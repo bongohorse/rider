@@ -3,7 +3,16 @@ function init(self)
     gui.set_font(title, "default")
     gui.set_scale(title, vmath.vector3(1.2, 1.2, 1))
     gui.set_color(title, vmath.vector4(0.86, 0.95, 0.91, 1))
-    local hint = gui.new_text_node(vmath.vector3(480, 466, 0), "W / Up: throttle | S / Down: brake | Free practice")
+    local hint = gui.new_text_node(vmath.vector3(480, 466, 0), "W / Up: throttle | S / Down: brake | R: retry | Free practice")
     gui.set_font(hint, "default")
     gui.set_scale(hint, vmath.vector3(0.65, 0.65, 1))
+    self.reason = gui.new_text_node(vmath.vector3(480,438,0), "")
+    gui.set_font(self.reason,"default")
+    gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
+end
+function on_message(self,id,data,sender)
+    if id==hash("retry_done") then
+        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or "Retry: manual")
+        msg.post(sender,"retry_labelled",{reason=data.reason})
+    end
 end

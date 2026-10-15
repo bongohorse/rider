@@ -1,6 +1,39 @@
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.gym.vehicle"
+local socket = require "socket"
+-- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
+local bounds = {min_x=-3900,max_x=7900,min_y=-500}
+local function request_reset(self,reason)
+    if self.vehicle and self.vehicle.ready and not self.pending_reset then
+        self.pending_reset = {generation=self.generation,reason=reason,requested=socket.gettime()}
+    end
+end
+local function reset(self)
+    local request = self.pending_reset
+    self.pending_reset = nil
+    if request.generation ~= self.generation then return end
+    self.resetting = true
+    self.held = {}
+    local before = vehicle.state(self.vehicle)
+    local started = socket.gettime()
+    vehicle.reset(self.vehicle)
+    assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
+    local shapes = b2d.body.get_shapes(self.terrain)
+    assert(#shapes==1 and shapes[1].is_chain_segment, "Retry changed terrain chain")
+    go.set_position(vmath.vector3(vehicle.config.spawn_x,250,500),"/camera")
+    self.generation = self.generation+1
+    self.reset_count = self.reset_count+1
+    self.last_reset_reason = request.reason
+    self.resetting = false
+    self.check_reset_pose = self.testcase=="a3"
+    local elapsed = (socket.gettime()-started)*1000
+    if self.testcase=="a3" then self.reset_ms[#self.reset_ms+1] = elapsed end
+    self.latency_ms = math.max(self.latency_ms,(socket.gettime()-request.requested)*1000)
+    if request.reason=="bounds" then self.bounds_count=self.bounds_count+1 end
+    print("GYM_RESET "..json.encode({count=self.reset_count,reason=request.reason,x=before.x,y=before.y,vx=before.vx}))
+    msg.post("main:/loader#ui","retry_done",{reason=request.reason})
+end
 local function emit(self, event, data)
     data = data or {}
     data.event = event
@@ -39,6 +72,8 @@ function init(self)
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
     self.held = {}
+    self.generation, self.reset_count, self.bounds_count = 1,0,0
+    self.reset_ms, self.latency_ms = {},0
     self.drive_tick = 0
     self.max_angle = 0
     self.target = hash("/focus")
@@ -71,8 +106,20 @@ local function command(self)
     return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, lean = 0}
 end
 function on_input(self, action_id, action)
+    if action_id == hash("retry") then
+        if action.pressed then request_reset(self,"manual") end
+        return
+    end
+    if self.resetting then return end
     if action.pressed then self.held[action_id] = true end
     if action.released then self.held[action_id] = nil end
+    if self.testcase=="a3" and self.reset_phase=="await_release" and action_id==hash("throttle_up") and action.released then
+        self.reset_phase="await_press"
+        emit(self,"phase",{name="redrive"})
+    elseif self.testcase=="a3" and self.reset_phase=="await_press" and action_id==hash("throttle_up") and action.pressed then
+        self.reset_phase="redrive"
+        self.redrive_tick=0
+    end
 end
 local function drive_test(self)
     self.drive_tick = self.drive_tick + 1
@@ -96,16 +143,94 @@ local function drive_test(self)
             assert(#b2d.body.get_contact_data(wheel)>0,"Wheel lost floor contact")
         end
         assert(math.abs(go.get_position("/camera").x-state.x)<12,"Camera did not follow buggy")
-        emit(self,"suite_end",{status="PASS",cases={drive_dx=self.drive_dx,drive_speed=self.drive_speed,
-            stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}})
-        self.testcase = "done"
+        self.drive_cases = {drive_dx=self.drive_dx,drive_speed=self.drive_speed,
+            stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}
+        if self.testcase=="a3" then
+            self.reset_phase="await_manual"
+            emit(self,"phase",{name="retry_held"})
+        else
+            emit(self,"suite_end",{status="PASS",cases=self.drive_cases})
+            self.testcase = "done"
+        end
+    end
+end
+local function reset_test(self)
+    if self.reset_phase=="await_manual" and self.reset_count>0 then
+        assert(self.reset_count==1 and self.last_reset_reason=="manual","Keyboard retry was not consumed before bounds recovery")
+        emit(self,"phase",{name="retry_release"})
+        assert(self.last_command.throttle==0 and self.last_command.brake_reverse==0,"Retry kept held command")
+        self.reset_phase="stress"
+    elseif self.reset_phase=="stress" then
+        if self.reset_count<100 then
+            if self.reset_count==49 then
+                -- Explicit fault injection; only a3 test mode mutates this pose.
+                self.check_reset_pose = false
+                for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+                    local p=b2d.body.get_position(body)
+                    local id=body==self.vehicle.chassis and self.vehicle.ids.chassis or nil
+                    for i,wheel in ipairs(self.vehicle.wheels) do if body==wheel then id=self.vehicle.ids[i] end end
+                    local visual=go.get_position(id)
+                    go.set_position(vmath.vector3(p.x,p.y-800,visual.z),id)
+                    b2d.body.set_transform(body,vmath.vector3(p.x,p.y-800,0),0)
+                end
+            else request_reset(self,"manual") end
+        else
+            assert(self.bounds_count==1,"Bounds recovery not exercised exactly once: "..self.bounds_count)
+            self.reset_phase="settle"
+            self.settle_tick=0
+        end
+    elseif self.reset_phase=="settle" then
+        self.settle_tick=self.settle_tick+1
+        assert(self.last_command.throttle==0,"Held throttle reactivated after retry")
+        if self.settle_tick==120 then
+            for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+                assert(not b2d.body.is_awake(body),"Re-drive must exercise a sleeping vehicle")
+            end
+            assert(math.abs(vehicle.state(self.vehicle).x)<2,"Reset drifted from spawn")
+            self.redrive_x=vehicle.state(self.vehicle).x
+            self.reset_phase="await_release"
+            emit(self,"phase",{name="release_for_redrive"})
+        end
+    elseif self.reset_phase=="redrive" then
+        self.redrive_tick=self.redrive_tick+1
+        if self.redrive_tick==120 then
+            local state=vehicle.state(self.vehicle)
+            assert(state.x-self.redrive_x>150,"Fresh input did not drive after resets: "..json.encode({dx=state.x-self.redrive_x,y=state.y,vx=state.vx,command=self.last_command}))
+            local cases=self.drive_cases
+            table.sort(self.reset_ms)
+            cases.resets=self.reset_count
+            cases.bounds_recovery=self.bounds_count==1
+            cases.input_cleared=true
+            cases.redrive=true
+            cases.asleep_before_redrive=true
+            assert(self.world_loads==1,"Retry reloaded the world")
+            assert(self.bounds_labelled,"Bounds recovery reason was not displayed")
+            cases.no_collection_reload=self.world_loads==1
+            cases.reason_visible=self.bounds_labelled
+            cases.reset_ms_min=self.reset_ms[1]
+            cases.reset_ms_p50=self.reset_ms[50]
+            cases.reset_ms_max=self.reset_ms[100]
+            cases.request_ready_ms_max=self.latency_ms
+            emit(self,"suite_end",{status="PASS",cases=cases})
+            self.testcase="done"
+        end
     end
 end
 function fixed_update(self, dt)
+    if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
+        local state = vehicle.state(self.vehicle)
+        if self.check_reset_pose then
+            assert(math.abs(state.x-vehicle.config.spawn_x)<0.1 and math.abs(state.y-vehicle.config.spawn_y)<2,"Retry pose was overwritten before the next tick")
+            self.check_reset_pose=false
+        end
+        if state.x<bounds.min_x or state.x>bounds.max_x or state.y<bounds.min_y then request_reset(self,"bounds") end
+        if self.pending_reset then reset(self) end
         self.last_command = command(self)
         vehicle.apply(self.vehicle,self.last_command)
-        if self.testcase == "a2" then drive_test(self) end
+        if self.testcase == "a2" or self.testcase == "a3" then
+            if self.reset_phase then reset_test(self) else drive_test(self) end
+        end
     end
     if not self.ready or self.test_phase ~= "drop" then return end
     self.tick = self.tick + 1
@@ -123,4 +248,8 @@ function final(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
+end
+function on_message(self,id,data,sender)
+    if id==hash("world_load_count") then self.world_loads=data.count
+    elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

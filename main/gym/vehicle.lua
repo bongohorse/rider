@@ -14,12 +14,8 @@ function M.spawn()
     return v
 end
 local function body(id) return b2d.get_body(msg.url(nil,id,"body")) end
-function M.attach(v)
-    v.chassis = body(v.ids.chassis)
-    assert(b2d.body.is_valid(v.chassis), "Chassis body unavailable")
+local function joints(v)
     for i,x in ipairs(M.config.wheel_x) do
-        v.wheels[i] = body(v.ids[i])
-        assert(b2d.body.is_valid(v.wheels[i]), "Wheel body unavailable")
         v.joints[i] = b2d.joint.create_wheel(v.chassis,v.wheels[i],{
             local_anchor_a = vmath.vector3(x,M.config.wheel_y,0), local_anchor_b = vmath.vector3(),
             local_axis_a = vmath.vector3(0,1,0), enable_spring = true,
@@ -29,12 +25,52 @@ function M.attach(v)
         })
         assert(b2d.joint.is_valid(v.joints[i]), "Wheel joint unavailable")
     end
+end
+function M.attach(v)
+    v.chassis = body(v.ids.chassis)
+    assert(b2d.body.is_valid(v.chassis), "Chassis body unavailable")
+    for i=1,2 do
+        v.wheels[i] = body(v.ids[i])
+        assert(b2d.body.is_valid(v.wheels[i]), "Wheel body unavailable")
+    end
+    joints(v)
     v.ready = true
+end
+function M.reset(v)
+    for _,joint in ipairs(v.joints) do
+        assert(b2d.joint.is_valid(joint), "Invalid joint before reset")
+        b2d.joint.destroy(joint)
+        assert(not b2d.joint.is_valid(joint), "Replaced joint still valid")
+    end
+    v.joints = {}
+    local c = M.config
+    local bodies = {v.chassis,v.wheels[1],v.wheels[2]}
+    for i,b in ipairs(bodies) do
+        assert(b2d.body.is_valid(b), "Retained body invalid")
+        local x = c.spawn_x + (i>1 and c.wheel_x[i-1] or 0)
+        local y = c.spawn_y + (i>1 and c.wheel_y or 0)
+        -- Dynamic transforms default on in this engine: synchronize the owning
+        -- GO as well, otherwise the next step copies the old GO pose back.
+        local id=i==1 and v.ids.chassis or v.ids[i-1]
+        local visual=go.get_position(id)
+        go.set_position(vmath.vector3(x,y,visual.z),id)
+        go.set_rotation(vmath.quat(),id)
+        b2d.body.set_transform(b,vmath.vector3(x,y,0),0)
+        b2d.body.set_linear_velocity(b,vmath.vector3())
+        b2d.body.set_angular_velocity(b,0)
+        b2d.body.set_awake(b,true)
+        local p,vel = b2d.body.get_position(b),b2d.body.get_linear_velocity(b)
+        assert(math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001, "Noncanonical reset pose")
+        assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
+    end
+    joints(v)
+    assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")
 end
 function M.apply(v,command)
     local brake = command.brake_reverse > 0
     local drive = command.throttle > 0 and not brake
     for _,joint in ipairs(v.joints) do
+        if brake or drive then b2d.joint.wake_bodies(joint) end
         b2d.joint.enable_motor(joint,brake or drive)
         b2d.joint.set_motor_speed(joint,drive and M.config.motor_speed*command.throttle or 0)
         b2d.joint.set_max_motor_torque(joint,brake and M.config.brake_torque or drive and M.config.drive_torque or 0)

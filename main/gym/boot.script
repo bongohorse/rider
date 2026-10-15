@@ -1,5 +1,6 @@
 function init(self)
     msg.post(".", "acquire_input_focus")
+    self.world_loads = 0
     self.loading = true
     self.deadline = 0
     msg.post("#world", "load")
@@ -12,9 +13,11 @@ function update(self, dt)
 end
 function on_message(self, id, data, sender)
     if id == hash("proxy_loaded") then
+        self.world_loads = self.world_loads+1
         msg.post(sender, "init")
         msg.post(sender, "enable")
     elseif id == hash("gym_ready") then
         self.loading = false
+        msg.post(sender,"world_load_count",{count=self.world_loads})
     end
 end
