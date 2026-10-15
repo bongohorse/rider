@@ -40,6 +40,9 @@ local function emit(self, event, data)
     data.run_id = self.run_id
     data.source_sha = sys.get_config_string("rider.source_sha", "development")
     print("RIDER_GYM " .. json.encode(data))
+    if html5 and event=="vehicle_ready" then
+        html5.run("window.riderReady = "..json.encode(data))
+    end
 end
 local function setup(self)
     self.terrain = b2d.get_body("/terrain#body")

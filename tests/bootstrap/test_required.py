@@ -1,4 +1,4 @@
-"""Exercise the actual required job script with failed/cancelled/skipped physics."""
+"""Exercise the actual required job script with failed/cancelled/skipped required dependencies."""
 import json
 import os
 from pathlib import Path
@@ -14,20 +14,30 @@ class RequiredCheck(unittest.TestCase):
         workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
         job = workflow['jobs']['required']
         self.assertEqual(job['if'], '${{ always() }}')
-        self.assertEqual(set(job['needs']), {'bootstrap', 'renovate', 'physics', 'tooling', 'bridge'})
-        for state in ['success', 'failure', 'cancelled', 'skipped']:
-            with self.subTest(physics=state):
-                needs = {name: {'result': 'success'} for name in job['needs']}
-                needs['physics']['result'] = state
-                result = subprocess.run([sys.executable, '-c', job['steps'][0]['run'].split("<<'PYTHON'\n", 1)[1].rsplit('\nPYTHON', 1)[0]],
-                    env={**os.environ, 'RESULTS': json.dumps(needs)}, capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0 if state == 'success' else 1, result.stderr)
+        self.assertEqual(set(job['needs']), {'bootstrap', 'renovate', 'physics', 'tooling', 'bridge', 'preview'})
+        for dependency in job['needs']:
+            for state in ['success', 'failure', 'cancelled', 'skipped']:
+                with self.subTest(dependency=dependency,state=state):
+                    needs = {name: {'result': 'success'} for name in job['needs']}
+                    needs[dependency]['result'] = state
+                    result = subprocess.run([sys.executable, '-c', job['steps'][0]['run'].split("<<'PYTHON'\n", 1)[1].rsplit('\nPYTHON', 1)[0]],
+                        env={**os.environ, 'RESULTS': json.dumps(needs)}, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0 if state == 'success' else 1, result.stderr)
 
     def test_physics_runs_for_pr_and_main_via_reusable_workflows(self):
         workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
         self.assertIn('pull_request', workflow['on'])
         self.assertIn('main', workflow['on']['push']['branches'])
-        for job, name in [('physics', 'g1'), ('tooling', 'g2'), ('bridge', 'bridge')]:
+        for job, name in [('physics', 'g1'), ('tooling', 'g2'), ('bridge', 'bridge'), ('preview', 'preview')]:
             self.assertEqual(workflow['jobs'][job]['uses'], f'./.github/workflows/{name}.yml')
             called = yaml.load((ROOT / f'.github/workflows/{name}.yml').read_text(), Loader=yaml.BaseLoader)
             self.assertIn('workflow_call', called['on'])
+
+    def test_pages_deploy_waits_for_required_and_only_main(self):
+        workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+        deploy = workflow['jobs']['pages']
+        self.assertEqual(deploy['needs'], 'required')
+        self.assertEqual(deploy['if'], "github.ref == 'refs/heads/main'")
+        self.assertEqual(deploy['uses'], './.github/workflows/pages.yml')
+        self.assertIn('workflow_dispatch', workflow['on'])
+        self.assertEqual(workflow['concurrency']['cancel-in-progress'], "${{ github.ref != 'refs/heads/main' }}")

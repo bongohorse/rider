@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: bootstrap-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   bootstrap:
     name: Bootstrap (${{ matrix.os }})
@@ -81,10 +81,20 @@ jobs:
     uses: ./.github/workflows/g2.yml
   bridge:
     uses: ./.github/workflows/bridge.yml
+  preview:
+    uses: ./.github/workflows/preview.yml
+  pages:
+    if: github.ref == 'refs/heads/main'
+    needs: required
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
   required:
     name: required
     if: ${{ always() }}
-    needs: [bootstrap, renovate, physics, tooling, bridge]
+    needs: [bootstrap, renovate, physics, tooling, bridge, preview]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:

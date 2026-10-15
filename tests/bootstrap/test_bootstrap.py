@@ -40,6 +40,17 @@ class BootstrapContract(unittest.TestCase):
             workflow.write_text(re.sub(r'actions/checkout@[0-9a-f]{40}', 'actions/checkout@main', text))
             self.assertTrue(any('unpinned' in e for e in bootstrap_check.validate(copy)))
 
+    def test_pages_write_permission_requires_main_guard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory)
+            for filename in bootstrap_check.REQUIRED + ['package.json']:
+                target = copy / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / filename, target)
+            workflow = copy / '.github/workflows/ci.yml'
+            workflow.write_text(workflow.read_text().replace("github.ref == 'refs/heads/main'", 'true'))
+            self.assertTrue(any('Pages permission requires main-only guard' in e for e in bootstrap_check.validate(copy)))
+
     def test_doctor_returns_machine_readable_report_without_runtime_claim(self):
         result = subprocess.run([sys.executable, str(ROOT / 'tools/doctor.py'), '--json'],
                                 capture_output=True, text=True, timeout=30, check=True)
