@@ -1,6 +1,6 @@
 name: G2 tooling
 on:
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

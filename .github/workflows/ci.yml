@@ -75,3 +75,27 @@ jobs:
           path: artifacts/
           retention-days: 14
           if-no-files-found: warn
+  physics:
+    uses: ./.github/workflows/g1.yml
+  tooling:
+    uses: ./.github/workflows/g2.yml
+  bridge:
+    uses: ./.github/workflows/bridge.yml
+  required:
+    name: required
+    if: ${{ always() }}
+    needs: [bootstrap, renovate, physics, tooling, bridge]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 2
+    steps:
+      - name: Reject failed, cancelled or skipped dependencies
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PYTHON'
+          import json, os, sys
+          results = json.loads(os.environ['RESULTS'])
+          for name, job in results.items():
+              print(f"{name}: {job['result']}")
+          sys.exit(0 if results and all(job['result'] == 'success' for job in results.values()) else 1)
+          PYTHON
