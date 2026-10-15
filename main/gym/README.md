@@ -33,3 +33,5 @@ Reset source follow-up: pinned `engine/engine/src/engine.cpp` defaults `physics.
 Browser input synchronization: the smoke holds R until the controller confirms manual retry, and waits for the engine-observed throttle release before a fresh press. Same-frame down/up pulses are not treated as reliable sampled engine input. The first retry must be manual; an incidental bounds reset cannot substitute for it.
 
 The re-drive interval begins only after the engine observes the fresh throttle press, so browser/runner input delivery delay is excluded from the declared 120 driving ticks.
+
+Sleep follow-up: Box2D 3.1.0 `src/wheel_joint.c` motor enable/speed/torque setters do not wake sleeping bodies. Pinned Defold `script_box2d_joint_v3.cpp` forwards those setters and exposes `wake_bodies`. Active throttle/brake now wakes the connected bodies before applying motors; coasting still permits sleep. The post-reset smoke explicitly requires all three bodies asleep before the fresh press, then requires actual travel over 120 commanded ticks. Initial warm-spawn driving alone missed this behavior.

@@ -183,6 +183,9 @@ local function reset_test(self)
         self.settle_tick=self.settle_tick+1
         assert(self.last_command.throttle==0,"Held throttle reactivated after retry")
         if self.settle_tick==120 then
+            for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+                assert(not b2d.body.is_awake(body),"Re-drive must exercise a sleeping vehicle")
+            end
             assert(math.abs(vehicle.state(self.vehicle).x)<2,"Reset drifted from spawn")
             self.redrive_x=vehicle.state(self.vehicle).x
             self.reset_phase="await_release"
@@ -199,6 +202,7 @@ local function reset_test(self)
             cases.bounds_recovery=self.bounds_count==1
             cases.input_cleared=true
             cases.redrive=true
+            cases.asleep_before_redrive=true
             assert(self.world_loads==1,"Retry reloaded the world")
             assert(self.bounds_labelled,"Bounds recovery reason was not displayed")
             cases.no_collection_reload=self.world_loads==1
