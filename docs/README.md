@@ -1,13 +1,13 @@
 # Rider documentation
 
-[Current status](../STATUS.md) · [Plan](PLAN.md) · `docs/GAME_DESIGN.md` (S3)
+[Current status](../STATUS.md) · [Plan](PLAN.md) · [Game design](GAME_DESIGN.md)
 
 Read STATUS.md, the current issue and only its affected contract. Work is organized into issues and milestones M1–M5, replacing the old gates. Active agent documents are English; archived source records retain their original wording.
 
 | Task | Read |
 | --- | --- |
 | Decisions, phases, milestones, authorization | [Plan](PLAN.md) |
-| Gameplay intent and open design choices | `docs/GAME_DESIGN.md` (S3), [vehicle commands](contracts/vehicle.md) |
+| Gameplay intent and open design choices | [Game design](GAME_DESIGN.md), [vehicle commands](contracts/vehicle.md) |
 | Engine/API changes | [Official engine references](ENGINE_REFERENCES.md) |
 | Units, tick order, reset/ownership | [G1 verified baseline](contracts/physics/G1_CONTRACT.md); affected [physics contract](contracts/physics/) |
 | Automation and runner changes | [Automation contracts](contracts/automation/), [Bridge](contracts/automation/bridge.md) |

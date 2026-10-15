@@ -57,7 +57,7 @@ Use [BRIDGE.md](contracts/automation/bridge.md) for exact versions, capabilities
 | Screen layout | [Screen sizes](https://defold.com/manuals/adapting-graphics-to-screen-size/) | [Gym plan](PLAN.md), [platform matrix](PLATFORM_MATRIX.md) |
 | Android/HTML5 lifecycle | Locate the relevant platform manual through the official manuals index | [Platform matrix requirements](PLATFORM_MATRIX.md), [test protocol](contracts/automation/test-protocol.md) |
 | Performance | Locate profiling/optimization manuals through the official manuals index | [Phase E measurements](PLAN.md) |
-| Vehicle behavior | Box2D and Defold references above | [Vehicle commands](contracts/vehicle.md), `docs/GAME_DESIGN.md` (S3), [plan](PLAN.md) |
+| Vehicle behavior | Box2D and Defold references above | [Vehicle commands](contracts/vehicle.md), [Game design](GAME_DESIGN.md), [plan](PLAN.md) |
 
 Android is the first release target, HTML5 the main test platform. iOS builds wait until Phase G after Play Store launch. Keep gameplay platform-neutral and existing manifest exports possible. The reference phone and evidence limits are in PLATFORM_MATRIX.md; A13 establishes concrete budgets after measurement. This page does not invent completed measurements or approvals.
 
