@@ -8,7 +8,7 @@ Read [STATUS.md](STATUS.md), the current issue and its affected contract. [Docum
 
 ## Execution
 
-- Complete the authorized S1–S3 preparation. S3 needs Claudio's confirmation before M1 begins. Thereafter, within an approved milestone: take the next issue with completed dependencies, one issue per PR, review/fix, run affected checks and merge only with green `required` for the current head. Never weaken assertions for green CI.
+- S1–S3 preparation and Claudio's design feedback are recorded in STATUS.md. Comfort, preset strength and crash fairness are decided through playable trials, not demanded upfront. Within an approved milestone: take the next issue with completed dependencies, one issue per PR, review/fix, run affected checks and merge only with green `required` for the current head. Never weaken assertions for green CI.
 - After each completed step, briefly report what changed and what comes next. At milestone completion, stop, give the preview URL and request Claudio's drive test; wait for approval before the next milestone.
 - Ordinary in-scope failures: fix autonomously. Structural blockers: stop affected work, report evidence and alternatives; continue independent authorized work.
 - Keep [STATUS.md](STATUS.md) as the only current progress/blocker source. Evidence rules and status definitions live in [evidence policy](docs/contracts/evidence.md). Never invent builds, tests, screenshots or device observations.
