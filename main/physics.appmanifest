@@ -89,7 +89,6 @@ platforms:
             symbols: []
             libs: [physics_2d, box2d, script_box2d]
             linkFlags: []
-            excludeJslibs: []
     wasm_pthread-web:
         context:
             excludeLibs: [physics, LinearMath, BulletDynamics, BulletCollision, box2d_defold, script_box2d_defold]
@@ -97,4 +96,3 @@ platforms:
             symbols: []
             libs: [physics_2d, box2d, script_box2d]
             linkFlags: []
-            excludeJslibs: []

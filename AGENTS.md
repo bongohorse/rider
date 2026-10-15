@@ -4,7 +4,7 @@ Repository: bongohorse/rider. Treat this repository as the sole implementation s
 
 ## Authorized scope
 
-Current authorization: split documentation first, then execute G1. G0 is complete. The user explicitly authorized G1 on 2026-10-15 after the documentation change. Stop after G1; G2 and later phases are not authorized.
+Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 is active. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
 
 - Inspect branch, HEAD, working tree and these instructions before editing.
 - Preserve existing work. Never import old buggy scripts, vendor physics, rendering code or assets.
@@ -18,7 +18,7 @@ Current authorization: split documentation first, then execute G1. G0 is complet
 - Keep FAIL, BLOCKED, NOT RUN and PASS distinct. Missing optional future tools do not fail bootstrap correctness.
 - Do not expose tokens or run unreviewed installation scripts. No production secrets in PR jobs.
 - Merge/deployment authorization persists within its granted scope. Do not request it repeatedly when already granted. Never infer permission to start G1 from a merge.
-- End each gate with exact tested SHA, PR and CI links, limitations and next recommendation; no later gate automatically.
+- End each gate with exact tested SHA, PR and CI links, limitations and next recommendation; then continue in plan order under the user-authorized loop.
 
 ## Bootstrap checks (retain through G1; adapt G0-only boundaries explicitly when G1 starts)
 

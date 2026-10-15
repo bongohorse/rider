@@ -2,7 +2,7 @@
 
 Read this index and the active gate first. Do **not** read every planning file by default. Open only the contracts needed for the current change; use `rg` to find additional requirements.
 
-**State:** G0 complete. User authorized documentation restructuring followed by G1. Stop before G2.
+**State:** G0 complete. User authorized the autonomous review → fix → complete → next-task loop on 2026-10-15. G1 is active; prerequisites remain mandatory.
 
 ## Start here
 
@@ -44,7 +44,7 @@ Read this index and the active gate first. Do **not** read every planning file b
 |---|---|---|
 | [G0](gates/G0.md) | Repository/bootstrap | Complete |
 | [G1](gates/G1.md) | Integrated Box2D 3 PoC | Authorized after docs split |
-| [G2](gates/G2.md) | Automation and tests | Explicit authorization after G1 |
+| [G2](gates/G2.md) | Automation and tests | After G1 acceptance under the authorized loop |
 | [G3](gates/G3.md) | Minimal sandbox and Android | G2 |
 | [G4a](gates/G4a.md) | Vehicle-critical physics | G3 |
 | [G5](gates/G5.md) | Buggy and first challenge | G4a |
