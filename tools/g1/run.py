@@ -58,7 +58,7 @@ def browser(directory, collector):
         collector.feed(line)
 
 
-def run(platform, output):
+def run(platform, output, variant=None):
     source_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     reports = []
     for scale, fps in [(0.01, 60), (0.02, 30)]:
@@ -73,13 +73,13 @@ def run(platform, output):
         collector = Collector(run_id, source_sha, config_hash)
         # Prove that a foreign completion cannot authorize this fresh run.
         collector.feed(PREFIX + json.dumps({'event': 'suite_end', 'run_id': 'stale-' + run_id, 'status': 'PASS'}))
-        build(platform, directory, settings)
+        build(platform, directory, settings, variant=variant)
         if platform == 'wasm-web':
             browser(directory, collector)
         else:
             native(directory, collector, run_id)
         report = collector.finish()
-        report.update(platform=platform, render_target=fps, scale=scale)
+        report.update(platform=platform, variant=variant or ('debug' if platform=='wasm-web' else 'headless'), render_target=fps, scale=scale)
         (directory / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report), flush=True)
         reports.append(report)
@@ -97,9 +97,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', required=True)
     parser.add_argument('--output', required=True)
+    parser.add_argument('--variant', choices=['debug','headless'])
     args = parser.parse_args()
     try:
-        run(args.platform, args.output)
+        run(args.platform, args.output, args.variant)
     except Exception as exc:
         print('FAIL:', exc, file=sys.stderr)
         raise SystemExit(1)

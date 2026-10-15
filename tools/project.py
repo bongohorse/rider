@@ -82,6 +82,7 @@ def main(argv=None):
     verify.add_argument('--suite',choices=['bootstrap','physics'],default='physics')
     verify.add_argument('--target',choices=['desktop','html5'],default='desktop')
     verify.add_argument('--output')
+    verify.add_argument('--configuration',choices=['debug','headless'])
     bundle=subs.add_parser('build')
     bundle.add_argument('--target',choices=['desktop','html5','android'],required=True)
     bundle.add_argument('--configuration',choices=['debug','release'],default='debug')
@@ -109,7 +110,7 @@ def main(argv=None):
         tests=[execute(name,cmd,output,60,unit) for name,cmd,unit in commands]
         return write_report(output,'bootstrap',tests,[x[0] for x in commands],sha)
     test=execute('physics',[sys.executable,'tools/g1/run.py','--platform',platform_for(args.target),
-                           '--output',str(output/'physics')],output,2100)
+                           '--output',str(output/'physics'),'--variant',args.configuration or ('debug' if args.target=='html5' else 'headless')],output,2100)
     tests=[]
     expected=[f'{config}.{key}' for config in ['scale-0.01-fps-60','scale-0.02-fps-30'] for key in IDS]
     if test['status']=='PASS':
