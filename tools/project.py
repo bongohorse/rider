@@ -119,6 +119,7 @@ def main(argv=None):
                 report=json.loads(report_path.read_text())
                 if report['status']!='PASS' or report['source_sha']!=sha or set(report['cases'])!=set(IDS):raise RuntimeError('Invalid physics inventory/identity')
                 for key in IDS:
+                    if not isinstance(report['cases'][key],dict) or not report['cases'][key]:raise RuntimeError('Invalid physics measurements')
                     tests.append({'id':f'{config}.{key}','status':'PASS','duration_ms':None,'assertions':1,
                                   'measurements':report['cases'][key],'artifacts':[str(report_path.relative_to(output))]})
         except (OSError,ValueError,KeyError,RuntimeError) as exc:

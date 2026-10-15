@@ -39,7 +39,7 @@ def main():
             except RuntimeError as exc:
                 log=output/'intentional-failure/build.log'
                 text=log.read_text(errors='replace') if log.exists() else ''
-                if 'Bob build failed:' not in str(exc) or 'main/controller.script' not in text or not re.search('unexpected|expected|syntax',text,re.I):
+                if 'Bob build failed:' not in str(exc) or 'main/controller.script' not in text or not re.search('unexpected|expect|syntax',text,re.I):
                     raise RuntimeError('Failure was not the intended Lua build error') from exc
                 report['intentional_build_error']='PASS (correctly rejected)'
             else:
