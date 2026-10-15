@@ -11,6 +11,7 @@
     "renovate:scan": "python tools/renovate_scan.py"
   },
   "devDependencies": {
+    "playwright": "1.64.1",
     "renovate": "44.161.0"
   }
 }

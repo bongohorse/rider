@@ -2,6 +2,9 @@
 """Pinned Bob candidate build. Native engines are rebuilt for the manifest."""
 import argparse
 import hashlib
+import json
+import os
+import signal
 from pathlib import Path
 import shutil
 import subprocess
@@ -21,7 +24,9 @@ def bob_jar():
         with urllib.request.urlopen(request, timeout=180) as response, temporary.open('wb') as output:
             shutil.copyfileobj(response, output)
         temporary.replace(target)
-    if hashlib.file_digest(target.open('rb'), 'sha256').hexdigest() != BOB_SHA256:
+    with target.open('rb') as source:
+        digest = hashlib.file_digest(source, 'sha256').hexdigest()
+    if digest != BOB_SHA256:
         raise RuntimeError('Bob SHA-256 mismatch; do not run unverified candidate')
     return target
 
@@ -40,15 +45,27 @@ def build(platform, output, settings=None, variant=None):
     if settings:
         command += ['--settings', str(Path(settings).resolve())]
     command += ['resolve', 'build', 'bundle']
+    (output / 'toolchain.json').write_text(json.dumps({'java': version.stdout + version.stderr,
+        'bob_sha256': BOB_SHA256, 'platform': platform, 'variant': variant or ('debug' if platform == 'wasm-web' else 'headless')}, indent=2))
     with (output / 'build.log').open('w') as log:
-        result = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+        process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt')
+        try:
+            code = process.wait(timeout=900)
+        except subprocess.TimeoutExpired:
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'], capture_output=True, timeout=15)
+            else:
+                os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=15)
+            raise
+
     for source in (ROOT / 'build').rglob('log.txt'):
         destination = output / 'extender' / source.relative_to(ROOT / 'build')
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
-        if result.returncode:
+        if code:
             print(source.read_text(errors='replace')[-18000:], file=sys.stderr)
-    if result.returncode:
+    if code:
         print((output / 'build.log').read_text()[-18000:], file=sys.stderr)
         raise RuntimeError(f'Bob build failed: {platform}; see {output / "build.log"}')
     print(f'PASS build {platform}: {output}', flush=True)
