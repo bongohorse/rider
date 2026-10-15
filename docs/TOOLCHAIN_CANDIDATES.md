@@ -7,7 +7,7 @@ Checked 2026-10-15 through official release/tag APIs. Machine-readable source id
 | Defold / Bob | 1.14.0, commit a81dbb0478e8b73931dc2d671563204f6ac0ef82 | [Release](https://github.com/defold/defold/releases/tag/1.14.0); exact release SHA-256 digests recorded. Assets not downloaded or independently hashed in G0. |
 | JDK | OpenJDK 25 | [Bob manual](https://defold.com/manuals/bob/); vendor/build selected and verified in G1. Local cloud host currently has JDK 17, not candidate readiness. |
 | Automation Bridge | 2.5.0, commit 567c7efb2f72626af71967984bd33dde856f0d36 | [Release](https://github.com/defold/extension-automation-bridge/releases/tag/2.5.0), minimum Defold 1.13.1 in release notes. No integration in G0. |
-| Python | 3.12.14 for bootstrap CI | Tooling only; Python is not the game language. |
+| Python | 3.14.8 for bootstrap CI | Official actions/python-versions manifest confirms Windows/Linux x64 binaries. Local host remains 3.12.14. Tooling only, not game runtime. |
 | Node | 24.21.0 for CI; Renovate requires ^24.11.0 | Tooling only; local 24.19.0 meets Renovate requirement. |
 | Renovate | 44.161.0 | [Release](https://github.com/renovatebot/renovate/releases/tag/44.161.0); exact dependency and transitive lockfile. |
 | PyYAML | 6.0.3 | [Release](https://github.com/yaml/pyyaml/releases/tag/6.0.3); YAML parsing for bootstrap checks. |
