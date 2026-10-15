@@ -51,6 +51,8 @@ def write_report(output,suite,tests,expected,source_sha,duration_ms=None):
     ids=[test['id'] for test in tests]
     if len(ids)!=len(set(ids)) or set(ids)!=set(expected) or not expected:
         raise RuntimeError('Missing, duplicate or zero test inventory')
+    if any(x['status'] not in ('PASS','FAIL','BLOCKED') for x in tests):
+        raise RuntimeError('Invalid result status')
     status='FAIL' if any(x['status']=='FAIL' for x in tests) else 'BLOCKED' if any(x['status']=='BLOCKED' for x in tests) else 'PASS'
     elapsed=duration_ms if duration_ms is not None else sum(x['duration_ms'] or 0 for x in tests)
     report={'schema_version':1,'gate':'G2','suite':suite,'commit_sha':source_sha,
@@ -126,7 +128,7 @@ def main(argv=None):
             test.update(status='FAIL',detail=str(exc))
     if test['status']!='PASS':
         # Missing cases are explicit failures, never omitted from the report.
-        tests=[dict(test,id=key) for key in expected]
+        tests=[dict(test,id=key,duration_ms=None) for key in expected]
     return write_report(output,'physics',tests,expected,sha,duration_ms=test['duration_ms'])
 
 

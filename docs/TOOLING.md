@@ -26,6 +26,6 @@ A real build regression is separate:
 python tools/g2/negative_build.py --output artifacts/g2/negative-build
 ```
 
-It copies the current project into a temporary directory, injects an invalid Lua statement, requires a build error naming that script, restores the exact original bytes, builds the restored copy successfully, and verifies the original working tree is unchanged. The broken copy is never committed. CI uploads both logs and the restoration report. The four CLI unit tests separately cover nonzero subprocess exits, zero-test rejection, timeout and incomplete inventory.
+It copies the current project into a temporary directory, injects an invalid Lua statement, requires a build error naming that script, restores the exact original bytes, builds the restored copy successfully, and verifies the original working tree is unchanged. The broken copy is never committed. CI uploads both logs and the restoration report. Its Linux APK job also builds through the shared CLI, verifies the signature with Android `apksigner`, and parses the package with `aapt2`; these checks do not claim an actual device installation. The four CLI unit tests separately cover nonzero subprocess exits, zero-test rejection, timeout and incomplete inventory.
 
 G1: native headless physics and HTML5 debug evidence. G2 Bridge/native-graphics and release-negative checks: blocked/unrun as shown in the acceptance file. Android APK build success does not prove installation or real device/touch behavior. No editor launch or local port/session is assumed by these commands.

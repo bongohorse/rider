@@ -9,7 +9,7 @@ The user authorized the autonomous review/fix/complete/next loop. This G2 increm
 | Shared build/verify commands; same G1 physics runner | Implemented; CI pending |
 | JSON v1 + JUnit, complete inventory, nonzero failure/BLOCKED exits | Local tests PASS; platform CI pending |
 | Real isolated build-error rejection and restored clean build | Implemented; CI pending |
-| Android debug APK | G1 build PASS; install/device behavior NOT RUN |
+| Android debug APK | G1 build PASS; shared-CLI signature/manifest checks pending; install/device behavior NOT RUN |
 | Editor HTTP connection | NOT RUN; no editor session provided |
 | Bridge 2.5.0 + matching wrapper/native clean build | BLOCKED: license evidence unresolved |
 | Engine/project identity, capability, input change, screenshot | NOT RUN; depends on Bridge integration |
