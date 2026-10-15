@@ -1,0 +1,25 @@
+local sessions = require "main.g1.sessions"
+function init(self)
+    self.id=sys.get_config_string("rider.run_id", "missing")
+    self.session=sessions.get(self.id)
+end
+function update(self, dt)
+    if self.ready then return end
+    self.ready=true
+    local ok,err=pcall(function()
+        local s=self.session
+        s.a=b2d.get_body("/chassis#body")
+        s.b=b2d.get_body("/wheel#body")
+        s.joint=b2d.joint.create_wheel(s.a,s.b,{
+            local_anchor_a=vmath.vector3(0,-50,0),local_anchor_b=vmath.vector3(),
+            local_axis_a=vmath.vector3(0,1,0),enable_spring=true,hertz=3,damping_ratio=0.7,
+            enable_motor=true,motor_speed=20,max_motor_torque=10000,collide_connected=false
+        })
+        assert(b2d.joint.is_valid(s.joint), "proxy joint unavailable")
+    end)
+    msg.post("main:/controller#script", "fixture_ready", {generation=self.session.generation, ok=ok, error=tostring(err)})
+end
+function final(self)
+    self.session.finalized=true
+    self.session=nil
+end

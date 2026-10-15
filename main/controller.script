@@ -1,4 +1,5 @@
 -- One session owner. No other script writes physics; Defold owns all world steps.
+local sessions = require "main.g1.sessions"
 local IDS = {"backend", "body_collision", "wheel_motor", "wheel_spring", "units", "fixed_ticks", "cleanup_reset", "collection_cleanup"}
 local function emit(self, event, data)
     data = data or {}
@@ -97,18 +98,11 @@ local function frame(self, dt)
         self.cycle = self.cycle + 1
         if self.cycle == 100 then
             result(self,"cleanup_reset",{cycles=100, explicit=50, automatic=50, generation=self.cycle})
+            self.proxy_session=sessions.create(self.run_id)
             self.state="proxy_loading"
             msg.post("#proxy", "load")
         else self.state="cleanup_create" end
-    elseif self.state == "proxy_ready" then
-        self.proxy_a=b2d.get_body("fixture:/chassis#body")
-        self.proxy_b=b2d.get_body("fixture:/wheel#body")
-        self.proxy_joint=join(self.proxy_a,self.proxy_b)
-        check(b2d.joint.is_valid(self.proxy_joint),"proxy joint creation failed")
-        msg.post("#proxy","disable")
-        msg.post("#proxy","final")
-        msg.post("#proxy","unload")
-        self.state="proxy_unloading"
+
     end
 end
 function update(self, dt) protected(self, frame, dt) end
@@ -159,16 +153,25 @@ local function fixed(self, dt)
     end
 end
 function fixed_update(self, dt) protected(self, fixed, dt) end
-local function message(self, id)
+local function message(self, id, data)
     if id==hash("proxy_loaded") then
         check(self.state=="proxy_loading","stale proxy_loaded")
         msg.post("#proxy","init");msg.post("#proxy","enable")
-        self.state="proxy_ready"
+        self.state="proxy_initializing"
+    elseif id==hash("fixture_ready") then
+        check(self.state=="proxy_initializing","unexpected fixture_ready")
+        check(data.ok and data.generation==self.proxy_session.generation,"proxy setup: "..data.error)
+        msg.post("#proxy","disable")
+        msg.post("#proxy","final")
+        msg.post("#proxy","unload")
+        self.state="proxy_unloading"
     elseif id==hash("proxy_unloaded") then
         check(self.state=="proxy_unloading","stale proxy_unloaded")
-        check(not b2d.body.is_valid(self.proxy_a) and not b2d.body.is_valid(self.proxy_b),"collection retained bodies")
-        check(not b2d.joint.is_valid(self.proxy_joint),"collection retained joint")
-        self.proxy_a,self.proxy_b,self.proxy_joint=nil,nil,nil
+        check(self.proxy_session.finalized,"collection final callback missing")
+        check(not b2d.body.is_valid(self.proxy_session.a) and not b2d.body.is_valid(self.proxy_session.b),"collection retained bodies")
+        check(not b2d.joint.is_valid(self.proxy_session.joint),"collection retained joint")
+        sessions.release(self.run_id)
+        self.proxy_session=nil
         result(self,"collection_cleanup",{completion="proxy_unloaded",stale_handles=0})
         for _,test in ipairs(IDS) do check(self.results[test],"missing "..test) end
         self.done=true
@@ -176,4 +179,4 @@ local function message(self, id)
         if sys.get_sys_info().system_name~="HTML5" then sys.exit(0) end
     end
 end
-function on_message(self, id) protected(self, message, id) end
+function on_message(self, id, data) protected(self, message, id, data) end
