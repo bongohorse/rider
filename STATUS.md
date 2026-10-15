@@ -4,7 +4,7 @@ Updated 2026-10-15. This is the sole current progress/blocker source; linked acc
 
 ## Current work
 
-S1–S2 are complete. Claudio has read S3's [brief](docs/GAME_DESIGN.md) and provided the design direction recorded in the [plan](docs/PLAN.md). The feedback is incorporated; feel/comfort/fairness decisions await the planned playable trials. Claudio authorized M1 on 2026-10-15. A1 is complete (PR #41; chain contact/camera smoke and retained G1 suites PASS). A2 is in progress; no human drive acceptance is claimed. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
+S1–S2 are complete. Claudio has read S3's [brief](docs/GAME_DESIGN.md) and provided the design direction recorded in the [plan](docs/PLAN.md). The feedback is incorporated; feel/comfort/fairness decisions await the planned playable trials. Claudio authorized M1 on 2026-10-15. A1 is complete (PR #41; chain contact/camera smoke and retained G1 suites PASS). A2 is complete (PR #42; keyboard drive/brake, contact and camera smoke PASS). A3 is in progress; no human drive acceptance is claimed. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
 
 | Step | State | Evidence / remaining acceptance |
 | --- | --- | --- |
@@ -27,4 +27,4 @@ Reference phone: Xiaomi Mi 10T Pro / Android 12 / Snapdragon 865 / 2400×1080 / 
 
 ## Next implementation step
 
-Current work: A2 (#17), drivable buggy. Then A3 (#18), A4 (#19), one reviewed PR each. Stop at M1 completion for Claudio's drive test; M2 is not authorized. Build the planned trials before asking Claudio to choose touch layout, assist values or crash fairness. M3 includes the required tilt experiment; final retention follows the actual phone comparison. At each milestone end, report the preview URL, request Claudio's drive test and wait for next-milestone approval.
+Current work: A3 (#18), in-world retry. Then A4 (#19), one reviewed PR each. Stop at M1 completion for Claudio's drive test; M2 is not authorized. Build the planned trials before asking Claudio to choose touch layout, assist values or crash fairness. M3 includes the required tilt experiment; final retention follows the actual phone comparison. At each milestone end, report the preview URL, request Claudio's drive test and wait for next-milestone approval.

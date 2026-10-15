@@ -70,7 +70,7 @@ jobs:
       - name: Build and run HTML5 physics
         run: python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5
       - name: Build and run current Gym smoke
-        run: python tools/gym/smoke.py --output artifacts/g1/gym --case a2
+        run: python tools/gym/smoke.py --output artifacts/g1/gym --case a3
       - name: Keep Gym screenshot separately for visual review
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
