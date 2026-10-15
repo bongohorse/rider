@@ -8,8 +8,8 @@ Preparation S1–S3 for the [Driving Gym plan](docs/PLAN.md). M1 has not started
 
 | Step | State | Evidence / remaining acceptance |
 | --- | --- | --- |
-| S1 required CI aggregation | In review | [PR #15](https://github.com/bongohorse/rider/pull/15); negative propagation probe running; final restored head must pass. Claudio must select only `required` in main protection. Full enforcement acceptance remains pending until saved. |
-| S2 issue/document migration | In preparation | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) prepared/created. Five milestone objects and label setup are BLOCKED by missing connector creation functions; issues are not yet assigned to milestones. |
+| S1 required CI aggregation | In review | [PR #15](https://github.com/bongohorse/rider/pull/15); negative propagation probe PASS (red physics → red required); final restored head CI running. Claudio confirmed protection update; branch metadata verifies only `required`, Actions app 15368, enforcement `everyone`. |
+| S2 issue/document migration | In preparation | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) prepared/created. Five milestones and five labels created; all 22 issues assigned and read back (counts M1/M2/M3/M4/M5 = 4/8/2/7/1). [Setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). Final PR CI/review pending. |
 | S3 design brief v0 | NOT RUN | Prepare one-page brief and obtain Claudio's read/confirmation before M1. |
 
 ## Preview and platform evidence
@@ -20,8 +20,8 @@ Reference phone: Xiaomi Mi 10T Pro / Android 12 / Snapdragon 865 / 2400×1080 / 
 
 ## Decisions / capability limits
 
-- Await Claudio's branch-protection update after the green S1 run; administration endpoint returns 403 for the integration. Do not bypass existing protection.
-- The installed GitHub connector creates/updates issues but exposes no milestone/label creation operations. Complete these through an authorized alternative before marking S2 accepted.
+- Branch protection update confirmed by Claudio and readable branch metadata: `required` is the sole required context, enforced for everyone. The full administration endpoint remains inaccessible; other settings rely on Claudio's saved configuration. No bypass used.
+- Milestone/label connector limitation resolved through a one-time, least-privilege repository Action; its workflow is removed from the final tree. No account setting or extra token was needed.
 - Bridge license provenance remains unresolved under explicit user implementation authorization; before Phase B app distribution remove the extension from release binaries and verify exclusion. [Contract](docs/contracts/automation/release.md).
 - S3 confirmation and then milestone drive-test approvals remain human acceptance; never infer them from CI or a merge.
 

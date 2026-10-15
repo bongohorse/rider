@@ -6,7 +6,7 @@
 
 S1 introduces one `required` job in CI. It depends on Bootstrap (all OS matrix entries), Renovate validation/extraction and reusable physics, tooling/Android and native Bridge workflows. CI runs for pull requests and pushes to main; reusable workflows also support manual dispatch. `required` uses `always()` and accepts only success from every dependency, so failure, cancellation or skip cannot pass.
 
-After the check has appeared, Claudio must select **only `required`** as the required status check for main, keeping force-push/deletion protections and the other saved settings. Do not bypass protection to merge. A red physics-to-required probe proves propagation; GitHub enforcement is a separate acceptance item until Claudio saves the new protection. Managed integration administration reads/writes are unavailable (the protection endpoint returns 403).
+Use **only `required`** as the required status check for main; preserve force-push/deletion protections and the other saved settings. Do not bypass protection to merge. The negative physics-to-required run is [38743590528](https://github.com/bongohorse/rider/actions/runs/38743590528). Claudio saved the protection update on 2026-10-15; branch metadata readback confirms context `required`, Actions app 15368 and enforcement `everyone`. Full administration endpoint access remains unavailable (403); the remaining settings rely on Claudio's saved configuration.
 
 A produced APK alone is not installation evidence. Android build failure now exits nonzero; the tooling workflow additionally verifies APK signature/manifest. Never weaken assertions, suppress failure or treat BLOCKED as green.
 
@@ -14,7 +14,7 @@ A produced APK alone is not installation evidence. Android build failure now exi
 
 PLAN.md defines M1–M5 and A1–A22, one issue per PR with 1–3 testable acceptance criteria. The task issue template records goal, scope, exclusions, criteria, drive-test need, dependencies and contract/API risks. Use actual issue-number links for dependencies; milestone approval is an additional dependency even when technical predecessors are complete.
 
-Milestone/label creation is not exposed by the installed connector. Its issue create/update functions can assign existing milestone numbers and labels, but cannot create them. Record incomplete setup honestly in STATUS.md and do not claim 22 issues are assigned to five milestones before verifying that state.
+The installed connector has no direct milestone/label creation operation. A reviewed one-time repository Action with `issues: write` created five milestones and labels, assigned the 22 known issues and verified their identities/assignments. [Setup run](https://github.com/bongohorse/rider/actions/runs/38745300299): milestone issue counts 4/8/2/7/1; labels `driving-gym`, `physics`, `mobile`, `tooling`, `experiment`. The temporary workflow is removed from the final tree. No account permission change or extra personal token was required.
 
 ## Renovate and pins
 
