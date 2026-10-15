@@ -42,6 +42,12 @@ def build(platform, output, settings=None, variant=None):
     command += ['resolve', 'build', 'bundle']
     with (output / 'build.log').open('w') as log:
         result = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+    for source in (ROOT / 'build').rglob('log.txt'):
+        destination = output / 'extender' / source.relative_to(ROOT / 'build')
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        if result.returncode:
+            print(source.read_text(errors='replace')[-18000:], file=sys.stderr)
     if result.returncode:
         print((output / 'build.log').read_text()[-18000:], file=sys.stderr)
         raise RuntimeError(f'Bob build failed: {platform}; see {output / "build.log"}')

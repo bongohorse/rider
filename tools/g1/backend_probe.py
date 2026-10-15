@@ -10,7 +10,7 @@ def main():
     p.add_argument('directory')
     args = p.parse_args()
     root = Path(args.directory)
-    binaries = list(root.rglob('*.exe')) if __import__('os').name == 'nt' else [x for x in root.rglob('*') if x.is_file() and x.name == 'RiderG1']
+    binaries = list(root.rglob('*.exe')) if __import__('os').name == 'nt' else [x for x in root.rglob('*') if x.is_file() and x.name == 'RiderG1.x86_64']
     if len(binaries) != 1:
         raise RuntimeError(f'Expected one matching bundled executable, got {binaries}')
     run_id = str(uuid.uuid4())
