@@ -8,6 +8,7 @@ Read this index and the active gate first. Do **not** read every planning file b
 
 | Task | Read |
 |---|---|
+| Engine/API changes | [Official engine references and documentation gate](ENGINE_REFERENCES.md) |
 | Current work | [G3 entry/acceptance](G3_ACCEPTANCE.md), [platform matrix](PLATFORM_MATRIX.md), then [G3 plan](gates/G3.md) |
 | Rules and sign-off | [Principles](plan/principles.md), [gate policy](plan/gate-policy.md), [evidence policy](plan/evidence-policy.md) |
 | Completed setup | [G0 completion](G0_COMPLETION.md), [repository setup](REPOSITORY_SETUP.md) |

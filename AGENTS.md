@@ -30,3 +30,14 @@ Current authorization (2026-10-15): autonomously review each PR, fix findings, c
 ## Documentation routing
 
 Read `docs/README.md`, `docs/G3_ACCEPTANCE.md` and `docs/PLATFORM_MATRIX.md` first. Then open `docs/gates/G3.md` and only the relevant topic files linked by the index. Do not read all docs or the old masterplan from top to bottom. Physics edits require the affected API/units/lifecycle/ownership contracts; runner edits require the test protocol. Historical G0 prompts do not override current authorization. Scoped acceptance documents define the active gate.
+
+## Official documentation gate
+
+Before changing Defold-dependent behavior, read [engine references](docs/ENGINE_REFERENCES.md) and only the official pages relevant to the task. Identify the pinned engine/backend/extension versions from `tools/toolchain-lock.json`; never infer compatibility from current website documentation alone.
+
+- For physics, distinguish Defold's integrated Box2D API from upstream Box2D C APIs. Read the relevant API, units, lifecycle and ownership contracts. No separate physics bridge or second simulation loop.
+- The Automation Bridge is a debug inspection/input service, not a Box2D binding. Use its pinned source and matching wrapper contract.
+- Verify signatures, units, defaults, ownership, callback timing and target-platform limits before relying on them. Resolve version uncertainty using pinned sources and a focused build/runtime probe.
+- When an authorized editor is available, discover `/openapi.json` before HTTP operations and use `/ref` if supported. Do not assume an editor/session exists.
+- Record sources actually read, reference version, implementation consequence and validation in the PR. Use justified N/A for changes without engine/API impact. If a needed reference is inaccessible, report the gap and do not claim verification. Stop dependent implementation if correctness remains unresolved; continue independent work.
+- Fetch relevant pages only. Do not paste or vendor the full combined documentation into every task. A source list or CI checkbox alone does not prove consultation.

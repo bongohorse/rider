@@ -2,6 +2,8 @@
 
 # 13. Primäre technische Quellen
 
+Start with [engine references](../ENGINE_REFERENCES.md) for official indexes, version selection and the documentation evidence workflow. The links below are topic entry points, not proof of compatibility with the pinned engine.
+
 - Defold 1.14.0 Release: https://defold.com/2026/10/12/Defold-1-14-0/
 - Defold Physics (Backend, Fixed Timestep, Scale, Proxy-Welten): https://defold.com/manuals/physics/
 - Body-/World-Ownership (`b2d`): https://defold.com/ref/b2d-lua/
