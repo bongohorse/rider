@@ -70,6 +70,7 @@ function M.apply(v,command)
     local brake = command.brake_reverse > 0
     local drive = command.throttle > 0 and not brake
     for _,joint in ipairs(v.joints) do
+        if brake or drive then b2d.joint.wake_bodies(joint) end
         b2d.joint.enable_motor(joint,brake or drive)
         b2d.joint.set_motor_speed(joint,drive and M.config.motor_speed*command.throttle or 0)
         b2d.joint.set_max_motor_torque(joint,brake and M.config.brake_torque or drive and M.config.drive_torque or 0)

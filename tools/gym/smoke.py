@@ -33,8 +33,8 @@ if args.case=='a1':
 elif args.case in ('a2','a3'):
     expected={'drive_dx','drive_speed','stopped_speed','max_angle','wheel_contact','camera_follow','brake_priority'}
     if args.case=='a3':
-        expected.update({'resets','reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload','reset_ms_min','reset_ms_p50','reset_ms_max','request_ready_ms_max'})
-        assert cases['resets']==100 and all(cases[x] is True for x in ['reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload'])
+        expected.update({'resets','asleep_before_redrive','reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload','reset_ms_min','reset_ms_p50','reset_ms_max','request_ready_ms_max'})
+        assert cases['resets']==100 and all(cases[x] is True for x in ['asleep_before_redrive','reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload'])
         assert 0<=cases['reset_ms_min']<=cases['reset_ms_p50']<=cases['reset_ms_max']
         assert cases['request_ready_ms_max']>=cases['reset_ms_max']
     assert set(cases)==expected

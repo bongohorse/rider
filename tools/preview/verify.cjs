@@ -4,7 +4,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 async function main(){
-  const [target,sha,out]=process.argv.slice(2);
+  const [target,sha,buildId,out]=process.argv.slice(2);
+  if(!/^[0-9]+-[0-9]+$/.test(buildId))throw Error('Expected build ID');
   if(!/^[a-f0-9]{40}$/.test(sha))throw Error('Expected full SHA');
   fs.mkdirSync(out,{recursive:true});
   let server,browser;
@@ -41,17 +42,17 @@ async function main(){
         throw error;
       }
       const current=new URL(page.url());
-      if(!current.pathname.endsWith('/builds/'+sha+'/index.html')||current.search!=='?preview-check=1'||current.hash!=='#verify')throw Error('Loader lost build identity/query/fragment');
-      // Wait for two rendered frames after READY; readiness is not a device/feel result.
-      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      if(!current.pathname.endsWith('/builds/'+sha+'/'+buildId+'/index.html')||current.search!=='?preview-check=1'||current.hash!=='#verify')throw Error('Loader lost build identity/query/fragment');
+      // Capture a settled view after 30 rendered frames; this is not phone performance/feel evidence.
+      await page.evaluate(async()=>{for(let i=0;i<30;i++)await new Promise(requestAnimationFrame);});
       await page.screenshot({path:path.join(out,spec.name+'.png')});
       fs.writeFileSync(path.join(out,spec.name+'.log'),logs.join('\n'));
       if(errors.length)throw Error(errors.join('\n'));
       results.push({name:spec.name,status:'PASS',url:page.url(),viewport:spec.viewport});
       await context.close();
     }
-    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
-    console.log(JSON.stringify({source_sha:sha,status:'PASS',cases:results}));
+    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
+    console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));
   }finally{if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

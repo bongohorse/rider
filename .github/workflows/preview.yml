@@ -28,12 +28,14 @@ jobs:
         run: python tools/project.py build --target html5 --configuration release --fixture gym --output artifacts/preview/bundle
       - name: Package exact source with unique asset paths
         env:
+          BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python tools/preview/package.py --bundle artifacts/preview/bundle --output _site --sha "$SOURCE_SHA"
+        run: python tools/preview/package.py --bundle artifacts/preview/bundle --output _site --sha "$SOURCE_SHA" --build-id "$BUILD_ID"
       - name: Verify release loader and gym on desktop and phone viewport
         env:
+          BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: node tools/preview/verify.cjs _site "$SOURCE_SHA" artifacts/preview/verification
+        run: node tools/preview/verify.cjs _site "$SOURCE_SHA" "$BUILD_ID" artifacts/preview/verification
       - name: Upload deployable Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:

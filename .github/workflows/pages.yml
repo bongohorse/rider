@@ -37,8 +37,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Verify public deployment source and runtime
         env:
+          BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
-        run: node tools/preview/verify.cjs https://bongohorse.github.io/rider/ "$SOURCE_SHA" artifacts/deployed
+        run: node tools/preview/verify.cjs https://bongohorse.github.io/rider/ "$SOURCE_SHA" "$BUILD_ID" artifacts/deployed
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

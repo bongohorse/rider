@@ -117,9 +117,11 @@ function on_input(self, action_id, action)
     if action.pressed then self.held[action_id] = true end
     if action.released then self.held[action_id] = nil end
     if self.testcase=="a3" and self.reset_phase=="await_release" and action_id==hash("throttle_up") and action.released then
+        self.reset_phase="await_press"
+        emit(self,"phase",{name="redrive"})
+    elseif self.testcase=="a3" and self.reset_phase=="await_press" and action_id==hash("throttle_up") and action.pressed then
         self.reset_phase="redrive"
         self.redrive_tick=0
-        emit(self,"phase",{name="redrive"})
     end
 end
 local function drive_test(self)
@@ -184,6 +186,9 @@ local function reset_test(self)
         self.settle_tick=self.settle_tick+1
         assert(self.last_command.throttle==0,"Held throttle reactivated after retry")
         if self.settle_tick==120 then
+            for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+                assert(not b2d.body.is_awake(body),"Re-drive must exercise a sleeping vehicle")
+            end
             assert(math.abs(vehicle.state(self.vehicle).x)<2,"Reset drifted from spawn")
             self.redrive_x=vehicle.state(self.vehicle).x
             self.reset_phase="await_release"
@@ -192,13 +197,15 @@ local function reset_test(self)
     elseif self.reset_phase=="redrive" then
         self.redrive_tick=self.redrive_tick+1
         if self.redrive_tick==120 then
-            assert(vehicle.state(self.vehicle).x-self.redrive_x>150,"Fresh input did not drive after resets")
+            local state=vehicle.state(self.vehicle)
+            assert(state.x-self.redrive_x>150,"Fresh input did not drive after resets: "..json.encode({dx=state.x-self.redrive_x,y=state.y,vx=state.vx,command=self.last_command}))
             local cases=self.drive_cases
             table.sort(self.reset_ms)
             cases.resets=self.reset_count
             cases.bounds_recovery=self.bounds_count==1
             cases.input_cleared=true
             cases.redrive=true
+            cases.asleep_before_redrive=true
             assert(self.world_loads==1,"Retry reloaded the world")
             assert(self.bounds_labelled,"Bounds recovery reason was not displayed")
             cases.no_collection_reload=self.world_loads==1
