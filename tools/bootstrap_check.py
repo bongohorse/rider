@@ -47,7 +47,10 @@ def validate(root):
             if workflow.get('permissions') != {'contents': 'read'}:
                 errors.append(f'{p.name}: expected read-only contents permission')
             for job in workflow['jobs'].values():
-                if not job.get('timeout-minutes'):
+                use = job.get('uses', '')
+                if use and not re.fullmatch(r'\./\.github/workflows/[\w.-]+\.ya?ml', use):
+                    errors.append(f'{p.name}: only local reusable workflows are allowed: {use}')
+                if not job.get('uses') and not job.get('timeout-minutes'):
                     errors.append(f'{p.name}: job timeout missing')
                 for step in job.get('steps', []):
                     use = step.get('uses', '')

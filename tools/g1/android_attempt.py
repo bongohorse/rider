@@ -17,3 +17,5 @@ except Exception as exc:
     report.update(build='FAIL',error=str(exc),follow_up='G2: resolve prerequisites and produce installable debug APK')
 (output/'attempt.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report))
+
+raise SystemExit(0 if report['build'] == 'PASS' else 1)
