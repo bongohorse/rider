@@ -4,7 +4,7 @@ Updated 2026-10-15. This is the sole current progress/blocker source; linked acc
 
 ## Current work
 
-S1–S2 are complete. Claudio has read S3's [brief](docs/GAME_DESIGN.md) and provided the design direction recorded in the [plan](docs/PLAN.md). The feedback is incorporated; feel/comfort/fairness decisions await the planned playable trials. M1 has not started in this documentation update. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
+S1–S2 are complete. Claudio has read S3's [brief](docs/GAME_DESIGN.md) and provided the design direction recorded in the [plan](docs/PLAN.md). The feedback is incorporated; feel/comfort/fairness decisions await the planned playable trials. Claudio authorized M1 on 2026-10-15. A1 is in progress; no gym runtime acceptance is claimed yet. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
 
 | Step | State | Evidence / remaining acceptance |
 | --- | --- | --- |
@@ -27,4 +27,4 @@ Reference phone: Xiaomi Mi 10T Pro / Android 12 / Snapdragon 865 / 2400×1080 / 
 
 ## Next implementation step
 
-A1 (#16), the gym skeleton, is the next implementation task in M1. This feedback update does not implement gameplay. Build the planned trials before asking Claudio to choose touch layout, assist values or crash fairness. M3 includes the required tilt experiment; final retention follows the actual phone comparison. At each milestone end, report the preview URL, request Claudio's drive test and wait for next-milestone approval.
+Current work: A1 (#16), gym skeleton. Then A2 (#17), A3 (#18), A4 (#19), one reviewed PR each. Stop at M1 completion for Claudio's drive test; M2 is not authorized. Build the planned trials before asking Claudio to choose touch layout, assist values or crash fairness. M3 includes the required tilt experiment; final retention follows the actual phone comparison. At each milestone end, report the preview URL, request Claudio's drive test and wait for next-milestone approval.

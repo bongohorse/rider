@@ -121,7 +121,7 @@ def run(platform, output, variant=None):
         directory = Path(output).resolve() / f'scale-{scale}-fps-{fps}'
         directory.mkdir(parents=True, exist_ok=True)
         run_id = str(uuid.uuid4())
-        settings_core = ('[project]\ndependencies =\n' if platform == 'wasm-web' else '') + f'[physics]\nscale = {scale}\n[display]\nupdate_frequency = {fps}\n'
+        settings_core = '[bootstrap]\nmain_collection = /main/main.collectionc\n' + ('[project]\ndependencies =\n' if platform == 'wasm-web' else '') + f'[physics]\nscale = {scale}\n[display]\nupdate_frequency = {fps}\n'
         identity = (ROOT / 'game.project').read_bytes() + (ROOT / 'main/physics.appmanifest').read_bytes() + settings_core.encode()
         config_hash = hashlib.sha256(identity).hexdigest()
         settings = directory / 'runner.settings'

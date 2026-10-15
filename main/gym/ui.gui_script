@@ -1,0 +1,9 @@
+function init(self)
+    local title = gui.new_text_node(vmath.vector3(480, 498, 0), "DRIVING GYM")
+    gui.set_font(title, "default")
+    gui.set_scale(title, vmath.vector3(1.2, 1.2, 1))
+    gui.set_color(title, vmath.vector4(0.86, 0.95, 0.91, 1))
+    local hint = gui.new_text_node(vmath.vector3(480, 466, 0), "Flat station | Free practice | No timer")
+    gui.set_font(hint, "default")
+    gui.set_scale(hint, vmath.vector3(0.65, 0.65, 1))
+end

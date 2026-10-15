@@ -1,0 +1,7 @@
+aspect_ratio: 1.777778
+fov: 0.785398
+near_z: 0.1
+far_z: 1000.0
+orthographic_projection: 1
+orthographic_zoom: 1.0
+orthographic_mode: ORTHO_MODE_AUTO_FIT

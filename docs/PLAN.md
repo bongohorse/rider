@@ -5,7 +5,7 @@ Authoritative plan, adopted from the approved English handoff. [STATUS.md](../ST
 ## Context
 
 - Rider is a 2D mobile driving game: Defold 1.14.0 (engine commit `a81dbb0478e8b73931dc2d671563204f6ac0ef82`), integrated Box2D 3.1.0, Trials- and early-TrackMania-inspired.
-- G0–G2 are complete (see `docs/history/G2_ACCEPTANCE.md`). There is no gameplay code yet.
+- G0–G2 are complete (see `docs/history/G2_ACCEPTANCE.md`). That handoff predates gameplay implementation; consult STATUS.md for current progress.
 - New direction: a **Driving Gym** replaces the old G3 and most of G4a. Work is organised as GitHub issues in milestones M1–M5 instead of gate documents.
 
 ## Decisions (binding)

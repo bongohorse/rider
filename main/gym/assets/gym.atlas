@@ -1,0 +1,2 @@
+images { image: "/main/gym/assets/checker.png" }
+extrude_borders: 2
