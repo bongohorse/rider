@@ -4,13 +4,13 @@ Updated 2026-10-15. This is the sole current progress/blocker source; linked acc
 
 ## Current work
 
-Preparation S1–S3 for the [Driving Gym plan](docs/PLAN.md). M1 has not started. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
+S1–S2 are complete. S3's [game design brief](docs/GAME_DESIGN.md) is prepared for Claudio's confirmation under the [Driving Gym plan](docs/PLAN.md). M1 has not started. G0–G2 are complete at their documented historical sources, not a gameplay acceptance.
 
 | Step | State | Evidence / remaining acceptance |
 | --- | --- | --- |
-| S1 required CI aggregation | In review | [PR #15](https://github.com/bongohorse/rider/pull/15); negative propagation probe PASS (red physics → red required); final restored head CI running. Claudio confirmed protection update; branch metadata verifies only `required`, Actions app 15368, enforcement `everyone`. |
-| S2 issue/document migration | In preparation | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) prepared/created. Five milestones and five labels created; all 22 issues assigned and read back (counts M1/M2/M3/M4/M5 = 4/8/2/7/1). [Setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). Final PR CI/review pending. |
-| S3 design brief v0 | Prepared; confirmation pending | [Brief](docs/GAME_DESIGN.md) covers loop, session, controls, fail/retry, differentiation and open questions. Claudio must read/confirm before M1. |
+| S1 required CI aggregation | PASS; merged | [PR #15](https://github.com/bongohorse/rider/pull/15), merge `82c70b19d2ef2e893eafa8770e5182cba15b96d2`; [clean CI](https://github.com/bongohorse/rider/actions/runs/38745075743) at `dbb8ffaf5f9ecdab369453ea9dd3b6194de87e4d` PASS. Negative propagation and sole-required protection verified. |
+| S2 issue/document migration | PASS; merged | [PR #38](https://github.com/bongohorse/rider/pull/38), merge `67703b24d8d642fcfebc80c27f840a535b48a0d0`; [clean CI](https://github.com/bongohorse/rider/actions/runs/38746136550) at `2cba36d542e8cc7b27dfb2de7dd50a96e68088dd` PASS. Plan/contracts/history and all 22 issues (#16–#37) verified in five milestones (4/8/2/7/1) with five labels; [setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). |
+| S3 design brief v0 | Prepared; human confirmation pending | [Brief](docs/GAME_DESIGN.md), [PR #39](https://github.com/bongohorse/rider/pull/39): core loop, session, controls, fail/retry, differentiation and open choices. Claudio must read/confirm before M1; document integration does not grant this acceptance. |
 
 ## Preview and platform evidence
 
@@ -27,4 +27,4 @@ Reference phone: Xiaomi Mi 10T Pro / Android 12 / Snapdragon 865 / 2400×1080 / 
 
 ## Next authorized action
 
-Finish S1–S3 preparation and report the concrete design brief for confirmation. Do not begin A1/M1 until approved. After each milestone, report preview URL, request the drive test and wait for next-milestone approval.
+Obtain Claudio's reading/confirmation of the design brief v0. Suggested session length is 2–5 minutes; control layout and fair failure rules remain explicit test questions. Do not begin A1/M1 until approved. After each milestone, report preview URL, request the drive test and wait for next-milestone approval.
