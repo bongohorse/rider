@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "CANDIDATE_NOT_RUNTIME_VERIFIED",
+  "verified_on": "2026-10-15",
+  "defold": {
+    "version": "1.14.0",
+    "commit": "a81dbb0478e8b73931dc2d671563204f6ac0ef82",
+    "license": "Defold License 1.0",
+    "release_url": "https://github.com/defold/defold/releases/tag/1.14.0",
+    "assets": [
+      {
+        "name": "bob.jar",
+        "url": "https://github.com/defold/defold/releases/download/1.14.0/bob.jar",
+        "release_sha256": "90da834167c21be956af2be5a2a64b2ee1e16ad980dfa99f35a6b26516958d0f",
+        "download_verified": false
+      },
+      {
+        "name": "Defold-x86_64-linux.zip",
+        "url": "https://github.com/defold/defold/releases/download/1.14.0/Defold-x86_64-linux.zip",
+        "release_sha256": "15b07b95ea702dedc42166d9a341f7b732af7ac2bf6fe09341f2d3121f2023d8",
+        "download_verified": false
+      },
+      {
+        "name": "Defold-x86_64-win32.zip",
+        "url": "https://github.com/defold/defold/releases/download/1.14.0/Defold-x86_64-win32.zip",
+        "release_sha256": "91fec2bb7d3702f80646db058b22b1dc319e36db58b6d4a264223af61cf86d5f",
+        "download_verified": false
+      },
+      {
+        "name": "ref-doc.zip",
+        "url": "https://github.com/defold/defold/releases/download/1.14.0/ref-doc.zip",
+        "release_sha256": "847a1d74307a5c4217ea2a85eff6e02ae85bf88d0e9fe472160de8ccecc549c4",
+        "download_verified": false
+      }
+    ]
+  },
+  "bridge": {
+    "version": "2.5.0",
+    "commit": "567c7efb2f72626af71967984bd33dde856f0d36",
+    "release_url": "https://github.com/defold/extension-automation-bridge/releases/tag/2.5.0",
+    "license_status": "UNRESOLVED: no LICENSE/NOTICE found in recursive tagged tree; do not integrate until G2 resolves distribution permission",
+    "runtime_verified": false
+  },
+  "jdk": {
+    "major": 25,
+    "status": "candidate; no JDK 25 build executed"
+  },
+  "tools": {
+    "renovate": "44.161.0",
+    "pyyaml": "6.0.3"
+  },
+  "actions": {
+    "checkout": {
+      "version": "v7.0.1",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1"
+    },
+    "setup-python": {
+      "version": "v7.0.0",
+      "sha": "5fda3b95a4ea91299a34e894583c3862153e4b97"
+    },
+    "setup-node": {
+      "version": "v7.1.0",
+      "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1"
+    },
+    "upload-artifact": {
+      "version": "v7.0.2",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+    }
+  }
+}

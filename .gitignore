@@ -1,0 +1,16 @@
+/build/
+/artifacts/
+/.internal/
+/.cache/
+/.venv/
+/node_modules/
+__pycache__/
+*.pyc
+*.log
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+/bob.jar
+/Defold/
