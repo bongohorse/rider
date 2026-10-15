@@ -2,7 +2,7 @@
 
 A fresh 2D mobile driving game foundation: Defold, integrated Box2D 3, precise arcade handling and short Trials-inspired obstacle challenges.
 
-**G0 complete — repository bootstrap verified. Waiting for explicit G1 authorization. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
+**G0 complete — repository bootstrap verified. G1 authorized after the documentation split. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
 
 ## Verify the bootstrap
 
@@ -27,7 +27,7 @@ G0 evidence: [completion report](docs/G0_COMPLETION.md).
 - [G1 acceptance contract](docs/G1_ACCEPTANCE.md): physics PoC only, after explicit authorization.
 - [Toolchain candidates](docs/TOOLCHAIN_CANDIDATES.md): source-verified candidates, not runtime-approved pins.
 - [Execution and repository setup](docs/REPOSITORY_SETUP.md): permissions, Renovate and evidence boundaries.
-- [Masterplan](docs/BUGGY_LAB_MASTERPLAN_v1.4.1.md) and [review clarifications](docs/DECISIONS/0001-bootstrap-scope.md).
+- [Documentation index](docs/README.md): targeted gate/topic reading, plus [review clarifications](docs/DECISIONS/0001-bootstrap-scope.md).
 
 UI and player-facing diagnostics will be English. Landscape is the initial gameplay basis. Android APK and Android Chrome are separate targets. A browser preview will be prepared during G1–G3 and published only within authorized deployment scope; G9 is the production release phase.
 
