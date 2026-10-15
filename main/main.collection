@@ -1,0 +1,6 @@
+name: "main"
+instances {
+  id: "controller"
+  prototype: "/main/controller.go"
+}
+instances { id: "floor" prototype: "/main/g1/floor.go" position { y: -20.0 } }

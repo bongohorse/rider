@@ -1,0 +1,4 @@
+name: "fixture"
+instances { id: "chassis" prototype: "/main/g1/chassis.go" position { x: 300.0 y: 300.0 } }
+instances { id: "wheel" prototype: "/main/g1/wheel.go" position { x: 300.0 y: 250.0 } }
+instances { id: "owner" prototype: "/main/g1/proxy.go" }

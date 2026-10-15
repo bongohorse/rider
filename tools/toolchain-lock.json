@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "approved_gate": "G1",
+  "engine": {
+    "version": "1.14.0",
+    "commit": "a81dbb0478e8b73931dc2d671563204f6ac0ef82",
+    "backend": "integrated Box2D 3.1.0",
+    "extender": "https://build.defold.com",
+    "manifest": "main/physics.appmanifest"
+  },
+  "bob": {
+    "url": "https://github.com/defold/defold/releases/download/1.14.0/bob.jar",
+    "sha256": "90da834167c21be956af2be5a2a64b2ee1e16ad980dfa99f35a6b26516958d0f"
+  },
+  "jdk": {
+    "vendor": "Eclipse Temurin",
+    "build": "25.0.4.1+1",
+    "ci_selector": "25.0.4",
+    "enforcement": "build.py rejects any effective build other than Temurin-25.0.4.1+1"
+  },
+  "baseline_evidence": {
+    "source_sha": "7594e500fafa074b65150dd45a3224369dea5033",
+    "run": "https://github.com/bongohorse/rider/actions/runs/38697533465",
+    "platforms": ["x86_64-linux headless", "x86_64-win32 headless", "wasm-web debug"],
+    "browser": "Chromium 156.0.8078.4 via Playwright 1.64.1",
+    "android": "APK built; installation and device runtime not verified"
+  },
+  "automation_bridge": "Not approved in G1; belongs to G2"
+}

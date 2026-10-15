@@ -2,7 +2,7 @@
 
 A fresh 2D mobile driving game foundation: Defold, integrated Box2D 3, precise arcade handling and short Trials-inspired obstacle challenges.
 
-**G0 complete — repository bootstrap verified. G1 authorized after the documentation split. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
+**G0 complete — repository bootstrap verified. G1 physics PoC passed on Linux, Windows and HTML5. The authorized loop continues with G2 tooling. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
 
 ## Verify the bootstrap
 
@@ -24,7 +24,7 @@ G0 evidence: [completion report](docs/G0_COMPLETION.md).
 
 ## Next steps
 
-- [G1 acceptance contract](docs/G1_ACCEPTANCE.md): physics PoC only, after explicit authorization.
+- [G1 acceptance contract](docs/G1_ACCEPTANCE.md): physics PoC results and test limits.
 - [Toolchain candidates](docs/TOOLCHAIN_CANDIDATES.md): source-verified candidates, not runtime-approved pins.
 - [Execution and repository setup](docs/REPOSITORY_SETUP.md): permissions, Renovate and evidence boundaries.
 - [Documentation index](docs/README.md): targeted gate/topic reading, plus [review clarifications](docs/DECISIONS/0001-bootstrap-scope.md).

@@ -1,0 +1,28 @@
+[project]
+title = RiderG1
+version = 0.1.0
+
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[display]
+width = 960
+height = 540
+vsync = 0
+update_frequency = 60
+
+[engine]
+fixed_update_frequency = 60
+
+[physics]
+type = 2D
+use_fixed_timestep = 1
+scale = 0.01
+gravity_y = -981
+max_collision_object_count = 256
+
+[box2d]
+sub_step_count = 4
+
+[native_extension]
+app_manifest = /main/physics.appmanifest

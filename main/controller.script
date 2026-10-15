@@ -1,0 +1,196 @@
+-- One session owner. No other script writes physics; Defold owns all world steps.
+local sessions = require "main.g1.sessions"
+local IDS = {"backend", "body_collision", "wheel_motor", "wheel_spring", "units", "fixed_ticks", "cleanup_reset", "collection_cleanup"}
+local function emit(self, event, data)
+    data = data or {}
+    data.event, data.run_id = event, self.run_id
+    print("RIDER_G1 " .. json.encode(data))
+end
+local function check(condition, message)
+    if not condition then error(message, 2) end
+end
+local function near(value, expected, tolerance)
+    return math.abs(value - expected) <= tolerance
+end
+local function result(self, id, data)
+    check(not self.results[id], "duplicate case " .. id)
+    self.results[id] = true
+    emit(self, "case", {id=id, status="PASS", measurements=data})
+end
+local function body(id)
+    return b2d.get_body(msg.url(nil, id, "body"))
+end
+local function pair(self)
+    self.a_id = factory.create("#chassis", vmath.vector3(300, 300, 0))
+    self.b_id = factory.create("#wheel", vmath.vector3(300, 250, 0))
+end
+local function join(a, b)
+    return b2d.joint.create_wheel(a, b, {
+        local_anchor_a=vmath.vector3(0,-50,0), local_anchor_b=vmath.vector3(),
+        local_axis_a=vmath.vector3(0,1,0), enable_spring=true, hertz=3,
+        damping_ratio=0.7, enable_motor=true, motor_speed=20, max_motor_torque=10000,
+        collide_connected=false
+    })
+end
+local function setup_pair(self)
+    self.a, self.b = body(self.a_id), body(self.b_id)
+    check(b2d.body.is_valid(self.a) and b2d.body.is_valid(self.b), "factory bodies unavailable")
+    b2d.body.set_gravity_scale(self.a, 0)
+    b2d.body.set_fixed_rotation(self.a, true)
+    self.motor_start=b2d.body.get_angular_velocity(self.b)
+    check(math.abs(self.motor_start)<0.001,"wheel did not start at rest")
+    self.joint = join(self.a, self.b)
+    check(b2d.joint.is_valid(self.joint), "wheel joint unavailable")
+end
+local function protected(self, fn, ...)
+    if self.failed or self.done then return end
+    local ok, err = pcall(fn, self, ...)
+    if not ok then
+        self.failed = true
+        emit(self, "suite_end", {status="FAIL", error=tostring(err), count=self.count or 0})
+        if sys.get_sys_info().system_name ~= "HTML5" then sys.exit(1) end
+    end
+end
+local function begin(self)
+    self.run_id = sys.get_config_string("rider.run_id", "missing")
+    self.results, self.tick, self.frames, self.count = {}, 0, 0, 0
+    emit(self, "suite_start", {protocol=1, suite="g1", expected=IDS,
+        source_sha=sys.get_config_string("rider.source_sha", "missing"),
+        config_hash=sys.get_config_string("rider.config_hash", "missing"),
+        scale=sys.get_config_number("physics.scale",0),
+        substeps=sys.get_config_int("box2d.sub_step_count",0)})
+    check(self.run_id ~= "missing", "missing runner ID")
+    local version = b2d.get_version()
+    check(version.major == 3, "expected Box2D 3")
+    check(sys.get_config_boolean("physics.use_fixed_timestep",false), "fixed timestep disabled")
+    check(sys.get_config_int("engine.fixed_update_frequency",0)==60, "fixed frequency not 60")
+    check(sys.get_config_int("box2d.sub_step_count",0)==4, "solver substeps not four")
+    local engine=sys.get_engine_info()
+    check(engine.version=="1.14.0", "unexpected Defold version")
+    check(engine.version_sha1=="a81dbb0478e8b73931dc2d671563204f6ac0ef82", "unexpected engine source SHA: "..engine.version_sha1)
+    result(self, "backend", {version=version, engine=engine.version, engine_sha=engine.version_sha1})
+    self.drop_id = factory.create("#wheel", vmath.vector3(-300,500,0))
+    pair(self)
+    self.state = "initialize"
+end
+function init(self) protected(self, begin) end
+local function frame(self, dt)
+    self.frames = self.frames + 1
+    if self.state == "initialize" then
+        setup_pair(self)
+        self.drop = body(self.drop_id)
+        b2d.body.set_gravity_scale(self.b, 1)
+        self.tick, self.measure_frames = -1, self.frames
+        self.drop_start = b2d.body.get_position(self.drop).y
+        self.state = "measure"
+    elseif self.state == "cleanup_create" then
+        pair(self)
+        self.state = "cleanup_setup"
+    elseif self.state == "cleanup_setup" then
+        setup_pair(self)
+        if self.cycle % 2 == 0 then
+            b2d.joint.destroy(self.joint)
+            check(not b2d.joint.is_valid(self.joint), "explicit joint destruction failed")
+        end
+        go.delete(self.a_id)
+        go.delete(self.b_id)
+        self.state = "cleanup_wait"
+    elseif self.state == "cleanup_wait" then
+        if go.exists(self.a_id) or go.exists(self.b_id) then return end
+        check(not b2d.body.is_valid(self.a) and not b2d.body.is_valid(self.b), "stale body still valid")
+        check(not b2d.joint.is_valid(self.joint), "body deletion retained joint")
+        self.a, self.b, self.joint, self.a_id, self.b_id = nil,nil,nil,nil,nil
+        self.cycle = self.cycle + 1
+        if self.cycle == 100 then
+            result(self,"cleanup_reset",{cycles=100, explicit=50, automatic=50, generation=self.cycle})
+            self.proxy_session=sessions.create(self.run_id)
+            self.state="proxy_loading"
+            msg.post("#proxy", "load")
+        else self.state="cleanup_create" end
+
+    end
+end
+function update(self, dt) protected(self, frame, dt) end
+local function fixed(self, dt)
+    if self.state ~= "measure" then return end
+    if self.tick == -1 then
+        -- Establish tick zero inside the fixed owner. Creation can precede one or
+        -- two startup steps depending on render frequency; erase that history.
+        b2d.body.set_transform(self.drop,vmath.vector3(-300,500,0),0)
+        b2d.body.set_linear_velocity(self.drop,vmath.vector3())
+        self.drop_start=b2d.body.get_position(self.drop).y
+        self.measure_frames,self.tick=self.frames,0
+        return
+    end
+    self.tick=self.tick+1
+    check(near(dt,1/60,0.00001),"unexpected fixed delta")
+    if self.tick == 30 then
+        local fall=self.drop_start-b2d.body.get_position(self.drop).y
+        -- Integration/order allowance fixed before execution: 0.5s free fall ~122.6 px.
+        check(fall>110 and fall<136,"fall distance outside 110..136: "..fall)
+        self.fall=fall
+        self.at30={frames=self.frames-self.measure_frames,ticks=self.tick,dt=dt}
+    elseif self.tick == 120 then
+        local y=b2d.body.get_position(self.drop).y
+        check(near(y,5,1.5),"floor contact position not 5 +/- 1.5: "..y)
+        result(self,"body_collision",{rest_y=y,tolerance=1.5,expected_y=5})
+        local omega=b2d.body.get_angular_velocity(self.b)
+        check(omega>18 and omega<22,"motor rad/s outside18..22: "..omega)
+        result(self,"wheel_motor",{initial_angular_velocity=self.motor_start,angular_velocity=omega,target=20,tolerance=2})
+        self.deflection=b2d.body.get_position(self.a).y-50-b2d.body.get_position(self.b).y
+        check(self.deflection>1.5 and self.deflection<4.0,"loaded spring deflection outside1.5..4: "..self.deflection)
+        b2d.body.set_gravity_scale(self.b,0)
+        self.released_velocity=b2d.body.get_linear_velocity(self.b).y
+    elseif self.tick == 240 then
+        local offset=b2d.body.get_position(self.a).y-50-b2d.body.get_position(self.b).y
+        -- Both dynamic bodies retain COM velocity; relative return is the spring assertion.
+        check(math.abs(offset)<0.2,"spring did not return within .2: "..offset)
+        result(self,"wheel_spring",{loaded_deflection=self.deflection,returned_offset=offset,hertz=3,damping_ratio=0.7})
+        b2d.body.set_gravity_scale(self.drop,0)
+        b2d.body.set_transform(self.drop,vmath.vector3(-300,500,0),0)
+        b2d.body.set_linear_velocity(self.drop,vmath.vector3(120,0,0))
+        self.command_x=b2d.body.get_position(self.drop).x
+        self.command_tick=self.tick
+    elseif self.tick == 241 then
+        self.command_dx=b2d.body.get_position(self.drop).x-self.command_x
+        check(near(self.command_dx,2,0.05),"one-tick velocity movement not 2 +/- .05: "..self.command_dx)
+    elseif self.tick == 270 then
+        local dx=b2d.body.get_position(self.drop).x-self.command_x
+        check(near(dx,60,0.1),"velocity conversion not120 px/s: "..dx)
+        result(self,"units",{fall_30=self.fall,velocity_dx_30=dx,scale=sys.get_config_number("physics.scale",0)})
+        result(self,"fixed_ticks",{dt=dt,one_tick_dx=self.command_dx,first_30=self.at30,frames=self.frames-self.measure_frames,ticks=self.tick,
+            ordering="command set in fixed_update; next fixed_update observes one physics step"})
+        b2d.joint.destroy(self.joint)
+        go.delete(self.a_id);go.delete(self.b_id);go.delete(self.drop_id)
+        self.cycle=0
+        self.state="cleanup_create"
+    end
+end
+function fixed_update(self, dt) protected(self, fixed, dt) end
+local function message(self, id, data)
+    if id==hash("proxy_loaded") then
+        check(self.state=="proxy_loading","stale proxy_loaded")
+        msg.post("#proxy","init");msg.post("#proxy","enable")
+        self.state="proxy_initializing"
+    elseif id==hash("fixture_ready") then
+        check(self.state=="proxy_initializing","unexpected fixture_ready")
+        check(data.ok and data.generation==self.proxy_session.generation,"proxy setup: "..data.error)
+        msg.post("#proxy","disable")
+        msg.post("#proxy","final")
+        msg.post("#proxy","unload")
+        self.state="proxy_unloading"
+    elseif id==hash("proxy_unloaded") then
+        check(self.state=="proxy_unloading","stale proxy_unloaded")
+        check(self.proxy_session.finalized,"collection final callback missing")
+        check(not b2d.body.is_valid(self.proxy_session.a) and not b2d.body.is_valid(self.proxy_session.b),"collection retained bodies")
+        check(not b2d.joint.is_valid(self.proxy_session.joint),"collection retained joint")
+        sessions.release(self.run_id)
+        self.proxy_session=nil
+        result(self,"collection_cleanup",{completion="proxy_unloaded",stale_handles=0})
+        for _,test in ipairs(IDS) do check(self.results[test],"missing "..test) end
+        self.done=true
+        emit(self,"suite_end",{status="PASS",count=#IDS,passed=#IDS})
+        if sys.get_sys_info().system_name~="HTML5" then sys.exit(0) end
+    end
+end
+function on_message(self, id, data) protected(self, message, id, data) end
