@@ -31,3 +31,5 @@ Pinned source additionally consulted: `script_box2d_body_v3.cpp` set_transform/s
 Reset source follow-up: pinned `engine/engine/src/engine.cpp` defaults `physics.allow_dynamic_transforms` to 1. `engine/physics/src/physics/box2d/box2d_physics.cpp`, StepWorld2D, copies GO transforms to dynamic bodies before stepping. Retry therefore synchronizes both owning GO pose and body pose, preserving sprite z, and the smoke checks persistence on the next tick. Initial body-only reset/fault injection was rejected by the runtime test. The bounds fault injection likewise moves both representations.
 
 Browser input synchronization: the smoke holds R until the controller confirms manual retry, and waits for the engine-observed throttle release before a fresh press. Same-frame down/up pulses are not treated as reliable sampled engine input. The first retry must be manual; an incidental bounds reset cannot substitute for it.
+
+The re-drive interval begins only after the engine observes the fresh throttle press, so browser/runner input delivery delay is excluded from the declared 120 driving ticks.
