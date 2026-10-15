@@ -25,6 +25,7 @@ local function reset(self)
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1
     self.resetting = false
+    self.check_reset_pose = self.testcase=="a3"
     local elapsed = (socket.gettime()-started)*1000
     if self.testcase=="a3" then self.reset_ms[#self.reset_ms+1] = elapsed end
     self.latency_ms = math.max(self.latency_ms,(socket.gettime()-request.requested)*1000)
@@ -153,8 +154,13 @@ local function reset_test(self)
         if self.reset_count<100 then
             if self.reset_count==49 then
                 -- Explicit fault injection; only a3 test mode mutates this pose.
+                self.check_reset_pose = false
                 for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
                     local p=b2d.body.get_position(body)
+                    local id=body==self.vehicle.chassis and self.vehicle.ids.chassis or nil
+                    for i,wheel in ipairs(self.vehicle.wheels) do if body==wheel then id=self.vehicle.ids[i] end end
+                    local visual=go.get_position(id)
+                    go.set_position(vmath.vector3(p.x,p.y-800,visual.z),id)
                     b2d.body.set_transform(body,vmath.vector3(p.x,p.y-800,0),0)
                 end
             else request_reset(self,"manual") end
@@ -200,6 +206,10 @@ function fixed_update(self, dt)
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
+        if self.check_reset_pose then
+            assert(math.abs(state.x-vehicle.config.spawn_x)<0.1 and math.abs(state.y-vehicle.config.spawn_y)<2,"Retry pose was overwritten before the next tick")
+            self.check_reset_pose=false
+        end
         if state.x<bounds.min_x or state.x>bounds.max_x or state.y<bounds.min_y then request_reset(self,"bounds") end
         if self.pending_reset then reset(self) end
         self.last_command = command(self)

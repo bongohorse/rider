@@ -49,6 +49,12 @@ function M.reset(v)
         assert(b2d.body.is_valid(b), "Retained body invalid")
         local x = c.spawn_x + (i>1 and c.wheel_x[i-1] or 0)
         local y = c.spawn_y + (i>1 and c.wheel_y or 0)
+        -- Dynamic transforms default on in this engine: synchronize the owning
+        -- GO as well, otherwise the next step copies the old GO pose back.
+        local id=i==1 and v.ids.chassis or v.ids[i-1]
+        local visual=go.get_position(id)
+        go.set_position(vmath.vector3(x,y,visual.z),id)
+        go.set_rotation(vmath.quat(),id)
         b2d.body.set_transform(b,vmath.vector3(x,y,0),0)
         b2d.body.set_linear_velocity(b,vmath.vector3())
         b2d.body.set_angular_velocity(b,0)
