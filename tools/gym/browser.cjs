@@ -43,7 +43,8 @@ async function main() {
             await page.keyboard.up('ArrowDown');await page.keyboard.down('ArrowUp');await page.keyboard.down('r');
           }
           if(data.name==='retry_release')await page.keyboard.up('r');
-          if(data.name==='redrive') {await page.keyboard.up('ArrowUp');await page.keyboard.down('ArrowUp');}
+          if(data.name==='release_for_redrive')await page.keyboard.up('ArrowUp');
+          if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
       }

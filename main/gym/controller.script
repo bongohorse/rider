@@ -113,6 +113,11 @@ function on_input(self, action_id, action)
     if self.resetting then return end
     if action.pressed then self.held[action_id] = true end
     if action.released then self.held[action_id] = nil end
+    if self.testcase=="a3" and self.reset_phase=="await_release" and action_id==hash("throttle_up") and action.released then
+        self.reset_phase="redrive"
+        self.redrive_tick=0
+        emit(self,"phase",{name="redrive"})
+    end
 end
 local function drive_test(self)
     self.drive_tick = self.drive_tick + 1
@@ -178,9 +183,8 @@ local function reset_test(self)
         if self.settle_tick==120 then
             assert(math.abs(vehicle.state(self.vehicle).x)<2,"Reset drifted from spawn")
             self.redrive_x=vehicle.state(self.vehicle).x
-            self.reset_phase="redrive"
-            self.redrive_tick=0
-            emit(self,"phase",{name="redrive"})
+            self.reset_phase="await_release"
+            emit(self,"phase",{name="release_for_redrive"})
         end
     elseif self.reset_phase=="redrive" then
         self.redrive_tick=self.redrive_tick+1
