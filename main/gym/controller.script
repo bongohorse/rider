@@ -1,5 +1,6 @@
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
+local vehicle = require "main.gym.vehicle"
 local function emit(self, event, data)
     data = data or {}
     data.event = event
@@ -24,6 +25,7 @@ local function setup(self)
     for x = -4096 + 128, 8192 - 128, 256 do
         factory.create("#checker", vmath.vector3(x, 16, -1))
     end
+    if self.testcase ~= "a1" then self.vehicle = vehicle.spawn() end
     self.ready = true
     msg.post("main:/loader#script", "gym_ready")
     emit(self, "ready", {chain_segments = #self.segments, tiles = 48, floor_y = 80})
@@ -34,7 +36,11 @@ local function setup(self)
 end
 function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
-    self.test = sys.get_config_string("rider.gym_test", "") == "a1"
+    self.testcase = sys.get_config_string("rider.gym_test", "")
+    self.test = self.testcase == "a1"
+    self.held = {}
+    self.drive_tick = 0
+    self.max_angle = 0
     self.target = hash("/focus")
     self.tick = 0
     msg.post(".", "acquire_input_focus")
@@ -45,6 +51,11 @@ function update(self, dt)
         self.probe = b2d.get_body(msg.url(nil, self.probe_id, "body"))
         if b2d.body.is_valid(self.probe) then self.test_phase = "drop" end
     end
+    if self.vehicle and not self.vehicle.ready then
+        vehicle.attach(self.vehicle)
+        self.target = self.vehicle.ids.chassis
+        emit(self,"vehicle_ready",{bodies=3,joints=2})
+    end
     local target = go.get_position(self.target)
     go.set_position(vmath.vector3(target.x, math.max(250, target.y + 70), 500), "/camera")
     if self.test_phase == "camera" then
@@ -54,7 +65,48 @@ function update(self, dt)
         emit(self, "suite_end", {status = "PASS", cases = {chain_contact = self.rest_y, camera_follow = true}})
     end
 end
+local function command(self)
+    local brake = self.held[hash("brake_down")] or self.held[hash("brake_s")]
+    local throttle = self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
+    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, lean = 0}
+end
+function on_input(self, action_id, action)
+    if action.pressed then self.held[action_id] = true end
+    if action.released then self.held[action_id] = nil end
+end
+local function drive_test(self)
+    self.drive_tick = self.drive_tick + 1
+    local t = self.drive_tick
+    local state = vehicle.state(self.vehicle)
+    self.max_angle = math.max(self.max_angle,math.abs(state.angle))
+    assert(self.max_angle < 0.6,"Buggy tipped on flat launch: "..self.max_angle)
+    if t == 60 then
+        self.start_x = state.x
+        emit(self,"phase",{name="throttle"})
+    elseif t == 240 then
+        self.drive_dx, self.drive_speed = state.x-self.start_x,state.vx
+        assert(self.drive_dx > 150 and self.drive_speed > 100,"Buggy did not drive forward")
+        emit(self,"phase",{name="brake"})
+    elseif t == 300 then
+        assert(self.last_command.brake_reverse==1 and self.last_command.throttle==0,"Brake did not win over throttle")
+        emit(self,"phase",{name="release_throttle"})
+    elseif t == 360 then
+        assert(math.abs(state.vx)<12,"Buggy did not brake: "..state.vx)
+        for _,wheel in ipairs(self.vehicle.wheels) do
+            assert(#b2d.body.get_contact_data(wheel)>0,"Wheel lost floor contact")
+        end
+        assert(math.abs(go.get_position("/camera").x-state.x)<12,"Camera did not follow buggy")
+        emit(self,"suite_end",{status="PASS",cases={drive_dx=self.drive_dx,drive_speed=self.drive_speed,
+            stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}})
+        self.testcase = "done"
+    end
+end
 function fixed_update(self, dt)
+    if self.vehicle and self.vehicle.ready then
+        self.last_command = command(self)
+        vehicle.apply(self.vehicle,self.last_command)
+        if self.testcase == "a2" then drive_test(self) end
+    end
     if not self.ready or self.test_phase ~= "drop" then return end
     self.tick = self.tick + 1
     assert(math.abs(dt - 1/60) < 0.00001, "Gym fixed timestep changed")
@@ -70,5 +122,5 @@ end
 function final(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
-    self.terrain, self.chain, self.segments, self.probe = nil, nil, nil, nil
+    self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
 end

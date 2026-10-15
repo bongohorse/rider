@@ -27,6 +27,7 @@ async function main() {
     browser=await chromium.launch();
     const page=await browser.newPage({viewport:{width:960,height:540}});
     let resolveDone, rejectDone;
+    let input = Promise.resolve();
     const done=new Promise((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
     page.on('console',message=>{
       const line=message.text();lines.push(line);
@@ -34,6 +35,11 @@ async function main() {
       if(line.includes('RIDER_GYM ')) {
         const data=JSON.parse(line.split('RIDER_GYM ')[1]);
         if(data.source_sha!==expected||data.run_id!==runId)rejectDone(Error('Foreign gym evidence'));
+        if(data.event==='phase') input=input.then(async()=>{
+          if(data.name==='throttle')await page.keyboard.down('ArrowUp');
+          if(data.name==='brake')await page.keyboard.down('ArrowDown');
+          if(data.name==='release_throttle')await page.keyboard.up('ArrowUp');
+        }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
       }
     });
@@ -44,6 +50,8 @@ async function main() {
     try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),30000))]);}
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
+    await input;
+    await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
     await page.evaluate(()=>new Promise(requestAnimationFrame));
     await page.screenshot({path:path.join(root,'gym.png')});
     fs.writeFileSync(path.join(root,'browser-version.txt'),browser.version()+'\n');

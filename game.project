@@ -27,3 +27,6 @@ sub_step_count = 4
 
 [native_extension]
 app_manifest = /main/physics.appmanifest
+
+[input]
+game_binding = /input/game.input_bindingc
