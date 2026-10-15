@@ -47,8 +47,12 @@ def native(directory, collector, run_id):
 
 def browser(directory, collector):
     collector_file = directory / 'browser-lines.json'
-    result = subprocess.run(['node', str(ROOT / 'tools/g1/browser.cjs'), str(directory), str(collector_file)], timeout=100)
-    if result.returncode:
+    process = subprocess.Popen(['node', str(ROOT / 'tools/g1/browser.cjs'), str(directory), str(collector_file)], start_new_session=os.name != 'nt')
+    try:
+        code = process.wait(timeout=100)
+    finally:
+        stop(process)
+    if code:
         raise RuntimeError('Browser runner failed; see browser log')
     for line in json.loads(collector_file.read_text()):
         collector.feed(line)

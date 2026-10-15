@@ -75,7 +75,7 @@ local function frame(self, dt)
         setup_pair(self)
         self.drop = body(self.drop_id)
         b2d.body.set_gravity_scale(self.b, 1)
-        self.tick, self.measure_frames = 0, self.frames
+        self.tick, self.measure_frames = -1, self.frames
         self.drop_start = b2d.body.get_position(self.drop).y
         self.state = "measure"
     elseif self.state == "cleanup_create" then
@@ -108,6 +108,15 @@ end
 function update(self, dt) protected(self, frame, dt) end
 local function fixed(self, dt)
     if self.state ~= "measure" then return end
+    if self.tick == -1 then
+        -- Establish tick zero inside the fixed owner. Creation can precede one or
+        -- two startup steps depending on render frequency; erase that history.
+        b2d.body.set_transform(self.drop,vmath.vector3(-300,500,0),0)
+        b2d.body.set_linear_velocity(self.drop,vmath.vector3())
+        self.drop_start=b2d.body.get_position(self.drop).y
+        self.measure_frames,self.tick=self.frames,0
+        return
+    end
     self.tick=self.tick+1
     check(near(dt,1/60,0.00001),"unexpected fixed delta")
     if self.tick == 30 then
