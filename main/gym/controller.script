@@ -12,12 +12,13 @@ local function setup(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
     -- A collision resource must contain a shape in this engine. Replace its
     -- temporary seed with a script-created chain in this safe update window.
+    b2d.body.destroy_shape(self.terrain, 1)
+    assert(b2d.body.is_valid(self.terrain), "Seed removal invalidated terrain body")
     self.chain, self.segments = b2d.body.create_chain(self.terrain, {
         vertices = {vmath.vector3(8192, 0, 0), vmath.vector3(-4096, 0, 0)},
         prev_vertex = vmath.vector3(8448, 0, 0), next_vertex = vmath.vector3(-4352, 0, 0),
         friction = 0.8, restitution = 0, filter = {category_bits = 1, mask_bits = 1}
     })
-    b2d.body.destroy_shape(self.terrain, 1)
     local shapes = b2d.body.get_shapes(self.terrain)
     assert(#shapes == 1 and shapes[1].is_chain_segment, "Terrain must contain only the chain")
     for x = -4096 + 128, 8192 - 128, 256 do
