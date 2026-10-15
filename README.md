@@ -2,7 +2,7 @@
 
 A fresh 2D mobile driving game foundation: Defold, integrated Box2D 3, precise arcade handling and short Trials-inspired obstacle challenges.
 
-**Current phase: G0 — repository and toolchain bootstrap. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
+**G0 complete — repository bootstrap verified. Waiting for explicit G1 authorization. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
 
 ## Verify the bootstrap
 
@@ -19,6 +19,8 @@ npm run renovate:scan
 Windows: `pwsh -File tools/doctor.ps1 --json`. The same Python implementation runs on Windows and Linux. Doctor does not install software, contact an editor or print environment secrets.
 
 G0 doctor success means the bootstrap prerequisites work. Missing Defold/Bob/JDK 25 are WARN findings for later gates; `--require-g1` makes those missing prerequisites blocking. A detected tool is not a proven working build.
+
+G0 evidence: [completion report](docs/G0_COMPLETION.md).
 
 ## Next steps
 
