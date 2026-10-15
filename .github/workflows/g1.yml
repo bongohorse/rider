@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4.1'
+          java-version: '25.0.4'
       - name: Build exact backend engine
         run: python tools/g1/build.py --platform ${{ matrix.platform }} --output artifacts/g1/native
       - name: Probe runtime backend
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4.1'
+          java-version: '25.0.4'
       - name: Build HTML5 candidate
         run: python tools/g1/build.py --platform wasm-web --output artifacts/g1/html5
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
