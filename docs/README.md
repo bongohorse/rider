@@ -8,7 +8,7 @@ Read this index and the active gate first. Do **not** read every planning file b
 
 | Task | Read |
 |---|---|
-| Current work | [G1 acceptance](G1_ACCEPTANCE.md), then [G1 plan](gates/G1.md) |
+| Current work | [G1 progress](G1_PROGRESS.md), [G1 acceptance](G1_ACCEPTANCE.md), then [G1 plan](gates/G1.md) |
 | Rules and sign-off | [Principles](plan/principles.md), [gate policy](plan/gate-policy.md), [evidence policy](plan/evidence-policy.md) |
 | Completed setup | [G0 completion](G0_COMPLETION.md), [repository setup](REPOSITORY_SETUP.md) |
 | Tool selection | [Verified candidate provenance](TOOLCHAIN_CANDIDATES.md), [version policy](plan/toolchain.md) |
