@@ -2,7 +2,7 @@
 
 Read this index and the active gate first. Do **not** read every planning file by default. Open only the contracts needed for the current change; use `rg` to find additional requirements.
 
-**State:** G0 complete. User authorized the autonomous review → fix → complete → next-task loop on 2026-10-15. G1 is complete; G2 CLI increment passed; Bridge integration remains blocked on missing license evidence. Prerequisites remain mandatory.
+**State:** G0 complete. User authorized the autonomous review → fix → complete → next-task loop on 2026-10-15. G1 is complete; G2 CLI increment passed; Bridge implementation is explicitly authorized and its technical checks are active. The missing license record remains a documented provenance finding. Prerequisites remain mandatory.
 
 ## Start here
 

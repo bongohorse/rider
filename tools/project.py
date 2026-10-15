@@ -95,7 +95,7 @@ def main(argv=None):
         try:
             config_hash=hashlib.sha256((ROOT/'game.project').read_bytes()+(ROOT/'main/physics.appmanifest').read_bytes()).hexdigest()
             settings=output/'build.settings'
-            settings.write_text(f'[rider]\nrun_id = {uuid.uuid4()}\nsource_sha = {sha}\nconfig_hash = {config_hash}\n')
+            settings.write_text(('[project]\ndependencies =\n' if args.target=='html5' else '') + f'[rider]\nrun_id = {uuid.uuid4()}\nsource_sha = {sha}\nconfig_hash = {config_hash}\n')
             build(platform_for(args.target),output,settings=settings,variant=args.configuration)
             test={'id':'bundle','status':'PASS','detail':'Build only; no runtime or install claim'}
         except Exception as exc:

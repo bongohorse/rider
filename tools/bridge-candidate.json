@@ -1,0 +1,11 @@
+{
+  "release": "2.5.0",
+  "commit": "567c7efb2f72626af71967984bd33dde856f0d36",
+  "url": "https://github.com/defold/extension-automation-bridge/archive/567c7efb2f72626af71967984bd33dde856f0d36.zip",
+  "sha256": "94807c707dd2814f5038fc26a9a20bcb4428a18b5e6d581d031507926a003958",
+  "python_package_version": "3.0.0",
+  "native_reported_version": "2.0.0",
+  "api_version": "2",
+  "license_evidence": "Unresolved; user explicitly authorized implementation on 2026-10-15 despite this recorded finding",
+  "runtime_approval": "PENDING"
+}
