@@ -1,36 +1,15 @@
 # Rider
 
-A fresh 2D mobile driving game foundation: Defold, integrated Box2D 3, precise arcade handling and short Trials-inspired obstacle challenges.
+A 2D mobile driving game built with Defold and integrated Box2D 3, combining precise arcade handling with short Trials- and early-TrackMania-inspired obstacle challenges.
 
-**G0 complete — repository bootstrap verified. G1 physics PoC passed on Linux, Windows and HTML5. The authorized loop continues with G2 tooling. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
+[HTML5 preview](https://bongohorse.github.io/rider/) · [Current status](STATUS.md) · [Documentation](docs/README.md)
 
-## Verify the bootstrap
+Start with STATUS.md for progress and blockers, then read only the plan or contract needed for the task. Android is the first release target; iOS follows the Play Store launch. The public preview is permanently authorized for automatic deployment on merges to main and manual dispatch; its implementation is tracked in A4.
 
-Prerequisites: Git, Python 3.12+, Node 24.11+ for Renovate tooling. Install development tooling with `python -m pip install -r requirements-dev.txt` and `npm ci --ignore-scripts`.
+## Development
 
-```sh
-python tools/bootstrap_check.py
-python -m unittest discover -s tests/bootstrap -v
-bash tools/doctor.sh --json
-npm run renovate:validate
-npm run renovate:scan
-```
-
-Windows: `pwsh -File tools/doctor.ps1 --json`. The same Python implementation runs on Windows and Linux. Doctor does not install software, contact an editor or print environment secrets.
-
-G0 doctor success means the bootstrap prerequisites work. Missing Defold/Bob/JDK 25 are WARN findings for later gates; `--require-g1` makes those missing prerequisites blocking. A detected tool is not a proven working build.
-
-G0 evidence: [completion report](docs/G0_COMPLETION.md).
-
-## Next steps
-
-- [G1 acceptance contract](docs/G1_ACCEPTANCE.md): physics PoC results and test limits.
-- [Toolchain candidates](docs/TOOLCHAIN_CANDIDATES.md): source-verified candidates, not runtime-approved pins.
-- [Execution and repository setup](docs/REPOSITORY_SETUP.md): permissions, Renovate and evidence boundaries.
-- [Documentation index](docs/README.md): targeted gate/topic reading, plus [review clarifications](docs/DECISIONS/0001-bootstrap-scope.md).
-
-UI and player-facing diagnostics will be English. Landscape is the initial gameplay basis. Android APK and Android Chrome are separate targets. A browser preview will be prepared during G1–G3 and published only within authorized deployment scope; G9 is the production release phase.
+See [tooling](docs/TOOLING.md) and the [pinned toolchain](docs/TOOLCHAIN_LOCK.md) for setup, build and verification commands. UI and active agent documentation are English. No code or assets are imported from the former buggy project.
 
 ## Licensing
 
-No project-wide redistribution license has been selected. Public visibility does not grant a software license. Third-party candidates retain their own terms; unresolved license findings must be cleared before integration.
+No project-wide redistribution license has been selected. Public visibility does not grant a software license. Third-party dependencies retain their terms; the [Bridge provenance finding](docs/contracts/automation/bridge.md) remains unresolved under the user's explicit implementation authorization.

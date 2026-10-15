@@ -1,28 +1,29 @@
-# Repository operations and evidence
+# Repository operations
 
-## Setup scope
+[Current status](../STATUS.md) · [Plan](PLAN.md) · [Tooling](TOOLING.md)
 
-G0 only. Repository initialization is a minimal README on main; implementation is reviewed in a bootstrap PR. No gameplay and no deployment. The user authorized repository setup and integration; stop before G1 regardless of merge.
+## CI and branch protection
 
-## Renovate
+S1 introduces one `required` job in CI. It depends on Bootstrap (all OS matrix entries), Renovate validation/extraction and reusable physics, tooling/Android and native Bridge workflows. CI runs for pull requests and pushes to main; reusable workflows also support manual dispatch. `required` uses `always()` and accepts only success from every dependency, so failure, cancellation or skip cannot pass.
 
-`renovate.json` configures the hosted Renovate app with dashboard, conservative PR limits, no automerge and manual major approval. `npm run renovate:validate` checks configuration. `npm run renovate:scan` runs the real pinned Renovate engine in local extraction mode against this checkout. Save JSON debug logs to artifacts; they must show github-actions, npm and pip dependency extraction. This is a real extraction scan, not a hosted installation or available-version lookup claim.
+After the check has appeared, Claudio must select **only `required`** as the required status check for main, keeping force-push/deletion protections and the other saved settings. Do not bypass protection to merge. A red physics-to-required probe proves propagation; GitHub enforcement is a separate acceptance item until Claudio saves the new protection. Managed integration administration reads/writes are unavailable (the protection endpoint returns 403).
 
-Hosted installation/repository access and dashboard/PR activity are separate proofs. A valid config or local scan never proves hosted activation. Hosted defaults read main/onboarding config; do not claim a PR-only config is active. Once merged, inspect actual Renovate bot activity. If app access cannot be inspected/installed through available capabilities, report BLOCKED with the user-facing action: grant Rider access in the existing Renovate app installation.
+A produced APK alone is not installation evidence. Android build failure now exits nonzero; the tooling workflow additionally verifies APK signature/manifest. Never weaken assertions, suppress failure or treat BLOCKED as green.
 
-Defold candidates in tools/toolchain-candidates.json are intentionally not auto-upgraded. At first real G1/G2 dependency introduction, add a verified manager/custom manager and demonstrate extraction before claiming Defold update coverage. No floating dependencies.
+## Issues and milestones
 
-## Administration capability boundary
+PLAN.md defines M1–M5 and A1–A22, one issue per PR with 1–3 testable acceptance criteria. The task issue template records goal, scope, exclusions, criteria, drive-test need, dependencies and contract/API risks. Use actual issue-number links for dependencies; milestone approval is an additional dependency even when technical predecessors are complete.
 
-Check actual connector operations, not only the reported admin role. If branch-protection, repository settings, Pages or app installation cannot be changed through available authenticated tools, report that limitation explicitly. Never weaken checks to avoid missing privileges. Recommended main protection after first green run: require Bootstrap (ubuntu-24.04), Bootstrap (windows-2025), Renovate validation and scan; disallow force pushes/deletion. Do not require an unattainable second human reviewer for a solo repo without an explicit decision.
+Milestone/label creation is not exposed by the installed connector. Its issue create/update functions can assign existing milestone numbers and labels, but cannot create them. Record incomplete setup honestly in STATUS.md and do not claim 22 issues are assigned to five milestones before verifying that state.
 
-## Verified setup status — 2026-10-15
+## Renovate and pins
 
-- Hosted Renovate is active: [Dependency Dashboard #4](https://github.com/bongohorse/rider/issues/4) lists the actual detected dependencies. No app-installation action is outstanding.
-- The user saved main protection. A fresh branch metadata read confirms `protected=true`, all three expected required checks, GitHub Actions source app ID 15368 and enforcement level `everyone`.
-- Full branch-protection endpoint access remains denied to this integration. PR requirement, up-to-date requirement, conversation resolution and force-push/deletion options rely on the user's saved settings and preceding screenshot; they are not separately asserted as API-verified.
-- [G0 completion evidence](G0_COMPLETION.md). No G1 implementation or deployment has started.
+Hosted Renovate activity is evidenced by [dashboard #4](https://github.com/bongohorse/rider/issues/4). Keep no automerge and separate major/runner/engine updates. `npm run renovate:validate` checks config; `npm run renovate:scan` performs local extraction with the pinned Renovate engine. Retain extraction logs for github-actions/npm/pip. Local extraction/config validity is not proof of hosted installation, available-version lookup or Defold update coverage.
+
+## Preview and distribution
+
+Public HTML5 preview at https://bongohorse.github.io/rider/ is permanently authorized for main-merge auto deployment and manual dispatch. A4 implements it with visible source SHA and unique per-build filenames. Do not claim a deployed build before observing it. Android release is Phase F; iOS builds wait until Phase G. The native Bridge must be excluded from distributed apps before Phase B sideload/distribution.
 
 ## Evidence retention
 
-Generated logs/reports/builds stay out of Git; CI artifacts retain bootstrap evidence for 14 days. Commit only small acceptance references and provenance. Reports link exact run and tested SHA. Long-lived gate sign-off summaries belong in docs with immutable source links, not giant binary commits.
+Generated logs/reports/builds stay ignored; CI retains artifacts for 14 days. Commit small summaries and immutable source/run links, not binary evidence dumps. Keep current status only in STATUS.md; historical acceptance records remain under docs/history.

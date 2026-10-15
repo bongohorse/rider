@@ -1,6 +1,6 @@
 ## Change
 
-Describe the problem and resulting behavior. State the gate and scope.
+Describe the problem and resulting behavior. Link the issue (one issue = one PR) and state its milestone/scope.
 
 ## Verification
 
@@ -21,4 +21,4 @@ Reviewer: check that sources support the changed behavior and match the project 
 
 ## Limits
 
-Missing tools/device access, dependency licensing and any user decision needed. Do not infer later-gate authorization.
+Missing tools/device access, dependency licensing and any user decision needed. Do not infer approval of the next milestone.
