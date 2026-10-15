@@ -2,13 +2,13 @@
 
 Read this index and the active gate first. Do **not** read every planning file by default. Open only the contracts needed for the current change; use `rg` to find additional requirements.
 
-**State:** G0 complete. User authorized the autonomous review → fix → complete → next-task loop on 2026-10-15. G1 is active; prerequisites remain mandatory.
+**State:** G0 complete. User authorized the autonomous review → fix → complete → next-task loop on 2026-10-15. G1 is complete; G2 CLI increment passed; Bridge integration remains blocked on missing license evidence. Prerequisites remain mandatory.
 
 ## Start here
 
 | Task | Read |
 |---|---|
-| Current work | [G1 progress](G1_PROGRESS.md), [G1 acceptance](G1_ACCEPTANCE.md), then [G1 plan](gates/G1.md) |
+| Current work | [G2 acceptance/blocker](G2_ACCEPTANCE.md), [G2 CLI](TOOLING.md), then [G2 plan](gates/G2.md) |
 | Rules and sign-off | [Principles](plan/principles.md), [gate policy](plan/gate-policy.md), [evidence policy](plan/evidence-policy.md) |
 | Completed setup | [G0 completion](G0_COMPLETION.md), [repository setup](REPOSITORY_SETUP.md) |
 | Tool selection | [Verified candidate provenance](TOOLCHAIN_CANDIDATES.md), [approved G1 lock](TOOLCHAIN_LOCK.md), [version policy](plan/toolchain.md) |
