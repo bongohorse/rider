@@ -1,43 +1,27 @@
 # Rider agent rules
 
-Repository: bongohorse/rider. Treat this repository as the sole implementation source.
+Repository: `bongohorse/rider`; sole implementation source. Inspect branch, HEAD and working tree before editing; preserve existing work. Do not import old buggy code/assets.
 
-## Authorized scope
+## Read only the task context
 
-Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 and G2 technical work are complete. The next task is G3 entry preflight: establish the required real Android model/OS/Chrome baseline before implementation, per docs/plan/platforms.md. Current agent environment has no physical device access; keep device tests NOT RUN until actual evidence exists. On 2026-10-15 the user explicitly instructed Bridge implementation despite the recorded missing license evidence. Proceed with the pinned native extension and matching wrapper; preserve that unresolved provenance finding without treating it as a renewed implementation stop. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
+Read [STATUS.md](STATUS.md), the current issue and its affected contract. [Documentation index](docs/README.md) routes additional reading. Do not read the entire history or every contract by default. [PLAN.md](docs/PLAN.md) defines decisions, issue/milestone workflow, scope and stop points; historical gate instructions do not override it.
 
-- Inspect branch, HEAD, working tree and these instructions before editing.
-- Preserve existing work. Never import old buggy scripts, vendor physics, rendering code or assets.
-- Keep the documentation split separate from engine implementation. Once integrated, G1 may add the minimal project, app manifest and smoke runner; no complete buggy or sandbox UI.
-- Use integrated Defold Box2D 3 in later gates. No custom physics extension or second simulation loop.
-- Candidate versions are not runtime-approved. Record exact source identity and actual evidence; no invented builds or screenshots.
-- Defold owns collision-object bodies and collection worlds. Prove units, ownership and lifecycle in G1. Never depend on ordering between script instances.
-- UI is English. Mobile APK and browser tests are separate; synthetic events do not prove real app/tab switching.
-- Fix ordinary in-scope failures autonomously. For structural blockers stop dependent work, document evidence and alternatives. Continue independent work within the active authorized scope.
-- Keep PRs reviewable. Run affected checks. Never weaken assertions or suppress errors for green CI.
-- Keep FAIL, BLOCKED, NOT RUN and PASS distinct. Missing optional future tools do not fail bootstrap correctness.
-- Do not expose tokens or run unreviewed installation scripts. No production secrets in PR jobs.
-- Merge/deployment authorization persists within its granted scope. Do not request it repeatedly when already granted. Never infer permission to start G1 from a merge.
-- End each gate with exact tested SHA, PR and CI links, limitations and next recommendation; then continue in plan order under the user-authorized loop.
+## Execution
 
-## Bootstrap checks (retain through G1; adapt G0-only boundaries explicitly when G1 starts)
+- Complete the authorized S1–S3 preparation. S3 needs Claudio's confirmation before M1 begins. Thereafter, within an approved milestone: take the next issue with completed dependencies, one issue per PR, review/fix, run affected checks and merge only with green `required` for the current head. Never weaken assertions for green CI.
+- After each completed step, briefly report what changed and what comes next. At milestone completion, stop, give the preview URL and request Claudio's drive test; wait for approval before the next milestone.
+- Ordinary in-scope failures: fix autonomously. Structural blockers: stop affected work, report evidence and alternatives; continue independent authorized work.
+- Keep [STATUS.md](STATUS.md) as the only current progress/blocker source. Evidence rules and status definitions live in [evidence policy](docs/contracts/evidence.md). Never invent builds, tests, screenshots or device observations.
+- Public HTML5 preview deployment on main merges and manual dispatch is permanently authorized. Store distribution remains a later phase. Android first; no iOS builds before Phase G.
 
-`python tools/bootstrap_check.py`
-`python -m unittest discover -s tests/bootstrap -v`
-`bash tools/doctor.sh --json` or `pwsh -File tools/doctor.ps1 --json`
-`npm ci --ignore-scripts && npm run renovate:validate && npm run renovate:scan`
+## Technical boundaries
 
-## Documentation routing
+- Keep the pinned toolchain and Renovate without automerge. Use Defold-owned bodies/worlds and a single tick owner; no custom physics extension, second simulation loop or manual stepping. Convert units once at the boundary; preserve handle/reset contracts.
+- Read [engine references](docs/ENGINE_REFERENCES.md) before Defold-dependent changes; consult only relevant official docs and pinned sources. Verify signatures, units, defaults, ownership, timing and platform limits. Record sources actually read, version, consequence and verification in the PR; justified N/A for no API impact. Inaccessible required references stop dependent work when correctness remains unresolved.
+- The Bridge is debug automation, not a physics binding. Keep its pin and matching wrapper, record unresolved license provenance, and remove it from release builds before app distribution (Phase B). Do not assume an editor/session or scan ports; discover `/openapi.json` only for an available authorized editor.
+- English UI and active agent docs; platform-neutral gameplay commands. Real APK and real browser device evidence are separate; synthetic input does not prove real touch or app/tab switching.
+- No secrets in logs/PRs; no unreviewed install scripts; use minimum CI permissions. Do not publish editor/runtime debug services.
 
-Read `docs/README.md`, `docs/G3_ACCEPTANCE.md` and `docs/PLATFORM_MATRIX.md` first. Then open `docs/gates/G3.md` and only the relevant topic files linked by the index. Do not read all docs or the old masterplan from top to bottom. Physics edits require the affected API/units/lifecycle/ownership contracts; runner edits require the test protocol. Historical G0 prompts do not override current authorization. Scoped acceptance documents define the active gate.
+## Verification
 
-## Official documentation gate
-
-Before changing Defold-dependent behavior, read [engine references](docs/ENGINE_REFERENCES.md) and only the official pages relevant to the task. Identify the pinned engine/backend/extension versions from `tools/toolchain-lock.json`; never infer compatibility from current website documentation alone.
-
-- For physics, distinguish Defold's integrated Box2D API from upstream Box2D C APIs. Read the relevant API, units, lifecycle and ownership contracts. No separate physics bridge or second simulation loop.
-- The Automation Bridge is a debug inspection/input service, not a Box2D binding. Use its pinned source and matching wrapper contract.
-- Verify signatures, units, defaults, ownership, callback timing and target-platform limits before relying on them. Resolve version uncertainty using pinned sources and a focused build/runtime probe.
-- When an authorized editor is available, discover `/openapi.json` before HTTP operations and use `/ref` if supported. Do not assume an editor/session exists.
-- Record sources actually read, reference version, implementation consequence and validation in the PR. Use justified N/A for changes without engine/API impact. If a needed reference is inaccessible, report the gap and do not claim verification. Stop dependent implementation if correctness remains unresolved; continue independent work.
-- Fetch relevant pages only. Do not paste or vendor the full combined documentation into every task. A source list or CI checkbox alone does not prove consultation.
+Use [TOOLING.md](docs/TOOLING.md). Baseline: `python tools/bootstrap_check.py`, `python -m unittest discover -s tests/bootstrap -v`, and affected `tests/g1` / `tests/g2`. Dependency changes also run Renovate validation/extraction. CI's `required` aggregates bootstrap, Renovate, native/HTML5 physics, Bridge and Android verification.

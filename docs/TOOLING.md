@@ -1,6 +1,6 @@
 # Project tooling
 
-[Documentation index](README.md) · [G2 state](G2_ACCEPTANCE.md)
+[Documentation index](README.md) · [G2 state](history/G2_ACCEPTANCE.md)
 
 Use the repository root. Bash and PowerShell wrappers forward to the same Python implementation:
 
@@ -30,4 +30,4 @@ It copies the current project into a temporary directory, injects an invalid Lua
 
 G1 baseline: native headless physics and HTML5 debug. G2 extends Windows to the normal debug engine with CI software OpenGL and proves Linux native Bridge graphics/input plus release-negative behavior. Android APK build success does not prove installation or real device/touch behavior. No editor launch or local port/session is assumed by these commands.
 
-Native Bridge verification uses the same result CLI: `verify --suite bridge` under Linux graphics/Xvfb. Install the pinned wrapper with `python tools/setup_bridge.py`; use `build --target desktop --configuration debug --fixture bridge` for the interactive native fixture. See [BRIDGE.md](BRIDGE.md) for explicit commands and verified debug/release behavior. HTML5 does not load the native extension.
+Native Bridge verification uses the same result CLI: `verify --suite bridge` under Linux graphics/Xvfb. Install the pinned wrapper with `python tools/setup_bridge.py`; use `build --target desktop --configuration debug --fixture bridge` for the interactive native fixture. See [BRIDGE.md](contracts/automation/bridge.md) for explicit commands and verified debug/release behavior. HTML5 does not load the native extension.
