@@ -41,7 +41,7 @@ Project contracts: [implemented G1 fixture](physics/G1_CONTRACT.md), [API/platfo
 The Automation Bridge controls debug inspection/input/screenshots. It is not a physics bridge.
 
 - [Pinned official extension and wrapper source](https://github.com/defold/extension-automation-bridge/tree/567c7efb2f72626af71967984bd33dde856f0d36)
-- [Native extensions](https://defold.com/manuals/extensions/) and [Defold SDK](https://defold.com/ref/overview_defoldsdk/) — only for affected extension/build work
+- [Native extensions](https://defold.com/manuals/extensions/) and [Defold SDK](https://defold.com/manuals/extensions-defold-sdk/) — only for affected extension/build work
 - [Editor HTTP API](https://defold.com/manuals/editor-http-api/)
 - [Engine service](https://defold.com/manuals/engine-service/)
 - [Automated testing](https://defold.com/manuals/automated-testing/)
@@ -54,7 +54,7 @@ Use [BRIDGE.md](BRIDGE.md) for exact versions, capabilities, wrapper provenance,
 |---|---|---|
 | Builds/tool versions | [Bob](https://defold.com/manuals/bob/), [project settings](https://defold.com/manuals/project-settings/) | [Tooling and commands](TOOLING.md), [lock/update rules](TOOLCHAIN_LOCK.md), [version policy](plan/toolchain.md) |
 | Touch/input | [Mouse and touch](https://defold.com/manuals/input-mouse-and-touch/) | [Platforms and real-device requirements](plan/platforms.md) |
-| Screen layout | [Screen sizes](https://defold.com/manuals/adapting-to-different-screen-sizes/) | [Sandbox](plan/sandbox.md), [platform orientation](plan/platforms.md) |
+| Screen layout | [Screen sizes](https://defold.com/manuals/adapting-graphics-to-screen-size/) | [Sandbox](plan/sandbox.md), [platform orientation](plan/platforms.md) |
 | Android/HTML5 lifecycle | Locate the relevant platform manual through the official manuals index | [Platform matrix requirements](plan/platforms.md), [test protocol](plan/automation/test-protocol.md) |
 | Performance | Locate profiling/optimization manuals through the official manuals index | [G6 measurements](gates/G6.md) |
 | Vehicle behavior | Box2D and Defold references above | [Vehicle/gameplay](plan/vehicle.md), [G4a](gates/G4a.md), [G5](gates/G5.md) |
