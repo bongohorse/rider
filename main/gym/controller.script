@@ -151,10 +151,13 @@ local function reset_test(self)
         if self.reset_count<100 then
             if self.reset_count==49 then
                 -- Explicit fault injection; only a3 test mode mutates this pose.
-                b2d.body.set_transform(self.vehicle.chassis,vmath.vector3(0,-600,0),0)
+                for _,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+                    local p=b2d.body.get_position(body)
+                    b2d.body.set_transform(body,vmath.vector3(p.x,p.y-800,0),0)
+                end
             else request_reset(self,"manual") end
         else
-            assert(self.bounds_count==1,"Bounds recovery not exercised exactly once")
+            assert(self.bounds_count==1,"Bounds recovery not exercised exactly once: "..self.bounds_count)
             self.reset_phase="settle"
             self.settle_tick=0
         end
