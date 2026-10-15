@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4'
+          java-version: '25.0.4+101.0.LTS'
       - name: Native graphics runtime dependencies
         run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglu1-mesa libopenal1 libxi6 libxrandr2 libxinerama1 libxcursor1
       - name: Exact Bridge install and owned debug/release capability smoke
