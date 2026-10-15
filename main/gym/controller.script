@@ -24,6 +24,7 @@ local function reset(self)
     go.set_position(vmath.vector3(vehicle.config.spawn_x,250,500),"/camera")
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1
+    self.last_reset_reason = request.reason
     self.resetting = false
     self.check_reset_pose = self.testcase=="a3"
     local elapsed = (socket.gettime()-started)*1000
@@ -147,7 +148,9 @@ local function drive_test(self)
     end
 end
 local function reset_test(self)
-    if self.reset_phase=="await_manual" and self.reset_count==1 then
+    if self.reset_phase=="await_manual" and self.reset_count>0 then
+        assert(self.reset_count==1 and self.last_reset_reason=="manual","Keyboard retry was not consumed before bounds recovery")
+        emit(self,"phase",{name="retry_release"})
         assert(self.last_command.throttle==0 and self.last_command.brake_reverse==0,"Retry kept held command")
         self.reset_phase="stress"
     elseif self.reset_phase=="stress" then
