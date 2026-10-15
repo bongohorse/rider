@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "approved_gate": "G1",
+  "approved_gate": "G2 native Bridge baseline",
   "engine": {
     "version": "1.14.0",
     "commit": "a81dbb0478e8b73931dc2d671563204f6ac0ef82",
@@ -21,9 +21,28 @@
   "baseline_evidence": {
     "source_sha": "7594e500fafa074b65150dd45a3224369dea5033",
     "run": "https://github.com/bongohorse/rider/actions/runs/38697533465",
-    "platforms": ["x86_64-linux headless", "x86_64-win32 headless", "wasm-web debug"],
+    "platforms": [
+      "x86_64-linux headless",
+      "x86_64-win32 headless",
+      "wasm-web debug"
+    ],
     "browser": "Chromium 156.0.8078.4 via Playwright 1.64.1",
     "android": "APK built; installation and device runtime not verified"
   },
-  "automation_bridge": "Not approved in G1; belongs to G2"
+  "automation_bridge": {
+    "release": "2.5.0",
+    "commit": "567c7efb2f72626af71967984bd33dde856f0d36",
+    "url": "https://github.com/defold/extension-automation-bridge/archive/567c7efb2f72626af71967984bd33dde856f0d36.zip",
+    "sha256": "94807c707dd2814f5038fc26a9a20bcb4428a18b5e6d581d031507926a003958",
+    "python_package_version": "3.0.0",
+    "native_reported_version": "2.0.0",
+    "api_version": "2",
+    "license_evidence": "Unresolved; user explicitly authorized implementation on 2026-10-15 despite this recorded finding",
+    "evidence": {
+      "source_sha": "3716f152ba03c004fe70a8e505f58212f74ed96c",
+      "run": "https://github.com/bongohorse/rider/actions/runs/38701899289",
+      "platform": "x86_64-linux debug and release, Xvfb/Mesa",
+      "shared_cli_run": "https://github.com/bongohorse/rider/actions/runs/38702661582"
+    }
+  }
 }

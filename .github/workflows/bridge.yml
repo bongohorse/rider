@@ -1,0 +1,40 @@
+name: G2 native Bridge
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bridge-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-bridge:
+    name: G2 Linux debug and release Bridge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14.8'
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '25.0.4'
+      - name: Native graphics runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglu1-mesa libopenal1 libxi6 libxrandr2 libxinerama1 libxcursor1
+      - name: Exact Bridge install and owned debug/release capability smoke
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/project.py verify --suite bridge --output artifacts/g2/bridge
+      - name: Read-only exact G2 toolchain and wrapper doctor
+        run: python tools/doctor.py --require-g2 --json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: g2-bridge-${{ github.run_id }}
+          path: artifacts/g2/bridge/
+          retention-days: 14

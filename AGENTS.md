@@ -4,7 +4,7 @@ Repository: bongohorse/rider. Treat this repository as the sole implementation s
 
 ## Authorized scope
 
-Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 is complete; G2 is active. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
+Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 is complete; G2 is active. On 2026-10-15 the user explicitly instructed Bridge implementation despite the recorded missing license evidence. Proceed with the pinned native extension and matching wrapper; preserve that unresolved provenance finding without treating it as a renewed implementation stop. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
 
 - Inspect branch, HEAD, working tree and these instructions before editing.
 - Preserve existing work. Never import old buggy scripts, vendor physics, rendering code or assets.

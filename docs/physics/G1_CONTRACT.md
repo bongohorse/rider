@@ -4,7 +4,7 @@
 
 ## API and units
 
-Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), integrated Box2D 3.1.0. Native G1 runs use the headless engine, so they prove physics, not graphics/window/input behavior. HTML5 uses the debug WebAssembly engine in Playwright Chromium; its exact browser version is an artifact.
+Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), integrated Box2D 3.1.0. The original G1 native baseline used the headless engine. G2 extends Windows to ordinary debug with per-process Mesa software OpenGL; Linux Bridge graphics/input are tested separately. See [Bridge evidence](../BRIDGE.md). HTML5 uses the debug WebAssembly engine in Playwright Chromium; its exact browser version is an artifact.
 
 | Used API/resource | Input/output convention | Evidence/case |
 |---|---|---|
