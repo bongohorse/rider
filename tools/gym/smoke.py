@@ -1,0 +1,31 @@
+"""Small HTML5 gym runtime smoke, independent of the retained G1 fixture."""
+import argparse
+import json
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(ROOT/'tools/g1'))
+from build import build
+from run import stop
+
+parser=argparse.ArgumentParser()
+parser.add_argument('--output',required=True)
+parser.add_argument('--case',default='a1')
+args=parser.parse_args()
+out=Path(args.output).resolve();out.mkdir(parents=True,exist_ok=True)
+sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+run_id=str(uuid.uuid4())
+settings=out/'gym.settings'
+settings.write_text(f'[project]\ndependencies =\n[rider]\nsource_sha = {sha}\nrun_id = {run_id}\ngym_test = {args.case}\n')
+build('wasm-web',out,settings,variant='debug')
+process=subprocess.Popen(['node',str(ROOT/'tools/gym/browser.cjs'),str(out),sha,run_id],cwd=ROOT,start_new_session=True)
+try: code=process.wait(timeout=90)
+finally: stop(process)
+if code:raise SystemExit(code)
+report=json.loads((out/'gym-result.json').read_text())
+assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
+assert set(report['cases'])=={'chain_contact','camera_follow'}
+assert abs(report['cases']['chain_contact']-95)<2 and report['cases']['camera_follow'] is True
+print(json.dumps(report))

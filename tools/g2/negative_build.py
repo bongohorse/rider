@@ -32,14 +32,14 @@ def main():
             cached=fixture/'.cache/g1/bob.jar';cached.parent.mkdir(parents=True)
             shutil.copyfile(bob,cached)
             builder.ROOT=fixture
-            script=fixture/'main/controller.script';original=script.read_bytes()
+            script=fixture/'main/gym/controller.script';original=script.read_bytes()
             script.write_bytes(original+b'\nfunction = invalid_g2_probe\n')
             try:
                 builder.build(args.platform,output/'intentional-failure')
             except RuntimeError as exc:
                 log=output/'intentional-failure/build.log'
                 text=log.read_text(errors='replace') if log.exists() else ''
-                if 'Bob build failed:' not in str(exc) or 'main/controller.script' not in text or not re.search('unexpected|expect|syntax',text,re.I):
+                if 'Bob build failed:' not in str(exc) or 'main/gym/controller.script' not in text or not re.search('unexpected|expect|syntax',text,re.I):
                     raise RuntimeError('Failure was not the intended Lua build error') from exc
                 report['intentional_build_error']='PASS (correctly rejected)'
             else:

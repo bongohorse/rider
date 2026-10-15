@@ -4,7 +4,7 @@ version = 0.1.0
 dependencies#0 = https://github.com/defold/extension-automation-bridge/archive/567c7efb2f72626af71967984bd33dde856f0d36.zip
 
 [bootstrap]
-main_collection = /main/main.collectionc
+main_collection = /main/gym/boot.collectionc
 
 [display]
 width = 960

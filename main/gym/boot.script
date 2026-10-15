@@ -1,0 +1,20 @@
+function init(self)
+    msg.post(".", "acquire_input_focus")
+    self.loading = true
+    self.deadline = 0
+    msg.post("#world", "load")
+end
+function update(self, dt)
+    if self.loading then
+        self.deadline = self.deadline + dt
+        assert(self.deadline < 15, "Gym initialization timed out")
+    end
+end
+function on_message(self, id, data, sender)
+    if id == hash("proxy_loaded") then
+        msg.post(sender, "init")
+        msg.post(sender, "enable")
+    elseif id == hash("gym_ready") then
+        self.loading = false
+    end
+end

@@ -87,7 +87,7 @@ def main(argv=None):
     bundle.add_argument('--target',choices=['desktop','html5','android'],required=True)
     bundle.add_argument('--configuration',choices=['debug','release'],default='debug')
     bundle.add_argument('--output')
-    bundle.add_argument('--fixture',choices=['physics','bridge'],default='physics')
+    bundle.add_argument('--fixture',choices=['gym','physics','bridge'],default='gym')
     args=parser.parse_args(argv)
     output=Path(args.output or ROOT/'artifacts/g2'/str(uuid.uuid4())).resolve()
     output.mkdir(parents=True,exist_ok=True)
@@ -96,7 +96,7 @@ def main(argv=None):
         start=time.monotonic()
         try:
             if args.fixture=='bridge' and args.target=='html5':raise RuntimeError('BLOCKED: native Bridge fixture is not an HTML5 target')
-            fixture_settings='[bootstrap]\nmain_collection = /main/bridge/main.collectionc\n[input]\ngame_binding = /input/bridge.input_bindingc\n[automation_bridge]\napplication_api = 1\n' if args.fixture=='bridge' else ''
+            fixture_settings='[bootstrap]\nmain_collection = /main/bridge/main.collectionc\n[input]\ngame_binding = /input/bridge.input_bindingc\n[automation_bridge]\napplication_api = 1\n' if args.fixture=='bridge' else '[bootstrap]\nmain_collection = /main/main.collectionc\n' if args.fixture=='physics' else ''
             override_settings=('[project]\ndependencies =\n' if args.target=='html5' else '') + fixture_settings
             config_hash=hashlib.sha256((ROOT/'game.project').read_bytes()+(ROOT/'main/physics.appmanifest').read_bytes()+override_settings.encode()+args.configuration.encode()).hexdigest()
             settings=output/'build.settings'
