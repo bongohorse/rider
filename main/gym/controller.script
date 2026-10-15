@@ -15,6 +15,7 @@ local function reset(self)
     if request.generation ~= self.generation then return end
     self.resetting = true
     self.held = {}
+    local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
@@ -28,6 +29,7 @@ local function reset(self)
     if self.testcase=="a3" then self.reset_ms[#self.reset_ms+1] = elapsed end
     self.latency_ms = math.max(self.latency_ms,(socket.gettime()-request.requested)*1000)
     if request.reason=="bounds" then self.bounds_count=self.bounds_count+1 end
+    print("GYM_RESET "..json.encode({count=self.reset_count,reason=request.reason,x=before.x,y=before.y,vx=before.vx}))
     msg.post("main:/loader#ui","retry_done",{reason=request.reason})
 end
 local function emit(self, event, data)
