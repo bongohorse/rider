@@ -10,7 +10,7 @@ Preparation S1–S3 for the [Driving Gym plan](docs/PLAN.md). M1 has not started
 | --- | --- | --- |
 | S1 required CI aggregation | In review | [PR #15](https://github.com/bongohorse/rider/pull/15); negative propagation probe PASS (red physics → red required); final restored head CI running. Claudio confirmed protection update; branch metadata verifies only `required`, Actions app 15368, enforcement `everyone`. |
 | S2 issue/document migration | In preparation | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) prepared/created. Five milestones and five labels created; all 22 issues assigned and read back (counts M1/M2/M3/M4/M5 = 4/8/2/7/1). [Setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). Final PR CI/review pending. |
-| S3 design brief v0 | NOT RUN | Prepare one-page brief and obtain Claudio's read/confirmation before M1. |
+| S3 design brief v0 | Prepared; confirmation pending | [Brief](docs/GAME_DESIGN.md) covers loop, session, controls, fail/retry, differentiation and open questions. Claudio must read/confirm before M1. |
 
 ## Preview and platform evidence
 
