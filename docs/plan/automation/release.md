@@ -20,4 +20,3 @@
 - Minimale GitHub-Actions-Permissions; kein Secretzugriff bei untrusted PRs.
 
 ---
-

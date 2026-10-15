@@ -11,4 +11,3 @@
 Offizielle Bob-/HTTP-Automation ist der bereits zugelassene Standardweg innerhalb des freigegebenen Gates. Community-MCP ist optional; ungeeignete oder nicht verfügbare Adapter werden begründet DEFERRED, ohne einen zusätzlichen Freigabeschritt für den Standardweg. Blockiert dieser Standardweg eine Pflichtfähigkeit, bleibt das Gate BLOCKED.
 
 MCP verbindet einen AI-Agenten mit diesen verfügbaren Fähigkeiten, ist kein Backend des Spiels. Kein Hardcoding von Engine-Service-Ports. Keine Veröffentlichung des HTTP-Servers nach außen. Keine MCP-Funktionen behaupten, die der konkrete Agent nicht erreichen kann.
-

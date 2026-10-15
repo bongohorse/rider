@@ -15,4 +15,3 @@ Bereits G1 erhält ein kleines strukturiertes Protokoll. Zeilenweise JSON mit ei
 G1-Abnahme pro Pflichtplattform: konkrete Run-ID-Übergabe, frischer Prozess-/Seitenkontext, passender Abschluss und Ablehnung eines fremden/veralteten Ergebnisses praktisch nachgewiesen. Der Übergabeweg darf je Plattform verschieden sein, der Ereignisvertrag bleibt gleich.
 
 G2 übernimmt dieses Protokoll in JSON/JUnit. Fehlerfälle des Collectors mit alten IDs, fehlendem Abschluss, null Fällen und doppelten Ergebnissen gezielt prüfen; kein umfangreiches eigenes Testframework entwickeln.
-

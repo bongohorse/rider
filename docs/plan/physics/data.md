@@ -10,4 +10,3 @@ Jedes Szenario/Replay beinhaltet mindestens:
 - Resultat/Fehlertext, Artefaktpfade, Test-ID.
 
 Ungültige Daten (NaN/Inf, fehlende Pflichtfelder, falsche Version, out-of-range, beschädigter Speicherstand) müssen mit verständlichem Fehler oder definiertem Default/Fallback behandelt werden; keine silent corruption. Plattformübergreifende Vergleiche zunächst toleranzbasiert, nicht bitgenau.
-

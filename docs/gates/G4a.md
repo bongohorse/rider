@@ -13,4 +13,3 @@
 - Zu jeder verwendeten `b2d`-API den Backend-/Plattformstatus bestätigen.
 
 **Gate:** Für alle P0-Mechaniken reproduzierbare Tests mit vorher definierten Toleranzen, keine fehlerhaften Handles oder Instabilitäten in der Testlast. Keine anderen Joint-Labs parallel.
-

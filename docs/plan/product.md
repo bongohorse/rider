@@ -21,4 +21,3 @@ Eine **Physics & Gameplay Sandbox**, die folgende Minimalfunktionen bietet:
 Kein Port des alten Spiels; keine vendorte Box2D-Bibliothek; keine eigene Physik-Extension; keine universelle Game Engine; kein generisches ECS; kein großer Leveleditor; keine Production Art; kein Wetter-/Fluidsystem; kein Cloud-Backend; keine Monetarisierung. Keine spekulativen Lua-Abstraktionen nur wegen möglicher späterer Features.
 
 ---
-

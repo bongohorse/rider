@@ -54,4 +54,3 @@ G5 protokolliert je Kriterium Beobachtung, Problem und Entscheidung:
 Desktop und echtes Touch-Gerät prüfen. Testerzahl, Gerät und Beobachtungen nennen; eine zusätzliche kleine Testgruppe ist optional. Einzelne subjektive Abnahme nicht als allgemeiner Nachweis für alle Spieler darstellen.
 
 ---
-

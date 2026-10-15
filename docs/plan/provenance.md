@@ -24,4 +24,3 @@ Diese vollständige Fassung ersetzt v1.4 als Planvorlage. Sie erteilt keine Umse
 Die Regeln aus v1.4 bleiben erhalten: eindeutiges Testprotokoll, tickgenauer Test-Command-Player, passende Bridge-/Wrapper-Versionen, frühe Release-Negativtests und reale Renovate-Erkennung bei Einführung neuer Abhängigkeiten. Bridge bleibt G2-Pflicht, MCP optional. Weitere Erkenntnisse werden in den zuständigen Gate-Nachweisen festgehalten; kein automatischer Neuentwurf des Masterplans.
 
 ---
-

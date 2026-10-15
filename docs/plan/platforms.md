@@ -50,4 +50,3 @@ Jeder Pflichtnachweis nennt ausführende Person/Agent, reale Umgebung, verfügba
 Manuell ausgeführte Tests werden als solche gekennzeichnet; der Agent dokumentiert die erhaltenen Resultate und behauptet keine eigene Ausführung. Fehlender Zugriff führt beim Pflichtnachweis zu BLOCKED. Headless-/Display-Backend und gegebenenfalls virtuelle Anzeige werden vor Linux-Runtime-Läufen erkannt und protokolliert; Wahl und Fähigkeiten des konkreten Engine-Binaries müssen zur Suite passen.
 
 ---
-

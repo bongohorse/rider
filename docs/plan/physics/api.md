@@ -15,4 +15,3 @@ Für jede benötigte Operation die Spalten führen:
 - Verfügbare Kollisionsgruppen/-Masken, Sensor-/Kontaktwege klären.
 
 **G4a Pflicht:** Terrain-/Edge-/Chain-Option, Filterung, hoher Speed/CCD, Kontaktverhalten und mobile Plattformtests nachweisen. Fehlende Pflicht-API → Gate **FAIL/BLOCKED**, Alternativen dokumentieren, Entscheidung anfordern. Kein eigenes Box2D heimlich einbauen.
-

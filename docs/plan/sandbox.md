@@ -15,4 +15,3 @@ Die Sandbox wird **zunächst minimal** aufgebaut:
 **Sandbox ist dauerhaftes Entwicklerwerkzeug, nicht Wegwerfcode.** Sie muss aber nicht alle zukünftigen Features zu Beginn enthalten.
 
 ---
-

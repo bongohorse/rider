@@ -49,4 +49,3 @@ Weitere Phase begonnen: NEIN
 Test- und Deploy-Aussagen nur für **genau** den genannten Commit. PR-Test nicht ohne erneute Prüfung als Beweis für späteren Merge/Deployment verwenden.
 
 ---
-

@@ -20,4 +20,3 @@ G0 erstellt **kein** game.project, App Manifest oder lauffähiges Physikprojekt.
 **Jede Designentscheidung** bekommt einen kurzen Eintrag mit Problem, gewählten Alternativen, Grund, Verifikation, Grenzen und Entscheidungsdatum.
 
 ---
-

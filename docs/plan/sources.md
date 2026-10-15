@@ -17,5 +17,3 @@
 - Community MCP (nur Kandidat): https://github.com/Fulviuus/defold-mcp
 
 **Quellenregel:** Maßgeblich ist der API-Stand passend zur **tatsächlich gebauten Engine**, nicht ein veralteter Stable-Suchtreffer. Entscheidungen über verfügbare APIs nur nach realen Builds und Runtime-Tests.
-
-

@@ -40,4 +40,3 @@ Die Automation Bridge ist eine native Extension. G0 erfasst, G2 prüft den benö
 - Quellen und benötigte Upload-Inhalte des Native-Builds dokumentieren; keine Secrets in Uploads/Logs.
 
 ---
-

@@ -56,4 +56,3 @@ STOP after G0 and request review/merge decision.
 ```
 
 ---
-

@@ -40,4 +40,3 @@ Asynchroner Ablauf: `RUNNING → STOPPING → UNLOADING → LOADING → INITIALI
 Freigegebene Handles dürfen weder in Lua noch zwischen Szenarien weiterverwendet werden; fehlgeschlagener Cleanup ist ein harter Testfehler.
 
 **Unterbrechungs- und Recovery-Tests ab G3:** Reset/Switch während ausstehender Timer, Kontaktmeldungen und Ladeoperationen sowie mehrfach schnelle Reset-Anfragen ausführen. Alte Generationen dürfen keine Mutation auslösen. ERROR bietet einen definierten, expliziten Neuaufbau-/Retry-Pfad mit erneuter Generationsvergabe und bestätigtem READY; kein automatisches Weiterlaufen einer teilweise initialisierten Welt. Fehlerpfad und erfolgreiche Wiederherstellung mit gezieltem Test nachweisen.
-

@@ -14,4 +14,3 @@
 10. **Änderungen klein halten:** Jede Architekturentscheidung mit konkretem Testfall und minimalem Diff belegen.
 
 ---
-

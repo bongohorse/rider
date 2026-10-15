@@ -43,4 +43,3 @@ Beispiel `results.json`-Schema (Entwurf):
   ]
 }
 ```
-

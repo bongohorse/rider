@@ -15,4 +15,3 @@ Bei Framedrops/Background:
 - Delta-/Catch-up-Verhalten des Engine-Systems messen.
 - Bei längerer Inaktivität Inputs freigeben, Session pausieren/sicher weiterführen.
 - Keine erzwungenen extra Steps, die vom Engine-Lifecycle abweichen.
-

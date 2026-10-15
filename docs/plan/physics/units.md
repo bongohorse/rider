@@ -11,4 +11,3 @@ Nicht einfach „1 Meter = N Pixel“ behaupten. Für **jede** verwendete API do
 - Winkel: intern Radiant, UI Grad; Speed intern physikalisch konsistent, UI-Einheiten explizit.
 
 **Abnahme:** Konversionsmatrix ausgefüllt, empirische Einheitentests unter Windows und HTML5 (Android frühstmöglich) innerhalb vor Testlauf definierter numerischer Toleranzen; keine doppelte Skalierung.
-
