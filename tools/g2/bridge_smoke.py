@@ -44,11 +44,13 @@ def main():
             folder=output/variant;folder.mkdir(parents=True,exist_ok=True)
             run_id=str(uuid.uuid4())
             settings=folder/'bridge.settings'
-            settings.write_text(f'[bootstrap]\nmain_collection = /main/bridge/main.collectionc\n[input]\ngame_binding = /input/bridge.input_bindingc\n[automation_bridge]\napplication_api = 1\n[rider]\nrun_id = {run_id}\nsource_sha = {source}\nbridge_mode = {variant}\n')
+            settings.write_text(f'[bootstrap]\nmain_collection = /main/bridge/main.collectionc\n[input]\ngame_binding = /input/bridge.input_bindingc\n[automation_bridge]\napplication_api = 1\n[rider]\nrun_id = {run_id}\nsource_sha = {source}\nbridge_mode = {variant}\nrelease_evidence = {folder / "release-ready.json"}\n')
             build('x86_64-linux',folder,settings=settings,variant=variant)
             executable=next(folder.rglob('RiderG1.x86_64'))
             log_path=folder/'runtime.log'
             client=None
+            evidence=folder/'release-ready.json'
+            if evidence.exists():evidence.unlink()
             with log_path.open('w') as log:
                 environment=dict(os.environ,DM_SERVICE_PORT='dynamic')
                 process=subprocess.Popen([str(executable.resolve())],cwd=executable.parent,stdout=log,stderr=subprocess.STDOUT,
@@ -87,9 +89,12 @@ def main():
                             'input':dict(receipt),'count_before':0,'count_after':1,'title_element':title.raw,
                             'screenshot_sha256':hashlib.sha256((folder/'after.png').read_bytes()).hexdigest()}
                     else:
-                        text=wait_value(lambda:log_text() if 'RIDER_RELEASE ' in log_text() else None)
-                        line=next(x.split('RIDER_RELEASE ',1)[1] for x in text.splitlines() if 'RIDER_RELEASE ' in x)
-                        data=json.loads(line)
+                        evidence=folder/'release-ready.json'
+                        def release_ready():
+                            log_text()  # The process must still be running.
+                            return json.loads(evidence.read_text()) if evidence.exists() else None
+                        data=wait_value(release_ready)
+                        text=log_text()
                         if data['run_id']!=run_id or not data['module_absent'] or not data['ready']:raise RuntimeError('Release readiness/module assertion failed')
                         ports=re.findall(r'Engine service started on port (\d+)',text)
                         # Release commonly compiles out the entire service. Prove

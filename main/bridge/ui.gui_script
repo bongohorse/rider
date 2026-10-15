@@ -18,8 +18,12 @@ function init(self)
     gui.set_font(self.label,"default");gui.set_id(self.label,"counter")
     if sys.get_config_string("rider.bridge_mode","debug")=="release" then
         local absent=type(automation_bridge)=="nil"
-        print("RIDER_RELEASE "..json.encode({run_id=self.run_id,module_absent=absent,ready=true,engine=sys.get_engine_info()}))
         assert(absent,"Debug automation Lua module leaked into release")
+        local path=sys.get_config_string("rider.release_evidence","missing")
+        local file=assert(io.open(path..".pending","w"))
+        file:write(json.encode({run_id=self.run_id,module_absent=absent,ready=true,engine=sys.get_engine_info()}))
+        file:flush();file:close()
+        assert(os.rename(path..".pending",path),"Release evidence could not be committed")
         -- Runner also checks the HTTP route while this process is known alive.
         return
     end
