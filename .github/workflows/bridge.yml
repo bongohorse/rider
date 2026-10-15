@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: '25.0.4'
       - name: Native graphics runtime dependencies
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libopenal1
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglu1-mesa libopenal1 libxi6 libxrandr2 libxinerama1 libxcursor1
       - name: Exact Bridge install and owned debug/release capability smoke
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'

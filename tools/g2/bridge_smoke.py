@@ -64,6 +64,7 @@ def main():
                         port=int(re.search(r'Engine service started on port (\d+)',text)[1])
                         client=engine.connect(port,required_capabilities=('scene','elements','application.state','input.key>=2','input.receipts','screenshot'))
                         health=client.health();metadata=client.trace_metadata()
+                        (folder/'health.json').write_text(json.dumps(health,indent=2)+'\n')
                         if health['native_version']!=candidate['native_reported_version'] or str(health['version'])!=candidate['api_version']:
                             raise RuntimeError('Native/API version mismatch')
                         identity=health['identity']
