@@ -35,9 +35,7 @@ def main():
     wrapper=install();sys.path.insert(0,str(wrapper))
     shutil.copyfile(ROOT/'.cache/g2/wrapper-provenance.json',output/'wrapper-provenance.json')
     from automation_bridge import engine
-    from automation_bridge.client import PYTHON_PACKAGE_VERSION
     candidate=json.loads((ROOT/'tools/bridge-candidate.json').read_text())
-    if PYTHON_PACKAGE_VERSION!=candidate['python_package_version']:raise RuntimeError('Wrong installed wrapper')
     source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     report={'schema_version':1,'source_sha':source,'status':'FAIL','platform':'x86_64-linux','cases':{}}
     try:
@@ -67,6 +65,7 @@ def main():
                         port=int(re.search(r'Engine service started on port (\d+)',text)[1])
                         client=engine.connect(port,required_capabilities=('scene','elements','application.state','input.key>=2','input.receipts','screenshot'))
                         health=client.health();metadata=client.trace_metadata()
+                        if metadata['python_package_version']!=candidate['python_package_version']:raise RuntimeError('Wrong installed wrapper')
                         (folder/'health.json').write_text(json.dumps(health,indent=2)+'\n')
                         if health['native_version']!=candidate['native_reported_version'] or str(health['version'])!=candidate['api_version']:
                             raise RuntimeError('Native/API version mismatch')
