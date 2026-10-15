@@ -9,6 +9,7 @@ from pathlib import Path
 import signal
 import shutil
 import tempfile
+import time
 import subprocess
 import sys
 import uuid
@@ -16,15 +17,52 @@ from build import ROOT, build
 from protocol import Collector, PREFIX
 
 
+def process_snapshot():
+    """Local PID -> (parent PID, state), including nested PID namespaces."""
+    if sys.platform.startswith('linux'):
+        namespace=os.readlink('/proc/self/ns/pid')
+        records={}
+        for path in Path('/proc').iterdir():
+            if not path.name.isdigit():continue
+            try:
+                if os.readlink(path/'ns/pid')!=namespace:continue
+                fields=dict(line.split(':',1) for line in (path/'status').read_text().splitlines() if ':' in line)
+                local=int(fields.get('NSpid',fields['Pid']).split()[-1])
+                records[int(fields['Pid'])]=(local,int(fields['PPid']),fields['State'].strip()[0])
+            except (OSError,ValueError,KeyError):continue
+        return {local:(records[parent][0] if parent in records else -1,state) for local,parent,state in records.values()}
+    rows=subprocess.check_output(['ps','-eo','pid=,ppid=,stat='],text=True,timeout=5)
+    return {int(parts[0]):(int(parts[1]),parts[2]) for line in rows.splitlines() if (parts:=line.split())}
+
+
 def stop(process):
     if os.name == 'nt':
         subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'], capture_output=True, timeout=15)
-    else:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        process.wait(timeout=15)
+        return
+    groups={process.pid}
+    snapshot=process_snapshot()
+    children={}
+    for pid,(parent,state) in snapshot.items():children.setdefault(parent,[]).append(pid)
+    pending=[process.pid];seen=set()
+    while pending:
+        pid=pending.pop()
+        if pid in seen:continue
+        seen.add(pid);pending.extend(children.get(pid,[]))
+        try:groups.add(os.getpgid(pid))
+        except ProcessLookupError:pass
+    for group in groups:
+        if group==os.getpgrp():continue
+        try:os.killpg(group,signal.SIGKILL)
+        except ProcessLookupError:pass
     process.wait(timeout=15)
+    deadline=time.monotonic()+5
+    while True:
+        states=process_snapshot()
+        alive=[pid for pid in seen if pid!=process.pid and pid in states and not states[pid][1].startswith('Z')]
+        if not alive:break
+        if time.monotonic()>=deadline:raise RuntimeError(f'Child cleanup incomplete: {alive}')
+        time.sleep(0.02)
 
 
 def native(directory, collector, run_id):

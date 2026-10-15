@@ -34,7 +34,7 @@ The dedicated `main/bridge/` fixture publishes a run-ID/source/engine-bound stat
 5. Captures completed screenshots before/after and requires visible image change.
 6. Builds/starts **release**, requires a new atomic readiness file with the current run ID and absent Lua module, and proves the live process has no TCP listeners (or an actual engine-service route returns 404). Quiet release logging is not a missing-start success.
 
-The common CLI emits JSON v1 and JUnit for both mandatory cases; setup errors, missing results or timeout cannot pass. Native processes are terminated with their process groups. Actual logs, settings, health, wrapper provenance, screenshots and readiness files are CI artifacts.
+The common CLI emits JSON v1 and JUnit for both mandatory cases; setup errors, missing results or timeout cannot pass. Timeout cleanup covers owned descendant process groups, including nested tools that create their own sessions. A regression verifies this inside Linux PID namespaces; Windows uses taskkill /T. Actual logs, settings, health, wrapper provenance, screenshots and readiness files are CI artifacts.
 
 ## Distinct version fields and limits
 

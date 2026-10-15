@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import os
+import signal
 from pathlib import Path
 import sys
 import tempfile
@@ -29,6 +31,23 @@ class CliTests(unittest.TestCase):
             test=cli.execute('timeout',[sys.executable,'-c','import time; time.sleep(30)'],Path(d),0.1)
             self.assertEqual(test['status'],'FAIL')
             self.assertIn('process tree terminated',test['detail'])
+
+    @unittest.skipUnless(sys.platform.startswith('linux'),'Linux process-tree regression')
+    def test_timeout_terminates_child_with_own_session(self):
+        with tempfile.TemporaryDirectory() as d:
+            out=Path(d);pidfile=out/'child.pid'
+            child="import os,time,json; from pathlib import Path; Path("+repr(str(pidfile))+").write_text(json.dumps(dict(pid=os.getpid(),proc=os.readlink('/proc/self')))); time.sleep(30)"
+            parent="import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',"+repr(child)+"],start_new_session=True); time.sleep(30)"
+            result=cli.execute('tree',[sys.executable,'-c',parent],out,2)
+            self.assertEqual(result['status'],'FAIL')
+            self.assertTrue(pidfile.exists(),'Child process did not reach the test fixture')
+            child_info=json.loads(pidfile.read_text());pid=child_info['pid']
+            try:
+                stat=Path('/proc')/child_info['proc']/'stat'
+                self.assertTrue(not stat.exists() or stat.read_text().split()[2]=='Z','Detached child survived watchdog cleanup')
+            finally:
+                try:os.kill(pid,signal.SIGKILL)
+                except ProcessLookupError:pass
 
     def test_incomplete_inventory_is_rejected(self):
         with tempfile.TemporaryDirectory() as d:
