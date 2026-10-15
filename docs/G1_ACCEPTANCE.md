@@ -1,4 +1,4 @@
-# G1 acceptance — specification only, implementation NOT AUTHORIZED
+# G1 acceptance — implementation authorized on 2026-10-15; evidence pending
 
 Scope: minimal Defold / integrated Box2D 3 PoC, not a complete vehicle or sandbox UI. Run against the exact candidate engine and effective app manifest. No separate physics extension.
 

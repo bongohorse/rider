@@ -1,0 +1,4 @@
+function init(self)
+    print("RIDER_BACKEND " .. json.encode({run_id = sys.get_config("rider.run_id", "manual"), version = b2d.get_version()}))
+    sys.exit(0)
+end

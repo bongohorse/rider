@@ -18,15 +18,21 @@ def validate(root):
     for filename in REQUIRED:
         if not (root / filename).is_file():
             errors.append(f'Missing {filename}')
-    for filename in ('game.project',):
-        if (root / filename).exists():
-            errors.append(f'{filename} belongs to G1, not G0')
-    for folder in ('main', 'physics', 'vehicle', 'sandbox'):
+    # G1 is explicitly authorized. Validate its minimal resource graph instead of
+    # retaining a G0-only ban on the required engine project.
+    project = root / 'game.project'
+    if project.exists():
+        import configparser
+        config = configparser.ConfigParser()
+        config.read(project)
+        if config.get('bootstrap', 'main_collection', fallback='') != '/main/main.collectionc':
+            errors.append('G1 main_collection must reference the compiled main resource')
+        manifest = root / 'main/physics.appmanifest'
+        if not manifest.is_file():
+            errors.append('G1 requires an explicit integrated Box2D 3 manifest')
+    for folder in ('vehicle', 'sandbox'):
         if (root / folder).exists():
-            errors.append(f'{folder}/ implementation is outside G0')
-    for p in root.rglob('*.appmanifest'):
-        if 'node_modules' not in p.parts:
-            errors.append(f'{p.name} belongs to G1')
+            errors.append(f'{folder}/ implementation is outside G1')
     for filename in ('renovate.json', 'package.json', 'tools/toolchain-candidates.json'):
         try:
             json.loads((root / filename).read_text())
@@ -60,7 +66,7 @@ def main():
     for error in errors:
         print(f'FAIL: {error}', file=sys.stderr)
     if not errors:
-        print('PASS: G0 file boundaries, JSON, workflow structure, pinned actions and permissions')
+        print('PASS: scoped project boundaries, JSON, workflow structure, pinned actions and permissions')
     return 1 if errors else 0
 
 

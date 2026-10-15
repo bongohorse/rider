@@ -17,7 +17,7 @@ class BootstrapContract(unittest.TestCase):
     def test_actual_bootstrap_is_valid(self):
         self.assertEqual(bootstrap_check.validate(ROOT), [])
 
-    def test_out_of_scope_game_is_rejected(self):
+    def test_invalid_g1_bootstrap_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory)
             for filename in bootstrap_check.REQUIRED + ['package.json']:
@@ -25,7 +25,7 @@ class BootstrapContract(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / filename, target)
             (copy / 'game.project').write_text('[project]\n')
-            self.assertTrue(any('belongs to G1' in e for e in bootstrap_check.validate(copy)))
+            self.assertTrue(any('main_collection' in e for e in bootstrap_check.validate(copy)))
 
     def test_unpinned_action_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
