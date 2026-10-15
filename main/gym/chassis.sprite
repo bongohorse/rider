@@ -1,0 +1,3 @@
+default_animation: "chassis"
+material: "/builtins/materials/sprite.material"
+textures { sampler: "texture_sampler" texture: "/main/gym/assets/gym.atlas" }

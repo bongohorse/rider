@@ -26,6 +26,13 @@ finally: stop(process)
 if code:raise SystemExit(code)
 report=json.loads((out/'gym-result.json').read_text())
 assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
-assert set(report['cases'])=={'chain_contact','camera_follow'}
-assert abs(report['cases']['chain_contact']-95)<2 and report['cases']['camera_follow'] is True
+cases=report['cases']
+if args.case=='a1':
+    assert set(cases)=={'chain_contact','camera_follow'}
+    assert abs(cases['chain_contact']-95)<2 and cases['camera_follow'] is True
+elif args.case=='a2':
+    assert set(cases)=={'drive_dx','drive_speed','stopped_speed','max_angle','wheel_contact','camera_follow','brake_priority'}
+    assert cases['drive_dx']>150 and cases['drive_speed']>100 and abs(cases['stopped_speed'])<12
+    assert cases['max_angle']<0.6 and all(cases[x] is True for x in ['wheel_contact','camera_follow','brake_priority'])
+else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))
