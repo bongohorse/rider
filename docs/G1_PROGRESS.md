@@ -1,4 +1,4 @@
-# G1 progress — baseline matrix PASS; final review in progress
+# G1 progress — PASS — see acceptance and PR #7
 
 G1 started after the documentation split was merged in PR #6. Implementation is isolated in [draft PR #7](https://github.com/bongohorse/rider/pull/7). This is a progress record, not gate approval.
 

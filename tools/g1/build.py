@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import signal
 from pathlib import Path
 import shutil
@@ -15,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[2]
 LOCK = json.loads((ROOT / 'tools/toolchain-lock.json').read_text())
 BOB_SHA256 = LOCK['bob']['sha256']
 JDK_BUILD = 'Temurin-' + LOCK['jdk']['build']
+
+
+def approved_java(output):
+    return re.search(re.escape(JDK_BUILD) + r"(?=[\s)])", output) is not None
 
 
 def bob_jar():
@@ -40,7 +45,7 @@ def build(platform, output, settings=None, variant=None):
     if not java:
         raise RuntimeError('BLOCKED: JDK 25 java not available')
     version = subprocess.run([java, '-version'], capture_output=True, text=True, timeout=15)
-    if JDK_BUILD not in version.stdout + version.stderr:
+    if not approved_java(version.stdout + version.stderr):
         raise RuntimeError(f'BLOCKED: approved JDK is {JDK_BUILD}; selector must resolve to the locked build')
     command = [java, '-jar', str(bob_jar()), '--platform', platform, '--variant', variant or ('debug' if platform == 'wasm-web' else 'headless'),
                '--archive', '--bundle-output', str(output)]

@@ -4,6 +4,7 @@ import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools/g1'))
 from protocol import Collector, IDS, PREFIX
+from build import approved_java
 
 
 class ProtocolTests(unittest.TestCase):
@@ -21,6 +22,11 @@ class ProtocolTests(unittest.TestCase):
 
     def end(self,c):
         self.feed(c,event='suite_end',status='PASS',count=len(IDS),passed=len(IDS))
+
+    def test_exact_jdk_build_is_enforced(self):
+        self.assertTrue(approved_java('OpenJDK Runtime Environment Temurin-25.0.4.1+1 (build 25.0.4.1+1-LTS)'))
+        for text in ['Temurin-25.0.4.1+10 (build)', 'Temurin-25.0.4.1+1.1 (build)', 'OtherVendor-25.0.4.1+1 (build)', 'Temurin-25.0.5+1 (build)']:
+            self.assertFalse(approved_java(text),text)
 
     def test_complete_inventory_passes(self):
         c=self.collector();self.start(c);self.cases(c);self.end(c)

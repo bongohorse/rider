@@ -2,7 +2,7 @@
 
 A fresh 2D mobile driving game foundation: Defold, integrated Box2D 3, precise arcade handling and short Trials-inspired obstacle challenges.
 
-**G0 complete — repository bootstrap verified. G1 physics baseline passed on Linux, Windows and HTML5; final PR review in progress. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
+**G0 complete — repository bootstrap verified. G1 physics PoC passed on Linux, Windows and HTML5. The authorized loop continues with G2 tooling. No playable game exists yet.** No code or assets were migrated from `bongohorse/buggy`.
 
 ## Verify the bootstrap
 
