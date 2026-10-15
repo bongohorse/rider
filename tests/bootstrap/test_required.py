@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 import yaml
 
@@ -18,7 +19,7 @@ class RequiredCheck(unittest.TestCase):
             with self.subTest(physics=state):
                 needs = {name: {'result': 'success'} for name in job['needs']}
                 needs['physics']['result'] = state
-                result = subprocess.run(['bash', '-c', job['steps'][0]['run']],
+                result = subprocess.run([sys.executable, '-c', job['steps'][0]['run'].split("<<'PYTHON'\n", 1)[1].rsplit('\nPYTHON', 1)[0]],
                     env={**os.environ, 'RESULTS': json.dumps(needs)}, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0 if state == 'success' else 1, result.stderr)
 
