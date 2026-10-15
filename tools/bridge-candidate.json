@@ -7,5 +7,5 @@
   "native_reported_version": "2.0.0",
   "api_version": "2",
   "license_evidence": "Unresolved; user explicitly authorized implementation on 2026-10-15 despite this recorded finding",
-  "runtime_approval": "PENDING"
+  "runtime_approval": "PASS baseline source 3716f152ba03c004fe70a8e505f58212f74ed96c, CI 38701899289; shared CLI also passed at d0872a569bfaaed3b4c294969650b87418314cad, CI 38702661582"
 }

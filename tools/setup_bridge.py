@@ -12,6 +12,27 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 
 
+
+def inspect_installation():
+    """Read-only source verification; never launches, downloads or updates."""
+    lock=json.loads((ROOT/'tools/bridge-candidate.json').read_text())
+    archive=ROOT/'.cache/g2/bridge.zip'
+    with archive.open('rb') as source:
+        if hashlib.file_digest(source,'sha256').hexdigest()!=lock['sha256']:
+            raise RuntimeError('Bridge archive SHA-256 mismatch')
+    marker='/automation_bridge/automation-bridge-python/'
+    checked=0
+    with zipfile.ZipFile(archive) as z:
+        for item in z.infolist():
+            if marker not in item.filename or item.is_dir():continue
+            relative=item.filename.split(marker,1)[1]
+            if (ROOT/'automation-bridge-python'/relative).read_bytes()!=z.read(item):
+                raise RuntimeError('Wrapper source mismatch: '+relative)
+            checked+=1
+    if checked==0:raise RuntimeError('No matching wrapper files')
+    return {'source_commit':lock['commit'],'verified_files':checked,'python_package_version':lock['python_package_version']}
+
+
 def install():
     lock=json.loads((ROOT/'tools/bridge-candidate.json').read_text())
     archive=ROOT/'.cache/g2/bridge.zip';archive.parent.mkdir(parents=True,exist_ok=True)

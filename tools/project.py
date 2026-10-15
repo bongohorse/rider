@@ -87,6 +87,7 @@ def main(argv=None):
     bundle.add_argument('--target',choices=['desktop','html5','android'],required=True)
     bundle.add_argument('--configuration',choices=['debug','release'],default='debug')
     bundle.add_argument('--output')
+    bundle.add_argument('--fixture',choices=['physics','bridge'],default='physics')
     args=parser.parse_args(argv)
     output=Path(args.output or ROOT/'artifacts/g2'/str(uuid.uuid4())).resolve()
     output.mkdir(parents=True,exist_ok=True)
@@ -94,9 +95,12 @@ def main(argv=None):
     if args.command=='build':
         start=time.monotonic()
         try:
-            config_hash=hashlib.sha256((ROOT/'game.project').read_bytes()+(ROOT/'main/physics.appmanifest').read_bytes()).hexdigest()
+            if args.fixture=='bridge' and args.target=='html5':raise RuntimeError('BLOCKED: native Bridge fixture is not an HTML5 target')
+            fixture_settings='[bootstrap]\nmain_collection = /main/bridge/main.collectionc\n[input]\ngame_binding = /input/bridge.input_bindingc\n[automation_bridge]\napplication_api = 1\n' if args.fixture=='bridge' else ''
+            override_settings=('[project]\ndependencies =\n' if args.target=='html5' else '') + fixture_settings
+            config_hash=hashlib.sha256((ROOT/'game.project').read_bytes()+(ROOT/'main/physics.appmanifest').read_bytes()+override_settings.encode()+args.configuration.encode()).hexdigest()
             settings=output/'build.settings'
-            settings.write_text(('[project]\ndependencies =\n' if args.target=='html5' else '') + f'[rider]\nrun_id = {uuid.uuid4()}\nsource_sha = {sha}\nconfig_hash = {config_hash}\n')
+            settings.write_text(override_settings + f'[rider]\nrun_id = {uuid.uuid4()}\nsource_sha = {sha}\nconfig_hash = {config_hash}\nbridge_mode = {args.configuration}\nrelease_evidence = {output / "release-ready.json"}\n')
             build(platform_for(args.target),output,settings=settings,variant=args.configuration)
             test={'id':'bundle','status':'PASS','detail':'Build only; no runtime or install claim'}
         except Exception as exc:
@@ -111,7 +115,7 @@ def main(argv=None):
         return write_report(output,'bootstrap',tests,[x[0] for x in commands],sha)
     if args.suite=='bridge':
         expected=['debug','release']
-        if not sys.platform.startswith('linux'):
+        if args.target!='desktop' or args.configuration=='headless' or not sys.platform.startswith('linux'):
             tests=[{'id':key,'status':'BLOCKED','duration_ms':None,'assertions':1,
                     'detail':'Bridge capability smoke currently requires Linux graphics (Xvfb/Mesa)', 'artifacts':[]} for key in expected]
             return write_report(output,'bridge',tests,expected,sha)

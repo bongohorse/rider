@@ -33,6 +33,7 @@ def wait_value(check,timeout=30):
 def main():
     output=Path(sys.argv[1]).resolve();output.mkdir(parents=True,exist_ok=True)
     wrapper=install();sys.path.insert(0,str(wrapper))
+    shutil.copyfile(ROOT/'.cache/g2/wrapper-provenance.json',output/'wrapper-provenance.json')
     from automation_bridge import engine
     from automation_bridge.client import PYTHON_PACKAGE_VERSION
     candidate=json.loads((ROOT/'tools/bridge-candidate.json').read_text())

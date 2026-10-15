@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only environment inventory; readiness is separate from runtime evidence."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -30,6 +31,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--require-g1', action='store_true')
+    parser.add_argument('--require-g2', action='store_true')
     args = parser.parse_args(argv)
     checks = []
     def add(name, passed, detail, required=False):
@@ -42,29 +44,48 @@ def main(argv=None):
     java = shutil.which('java')
     code, output = probe([java, '-version']) if java else (1, 'Java missing')
     major = java_major(output)
-    add('jdk25_candidate', code == 0 and major == 25,
-        f'Java major={major}; candidate=25; no Bob build implied', args.require_g1)
-    bob = Path(os.environ.get('RIDER_BOB_JAR', 'bob.jar')).expanduser()
-    add('bob_candidate', bob.is_file(), 'Set RIDER_BOB_JAR to candidate bob.jar; presence only', args.require_g1)
+    if args.require_g2:
+        sys.path.insert(0,str(Path(__file__).resolve().parent/'g1'))
+        from build import approved_java
+        java_ok=code==0 and approved_java(output)
+    else:
+        java_ok=code==0 and major==25
+    add('jdk25_candidate', java_ok,
+        f'Java major={major}; G2 checks exact approved Temurin build; no build implied', args.require_g1 or args.require_g2)
+    root=Path(__file__).resolve().parents[1]
+    bob = Path(os.environ.get('RIDER_BOB_JAR', str(root/'.cache/g1/bob.jar') if args.require_g2 else 'bob.jar')).expanduser()
+    bob_ok=bob.is_file()
+    if args.require_g2 and bob_ok:
+        lock=json.loads((root/'tools/toolchain-lock.json').read_text())
+        with bob.open('rb') as source:bob_ok=hashlib.file_digest(source,'sha256').hexdigest()==lock['bob']['sha256']
+    add('bob_candidate', bob_ok, 'G2 checks approved SHA-256; G0/G1 inventory checks presence', args.require_g1 or args.require_g2)
+    if args.require_g2:
+        try:
+            from setup_bridge import inspect_installation
+            wrapper=inspect_installation()
+            add('matching_bridge_wrapper',True,json.dumps(wrapper),True)
+        except (OSError,RuntimeError,ValueError) as exc:
+            add('matching_bridge_wrapper',False,str(exc),True)
     editor = os.environ.get('RIDER_DEFOLD_EDITOR')
     editor_exists = bool(editor and Path(editor).expanduser().is_file())
     add('defold_editor', editor_exists,
         'Set RIDER_DEFOLD_EDITOR to the editor executable; presence only; optional for Bob-only workflows')
     for name in ('node', 'adb'):
         add(name, bool(shutil.which(name)), 'Detected on PATH' if shutil.which(name) else 'Not found; later tooling/device prerequisite')
-    add('editor_mcp', False, 'NOT RUN: live editor/Bridge/MCP connection belongs to G2')
+    add('editor_mcp', False, 'NOT RUN by inventory; use the separate Bridge runtime suite for connection/capability evidence')
     add('android_device', False, 'NOT RUN: no device access assumed or probed')
-    report = {'schema_version': 1, 'scope': 'G1_PREREQUISITES' if args.require_g1 else 'G0_ENVIRONMENT',
+    report = {'schema_version': 1, 'scope': 'G2_TOOLCHAIN' if args.require_g2 else 'G1_PREREQUISITES' if args.require_g1 else 'G0_ENVIRONMENT',
               'os': platform.system(), 'checks': checks,
               'status': 'FAIL' if any(c['status'] == 'FAIL' for c in checks) else 'PASS',
               'runtime_verified': False}
+    if args.require_g2 and report['status']=='FAIL':report['status']='BLOCKED'
     if args.json:
         print(json.dumps(report, indent=2))
     else:
         print(f"{report['scope']}: {report['status']} (tool presence only, no runtime approval)")
         for check in checks:
             print(f"{check['status']:4} {check['id']}: {check['detail']}")
-    return 2 if report['status'] == 'FAIL' else 0
+    return 0 if report['status'] == 'PASS' else 2
 
 
 if __name__ == '__main__':

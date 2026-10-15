@@ -30,11 +30,11 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/project.py verify --suite bridge --output artifacts/g2/bridge
+      - name: Read-only exact G2 toolchain and wrapper doctor
+        run: python tools/doctor.py --require-g2 --json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: g2-bridge-${{ github.run_id }}
-          path: |
-            artifacts/g2/bridge/
-            .cache/g2/wrapper-provenance.json
+          path: artifacts/g2/bridge/
           retention-days: 14
