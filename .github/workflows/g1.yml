@@ -34,6 +34,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '25.0.4'
+      - name: Verified Windows software OpenGL
+        if: runner.os == 'Windows'
+        run: python tools/g2/setup_windows_graphics.py
       - run: python -m unittest discover -s tests/g1 -v
       - name: Build exact backend engine
         run: python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native

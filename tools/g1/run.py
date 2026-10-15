@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Build and execute identical core assertions per platform/configuration."""
 import argparse
+from contextlib import ExitStack
 import hashlib
 import json
 import os
 from pathlib import Path
 import signal
+import shutil
+import tempfile
 import subprocess
 import sys
 import uuid
@@ -29,15 +32,30 @@ def native(directory, collector, run_id):
     binaries = list(directory.rglob(name))
     if len(binaries) != 1:
         raise RuntimeError(f'Expected one {name}, got {binaries}')
-    command = [str(binaries[0].resolve()), '--config=rider.run_id=' + run_id]
-    with (directory / 'runtime.log').open('w', encoding='utf-8') as log:
-        process = subprocess.Popen(command, cwd=binaries[0].parent, stdout=log, stderr=subprocess.STDOUT,
-                                   start_new_session=os.name != 'nt')
-        try:
-            code = process.wait(timeout=60)
-        finally:
-            # Clean the process tree even after successful completion, if it remains.
-            stop(process)
+    with ExitStack() as cleanup:
+        executable=binaries[0].resolve()
+        mesa=os.environ.get('RIDER_MESA_DIR')
+        if os.name=='nt' and mesa:
+            # Per-process software driver in a disposable copy. The archived
+            # stock Rider bundle never contains Mesa DLLs.
+            temporary=Path(cleanup.enter_context(tempfile.TemporaryDirectory(prefix='rider-native-')))
+            bundle=temporary/'bundle'
+            shutil.copytree(executable.parent,bundle)
+            dlls=list(Path(mesa).glob('*.dll'))
+            if not any(x.name.lower()=='opengl32.dll' for x in dlls):raise RuntimeError('Missing software OpenGL driver')
+            for dll in dlls:shutil.copyfile(dll,bundle/dll.name)
+            executable=bundle/executable.name
+            lock=json.loads((ROOT/'tools/ci-graphics-lock.json').read_text())
+            (directory/'graphics-runtime.json').write_text(json.dumps(dict(lock,driver='llvmpipe',deployment='temporary per-process copy'),indent=2))
+        command = [str(executable), '--config=rider.run_id=' + run_id]
+        with (directory / 'runtime.log').open('w', encoding='utf-8') as log:
+            process = subprocess.Popen(command, cwd=executable.parent, stdout=log, stderr=subprocess.STDOUT,
+                                       env=dict(os.environ,GALLIUM_DRIVER='llvmpipe') if mesa else None,
+                                       start_new_session=os.name != 'nt')
+            try:
+                code = process.wait(timeout=60)
+            finally:
+                stop(process)
     lines = (directory / 'runtime.log').read_text(encoding='utf-8', errors='replace').splitlines()
     for line in lines:
         collector.feed(line)

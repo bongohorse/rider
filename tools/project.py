@@ -79,7 +79,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser()
     subs=parser.add_subparsers(dest='command',required=True)
     verify=subs.add_parser('verify')
-    verify.add_argument('--suite',choices=['bootstrap','physics'],default='physics')
+    verify.add_argument('--suite',choices=['bootstrap','physics','bridge'],default='physics')
     verify.add_argument('--target',choices=['desktop','html5'],default='desktop')
     verify.add_argument('--output')
     verify.add_argument('--configuration',choices=['debug','headless'])
@@ -109,6 +109,28 @@ def main(argv=None):
                   ('protocol_tests',[sys.executable,'-m','unittest','discover','-s','tests/g1','-v'],True)]
         tests=[execute(name,cmd,output,60,unit) for name,cmd,unit in commands]
         return write_report(output,'bootstrap',tests,[x[0] for x in commands],sha)
+    if args.suite=='bridge':
+        expected=['debug','release']
+        if not sys.platform.startswith('linux'):
+            tests=[{'id':key,'status':'BLOCKED','duration_ms':None,'assertions':1,
+                    'detail':'Bridge capability smoke currently requires Linux graphics (Xvfb/Mesa)', 'artifacts':[]} for key in expected]
+            return write_report(output,'bridge',tests,expected,sha)
+        test=execute('bridge',[sys.executable,'tools/g2/bridge_smoke.py',str(output/'bridge')],output,2100)
+        tests=[]
+        if test['status']=='PASS':
+            try:
+                report_path=output/'bridge/bridge-results.json'
+                report=json.loads(report_path.read_text())
+                if report['status']!='PASS' or report['source_sha']!=sha or set(report['cases'])!=set(expected):
+                    raise RuntimeError('Invalid Bridge report identity/inventory')
+                for key in expected:
+                    if report['cases'][key].get('status')!='PASS':raise RuntimeError('Incomplete Bridge case')
+                    tests.append({'id':key,'status':'PASS','duration_ms':None,'assertions':1,
+                                  'measurements':report['cases'][key],'artifacts':[str(report_path.relative_to(output))]})
+            except (OSError,ValueError,KeyError,RuntimeError) as exc:
+                test.update(status='FAIL',detail=str(exc))
+        if test['status']!='PASS':tests=[dict(test,id=key,duration_ms=None) for key in expected]
+        return write_report(output,'bridge',tests,expected,sha,duration_ms=test['duration_ms'])
     test=execute('physics',[sys.executable,'tools/g1/run.py','--platform',platform_for(args.target),
                            '--output',str(output/'physics'),'--variant',args.configuration or ('debug' if args.target=='html5' else 'headless')],output,2100)
     tests=[]
