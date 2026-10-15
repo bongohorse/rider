@@ -4,7 +4,7 @@ Repository: bongohorse/rider. Treat this repository as the sole implementation s
 
 ## Authorized scope
 
-Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 is complete; G2 is active. On 2026-10-15 the user explicitly instructed Bridge implementation despite the recorded missing license evidence. Proceed with the pinned native extension and matching wrapper; preserve that unresolved provenance finding without treating it as a renewed implementation stop. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
+Current authorization (2026-10-15): autonomously review each PR, fix findings, complete and merge after required checks, then start the next task in plan order. G0 and the documentation split are complete; G1 and G2 technical work are complete. The next task is G3 entry preflight: establish the required real Android model/OS/Chrome baseline before implementation, per docs/plan/platforms.md. Current agent environment has no physical device access; keep device tests NOT RUN until actual evidence exists. On 2026-10-15 the user explicitly instructed Bridge implementation despite the recorded missing license evidence. Proceed with the pinned native extension and matching wrapper; preserve that unresolved provenance finding without treating it as a renewed implementation stop. Report material findings and stop dependent work for decisions or structural blockers. This user instruction supersedes the earlier stop-after-G1 rule.
 
 - Inspect branch, HEAD, working tree and these instructions before editing.
 - Preserve existing work. Never import old buggy scripts, vendor physics, rendering code or assets.
@@ -29,4 +29,4 @@ Current authorization (2026-10-15): autonomously review each PR, fix findings, c
 
 ## Documentation routing
 
-Read `docs/README.md` and `docs/G2_ACCEPTANCE.md` first. Then open `docs/gates/G2.md` and only the relevant topic files linked by the index. Do not read all docs or the old masterplan from top to bottom. Physics edits require the affected API/units/lifecycle/ownership contracts; runner edits require the test protocol. Historical G0 prompts do not override current authorization. Scoped acceptance documents define the active gate.
+Read `docs/README.md`, `docs/G3_ACCEPTANCE.md` and `docs/PLATFORM_MATRIX.md` first. Then open `docs/gates/G3.md` and only the relevant topic files linked by the index. Do not read all docs or the old masterplan from top to bottom. Physics edits require the affected API/units/lifecycle/ownership contracts; runner edits require the test protocol. Historical G0 prompts do not override current authorization. Scoped acceptance documents define the active gate.
