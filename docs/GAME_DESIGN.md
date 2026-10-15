@@ -1,34 +1,31 @@
 # Rider — game design brief v0
 
-**Purpose:** a 2D mobile driving game about mastering a lively buggy on short, readable obstacle tracks. Precise control, forgiving arcade assists and quick retries matter more than physical realism. This v0 proposes the product details below for Claudio's confirmation; the approved plan remains authoritative.
+**Purpose:** a 2D mobile driving game about mastering a lively buggy on readable obstacle tracks. Precise control, adjustable arcade assists and quick retries matter more than realism. Claudio read v0 and supplied the direction below on 2026-10-15. Feel and fairness are decided through playable tests, not an upfront questionnaire.
 
-## Core loop and session
+## Core loop and duration
 
-Observe the next obstacle → accelerate/brake and adjust attitude → land or fail → retry immediately → improve the run. Target challenge length is **30–60 seconds**. Suggested session length is **2–5 minutes**, with several attempts and no energy/wait system. The first deliverable is a free Driving Gym: a checkerboard level with test stations, live feel parameters and comparable presets. Challenge timer/best time arrive in Phase B; the gym has no countdown pressure.
+Observe → accelerate/brake and adjust attitude → land or fail → retry → improve. The Driving Gym is unrestricted practice with stations, live parameters and presets: **no time limit, countdown, inactivity deadline or fixed session length**. Optional measurement timers never end practice.
 
-## Controls and camera
+Finished levels may vary; **60 seconds to 5 minutes is an exploratory range**, not an agreed target or time limit. Start Phase B with a short, roughly one-minute prototype and tune its length through playtests. Its elapsed-time/best-time display measures a run; any future timed challenge needs its own explicit design. No fixed overall play-session duration is prescribed.
 
-Keyboard first; mobile uses four simultaneous zones: throttle, brake/reverse, lean left and lean right. Brake wins over simultaneous throttle; reverse engages only after braking near standstill. Keyboard and touch feed the same normalized tick commands. Left/right mobile zone placement is a testable proposal, to be settled with Claudio on the phone; tilt lean is an optional M3 experiment.
+## Controls and feel trials
 
-Air lean gives deliberate landing control. Motor/spring/assist values and camera look-ahead/zoom live in one feel configuration with explicit units. The follow camera keeps upcoming obstacles and landings readable, including reverse and 20:9 layouts. No realistic tire model, ragdoll or checkpoints are needed for the gym.
+Keyboard first; mobile has four simultaneous actions: throttle, brake/reverse, lean left/right. Brake wins over simultaneous throttle; reverse engages near standstill. All sources use the same tick commands. Compare mirrored four-zone arrangements on the phone before choosing placement.
 
-## Failure and retry
+**Build and test tilt lean in M3 (A14)** alongside touch controls. The experiment is required; whether tilt remains in the finished game is decided after Claudio tries it. Keep touch available; permission denial or unsupported sensors must have a visible fallback and cannot count as a successful tilt test.
 
-A chassis-attached head sensor detects rider contact. In the gym, crash-reset defaults **off**: show the crash and allow experimentation; a key/overlay switch enables reset. Challenges default **on**. Do not make every rotation a failure. Track bounds/stuck behavior must be explicit before the first challenge is finalized.
+Build presets A/B/C and adjustable assists, then compare them with Claudio. No winning preset, assist strength or final crash-fairness verdict is required before implementation. Centralize driving/camera values with explicit units. Camera look-ahead/zoom should make obstacles and landings readable, including reverse and 20:9 layouts. No realistic tire model or ragdoll is needed for the gym.
 
-Retry restores the canonical vehicle/world/input/camera/attempt state **without collection reload**, subject to A3's measured correctness/latency. Proxy reload is reserved for track changes. The gym measures retry duration rather than inventing a performance claim.
+## Crash, recovery and checkpoints
 
-## Distinct identity and first fun test
+A chassis-attached head sensor provides the first crash candidate. Gym crash-reset defaults **off** (display only); a switch enables reset. Challenges initially enable it. Claudio tests whether head contact alone is fair; do not treat that rule or every rotation as a proven final failure condition.
 
-Trials contributes throttle, attitude and landing mastery; early TrackMania contributes compact routes that can be understood, solved and improved. Rider's proposed focus is a springy buggy, readable physics obstacles and short mobile attempts, later presented in one consistent illustrated 2D toy style with parallax depth. This is a design intention, not a claim of validated differentiation.
+**Recovery proposal to implement and playtest:** R always retries from the current station's safe start (the gym spawn before stations exist); add an on-screen Retry with touch controls. Author generous per-track safety bounds: leaving the visible camera is not out-of-bounds. Falling below/leaving those bounds resets through the same safe in-world path, even with head-crash reset off, and displays the reason. Do not auto-reset slow, stationary or stuck-looking experiments. Offer manual Retry instead; tune bounds from actual failures.
 
-Phase B's first track combines a braking point, controlled jump and balance/timing obstacle. Holding throttle must fail at least one passage; skilled input must succeed reliably. Claudio separately judges control, suspension/landing consistency, readable/fair failure, challenge, prompt retry, simultaneous real touch and desire to try again. Technical checks cannot approve fun. If feel fails, iterate the vehicle before adding features.
+Retry restores canonical vehicle/world/input/camera/attempt state without collection reload, subject to A3 correctness/latency measurements. Proxy reload is for track changes. Start the first challenge **without checkpoints**; if full restarts obstruct learning later sections, trial an authored checkpoint and compare feedback. A later checkpoint restores a defined safe section start and obstacle/input state, rather than an arbitrary physics snapshot. These are testable defaults, not claimed playtest results.
 
-## Open choices for confirmation and tests
+## Identity and fun acceptance
 
-- Is the proposed **2–5-minute session** right for Rider?
-- Which four-zone placement is most comfortable, and should optional tilt survive M3?
-- Which preset/assist strength feels best; is head contact alone a fair challenge crash rule?
-- How should out-of-bounds/stuck recovery work, and does the first short challenge need checkpoints?
+Trials contributes attitude/landing mastery; early TrackMania contributes routes that can be understood, solved and improved. Rider combines a springy buggy, physics obstacles and mobile retries, later in one illustrated 2D toy style with parallax. Differentiation is a design intention, not validated market evidence.
 
-Claudio's reading/confirmation is required before M1. Concrete frame/physics budgets and visual-interpolation needs follow real measurements in A13; iOS waits until after the Android Play Store launch.
+The first challenge combines braking, a controlled jump and timing/lean. Held throttle must fail a passage while skilled input succeeds reliably. Claudio judges control, landing consistency, readable/fair failure, challenge, retry, real simultaneous touch and motivation to try again. Technical checks cannot approve fun; iterate feel before adding features. Numeric budgets/interpolation follow A13 measurement; iOS follows the Play Store launch.

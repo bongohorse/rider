@@ -40,7 +40,7 @@ Authoritative plan, adopted from the approved English handoff. [STATUS.md](../ST
 
 1. **S1 – Complete required checks.** Add one aggregated job `required` that depends on bootstrap, physics (native + HTML5), Bridge and Android jobs. Run the physics workflows also on `push: main`. Ask Claudio to make `required` the only required check in branch protection. Acceptance: an intentionally failing physics run blocks the merge.
 2. **S2 – Switch to issues.** Add the issue template below, labels, milestones M1–M5. Create `STATUS.md` as the single status source. Commit this plan as `docs/PLAN.md`. Fix contradictory status statements, the iOS scope and the deployment restriction in `docs/`. Mark old G3/G4a gate files as superseded by `docs/PLAN.md`. Move G0–G2 records and the v1.4.1 masterplan to `docs/history/`; keep physics/automation contracts in `docs/contracts/`. Create all 22 issues below. Acceptance: no contradictory status statements remain (`grep`); 22 issues exist in five milestones.
-3. **S3 – Game design brief v0.** One page in `docs/GAME_DESIGN.md`: core loop, target session length, control concept, fail rules, how Rider differs from Trials and TrackMania, open design questions. Acceptance: Claudio has read and confirmed it.
+3. **S3 – Game design brief v0.** One page in `docs/GAME_DESIGN.md`: core loop, duration policy (unrestricted gym; level lengths decided by playtests), control concept, fail rules, how Rider differs from Trials and TrackMania, open design questions. Acceptance: Claudio has read the brief and supplied written design direction; comfort/feel/fairness choices are assigned to playable trials rather than required upfront.
 
 ## Issue template
 
@@ -96,7 +96,7 @@ Affected contracts (units, lifecycle, ownership), relevant APIs, known risks.
 | # | Title and scope | Acceptance | Depends on |
 | --- | --- | --- | --- |
 | A13 | **Touch controls v0** (four zones) and **device test** in Android Chrome on the Xiaomi Mi 10T Pro: drivability, frame time, visible stutter at 60 Hz and 144 Hz, 20:9 layout | Drivable on the device; measurements and Chrome version in the platform matrix; concrete budget values set; decision whether visual interpolation is needed | A4, A6 |
-| A14 | **Experiment: tilt steering** for lean (optional) | Comparison with touch buttons documented; keep or drop decided | A13 |
+| A14 | **Experiment: tilt steering** for lean (implementation and trial required; final retention decided after testing) | Tilt lean implemented and tested on the reference phone; comparison with touch buttons documented; Claudio-informed keep/drop decision recorded | A13 |
 
 ### M4 – Stations
 
@@ -120,7 +120,7 @@ Affected contracts (units, lifecycle, ownership), relevant APIs, known risks.
 
 ## Later phases (do not create issues yet)
 
-- **B – First challenge and fun acceptance:** finalise the design brief; 30–60 s track; timer and best time; crash detection on; juice (landing dust, light screen shake, visible suspension); multi-touch cases; APK sideload on the device; Bridge debug-only; short performance check.
+- **B – First challenge and fun acceptance:** finalise the design brief; initial short track around 60 s, adjusted through playtesting; elapsed timer and best time, no implicit deadline; crash detection on; juice (landing dust, light screen shake, visible suspension); multi-touch cases; APK sideload on the device; Bridge debug-only; short performance check.
 - **C – Three challenges:** jump/landing, balance, small physics puzzle; optional labs as gym stations.
 - **D – Art, audio, content.**
 - **E – Full stability and performance acceptance** with representative art, plus a weaker Android device.
@@ -130,12 +130,23 @@ Affected contracts (units, lifecycle, ownership), relevant APIs, known risks.
 
 ## Implementation clarifications
 
-- Milestone approval remains mandatory even if an issue's technical dependencies are already complete. S1–S3 preparation does not authorize M1 before Claudio confirms the design brief.
+- Milestone approval remains mandatory even if an issue's technical dependencies are already complete. Claudio has read v0 and supplied the design direction below; comfort, feel and fairness choices are settled through their planned tests, not demanded upfront.
 - A11 and A12 may use the current flat gym and a focused controlled suspension probe before the full M4 stations exist; no extra station dependency is implied.
 - A13 collects the missing phone Chrome version and actual refresh/frame data; device identity is supplied but no device runtime is claimed.
 - A20 uses collection-proxy time scaling. A1 must keep the gym world arrangement compatible with that mechanism; single-step is optional and is not part of A20.
 - A21 compares a candidate replay using the same tick commands against a translucent reference drawn from recorded transforms. Cross-platform bit-exact re-simulation and a separate split-screen renderer are not required.
 - The German feedback and original review explain the decisions; where they differ from the later approved English handoff, D1–D15 and S1–S3 above govern. In particular, the revised plan schedules mobile HTML5 testing in M3, APK sideload/Bridge binary exclusion in Phase B, and full stability testing after representative art in Phase E.
+
+## Claudio's design feedback — 2026-10-15
+
+This later feedback updates the initial handoff wherever duration or optionality differs. The detailed brief and recovery proposal are in [GAME_DESIGN.md](GAME_DESIGN.md).
+
+- Gym: unrestricted practice, no time limit or prescribed session length. Measurement timers do not end a run.
+- Finished level duration is unsettled and may vary; 60 s–5 min is exploratory. The first challenge is a short prototype around one minute, with actual duration decided through playtesting; elapsed time is not a deadline.
+- A13 compares mirrored four-zone layouts on the phone. A14 must implement a tilt trial; only retention in the finished product remains optional. Unsupported hardware/permission limits block the affected test rather than silently dropping the requested experiment.
+- Build presets/assists and the switchable head-contact rule, then let Claudio compare feel/fairness. No preferred values or final crash verdict are required before building the trials.
+- Recovery proposal for A3 and later station/touch integration: manual Retry to the current station's safe start (initial gym spawn until stations exist), generous authored safety bounds with reason-labelled automatic recovery, and no timeout/stuck auto-reset during practice. Camera visibility alone is not a boundary. Reuse the same reset path and validate all paths.
+- First challenge starts without checkpoints; trial an authored safe checkpoint only if full restarts hinder learning later sections. Recovery/bounds/checkpoint defaults are proposals to test, not user-approved or measured final behavior.
 
 ## GitHub issue index
 
