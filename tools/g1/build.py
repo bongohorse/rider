@@ -12,14 +12,16 @@ import sys
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
-BOB_SHA256 = '90da834167c21be956af2be5a2a64b2ee1e16ad980dfa99f35a6b26516958d0f'
+LOCK = json.loads((ROOT / 'tools/toolchain-lock.json').read_text())
+BOB_SHA256 = LOCK['bob']['sha256']
+JDK_BUILD = 'Temurin-' + LOCK['jdk']['build']
 
 
 def bob_jar():
     target = ROOT / '.cache/g1/bob.jar'
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists():
-        request = urllib.request.Request('https://github.com/defold/defold/releases/download/1.14.0/bob.jar', headers={'User-Agent': 'Rider-G1'})
+        request = urllib.request.Request(LOCK['bob']['url'], headers={'User-Agent': 'Rider-G1'})
         temporary = target.with_suffix('.download')
         with urllib.request.urlopen(request, timeout=180) as response, temporary.open('wb') as output:
             shutil.copyfileobj(response, output)
@@ -38,8 +40,8 @@ def build(platform, output, settings=None, variant=None):
     if not java:
         raise RuntimeError('BLOCKED: JDK 25 java not available')
     version = subprocess.run([java, '-version'], capture_output=True, text=True, timeout=15)
-    if 'version "25' not in version.stdout + version.stderr:
-        raise RuntimeError('BLOCKED: JDK 25 required; use the pinned CI toolchain')
+    if JDK_BUILD not in version.stdout + version.stderr:
+        raise RuntimeError(f'BLOCKED: approved JDK is {JDK_BUILD}; selector must resolve to the locked build')
     command = [java, '-jar', str(bob_jar()), '--platform', platform, '--variant', variant or ('debug' if platform == 'wasm-web' else 'headless'),
                '--archive', '--bundle-output', str(output)]
     if settings:

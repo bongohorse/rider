@@ -1,4 +1,4 @@
-# G1 acceptance — implementation authorized on 2026-10-15; evidence pending
+# G1 acceptance — baseline PASS, final PR regression required
 
 Scope: minimal Defold / integrated Box2D 3 PoC, not a complete vehicle or sandbox UI. Run against the exact candidate engine and effective app manifest. No separate physics extension.
 
@@ -6,14 +6,14 @@ Scope: minimal Defold / integrated Box2D 3 PoC, not a complete vehicle or sandbo
 
 | ID | Assertion | Windows native | Linux runtime | Desktop Chrome HTML5 | Android |
 |---|---|---|---|---|---|
-| backend | Active Box2D major 3 from runtime | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| body_collision | Static floor and dynamic collision behave within declared tolerances | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| wheel_motor | Measured wheel angular acceleration/speed changes under motor command | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| wheel_spring | Defined load causes measurable deflection and damped return | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| units | Fall distance, joint distance and changed-scale probe reject double conversion | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| fixed_ticks | 60 Hz independent of render rate, configured solver substeps separate | NOT RUN | NOT RUN | NOT RUN | G3 required |
-| cleanup_reset | 100 resets; explicit joint removal and body/collection autoremoval; no stale handles | NOT RUN | NOT RUN | NOT RUN | G3 core smoke |
-| protocol | Current run-ID completion accepted, foreign/stale results rejected | NOT RUN | NOT RUN | NOT RUN | documented route |
+| backend | Active Box2D major 3 from runtime | PASS | PASS | PASS | G3 required |
+| body_collision | Static floor and dynamic collision behave within declared tolerances | PASS | PASS | PASS | G3 required |
+| wheel_motor | Measured wheel angular acceleration/speed changes under motor command | PASS | PASS | PASS | G3 required |
+| wheel_spring | Defined load causes measurable deflection and damped return | PASS | PASS | PASS | G3 required |
+| units | Fall distance, joint distance and changed-scale probe reject double conversion | PASS | PASS | PASS | G3 required |
+| fixed_ticks | 60 Hz independent of render rate, configured solver substeps separate | PASS | PASS | PASS | G3 required |
+| cleanup_reset | 100 resets; explicit joint removal and body/collection autoremoval; no stale handles | PASS | PASS | PASS | G3 core smoke |
+| protocol | Current run-ID completion accepted, foreign/stale results rejected | PASS | PASS | PASS | documented route |
 
 Before running, define numeric tolerances, initial positions/velocities, body creation order, test duration and expected IDs. A chassis, one wheel, wheel joint and floor suffice. Declare fixture constraints and load; fixtures do not claim full-vehicle dynamics. Start tick zero only after initialization and a specified settling policy. Release input after start-state measurement.
 
@@ -29,3 +29,22 @@ Before running, define numeric tolerances, initial positions/velocities, body cr
 - Define session ownership, safe mutation queue, reset completion, Lua-state isolation and valid generation boundaries; implement only what the PoC needs.
 
 G1 creates the minimal runtime project and runner. G2 unifies tooling/JSON/JUnit and integrates Bridge. G3 adds sandbox and Android tests. Missing required APIs stop dependent work for a decision. Human device tests cannot be invented by a cloud agent.
+
+## Evidence
+
+Baseline source: `7594e500fafa074b65150dd45a3224369dea5033`. [G1 run 38697533465](https://github.com/bongohorse/rider/actions/runs/38697533465) passed Linux/Windows headless and HTML5 debug in both configurations (scale 0.01 at 60 render target, scale 0.02 at 30). Each platform emitted all eight engine cases plus matching completion, ignored one foreign completion, and passed changed-scale/render comparisons. Six collector negative tests passed. [Implemented contract](physics/G1_CONTRACT.md) defines fixtures, ownership, units and tolerances.
+
+| Measurement | Scale 0.01 / 60 target | Scale 0.02 / 30 target |
+|---|---|---|
+| Fall after 30 ticks | 123.817108 | 124.259888 |
+| Motor angular speed | 20 rad/s | 20 rad/s |
+| Loaded spring deflection | 2.761017 | 2.761017 |
+| Return anchor error | -0.0000763 | -0.00000763 |
+| Velocity displacement, 30 ticks | 59.999939 | 59.999939 |
+| One-tick command movement | 2 | 2 |
+| Linux / HTML5 ticks per frame | 1 | 2 |
+| Reset cycles per run | 100 (50 explicit / 50 automatic) | 100 (50 explicit / 50 automatic) |
+
+Windows matched the physical values; its 30-target run measured 270 ticks in 137 rendered updates, within declared bounds. The changed-scale fall difference is 0.442780, below the predeclared 0.5 limit. No tolerance was expanded. This is an invariance probe within tolerance, not a claim of bit-identical scale behavior.
+
+Android: Bob produced `RiderG1.apk` for arm64 with the debug engine. APK installation, real hardware, touch and tab/app switching remain NOT RUN. [Toolchain lock](TOOLCHAIN_LOCK.md) identifies approved engine/Bob/JDK only. CI artifacts retain logs, structured results, toolchain reports and browser evidence for 14 days; numeric results and source/run identities remain in git. Final PR source and merge evidence will be added after regression.

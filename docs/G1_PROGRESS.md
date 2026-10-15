@@ -1,4 +1,4 @@
-# G1 progress — started, acceptance pending
+# G1 progress — baseline matrix PASS; final review in progress
 
 G1 started after the documentation split was merged in PR #6. Implementation is isolated in [draft PR #7](https://github.com/bongohorse/rider/pull/7). This is a progress record, not gate approval.
 
@@ -31,7 +31,11 @@ Source: [body binding](https://github.com/defold/defold/blob/1.14.0/engine/games
 | Motor speed / angular velocity | Angular values in radians per second | UI degree conversion belongs outside physics |
 | Joint translation getter | Registered for prismatic, not wheel joint | Measure wheel/chassis positions for the spring case |
 
-## Next work
+## Baseline completion
+
+All required desktop/HTML5 physics runs now pass at `7594e500fafa074b65150dd45a3224369dea5033`, [run 38697533465](https://github.com/bongohorse/rider/actions/runs/38697533465). The unsupported empty `excludeJslibs` manifest key was removed. Proxy handle lookup was moved into its owning collection. Fixed-callback tick zero now resets initial velocity, eliminating a render-dependent startup bias without widening tolerances. Android debug APK building also passed; installation/device tests remain unverified. See [acceptance](G1_ACCEPTANCE.md), [implemented contract](physics/G1_CONTRACT.md) and [toolchain lock](TOOLCHAIN_LOCK.md).
+
+## Original remaining-work list (now implemented, retained as scope history)
 
 1. Finish platform backend probes and diagnose HTML5 Extender output.
 2. Add the minimal chassis, wheel, joint and floor fixtures; define tolerances before runs.

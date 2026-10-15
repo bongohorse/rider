@@ -11,13 +11,14 @@ Read this index and the active gate first. Do **not** read every planning file b
 | Current work | [G1 progress](G1_PROGRESS.md), [G1 acceptance](G1_ACCEPTANCE.md), then [G1 plan](gates/G1.md) |
 | Rules and sign-off | [Principles](plan/principles.md), [gate policy](plan/gate-policy.md), [evidence policy](plan/evidence-policy.md) |
 | Completed setup | [G0 completion](G0_COMPLETION.md), [repository setup](REPOSITORY_SETUP.md) |
-| Tool selection | [Verified candidate provenance](TOOLCHAIN_CANDIDATES.md), [version policy](plan/toolchain.md) |
+| Tool selection | [Verified candidate provenance](TOOLCHAIN_CANDIDATES.md), [approved G1 lock](TOOLCHAIN_LOCK.md), [version policy](plan/toolchain.md) |
 | Architecture review clarifications | [ADR 0001](DECISIONS/0001-bootstrap-scope.md) |
 
 ## Physics: choose the relevant contract
 
 | Topic | File |
 |---|---|
+| Implemented G1 fixture and runner | [G1 contract](physics/G1_CONTRACT.md) |
 | API/backend/platform support | [API matrix](plan/physics/api.md) |
 | Coordinates and scaling | [Units](plan/physics/units.md) |
 | Fixed ticks, callback ordering, mutation | [Lifecycle](plan/physics/lifecycle.md) |
