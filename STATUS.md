@@ -8,8 +8,8 @@ Preparation S1–S3 for the [Driving Gym plan](docs/PLAN.md). M1 has not started
 
 | Step | State | Evidence / remaining acceptance |
 | --- | --- | --- |
-| S1 required CI aggregation | In review | [PR #15](https://github.com/bongohorse/rider/pull/15); negative propagation probe PASS (red physics → red required); final restored head CI running. Claudio confirmed protection update; branch metadata verifies only `required`, Actions app 15368, enforcement `everyone`. |
-| S2 issue/document migration | In preparation | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) prepared/created. Five milestones and five labels created; all 22 issues assigned and read back (counts M1/M2/M3/M4/M5 = 4/8/2/7/1). [Setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). Final PR CI/review pending. |
+| S1 required CI aggregation | PASS; merged | [PR #15](https://github.com/bongohorse/rider/pull/15), merge `82c70b19d2ef2e893eafa8770e5182cba15b96d2`; [clean CI](https://github.com/bongohorse/rider/actions/runs/38745075743) at `dbb8ffaf5f9ecdab369453ea9dd3b6194de87e4d` PASS. Negative propagation and sole-required protection verified. |
+| S2 issue/document migration | Review/CI pending | English plan, contracts/history split and 22 issues A1–A22 (#16–#37) created in [PR #38](https://github.com/bongohorse/rider/pull/38). Five milestones and five labels created; all 22 issues assigned and read back (counts M1/M2/M3/M4/M5 = 4/8/2/7/1). [Setup evidence](https://github.com/bongohorse/rider/actions/runs/38745300299). Final PR CI/review pending. |
 | S3 design brief v0 | NOT RUN | Prepare one-page brief and obtain Claudio's read/confirmation before M1. |
 
 ## Preview and platform evidence
