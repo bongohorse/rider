@@ -132,7 +132,7 @@ function on_message(self,id,data,sender)
         for key,box in pairs(self.presets) do
             gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
         end
-        gui.set_text(self.preset_note,data.invalid and "Invalid URL preset: using A" or data.modified and "Modified - select preset to restore" or "Preset comparison")
+        gui.set_text(self.preset_note,data.invalid and "Invalid URL: A" or data.modified and "Modified - select A/B/C" or "Presets [P]")
     elseif id==hash("tuning") then
         self.owner=sender
         self.tuning=data
@@ -160,7 +160,7 @@ function on_message(self,id,data,sender)
             string.format("L %+.1f   R %+.1f u",data.travel1,data.travel2),
             string.format("%.0f fps / %.1f ms",data.fps,data.frame_ms),
             string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
-            string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "budget unset")}
+            string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "unset")}
         for i,text in ipairs(values) do
             gui.set_text(self.metrics[i],text)
             local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
@@ -213,7 +213,9 @@ function update(self,dt)
     local panel_scale=math.max(1,1/math.max(0.01,base))
     -- Small/portrait FIT views still need a usable editor and a legible graph.
     gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
-    gui.set_scale(layout.roots.right_top,vmath.vector3(panel_scale,panel_scale,1))
+    local height=html5 and tonumber(html5.run("innerHeight")) or 540
+    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-16)/(446*base)))
+    gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
     layout.readable(base)
     if html5 then
         local function point(n)

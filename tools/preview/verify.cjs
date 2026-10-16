@@ -53,7 +53,7 @@ async function main(){
       const responsive=[];
       const initialReady=await page.evaluate(()=>JSON.stringify(window.riderReady));
       const sizes=name==='desktop'?[{width:1920,height:1080},{width:2560,height:1440},{width:1280,height:720}]:
-        [{width:1080,height:486},{width:486,height:1080},{width:1080,height:486}];
+        [{width:1080,height:486},{width:486,height:1080},{width:896,height:400},{width:1080,height:486}];
       if(await page.evaluate(()=>window.riderHud.tuning))throw Error('Tuning must be collapsed by default');
       await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud.tuning);await page.keyboard.up('t');
       for(const viewport of sizes){

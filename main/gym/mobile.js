@@ -88,6 +88,7 @@
     #rider-mobile .tilt-panel{background:#10252bf5;padding:8px;border-radius:8px;max-width:620px}
     #rider-mobile .tilt-panel label{pointer-events:auto;display:flex;align-items:center;gap:8px}
     #rider-mobile .tilt-panel input{pointer-events:auto;min-height:32px;width:110px;touch-action:pan-x}
+    #rider-mobile.editing .toolbar button:not([data-tuning]){display:none}
     #rider-mobile.editing .zones{display:none}
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
@@ -108,7 +109,7 @@
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
   });
-  const tuningButton=button('Tuning',toolbar,()=>api.toggleDetails());
+  const tuningButton=button('Tuning',toolbar,()=>api.toggleDetails());tuningButton.dataset.tuning='';
   api.toggleDetails=()=>{abort('tuning changed');api.details=!api.details;root.classList.toggle('editing',api.details);tuningButton.textContent=api.details?'Close tuning':'Tuning';};
   button('Measure',toolbar,()=>{tiltPanel.classList.remove('open');measure.classList.toggle('open');});
   button('Tilt',toolbar,()=>{measure.classList.remove('open');tiltPanel.classList.toggle('open');});

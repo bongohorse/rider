@@ -39,15 +39,15 @@ end
 M.sliders={
     {key="spring_hz",label="Spring",min=1,max=12,unit="Hz"},
     {key="damping",label="Damping",min=0.2,max=1.8,unit="ratio"},
-    {key="motor_speed",label="Wheel target",min=8,max=140,sign=-1,unit="rad/s"},
-    {key="drive_torque",label="Motor cap",min=500,max=5000,unit="binding u"},
+    {key="motor_speed",label="Speed",min=8,max=140,sign=-1,unit="rad/s"},
+    {key="drive_torque",label="Motor",min=500,max=5000,unit="binding u"},
     {key="lean_torque",label="Air lean",min=0,max=200,unit="N m"},
     {key="lean_rate_max",label="Air rate",min=1,max=16,unit="rad/s"},
-    {key="ground_lean_torque",label="Ground lean",min=0,max=400,unit="N m"},
-    {key="coast_torque",label="Coast cap",min=0,max=1500,unit="binding u"},
-    {key="rolling_resistance",label="Rolling drag",min=0,max=0.5,unit="N m s"},
-    {key="camera_response",label="Camera response",min=2,max=12,unit="1/s"},
-    {key="camera_look_seconds",label="Look ahead",min=0,max=0.6,unit="s"}
+    {key="ground_lean_torque",label="Ground",min=0,max=400,unit="N m"},
+    {key="coast_torque",label="Coast",min=0,max=1500,unit="binding u"},
+    {key="rolling_resistance",label="Rolling",min=0,max=0.5,unit="N m s"},
+    {key="camera_response",label="Camera",min=2,max=12,unit="1/s"},
+    {key="camera_look_seconds",label="Look",min=0,max=0.6,unit="s"}
 }
 function M.set(key,value)
     if type(value)~="number" or value~=value then return false end
