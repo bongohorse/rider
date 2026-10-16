@@ -138,5 +138,5 @@
     }
     zones.append(pair);
   }
-  root.append(zones);document.body.append(root);
+  root.append(zones);(document.getElementById('app-container')||document.body).append(root);
 })();

@@ -7,6 +7,7 @@ module.exports=async function mobile(browser,url,sha,out){
   const page=await context.newPage(),errors=[],logs=[],cases=[];
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{logs.push(m.text());if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
+  const pass=name=>{cases.push(name);console.log('MOBILE_CASE '+name);};
   const session=await context.newCDPSession(page);
   const dispatch=(type,points)=>session.send('Input.dispatchTouchEvent',{type,touchPoints:points});
   const point=async(command,id)=>{
@@ -34,23 +35,23 @@ module.exports=async function mobile(browser,url,sha,out){
     await dispatch('touchStart',[throttle,left]);
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1&&window.riderTelemetry.command.lean===1&&window.riderTelemetry.speed>25);
     await page.waitForFunction(()=>window._dmJSDeviceShared?.audioCtx?.state==='running');
-    cases.push('simultaneous_drive_lean_audio');
+    pass('simultaneous_drive_lean_audio');
     await dispatch('touchStart',[throttle,left,brake]);
     await page.waitForFunction(()=>{const c=window.riderTelemetry.command;return c.throttle===0&&c.brake_reverse===1&&c.allow_reverse===false;});
-    cases.push('brake_priority');
-    await dispatch('touchCancel',[]);await neutral();cases.push('cancel_neutral');
+    pass('brake_priority');
+    await dispatch('touchCancel',[]);await neutral();pass('cancel_neutral');
     // Capture persists outside a button, then releases outside it.
     await dispatch('touchStart',[await point('throttle',1)]);
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
     await dispatch('touchMove',[{x:540,y:250,id:1}]);
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
-    await dispatch('touchEnd',[]);await neutral();cases.push('outside_release');
+    await dispatch('touchEnd',[]);await neutral();pass('outside_release');
     await dispatch('touchStart',[await point('throttle',1)]);
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
     const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
     await page.getByRole('button',{name:'Retry',exact:true}).click();
     await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resets);await neutral();
-    await dispatch('touchEnd',[]);cases.push('same_reset_path_clears_input');
+    await dispatch('touchEnd',[]);pass('same_reset_path_clears_input');
     const before=await point('throttle',1);
     await page.getByRole('button',{name:'Layout A · mirror',exact:true}).click();
     await page.waitForFunction(()=>window.riderMobile.mirrored);
@@ -61,7 +62,7 @@ module.exports=async function mobile(browser,url,sha,out){
     await layout();await page.screenshot({path:path.join(out,'mobile-portrait.png')});
     await page.setViewportSize({width:1080,height:486});await layout();
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
-    cases.push('mirrored_drive_rotation_no_reload');
+    pass('mirrored_drive_rotation_no_reload');
     // A real 30-second capture exercises bounded collection and source metadata.
     await page.getByRole('button',{name:'Measure',exact:true}).click();
     await page.getByRole('combobox').selectOption({label:'60 Hz'});
@@ -74,13 +75,13 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(capture.capture.source,sha);assert.equal(capture.capture.refreshModeUserSelected,'60 Hz');
     assert(capture.capture.durationSeconds>=30&&capture.capture.engineCallbackIntervalMs.samples>100);
     fs.writeFileSync(path.join(out,'mobile-capture.json'),JSON.stringify(capture,null,2));
-    cases.push('capture_30s_identity_and_samples');
+    pass('capture_30s_identity_and_samples');
     // An interrupted capture must not silently include background time.
     await page.getByRole('button',{name:'Record 30 s',exact:true}).click();
     await page.waitForFunction(()=>window.riderMobile.recording);
     await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
     await page.waitForFunction(()=>!window.riderMobile.recording);assert.equal(await page.evaluate(()=>window.riderMobile.report),null);
-    cases.push('interrupted_capture_cancelled');
+    pass('interrupted_capture_cancelled');
     await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
     await page.getByRole('button',{name:'Copy report',exact:true}).click();
     await page.waitForFunction(()=>window.riderFeedback.visible);
@@ -88,7 +89,16 @@ module.exports=async function mobile(browser,url,sha,out){
     assert((await page.locator('#rider-feedback-text').inputValue()).includes(sha));
     await page.getByRole('button',{name:'Close',exact:true}).click();
     await page.waitForFunction(()=>!window.riderFeedback.visible&&!window.riderTelemetry.ui_captured);
-    cases.push('mobile_report_fallback');
+    pass('mobile_report_fallback');
+    assert.equal(await page.locator('#app-container #rider-mobile').count(),1);
+    await page.getByRole('button',{name:'Fullscreen',exact:true}).click();
+    await page.waitForFunction(()=>document.fullscreenElement!==null);
+    await dispatch('touchStart',[await point('throttle',1)]);
+    await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+    await dispatch('touchEnd',[]);await neutral();
+    await page.evaluate(()=>document.exitFullscreen());
+    await page.waitForFunction(()=>document.fullscreenElement===null);
+    pass('fullscreen_controls_remain_drivable');
     await page.screenshot({path:path.join(out,'mobile-landscape.png')});
     if(errors.length)throw Error(errors.join('\n'));
     return {name:'mobile-touch-emulation',status:'PASS',cases,physicalDevice:'NOT RUN'};
