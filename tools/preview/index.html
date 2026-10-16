@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store"><title>Rider · Driving Gym</title>
+<style>body{margin:0;min-height:100dvh;display:grid;place-content:center;background:#101b20;color:#dceee6;font:18px system-ui;text-align:center}button{font:inherit;padding:.6em 1em}</style>
+<h1>Driving Gym</h1><p id="status">Loading practice area…</p><button hidden id="retry" onclick="location.reload()">Try again</button>
+<script>
+(async()=>{
+  try {
+    const base=new URL('./',location.href);
+    const response=await fetch(new URL('build.json?fresh='+Date.now(),base),{cache:'no-store',signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw Error('Build unavailable');
+    const build=await response.json();
+    if(!/^[a-f0-9]{40}$/.test(build.source_sha)||!/^\d+-\d+$/.test(build.build_id)||build.path!=='builds/'+build.source_sha+'/'+build.build_id+'/index.html')throw Error('Invalid build');
+    const target=new URL(build.path,base);target.search=location.search;target.hash=location.hash;
+    location.replace(target.href);
+  } catch(error) {
+    document.getElementById('status').textContent='The practice area could not load. Please try again.';
+    document.getElementById('retry').hidden=false;
+  }
+})();
+</script></html>
