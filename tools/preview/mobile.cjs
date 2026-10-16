@@ -63,6 +63,23 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.setViewportSize({width:1080,height:486});await layout();
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('mirrored_drive_rotation_no_reload');
+    // Closing tuning with another pointer must release an active editor drag.
+    await page.getByRole('button',{name:'Tuning',exact:true}).click();
+    await page.waitForFunction(()=>window.riderCompact===false);
+    const editorPoint=await page.evaluate(()=>{
+      const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),row=window.riderControls[0];
+      return {x:(row.left.x+row.right.x)*.5/c.width*r.width,y:(1-row.left.y/c.height)*r.height};
+    });
+    await page.mouse.move(editorPoint.x,editorPoint.y);await page.mouse.down();
+    await page.waitForFunction(()=>window.riderDragging&&window.riderTelemetry.ui_captured);
+    const close=await page.getByRole('button',{name:'Close tuning',exact:true}).boundingBox();
+    await dispatch('touchStart',[{x:close.x+close.width/2,y:close.y+close.height/2,id:10}]);
+    await dispatch('touchEnd',[]);
+    await page.waitForFunction(()=>window.riderCompact===true&&!window.riderDragging&&!window.riderTelemetry.ui_captured);
+    await page.mouse.up();
+    await dispatch('touchStart',[await point('throttle',1)]);
+    await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+    await dispatch('touchEnd',[]);await neutral();pass('closing_editor_releases_capture');
     // A real 30-second capture exercises bounded collection and source metadata.
     await page.getByRole('button',{name:'Measure',exact:true}).click();
     await page.getByRole('combobox').selectOption({label:'60 Hz'});

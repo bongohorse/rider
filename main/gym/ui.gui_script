@@ -5,6 +5,12 @@ local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
 local telemetry = require "main.gym.telemetry"
+local function cancel_drag(self)
+    if self.controls and self.controls.drag then
+        self.controls.drag=nil
+        if self.owner then msg.post(self.owner,"ui_capture",{active=self.feedback_open or self.feedback_modal or false}) end
+    end
+end
 function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
@@ -67,7 +73,8 @@ function init(self)
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
 function on_message(self,id,data,sender)
-    if id==hash("graph") then
+    if id==hash("cancel_drag") then cancel_drag(self)
+    elseif id==hash("graph") then
         graph.draw(self.graph,data)
         msg.post(sender,"graph_shown",{series=data.series,peak=data.peak,positive_peak=data.positive_peak,generation=data.generation})
     elseif id==hash("preset") then
@@ -130,7 +137,11 @@ local function copy_feedback(self)
 end
 function update(self,dt)
     local compact=mobile.compact()
-    if compact~=self.compact then self.compact=compact;layout.visible(not compact) end
+    if compact~=self.compact then
+        if compact then cancel_drag(self) end
+        self.compact=compact;layout.visible(not compact)
+        if html5 then html5.run("window.riderCompact = "..tostring(compact)) end
+    end
     self.feedback_poll=(self.feedback_poll or 0)+dt
     if self.feedback_poll<0.1 then return end
     self.feedback_poll=0
