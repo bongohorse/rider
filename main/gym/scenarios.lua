@@ -446,6 +446,25 @@ function M.coast_tick(self,dt)
         self.coast_phase,self.coast_ticks,self.coast_x,self.coast_last="tap_roll",0,state.x,state.vx
     end
 end
+function M.hud_tick(self,dt)
+    self.hud_ticks=(self.hud_ticks or 0)+1
+    if self.hud_ticks<60 then return end
+    local cases={{55,0.3,0.9,0.6},{54,1,0.65,0.2},{30,1,0.65,0.2},{29,1,0.25,0.25}}
+    self.hud_index=self.hud_index or 1
+    local result=self.hud_probe_result
+    if result then
+        local c=cases[self.hud_index]
+        assert(math.abs(result.fps-c[1])<0.001 and math.abs(result.r-c[2])<0.001 and math.abs(result.g-c[3])<0.001 and math.abs(result.b-c[4])<0.001,"FPS badge colour threshold wrong")
+        self.hud_index=self.hud_index+1;self.hud_probe_result=nil;self.hud_waiting=false
+    end
+    if self.hud_index>#cases then
+        emit(self,"suite_end",{status="PASS",cases={fps_green_55=true,fps_orange_54=true,fps_orange_30=true,fps_red_29=true}})
+        self.testcase="done"
+    elseif not self.hud_waiting then
+        self.hud_waiting=true
+        msg.post("main:/loader#ui","hud_probe",{frame_ms=1000/cases[self.hud_index][1]})
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
@@ -455,6 +474,7 @@ function M.fixed(self,dt)
         elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt)
         elseif self.testcase=="a11" then M.feedback_tick(self,dt)
         elseif self.testcase=="a12" then M.graph_tick(self,dt)
+        elseif self.testcase=="hud" then M.hud_tick(self,dt)
         elseif self.testcase=="coast" then M.coast_tick(self,dt)
         elseif self.testcase=="m2feedback" then M.feedback_feel_tick(self,dt) end
     end

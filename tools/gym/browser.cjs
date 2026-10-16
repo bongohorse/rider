@@ -57,30 +57,43 @@ async function main() {
           if(data.name==='ground_right')await page.keyboard.down('d');
           if(data.name==='ground_release'){await page.keyboard.up('a');await page.keyboard.up('d');}
           if(data.name==='enable_crash')await page.keyboard.down('c');
+          async function guiPoint(name,key){
+            return page.evaluate(({name,key})=>{
+              const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
+              const p=key?window.riderHud[name][key]:window.riderHud[name];
+              return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};
+            },{name,key});
+          }
+          async function openTuning(){
+            if(!await page.evaluate(()=>window.riderHud?.tuning)){
+              await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud?.tuning);await page.keyboard.up('t');
+            }
+          }
           if(data.name==='disable_crash_overlay'){
-            await page.keyboard.up('c');
-            const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*140/540);
-            await page.mouse.down();
+            await page.keyboard.up('c');await openTuning();
+            const p=await guiPoint('crash');await page.mouse.move(p.x,p.y);await page.mouse.down();
           }
           if(data.name==='slider_begin'){
-            const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*214/540);await page.mouse.down();
+            await openTuning();
+            const p=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderControls[0];return {x:r.x+(s.left.x+s.right.x)/2/c.width*r.width,y:r.y+(1-s.left.y/c.height)*r.height};});
+            await page.mouse.move(p.x,p.y);await page.mouse.down();
           }
           if(data.name==='slider_move'){
             await page.keyboard.down('ArrowUp');
-            const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.move(box.x+box.width*900/960,box.y+box.height*214/540);
+            const p=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderControls[0];return {x:r.x+s.right.x/c.width*r.width+3,y:r.y+(1-s.right.y/c.height)*r.height};});
+            await page.mouse.move(p.x,p.y);
           }
           if(data.name==='slider_release'){await page.mouse.up();await page.keyboard.up('ArrowUp');}
           if(data.name==='select_preset'){
-            await page.keyboard.up('ArrowUp');
-            for(const key of ['1','2','3'])await page.keyboard.up(key);
-            await page.keyboard.down({a:'1',b:'2',c:'3'}[data.key]);
+            await page.keyboard.up('ArrowUp');await openTuning();
+            const p=await guiPoint('presets',data.key);
+            const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
+            await page.mouse.move(p.x,p.y);await page.mouse.down();
+            // Reselecting the already active A still needs a fresh owner acknowledgement.
+            await page.waitForFunction(({key,resets})=>window.riderTelemetry.preset===key&&!window.riderTelemetry.modified&&window.riderTelemetry.reset_count===resets+1,{key:data.key,resets});
+            await page.mouse.up();
           }
-          if(data.name==='preset_drive'){
-            await page.keyboard.up({a:'1',b:'2',c:'3'}[data.key]);await page.keyboard.down('ArrowUp');
-          }
+          if(data.name==='preset_drive')await page.keyboard.down('ArrowUp');
           if(data.name==='copy_feedback'){
             await page.keyboard.down('f');
             await page.waitForFunction(()=>window.riderFeedback?.status==='Copied feedback [F]');

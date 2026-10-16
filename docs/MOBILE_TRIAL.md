@@ -8,7 +8,13 @@ Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](h
 - Hold Throttle and either Lean button with two fingers. Hold both pedals to check braking priority. Brake near standstill to reverse.
 - Try **Layout A · mirror** and **Layout B · mirror**. Compare comfort, accidental presses and readable space; neither layout is preselected as the winner.
 - Retry while holding a zone; the vehicle must reset and wait for a fresh press. Drag a finger outside a zone and release. Rotate, switch tabs/apps and return; no stuck pedal or lean is allowed.
-- **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows speed, frame metrics, preset and source SHA. Landscape is recommended for the detailed editor.
+- **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows FPS/frame interval, speed, contact dots, spring travel and a small graph; the build SHA is dim at the bottom. Tuning contains A/B/C chips, crash/sound/copy actions and eleven sliders. P cycles presets; 1–9 are reserved for stations. Landscape is recommended for the detailed editor.
+
+## Coasting and HUD follow-up (#68 / #69)
+
+- Accelerate on flat ground and release Throttle. The buggy should slow down naturally; a short brake tap followed by no input must not leave it rolling indefinitely. Automated baseline: 5 m/s to below 0.1 m/s in 11.53 m; phone feel is still your observation.
+- Confirm the default HUD leaves the vehicle/centre clear and text is readable. Open/close Tuning, adjust a slider, release outside it, then drive again. On short views the expanded editor scales to fit; extra toolbar buttons hide while editing.
+- Report clipping, overlap, unreadable values or uncomfortable coast strength. These checks are part of the same M3 phone trial, not a separate assumed acceptance.
 
 ## Comparable phone captures
 

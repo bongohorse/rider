@@ -92,7 +92,7 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" or self.testcase=="hud" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
@@ -182,11 +182,9 @@ function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
     if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
     if self.ui_captured then return end
-    for _,key in ipairs({"a","b","c"}) do
-        if action_id==hash("preset_"..key) then
-            if action.pressed then self.pending_preset=key end
-            return
-        end
+    if action_id==hash("preset_cycle") then
+        if action.pressed then self.pending_preset=({a="b",b="c",c="a"})[self.preset] end
+        return
     end
     if action_id == hash("crash_toggle") then
         if action.pressed then self.crash_enabled=not self.crash_enabled end
@@ -253,6 +251,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("graph_shown") and data.generation==self.history.generation then
         self.graph_peaks=self.graph_peaks or {};self.graph_peaks[data.series]=data.peak
         if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
+    elseif id==hash("hud_probe_result") then self.hud_probe_result=data
     elseif id==hash("measurements_shown") then self.measurements_shown=data
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

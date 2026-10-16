@@ -75,6 +75,8 @@ jobs:
         run: python tools/gym/smoke.py --output artifacts/g1/feel --case a6
       - name: Coasting and brake-tap regression
         run: python tools/gym/smoke.py --output artifacts/g1/coast --case coast
+      - name: Verify injected HUD FPS colour thresholds
+        run: python tools/gym/smoke.py --output artifacts/g1/hud --case hud
       - name: Verify head sensor and both crash switches
         run: python tools/gym/smoke.py --output artifacts/g1/head --case a7
       - name: Verify live slider and captured input

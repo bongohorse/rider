@@ -53,7 +53,9 @@ async function main(){
       const responsive=[];
       const initialReady=await page.evaluate(()=>JSON.stringify(window.riderReady));
       const sizes=name==='desktop'?[{width:1920,height:1080},{width:2560,height:1440},{width:1280,height:720}]:
-        [{width:1080,height:486},{width:486,height:1080},{width:1080,height:486}];
+        [{width:1080,height:486},{width:486,height:1080},{width:896,height:400},{width:1080,height:486}];
+      if(await page.evaluate(()=>window.riderHud.tuning))throw Error('Tuning must be collapsed by default');
+      await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud.tuning);await page.keyboard.up('t');
       for(const viewport of sizes){
         await page.setViewportSize(viewport);
         await page.waitForFunction(()=>{
@@ -89,13 +91,30 @@ async function main(){
             await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
           }
         }
-        await page.keyboard.down('1');
-        await page.waitForFunction(()=>window.riderTelemetry.preset==='a'&&!window.riderTelemetry.modified);
-        await page.keyboard.up('1');
+        const p=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=window.riderHud.presets.a;return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};});
+        await page.mouse.move(p.x,p.y);await page.mouse.down();
+        await page.waitForFunction(()=>window.riderTelemetry.preset==='a'&&!window.riderTelemetry.modified);await page.mouse.up();
         await page.screenshot({path:path.join(out,`${name}-${viewport.width}x${viewport.height}.png`)});
         console.log(JSON.stringify({layout:name,viewport,sliderPairs:11,status:"PASS"}));
         responsive.push({viewport,status:'PASS',sliders:11});
       }
+      await page.keyboard.down('t');await page.waitForFunction(()=>!window.riderHud.tuning);await page.keyboard.up('t');
+      await page.setViewportSize(name==='desktop'?{width:1920,height:1080}:{width:1080,height:486});
+      await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
+      await page.screenshot({path:path.join(out,name+'-compact-hud.png')});
+      const before=await page.evaluate(()=>({preset:window.riderTelemetry.preset,resets:window.riderTelemetry.reset_count,seq:window.riderTelemetry.sequence}));
+      for(const key of ['1','2','3','4','5','6','7','8','9']){
+        const seq=await page.evaluate(()=>window.riderTelemetry.sequence);
+        await page.keyboard.down(key);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);await page.keyboard.up(key);
+      }
+      if(await page.evaluate(()=>window.riderTelemetry.preset)!==before.preset||await page.evaluate(()=>window.riderTelemetry.reset_count)!==before.resets)throw Error('Station keys changed preset');
+      for(const key of ['b','c','a']){
+        await page.keyboard.down('p');await page.waitForFunction(k=>window.riderTelemetry.preset===k,key);await page.keyboard.up('p');
+        const seq=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);
+      }
+      await page.keyboard.down('h');await page.waitForFunction(()=>window.riderHud.help);await page.keyboard.up('h');
+      {const seq=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);}
+      await page.keyboard.down('h');await page.waitForFunction(()=>!window.riderHud.help);await page.keyboard.up('h');
       if(await page.evaluate(()=>JSON.stringify(window.riderReady))!==initialReady)throw Error('Resize reloaded world');
       await page.keyboard.down('ArrowUp');
       const drivingSequence=await page.evaluate(()=>window.riderTelemetry.sequence);
