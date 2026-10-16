@@ -1,0 +1,4 @@
+sound: "/main/gym/assets/engine.wav"
+looping: 1
+gain: 1.0
+speed: 1.0
