@@ -1,8 +1,9 @@
+local layout=require "main.gym.layout"
 -- GUI only: changes are messages; physics writes remain in the fixed owner.
 local feel=require "main.gym.feel"
 local M={}
 local function text(x,y,value)
-    local n=gui.new_text_node(vmath.vector3(x,y,0),value)
+    local n=layout.text(vmath.vector3(x,y,0),value)
     gui.set_font(n,"default");gui.set_scale(n,vmath.vector3(0.55,0.55,1))
     return n
 end
@@ -12,10 +13,17 @@ function M.new()
         local y=316-(i-1)*26
         local row={spec=spec,y=y,value=feel.values[spec.key]}
         row.label=text(780,y+10,"")
-        row.track=gui.new_box_node(vmath.vector3(780,y,0),vmath.vector3(240,10,0))
+        row.track=layout.box(vmath.vector3(780,y,0),vmath.vector3(240,10,0))
         gui.set_color(row.track,vmath.vector4(0.15,0.25,0.3,1))
-        row.knob=gui.new_box_node(vmath.vector3(780,y,0),vmath.vector3(12,18,0))
+        row.knob=layout.box(vmath.vector3(780,y,0),vmath.vector3(12,18,0))
         gui.set_color(row.knob,vmath.vector4(0.35,0.85,0.75,1))
+        row.left=gui.new_box_node(vmath.vector3(660,y,0),vmath.vector3(1,1,0))
+        row.right=gui.new_box_node(vmath.vector3(900,y,0),vmath.vector3(1,1,0))
+        gui.set_enabled(row.left,false);gui.set_enabled(row.right,false)
+        for _,node in ipairs({row.label,row.track,row.knob,row.left,row.right}) do
+            gui.set_xanchor(node,gui.ANCHOR_RIGHT)
+            gui.set_yanchor(node,gui.ANCHOR_TOP)
+        end
         c.rows[i]=row
     end
     M.sync(c,feel.values)
@@ -30,6 +38,15 @@ function M.sync(c,values)
         gui.set_text(row.label,string.format("%s %.2f %s",row.spec.label,display,row.spec.unit))
     end
 end
+function M.geometry(c)
+    local rows={}
+    for _,row in ipairs(c.rows) do
+        local left,right=gui.get_screen_position(row.left),gui.get_screen_position(row.right)
+        rows[#rows+1]={key=row.spec.key,value=row.value,min=row.spec.min,max=row.spec.max,sign=row.spec.sign or 1,
+            left={x=left.x,y=left.y},right={x=right.x,y=right.y}}
+    end
+    return rows
+end
 function M.input(c,id,action,owner)
     if not owner then return end
     if id==hash("ui_pointer") and action.pressed then
@@ -43,9 +60,13 @@ function M.input(c,id,action,owner)
     end
     if c.drag then
         local row=c.drag
-        -- action.x/y use the authored GUI coordinates for this fixed-fit scene.
-        if action.x then
-            local ratio=feel.clamp((action.x-660)/240,0,1)
+        -- screen_to_local reverses anchors, adjust scale and safe-area offsets.
+        -- action.x remains design-scaled and cannot be used as a track coordinate.
+        if action.screen_x then
+            local pos=gui.screen_to_local(row.track,vmath.vector3(action.screen_x,action.screen_y,0))
+            local centre=gui.get_position(row.track).x
+            local width=gui.get_size(row.track).x
+            local ratio=feel.clamp((pos.x-(centre-width/2))/width,0,1)
             local value=(row.spec.min+ratio*(row.spec.max-row.spec.min))*(row.spec.sign or 1)
             msg.post(owner,"tune",{key=row.spec.key,value=value})
         end

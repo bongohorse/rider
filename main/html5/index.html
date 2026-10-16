@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- Loader interface derived from Defold 1.14.0 builtins/manifests/web/engine_template.html. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rider · Driving Gym</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#101b20;color:#dceee6;font:14px system-ui}
+#app-container,#canvas-container{position:fixed;inset:0;width:100%;height:100%;overflow:hidden}
+#canvas{display:block;width:100%;height:100%;padding:0;border:0;outline:none;touch-action:none}
+#page-tools{position:absolute;right:max(8px,env(safe-area-inset-right));bottom:max(6px,env(safe-area-inset-bottom));display:flex;gap:6px}
+#page-tools button{font:inherit;font-size:12px;background:#18313bdd;color:#dceee6;border:1px solid #68cdbc;border-radius:5px;padding:5px 8px;min-height:32px}
+.canvas-app-progress{position:absolute;left:0;bottom:0;height:4px;width:100%;background:#18313b}
+.canvas-app-progress-bar{height:100%;background:#68cdbc;transform-origin:left}
+.warning{position:absolute;inset:20%;background:#18313b;padding:20px}
+</style>
+</head>
+<body>
+<div id="app-container">
+  <div id="canvas-container"><canvas id="canvas" tabindex="0" width="{{display.width}}" height="{{display.height}}"></canvas></div>
+  <div id="running-from-file-warning" class="warning" style="display:none">Please open Rider through a web server.</div>
+  <div id="webgl-not-supported" class="warning" style="display:none">WebGL is unavailable in this browser.</div>
+  <div id="page-tools"><button id="quality" type="button">High DPI</button><button id="fullscreen" type="button">Fullscreen</button></div>
+</div>
+<script id="engine-loader" src="dmloader.js"></script>
+<script id="engine-setup">
+(() => {
+  const highDpi = new URLSearchParams(location.search).get('dpi') !== '0';
+  const quality=document.getElementById('quality');
+  quality.textContent='High DPI: '+(highDpi?'ON':'OFF');
+  quality.onclick=()=>{const url=new URL(location.href);url.searchParams.set('dpi',highDpi?'0':'1');location.href=url.href;};
+  CUSTOM_PARAMETERS.engine_arguments.push('--config=display.high_dpi='+(highDpi?'1':'0'));
+  CUSTOM_PARAMETERS.full_screen_container='#app-container';
+  document.getElementById('fullscreen').onclick=()=>Module.toggleFullscreen();
+  // Stretch the viewport, not the projection. The Auto Fit camera keeps world proportions.
+  // Unlike the stock callback, invalidate on DPR changes too (zoom / moving monitors).
+  CUSTOM_PARAMETERS.resize_window_callback=()=>{
+    const canvas=document.getElementById('canvas');
+    const width=innerWidth,height=innerHeight,dpr=highDpi?(devicePixelRatio||1):1;
+    const w=Math.max(1,Math.floor(width*dpr)),h=Math.max(1,Math.floor(height*dpr));
+    if(canvas.width!==w)canvas.width=w;
+    if(canvas.height!==h)canvas.height=h;
+    window.riderViewport={width,height,dpr,highDpi,bufferWidth:w,bufferHeight:h};
+  };
+  // ResizeObserver covers fullscreen; resolution media queries cover browser zoom / DPR.
+  new ResizeObserver(()=>CUSTOM_PARAMETERS.resize_window_callback()).observe(document.documentElement);
+  function watchDpr(){
+    const query=matchMedia('(resolution: '+devicePixelRatio+'dppx)');
+    query.addEventListener('change',()=>{CUSTOM_PARAMETERS.resize_window_callback();watchDpr();},{once:true});
+  }
+  watchDpr();
+  CUSTOM_PARAMETERS.resize_window_callback();
+})();
+</script>
+<script id="engine-start">
+if(location.protocol==='file:')document.getElementById('running-from-file-warning').style.display='block';
+else EngineLoader.load('canvas','{{exe-name}}');
+</script>
+</body>
+</html>

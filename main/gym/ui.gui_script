@@ -1,19 +1,21 @@
+local layout=require "main.gym.layout"
 local feel=require "main.gym.feel"
 local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
 local telemetry = require "main.gym.telemetry"
 function init(self)
+    gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
-    local title = gui.new_text_node(vmath.vector3(480, 498, 0), "DRIVING GYM")
+    local title = layout.text(vmath.vector3(480, 498, 0), "DRIVING GYM")
     gui.set_font(title, "default")
     gui.set_scale(title, vmath.vector3(1.2, 1.2, 1))
     gui.set_color(title, vmath.vector4(0.86, 0.95, 0.91, 1))
-    local hint = gui.new_text_node(vmath.vector3(480, 466, 0), "W / Up: throttle | S / Down: brake / reverse | A / D: lean | R: retry | Free practice")
+    local hint = layout.text(vmath.vector3(480, 466, 0), "W / Up: throttle | S / Down: brake / reverse | A / D: lean | R: retry | Free practice")
     gui.set_font(hint, "default")
     gui.set_scale(hint, vmath.vector3(0.65, 0.65, 1))
     local sha = sys.get_config_string("rider.source_sha","development")
-    local version = gui.new_text_node(vmath.vector3(480,20,0),"Build "..string.sub(sha,1,12))
+    local version = layout.text(vmath.vector3(480,20,0),"Build "..string.sub(sha,1,12))
     gui.set_font(version,"default")
     gui.set_scale(version,vmath.vector3(0.6,0.6,1))
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
@@ -21,44 +23,44 @@ function init(self)
     self.presets={}
     for i,key in ipairs({"a","b","c"}) do
         local x=680+(i-1)*100
-        local box=gui.new_box_node(vmath.vector3(x,430,0),vmath.vector3(90,30,0))
-        local label=gui.new_text_node(vmath.vector3(x,430,0),string.upper(key).." ["..i.."]")
+        local box=layout.box(vmath.vector3(x,430,0),vmath.vector3(90,30,0))
+        local label=layout.text(vmath.vector3(x,430,0),string.upper(key).." ["..i.."]")
         gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.65,0.65,1))
         self.presets[key]=box
     end
-    self.preset_note=gui.new_text_node(vmath.vector3(780,454,0),"")
+    self.preset_note=layout.text(vmath.vector3(780,454,0),"")
     gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.5,0.5,1))
-    self.crash_button=gui.new_box_node(vmath.vector3(780,400,0),vmath.vector3(280,32,0))
+    self.crash_button=layout.box(vmath.vector3(780,400,0),vmath.vector3(280,32,0))
     gui.set_color(self.crash_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.crash_label=gui.new_text_node(vmath.vector3(780,400,0),"Crash reset OFF [C]")
+    self.crash_label=layout.text(vmath.vector3(780,400,0),"Crash reset OFF [C]")
     gui.set_font(self.crash_label,"default")
     gui.set_scale(self.crash_label,vmath.vector3(0.65,0.65,1))
-    self.head=gui.new_text_node(vmath.vector3(780,368,0),"Head contact: false")
+    self.head=layout.text(vmath.vector3(780,368,0),"Head contact: false")
     gui.set_font(self.head,"default")
     gui.set_scale(self.head,vmath.vector3(0.65,0.65,1))
     self.controls=controls.new()
-    self.audio_button=gui.new_box_node(vmath.vector3(780,62,0),vmath.vector3(280,26,0))
+    self.audio_button=layout.box(vmath.vector3(780,62,0),vmath.vector3(280,26,0))
     gui.set_color(self.audio_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.audio_label=gui.new_text_node(vmath.vector3(780,62,0),"Engine: waiting for input [M]")
+    self.audio_label=layout.text(vmath.vector3(780,62,0),"Engine: waiting for input [M]")
     gui.set_font(self.audio_label,"default");gui.set_scale(self.audio_label,vmath.vector3(0.55,0.55,1))
-    self.feedback_button=gui.new_box_node(vmath.vector3(780,30,0),vmath.vector3(280,26,0))
+    self.feedback_button=layout.box(vmath.vector3(780,30,0),vmath.vector3(280,26,0))
     gui.set_color(self.feedback_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.feedback_label=gui.new_text_node(vmath.vector3(780,30,0),"Copy feedback [F]")
+    self.feedback_label=layout.text(vmath.vector3(780,30,0),"Copy feedback [F]")
     gui.set_font(self.feedback_label,"default");gui.set_scale(self.feedback_label,vmath.vector3(0.55,0.55,1))
-    self.report_bg=gui.new_box_node(vmath.vector3(480,260,0),vmath.vector3(680,340,0))
+    self.report_bg=layout.box(vmath.vector3(480,260,0),vmath.vector3(680,340,0))
     gui.set_color(self.report_bg,vmath.vector4(0.06,0.1,0.13,1));gui.set_enabled(self.report_bg,false)
-    self.report=gui.new_text_node(vmath.vector3(480,260,0),"")
+    self.report=layout.text(vmath.vector3(480,260,0),"")
     gui.set_font(self.report,"default");gui.set_scale(self.report,vmath.vector3(0.55,0.55,1));gui.set_enabled(self.report,false)
     self.graph=graph.new()
     self.metrics = {}
     for i=1,6 do
-        local n=gui.new_text_node(vmath.vector3(24,400-(i-1)*24,0),"")
+        local n=layout.text(vmath.vector3(24,400-(i-1)*24,0),"")
         gui.set_font(n,"default")
         gui.set_pivot(n,gui.PIVOT_W)
         gui.set_scale(n,vmath.vector3(0.65,0.65,1))
         self.metrics[i]=n
     end
-    self.reason = gui.new_text_node(vmath.vector3(480,438,0), "")
+    self.reason = layout.text(vmath.vector3(480,438,0), "")
     gui.set_font(self.reason,"default")
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
@@ -83,7 +85,10 @@ function on_message(self,id,data,sender)
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
         gui.set_text(self.audio_label,data.audio_muted and "Engine: muted [M]" or data.audio_started and string.format("Engine pitch %.2fx [M]",data.audio_pitch) or "Engine: waiting for input [M]")
-        if html5 then html5.run("window.riderTelemetry = "..json.encode(data)) end
+        if html5 then
+            html5.run("window.riderTelemetry = "..json.encode(data))
+            html5.run("window.riderControls = "..json.encode(controls.geometry(self.controls)))
+        end
         gui.set_text(self.crash_label,"Crash reset "..(data.crash_enabled and "ON" or "OFF").." [C]")
         gui.set_text(self.head,"Head contact: "..tostring(data.head_contact))
         local b=telemetry.budget

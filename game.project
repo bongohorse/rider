@@ -10,6 +10,7 @@ main_collection = /main/gym/boot.collectionc
 [display]
 width = 960
 height = 540
+high_dpi = 1
 vsync = 0
 update_frequency = 60
 
@@ -31,3 +32,9 @@ app_manifest = /main/physics.appmanifest
 
 [input]
 game_binding = /input/game.input_bindingc
+
+[html5]
+scale_mode = stretch
+htmlfile = /main/html5/index.html
+show_fullscreen_button = 0
+show_made_with_defold = 0

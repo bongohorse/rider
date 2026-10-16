@@ -4,7 +4,7 @@ Updated 2026-10-16. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
-Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** The original M2 merge and public deployment passed [CI 38867483415](https://github.com/bongohorse/rider/actions/runs/38867483415) at `f73aac5`. Technical merge/deployment verification is tracked in [PR #54](https://github.com/bongohorse/rider/pull/54); Claudio's milestone drive/listening acceptance remains pending. **M3 is not authorized or started.** No winning preset, final assist strength, crash-fairness or device-performance acceptance is implied.
+Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** The original M2 merge and public deployment passed [CI 38867483415](https://github.com/bongohorse/rider/actions/runs/38867483415) at `f73aac5`. Technical merge/deployment verification is tracked in [PR #54](https://github.com/bongohorse/rider/pull/54); Claudio's milestone drive/listening acceptance remains pending. **Claudio authorized M3 on 2026-10-16; A12b (#58) is the first task, before A13.** No winning preset, final assist strength, crash-fairness or device-performance acceptance is implied.
 
 | Step | Implementation / evidence |
 | --- | --- |
@@ -17,9 +17,9 @@ Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** Th
 | A11 feedback | Merged [#53](https://github.com/bongohorse/rider/pull/53), `7388396`. [Required 38852573731](https://github.com/bongohorse/rider/actions/runs/38852573731) PASS: actual isolated-browser clipboard readback with every field/current source, and visible selectable fallback after injected denial. Native clipboard is unavailable and labelled. |
 | A12 graphs | Implemented in [#54](https://github.com/bongohorse/rider/pull/54). Code-head `ace30e5b420e325573fdf95ed2df9d01aadaa1f6` [required 38853100487](https://github.com/bongohorse/rider/actions/runs/38853100487) PASS: physical stop peak 17.6 u drawn, expired naturally, 301 samples over 5.0000003 s; spike/desktop/phone-emulation images reviewed. Final PR checks also cover the narrower panel, restored probe limits and no-reset expiry. |
 
-Claudio authorized the M2 feedback follow-up [#61](https://github.com/bongohorse/rider/issues/61) on 2026-10-16: expanded speed/air controls, separate ground pitch assistance, readable speed units, and #58 input-layout dependency. Implementation and local checks complete in [PR #62](https://github.com/bongohorse/rider/pull/62); required runtime/visual and merged-main deployment evidence is tracked there. No human acceptance claimed. Ramps and human air-control testing remain M4; M3 remains unstarted. Candidate values are documented in main/gym/README.md.
+Claudio authorized the M2 feedback follow-up [#61](https://github.com/bongohorse/rider/issues/61) on 2026-10-16: expanded speed/air controls, separate ground pitch assistance, readable speed units, and #58 input-layout dependency. Implementation and local checks complete in [PR #62](https://github.com/bongohorse/rider/pull/62); required runtime/visual and merged-main deployment evidence is tracked there. No human acceptance claimed. Ramps and human air-control testing remain M4; M3 is now authorized; A12b presentation work precedes A13. Candidate values are documented in main/gym/README.md.
 
-Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongohorse/rider/issues/59) through existing [PR #60](https://github.com/bongohorse/rider/pull/60). Review reduced the list to five recurring pitfalls, added direct evidence links and corrected the shape-index guidance. Documentation checks and final required/main deployment evidence are tracked in that PR; no gameplay change or M3 authorization.
+Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongohorse/rider/issues/59) through existing [PR #60](https://github.com/bongohorse/rider/pull/60). Review reduced the list to five recurring pitfalls, added direct evidence links and corrected the shape-index guidance. Documentation checks and final required/main deployment evidence are tracked in that PR; no gameplay change. M3 was separately authorized afterwards.
 
 ## Preview and next action
 
@@ -27,7 +27,7 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 Claudio's M2 test: compare A/B/C (1/2/3 or buttons), try live sliders, throttle/brake-to-reverse, A/D ground pitch assistance (airborne feel testing in M4), camera response, C crash switch, engine audio/M mute and F feedback copy. The gym remains unrestricted. Authored ramps/step stations are M4; the A12 hard-stop probe is debug-only, not a new production suspension rule. Report feel/comfort/readability and any problems; then approve or revise before M3.
 
-M3's next planned issue is A13 (#28), **only after Claudio's M2 approval**. It adds actual touch trials and measures the reference phone; no M3 implementation has begun.
+M3 starts with A12b (#58): full-window, HiDPI and responsive overlay/input. A13 (#28) follows with touch trials and reference-phone measurements; A14 (#29) is the tilt trial. An initial A13 draft is parked separately; it is not merged. A12b is implemented locally on `feat/a12b-responsive`; local bootstrap (14), G1 protocol (7) and G2 tooling (6) tests pass. Claudio explicitly authorized publication and completing M3 on 2026-10-16; PR/required CI and runtime/screenshots are being prepared. No new preview deployment is claimed yet. The prepared release verifier covers resizing, nine slider endpoint pairs, outside release and HiDPI on/off sampling. Real-phone DPI cost, refresh measurements and human acceptance remain NOT RUN.
 
 ## M2 checkpoint: what worked / what changes next
 

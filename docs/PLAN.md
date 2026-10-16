@@ -93,6 +93,8 @@ Affected contracts (units, lifecycle, ownership), relevant APIs, known risks.
 
 ### M3 – Mobile
 
+Start with [A12b / #58](https://github.com/bongohorse/rider/issues/58): full-window rendering, HiDPI comparison and responsive overlay/pointer coordinates. This presentation prerequisite precedes A13 touch zones.
+
 | # | Title and scope | Acceptance | Depends on |
 | --- | --- | --- | --- |
 | A13 | **Touch controls v0** (four zones) and **device test** in Android Chrome on the Xiaomi Mi 10T Pro: drivability, frame time, visible stutter at 60 Hz and 144 Hz, 20:9 layout | Drivable on the device; measurements and Chrome version in the platform matrix; concrete budget values set; decision whether visual interpolation is needed | A4, A6 |
@@ -164,6 +166,7 @@ This later feedback updates the initial handoff wherever duration or optionality
 | M2 | [A10 / #25](https://github.com/bongohorse/rider/issues/25) | Placeholder engine sound |
 | M2 | [A11 / #26](https://github.com/bongohorse/rider/issues/26) | Feedback key |
 | M2 | [A12 / #27](https://github.com/bongohorse/rider/issues/27) | Mini graph in the overlay |
+| M3 | [A12b / #58](https://github.com/bongohorse/rider/issues/58) | Full-window rendering and HiDPI |
 | M3 | [A13 / #28](https://github.com/bongohorse/rider/issues/28) | Touch controls v0 |
 | M3 | [A14 / #29](https://github.com/bongohorse/rider/issues/29) | Experiment: tilt steering |
 | M4 | [A15 / #30](https://github.com/bongohorse/rider/issues/30) | Straight with distance markers |
