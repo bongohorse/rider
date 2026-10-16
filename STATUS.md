@@ -19,6 +19,8 @@ Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** Th
 
 Claudio authorized the M2 feedback follow-up [#61](https://github.com/bongohorse/rider/issues/61) on 2026-10-16: expanded speed/air controls, separate ground pitch assistance, readable speed units, and #58 input-layout dependency. Implementation and local checks complete in [PR #62](https://github.com/bongohorse/rider/pull/62); required runtime/visual and merged-main deployment evidence is tracked there. No human acceptance claimed. Ramps and human air-control testing remain M4; M3 remains unstarted. Candidate values are documented in main/gym/README.md.
 
+Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongohorse/rider/issues/59) through existing [PR #60](https://github.com/bongohorse/rider/pull/60). Review reduced the list to five recurring pitfalls, added direct evidence links and corrected the shape-index guidance. Documentation checks and final required/main deployment evidence are tracked in that PR; no gameplay change or M3 authorization.
+
 ## Preview and next action
 
 **Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #54 / issue #27 for final cumulative main/deployment evidence.

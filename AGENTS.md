@@ -17,6 +17,7 @@ Read [STATUS.md](STATUS.md), the current issue and its affected contract. [Docum
 ## Technical boundaries
 
 - Keep the pinned toolchain and Renovate without automerge. Use Defold-owned bodies/worlds and a single tick owner; no custom physics extension, second simulation loop or manual stepping. Convert units once at the boundary; preserve handle/reset contracts.
+- Read [engine pitfalls](docs/contracts/engine-pitfalls.md) before physics/engine changes; add an entry only under its three-part rule.
 - Read [engine references](docs/ENGINE_REFERENCES.md) before Defold-dependent changes; consult only relevant official docs and pinned sources. Verify signatures, units, defaults, ownership, timing and platform limits. Record sources actually read, version, consequence and verification in the PR; justified N/A for no API impact. Inaccessible required references stop dependent work when correctness remains unresolved.
 - The Bridge is debug automation, not a physics binding. Keep its pin and matching wrapper, record unresolved license provenance, and remove it from release builds before app distribution (Phase B). Do not assume an editor/session or scan ports; discover `/openapi.json` only for an available authorized editor.
 - English UI and active agent docs; platform-neutral gameplay commands. Real APK and real browser device evidence are separate; synthetic input does not prove real touch or app/tab switching.
