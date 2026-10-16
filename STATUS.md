@@ -33,7 +33,9 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 M3 trial procedure: [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md). After the M3 technical increments deploy, compare mirrored touch layouts, Retry and the tilt trial on the reference phone. Record Chrome version and actual 60/144-Hz settings, feel/stutter and High DPI ON/OFF captures. Numeric phone physics budgets and the interpolation decision remain unmeasured; keep the initial 60-FPS budget until actual evidence exists.
 
-Next action: finish cumulative M3 runtime/deployment verification, then Claudio's reference-phone trial. A14 is merged as `998248b` with green PR-head and main `required`; the deployed-source check matches. Its first public runtime run passed responsive checks and ten touch cases but failed the immediate post-fullscreen throttle acknowledgement. An A13 test follow-up waits for owner/viewport settlement and requires three fullscreen driving cycles; final evidence is tracked in its PR and PR #67. A12b, A13 and A14 real-device criteria remain open until Claudio supplies actual-phone observations. M4 is not authorized.
+M3 technical implementation and final verification: A14 is merged as `998248b` with green PR-head and main `required`; the deployed-source check matches. Its first public runtime run passed responsive checks and ten touch cases but failed the immediate post-fullscreen throttle acknowledgement. [A13 follow-up PR #72](https://github.com/bongohorse/rider/pull/72) waits for owner/viewport settlement and requires three fullscreen driving cycles. Exact current-head, merged-main and final public runtime results are tracked there and linked from PR #67.
+
+Next action after green final verification in PR #72: Claudio's reference-phone trial. A12b, A13 and A14 real-device criteria remain open until Claudio supplies actual-phone observations. M4 is not authorized.
 ## M3 technical checkpoint
 
 - Keep the single fixed owner, existing reset/preset paths and unit adapter. Touch and tilt are browser input sources, not another simulation loop. Native/desktop input remains available.
