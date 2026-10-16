@@ -8,7 +8,7 @@ Read STATUS.md, the current issue and only its affected contract. Work is organi
 | --- | --- |
 | Decisions, phases, milestones, authorization | [Plan](PLAN.md) |
 | Gameplay intent and open design choices | [Game design](GAME_DESIGN.md), [vehicle commands](contracts/vehicle.md) |
-| Engine/API changes | [Official engine references](ENGINE_REFERENCES.md) |
+| Engine/API changes | [Curated engine pitfalls](contracts/engine-pitfalls.md), [official engine references](ENGINE_REFERENCES.md) |
 | Units, tick order, reset/ownership | [G1 verified baseline](contracts/physics/G1_CONTRACT.md); affected [physics contract](contracts/physics/) |
 | Automation and runner changes | [Automation contracts](contracts/automation/), [Bridge](contracts/automation/bridge.md) |
 | Tool setup/build/run | [Tooling](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md) |

@@ -1,3 +1,4 @@
+local feel=require "main.gym.feel"
 local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
@@ -87,7 +88,7 @@ function on_message(self,id,data,sender)
         gui.set_text(self.head,"Head contact: "..tostring(data.head_contact))
         local b=telemetry.budget
         local values={
-            string.format("Speed %.1f u/s (vx %+.1f)",data.speed,data.velocity_x),
+            string.format("Speed %.2f m/s | %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
             string.format("Wheel contact L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
             string.format("Spring travel L %+.2f / R %+.2f u",data.travel1,data.travel2),
             string.format("FPS %.1f / target %.0f",data.fps,b.fps_min),

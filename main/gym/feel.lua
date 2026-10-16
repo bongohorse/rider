@@ -2,7 +2,7 @@
 local M = {}
 M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 local allowed={a=true,b=true,c=true}
-M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
+M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
 function M.preset(requested)
     local valid=allowed[requested]==true
     local key=valid and requested or "a"
@@ -39,9 +39,11 @@ end
 M.sliders={
     {key="spring_hz",label="Spring",min=1,max=12,unit="Hz"},
     {key="damping",label="Damping",min=0.2,max=1.8,unit="ratio"},
-    {key="motor_speed",label="Wheel target",min=8,max=36,sign=-1,unit="rad/s"},
+    {key="motor_speed",label="Wheel target",min=8,max=140,sign=-1,unit="rad/s"},
     {key="drive_torque",label="Motor cap",min=500,max=5000,unit="binding u"},
-    {key="lean_torque",label="Air lean",min=0,max=40,unit="N m"},
+    {key="lean_torque",label="Air lean",min=0,max=200,unit="N m"},
+    {key="lean_rate_max",label="Air rate",min=1,max=16,unit="rad/s"},
+    {key="ground_lean_torque",label="Ground lean",min=0,max=400,unit="N m"},
     {key="camera_response",label="Camera response",min=2,max=12,unit="1/s"},
     {key="camera_look_seconds",label="Look ahead",min=0,max=0.6,unit="s"}
 }

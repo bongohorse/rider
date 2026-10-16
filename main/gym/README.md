@@ -68,9 +68,9 @@ Bundling follow-up: pinned Bob 1.14.0 `com/dynamo/bob/meta.properties` declares 
 
 ## A6 feel trial
 
-`feel.lua` owns all drive/spring/camera values; authored shape/mass resources and recovery bounds are geometry/safety, not hidden tuning. The original 16 rad/s, 1800/3000 binding motor caps and 5 Hz/0.8 spring baseline remain preset candidates. Engine-unit positions/velocities and joint cap inputs pass unchanged through the named adapter; body lean torque is raw N m (the pinned body binding does not scale it). Display conversion to metres uses physics.scale once, outside the physics setters.
+`feel.lua` owns all drive/spring/camera values; authored shape/mass resources and recovery bounds are geometry/safety, not hidden tuning. The initial A6 16 rad/s wheel target is superseded by the #61 candidates below; A retains the 1800/3000 binding motor caps and 5 Hz/0.8 spring baseline. Engine-unit positions/velocities and joint cap inputs pass unchanged through the named adapter; body lean torque is raw N m (the pinned body binding does not scale it). Display conversion to metres uses physics.scale once, outside the physics setters.
 
-Down/S brakes first. With throttle released, speed below 8 units/s for 0.25 seconds latches reverse at 8 rad/s until brake release; simultaneous pedals remain brake-only. Reverse latch clears on retry. A/D applies ±12 N m only while both wheels lack touching contacts; a 3 rad/s assist cap prevents continued acceleration in the same direction. These are trial values, not accepted feel.
+Down/S brakes first. With throttle released, speed below 8 units/s for 0.25 seconds latches reverse at 8 rad/s until brake release; simultaneous pedals remain brake-only. Reverse latch clears on retry. A/D applies the separate ground or airborne pitch assistance described under #61 below. Soft rate thresholds stop adding same-direction torque; counter-steering remains possible. These are trial values, not accepted feel.
 
 Camera uses render-dt exponential following, signed velocity look-ahead (0.22 s, capped at 130 u), and zoom from 1 to 0.82 with speed. Retry restores position and zoom. The A1 direct focus probe remains separate. A3 still tests full braking and brake priority by keeping both pedals held through its stop observation, then retry while throttle is held. A6 separately releases throttle while brake remains held and requires actual reverse distance/speed; its disclosed debug-only +400 u lift then checks rotation under real keyboard lean during flight. It checks camera direction/symmetric zoom and applied camera property, not 60/144 Hz visual smoothness acceptance.
 
@@ -96,7 +96,7 @@ A7 input follow-up: the browser now holds overlay mouse-down until the engine ac
 
 ## A8 live tuning
 
-Seven sliders edit spring Hz, damping ratio, wheel target rad/s, motor cap (binding units), air lean N m, camera response 1/s and look-ahead seconds. Bounds/labels live with tuning in `feel.lua`; geometry and unknown/invalid/non-finite values cannot be edited through the command. GUI sends messages, the sole fixed owner validates/applies them and acknowledges current values. Changed spring settings wake bodies once and update existing wheel joints; no reset/reload is needed.
+Nine sliders edit spring Hz, damping ratio, wheel target rad/s, motor cap (binding units), air lean N m, air rate rad/s, ground lean N m, camera response 1/s and look-ahead seconds. Bounds/labels live with tuning in `feel.lua`; geometry and unknown/invalid/non-finite values cannot be edited through the command. GUI sends messages, the sole fixed owner validates/applies them and acknowledges current values. Changed spring settings wake bodies once and update existing wheel joints; no reset/reload is needed.
 
 During a captured drag, gameplay commands are zeroed and held input clears on both capture/release. Release outside the track is handled by the captured pointer path. Layout uses the existing 960×540 fit GUI; reference-phone touch and lifecycle testing remain M3. Required A8 smoke holds real mouse input, changes spring Hz to 12, checks the actual joint getter without reset/reload, attempts throttle during capture and requires neutral release. Test routing now lives entirely in `scenarios.fixed`, still called only by the sole physics owner.
 
@@ -118,7 +118,7 @@ Pinned Defold sources read: `script_sound.cpp` sound.play/stop; `comp_sound.cpp`
 
 ## A11 feedback copy
 
-F (a real browser key handler) or Copy feedback uses the latest acknowledged measurements to format Markdown with source SHA, preset/Modified, flat-gym station, signed velocity/speed, contacts, signed travel, FPS/mean frame/profile step, crash rule and seven live tuning values. The action clears held gameplay input; opening the fallback captures commands until close. It never creates/sends an issue.
+F (a real browser key handler) or Copy feedback uses the latest acknowledged measurements to format Markdown with source SHA, preset/Modified, flat-gym station, signed velocity/speed, contacts, signed travel, FPS/mean frame/profile step, crash rule and nine live tuning values. The action clears held gameplay input; opening the fallback captures commands until close. It never creates/sends an issue.
 
 HTML5 calls navigator.clipboard.writeText only after the action. Success is shown only after its promise resolves. Missing API/insecure context/permission denial shows a selectable, read-only report plus retry/close; fullscreen is exited if necessary to expose this DOM fallback. Native builds explicitly show the report rather than claiming OS clipboard support. Pending requests are generation-guarded against stale dialog updates. The small helper is bundled as a custom resource, with no external script.
 
@@ -133,3 +133,15 @@ The production baseline still has no authored hard suspension stop; the plot is 
 Pinned sources read: wheel `set_limits`, `enable_limit`, `get_upper_limit` (engine-unit scaling in the binding) and body set_linear_velocity (one conversion). All probe changes live in debug scenarios called by the sole owner. Existing A3/A6/A7/A8/A9/A10/A11 tests remain required. Feedback F now respects browser Ctrl/Meta/Alt shortcuts; no clipboard behavior is broadened.
 
 M2 final review: the graph panel is narrowed to leave the velocity-look-ahead vehicle clear, with explicit zero baselines. The probe additionally verifies disabled test limits, zero retries and one world load, so reset cannot masquerade as normal history expiry.
+
+## M2 feedback follow-up (#61)
+
+Claudio authorized expanded feel controls on 2026-10-16, leaving ramps and human airborne/flip testing in M4. Candidate A/B/C wheel targets are 32/64/96 rad/s (negative sign for forward), corresponding to theoretical no-slip 7.04/14.08/21.12 m/s at radius 0.22 m. The live range is 8–140 rad/s (up to 30.8 m/s theoretical); these are targets, not promised chassis speeds. Existing torque caps, braking and geometry remain unchanged. M4 #33 must report measured speed at seams, not assume launch speed stays constant under a lower motor target. Gap ladders deliberately include unreachable sections.
+
+Air torque is 48/72/96 N m with soft rate thresholds 8/10/12 rad/s. Live ranges: 0–200 N m and 1–16 rad/s. Ground assistance is separate chassis pitch torque 120/180/240 N m, live 0–400, with a 2.5 rad/s soft threshold. A/D use the existing normalized lean command; either wheel's contact data selects ground assistance, otherwise air assistance. This does not move the centre of mass. Zero ground torque disables the assistance. Thresholds stop adding same-direction torque rather than clamping existing spin; counter-steering stays available. Final strength/fairness awaits human testing.
+
+All writes remain in vehicle.apply via the sole fixed owner. Pinned Defold 1.14.0 `a81dbb0478e8b73931dc2d671563204f6ac0ef82`, `engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp` was read: Body_ApplyTorque passes raw N m to Box2D with wake=true; GetAngularVelocity returns rad/s; GetContactData returns the current body's contact table. No new engine API or dependency.
+
+HUD/report speed is m/s and km/h; report retains signed vx in m/s. Graph labels use m/s while history/message values retain engine units and existing scale. Nine sliders fit the existing panel; coordinates and input mapping remain tied to the fixed-fit GUI until #58, which must adapt drawing, picking and drag normalization together. Compiled test resources in release remain the documented Phase B exclusion task.
+
+Required `m2feedback` smoke uses real keyboard A/D on the flat floor, checks disabled assistance leaves the chassis neutral, signed chassis pitch both ways, two neutral resets and one world, new control limits/preset restore, then selects C and verifies upright actual chassis speed above 8 m/s (old target ceiling 7.92). Existing A6 controlled airborne probe remains a technical response regression, not a ramp/flip playtest. Clipboard smoke checks readable speed units and the added tuning fields.
