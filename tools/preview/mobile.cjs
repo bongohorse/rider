@@ -64,8 +64,9 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('mirrored_drive_rotation_no_reload');
     // Closing tuning with another pointer must release an active editor drag.
+    const editorSequence=await page.evaluate(()=>window.riderTelemetry.sequence);
     await page.getByRole('button',{name:'Tuning',exact:true}).click();
-    await page.waitForFunction(()=>window.riderCompact===false);
+    await page.waitForFunction(n=>window.riderCompact===false&&window.riderTelemetry.sequence>n+1,editorSequence);
     const editorPoint=await page.evaluate(()=>{
       const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),row=window.riderControls[0];
       return {x:(row.left.x+row.right.x)*.5/c.width*r.width,y:(1-row.left.y/c.height)*r.height};
