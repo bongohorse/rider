@@ -43,8 +43,9 @@ function M.text(pos,value,name)
 end
 function M.readable(css_per_unit)
     -- The built-in font is 14 units high. FIT alone makes phone text tiny.
-    local minimum=11/(14*math.max(0.01,css_per_unit))
     for _,n in ipairs(M.text_nodes) do
+        local factor=gui.get_scale(M.roots[M.parents[n]]).x
+        local minimum=11/(14*math.max(0.01,css_per_unit*factor))
         local s=M.authored_scales[n]
         if not s then s=gui.get_scale(n);M.authored_scales[n]=s end
         gui.set_scale(n,vmath.vector3(math.max(s.x,minimum),math.max(s.y,minimum),1))

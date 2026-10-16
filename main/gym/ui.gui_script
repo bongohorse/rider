@@ -33,7 +33,7 @@ function init(self)
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
     msg.post(".","acquire_input_focus")
     local panel_start=#layout.nodes+1
-    local panel=layout.box(vmath.vector3(788,301,0),vmath.vector3(304,384,0),"right_top")
+    local panel=layout.box(vmath.vector3(788,294,0),vmath.vector3(304,400,0),"right_top")
     gui.set_color(panel,vmath.vector4(0.05,0.1,0.13,0.9))
     self.presets={}
     for i,key in ipairs({"a","b","c"}) do
@@ -182,7 +182,7 @@ function update(self,dt)
     -- Small/portrait FIT views still need a usable editor and a legible graph.
     gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
     gui.set_scale(layout.roots.right_top,vmath.vector3(panel_scale,panel_scale,1))
-    layout.readable(base*panel_scale)
+    layout.readable(base)
     if html5 then
         local function point(n)
             local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
