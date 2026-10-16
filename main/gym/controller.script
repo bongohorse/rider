@@ -1,3 +1,4 @@
+local audio=require "main.gym.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.gym.vehicle"
@@ -84,7 +85,7 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
@@ -129,11 +130,13 @@ function update(self, dt)
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
     if self.vehicle and self.vehicle.ready then
+        audio.update(self)
         rider.paint(self.vehicle,self.head_contact)
         local sample = telemetry.frame(self.metrics,self.vehicle,dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
+            sample.audio_started,sample.audio_muted,sample.audio_pitch=self.audio_started or false,self.audio_muted or false,self.audio_pitch or 0
             sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
@@ -148,6 +151,8 @@ local function command(self)
     return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = (self.held[hash("lean_left")] and 1 or 0)-(self.held[hash("lean_right")] and 1 or 0)}
 end
 function on_input(self, action_id, action)
+    if action.pressed then audio.start(self) end
+    if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
     if self.ui_captured then return end
     for _,key in ipairs({"a","b","c"}) do
         if action_id==hash("preset_"..key) then
@@ -201,6 +206,7 @@ function fixed_update(self, dt)
     if self.scenario then self.scenario.fixed(self,dt) end
 end
 function final(self)
+    audio.stop(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
@@ -209,6 +215,7 @@ function on_message(self,id,data,sender)
     if id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("select_preset") then self.pending_preset=data.key
+    elseif id==hash("audio_mute") then audio.mute(self)
     elseif id==hash("tune") then self.pending_tuning=data
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={}
     elseif id==hash("measurements_shown") then self.measurements_shown=data

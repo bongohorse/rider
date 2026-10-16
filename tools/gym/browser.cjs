@@ -37,7 +37,10 @@ async function main() {
         if(data.source_sha!==expected||data.run_id!==runId)rejectDone(Error('Foreign gym evidence'));
         if(data.event==='phase') input=input.then(async()=>{
           if(data.name==='throttle')await page.keyboard.down('ArrowUp');
-          if(data.name==='brake')await page.keyboard.down('ArrowDown');
+          if(data.name==='brake'){
+            if(process.argv[5]==='a10' && await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext not running after initial throttle input');
+            await page.keyboard.down('ArrowDown');
+          }
           if(data.name==='release_throttle')await page.keyboard.up('ArrowUp');
           if(data.name==='retry_held') {
             await page.keyboard.up('ArrowDown');await page.keyboard.down('ArrowUp');await page.keyboard.down('r');
@@ -89,6 +92,10 @@ async function main() {
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
     await input;
+    if(process.argv[5]==='a10'){
+      if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');
+      result.cases.audio_context_running=true;
+    }
     await page.mouse.up();
     await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
     await page.evaluate(()=>new Promise(requestAnimationFrame));

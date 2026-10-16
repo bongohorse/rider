@@ -10,9 +10,16 @@ function M.drive(self)
     self.max_angle = math.max(self.max_angle,math.abs(state.angle))
     assert(self.max_angle < 0.6,"Buggy tipped on flat launch: "..self.max_angle)
     if t == 60 then
+        if self.testcase=="a10" then assert(not self.audio_started,"Engine autoplayed before input") end
         self.start_x = state.x
         emit(self,"phase",{name="throttle"})
     elseif t == 240 then
+        if self.testcase=="a10" then
+            local audio=require "main.gym.audio"
+            assert(self.audio_started and self.audio_starts==1 and self.audio_pitch>audio.idle_pitch+0.2,"Wheel pitch did not rise after input")
+            assert(math.abs(go.get("#engine","speed")-self.audio_pitch)<0.001,"Audio playback property not updated")
+            self.measured_audio_pitch=self.audio_pitch
+        end
         self.drive_dx, self.drive_speed = state.x-self.start_x,state.vx
         assert(self.drive_dx > 150 and self.drive_speed > 100,"Buggy did not drive forward")
         emit(self,"phase",{name="brake"})
@@ -32,6 +39,11 @@ function M.drive(self)
         assert(observer.budget.fps_min==60 and observer.over(30,60,true) and observer.over(40,16.67) and not observer.over(1,nil),"Budget configuration/classification failed")
         self.drive_cases = {drive_dx=self.drive_dx,drive_speed=self.drive_speed,
             stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}
+        if self.testcase=="a10" then
+            self.drive_cases.audio_once=self.audio_starts==1
+            self.drive_cases.audio_pitch=self.measured_audio_pitch
+            self.drive_cases.no_autoplay=true
+        end
         if self.testcase=="a6" then
             self.feel_phase,self.feel_tick= "reverse",0
             self.reverse_start=state.x
@@ -285,7 +297,7 @@ function M.preset_tick(self,dt)
 end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
-        if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" then
+        if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
             if self.feel_phase then M.feel_tick(self,dt) elseif self.reset_phase then M.reset(self) else M.drive(self) end
         elseif self.testcase=="a7" then M.crash_tick(self,dt)
         elseif self.testcase=="a8" then M.slider_tick(self,dt)
