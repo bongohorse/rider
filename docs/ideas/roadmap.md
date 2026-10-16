@@ -1,6 +1,6 @@
 # Future feature roadmap (ideas, not approved work)
 
-Status: idea backlog, **not** approved work. Nothing here becomes an issue until its wave's entry gate is passed.
+Status: **worked out** — idea backlog, **not** approved work. Entry gates below are proposals; scheduling still requires Claudio's explicit approval and an issue with a milestone.
 Owner of priorities: Claudio. Last revised: 2026-10-16.
 
 ## How to read this
@@ -13,7 +13,7 @@ Owner of priorities: Claudio. Last revised: 2026-10-16.
 ## Guiding rules
 
 1. **Gameplay first, effects second.** Physics (grip, drag, forces) and presentation (particles, decals, shaders) are always separate layers. Effects never change the simulation.
-2. **One track format for everything.** Built-in tracks, the dev editor, the player editor and shared tracks all use the versioned station/track JSON format from A15 (#30). No levels in code.
+2. **One track format for everything.** Built-in tracks, the dev editor, the player editor and shared tracks all use the versioned station/track JSON format from A16 (#31). No levels in code.
 3. **Cheap model before simulation.** Mud, honey, water and weather start as zones with grip/drag/force multipliers, not as fluid or particle simulation.
 4. **Fair time trials.** Anything that changes vehicle performance must not invalidate medal times (see Wave 4).
 5. **Offline first.** No backend until there is an explicit decision (the product scope currently excludes a cloud backend). Online features stay in Wave 6.
@@ -23,7 +23,7 @@ Owner of priorities: Claudio. Last revised: 2026-10-16.
 
 | Wave | Theme | Entry gate |
 |---|---|---|
-| 0 | Core loop (moved into Phases B/C) | Already planned |
+| 0 | Core loop proposals for Phases B/C | Claudio's scope decision; existing plan remains authoritative |
 | 1 | Identity: surfaces, reactive obstacles, feel | Phase B fun acceptance passed |
 | 2 | Content tooling: track editor | Phase C (three challenges) done; track format stable |
 | 3 | Atmosphere: light and weather | Phase D art style chosen; frame budget measured with real art |
@@ -36,9 +36,9 @@ Owner of priorities: Claudio. Last revised: 2026-10-16.
 
 ## Wave 0 – Core loop (move into the current plan)
 
-These were listed as "future", but they *are* the game loop of a Trials/TrackMania-style game. Recommendation: add them to Phase B/C instead of the backlog.
+These were listed as "future", but they *are* the game loop of a Trials/TrackMania-style game. Recommendation: consider them for Phase B/C. The current plan includes elapsed time and best time, but starts the first challenge without checkpoints; checkpoints are a later trial only if full restarts hinder learning. Medals, a personal-best ghost, fault rules and section practice remain proposals until explicitly scheduled.
 
-| Feature | Idea | Approach | Cost | Plan slot |
+| Feature | Idea | Approach | Cost | Proposed plan slot |
 |---|---|---|---|---|
 | Time trial + best time | Every track has a timer and a stored personal best | Local save file | S | Phase B |
 | Medals | Bronze / silver / gold / author time | Author time = designer's own best run; medal thresholds derived from it | S | Phase B |
