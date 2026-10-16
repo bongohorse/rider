@@ -86,6 +86,7 @@ async function main(){
             await page.waitForFunction(({row,value})=>Math.abs(window.riderControls[row].value-value)<.01,{row,value:point.value});
             // Release outside the track; then actual keyboard drive must work again.
             await page.mouse.move(2,2);await page.mouse.up();
+            await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
           }
         }
         await page.keyboard.down('1');
