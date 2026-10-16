@@ -50,7 +50,8 @@ async function main() {
           if(data.name==='disable_crash_overlay'){
             await page.keyboard.up('c');
             const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.click(box.x+box.width*780/960,box.y+box.height*140/540);
+            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*140/540);
+            await page.mouse.down();
           }
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
@@ -70,6 +71,7 @@ async function main() {
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
     await input;
+    await page.mouse.up();
     await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
     await page.evaluate(()=>new Promise(requestAnimationFrame));
     await page.screenshot({path:path.join(root,'gym.png')});

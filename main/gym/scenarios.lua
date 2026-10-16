@@ -214,7 +214,8 @@ function M.crash_tick(self,dt)
         self.crash_phase="enable"
         emit(self,"phase",{name="enable_crash"})
     elseif self.crash_phase=="enable" and self.crash_enabled then
-        head_pose(self)
+        -- The frozen overlap is still active; the normal owner may already
+        -- have consumed its reset before this observer sees the key.
         self.crash_phase="reset"
     elseif self.crash_phase=="reset" and self.reset_count>0 then
         assert(self.reset_count==1 and self.last_reset_reason=="head","Enabled head contact did not use canonical reset")
