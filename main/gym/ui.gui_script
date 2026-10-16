@@ -11,16 +11,35 @@ local function cancel_drag(self)
         if self.owner then msg.post(self.owner,"ui_capture",{active=self.feedback_open or self.feedback_modal or false}) end
     end
 end
+local function hud_textures()
+    for _,name in ipairs({"dot","speaker","copy"}) do
+        local pixels={}
+        for y=0,15 do for x=0,15 do
+            local on=name=="dot" and ((x-7.5)^2+(y-7.5)^2<42)
+                or name=="speaker" and ((x>=2 and x<=5 and y>=5 and y<=10) or (x>=6 and x<=10 and math.abs(y-7.5)<=x-3) or (x>=13 and x<=14 and y>=4 and y<=11))
+                or name=="copy" and (((x==3 or x==10) and y>=2 and y<=11) or ((y==2 or y==11) and x>=3 and x<=10) or (x==13 and y>=5 and y<=14) or (y==14 and x>=6 and x<=13))
+            pixels[#pixels+1]=on and string.char(255,255,255,255) or string.char(0,0,0,0)
+        end end
+        assert(gui.new_texture("hud_"..name,16,16,"rgba",table.concat(pixels)),"HUD icon texture unavailable")
+    end
+end
+local function icon(x,y,name,anchor,size)
+    local n=layout.box(vmath.vector3(x,y,0),vmath.vector3(size or 14,size or 14,0),anchor)
+    gui.set_texture(n,"hud_"..name);return n
+end
 function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
+    hud_textures()
     self.tuning_open=false
     self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy")
     gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
     gui.set_scale(self.help,vmath.vector3(0.5,0.5,1));gui.set_visible(self.help,false)
     self.tuning_button=layout.box(vmath.vector3(922,514,0),vmath.vector3(52,28,0),"right_top")
     self.help_button=layout.box(vmath.vector3(860,514,0),vmath.vector3(52,28,0),"right_top")
+    local button_color=vmath.vector4(0.13,0.24,0.28,1)
+    gui.set_color(self.tuning_button,button_color);gui.set_color(self.help_button,button_color)
     self.toggle_labels={}
     for _,spec in ipairs({{922,"T"},{860,"H"}}) do
         local n=layout.text(vmath.vector3(spec[1],514,0),spec[2],"right_top")
@@ -46,16 +65,21 @@ function init(self)
     self.preset_note=layout.text(vmath.vector3(788,449,0),"","right_top")
     gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.4,0.4,1))
     self.crash_button=layout.box(vmath.vector3(788,426,0),vmath.vector3(280,24,0),"right_top")
+    gui.set_color(self.crash_button,button_color)
     self.crash_label=layout.text(vmath.vector3(788,426,0),"Crash OFF [C]","right_top")
     gui.set_font(self.crash_label,"default");gui.set_scale(self.crash_label,vmath.vector3(0.5,0.5,1))
     self.head=layout.text(vmath.vector3(788,407,0),"","right_top")
     gui.set_font(self.head,"default");gui.set_scale(self.head,vmath.vector3(0.4,0.4,1))
     self.controls=controls.new()
     self.audio_button=layout.box(vmath.vector3(714,128,0),vmath.vector3(132,24,0),"right_top")
-    self.audio_label=layout.text(vmath.vector3(714,128,0),"Sound [M]","right_top")
+    gui.set_color(self.audio_button,button_color)
+    icon(662,128,"speaker","right_top")
+    self.audio_label=layout.text(vmath.vector3(726,128,0),"Sound [M]","right_top")
     gui.set_font(self.audio_label,"default");gui.set_scale(self.audio_label,vmath.vector3(0.4,0.4,1))
     self.feedback_button=layout.box(vmath.vector3(862,128,0),vmath.vector3(132,24,0),"right_top")
-    self.feedback_label=layout.text(vmath.vector3(862,128,0),"Copy [F]","right_top")
+    gui.set_color(self.feedback_button,button_color)
+    icon(810,128,"copy","right_top")
+    self.feedback_label=layout.text(vmath.vector3(874,128,0),"Copy [F]","right_top")
     gui.set_font(self.feedback_label,"default");gui.set_scale(self.feedback_label,vmath.vector3(0.4,0.4,1))
     self.panel_nodes={}
     for i=panel_start,#layout.nodes do self.panel_nodes[#self.panel_nodes+1]=layout.nodes[i];gui.set_visible(layout.nodes[i],false) end
@@ -71,6 +95,11 @@ function init(self)
         gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W)
         gui.set_scale(n,vmath.vector3(i==4 and 0.6 or 0.48,i==4 and 0.6 or 0.48,1))
         self.metrics[i]=n
+    end
+    self.contact_dots={icon(32,477,"dot","left_top",6),icon(94,477,"dot","left_top",6)}
+    for _,x in ipairs({12,74}) do
+        local n=layout.text(vmath.vector3(x,477,0),x==12 and "L" or "R","left_top")
+        gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W);gui.set_scale(n,vmath.vector3(0.48,0.48,1))
     end
     gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
     self.reason = layout.text(vmath.vector3(480,498,0), "")
@@ -103,7 +132,7 @@ function on_message(self,id,data,sender)
         for key,box in pairs(self.presets) do
             gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
         end
-        gui.set_text(self.preset_note,data.invalid and "Invalid URL preset: using A" or data.modified and "Modified — choose preset to restore" or "Preset comparison")
+        gui.set_text(self.preset_note,data.invalid and "Invalid URL preset: using A" or data.modified and "Modified - select preset to restore" or "Preset comparison")
     elseif id==hash("tuning") then
         self.owner=sender
         self.tuning=data
@@ -113,7 +142,7 @@ function on_message(self,id,data,sender)
         self.latest=data
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
-        gui.set_text(self.audio_label,data.audio_muted and "Mute [M]" or data.audio_started and string.format("♪ %.2fx [M]",data.audio_pitch) or "♪ [M]")
+        gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
         if html5 then
             html5.run("window.riderTelemetry = "..json.encode(data))
             html5.run("window.riderControls = "..json.encode(controls.geometry(self.controls)))
@@ -121,12 +150,15 @@ function on_message(self,id,data,sender)
         end
         gui.set_text(self.crash_label,"Crash "..(data.crash_enabled and "ON" or "OFF").." [C]")
         gui.set_text(self.head,"Head: "..tostring(data.head_contact))
+        for i,n in ipairs(self.contact_dots) do
+            gui.set_color(n,(i==1 and data.contact1 or i==2 and data.contact2) and vmath.vector4(0.3,0.9,0.6,1) or vmath.vector4(0.4,0.45,0.5,1))
+        end
         local b=telemetry.budget
         local values={
-            string.format("%.2f m/s · %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
-            string.format("L %s   R %s",data.contact1 and "●" or "○",data.contact2 and "●" or "○"),
+            string.format("%.2f m/s | %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
+            "",
             string.format("L %+.1f   R %+.1f u",data.travel1,data.travel2),
-            string.format("%.0f fps · %.1f ms",data.fps,data.frame_ms),
+            string.format("%.0f fps / %.1f ms",data.fps,data.frame_ms),
             string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
             string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "budget unset")}
         for i,text in ipairs(values) do

@@ -21,8 +21,8 @@ function M.new()
     g.origin=layout.box(vmath.vector3(12,430,0),vmath.vector3(1,1,0),"left_top")
     g.probe=layout.box(vmath.vector3(13,430,0),vmath.vector3(1,1,0),"left_top")
     gui.set_enabled(g.origin,false);gui.set_enabled(g.probe,false)
-    g.speed=text(18,429,"Speed · 5 s")
-    g.travel=text(18,394,"Spring · L / R")
+    g.speed=text(18,429,"Speed / 5 s")
+    g.travel=text(18,394,"Spring / L / R")
     for i=1,3 do
         g.bars[i]={}
         for j=1,50 do
@@ -65,7 +65,7 @@ function M.draw(g,data)
             previous={x=x,y=y}
         else previous=nil end
     end
-    if series==1 then gui.set_text(g.speed,string.format("Speed ≤%.1f m/s · 5 s",feel.metres(data.scale)))
-    else gui.set_text(g.travel,string.format("Spring ±%.0f · L / R",data.scale)) end
+    if series==1 then gui.set_text(g.speed,string.format("Speed <=%.1f m/s / 5 s",feel.metres(data.scale)))
+    else gui.set_text(g.travel,string.format("Spring +/-%.0f L / R",data.scale)) end
 end
 return M
