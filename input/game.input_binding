@@ -5,3 +5,5 @@ key_trigger { input: KEY_S action: "brake_s" }
 key_trigger { input: KEY_R action: "retry" }
 key_trigger { input: KEY_A action: "lean_left" }
 key_trigger { input: KEY_D action: "lean_right" }
+key_trigger { input: KEY_C action: "crash_toggle" }
+mouse_trigger { input: MOUSE_BUTTON_1 action: "ui_pointer" }

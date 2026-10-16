@@ -2,6 +2,7 @@
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.gym.vehicle"
 local socket = require "socket"
+local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
@@ -17,6 +18,7 @@ local function reset(self)
     if request.generation ~= self.generation then return end
     self.resetting = true
     self.held = {}
+    self.head_contact,self.sensor_skip=false,2
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
@@ -75,11 +77,12 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
     end
+    self.crash_enabled,self.head_contact,self.sensor_skip=false,false,0
     self.camera_zoom=feel.values.camera_zoom
     self.metrics = telemetry.new()
     self.held = {}
@@ -109,8 +112,12 @@ function update(self, dt)
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
     if self.vehicle and self.vehicle.ready then
+        rider.paint(self.vehicle,self.head_contact)
         local sample = telemetry.frame(self.metrics,self.vehicle,dt)
-        if sample then msg.post("main:/loader#ui","measurements",sample) end
+        if sample then
+            sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
+            msg.post("main:/loader#ui","measurements",sample)
+        end
     end
     if self.scenario then self.scenario.update_after(self) end
 end
@@ -120,6 +127,10 @@ local function command(self)
     return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = (self.held[hash("lean_left")] and 1 or 0)-(self.held[hash("lean_right")] and 1 or 0)}
 end
 function on_input(self, action_id, action)
+    if action_id == hash("crash_toggle") then
+        if action.pressed then self.crash_enabled=not self.crash_enabled end
+        return
+    end
     if action_id == hash("retry") then
         if action.pressed then request_reset(self,"manual") end
         return
@@ -135,6 +146,12 @@ function fixed_update(self, dt)
         local state = vehicle.state(self.vehicle)
         if self.scenario then self.scenario.check_pose(self,state) end
         if state.x<bounds.min_x or state.x>bounds.max_x or state.y<bounds.min_y then request_reset(self,"bounds") end
+        if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
+        else self.head_contact=rider.contact(self.vehicle) end
+        if self.head_contact then
+            self.head_seen=true
+            if self.crash_enabled then request_reset(self,"head") end
+        end
         if self.pending_reset then reset(self) end
         self.last_command = command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
@@ -142,6 +159,7 @@ function fixed_update(self, dt)
             if self.feel_phase then self.scenario.feel_tick(self,dt) elseif self.reset_phase then self.scenario.reset(self) else self.scenario.drive(self) end
         end
     end
+    if self.testcase=="a7" and self.vehicle and self.vehicle.ready then self.scenario.crash_tick(self,dt) end
     if self.scenario then self.scenario.probe_tick(self,dt) end
 end
 function final(self)
@@ -151,6 +169,7 @@ function final(self)
 end
 function on_message(self,id,data,sender)
     if id==hash("world_load_count") then self.world_loads=data.count
+    elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("measurements_shown") then self.measurements_shown=data
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

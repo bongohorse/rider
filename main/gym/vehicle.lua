@@ -1,6 +1,7 @@
 -- Per-session vehicle. Positions/anchors: engine units; angular speed: rad/s.
 -- Motor torque uses the pinned binding's scaled input convention (not body torque).
 local M = {}
+local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 M.config = feel.values
 function M.spawn()
@@ -33,9 +34,11 @@ function M.attach(v)
         assert(b2d.body.is_valid(v.wheels[i]), "Wheel body unavailable")
     end
     joints(v)
+    rider.attach(v)
     v.ready = true
 end
 function M.reset(v)
+    assert(b2d.shape.is_valid(v.head),"Head sensor lost before reset")
     for _,joint in ipairs(v.joints) do
         assert(b2d.joint.is_valid(joint), "Invalid joint before reset")
         b2d.joint.destroy(joint)
@@ -62,6 +65,7 @@ function M.reset(v)
         assert(math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001, "Noncanonical reset pose")
         assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
     end
+    assert(b2d.shape.is_valid(v.head) and #b2d.body.get_shapes(v.chassis)==2,"Retry changed sensor ownership")
     v.reverse_time,v.reversing=0,false
     joints(v)
     assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")

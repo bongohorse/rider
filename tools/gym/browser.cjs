@@ -46,6 +46,12 @@ async function main() {
           if(data.name==='release_for_redrive')await page.keyboard.up('ArrowUp');
           if(data.name==='reverse_request')await page.keyboard.up('ArrowUp');
           if(data.name==='air_lean'){await page.keyboard.up('ArrowDown');await page.keyboard.down('a');}
+          if(data.name==='enable_crash')await page.keyboard.down('c');
+          if(data.name==='disable_crash_overlay'){
+            await page.keyboard.up('c');
+            const box=await page.locator('canvas').first().boundingBox();
+            await page.mouse.click(box.x+box.width*780/960,box.y+box.height*140/540);
+          }
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);

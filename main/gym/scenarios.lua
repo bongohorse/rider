@@ -190,4 +190,39 @@ function M.feel_tick(self,dt)
         end
     end
 end
+local function head_pose(self)
+    local v=self.vehicle
+    vehicle.reset(v)
+    for i,body in ipairs({v.chassis,v.wheels[1],v.wheels[2]}) do
+        local p=b2d.body.get_position(body)
+        local pos=vmath.vector3(-p.x,130-(p.y-vehicle.config.spawn_y),0)
+        local id=i==1 and v.ids.chassis or v.ids[i-1]
+        go.set_position(vmath.vector3(pos.x,pos.y,go.get_position(id).z),id)
+        go.set_rotation(vmath.quat_rotation_z(math.pi),id)
+        b2d.body.set_transform(body,pos,math.pi)
+    end
+end
+function M.crash_tick(self,dt)
+    self.crash_tick=(self.crash_tick or 0)+1
+    if self.crash_tick==60 then
+        assert(not self.crash_enabled,"Crash reset must default off")
+        head_pose(self)
+        self.crash_phase="observe"
+    elseif self.crash_phase=="observe" and self.head_seen then
+        assert(self.reset_count==0,"Disabled crash rule reset the vehicle")
+        self.crash_phase="enable"
+        emit(self,"phase",{name="enable_crash"})
+    elseif self.crash_phase=="enable" and self.crash_enabled then
+        head_pose(self)
+        self.crash_phase="reset"
+    elseif self.crash_phase=="reset" and self.reset_count>0 then
+        assert(self.reset_count==1 and self.last_reset_reason=="head","Enabled head contact did not use canonical reset")
+        assert(b2d.shape.is_valid(self.vehicle.head) and #b2d.body.get_shapes(self.vehicle.chassis)==2,"Retry leaked/replaced head sensor")
+        self.crash_phase="overlay"
+        emit(self,"phase",{name="disable_crash_overlay"})
+    elseif self.crash_phase=="overlay" and not self.crash_enabled then
+        emit(self,"suite_end",{status="PASS",cases={head_detected=true,default_off=true,head_reset=true,sensor_retained=true,keyboard_toggle=true,overlay_toggle=true}})
+        self.testcase="done"
+    end
+end
 return M

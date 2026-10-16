@@ -12,6 +12,15 @@ function init(self)
     gui.set_font(version,"default")
     gui.set_scale(version,vmath.vector3(0.6,0.6,1))
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
+    msg.post(".","acquire_input_focus")
+    self.crash_button=gui.new_box_node(vmath.vector3(780,400,0),vmath.vector3(280,32,0))
+    gui.set_color(self.crash_button,vmath.vector4(0.13,0.24,0.28,1))
+    self.crash_label=gui.new_text_node(vmath.vector3(780,400,0),"Crash reset OFF [C]")
+    gui.set_font(self.crash_label,"default")
+    gui.set_scale(self.crash_label,vmath.vector3(0.65,0.65,1))
+    self.head=gui.new_text_node(vmath.vector3(780,368,0),"Head contact: false")
+    gui.set_font(self.head,"default")
+    gui.set_scale(self.head,vmath.vector3(0.65,0.65,1))
     self.metrics = {}
     for i=1,6 do
         local n=gui.new_text_node(vmath.vector3(24,400-(i-1)*24,0),"")
@@ -26,6 +35,8 @@ function init(self)
 end
 function on_message(self,id,data,sender)
     if id==hash("measurements") then
+        gui.set_text(self.crash_label,"Crash reset "..(data.crash_enabled and "ON" or "OFF").." [C]")
+        gui.set_text(self.head,"Head contact: "..tostring(data.head_contact))
         local b=telemetry.budget
         local values={
             string.format("Speed %.1f u/s (vx %+.1f)",data.speed,data.velocity_x),
@@ -44,7 +55,14 @@ function on_message(self,id,data,sender)
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
             contact1=data.contact1,contact2=data.contact2,travel1=data.travel1,travel2=data.travel2})
     elseif id==hash("retry_done") then
-        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or "Retry: manual")
+        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or "Retry: manual")
         msg.post(sender,"retry_labelled",{reason=data.reason})
+    end
+end
+
+function on_input(self,id,action)
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.crash_button,action.x,action.y) then
+        msg.post("gym:/owner#script","crash_toggle")
+        return true
     end
 end

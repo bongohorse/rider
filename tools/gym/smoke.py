@@ -43,5 +43,8 @@ elif args.case in ('a2','a3','a6'):
     assert set(cases)==expected
     assert cases['drive_dx']>150 and cases['drive_speed']>100 and abs(cases['stopped_speed'])<12
     assert cases['max_angle']<0.6 and all(cases[x] is True for x in ['wheel_contact','camera_follow','brake_priority'])
+elif args.case=='a7':
+    assert set(cases)=={'head_detected','default_off','head_reset','sensor_retained','keyboard_toggle','overlay_toggle'}
+    assert all(value is True for value in cases.values())
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))
