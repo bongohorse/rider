@@ -6,7 +6,8 @@ M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque"
 function M.preset(requested)
     local valid=allowed[requested]==true
     local key=valid and requested or "a"
-    local data=json.decode(assert(sys.load_resource("/main/gym/presets/"..key..".json"),"Missing preset"))
+    local resource=assert(sys.load_resource("/main/gym/presets/"..key..".json"),"Missing preset")
+    local data=json.decode(resource)
     assert(data.schema==1 and data.key==key and type(data.values)=="table","Invalid preset schema")
     local count=0
     for name,value in pairs(data.values) do
