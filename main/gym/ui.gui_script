@@ -1,3 +1,4 @@
+local telemetry = require "main.gym.telemetry"
 function init(self)
     local title = gui.new_text_node(vmath.vector3(480, 498, 0), "DRIVING GYM")
     gui.set_font(title, "default")
@@ -11,12 +12,38 @@ function init(self)
     gui.set_font(version,"default")
     gui.set_scale(version,vmath.vector3(0.6,0.6,1))
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
+    self.metrics = {}
+    for i=1,6 do
+        local n=gui.new_text_node(vmath.vector3(24,400-(i-1)*24,0),"")
+        gui.set_font(n,"default")
+        gui.set_pivot(n,gui.PIVOT_W)
+        gui.set_scale(n,vmath.vector3(0.65,0.65,1))
+        self.metrics[i]=n
+    end
     self.reason = gui.new_text_node(vmath.vector3(480,438,0), "")
     gui.set_font(self.reason,"default")
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
 function on_message(self,id,data,sender)
-    if id==hash("retry_done") then
+    if id==hash("measurements") then
+        local b=telemetry.budget
+        local values={
+            string.format("Speed %.1f u/s (vx %+.1f)",data.speed,data.velocity_x),
+            string.format("Wheel contact L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
+            string.format("Spring travel L %+.2f / R %+.2f u",data.travel1,data.travel2),
+            string.format("FPS %.1f / target %.0f",data.fps,b.fps_min),
+            string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
+            string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "budget unset")}
+        for i,text in ipairs(values) do
+            gui.set_text(self.metrics[i],text)
+            local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
+                or i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
+                or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
+            gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
+        end
+        msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
+            contact1=data.contact1,contact2=data.contact2,travel1=data.travel1,travel2=data.travel2})
+    elseif id==hash("retry_done") then
         gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or "Retry: manual")
         msg.post(sender,"retry_labelled",{reason=data.reason})
     end
