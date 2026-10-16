@@ -91,6 +91,7 @@ async function main() {
             for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','Tuning:'])if(!fallback.includes(field))throw Error('Incomplete denied-copy fallback');
             feedbackChecked=true;
           }
+          if(data.name==='graph_spike')await page.screenshot({path:path.join(root,'suspension-spike.png')});
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);

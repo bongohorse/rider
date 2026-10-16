@@ -1,3 +1,4 @@
+local history=require "main.gym.history"
 local audio=require "main.gym.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
@@ -20,6 +21,7 @@ local function reset(self)
     self.resetting = true
     self.held = {}
     self.head_contact,self.sensor_skip=false,2
+    self.history=history.new(self.history.generation+1)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
@@ -85,7 +87,7 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
@@ -100,6 +102,7 @@ function init(self)
     self.invalid_preset=not valid
     self.crash_enabled,self.head_contact,self.sensor_skip=false,false,0
     self.camera_zoom=feel.values.camera_zoom
+    self.history=history.new()
     self.telemetry_seq=0
     self.metrics = telemetry.new()
     self.held = {}
@@ -140,6 +143,12 @@ function update(self, dt)
             sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
+            for i,series in ipairs(history.series(self.history)) do
+                local encoded=json.encode(series.values)
+                assert(#encoded<1500,"Graph message exceeds safe payload budget")
+                msg.post("main:/loader#ui","graph",{series=i,values=encoded,scale=series.scale,peak=series.peak,positive_peak=series.positive_peak,
+                    generation=self.history.generation,count=series.count,oldest_age=series.oldest_age})
+            end
         end
     end
     if self.scenario then self.scenario.update_after(self) end
@@ -202,6 +211,7 @@ function fixed_update(self, dt)
         end
         self.last_command = command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
+        history.push(self.history,telemetry.sample(self.vehicle),dt)
     end
     if self.scenario then self.scenario.fixed(self,dt) end
 end
@@ -220,6 +230,9 @@ function on_message(self,id,data,sender)
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then self.pending_tuning=data
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={}
+    elseif id==hash("graph_shown") and data.generation==self.history.generation then
+        self.graph_peaks=self.graph_peaks or {};self.graph_peaks[data.series]=data.peak
+        if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
     elseif id==hash("measurements_shown") then self.measurements_shown=data
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end
