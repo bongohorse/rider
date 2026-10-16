@@ -77,6 +77,8 @@ jobs:
         run: python tools/gym/smoke.py --output artifacts/g1/head --case a7
       - name: Verify live slider and captured input
         run: python tools/gym/smoke.py --output artifacts/g1/sliders --case a8
+      - name: Verify expanded feel controls and grounded keyboard lean
+        run: python tools/gym/smoke.py --output artifacts/g1/feedback-feel --case m2feedback
       - name: Verify URL presets and all three drivable candidates
         run: python tools/gym/smoke.py --output artifacts/g1/presets --case a9
       - name: Verify invalid URL fallback

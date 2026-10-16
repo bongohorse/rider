@@ -340,6 +340,65 @@ function M.graph_tick(self,dt)
         self.testcase="done"
     end
 end
+-- Flat-ground input probe only; ramps and human air-control acceptance stay M4.
+function M.feedback_feel_tick(self,dt)
+    local feel=require "main.gym.feel"
+    self.feedback_feel_ticks=(self.feedback_feel_ticks or 0)+1
+    local state=vehicle.state(self.vehicle)
+    if not self.ground_phase and self.feedback_feel_ticks==60 then
+        assert(#b2d.body.get_contact_data(self.vehicle.wheels[1])>0 and #b2d.body.get_contact_data(self.vehicle.wheels[2])>0,"Ground lean must start on both wheels")
+        assert(feel.set("motor_speed",-140) and not feel.set("motor_speed",-141),"Expanded speed range invalid")
+        assert(feel.set("lean_torque",200) and feel.set("lean_rate_max",16) and feel.set("ground_lean_torque",400),"New lean controls unavailable")
+        feel.preset("a")
+        assert(feel.values.motor_speed==-32 and feel.values.lean_rate_max==8 and feel.values.ground_lean_torque==120,"Preset did not restore expanded tuning")
+        assert(feel.set("ground_lean_torque",0),"Cannot disable ground assistance")
+        self.ground_phase,self.ground_ticks="disabled",0
+        emit(self,"phase",{name="ground_left"})
+    elseif self.ground_phase=="disabled" then
+        if self.last_command.lean==1 then self.ground_ticks=self.ground_ticks+1 end
+        if self.ground_ticks==24 then
+            assert(math.abs(state.angle)<0.01,"Zero ground torque still pitched chassis")
+            assert(feel.set("ground_lean_torque",120),"Cannot enable ground assistance")
+            self.ground_phase,self.ground_ticks="left",0
+        end
+    elseif self.ground_phase=="left" or self.ground_phase=="right" then
+        local sign=self.ground_phase=="left" and 1 or -1
+        if self.last_command.lean==sign then self.ground_ticks=self.ground_ticks+1 end
+        if self.ground_ticks==24 then
+            assert(state.angle*sign>0.03,"Ground lean did not produce signed pitch: "..state.angle)
+            if sign==1 then self.ground_left=state.angle else self.ground_right=state.angle end
+            self.ground_phase=sign==1 and "reset_left" or "reset_right"
+            emit(self,"phase",{name="ground_release"})
+            request_reset(self,"manual")
+            self.ground_ticks=0
+        end
+    elseif self.ground_phase=="select_fast" and self.preset=="c" and self.last_reset_reason=="preset" then
+        self.ground_phase,self.ground_ticks="fast",0
+        emit(self,"phase",{name="preset_drive",key="c"})
+    elseif self.ground_phase=="fast" then
+        if self.last_command.throttle==1 then self.ground_ticks=self.ground_ticks+1 end
+        if self.ground_ticks==180 then
+            assert(state.vx>800 and math.abs(state.angle)<0.6,"Fast candidate did not exceed old maximum while upright: "..state.vx)
+            assert(self.reset_count==3 and self.world_loads==1,"Fast candidate reset/reload mismatch")
+            emit(self,"suite_end",{status="PASS",cases={ground_left=self.ground_left,ground_right=self.ground_right,reset_neutral=true,no_reload=true,expanded_controls=true,ground_disabled=true,fast_speed_mps=feel.metres(state.vx)}})
+            self.testcase="done"
+        end
+    elseif self.ground_phase=="reset_left" or self.ground_phase=="reset_right" then
+        self.ground_ticks=self.ground_ticks+1
+        if self.ground_ticks==60 then
+            assert(self.last_command.lean==0 and math.abs(state.angle)<0.01,"Ground lean survived reset")
+            if self.ground_phase=="reset_left" then
+                assert(#b2d.body.get_contact_data(self.vehicle.wheels[1])>0 and #b2d.body.get_contact_data(self.vehicle.wheels[2])>0,"Right lean did not start grounded")
+                self.ground_phase,self.ground_ticks="right",0
+                emit(self,"phase",{name="ground_right"})
+            else
+                assert(self.reset_count==2 and self.world_loads==1,"Ground probe reset/reload mismatch")
+                self.ground_phase="select_fast"
+                emit(self,"phase",{name="select_preset",key="c"})
+            end
+        end
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
@@ -348,7 +407,8 @@ function M.fixed(self,dt)
         elseif self.testcase=="a8" then M.slider_tick(self,dt)
         elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt)
         elseif self.testcase=="a11" then M.feedback_tick(self,dt)
-        elseif self.testcase=="a12" then M.graph_tick(self,dt) end
+        elseif self.testcase=="a12" then M.graph_tick(self,dt)
+        elseif self.testcase=="m2feedback" then M.feedback_feel_tick(self,dt) end
     end
     M.probe_tick(self,dt)
 end
