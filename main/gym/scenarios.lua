@@ -295,13 +295,24 @@ function M.preset_tick(self,dt)
         end
     end
 end
+function M.feedback_tick(self,dt)
+    self.feedback_ticks=(self.feedback_ticks or 0)+1
+    if self.feedback_ticks==60 then
+        assert(self.measurements_shown,"Feedback needs real measurements")
+        emit(self,"phase",{name="copy_feedback"})
+    elseif self.feedback_visible and self.feedback_status=="Select text to copy" then
+        emit(self,"suite_end",{status="PASS",cases={report_requested=true,visible_failure=true}})
+        self.testcase="done"
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
             if self.feel_phase then M.feel_tick(self,dt) elseif self.reset_phase then M.reset(self) else M.drive(self) end
         elseif self.testcase=="a7" then M.crash_tick(self,dt)
         elseif self.testcase=="a8" then M.slider_tick(self,dt)
-        elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt) end
+        elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt)
+        elseif self.testcase=="a11" then M.feedback_tick(self,dt) end
     end
     M.probe_tick(self,dt)
 end
