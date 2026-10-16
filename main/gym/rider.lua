@@ -5,7 +5,7 @@ function M.attach(v)
     local mass=b2d.body.get_mass(v.chassis)
     local shape=b2d.body.create_shape(v.chassis,{type=b2d.shape.SHAPE_TYPE_CIRCLE,
         center=vmath.vector3(0,M.center_y,0),radius=M.radius,sensor=true,density=0,
-        filter={category_bits=1,mask_bits=1}})
+        filter={category_bits=1,mask_bits=1,group_index=0}})
     v.head=shape.shape_id
     b2d.shape.enable_sensor_events(v.head,true)
     assert(b2d.shape.is_valid(v.head) and b2d.shape.is_sensor(v.head),"Head sensor unavailable")
