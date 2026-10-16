@@ -101,8 +101,12 @@ function M.apply(v,command,dt)
         local airborne=true
         for _,wheel in ipairs(v.wheels) do if #b2d.body.get_contact_data(wheel)>0 then airborne=false end end
         local omega=b2d.body.get_angular_velocity(v.chassis)
-        if airborne and (math.abs(omega)<c.lean_rate_max or omega*command.lean<0) then
-            b2d.body.apply_torque(v.chassis,feel.body_torque(command.lean*c.lean_torque))
+        local torque=airborne and c.lean_torque or c.ground_lean_torque
+        local rate=airborne and c.lean_rate_max or c.ground_rate_max
+        -- Soft threshold: stop adding spin, but always allow counter-steering.
+        -- Ground assistance pitches the chassis; it does not move the centre of mass.
+        if math.abs(omega)<rate or omega*command.lean<0 then
+            b2d.body.apply_torque(v.chassis,feel.body_torque(command.lean*torque))
         end
     end
 end

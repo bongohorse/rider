@@ -9,9 +9,9 @@ end
 function M.new()
     local c={rows={}}
     for i,spec in ipairs(feel.sliders) do
-        local y=316-(i-1)*36
+        local y=316-(i-1)*26
         local row={spec=spec,y=y,value=feel.values[spec.key]}
-        row.label=text(780,y+13,"")
+        row.label=text(780,y+10,"")
         row.track=gui.new_box_node(vmath.vector3(780,y,0),vmath.vector3(240,10,0))
         gui.set_color(row.track,vmath.vector4(0.15,0.25,0.3,1))
         row.knob=gui.new_box_node(vmath.vector3(780,y,0),vmath.vector3(12,18,0))

@@ -1,4 +1,5 @@
 -- Fifty 100-ms min/max bars per signal preserve short spikes from 60-Hz samples.
+local feel=require "main.gym.feel"
 local M={}
 local colors={vmath.vector4(0.7,0.9,1,1),vmath.vector4(0.3,0.85,0.73,1),vmath.vector4(1,0.72,0.3,1)}
 local function text(x,y,value)
@@ -38,7 +39,7 @@ function M.draw(g,data)
             gui.set_size(n,vmath.vector3(series==1 and 4 or 2,math.max(2,(high-low)/data.scale*span),0))
         end
     end
-    if series==1 then gui.set_text(g.speed,string.format("Speed 0-%.0f u/s | last 5 s",data.scale))
+    if series==1 then gui.set_text(g.speed,string.format("Speed 0-%.1f m/s | last 5 s",feel.metres(data.scale)))
     else gui.set_text(g.travel,string.format("Spring ±%.0f u | L teal / R amber",data.scale)) end
 end
 return M

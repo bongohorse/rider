@@ -51,6 +51,9 @@ async function main() {
           if(data.name==='release_for_redrive')await page.keyboard.up('ArrowUp');
           if(data.name==='reverse_request')await page.keyboard.up('ArrowUp');
           if(data.name==='air_lean'){await page.keyboard.up('ArrowDown');await page.keyboard.down('a');}
+          if(data.name==='ground_left')await page.keyboard.down('a');
+          if(data.name==='ground_right')await page.keyboard.down('d');
+          if(data.name==='ground_release'){await page.keyboard.up('a');await page.keyboard.up('d');}
           if(data.name==='enable_crash')await page.keyboard.down('c');
           if(data.name==='disable_crash_overlay'){
             await page.keyboard.up('c');
@@ -81,7 +84,7 @@ async function main() {
             await page.waitForFunction(()=>window.riderFeedback?.status==='Copied feedback [F]');
             await page.keyboard.up('f');
             const copied=await page.evaluate(()=>navigator.clipboard.readText());
-            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','Wheel contact:','Suspension:','FPS:','physics step','Tuning:'])if(!copied.includes(field))throw Error('Missing feedback field: '+field);
+            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','m/s','km/h','ground_lean_torque','lean_rate_max','Wheel contact:','Suspension:','FPS:','physics step','Tuning:'])if(!copied.includes(field))throw Error('Missing feedback field: '+field);
             fs.writeFileSync(path.join(root,'copied-feedback.md'),copied);
             await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
             await page.keyboard.down('f');

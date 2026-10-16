@@ -63,5 +63,10 @@ elif args.case=='a12':
     assert set(cases)=={'bottoming_peak','spike_drawn','bounded','expired','limits_restored','no_reset','samples','oldest_age'}
     assert 16<=cases['bottoming_peak']<=20 and all(cases[k] is True for k in ['spike_drawn','bounded','expired','limits_restored','no_reset'])
     assert 299<=cases['samples']<=301 and 4.9<=cases['oldest_age']<=5.00001
+elif args.case=='m2feedback':
+    assert set(cases)=={'ground_left','ground_right','reset_neutral','no_reload','expanded_controls','fast_speed_mps'}
+    assert cases['fast_speed_mps']>8
+    assert cases['ground_left']>0.03 and cases['ground_right'] < -0.03
+    assert all(cases[k] is True for k in ['reset_neutral','no_reload','expanded_controls'])
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))

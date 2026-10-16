@@ -1,3 +1,4 @@
+local feel=require "main.gym.feel"
 local M={}
 function M.report(data,preset,modified,tuning)
     if not data then return nil end
@@ -5,7 +6,7 @@ function M.report(data,preset,modified,tuning)
         "- Commit: "..sys.get_config_string("rider.source_sha","development"),
         "- Preset: "..string.upper(preset or "a")..(modified and " (modified)" or ""),
         "- Station: flat-gym",
-        string.format("- Speed: %.2f u/s; vx %+.2f u/s",data.speed,data.velocity_x),
+        string.format("- Speed: %.2f m/s (%.1f km/h); vx %+.2f m/s",feel.metres(data.speed),feel.metres(data.speed)*3.6,feel.metres(data.velocity_x)),
         string.format("- Wheel contact: L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
         string.format("- Suspension: L %+.3f / R %+.3f u",data.travel1,data.travel2),
         string.format("- FPS: %.2f; mean frame %.3f ms; physics step %.3f ms",data.fps,data.frame_ms,data.physics_ms),
