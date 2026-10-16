@@ -17,5 +17,6 @@ Read STATUS.md, the current issue and only its affected contract. Work is organi
 | CI/protection, dependencies, repository operations | [Repository setup](REPOSITORY_SETUP.md) |
 | Status meanings and reporting | [Evidence policy](contracts/evidence.md) |
 | Completed G0–G2 and superseded gates/masterplan | [History](history/README.md) |
+| Unscheduled ideas (not approved work; do not implement) | [Ideas](ideas/README.md) |
 
 History is evidence, not the current queue or authority. Physics and automation contracts remain binding; the plan determines when later validations become necessary.
