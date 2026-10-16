@@ -7,7 +7,9 @@ module.exports=async function tilt(browser,url,sha,out){
   page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   const pass=name=>{cases.push(name);console.log('TILT_CASE '+name);};
   const session=await context.newCDPSession(page);
-  const emit=(beta,gamma)=>page.evaluate(({beta,gamma})=>window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta,gamma,alpha:0})),{beta,gamma});
+  const emit=(beta,gamma)=>beta===null||gamma===null?
+    page.evaluate(()=>window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta:null,gamma:null,alpha:null}))):
+    session.send('DeviceOrientation.setDeviceOrientationOverride',{alpha:0,beta,gamma});
   const open=async()=>{if(!await page.locator('.tilt-panel').isVisible())await page.getByRole('button',{name:'Tilt',exact:true}).click();};
   const close=async()=>{if(await page.locator('.tilt-panel').isVisible())await page.getByRole('button',{name:'Tilt',exact:true}).click();};
   const neutral=()=>page.waitForFunction(()=>{const c=window.riderTelemetry.command;return c.throttle===0&&c.brake_reverse===0&&c.lean===0;});
@@ -41,9 +43,11 @@ module.exports=async function tilt(browser,url,sha,out){
       window.DeviceOrientationEvent=window.__orientationCtor;
       Object.defineProperty(DeviceOrientationEvent,'requestPermission',{configurable:true,value:()=>Promise.resolve('granted')});
     });
+    // Establish the virtual source before subscribing. Otherwise the browser's
+    // real missing-sensor null event races a manually dispatched valid sample.
+    await emit(0,0);
     await open();await page.getByRole('button',{name:'Enable tilt',exact:true}).click();
-    await page.waitForFunction(()=>window.riderTilt.mode==='waiting');
-    await emit(0,0);await page.waitForFunction(()=>window.riderTilt.mode==='calibrate');
+    await page.waitForFunction(()=>window.riderTilt.mode==='calibrate');
     await calibrate();await emit(0,-20);
     await page.waitForFunction(()=>window.riderTelemetry.command.lean>.95&&window.riderTelemetry.pitch>.03);
     pass('calibrated_sensor_moves_body_through_owner');
@@ -85,6 +89,7 @@ module.exports=async function tilt(browser,url,sha,out){
     pass('screen_axis_rotation_no_reload');
     await emit(null,null);await page.waitForFunction(()=>window.riderTilt.mode==='fallback');await neutral();
     await touch('throttle');await release();await neutral();pass('invalid_data_touch_fallback');
+    await session.send('DeviceOrientation.clearDeviceOrientationOverride');
     await open();await page.getByRole('button',{name:'Enable tilt',exact:true}).click();
     await page.waitForFunction(()=>window.riderTilt.mode==='fallback'&&window.riderTilt.reason.includes('No sensor'),null,{timeout:6000});
     await page.screenshot({path:path.join(out,'tilt-fallback.png')});pass('no_data_timeout');
