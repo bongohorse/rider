@@ -41,6 +41,10 @@ end
 function M.geometry(c)
     local rows={}
     for _,row in ipairs(c.rows) do
+        -- Disabled probe nodes do not render, so invalidate their cached transforms
+        -- explicitly after a window resize before reading their screen positions.
+        gui.set_position(row.left,gui.get_position(row.left))
+        gui.set_position(row.right,gui.get_position(row.right))
         local left,right=gui.get_screen_position(row.left),gui.get_screen_position(row.right)
         rows[#rows+1]={key=row.spec.key,value=row.value,min=row.spec.min,max=row.spec.max,sign=row.spec.sign or 1,
             left={x=left.x,y=left.y},right={x=right.x,y=right.y}}

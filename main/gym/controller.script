@@ -139,6 +139,8 @@ function update(self, dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
+            local projection=camera.get_projection("/camera#camera")
+            sample.projection_x,sample.projection_y=projection.m00,projection.m11
             sample.audio_started,sample.audio_muted,sample.audio_pitch=self.audio_started or false,self.audio_muted or false,self.audio_pitch or 0
             sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled

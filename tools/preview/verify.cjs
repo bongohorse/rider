@@ -64,6 +64,10 @@ async function main(){
         // Allow input coordinates and owner -> UI messages to settle after resize.
         const seq=await page.evaluate(()=>window.riderTelemetry.sequence);
         await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);
+        await page.waitForFunction(()=>{
+          const t=window.riderTelemetry;
+          return Math.abs(t.projection_x*innerWidth/(t.projection_y*innerHeight)-1)<.001;
+        });
         for(let row=0;row<9;row++){
           for(const endpoint of ['left','right']){
             const point=await page.evaluate(({row,endpoint})=>{
