@@ -89,3 +89,5 @@ Sensor binding follow-up: `CheckFilterData` requires all three numeric fields, i
 Tint follow-up: the pinned sprite module has no `sprite.set_constant`; use `go.set(sprite_url,"tint",value)`. Pinned `CompSpriteSetProperty` routes material constants via `SetConstant`. CI rejected the obsolete call; no failure was waived.
 
 Release verification now requires two further owner-to-GUI telemetry sequences after initial READY. Release engines can suppress diagnostics, so READY plus a static screenshot alone did not establish a continuing controller; the new progress assertion closes that observed verification gap.
+
+Sensor participation follow-up: pinned Defold chain creation forwards `enable_sensor_events`; upstream Box2D 3.1.0 `src/sensor.c` excludes visitor shapes with sensor events disabled. The authored terrain chain now explicitly enables this flag and asserts it on returned segment handles. Enabling the sensor alone was insufficient and the focused test timed out as intended. Physics geometry/contact assertions are unchanged. Failed browser runs now retain a screenshot and last GUI telemetry for diagnosis.

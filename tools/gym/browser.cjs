@@ -62,6 +62,11 @@ async function main() {
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
     let timer;
     try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),30000))]);}
+    catch(error){
+      await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
+      fs.writeFileSync(path.join(root,'failed-telemetry.json'),JSON.stringify(await page.evaluate(()=>window.riderTelemetry||null).catch(()=>null),null,2));
+      throw error;
+    }
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
     await input;
