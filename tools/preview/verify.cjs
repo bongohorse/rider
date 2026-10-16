@@ -74,9 +74,15 @@ async function main(){
               const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
               const data=window.riderControls[row],p=data[endpoint];
               return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height,
+                centreX:r.x+(data.left.x+data.right.x)*.5/c.width*r.width,
+                midpoint:(data.min+data.max)*.5*data.sign,tolerance:(data.max-data.min)*.01,
                 key:data.key,value:(endpoint==='left'?data.min:data.max)*data.sign};
             },{row,endpoint});
-            await page.mouse.move(point.x,point.y);await page.mouse.down();
+            // Start inside the track, acknowledge capture, then drag past its end.
+            // Exact edge clicks are ambiguous after browser pixel rounding.
+            await page.mouse.move(point.centreX,point.y);await page.mouse.down();
+            await page.waitForFunction(({row,point})=>Math.abs(window.riderControls[row].value-point.midpoint)<point.tolerance,{row,point});
+            await page.mouse.move(point.x+(endpoint==='left'?-4:4),point.y);
             await page.waitForFunction(({row,value})=>Math.abs(window.riderControls[row].value-value)<.01,{row,value:point.value});
             // Release outside the track; then actual keyboard drive must work again.
             await page.mouse.move(2,2);await page.mouse.up();
