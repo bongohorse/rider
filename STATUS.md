@@ -4,14 +4,17 @@ Updated 2026-10-16. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
-M3 scope audit corrected the premature technical-completion claim: all five assigned issues remain open (#58, #28, #29, #68, #69). #68 and #69 were omitted from the prior execution; they are implementation work, not device-only acceptance. Claudio reauthorized completing M3. A13a/#68 is merged in PR #73 (`faefa53`), with green required 38956567507 at `5b11ec0`: coast distance 11.5282 m and brake-tap rest 0 m/s. Closed under the explicit priority-comment authorization; actual-phone feel remains NOT RUN in #28. Current work: #69 compact HUD, P preset cycling, reserved station keys, responsive slider/picking regressions and injected FPS-colour tests. M4 remains unauthorized. Real-device criteria are not replaced by CI.
+Claudio authorized completing M3. The scope audit corrected the premature completion claim: M3 has five assigned issues, including the previously omitted #68 and #69. The live milestone, not just the plan table, must be checked at completion. M4 is not authorized.
 
+| M3 issue | Technical work / remaining acceptance |
+| --- | --- |
+| [#58 A12b](https://github.com/bongohorse/rider/issues/58) | Full-window/HiDPI/responsive pointers merged in PR #63 (`b42040a`), required 38883421693 PASS at `ceacf4d`; final images reviewed. Actual-phone DPI/readability/rotation evidence remains open. |
+| [#28 A13](https://github.com/bongohorse/rider/issues/28) | Touch/mirror/Retry/capture merged in PR #64 (`a285f08`), required 38885765551 PASS at `ce41b60`. Eleven synthetic touch cases and the actual 30-second browser capture pass. Actual touch/layout preference, Chrome/60/144-Hz measurements, numeric budgets and interpolation decision remain open. |
+| [#29 A14](https://github.com/bongohorse/rider/issues/29) | Tilt merged in PR #67 (`998248b`); fullscreen synchronization follow-up PR #72 (`da8c33e`) passes PR/main/public tests. Twelve synthetic tilt cases pass; default OFF, calibration, sensitivity, dead zone, inversion and touch fallback remain. Actual sensor comparison and keep/tune/drop decision remain open. |
+| [#68 A13a](https://github.com/bongohorse/rider/issues/68) | Merged PR #73 (`faefa53`); required 38956567507 PASS at `5b11ec0`, merged-main/public runtime 38957394494 PASS, build `38957394494-1`. Coasting from 5 m/s stops after 11.5282 m; real brake-tap test settles and stays at 0 m/s. Closed under Claudio's explicit priority-comment authorization. Human feel remains NOT RUN in the #28 trial. |
+| [#69 A13b](https://github.com/bongohorse/rider/issues/69) | Implemented in PR #74: compact default HUD, collapsible tuning/help, 1.5-second retry toast, eleven GUI-mapped sliders, slim min/max graphs, P preset cycling and 1–9 reserved. Runtime/visual review, current-head required, merge and merged-main/public verification are tracked in that PR; do not infer them from implementation alone. |
 
-Claudio authorized starting and completing M3 on 2026-10-16. **A12b presentation is technically complete and merged in [PR #63](https://github.com/bongohorse/rider/pull/63), `b42040a`.** Final source `ceacf4d` passed [required CI 38883421693](https://github.com/bongohorse/rider/actions/runs/38883421693); final desktop/landscape/portrait images were reviewed. Resizing, all nine slider endpoint pairs and input release, camera proportions and both DPI modes passed. CI software-browser DPI2 callback means: ON 37.736 ms / OFF 16.667 ms; this is not phone/GPU performance. #58 stays open for real-device evidence.
-
-**A13 is technically complete and merged in [PR #64](https://github.com/bongohorse/rider/pull/64), `a285f08`.** Final source `ce41b60` passed [required CI 38885765551](https://github.com/bongohorse/rider/actions/runs/38885765551), including eleven release touch cases, actual 30-second capture, fullscreen driving, editor capture release and all existing regressions. Final compact landscape/portrait images were reviewed. #28 stays open for actual-phone criteria.
-
-**A14 tilt implementation is complete; runtime/merge/deployment evidence is tracked in [PR #67](https://github.com/bongohorse/rider/pull/67).** It is OFF by default, uses explicit motion enable/permission, neutral calibration, full-lean angle, dead zone and inversion. It feeds the same normalized lean command; touch/keyboard lean overrides it. Retry, focus/view changes and UI capture pause calibration. Denial, unsupported/missing/invalid sensor data visibly leave touch available. Three local mapping/normalization tests pass; injected orientation events must not be mistaken for real-phone sensor results. M2 human feel/listening acceptance is still not inferred from M3 authorization.
+The next action is to complete PR #74's review/CI/merge/public verification, then Claudio's reference-phone trial. M3 cannot be marked fully accepted or its remaining device issues closed without that evidence. Browser injection, APK build success and software-renderer timings do not replace the phone trial. M2 human feel/listening acceptance is also not inferred from M3 authorization.
 
 The completed M2 implementation evidence remains below.
 
@@ -32,19 +35,18 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 ## Preview and next action
 
-**Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #67 for cumulative M3 main/deployment evidence.
+**Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #74 for the final HUD/current M3 main/deployment evidence; PR #73 records the coasting fix.
 
 M3 trial procedure: [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md). After the M3 technical increments deploy, compare mirrored touch layouts, Retry and the tilt trial on the reference phone. Record Chrome version and actual 60/144-Hz settings, feel/stutter and High DPI ON/OFF captures. Numeric phone physics budgets and the interpolation decision remain unmeasured; keep the initial 60-FPS budget until actual evidence exists.
 
-M3 technical implementation and final verification: A14 is merged as `998248b` with green PR-head and main `required`; the deployed-source check matches. Its first public runtime run passed responsive checks and ten touch cases but failed the immediate post-fullscreen throttle acknowledgement. [A13 follow-up PR #72](https://github.com/bongohorse/rider/pull/72) waits for owner/viewport settlement and requires three fullscreen driving cycles. Exact current-head, merged-main and final public runtime results are tracked there and linked from PR #67.
+Final implementation work is PR #74. After its required/current-head, merged-main and public runtime verification, run [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md), including coast/brake-tap feel and the compact HUD. #58, #28 and #29 remain open for real-device criteria; M4 remains stopped until Claudio's approval.
 
-Next action after green final verification in PR #72: Claudio's reference-phone trial. A12b, A13 and A14 real-device criteria remain open until Claudio supplies actual-phone observations. M4 is not authorized.
 ## M3 technical checkpoint
 
 - Keep the single fixed owner, existing reset/preset paths and unit adapter. Touch and tilt are browser input sources, not another simulation loop. Native/desktop input remains available.
 - Full-window CSS alone was insufficient: panel-root grouping keeps visible sizes, knob/graph positions and picking consistent. Actual engine input/release acknowledgements and screenshots caught gaps that DOM dispatch or static boot checks missed.
 - Compact phone controls, mirror comparison and captures make the next acceptance concrete. Detailed tuning remains best in landscape; portrait editor text is small. CI software timings and injected orientation events cannot choose phone DPI, budgets, interpolation, comfort or tilt retention.
-- Keep the issue/PR loop. Complete current-head/merged-main/live verification in PR #67, collect Claudio's real-device comparison, then decide whether M3 needs tuning. M4 remains stopped until approval.
+- Keep the issue/PR loop. Complete current-head/merged-main/live verification in PR #74, collect Claudio's real-device comparison, then decide whether M3 needs tuning. M4 remains stopped until approval.
 
 ## M2 checkpoint: what worked / what changes next
 
