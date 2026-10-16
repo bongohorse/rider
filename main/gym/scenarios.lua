@@ -252,12 +252,44 @@ function M.slider_tick(self,dt)
         self.testcase="done"
     end
 end
+function M.preset_tick(self,dt)
+    self.preset_ticks=(self.preset_ticks or 0)+1
+    if self.preset_ticks==60 then
+        local expected=self.testcase=="a9invalid" and "a" or "b"
+        assert(self.preset==expected and self.measurements_shown.preset==expected,"URL preset not applied/displayed")
+        assert(self.invalid_preset==(self.testcase=="a9invalid"),"Invalid preset fallback not labelled")
+        self.preset_order,self.preset_index={"a","b","c"},1
+        self.preset_phase="select"
+        emit(self,"phase",{name="select_preset",key="a"})
+    elseif self.preset_phase=="select" and self.preset==self.preset_order[self.preset_index] and self.last_reset_reason=="preset" then
+        self.preset_phase="drive";self.preset_drive_ticks=0
+        self.preset_x=vehicle.state(self.vehicle).x
+        emit(self,"phase",{name="preset_drive",key=self.preset})
+    elseif self.preset_phase=="drive" then
+        if self.last_command.throttle==1 then self.preset_drive_ticks=self.preset_drive_ticks+1 end
+        if self.preset_drive_ticks==120 then
+            local state=vehicle.state(self.vehicle)
+            assert(state.x-self.preset_x>100 and math.abs(state.angle)<0.6,"Preset is not drivable")
+            assert(math.abs(b2d.joint.get_spring_hertz(self.vehicle.joints[1])-vehicle.config.spring_hz)<0.001,"Preset did not replace spring")
+            self.preset_index=self.preset_index+1
+            if self.preset_index<=3 then
+                self.preset_phase="select"
+                emit(self,"phase",{name="select_preset",key=self.preset_order[self.preset_index]})
+            else
+                assert(self.reset_count==3 and self.world_loads==1,"Preset switch reloaded/leaked resets")
+                emit(self,"suite_end",{status="PASS",cases={url_selected=true,invalid_fallback=self.testcase=="a9invalid",three_drivable=true,full_replacement=true,no_reload=true}})
+                self.testcase="done"
+            end
+        end
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" then
             if self.feel_phase then M.feel_tick(self,dt) elseif self.reset_phase then M.reset(self) else M.drive(self) end
         elseif self.testcase=="a7" then M.crash_tick(self,dt)
-        elseif self.testcase=="a8" then M.slider_tick(self,dt) end
+        elseif self.testcase=="a8" then M.slider_tick(self,dt)
+        elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt) end
     end
     M.probe_tick(self,dt)
 end

@@ -50,6 +50,10 @@ local function emit(self, event, data)
         html5.run("window.riderReady = "..json.encode(data))
     end
 end
+local function show_preset(self)
+    msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=self.invalid_preset or false})
+    msg.post("main:/loader#ui","tuning",feel.snapshot())
+end
 local function setup(self)
     self.terrain = b2d.get_body("/terrain#body")
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
@@ -80,11 +84,19 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
     end
+    local requested=sys.get_config_string("rider.preset","a")
+    if html5 then
+        local query=html5.run("new URLSearchParams(location.search).get('preset') || ''")
+        if query~="" then requested=query end
+    end
+    local valid
+    self.preset,valid=feel.preset(requested)
+    self.invalid_preset=not valid
     self.crash_enabled,self.head_contact,self.sensor_skip=false,false,0
     self.camera_zoom=feel.values.camera_zoom
     self.telemetry_seq=0
@@ -105,7 +117,7 @@ function update(self, dt)
         vehicle.attach(self.vehicle)
         self.target = self.vehicle.ids.chassis
         emit(self,"vehicle_ready",{bodies=3,joints=2})
-        msg.post("main:/loader#ui","tuning",feel.snapshot())
+        show_preset(self)
     end
     local target = go.get_position(self.target)
     if self.vehicle and self.vehicle.ready then
@@ -122,6 +134,7 @@ function update(self, dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
+            sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
         end
@@ -136,6 +149,12 @@ local function command(self)
 end
 function on_input(self, action_id, action)
     if self.ui_captured then return end
+    for _,key in ipairs({"a","b","c"}) do
+        if action_id==hash("preset_"..key) then
+            if action.pressed then self.pending_preset=key end
+            return
+        end
+    end
     if action_id == hash("crash_toggle") then
         if action.pressed then self.crash_enabled=not self.crash_enabled end
         return
@@ -161,12 +180,19 @@ function fixed_update(self, dt)
             self.head_seen=true
             if self.crash_enabled then request_reset(self,"head") end
         end
+        if self.pending_preset then
+            self.preset=feel.preset(self.pending_preset)
+            self.pending_preset,self.modified,self.invalid_preset=nil,false,false
+            request_reset(self,"preset")
+            show_preset(self)
+        end
         if self.pending_reset then reset(self) end
         if self.pending_tuning then
             local t=self.pending_tuning;self.pending_tuning=nil
             if feel.set(t.key,t.value) then
                 self.last_tune=t
-                msg.post("main:/loader#ui","tuning",feel.snapshot())
+                self.modified=true
+                show_preset(self)
             end
         end
         self.last_command = command(self)
@@ -182,6 +208,7 @@ end
 function on_message(self,id,data,sender)
     if id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
+    elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("tune") then self.pending_tuning=data
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={}
     elseif id==hash("measurements_shown") then self.measurements_shown=data

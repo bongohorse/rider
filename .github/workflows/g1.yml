@@ -77,6 +77,10 @@ jobs:
         run: python tools/gym/smoke.py --output artifacts/g1/head --case a7
       - name: Verify live slider and captured input
         run: python tools/gym/smoke.py --output artifacts/g1/sliders --case a8
+      - name: Verify URL presets and all three drivable candidates
+        run: python tools/gym/smoke.py --output artifacts/g1/presets --case a9
+      - name: Verify invalid URL fallback
+        run: python tools/gym/smoke.py --output artifacts/g1/preset-invalid --case a9invalid
       - name: Keep Gym screenshot separately for visual review
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

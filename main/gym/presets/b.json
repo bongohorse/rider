@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "key": "b",
+  "values": {
+    "spring_hz": 6,
+    "damping": 0.9,
+    "motor_speed": -22,
+    "drive_torque": 2400,
+    "brake_torque": 3400,
+    "reverse_speed": 8,
+    "reverse_threshold": 8,
+    "reverse_delay": 0.25,
+    "lean_torque": 18,
+    "lean_rate_max": 3,
+    "camera_height": 250,
+    "camera_lift": 70,
+    "camera_response": 7,
+    "camera_look_seconds": 0.28,
+    "camera_look_max": 130,
+    "camera_zoom": 1,
+    "camera_zoom_min": 0.78,
+    "camera_zoom_speed": 650
+  }
+}
