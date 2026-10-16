@@ -56,5 +56,8 @@ elif args.case in ('a9','a9invalid'):
     assert set(cases)=={'url_selected','invalid_fallback','three_drivable','full_replacement','no_reload'}
     assert all(cases[k] is True for k in ['url_selected','three_drivable','full_replacement','no_reload'])
     assert cases['invalid_fallback']==(args.case=='a9invalid')
+elif args.case=='a11':
+    assert set(cases)=={'report_requested','visible_failure','clipboard_roundtrip','denied_fallback'}
+    assert all(value is True for value in cases.values())
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))

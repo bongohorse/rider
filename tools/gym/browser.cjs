@@ -26,6 +26,8 @@ async function main() {
   try {
     browser=await chromium.launch();
     const page=await browser.newPage({viewport:{width:960,height:540}});
+    if(process.argv[5]==='a11')await page.context().grantPermissions(['clipboard-read','clipboard-write']);
+    let feedbackChecked=false;
     let resolveDone, rejectDone;
     let input = Promise.resolve();
     const done=new Promise((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
@@ -74,6 +76,21 @@ async function main() {
           if(data.name==='preset_drive'){
             await page.keyboard.up({a:'1',b:'2',c:'3'}[data.key]);await page.keyboard.down('ArrowUp');
           }
+          if(data.name==='copy_feedback'){
+            await page.keyboard.down('f');
+            await page.waitForFunction(()=>window.riderFeedback?.status==='Copied feedback [F]');
+            await page.keyboard.up('f');
+            const copied=await page.evaluate(()=>navigator.clipboard.readText());
+            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','Wheel contact:','Suspension:','FPS:','physics step','Tuning:'])if(!copied.includes(field))throw Error('Missing feedback field: '+field);
+            fs.writeFileSync(path.join(root,'copied-feedback.md'),copied);
+            await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
+            await page.keyboard.down('f');
+            await page.waitForFunction(()=>window.riderFeedback?.visible===true);
+            await page.keyboard.up('f');
+            const fallback=await page.locator('#rider-feedback-text').inputValue();
+            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','Tuning:'])if(!fallback.includes(field))throw Error('Incomplete denied-copy fallback');
+            feedbackChecked=true;
+          }
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
@@ -92,6 +109,7 @@ async function main() {
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
     await input;
+    if(process.argv[5]==='a11'){if(!feedbackChecked)throw Error('Feedback roundtrip not verified');result.cases.clipboard_roundtrip=true;result.cases.denied_fallback=true;}
     if(process.argv[5]==='a10'){
       if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');
       result.cases.audio_context_running=true;
