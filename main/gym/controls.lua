@@ -10,15 +10,15 @@ end
 function M.new()
     local c={rows={}}
     for i,spec in ipairs(feel.sliders) do
-        local y=326-(i-1)*22
+        local y=386-(i-1)*24
         local row={spec=spec,y=y,value=feel.values[spec.key]}
-        row.label=text(780,y+10,"")
-        row.track=layout.box(vmath.vector3(780,y,0),vmath.vector3(240,10,0),"right_top")
+        row.label=text(648,y,"");gui.set_pivot(row.label,gui.PIVOT_W);gui.set_scale(row.label,vmath.vector3(0.38,0.38,1))
+        row.track=layout.box(vmath.vector3(866,y,0),vmath.vector3(124,8,0),"right_top")
         gui.set_color(row.track,vmath.vector4(0.15,0.25,0.3,1))
-        row.knob=layout.box(vmath.vector3(780,y,0),vmath.vector3(12,18,0),"right_top")
+        row.knob=layout.box(vmath.vector3(866,y,0),vmath.vector3(9,14,0),"right_top")
         gui.set_color(row.knob,vmath.vector4(0.35,0.85,0.75,1))
-        row.left=layout.box(vmath.vector3(660,y,0),vmath.vector3(1,1,0),"right_top")
-        row.right=layout.box(vmath.vector3(900,y,0),vmath.vector3(1,1,0),"right_top")
+        row.left=layout.box(vmath.vector3(804,y,0),vmath.vector3(1,1,0),"right_top")
+        row.right=layout.box(vmath.vector3(928,y,0),vmath.vector3(1,1,0),"right_top")
         gui.set_enabled(row.left,false);gui.set_enabled(row.right,false)
         c.rows[i]=row
     end
@@ -30,8 +30,8 @@ function M.sync(c,values)
         if values[row.spec.key] then row.value=values[row.spec.key] end
         local display=row.value*(row.spec.sign or 1)
         local ratio=feel.clamp((display-row.spec.min)/(row.spec.max-row.spec.min),0,1)
-        layout.position(row.knob,vmath.vector3(660+240*ratio,row.y,0))
-        gui.set_text(row.label,string.format("%s %.2f %s",row.spec.label,display,row.spec.unit))
+        layout.position(row.knob,vmath.vector3(804+124*ratio,row.y,0))
+        gui.set_text(row.label,string.format("%s %.2f",row.spec.label,display))
     end
 end
 function M.geometry(c)

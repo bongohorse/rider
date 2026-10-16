@@ -15,6 +15,7 @@ function M.clear() if html5 then html5.run('window.riderMobile.clear()') end end
 function M.final()
     if html5 then html5.run('window.riderMobile.clear(); window.riderTilt.disable()') end
 end
+function M.enabled() return html5 and html5.run("!!window.riderMobile?.enabled")=="true" end
 function M.compact()
     return html5 and html5.run('window.riderMobile && window.riderMobile.enabled && !window.riderMobile.details')=='true'
 end

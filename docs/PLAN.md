@@ -98,6 +98,8 @@ Start with [A12b / #58](https://github.com/bongohorse/rider/issues/58): full-win
 | # | Title and scope | Acceptance | Depends on |
 | --- | --- | --- | --- |
 | A13 | **Touch controls v0** (four zones) and **device test** in Android Chrome on the Xiaomi Mi 10T Pro: drivability, frame time, visible stutter at 60 Hz and 144 Hz, 20:9 layout | Drivable on the device; measurements and Chrome version in the platform matrix; concrete budget values set; decision whether visual interpolation is needed | A4, A6 |
+| A13a | **Coasting fix** ([#68](https://github.com/bongohorse/rider/issues/68)): tunable motor braking and rolling resistance | 5 m/s stopping-distance and brake-tap regressions; drive-test feedback | A6 |
+| A13b | **Compact HUD** ([#69](https://github.com/bongohorse/rider/issues/69)): collapsed tuning/help, slim graphs, FPS badge, P presets; 1–9 reserved | Default screenshots, colour boundaries and A5–A12 regression | A12b |
 | A14 | **Experiment: tilt steering** for lean (implementation and trial required; final retention decided after testing) | Tilt lean implemented and tested on the reference phone; comparison with touch buttons documented; Claudio-informed keep/drop decision recorded | A13 |
 
 ### M4 – Stations

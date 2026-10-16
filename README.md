@@ -15,3 +15,5 @@ See [tooling](docs/TOOLING.md) and the [pinned toolchain](docs/TOOLCHAIN_LOCK.md
 ## Licensing
 
 No project-wide redistribution license has been selected. Public visibility does not grant a software license. Third-party dependencies retain their terms; the [Bridge provenance finding](docs/contracts/automation/bridge.md) remains unresolved under the user's explicit implementation authorization.
+
+Gym controls: W/Up throttle, S/Down brake/reverse, A/D lean, R retry, P cycle preset, T tuning, H help, C crash reset, M mute, F copy feedback. Keys 1–9 are reserved for stations. Touch has on-screen controls and mirrored layouts; tilt is an opt-in trial.

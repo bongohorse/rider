@@ -15,46 +15,50 @@ function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
-    local title = layout.text(vmath.vector3(480, 498, 0), "DRIVING GYM")
-    gui.set_font(title, "default")
-    gui.set_scale(title, vmath.vector3(1.2, 1.2, 1))
-    gui.set_color(title, vmath.vector4(0.86, 0.95, 0.91, 1))
-    local hint = layout.text(vmath.vector3(480, 466, 0), "W / Up: throttle | S / Down: brake / reverse | A / D: lean | R: retry | Free practice")
-    gui.set_font(hint, "default")
-    gui.set_scale(hint, vmath.vector3(0.65, 0.65, 1))
+    self.tuning_open=false
+    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy")
+    gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
+    gui.set_scale(self.help,vmath.vector3(0.5,0.5,1));gui.set_visible(self.help,false)
+    self.tuning_button=layout.box(vmath.vector3(922,514,0),vmath.vector3(52,28,0),"right_top")
+    self.help_button=layout.box(vmath.vector3(860,514,0),vmath.vector3(52,28,0),"right_top")
+    self.toggle_labels={}
+    for _,spec in ipairs({{922,"T"},{860,"H"}}) do
+        local n=layout.text(vmath.vector3(spec[1],514,0),spec[2],"right_top")
+        gui.set_font(n,"default");gui.set_scale(n,vmath.vector3(0.6,0.6,1));self.toggle_labels[#self.toggle_labels+1]=n
+    end
     local sha = sys.get_config_string("rider.source_sha","development")
     local version = layout.text(vmath.vector3(480,20,0),"Build "..string.sub(sha,1,12))
     gui.set_font(version,"default")
-    gui.set_scale(version,vmath.vector3(0.6,0.6,1))
+    gui.set_scale(version,vmath.vector3(0.4,0.4,1));gui.set_color(version,vmath.vector4(0.55,0.65,0.65,0.7))
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
     msg.post(".","acquire_input_focus")
+    local panel_start=#layout.nodes+1
+    local panel=layout.box(vmath.vector3(788,301,0),vmath.vector3(304,384,0),"right_top")
+    gui.set_color(panel,vmath.vector4(0.05,0.1,0.13,0.9))
     self.presets={}
     for i,key in ipairs({"a","b","c"}) do
-        local x=680+(i-1)*100
-        local box=layout.box(vmath.vector3(x,430,0),vmath.vector3(90,30,0))
-        local label=layout.text(vmath.vector3(x,430,0),string.upper(key).." ["..i.."]")
-        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.65,0.65,1))
+        local x=688+(i-1)*98
+        local box=layout.box(vmath.vector3(x,475,0),vmath.vector3(86,26,0),"right_top")
+        local label=layout.text(vmath.vector3(x,475,0),string.upper(key),"right_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.55,0.55,1))
         self.presets[key]=box
     end
-    self.preset_note=layout.text(vmath.vector3(780,454,0),"")
-    gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.5,0.5,1))
-    self.crash_button=layout.box(vmath.vector3(780,400,0),vmath.vector3(280,32,0))
-    gui.set_color(self.crash_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.crash_label=layout.text(vmath.vector3(780,400,0),"Crash reset OFF [C]")
-    gui.set_font(self.crash_label,"default")
-    gui.set_scale(self.crash_label,vmath.vector3(0.65,0.65,1))
-    self.head=layout.text(vmath.vector3(780,368,0),"Head contact: false")
-    gui.set_font(self.head,"default")
-    gui.set_scale(self.head,vmath.vector3(0.65,0.65,1))
+    self.preset_note=layout.text(vmath.vector3(788,449,0),"","right_top")
+    gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.4,0.4,1))
+    self.crash_button=layout.box(vmath.vector3(788,426,0),vmath.vector3(280,24,0),"right_top")
+    self.crash_label=layout.text(vmath.vector3(788,426,0),"Crash OFF [C]","right_top")
+    gui.set_font(self.crash_label,"default");gui.set_scale(self.crash_label,vmath.vector3(0.5,0.5,1))
+    self.head=layout.text(vmath.vector3(788,407,0),"","right_top")
+    gui.set_font(self.head,"default");gui.set_scale(self.head,vmath.vector3(0.4,0.4,1))
     self.controls=controls.new()
-    self.audio_button=layout.box(vmath.vector3(780,62,0),vmath.vector3(280,26,0))
-    gui.set_color(self.audio_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.audio_label=layout.text(vmath.vector3(780,62,0),"Engine: waiting for input [M]")
-    gui.set_font(self.audio_label,"default");gui.set_scale(self.audio_label,vmath.vector3(0.55,0.55,1))
-    self.feedback_button=layout.box(vmath.vector3(780,30,0),vmath.vector3(280,26,0))
-    gui.set_color(self.feedback_button,vmath.vector4(0.13,0.24,0.28,1))
-    self.feedback_label=layout.text(vmath.vector3(780,30,0),"Copy feedback [F]")
-    gui.set_font(self.feedback_label,"default");gui.set_scale(self.feedback_label,vmath.vector3(0.55,0.55,1))
+    self.audio_button=layout.box(vmath.vector3(714,128,0),vmath.vector3(132,24,0),"right_top")
+    self.audio_label=layout.text(vmath.vector3(714,128,0),"Sound [M]","right_top")
+    gui.set_font(self.audio_label,"default");gui.set_scale(self.audio_label,vmath.vector3(0.4,0.4,1))
+    self.feedback_button=layout.box(vmath.vector3(862,128,0),vmath.vector3(132,24,0),"right_top")
+    self.feedback_label=layout.text(vmath.vector3(862,128,0),"Copy [F]","right_top")
+    gui.set_font(self.feedback_label,"default");gui.set_scale(self.feedback_label,vmath.vector3(0.4,0.4,1))
+    self.panel_nodes={}
+    for i=panel_start,#layout.nodes do self.panel_nodes[#self.panel_nodes+1]=layout.nodes[i];gui.set_visible(layout.nodes[i],false) end
     self.report_bg=layout.box(vmath.vector3(480,260,0),vmath.vector3(680,340,0))
     gui.set_color(self.report_bg,vmath.vector4(0.06,0.1,0.13,1));gui.set_enabled(self.report_bg,false)
     self.report=layout.text(vmath.vector3(480,260,0),"")
@@ -62,18 +66,34 @@ function init(self)
     self.graph=graph.new()
     self.metrics = {}
     for i=1,6 do
-        local n=layout.text(vmath.vector3(24,400-(i-1)*24,0),"")
-        gui.set_font(n,"default")
-        gui.set_pivot(n,gui.PIVOT_W)
-        gui.set_scale(n,vmath.vector3(0.65,0.65,1))
+        local y=({496,477,458,520,0,104})[i]
+        local n=layout.text(vmath.vector3(i==6 and 648 or 12,y,0),"",i==6 and "right_top" or "left_top")
+        gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W)
+        gui.set_scale(n,vmath.vector3(i==4 and 0.6 or 0.48,i==4 and 0.6 or 0.48,1))
         self.metrics[i]=n
     end
-    self.reason = layout.text(vmath.vector3(480,438,0), "")
-    gui.set_font(self.reason,"default")
-    gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
+    gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
+    self.reason = layout.text(vmath.vector3(480,498,0), "")
+    gui.set_font(self.reason,"default");gui.set_scale(self.reason,vmath.vector3(0.55,0.55,1))
+end
+local function fps_color(fps)
+    return fps>=55 and vmath.vector4(0.3,0.9,0.6,1) or fps>=30 and vmath.vector4(1,0.65,0.2,1) or vmath.vector4(1,0.25,0.25,1)
+end
+local function toggle_tuning(self)
+    cancel_drag(self)
+    if mobile.enabled() then html5.run("window.riderMobile.toggleDetails()") else self.tuning_open=not self.tuning_open end
+end
+local function toggle_help(self)
+    self.help_open=not self.help_open;gui.set_visible(self.help,self.help_open)
+
 end
 function on_message(self,id,data,sender)
-    if id==hash("cancel_drag") then cancel_drag(self)
+    if id==hash("hud_probe") then
+        assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
+        gui.set_color(self.metrics[4],fps_color(data.fps))
+        local c=gui.get_color(self.metrics[4])
+        msg.post(sender,"hud_probe_result",{fps=data.fps,r=c.x,g=c.y,b=c.z})
+    elseif id==hash("cancel_drag") then cancel_drag(self)
     elseif id==hash("graph") then
         graph.draw(self.graph,data)
         msg.post(sender,"graph_shown",{series=data.series,peak=data.peak,positive_peak=data.positive_peak,generation=data.generation})
@@ -93,20 +113,20 @@ function on_message(self,id,data,sender)
         self.latest=data
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
-        gui.set_text(self.audio_label,data.audio_muted and "Engine: muted [M]" or data.audio_started and string.format("Engine pitch %.2fx [M]",data.audio_pitch) or "Engine: waiting for input [M]")
+        gui.set_text(self.audio_label,data.audio_muted and "Mute [M]" or data.audio_started and string.format("♪ %.2fx [M]",data.audio_pitch) or "♪ [M]")
         if html5 then
             html5.run("window.riderTelemetry = "..json.encode(data))
             html5.run("window.riderControls = "..json.encode(controls.geometry(self.controls)))
             html5.run("window.riderDragging = "..tostring(self.controls.drag~=nil))
         end
-        gui.set_text(self.crash_label,"Crash reset "..(data.crash_enabled and "ON" or "OFF").." [C]")
-        gui.set_text(self.head,"Head contact: "..tostring(data.head_contact))
+        gui.set_text(self.crash_label,"Crash "..(data.crash_enabled and "ON" or "OFF").." [C]")
+        gui.set_text(self.head,"Head: "..tostring(data.head_contact))
         local b=telemetry.budget
         local values={
-            string.format("Speed %.2f m/s | %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
-            string.format("Wheel contact L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
-            string.format("Spring travel L %+.2f / R %+.2f u",data.travel1,data.travel2),
-            string.format("FPS %.1f / target %.0f",data.fps,b.fps_min),
+            string.format("%.2f m/s · %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
+            string.format("L %s   R %s",data.contact1 and "●" or "○",data.contact2 and "●" or "○"),
+            string.format("L %+.1f   R %+.1f u",data.travel1,data.travel2),
+            string.format("%.0f fps · %.1f ms",data.fps,data.frame_ms),
             string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
             string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "budget unset")}
         for i,text in ipairs(values) do
@@ -114,11 +134,12 @@ function on_message(self,id,data,sender)
             local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
                 or i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
                 or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
-            gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
+            gui.set_color(self.metrics[i],i==4 and fps_color(data.fps) or over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
             contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2})
     elseif id==hash("retry_done") then
+        self.toast_time=1.5;gui.set_visible(self.reason,true)
         gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or "Retry: manual")
         msg.post(sender,"retry_labelled",{reason=data.reason})
     end
@@ -136,18 +157,34 @@ local function copy_feedback(self)
     end
 end
 function update(self,dt)
+    self.toast_time=math.max(0,(self.toast_time or 0)-dt)
+    gui.set_visible(self.reason,self.toast_time>0)
+    local enabled=mobile.enabled()
+    gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
+    for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
     local compact=mobile.compact()
-    if compact~=self.compact then
-        if compact then cancel_drag(self) end
-        self.compact=compact;layout.visible(not compact)
-        if html5 then html5.run("window.riderCompact = "..tostring(compact)) end
+    self.compact=compact
+    local open=mobile.enabled() and not compact or self.tuning_open
+    if open~=self.panel_open then
+        if not open then cancel_drag(self) end
+        self.panel_open=open
+        for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open) end
+        gui.set_visible(self.metrics[6],open)
     end
     self.feedback_poll=(self.feedback_poll or 0)+dt
     if self.feedback_poll<0.1 then return end
     self.feedback_poll=0
     if html5 then
+        local function point(n)
+            local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
+        end
+        local c=gui.get_color(self.metrics[4])
+        html5.run("window.riderCompact = "..tostring(compact))
+        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)}}))
+    end
+    if html5 then
         local status,visible=feedback.state()
-        gui.set_text(self.feedback_label,status)
+        gui.set_text(self.feedback_label,"Copy [F]")
         if self.owner then
             if status~=self.last_feedback_status or visible~=self.feedback_modal then
                 self.last_feedback_status=status
@@ -166,7 +203,13 @@ function on_input(self,id,action)
         return true
     end
     if self.feedback_open or self.feedback_modal then return true end
-    if self.compact then return end
+    if id==hash("tuning_toggle") and action.pressed then toggle_tuning(self);return true end
+    if id==hash("help_toggle") and action.pressed then toggle_help(self);return true end
+    if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
+        if gui.pick_node(self.tuning_button,action.x,action.y) then toggle_tuning(self);return true end
+        if gui.pick_node(self.help_button,action.x,action.y) then toggle_help(self);return true end
+    end
+    if not self.panel_open then return end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.feedback_button,action.x,action.y) then copy_feedback(self);return true end
     if controls.input(self.controls,id,action,self.owner) then return true end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.audio_button,action.x,action.y) then msg.post(self.owner,"audio_mute");return true end
