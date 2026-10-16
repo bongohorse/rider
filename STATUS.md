@@ -4,7 +4,7 @@ Updated 2026-10-16. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
-Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** The milestone now needs final technical merge/deployment verification recorded in [PR #54](https://github.com/bongohorse/rider/pull/54), followed by Claudio's drive/listening test. **M3 is not authorized or started.** No winning preset, final assist strength, crash-fairness or device-performance acceptance is implied.
+Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** Technical merge/deployment verification is tracked in [PR #54](https://github.com/bongohorse/rider/pull/54); Claudio's milestone drive/listening acceptance remains pending. **M3 is not authorized or started.** No winning preset, final assist strength, crash-fairness or device-performance acceptance is implied.
 
 | Step | Implementation / evidence |
 | --- | --- |
@@ -19,7 +19,7 @@ Claudio authorized M2 on 2026-10-16. **A5–A12 implementation is complete.** Th
 
 ## Preview and next action
 
-**Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; final cumulative main/deployment evidence is recorded in PR #54 / issue #27.
+**Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #54 / issue #27 for final cumulative main/deployment evidence.
 
 Claudio's M2 test: compare A/B/C (1/2/3 or buttons), try live sliders, throttle/brake-to-reverse, A/D lean where airborne, camera response, C crash switch, engine audio/M mute and F feedback copy. The gym remains unrestricted. Authored ramps/step stations are M4; the A12 hard-stop probe is debug-only, not a new production suspension rule. Report feel/comfort/readability and any problems; then approve or revise before M3.
 
