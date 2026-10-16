@@ -6,7 +6,9 @@ Updated 2026-10-16. This is the sole current progress/blocker source. Evidence b
 
 Claudio authorized starting and completing M3 on 2026-10-16. **A12b presentation is technically complete and merged in [PR #63](https://github.com/bongohorse/rider/pull/63), `b42040a`.** Final source `ceacf4d` passed [required CI 38883421693](https://github.com/bongohorse/rider/actions/runs/38883421693); final desktop/landscape/portrait images were reviewed. Resizing, all nine slider endpoint pairs and input release, camera proportions and both DPI modes passed. CI software-browser DPI2 callback means: ON 37.736 ms / OFF 16.667 ms; this is not phone/GPU performance. #58 stays open for real-device evidence.
 
-**A13 touch implementation is being verified.** The compact browser surface has four simultaneous zones, mirrored layouts, Retry and a 30-second measurement capture. It uses the existing fixed-owner commands and clears on reset, cancellation, focus loss and rotation. A14 tilt follows the technical A13 increment; Claudio's request covers both implementations while actual-phone acceptance remains open. M2 human feel/listening acceptance is still not inferred from M3 authorization.
+**A13 is technically complete and merged in [PR #64](https://github.com/bongohorse/rider/pull/64), `a285f08`.** Final source `ce41b60` passed [required CI 38885765551](https://github.com/bongohorse/rider/actions/runs/38885765551), including eleven release touch cases, actual 30-second capture, fullscreen driving, editor capture release and all existing regressions. Final compact landscape/portrait images were reviewed. #28 stays open for actual-phone criteria.
+
+**A14 tilt implementation is complete; runtime/merge/deployment evidence is tracked in its M3 PR.** It is OFF by default, uses explicit motion enable/permission, neutral calibration, full-lean angle, dead zone and inversion. It feeds the same normalized lean command; touch/keyboard lean overrides it. Retry, focus/view changes and UI capture pause calibration. Denial, unsupported/missing/invalid sensor data visibly leave touch available. Three local mapping/normalization tests pass; injected orientation events must not be mistaken for real-phone sensor results. M2 human feel/listening acceptance is still not inferred from M3 authorization.
 
 The completed M2 implementation evidence remains below.
 
@@ -31,7 +33,7 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 M3 trial procedure: [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md). After the M3 technical increments deploy, compare mirrored touch layouts, Retry and the tilt trial on the reference phone. Record Chrome version and actual 60/144-Hz settings, feel/stutter and High DPI ON/OFF captures. Numeric phone physics budgets and the interpolation decision remain unmeasured; keep the initial 60-FPS budget until actual evidence exists.
 
-Next implementation: finish A13 (#28), then A14 (#29). A12b, A13 and A14 real-device criteria remain open until Claudio supplies actual-phone observations. M4 is not authorized.
+Next action: finish cumulative M3 runtime/deployment verification, then Claudio's reference-phone trial. A12b, A13 and A14 real-device criteria remain open until Claudio supplies actual-phone observations. M4 is not authorized.
 ## M2 checkpoint: what worked / what changes next
 
 - Keep the pinned Defold-owned Box2D world and sole tick owner. Motor/units, camera, source/run identity and all 100-reset regressions stayed green while the gym grew. The A/B/C and live controls are ready for measured comparison rather than choosing final values upfront.

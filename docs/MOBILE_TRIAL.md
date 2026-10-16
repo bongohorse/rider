@@ -20,4 +20,14 @@ Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](h
 
 Capture time is a measurement window, never a gym deadline. Rotation, focus loss, long frame interruption or opening tuning cancels an active capture. The report retains engine callback intervals (mean/p95/max), engine dt, physics profile, zero-profile counts, over-25-ms intervals, browser/source, viewport/DPR/quality, layout, preset/tuning and reset counts. It does not assert physical refresh, touch quality or fun. Zero profile samples may be below timing resolution.
 
-The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget or keep/drop decision is invented before this trial. A14 adds the required tilt comparison; finished-game retention is decided after Claudio tries it. Do not proceed to M4 without his approval.
+The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget or keep/drop decision is invented before this trial. The tilt trial below is required; finished-game retention is decided after Claudio tries it. Do not proceed to M4 without his approval.
+
+## Tilt comparison (A14)
+
+1. Open **Tilt → Enable tilt**. Allow motion access if Chrome requests it. If the page reports unavailable, denied or no data, use touch and report the exact outcome; that is not a successful tilt trial.
+2. Hold the phone in a comfortable neutral position and tap **Calibrate neutral**. The panel closes; drive with Throttle and tilt gently left/right. The HUD shows normalized tilt input.
+3. Adjust **Full lean angle** (smaller angle = more sensitive) and **Dead zone** if needed; **Invert** reverses the direction. Opening settings suppresses tilt commands while editing; close it to try the change. Touch lean buttons and keyboard lean take priority, including two opposing buttons giving neutral input.
+4. Retry, rotation, focus loss or app/tab switching pauses tilt. Calibrate again before it resumes. Disable tilt to compare directly with touch under the same preset and DPI setting.
+5. Copy the report and add: tilt direction correct, comfortable full-lean angle/dead zone, accidental leaning, touch vs tilt preference, and **keep / tune / drop** recommendation. The report includes sensor mode, calibration and candidate settings. Default settings are trial values, not a retention decision.
+
+Only initial sensor acquisition times out. Valid orientation may remain unchanged without new events (the W3C event model fires on significant changes), so sample age alone does not prove a failure. The flat gym tests input/comfort and ground assistance; ramps and actual airborne feel remain M4. No sensor, actual-device or keep/drop acceptance is inferred from synthetic CI.

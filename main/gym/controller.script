@@ -172,7 +172,11 @@ local function command(self)
     if self.ui_captured then return {throttle=0,brake_reverse=0,lean=0,allow_reverse=false} end
     local brake = self.mobile.brake or self.held[hash("brake_down")] or self.held[hash("brake_s")]
     local throttle = self.mobile.throttle or self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
-    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = ((self.mobile.left or self.held[hash("lean_left")]) and 1 or 0)-((self.mobile.right or self.held[hash("lean_right")]) and 1 or 0)}
+    local left=self.mobile.left or self.held[hash("lean_left")]
+    local right=self.mobile.right or self.held[hash("lean_right")]
+    local lean=self.mobile.tilt or 0
+    if left or right then lean=(left and 1 or 0)-(right and 1 or 0) end
+    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = lean}
 end
 function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
@@ -231,6 +235,7 @@ function fixed_update(self, dt)
     if self.scenario then self.scenario.fixed(self,dt) end
 end
 function final(self)
+    mobile.final()
     audio.stop(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
@@ -241,7 +246,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)
-    elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear()
+    elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then self.pending_tuning=data
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={};self.mobile={};mobile.clear()

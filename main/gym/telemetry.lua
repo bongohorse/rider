@@ -9,7 +9,7 @@ function M.over(value,limit,minimum)
 end
 function M.sample(v)
     local state = vehicle.state(v)
-    local sample = {speed=vmath.length(b2d.body.get_linear_velocity(v.chassis)),velocity_x=state.vx}
+    local sample = {pitch=state.angle,speed=vmath.length(b2d.body.get_linear_velocity(v.chassis)),velocity_x=state.vx}
     for i,wheel in ipairs(v.wheels) do
         -- Wheel joint translation has no wheel binding in 1.14.0. Project the
         -- world wheel centre into chassis-local Y (the authored spring axis).
