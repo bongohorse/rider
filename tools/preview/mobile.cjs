@@ -52,6 +52,11 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.getByRole('button',{name:'Retry',exact:true}).click();
     await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resets);await neutral();
     await dispatch('touchEnd',[]);pass('same_reset_path_clears_input');
+    await page.waitForFunction(()=>!document.querySelector('#rider-mobile .toast').hidden);
+    const toast=await page.locator('#rider-mobile .toast').boundingBox(),bar=await page.locator('#rider-mobile .toolbar').boundingBox();
+    assert(toast&&bar&&toast.y>=bar.y+bar.height&&toast.x>=0&&toast.x+toast.width<=page.viewportSize().width);
+    await page.waitForFunction(()=>document.querySelector('#rider-mobile .toast').hidden,null,{timeout:5000});
+    pass('retry_toast_clear_and_expires');
     const before=await point('throttle',1);
     await page.getByRole('button',{name:'Layout A · mirror',exact:true}).click();
     await page.waitForFunction(()=>window.riderMobile.mirrored);

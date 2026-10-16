@@ -5,7 +5,7 @@
   const enabled=forced==='1'||(forced!=='0'&&navigator.maxTouchPoints>0);
   const pointers=new Map(),pending={};
   const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false};
-  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence;
+  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode;
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
@@ -83,6 +83,8 @@
     #rider-mobile .zones button{width:clamp(62px,12vw,130px);height:clamp(64px,18vh,100px);font-weight:bold;background:#142e38ce}
     #rider-mobile .zones button.held{background:#277b67}
     #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
+    #rider-mobile .toast{position:absolute;top:56px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:6px 12px;background:#10252bf0;border-radius:6px;text-align:center;pointer-events:none}
+    #rider-mobile .toast[hidden]{display:none}
     #rider-mobile .measure,#rider-mobile .tilt-panel{display:none;position:absolute;top:114px;left:10px;right:10px;gap:5px;align-items:center;flex-wrap:wrap}
     #rider-mobile .measure.open,#rider-mobile .tilt-panel.open{display:flex}
     #rider-mobile .tilt-panel{background:#10252bf5;padding:8px;border-radius:8px;max-width:620px}
@@ -93,7 +95,7 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    @media (orientation:portrait){#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:160px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
+    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:160px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
@@ -122,6 +124,11 @@
   status=document.createElement('div');status.textContent='';
   tiltHud=document.createElement('div');tiltHud.textContent='Tilt OFF — touch controls available';
   readout.append(hud,status,tiltHud);root.append(readout);
+  toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
+  api.toast=message=>{
+    toastNode.textContent=message;toastNode.hidden=false;
+    clearTimeout(api.toastTimer);api.toastTimer=setTimeout(()=>{toastNode.hidden=true;},1500);
+  };
   measure=document.createElement('div');measure.className='measure';
   const mode=document.createElement('select');mode.setAttribute('aria-label','Refresh mode selected in phone settings');
   for(const value of ['Select phone refresh mode','60 Hz','144 Hz','Other / adaptive']){
