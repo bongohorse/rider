@@ -93,3 +93,11 @@ Release verification now requires two further owner-to-GUI telemetry sequences a
 Sensor participation follow-up: pinned Defold chain creation forwards `enable_sensor_events`; upstream Box2D 3.1.0 `src/sensor.c` excludes visitor shapes with sensor events disabled. The authored terrain chain now explicitly enables this flag and asserts it on returned segment handles. Enabling the sensor alone was insufficient and the focused test timed out as intended. Physics geometry/contact assertions are unchanged. Failed browser runs now retain a screenshot and last GUI telemetry for diagnosis.
 
 A7 input follow-up: the browser now holds overlay mouse-down until the engine acknowledges the switch, then releases at completion. An immediate same-frame down/up pulse was not a reliable sampled Defold action (the same boundary already applies to keyboard retry). The observer no longer reinjects the inverted pose after the normal owner has already consumed the C-triggered reset; the one-reset assertion stays intact.
+
+## A8 live tuning
+
+Seven sliders edit spring Hz, damping ratio, wheel target rad/s, motor cap (binding units), air lean N m, camera response 1/s and look-ahead seconds. Bounds/labels live with tuning in `feel.lua`; geometry and unknown/invalid/non-finite values cannot be edited through the command. GUI sends messages, the sole fixed owner validates/applies them and acknowledges current values. Changed spring settings wake bodies once and update existing wheel joints; no reset/reload is needed.
+
+During a captured drag, gameplay commands are zeroed and held input clears on both capture/release. Release outside the track is handled by the captured pointer path. Layout uses the existing 960×540 fit GUI; reference-phone touch and lifecycle testing remain M3. Required A8 smoke holds real mouse input, changes spring Hz to 12, checks the actual joint getter without reset/reload, attempts throttle during capture and requires neutral release. Test routing now lives entirely in `scenarios.fixed`, still called only by the sole physics owner.
+
+Pinned source consulted: wheel spring hertz/damping setters/getter and `wake_bodies` in `script_box2d_joint_v3.cpp`; existing GUI pick/text/box APIs used. No custom world/tick owner.

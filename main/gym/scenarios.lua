@@ -228,4 +228,37 @@ function M.crash_tick(self,dt)
         self.testcase="done"
     end
 end
+function M.slider_tick(self,dt)
+    self.slider_tick=(self.slider_tick or 0)+1
+    if self.slider_tick==60 then
+        self.slider_phase="capture"
+        emit(self,"phase",{name="slider_begin"})
+    elseif self.slider_phase=="capture" and self.ui_captured then
+        self.slider_phase="change"
+        emit(self,"phase",{name="slider_move"})
+    elseif self.slider_phase=="change" then
+        assert(self.last_command.throttle==0 and self.last_command.brake_reverse==0,"Slider leaked driving commands")
+        if self.last_tune and self.last_tune.key=="spring_hz" and self.last_tune.value>11.8 then
+            assert(math.abs(b2d.joint.get_spring_hertz(self.vehicle.joints[1])-12)<0.2,"Spring change not applied live")
+            assert(self.reset_count==0 and self.world_loads==1,"Tuning restarted the world")
+            self.slider_phase="release"
+            emit(self,"phase",{name="slider_release"})
+        end
+    elseif self.slider_phase=="release" and not self.ui_captured then
+        assert(self.last_command.throttle==0,"Slider release retained held throttle")
+        local feel=require "main.gym.feel"
+        assert(not feel.set("spawn_x",1) and not feel.set("spring_hz",0),"Tuner accepted invalid parameter")
+        emit(self,"suite_end",{status="PASS",cases={live_spring=true,no_restart=true,input_isolated=true,release_cleared=true,invalid_rejected=true}})
+        self.testcase="done"
+    end
+end
+function M.fixed(self,dt)
+    if self.vehicle and self.vehicle.ready then
+        if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" then
+            if self.feel_phase then M.feel_tick(self,dt) elseif self.reset_phase then M.reset(self) else M.drive(self) end
+        elseif self.testcase=="a7" then M.crash_tick(self,dt)
+        elseif self.testcase=="a8" then M.slider_tick(self,dt) end
+    end
+    M.probe_tick(self,dt)
+end
 return M

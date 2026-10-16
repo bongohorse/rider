@@ -53,6 +53,16 @@ async function main() {
             await page.mouse.move(box.x+box.width*780/960,box.y+box.height*140/540);
             await page.mouse.down();
           }
+          if(data.name==='slider_begin'){
+            const box=await page.locator('canvas').first().boundingBox();
+            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*224/540);await page.mouse.down();
+          }
+          if(data.name==='slider_move'){
+            await page.keyboard.down('ArrowUp');
+            const box=await page.locator('canvas').first().boundingBox();
+            await page.mouse.move(box.x+box.width*900/960,box.y+box.height*224/540);
+          }
+          if(data.name==='slider_release'){await page.mouse.up();await page.keyboard.up('ArrowUp');}
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
