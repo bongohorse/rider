@@ -18,7 +18,7 @@ function M.drive(self)
         emit(self,"phase",{name="brake"})
     elseif t == 300 then
         assert(self.last_command.brake_reverse==1 and self.last_command.throttle==0,"Brake did not win over throttle")
-        emit(self,"phase",{name="release_throttle"})
+        emit(self,"phase",{name="brake_priority_confirmed"})
     elseif t == 360 then
         assert(math.abs(state.vx)<12,"Buggy did not brake: "..state.vx)
         for _,wheel in ipairs(self.vehicle.wheels) do
@@ -32,7 +32,11 @@ function M.drive(self)
         assert(observer.budget.fps_min==60 and observer.over(30,60,true) and observer.over(40,16.67) and not observer.over(1,nil),"Budget configuration/classification failed")
         self.drive_cases = {drive_dx=self.drive_dx,drive_speed=self.drive_speed,
             stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}
-        if self.testcase=="a3" then
+        if self.testcase=="a6" then
+            self.feel_phase,self.feel_tick= "reverse",0
+            self.reverse_start=state.x
+            emit(self,"phase",{name="reverse_request"})
+        elseif self.testcase=="a3" then
             self.reset_phase="await_manual"
             emit(self,"phase",{name="retry_held"})
         else
@@ -149,6 +153,41 @@ function M.probe_tick(self, dt)
         go.delete(self.probe_id)
         go.set_position(vmath.vector3(180, 180, 0), "/focus")
         self.test_phase = "camera"
+    end
+end
+-- Controlled airborne probe is debug-only; no station/jump feature is added.
+function M.feel_tick(self,dt)
+    self.feel_tick=self.feel_tick+1
+    local state=vehicle.state(self.vehicle)
+    if self.feel_phase=="reverse" and self.feel_tick==150 then
+        assert(state.vx < -50 and state.x<self.reverse_start-50,"Held brake did not transition to reverse")
+        self.drive_cases.reverse_speed=state.vx
+        self.drive_cases.reverse_dx=state.x-self.reverse_start
+        vehicle.reset(self.vehicle)
+        for i,body in ipairs({self.vehicle.chassis,self.vehicle.wheels[1],self.vehicle.wheels[2]}) do
+            local p=b2d.body.get_position(body)
+            local id=i==1 and self.vehicle.ids.chassis or self.vehicle.ids[i-1]
+            go.set_position(vmath.vector3(p.x,p.y+400,go.get_position(id).z),id)
+            b2d.body.set_transform(body,vmath.vector3(p.x,p.y+400,0),0)
+        end
+        self.held={}
+        self.feel_phase,self.feel_tick="air",0
+        emit(self,"phase",{name="air_lean"})
+    elseif self.feel_phase=="air" then
+        if self.last_command.lean~=0 then self.air_ticks=(self.air_ticks or 0)+1 end
+        if self.air_ticks==30 then
+            assert(#b2d.body.get_contact_data(self.vehicle.wheels[1])==0 and #b2d.body.get_contact_data(self.vehicle.wheels[2])==0,"Lean probe was not airborne")
+            assert(state.angle>0.1,"Air lean did not rotate chassis")
+            self.drive_cases.air_angle=state.angle
+            local c=require "main.gym.feel"
+            local right,zr=c.camera(vmath.vector3(0,170,0),350,vmath.vector3(0,250,500),1,1)
+            local left,zl=c.camera(vmath.vector3(0,170,0),-350,vmath.vector3(0,250,500),1,1)
+            assert(right.x>0 and left.x<0 and zr<1 and math.abs(zr-zl)<0.001,"Camera direction/zoom failed")
+            assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
+            self.drive_cases.camera_direction_zoom=true
+            emit(self,"suite_end",{status="PASS",cases=self.drive_cases})
+            self.testcase,self.feel_phase="done",nil
+        end
     end
 end
 return M

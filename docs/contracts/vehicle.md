@@ -8,7 +8,7 @@ brake_reverse: 0..1
 lean: -1..1
 ```
 
-Lua field names may differ if documented. Throttle, brake/reverse and left/right lean remain distinct actions. Default simultaneous throttle/brake behavior: brake wins; any intentional alternative must be documented and tested. Brake down to near standstill before controlled reverse; tune threshold/hysteresis explicitly.
+A6 adds `allow_reverse` (boolean) to resolve simultaneous pedals: false while throttle is physically held, even though brake priority normalizes throttle to zero. Other input sources must supply the same intent. Throttle, brake/reverse and left/right lean remain distinct actions. Default simultaneous throttle/brake behavior: brake wins; any intentional alternative must be documented and tested. Brake down to near standstill before controlled reverse; tune threshold/hysteresis explicitly.
 
 Assign a touch ID once to a zone; release outside, focus loss, cancellation, orientation change and scenario switch must clear held input. Overlay interaction must not leak hidden vehicle commands. Multi-touch tests become required as touch is introduced, with broader challenge acceptance in Phase B.
 

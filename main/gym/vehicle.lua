@@ -1,9 +1,8 @@
 -- Per-session vehicle. Positions/anchors: engine units; angular speed: rad/s.
 -- Motor torque uses the pinned binding's scaled input convention (not body torque).
 local M = {}
-M.config = {spawn_x = 0, spawn_y = 170, wheel_x = {-46,46}, wheel_y = -30,
-    spring_hz = 5, damping = 0.8, motor_speed = -16,
-    drive_torque = 1800, brake_torque = 3000}
+local feel = require "main.gym.feel"
+M.config = feel.values
 function M.spawn()
     local c = M.config
     local v = {ids = {}, wheels = {}, joints = {}}
@@ -63,17 +62,36 @@ function M.reset(v)
         assert(math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001, "Noncanonical reset pose")
         assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
     end
+    v.reverse_time,v.reversing=0,false
     joints(v)
     assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")
 end
-function M.apply(v,command)
+function M.apply(v,command,dt)
+    local c=M.config
     local brake = command.brake_reverse > 0
     local drive = command.throttle > 0 and not brake
+    local speed=b2d.body.get_linear_velocity(v.chassis).x
+    if brake and command.allow_reverse then
+        if not v.reversing and math.abs(speed)<c.reverse_threshold then
+            v.reverse_time=(v.reverse_time or 0)+dt
+            v.reversing=v.reverse_time>=c.reverse_delay
+        end
+    else v.reverse_time,v.reversing=0,false end
+    local reverse=brake and command.allow_reverse and v.reversing
+    local motor_speed=drive and c.motor_speed*command.throttle or reverse and c.reverse_speed*command.brake_reverse or 0
     for _,joint in ipairs(v.joints) do
         if brake or drive then b2d.joint.wake_bodies(joint) end
         b2d.joint.enable_motor(joint,brake or drive)
-        b2d.joint.set_motor_speed(joint,drive and M.config.motor_speed*command.throttle or 0)
-        b2d.joint.set_max_motor_torque(joint,brake and M.config.brake_torque or drive and M.config.drive_torque or 0)
+        b2d.joint.set_motor_speed(joint,motor_speed)
+        b2d.joint.set_max_motor_torque(joint,feel.motor_torque(brake and not reverse and c.brake_torque or (drive or reverse) and c.drive_torque or 0))
+    end
+    if command.lean~=0 then
+        local airborne=true
+        for _,wheel in ipairs(v.wheels) do if #b2d.body.get_contact_data(wheel)>0 then airborne=false end end
+        local omega=b2d.body.get_angular_velocity(v.chassis)
+        if airborne and (math.abs(omega)<c.lean_rate_max or omega*command.lean<0) then
+            b2d.body.apply_torque(v.chassis,feel.body_torque(command.lean*c.lean_torque))
+        end
     end
 end
 function M.state(v)
