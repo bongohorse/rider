@@ -1,0 +1,6 @@
+{
+  "fps_min": 60,
+  "frame_ms_max": 16.666667,
+  "physics_ms_max": null,
+  "sample_seconds": 0.25
+}

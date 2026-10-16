@@ -1,6 +1,7 @@
 [project]
 title = RiderG1
 version = 0.1.0
+custom_resources = /main/gym/budget.json
 dependencies#0 = https://github.com/defold/extension-automation-bridge/archive/567c7efb2f72626af71967984bd33dde856f0d36.zip
 
 [bootstrap]
