@@ -105,7 +105,7 @@ function M.apply(v,command,dt)
         local rate=airborne and c.lean_rate_max or c.ground_rate_max
         -- Soft threshold: stop adding spin, but always allow counter-steering.
         -- Ground assistance pitches the chassis; it does not move the centre of mass.
-        if math.abs(omega)<rate or omega*command.lean<0 then
+        if torque>0 and (math.abs(omega)<rate or omega*command.lean<0) then
             b2d.body.apply_torque(v.chassis,feel.body_torque(command.lean*torque))
         end
     end

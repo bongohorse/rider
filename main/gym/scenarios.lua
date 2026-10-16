@@ -351,8 +351,16 @@ function M.feedback_feel_tick(self,dt)
         assert(feel.set("lean_torque",200) and feel.set("lean_rate_max",16) and feel.set("ground_lean_torque",400),"New lean controls unavailable")
         feel.preset("a")
         assert(feel.values.motor_speed==-32 and feel.values.lean_rate_max==8 and feel.values.ground_lean_torque==120,"Preset did not restore expanded tuning")
-        self.ground_phase,self.ground_ticks="left",0
+        assert(feel.set("ground_lean_torque",0),"Cannot disable ground assistance")
+        self.ground_phase,self.ground_ticks="disabled",0
         emit(self,"phase",{name="ground_left"})
+    elseif self.ground_phase=="disabled" then
+        if self.last_command.lean==1 then self.ground_ticks=self.ground_ticks+1 end
+        if self.ground_ticks==24 then
+            assert(math.abs(state.angle)<0.01,"Zero ground torque still pitched chassis")
+            assert(feel.set("ground_lean_torque",120),"Cannot enable ground assistance")
+            self.ground_phase,self.ground_ticks="left",0
+        end
     elseif self.ground_phase=="left" or self.ground_phase=="right" then
         local sign=self.ground_phase=="left" and 1 or -1
         if self.last_command.lean==sign then self.ground_ticks=self.ground_ticks+1 end
@@ -372,7 +380,7 @@ function M.feedback_feel_tick(self,dt)
         if self.ground_ticks==180 then
             assert(state.vx>800 and math.abs(state.angle)<0.6,"Fast candidate did not exceed old maximum while upright: "..state.vx)
             assert(self.reset_count==3 and self.world_loads==1,"Fast candidate reset/reload mismatch")
-            emit(self,"suite_end",{status="PASS",cases={ground_left=self.ground_left,ground_right=self.ground_right,reset_neutral=true,no_reload=true,expanded_controls=true,fast_speed_mps=feel.metres(state.vx)}})
+            emit(self,"suite_end",{status="PASS",cases={ground_left=self.ground_left,ground_right=self.ground_right,reset_neutral=true,no_reload=true,expanded_controls=true,ground_disabled=true,fast_speed_mps=feel.metres(state.vx)}})
             self.testcase="done"
         end
     elseif self.ground_phase=="reset_left" or self.ground_phase=="reset_right" then
