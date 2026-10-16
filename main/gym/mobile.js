@@ -82,7 +82,7 @@
     #rider-mobile .pair{display:flex;gap:8px}
     #rider-mobile .zones button{width:clamp(62px,12vw,130px);height:clamp(64px,18vh,100px);font-weight:bold;background:#142e38ce}
     #rider-mobile .zones button.held{background:#277b67}
-    #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 20px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
+    #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
     #rider-mobile .measure,#rider-mobile .tilt-panel{display:none;position:absolute;top:114px;left:10px;right:10px;gap:5px;align-items:center;flex-wrap:wrap}
     #rider-mobile .measure.open,#rider-mobile .tilt-panel.open{display:flex}
     #rider-mobile .tilt-panel{background:#10252bf5;padding:8px;border-radius:8px;max-width:620px}
@@ -92,7 +92,7 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    @media (orientation:portrait){#rider-mobile .toolbar{left:120px}#rider-mobile .readout{top:160px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
+    @media (orientation:portrait){#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:160px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');

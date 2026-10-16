@@ -176,7 +176,13 @@ function update(self,dt)
     self.feedback_poll=0
     local pixel_ratio=html5 and tonumber(html5.run("document.querySelector('canvas').width / document.querySelector('canvas').getBoundingClientRect().width")) or 1
     local unit=math.abs(gui.get_screen_position(self.graph.probe).x-gui.get_screen_position(self.graph.origin).x)
-    layout.readable(unit/math.max(0.01,pixel_ratio or 1))
+    local root=layout.roots.left_top
+    local base=unit/math.max(0.01,pixel_ratio or 1)/gui.get_scale(root).x
+    local panel_scale=math.max(1,1/math.max(0.01,base))
+    -- Small/portrait FIT views still need a usable editor and a legible graph.
+    gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
+    gui.set_scale(layout.roots.right_top,vmath.vector3(panel_scale,panel_scale,1))
+    layout.readable(base*panel_scale)
     if html5 then
         local function point(n)
             local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
