@@ -1,6 +1,6 @@
 # M3 reference-phone trial
 
-Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](https://bongohorse.github.io/rider/). Actual-device results remain open in STATUS.md; browser automation is synthetic evidence only.
+Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](https://bongohorse.github.io/rider/). Claudio accepted M3 after browser/phone testing on 2026-10-16 and reports that tilt works well. Tilt is retained opt-in, default OFF. See STATUS.md and PLATFORM_MATRIX.md for the closure exception covering measurements not supplied. The procedure below remains available for future diagnostics; it is not an outstanding M3 approval request. Browser automation remains synthetic evidence only.
 
 ## Touch and layout
 
@@ -26,7 +26,7 @@ Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](h
 
 Capture time is a measurement window, never a gym deadline. Rotation, focus loss, long frame interruption or opening tuning cancels an active capture. The report retains engine callback intervals (mean/p95/max), engine dt, physics profile, zero-profile counts, over-25-ms intervals, browser/source, viewport/DPR/quality, layout, preset/tuning and reset counts. It does not assert physical refresh, touch quality or fun. Zero profile samples may be below timing resolution.
 
-The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget or keep/drop decision is invented before this trial. The tilt trial below is required; finished-game retention is decided after Claudio tries it. Do not proceed to M4 without his approval.
+The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget is inferred from qualitative acceptance. Claudio has now tried and accepted tilt; retain the current implementation. Do not proceed to M4 without his approval.
 
 ## Tilt comparison (A14)
 
