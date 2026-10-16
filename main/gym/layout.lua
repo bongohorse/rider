@@ -10,7 +10,7 @@ local specs={
     top={480,540,gui.ANCHOR_NONE,gui.ANCHOR_TOP},
     bottom={480,0,gui.ANCHOR_NONE,gui.ANCHOR_BOTTOM},
     centre={480,270,gui.ANCHOR_NONE,gui.ANCHOR_NONE}}
-function M.init() M.roots={};M.nodes={};M.parents={} end
+function M.init() M.roots={};M.nodes={};M.parents={};M.text_nodes={};M.authored_scales={} end
 local function group(name)
     if M.roots[name] then return M.roots[name] end
     local s=specs[name]
@@ -36,6 +36,19 @@ end
 function M.visible(visible)
     for _,node in ipairs(M.nodes) do gui.set_visible(node,visible) end
 end
-function M.text(pos,value,name) return attach(gui.new_text_node(pos,value),pos,name) end
+function M.text(pos,value,name)
+    local n=attach(gui.new_text_node(pos,value),pos,name)
+    M.text_nodes[#M.text_nodes+1]=n
+    return n
+end
+function M.readable(css_per_unit)
+    -- The built-in font is 14 units high. FIT alone makes phone text tiny.
+    local minimum=11/(14*math.max(0.01,css_per_unit))
+    for _,n in ipairs(M.text_nodes) do
+        local s=M.authored_scales[n]
+        if not s then s=gui.get_scale(n);M.authored_scales[n]=s end
+        gui.set_scale(n,vmath.vector3(math.max(s.x,minimum),math.max(s.y,minimum),1))
+    end
+end
 function M.box(pos,size,name) return attach(gui.new_box_node(pos,size),pos,name) end
 return M
