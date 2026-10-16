@@ -35,6 +35,7 @@ function init(self)
 end
 function on_message(self,id,data,sender)
     if id==hash("measurements") then
+        if html5 then html5.run("window.riderTelemetry = "..json.encode(data)) end
         gui.set_text(self.crash_label,"Crash reset "..(data.crash_enabled and "ON" or "OFF").." [C]")
         gui.set_text(self.head,"Head contact: "..tostring(data.head_contact))
         local b=telemetry.budget

@@ -87,3 +87,5 @@ A7 smoke uses a disclosed debug-only inverted canonical pose held with test-only
 Sensor binding follow-up: `CheckFilterData` requires all three numeric fields, including `group_index=0`; unlike the terrain chain definition it does not default this field when a filter table is supplied. CI rejected the omitted field before any sensor acceptance.
 
 Tint follow-up: the pinned sprite module has no `sprite.set_constant`; use `go.set(sprite_url,"tint",value)`. Pinned `CompSpriteSetProperty` routes material constants via `SetConstant`. CI rejected the obsolete call; no failure was waived.
+
+Release verification now requires two further owner-to-GUI telemetry sequences after initial READY. Release engines can suppress diagnostics, so READY plus a static screenshot alone did not establish a continuing controller; the new progress assertion closes that observed verification gap.

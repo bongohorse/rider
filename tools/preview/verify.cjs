@@ -43,6 +43,11 @@ async function main(){
       }
       const current=new URL(page.url());
       if(!current.pathname.endsWith('/builds/'+sha+'/'+buildId+'/index.html')||current.search!=='?preview-check=1'||current.hash!=='#verify')throw Error('Loader lost build identity/query/fragment');
+      // Release engines may suppress diagnostics: require ongoing owner -> GUI
+      // progress after READY so a dead controller cannot pass on a static scene.
+      await page.waitForFunction(()=>window.riderTelemetry?.sequence>=2,null,{timeout:10000});
+      const sequence=await page.evaluate(()=>window.riderTelemetry.sequence);
+      await page.waitForFunction(previous=>window.riderTelemetry?.sequence>previous+1,sequence,{timeout:10000});
       // Capture a settled view after 30 rendered frames; this is not phone performance/feel evidence.
       await page.evaluate(async()=>{for(let i=0;i<30;i++)await new Promise(requestAnimationFrame);});
       await page.screenshot({path:path.join(out,spec.name+'.png')});

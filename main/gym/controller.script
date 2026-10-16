@@ -84,6 +84,7 @@ function init(self)
     end
     self.crash_enabled,self.head_contact,self.sensor_skip=false,false,0
     self.camera_zoom=feel.values.camera_zoom
+    self.telemetry_seq=0
     self.metrics = telemetry.new()
     self.held = {}
     self.generation, self.reset_count, self.bounds_count = 1,0,0
@@ -115,6 +116,8 @@ function update(self, dt)
         rider.paint(self.vehicle,self.head_contact)
         local sample = telemetry.frame(self.metrics,self.vehicle,dt)
         if sample then
+            self.telemetry_seq=self.telemetry_seq+1
+            sample.sequence=self.telemetry_seq
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
         end
