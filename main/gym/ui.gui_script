@@ -5,6 +5,7 @@ local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
 local telemetry = require "main.gym.telemetry"
 function init(self)
+    layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
     local title = layout.text(vmath.vector3(480, 498, 0), "DRIVING GYM")

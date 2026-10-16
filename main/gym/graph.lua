@@ -5,7 +5,6 @@ local M={}
 local colors={vmath.vector4(0.7,0.9,1,1),vmath.vector4(0.3,0.85,0.73,1),vmath.vector4(1,0.72,0.3,1)}
 local function text(x,y,value)
     local n=layout.text(vmath.vector3(x,y,0),value)
-    gui.set_xanchor(n,gui.ANCHOR_LEFT);gui.set_yanchor(n,gui.ANCHOR_BOTTOM)
     gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W)
     gui.set_scale(n,vmath.vector3(0.55,0.55,1));return n
 end

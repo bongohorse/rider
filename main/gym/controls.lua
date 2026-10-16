@@ -3,7 +3,7 @@ local layout=require "main.gym.layout"
 local feel=require "main.gym.feel"
 local M={}
 local function text(x,y,value)
-    local n=layout.text(vmath.vector3(x,y,0),value)
+    local n=layout.text(vmath.vector3(x,y,0),value,"right_top")
     gui.set_font(n,"default");gui.set_scale(n,vmath.vector3(0.55,0.55,1))
     return n
 end
@@ -13,17 +13,13 @@ function M.new()
         local y=316-(i-1)*26
         local row={spec=spec,y=y,value=feel.values[spec.key]}
         row.label=text(780,y+10,"")
-        row.track=layout.box(vmath.vector3(780,y,0),vmath.vector3(240,10,0))
+        row.track=layout.box(vmath.vector3(780,y,0),vmath.vector3(240,10,0),"right_top")
         gui.set_color(row.track,vmath.vector4(0.15,0.25,0.3,1))
-        row.knob=layout.box(vmath.vector3(780,y,0),vmath.vector3(12,18,0))
+        row.knob=layout.box(vmath.vector3(780,y,0),vmath.vector3(12,18,0),"right_top")
         gui.set_color(row.knob,vmath.vector4(0.35,0.85,0.75,1))
-        row.left=gui.new_box_node(vmath.vector3(660,y,0),vmath.vector3(1,1,0))
-        row.right=gui.new_box_node(vmath.vector3(900,y,0),vmath.vector3(1,1,0))
+        row.left=layout.box(vmath.vector3(660,y,0),vmath.vector3(1,1,0),"right_top")
+        row.right=layout.box(vmath.vector3(900,y,0),vmath.vector3(1,1,0),"right_top")
         gui.set_enabled(row.left,false);gui.set_enabled(row.right,false)
-        for _,node in ipairs({row.label,row.track,row.knob,row.left,row.right}) do
-            gui.set_xanchor(node,gui.ANCHOR_RIGHT)
-            gui.set_yanchor(node,gui.ANCHOR_TOP)
-        end
         c.rows[i]=row
     end
     M.sync(c,feel.values)
@@ -34,7 +30,7 @@ function M.sync(c,values)
         if values[row.spec.key] then row.value=values[row.spec.key] end
         local display=row.value*(row.spec.sign or 1)
         local ratio=feel.clamp((display-row.spec.min)/(row.spec.max-row.spec.min),0,1)
-        gui.set_position(row.knob,vmath.vector3(660+240*ratio,row.y,0))
+        layout.position(row.knob,vmath.vector3(660+240*ratio,row.y,0))
         gui.set_text(row.label,string.format("%s %.2f %s",row.spec.label,display,row.spec.unit))
     end
 end
