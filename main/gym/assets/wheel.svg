@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <title>Centred wheel; geometry derived from collision radius</title>
+  <circle cx="24.0" cy="24.0" r="22.0" fill="#879ba6" />
+  <circle cx="24.0" cy="24.0" r="19.0" fill="#1c2630" />
+  <rect x="22.5" y="7.0" width="3" height="34.0" fill="#5c6f79" />
+  <rect x="7.0" y="22.5" width="34.0" height="3" fill="#5c6f79" />
+  <circle cx="24.0" cy="24.0" r="7" fill="#69cbb8" />
+</svg>
