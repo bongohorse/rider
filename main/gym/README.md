@@ -85,3 +85,5 @@ Pinned 1.14.0 sources read: body `create_shape` returns a shape-info table inclu
 A7 smoke uses a disclosed debug-only inverted canonical pose held with test-only zero gravity to create head/floor overlap until the GUI acknowledges its display (gravity restored after recovery): requires off to detect without resetting, actual C input to enable a reason-labelled reset with retained sensor/no shape leak, and an actual overlay mouse click to disable. A3's 100 resets now also check sensor validity/shape count. Fairness, real touch and final art remain Claudio's later drive test; the synthetic probe is not challenge acceptance.
 
 Sensor binding follow-up: `CheckFilterData` requires all three numeric fields, including `group_index=0`; unlike the terrain chain definition it does not default this field when a filter table is supplied. CI rejected the omitted field before any sensor acceptance.
+
+Tint follow-up: the pinned sprite module has no `sprite.set_constant`; use `go.set(sprite_url,"tint",value)`. Pinned `CompSpriteSetProperty` routes material constants via `SetConstant`. CI rejected the obsolete call; no failure was waived.

@@ -20,7 +20,7 @@ function M.contact(v)
     return false
 end
 function M.paint(v,contact)
-    sprite.set_constant(msg.url(nil,v.ids.chassis,"rider"),"tint",
+    go.set(msg.url(nil,v.ids.chassis,"rider"),"tint",
         contact and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(1,1,1,1))
 end
 return M
