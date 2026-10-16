@@ -8,8 +8,12 @@ local function text(x,y,value)
 end
 function M.new()
     local g={bars={}}
-    local bg=gui.new_box_node(vmath.vector3(210,145,0),vmath.vector3(390,220,0))
+    local bg=gui.new_box_node(vmath.vector3(160,145,0),vmath.vector3(280,220,0))
     gui.set_color(bg,vmath.vector4(0.05,0.1,0.12,0.92))
+    for _,y in ipairs({86,168}) do
+        local zero=gui.new_box_node(vmath.vector3(153,y,0),vmath.vector3(250,1,0))
+        gui.set_color(zero,vmath.vector4(0.4,0.55,0.6,0.5))
+    end
     g.speed=text(28,238,"Speed - last 5 s")
     g.travel=text(28,144,"Spring travel - L teal / R amber")
     for i=1,3 do
@@ -30,7 +34,7 @@ function M.draw(g,data)
         local present=type(low)=="number" and type(high)=="number"
         gui.set_enabled(n,present)
         if present then
-            gui.set_position(n,vmath.vector3(28+(j-0.5)*7+(series==3 and 2 or 0),base+(low+high)*0.5/data.scale*span,0))
+            gui.set_position(n,vmath.vector3(28+(j-0.5)*5+(series==3 and 2 or 0),base+(low+high)*0.5/data.scale*span,0))
             gui.set_size(n,vmath.vector3(series==1 and 4 or 2,math.max(2,(high-low)/data.scale*span),0))
         end
     end

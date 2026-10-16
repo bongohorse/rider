@@ -60,8 +60,8 @@ elif args.case=='a11':
     assert set(cases)=={'report_requested','visible_failure','clipboard_roundtrip','denied_fallback'}
     assert all(value is True for value in cases.values())
 elif args.case=='a12':
-    assert set(cases)=={'bottoming_peak','spike_drawn','bounded','expired','samples','oldest_age'}
-    assert 16<=cases['bottoming_peak']<=20 and all(cases[k] is True for k in ['spike_drawn','bounded','expired'])
+    assert set(cases)=={'bottoming_peak','spike_drawn','bounded','expired','limits_restored','no_reset','samples','oldest_age'}
+    assert 16<=cases['bottoming_peak']<=20 and all(cases[k] is True for k in ['spike_drawn','bounded','expired','limits_restored','no_reset'])
     assert 299<=cases['samples']<=301 and 4.9<=cases['oldest_age']<=5.00001
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))

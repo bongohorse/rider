@@ -329,11 +329,13 @@ function M.graph_tick(self,dt)
         for _,joint in ipairs(self.vehicle.joints) do b2d.joint.enable_limit(joint,false) end
     elseif self.graph_ticks==480 then
         local series=history.series(self.history)
+        assert(self.reset_count==0 and self.world_loads==1,"History expiry was replaced by reset/reload")
+        for _,joint in ipairs(self.vehicle.joints) do assert(not b2d.joint.is_limit_enabled(joint),"Probe limits not restored") end
         assert(self.history.size<=history.capacity and series[1].count<=301,"History exceeded five-second bound")
         assert(series[1].oldest_age<=5.00001,"History retained stale samples")
         assert(math.max(series[2].peak,series[3].peak)<12,"Old stop spike did not expire")
         assert(math.max(self.graph_peaks[2] or 100,self.graph_peaks[3] or 100)<12,"GUI kept expired spike")
-        emit(self,"suite_end",{status="PASS",cases={bottoming_peak=self.bottom_peak,spike_drawn=true,bounded=true,expired=true,
+        emit(self,"suite_end",{status="PASS",cases={bottoming_peak=self.bottom_peak,spike_drawn=true,bounded=true,expired=true,limits_restored=true,no_reset=true,
             samples=series[1].count,oldest_age=series[1].oldest_age}})
         self.testcase="done"
     end
