@@ -1,14 +1,26 @@
 -- All gym driving/camera tuning. Geometry remains in the authored body resources.
 local M = {}
-M.values = {
-    spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30,
-    spring_hz=5,damping=0.8,motor_speed=-16,drive_torque=1800,brake_torque=3000,
-    reverse_speed=8,reverse_threshold=8,reverse_delay=0.25,
-    lean_torque=12,lean_rate_max=3,
-    camera_height=250,camera_lift=70,camera_response=6,
-    camera_look_seconds=0.22,camera_look_max=130,camera_zoom=1,camera_zoom_min=0.82,
-    camera_zoom_speed=650
-}
+M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
+local allowed={a=true,b=true,c=true}
+M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
+function M.preset(requested)
+    local valid=allowed[requested]==true
+    local key=valid and requested or "a"
+    local data=json.decode(assert(sys.load_resource("/main/gym/presets/"..key..".json"),"Missing preset"))
+    assert(data.schema==1 and data.key==key and type(data.values)=="table","Invalid preset schema")
+    local count=0
+    for name,value in pairs(data.values) do
+        assert(type(value)=="number" and value==value and math.abs(value)<100000,"Invalid preset number")
+        count=count+1
+    end
+    assert(count==#M.preset_keys,"Unexpected preset fields")
+    for _,name in ipairs(M.preset_keys) do
+        assert(data.values[name]~=nil,"Missing preset tuning: "..name)
+        M.values[name]=data.values[name]
+    end
+    return key,valid
+end
+M.preset("a")
 -- Body torque is raw Box2D N m; joint motor caps are scaled binding inputs.
 -- Keep these distinct. Gameplay lengths/linear speed stay in engine units.
 function M.motor_torque(binding_units) return binding_units end

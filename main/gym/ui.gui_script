@@ -14,6 +14,16 @@ function init(self)
     gui.set_scale(version,vmath.vector3(0.6,0.6,1))
     if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
     msg.post(".","acquire_input_focus")
+    self.presets={}
+    for i,key in ipairs({"a","b","c"}) do
+        local x=680+(i-1)*100
+        local box=gui.new_box_node(vmath.vector3(x,430,0),vmath.vector3(90,30,0))
+        local label=gui.new_text_node(vmath.vector3(x,430,0),string.upper(key).." ["..i.."]")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.65,0.65,1))
+        self.presets[key]=box
+    end
+    self.preset_note=gui.new_text_node(vmath.vector3(780,454,0),"")
+    gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.5,0.5,1))
     self.crash_button=gui.new_box_node(vmath.vector3(780,400,0),vmath.vector3(280,32,0))
     gui.set_color(self.crash_button,vmath.vector4(0.13,0.24,0.28,1))
     self.crash_label=gui.new_text_node(vmath.vector3(780,400,0),"Crash reset OFF [C]")
@@ -36,7 +46,14 @@ function init(self)
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
 function on_message(self,id,data,sender)
-    if id==hash("tuning") then
+    if id==hash("preset") then
+        self.owner=sender
+        self.preset,self.modified=data.key,data.modified
+        for key,box in pairs(self.presets) do
+            gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
+        end
+        gui.set_text(self.preset_note,data.invalid and "Invalid URL preset: using A" or data.modified and "Modified — choose preset to restore" or "Preset comparison")
+    elseif id==hash("tuning") then
         self.owner=sender
         controls.sync(self.controls,data)
     elseif id==hash("measurements") then
@@ -60,15 +77,20 @@ function on_message(self,id,data,sender)
             gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
-            contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,travel1=data.travel1,travel2=data.travel2})
+            contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2})
     elseif id==hash("retry_done") then
-        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or "Retry: manual")
+        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or "Retry: manual")
         msg.post(sender,"retry_labelled",{reason=data.reason})
     end
 end
 
 function on_input(self,id,action)
     if controls.input(self.controls,id,action,self.owner) then return true end
+    if id==hash("ui_pointer") and action.pressed then
+        for key,box in pairs(self.presets) do
+            if gui.pick_node(box,action.x,action.y) then msg.post(self.owner,"select_preset",{key=key});return true end
+        end
+    end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.crash_button,action.x,action.y) then
         msg.post("gym:/owner#script","crash_toggle")
         return true

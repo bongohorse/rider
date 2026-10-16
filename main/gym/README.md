@@ -101,3 +101,11 @@ Seven sliders edit spring Hz, damping ratio, wheel target rad/s, motor cap (bind
 During a captured drag, gameplay commands are zeroed and held input clears on both capture/release. Release outside the track is handled by the captured pointer path. Layout uses the existing 960×540 fit GUI; reference-phone touch and lifecycle testing remain M3. Required A8 smoke holds real mouse input, changes spring Hz to 12, checks the actual joint getter without reset/reload, attempts throttle during capture and requires neutral release. Test routing now lives entirely in `scenarios.fixed`, still called only by the sole physics owner.
 
 Pinned source consulted: wheel spring hertz/damping setters/getter and `wake_bodies` in `script_box2d_joint_v3.cpp`; existing GUI pick/text/box APIs used. No custom world/tick owner.
+
+## A9 candidate presets
+
+All drive/camera values now live in `presets/a.json`, `b.json`, `c.json` (schema 1); geometry stays authored separately. A preserves the prior baseline, B and C progressively increase wheel target/torque, spring/lean strength and camera anticipation. These are comparison candidates without an assumed winner. Keys 1/2/3 or overlay buttons select a complete replacement and canonical in-world retry, clearing held input and preserving one world. Live edits show Modified; reselecting any preset restores its data.
+
+`?preset=b` opens B; only a/b/c are valid file selectors. An invalid query visibly falls back to A. The loader validates schema, numeric/finite values and the complete field inventory. GUI receives only flat numeric slider snapshots. Pinned `script_html5_js.cpp` was read: html5.run returns the evaluated result as a string and throws on JavaScript errors. URLSearchParams is used only on HTML5; native launch defaults to A or explicit rider.preset settings.
+
+Required A9 browser runs select B by URL and test invalid fallback separately. Each then uses actual 1/2/3 key events to drive all three candidates for 120 observed throttle ticks, checks travel/angle and actual spring replacement, and requires exactly three retries with one world load. Existing A3/A6/A7/A8 cases remain mandatory. Real-device feel and winning values remain Claudio's test.

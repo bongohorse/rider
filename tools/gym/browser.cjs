@@ -63,6 +63,14 @@ async function main() {
             await page.mouse.move(box.x+box.width*900/960,box.y+box.height*224/540);
           }
           if(data.name==='slider_release'){await page.mouse.up();await page.keyboard.up('ArrowUp');}
+          if(data.name==='select_preset'){
+            await page.keyboard.up('ArrowUp');
+            for(const key of ['1','2','3'])await page.keyboard.up(key);
+            await page.keyboard.down({a:'1',b:'2',c:'3'}[data.key]);
+          }
+          if(data.name==='preset_drive'){
+            await page.keyboard.up({a:'1',b:'2',c:'3'}[data.key]);await page.keyboard.down('ArrowUp');
+          }
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
@@ -70,7 +78,7 @@ async function main() {
     });
     page.on('pageerror',e=>rejectDone(e));
     page.on('crash',()=>rejectDone(Error('Gym page crashed')));
-    await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
+    await page.goto('http://127.0.0.1:'+server.address().port+'/index.html'+(process.argv[5]==='a9'?'?preset=b':process.argv[5]==='a9invalid'?'?preset=invalid':''));
     let timer;
     try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),30000))]);}
     catch(error){
