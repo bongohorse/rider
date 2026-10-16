@@ -109,13 +109,26 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>!window.riderFeedback.visible&&!window.riderTelemetry.ui_captured);
     pass('mobile_report_fallback');
     assert.equal(await page.locator('#app-container #rider-mobile').count(),1);
-    await page.getByRole('button',{name:'Fullscreen',exact:true}).click();
-    await page.waitForFunction(()=>document.fullscreenElement!==null);
-    await dispatch('touchStart',[await point('throttle',1)]);
-    await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
-    await dispatch('touchEnd',[]);await neutral();
-    await page.evaluate(()=>document.exitFullscreen());
-    await page.waitForFunction(()=>document.fullscreenElement===null);
+    async function settledViewport(){
+      // fullscreenElement changes before the asynchronous viewport/input
+      // transition has necessarily reached the engine. Resize clears held input.
+      const sequence=await page.evaluate(()=>window.riderTelemetry.sequence);
+      await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1&&
+        window.riderViewport.width===innerWidth&&window.riderViewport.height===innerHeight,sequence);
+      await neutral();await layout();
+    }
+    for(let transition=0;transition<3;transition++){
+      await page.getByRole('button',{name:'Fullscreen',exact:true}).click();
+      await page.waitForFunction(()=>document.fullscreenElement!==null);
+      await settledViewport();
+      await dispatch('touchStart',[await point('throttle',1)]);
+      await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+      await dispatch('touchEnd',[]);await neutral();
+      await page.evaluate(()=>document.exitFullscreen());
+      await page.waitForFunction(()=>document.fullscreenElement===null);
+      await settledViewport();
+    }
+    assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('fullscreen_controls_remain_drivable');
     await page.screenshot({path:path.join(out,'mobile-landscape.png')});
     if(errors.length)throw Error(errors.join('\n'));
