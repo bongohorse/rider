@@ -46,5 +46,8 @@ elif args.case in ('a2','a3','a6'):
 elif args.case=='a7':
     assert set(cases)=={'head_detected','default_off','head_reset','sensor_retained','keyboard_toggle','overlay_toggle'}
     assert all(value is True for value in cases.values())
+elif args.case=='a8':
+    assert set(cases)=={'live_spring','no_restart','input_isolated','release_cleared','invalid_rejected'}
+    assert all(value is True for value in cases.values())
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))

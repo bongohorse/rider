@@ -72,6 +72,14 @@ function M.reset(v)
 end
 function M.apply(v,command,dt)
     local c=M.config
+    if v.applied_hz~=c.spring_hz or v.applied_damping~=c.damping then
+        for _,joint in ipairs(v.joints) do
+            b2d.joint.set_spring_hertz(joint,c.spring_hz)
+            b2d.joint.set_spring_damping_ratio(joint,c.damping)
+            b2d.joint.wake_bodies(joint)
+        end
+        v.applied_hz,v.applied_damping=c.spring_hz,c.damping
+    end
     local brake = command.brake_reverse > 0
     local drive = command.throttle > 0 and not brake
     local speed=b2d.body.get_linear_velocity(v.chassis).x
