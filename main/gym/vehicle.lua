@@ -66,7 +66,7 @@ function M.reset(v)
         assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
     end
     assert(b2d.shape.is_valid(v.head) and #b2d.body.get_shapes(v.chassis)==2,"Retry changed sensor ownership")
-    v.reverse_time,v.reversing=0,false
+    v.reverse_time,v.reversing,v.coasting=0,false,false
     joints(v)
     assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")
 end
@@ -90,12 +90,28 @@ function M.apply(v,command,dt)
         end
     else v.reverse_time,v.reversing=0,false end
     local reverse=brake and command.allow_reverse and v.reversing
+    local grounded=false
+    for _,wheel in ipairs(v.wheels) do
+        if #b2d.body.get_contact_data(wheel)>0 then grounded=true end
+    end
+    local coasting=not brake and not drive and grounded
     local motor_speed=drive and c.motor_speed*command.throttle or reverse and c.reverse_speed*command.brake_reverse or 0
     for _,joint in ipairs(v.joints) do
-        if brake or drive then b2d.joint.wake_bodies(joint) end
-        b2d.joint.enable_motor(joint,brake or drive)
+        if brake or drive or (coasting and not v.coasting) then b2d.joint.wake_bodies(joint) end
+        b2d.joint.enable_motor(joint,brake or drive or coasting)
         b2d.joint.set_motor_speed(joint,motor_speed)
-        b2d.joint.set_max_motor_torque(joint,feel.motor_torque(brake and not reverse and c.brake_torque or (drive or reverse) and c.drive_torque or 0))
+        b2d.joint.set_max_motor_torque(joint,feel.motor_torque(brake and not reverse and c.brake_torque or (drive or reverse) and c.drive_torque or coasting and c.coast_torque or 0))
+    end
+    v.coasting=coasting
+    if coasting then
+        for _,wheel in ipairs(v.wheels) do
+            local omega=b2d.body.get_angular_velocity(wheel)
+            -- Raw body torque (N m), distinct from the scaled joint cap.
+            -- No airborne chassis damping or repeated waking at rest.
+            if b2d.body.is_awake(wheel) and math.abs(omega)>0.01 then
+                b2d.body.apply_torque(wheel,-omega*c.rolling_resistance)
+            end
+        end
     end
     if command.lean~=0 then
         local airborne=true

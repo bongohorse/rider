@@ -10,7 +10,7 @@ end
 function M.new()
     local c={rows={}}
     for i,spec in ipairs(feel.sliders) do
-        local y=316-(i-1)*26
+        local y=326-(i-1)*22
         local row={spec=spec,y=y,value=feel.values[spec.key]}
         row.label=text(780,y+10,"")
         row.track=layout.box(vmath.vector3(780,y,0),vmath.vector3(240,10,0),"right_top")

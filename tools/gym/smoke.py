@@ -68,5 +68,8 @@ elif args.case=='m2feedback':
     assert cases['fast_speed_mps']>8
     assert cases['ground_left']>0.03 and cases['ground_right'] < -0.03
     assert all(cases[k] is True for k in ['reset_neutral','no_reload','expanded_controls','ground_disabled'])
+elif args.case=='coast':
+    assert set(cases)=={'coast_distance_m','brake_tap_stopped','rest_speed_mps'}
+    assert 6<=cases['coast_distance_m']<=15 and cases['brake_tap_stopped'] and cases['rest_speed_mps']<0.1
 else: raise RuntimeError('Unknown gym test case')
 print(json.dumps(report))

@@ -399,6 +399,53 @@ function M.feedback_feel_tick(self,dt)
         end
     end
 end
+-- Real owner integration: settle, seed a physically consistent 5 m/s roll,
+-- then observe normal neutral commands. Also cover a short real brake input.
+function M.coast_tick(self,dt)
+    local v=self.vehicle
+    local state=vehicle.state(v)
+    self.coast_ticks=(self.coast_ticks or 0)+1
+    if not self.coast_phase and self.coast_ticks>=90 then
+        for _,body in ipairs({v.chassis,v.wheels[1],v.wheels[2]}) do
+            b2d.body.set_linear_velocity(body,vmath.vector3(500,0,0))
+        end
+        for _,wheel in ipairs(v.wheels) do b2d.body.set_angular_velocity(wheel,-500/22) end
+        self.coast_phase,self.coast_ticks,self.coast_x,self.coast_last="roll",0,state.x,500
+    elseif self.coast_phase=="roll" or self.coast_phase=="tap_roll" then
+        assert(self.last_command.throttle==0 and self.last_command.brake_reverse==0,"Coast command not neutral")
+        -- Solver contact jitter below 0.01 m/s is not renewed acceleration.
+        assert(state.vx<=self.coast_last+1,"Coast accelerated: "..state.vx.." after "..self.coast_last)
+        self.coast_last=state.vx
+        if state.vx<10 then
+            local distance=(state.x-self.coast_x)*0.01
+            if self.coast_phase=="roll" then
+                assert(distance>=6 and distance<=15,"Coast distance outside declared 6–15 m: "..distance)
+                self.coast_distance=distance
+                self.coast_phase,self.coast_ticks="tap_setup",0
+            else
+                self.coast_phase,self.coast_ticks="rest",0
+            end
+        end
+        assert(self.coast_ticks<1200,"Never stopped coasting")
+    elseif self.coast_phase=="tap_setup" then
+        for _,body in ipairs({v.chassis,v.wheels[1],v.wheels[2]}) do b2d.body.set_linear_velocity(body,vmath.vector3(500,0,0)) end
+        for _,wheel in ipairs(v.wheels) do b2d.body.set_angular_velocity(wheel,-500/22) end
+        self.coast_phase,self.coast_ticks="tap",0
+        emit(self,"phase",{name="coast_brake"})
+    elseif self.coast_phase=="tap" and self.last_command.brake_reverse==1 then
+        self.coast_braked=(self.coast_braked or 0)+1
+        if self.coast_braked==6 then emit(self,"phase",{name="coast_release"}) end
+    elseif self.coast_phase=="rest" then
+        assert(math.abs(state.vx)<10,"Rolling resumed after brake tap")
+        if self.coast_ticks>=120 then
+            emit(self,"suite_end",{status="PASS",cases={coast_distance_m=self.coast_distance,brake_tap_stopped=true,rest_speed_mps=math.abs(state.vx)*0.01}})
+            self.testcase="done"
+        end
+    end
+    if self.coast_phase=="tap" and self.coast_braked and self.coast_braked>=6 and self.last_command.brake_reverse==0 then
+        self.coast_phase,self.coast_ticks,self.coast_x,self.coast_last="tap_roll",0,state.x,state.vx
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
@@ -408,6 +455,7 @@ function M.fixed(self,dt)
         elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt)
         elseif self.testcase=="a11" then M.feedback_tick(self,dt)
         elseif self.testcase=="a12" then M.graph_tick(self,dt)
+        elseif self.testcase=="coast" then M.coast_tick(self,dt)
         elseif self.testcase=="m2feedback" then M.feedback_feel_tick(self,dt) end
     end
     M.probe_tick(self,dt)

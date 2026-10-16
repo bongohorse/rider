@@ -68,7 +68,7 @@ async function main(){
           const t=window.riderTelemetry;
           return Math.abs(t.projection_x*innerWidth/(t.projection_y*innerHeight)-1)<.001;
         });
-        for(let row=0;row<9;row++){
+        for(let row=0;row<11;row++){
           for(const endpoint of ['left','right']){
             const point=await page.evaluate(({row,endpoint})=>{
               const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
@@ -93,8 +93,8 @@ async function main(){
         await page.waitForFunction(()=>window.riderTelemetry.preset==='a'&&!window.riderTelemetry.modified);
         await page.keyboard.up('1');
         await page.screenshot({path:path.join(out,`${name}-${viewport.width}x${viewport.height}.png`)});
-        console.log(JSON.stringify({layout:name,viewport,sliderPairs:9,status:"PASS"}));
-        responsive.push({viewport,status:'PASS',sliders:9});
+        console.log(JSON.stringify({layout:name,viewport,sliderPairs:11,status:"PASS"}));
+        responsive.push({viewport,status:'PASS',sliders:11});
       }
       if(await page.evaluate(()=>JSON.stringify(window.riderReady))!==initialReady)throw Error('Resize reloaded world');
       await page.keyboard.down('ArrowUp');

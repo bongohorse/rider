@@ -38,6 +38,8 @@ async function main() {
         const data=JSON.parse(line.split('RIDER_GYM ')[1]);
         if(data.source_sha!==expected||data.run_id!==runId)rejectDone(Error('Foreign gym evidence'));
         if(data.event==='phase') input=input.then(async()=>{
+          if(data.name==='coast_brake')await page.keyboard.down('ArrowDown');
+          if(data.name==='coast_release')await page.keyboard.up('ArrowDown');
           if(data.name==='throttle')await page.keyboard.down('ArrowUp');
           if(data.name==='brake'){
             if(process.argv[5]==='a10' && await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext not running after initial throttle input');
@@ -63,12 +65,12 @@ async function main() {
           }
           if(data.name==='slider_begin'){
             const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*224/540);await page.mouse.down();
+            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*214/540);await page.mouse.down();
           }
           if(data.name==='slider_move'){
             await page.keyboard.down('ArrowUp');
             const box=await page.locator('canvas').first().boundingBox();
-            await page.mouse.move(box.x+box.width*900/960,box.y+box.height*224/540);
+            await page.mouse.move(box.x+box.width*900/960,box.y+box.height*214/540);
           }
           if(data.name==='slider_release'){await page.mouse.up();await page.keyboard.up('ArrowUp');}
           if(data.name==='select_preset'){
@@ -104,7 +106,7 @@ async function main() {
     page.on('crash',()=>rejectDone(Error('Gym page crashed')));
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html'+(process.argv[5]==='a9'?'?preset=b':process.argv[5]==='a9invalid'?'?preset=invalid':''));
     let timer;
-    try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),30000))]);}
+    try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);}
     catch(error){
       await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
       fs.writeFileSync(path.join(root,'failed-telemetry.json'),JSON.stringify(await page.evaluate(()=>window.riderTelemetry||null).catch(()=>null),null,2));

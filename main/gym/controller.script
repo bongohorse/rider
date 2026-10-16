@@ -92,7 +92,7 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)

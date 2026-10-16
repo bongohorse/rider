@@ -21,6 +21,8 @@
     "camera_zoom_min": 0.78,
     "camera_zoom_speed": 650,
     "ground_lean_torque": 180,
-    "ground_rate_max": 2.5
+    "ground_rate_max": 2.5,
+    "coast_torque": 400,
+    "rolling_resistance": 0.15
   }
 }
