@@ -33,6 +33,9 @@ local function attach(node,pos,name)
     M.position(node,pos)
     return node
 end
+function M.visible(visible)
+    for _,node in ipairs(M.nodes) do gui.set_visible(node,visible) end
+end
 function M.text(pos,value,name) return attach(gui.new_text_node(pos,value),pos,name) end
 function M.box(pos,size,name) return attach(gui.new_box_node(pos,size),pos,name) end
 return M

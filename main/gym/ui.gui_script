@@ -1,9 +1,16 @@
+local mobile=require "main.gym.mobile"
 local layout=require "main.gym.layout"
 local feel=require "main.gym.feel"
 local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
 local telemetry = require "main.gym.telemetry"
+local function cancel_drag(self)
+    if self.controls and self.controls.drag then
+        self.controls.drag=nil
+        if self.owner then msg.post(self.owner,"ui_capture",{active=self.feedback_open or self.feedback_modal or false}) end
+    end
+end
 function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
@@ -66,7 +73,8 @@ function init(self)
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
 function on_message(self,id,data,sender)
-    if id==hash("graph") then
+    if id==hash("cancel_drag") then cancel_drag(self)
+    elseif id==hash("graph") then
         graph.draw(self.graph,data)
         msg.post(sender,"graph_shown",{series=data.series,peak=data.peak,positive_peak=data.positive_peak,generation=data.generation})
     elseif id==hash("preset") then
@@ -128,6 +136,12 @@ local function copy_feedback(self)
     end
 end
 function update(self,dt)
+    local compact=mobile.compact()
+    if compact~=self.compact then
+        if compact then cancel_drag(self) end
+        self.compact=compact;layout.visible(not compact)
+        if html5 then html5.run("window.riderCompact = "..tostring(compact)) end
+    end
     self.feedback_poll=(self.feedback_poll or 0)+dt
     if self.feedback_poll<0.1 then return end
     self.feedback_poll=0
@@ -152,6 +166,7 @@ function on_input(self,id,action)
         return true
     end
     if self.feedback_open or self.feedback_modal then return true end
+    if self.compact then return end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.feedback_button,action.x,action.y) then copy_feedback(self);return true end
     if controls.input(self.controls,id,action,self.owner) then return true end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.audio_button,action.x,action.y) then msg.post(self.owner,"audio_mute");return true end

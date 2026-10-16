@@ -1,3 +1,4 @@
+local mobile=require "main.gym.mobile"
 local history=require "main.gym.history"
 local audio=require "main.gym.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
@@ -20,6 +21,8 @@ local function reset(self)
     if request.generation ~= self.generation then return end
     self.resetting = true
     self.held = {}
+    self.mobile={}
+    mobile.clear()
     self.head_contact,self.sensor_skip=false,2
     self.history=history.new(self.history.generation+1)
     local before = vehicle.state(self.vehicle)
@@ -84,6 +87,8 @@ local function setup(self)
     if self.scenario then self.scenario.setup(self) end
 end
 function init(self)
+    mobile.init()
+    self.mobile={}
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
@@ -116,6 +121,10 @@ function init(self)
 end
 function update(self, dt)
     if not self.ready then setup(self); return end
+    self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
+    if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
+    if self.mobile.started then audio.start(self) end
+    if self.mobile.retry then request_reset(self,"manual") end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
@@ -139,6 +148,9 @@ function update(self, dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
+            sample.command=self.last_command or {}
+            sample.speed_mps=feel.metres(sample.speed)
+            sample.reset_count=self.reset_count
             sample.ui_captured=self.ui_captured or false
             local projection=camera.get_projection("/camera#camera")
             sample.projection_x,sample.projection_y=projection.m00,projection.m11
@@ -158,9 +170,9 @@ function update(self, dt)
 end
 local function command(self)
     if self.ui_captured then return {throttle=0,brake_reverse=0,lean=0,allow_reverse=false} end
-    local brake = self.held[hash("brake_down")] or self.held[hash("brake_s")]
-    local throttle = self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
-    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = (self.held[hash("lean_left")] and 1 or 0)-(self.held[hash("lean_right")] and 1 or 0)}
+    local brake = self.mobile.brake or self.held[hash("brake_down")] or self.held[hash("brake_s")]
+    local throttle = self.mobile.throttle or self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
+    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = ((self.mobile.left or self.held[hash("lean_left")]) and 1 or 0)-((self.mobile.right or self.held[hash("lean_right")]) and 1 or 0)}
 end
 function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
@@ -229,10 +241,10 @@ function on_message(self,id,data,sender)
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)
-    elseif id==hash("clear_input") then self.held={}
+    elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear()
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then self.pending_tuning=data
-    elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={}
+    elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("graph_shown") and data.generation==self.history.generation then
         self.graph_peaks=self.graph_peaks or {};self.graph_peaks[data.series]=data.peak
         if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
