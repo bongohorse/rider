@@ -3,3 +3,5 @@ key_trigger { input: KEY_W action: "throttle_w" }
 key_trigger { input: KEY_DOWN action: "brake_down" }
 key_trigger { input: KEY_S action: "brake_s" }
 key_trigger { input: KEY_R action: "retry" }
+key_trigger { input: KEY_A action: "lean_left" }
+key_trigger { input: KEY_D action: "lean_right" }

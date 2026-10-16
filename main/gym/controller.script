@@ -2,6 +2,7 @@
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.gym.vehicle"
 local socket = require "socket"
+local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
 local bounds = {min_x=-3900,max_x=7900,min_y=-500}
@@ -22,7 +23,9 @@ local function reset(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
     assert(#shapes==1 and shapes[1].is_chain_segment, "Retry changed terrain chain")
-    go.set_position(vmath.vector3(vehicle.config.spawn_x,250,500),"/camera")
+    go.set_position(vmath.vector3(vehicle.config.spawn_x,feel.values.camera_height,500),"/camera")
+    self.camera_zoom=feel.values.camera_zoom
+    go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1
     self.last_reset_reason = request.reason
@@ -72,11 +75,12 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
     end
+    self.camera_zoom=feel.values.camera_zoom
     self.metrics = telemetry.new()
     self.held = {}
     self.generation, self.reset_count, self.bounds_count = 1,0,0
@@ -96,7 +100,14 @@ function update(self, dt)
         emit(self,"vehicle_ready",{bodies=3,joints=2})
     end
     local target = go.get_position(self.target)
-    go.set_position(vmath.vector3(target.x, math.max(250, target.y + 70), 500), "/camera")
+    if self.vehicle and self.vehicle.ready then
+        local pos,zoom=feel.camera(target,vehicle.state(self.vehicle).vx,go.get_position("/camera"),self.camera_zoom,dt)
+        go.set_position(pos,"/camera")
+        self.camera_zoom=zoom
+        go.set("/camera#camera","orthographic_zoom",zoom)
+    else
+        go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
+    end
     if self.vehicle and self.vehicle.ready then
         local sample = telemetry.frame(self.metrics,self.vehicle,dt)
         if sample then msg.post("main:/loader#ui","measurements",sample) end
@@ -106,7 +117,7 @@ end
 local function command(self)
     local brake = self.held[hash("brake_down")] or self.held[hash("brake_s")]
     local throttle = self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
-    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, lean = 0}
+    return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = (self.held[hash("lean_left")] and 1 or 0)-(self.held[hash("lean_right")] and 1 or 0)}
 end
 function on_input(self, action_id, action)
     if action_id == hash("retry") then
@@ -126,9 +137,9 @@ function fixed_update(self, dt)
         if state.x<bounds.min_x or state.x>bounds.max_x or state.y<bounds.min_y then request_reset(self,"bounds") end
         if self.pending_reset then reset(self) end
         self.last_command = command(self)
-        vehicle.apply(self.vehicle,self.last_command)
-        if self.testcase == "a2" or self.testcase == "a3" then
-            if self.reset_phase then self.scenario.reset(self) else self.scenario.drive(self) end
+        vehicle.apply(self.vehicle,self.last_command,dt)
+        if self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" then
+            if self.feel_phase then self.scenario.feel_tick(self,dt) elseif self.reset_phase then self.scenario.reset(self) else self.scenario.drive(self) end
         end
     end
     if self.scenario then self.scenario.probe_tick(self,dt) end

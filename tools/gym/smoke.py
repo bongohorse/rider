@@ -30,13 +30,16 @@ cases=report['cases']
 if args.case=='a1':
     assert set(cases)=={'chain_contact','camera_follow'}
     assert abs(cases['chain_contact']-95)<2 and cases['camera_follow'] is True
-elif args.case in ('a2','a3'):
+elif args.case in ('a2','a3','a6'):
     expected={'drive_dx','drive_speed','stopped_speed','max_angle','wheel_contact','camera_follow','brake_priority'}
     if args.case=='a3':
         expected.update({'resets','asleep_before_redrive','reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload','reset_ms_min','reset_ms_p50','reset_ms_max','request_ready_ms_max'})
         assert cases['resets']==100 and all(cases[x] is True for x in ['asleep_before_redrive','reason_visible','bounds_recovery','input_cleared','redrive','no_collection_reload'])
         assert 0<=cases['reset_ms_min']<=cases['reset_ms_p50']<=cases['reset_ms_max']
         assert cases['request_ready_ms_max']>=cases['reset_ms_max']
+    if args.case=='a6':
+        expected.update({'reverse_speed','reverse_dx','air_angle','camera_direction_zoom'})
+        assert cases['reverse_speed'] < -50 and cases['reverse_dx'] < -50 and cases['air_angle']>0.1 and cases['camera_direction_zoom'] is True
     assert set(cases)==expected
     assert cases['drive_dx']>150 and cases['drive_speed']>100 and abs(cases['stopped_speed'])<12
     assert cases['max_angle']<0.6 and all(cases[x] is True for x in ['wheel_contact','camera_follow','brake_priority'])
