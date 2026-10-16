@@ -305,6 +305,39 @@ function M.feedback_tick(self,dt)
         self.testcase="done"
     end
 end
+function M.graph_tick(self,dt)
+    local history=require "main.gym.history"
+    self.graph_ticks=(self.graph_ticks or 0)+1
+    if self.graph_ticks==120 then
+        self.history=history.new(self.history.generation+1)
+        self.graph_peaks,self.graph_seen_peak={},0
+        -- Focused test-only physical stop probe before the M4 step station.
+        for i,joint in ipairs(self.vehicle.joints) do
+            b2d.joint.set_limits(joint,-20,18)
+            b2d.joint.enable_limit(joint,true)
+            b2d.joint.wake_bodies(joint)
+            assert(math.abs(b2d.joint.get_upper_limit(joint)-18)<0.001,"Probe stop not applied")
+            b2d.body.set_linear_velocity(self.vehicle.wheels[i],vmath.vector3(0,1000,0))
+        end
+    elseif self.graph_ticks==180 then
+        local series=history.series(self.history)
+        local peak=math.max(series[2].positive_peak,series[3].positive_peak)
+        assert(peak>=16 and peak<=20,"Controlled stop did not create a bounded compression spike: "..peak)
+        assert((self.graph_seen_peak or 0)>=16,"Compression spike was not drawn/acknowledged")
+        self.bottom_peak=peak
+        emit(self,"phase",{name="graph_spike"})
+        for _,joint in ipairs(self.vehicle.joints) do b2d.joint.enable_limit(joint,false) end
+    elseif self.graph_ticks==480 then
+        local series=history.series(self.history)
+        assert(self.history.size<=history.capacity and series[1].count<=301,"History exceeded five-second bound")
+        assert(series[1].oldest_age<=5.00001,"History retained stale samples")
+        assert(math.max(series[2].peak,series[3].peak)<12,"Old stop spike did not expire")
+        assert(math.max(self.graph_peaks[2] or 100,self.graph_peaks[3] or 100)<12,"GUI kept expired spike")
+        emit(self,"suite_end",{status="PASS",cases={bottoming_peak=self.bottom_peak,spike_drawn=true,bounded=true,expired=true,
+            samples=series[1].count,oldest_age=series[1].oldest_age}})
+        self.testcase="done"
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
@@ -312,7 +345,8 @@ function M.fixed(self,dt)
         elseif self.testcase=="a7" then M.crash_tick(self,dt)
         elseif self.testcase=="a8" then M.slider_tick(self,dt)
         elseif self.testcase=="a9" or self.testcase=="a9invalid" then M.preset_tick(self,dt)
-        elseif self.testcase=="a11" then M.feedback_tick(self,dt) end
+        elseif self.testcase=="a11" then M.feedback_tick(self,dt)
+        elseif self.testcase=="a12" then M.graph_tick(self,dt) end
     end
     M.probe_tick(self,dt)
 end

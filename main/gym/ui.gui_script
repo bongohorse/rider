@@ -1,3 +1,4 @@
+local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
 local controls=require "main.gym.controls"
 local telemetry = require "main.gym.telemetry"
@@ -47,6 +48,7 @@ function init(self)
     gui.set_color(self.report_bg,vmath.vector4(0.06,0.1,0.13,1));gui.set_enabled(self.report_bg,false)
     self.report=gui.new_text_node(vmath.vector3(480,260,0),"")
     gui.set_font(self.report,"default");gui.set_scale(self.report,vmath.vector3(0.55,0.55,1));gui.set_enabled(self.report,false)
+    self.graph=graph.new()
     self.metrics = {}
     for i=1,6 do
         local n=gui.new_text_node(vmath.vector3(24,400-(i-1)*24,0),"")
@@ -60,7 +62,10 @@ function init(self)
     gui.set_scale(self.reason,vmath.vector3(0.65,0.65,1))
 end
 function on_message(self,id,data,sender)
-    if id==hash("preset") then
+    if id==hash("graph") then
+        graph.draw(self.graph,data)
+        msg.post(sender,"graph_shown",{series=data.series,peak=data.peak,positive_peak=data.positive_peak,generation=data.generation})
+    elseif id==hash("preset") then
         self.owner=sender
         self.preset,self.modified=data.key,data.modified
         for key,box in pairs(self.presets) do

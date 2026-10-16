@@ -36,7 +36,7 @@
     } finally {if(request===api.request)api.busy=false;}
   };
   document.addEventListener('keydown',event=>{
-    if(event.code!=='KeyF'||event.repeat||/^(INPUT|TEXTAREA|BUTTON)$/.test(event.target?.tagName)||event.target?.isContentEditable)return;
+    if(event.code!=='KeyF'||event.repeat||event.ctrlKey||event.metaKey||event.altKey||/^(INPUT|TEXTAREA|BUTTON)$/.test(event.target?.tagName)||event.target?.isContentEditable)return;
     event.preventDefault();api.copy();
   });
 })();
