@@ -32,7 +32,7 @@ async function main(){
       const page=await context.newPage(),errors=[],logs=[];
       page.on('pageerror',e=>errors.push(e.message));page.on('crash',()=>errors.push('Page crashed'));
       page.on('console',m=>{logs.push(m.text());if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
-      const launch=new URL(url);launch.search='?preview-check=1';launch.hash='verify';
+      const launch=new URL(url);launch.search='?preview-check=1&touch=0';launch.hash='verify';
       await page.goto(launch.href);
       try {
         await page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderBuild===expected,sha,{timeout:60000});
@@ -42,7 +42,7 @@ async function main(){
         throw error;
       }
       const current=new URL(page.url());
-      if(!current.pathname.endsWith('/builds/'+sha+'/'+buildId+'/index.html')||current.search!=='?preview-check=1'||current.hash!=='#verify')throw Error('Loader lost build identity/query/fragment');
+      if(!current.pathname.endsWith('/builds/'+sha+'/'+buildId+'/index.html')||current.search!=='?preview-check=1&touch=0'||current.hash!=='#verify')throw Error('Loader lost build identity/query/fragment');
       // Release engines may suppress diagnostics: require ongoing owner -> GUI
       // progress after READY so a dead controller cannot pass on a static scene.
       await page.waitForFunction(()=>window.riderTelemetry?.sequence>=2,null,{timeout:10000});
@@ -135,6 +135,7 @@ async function main(){
       results.at(-1).qualityComparison=quality;
       await context.close();
     }
+    results.push(await require('./mobile.cjs')(browser,url,sha,out));
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
     console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));
   }catch(error){

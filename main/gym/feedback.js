@@ -24,7 +24,7 @@
   api.copy = async () => {
     if(!api.text){api.status='Waiting for measurements';return;}
     if(api.busy)return;
-    const request=++api.request,text=api.text;api.busy=true;api.status='Copying...';
+    const request=++api.request,text=api.text+(window.riderMobile?.enabled ? "\n## Mobile trial\n"+JSON.stringify(window.riderMobile.snapshot(),null,2) : "");api.busy=true;api.status='Copying...';
     try {
       if(!window.isSecureContext || !navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
       await navigator.clipboard.writeText(text);
