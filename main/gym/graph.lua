@@ -15,6 +15,7 @@ function M.new()
         pixels[#pixels+1]=string.rep(string.char(alpha,alpha,alpha,alpha),8)
     end
     assert(gui.new_texture("graph_line",8,8,"rgba",table.concat(pixels)),"Graph texture unavailable")
+    local first=#layout.nodes+1
     local g={bars={}}
     local bg=layout.box(vmath.vector3(112,401,0),vmath.vector3(200,80,0),"left_top")
     gui.set_color(bg,vmath.vector4(0.05,0.1,0.12,0.55))
@@ -35,7 +36,14 @@ function M.new()
             g.bars[i][j]=pair
         end
     end
+    g.nodes={}
+    for i=first,#layout.nodes do g.nodes[#g.nodes+1]=layout.nodes[i] end
     return g
+end
+function M.visible(g,visible)
+    if g.visible==visible then return end
+    g.visible=visible
+    for _,n in ipairs(g.nodes) do gui.set_visible(n,visible) end
 end
 local function line(n,x1,y1,x2,y2,thickness)
     local dx,dy=x2-x1,y2-y1

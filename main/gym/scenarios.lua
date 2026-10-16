@@ -454,7 +454,7 @@ function M.hud_tick(self,dt)
     local result=self.hud_probe_result
     if result then
         local c=cases[self.hud_index]
-        assert(result.fps==c[1] and math.abs(result.r-c[2])<0.001 and math.abs(result.g-c[3])<0.001 and math.abs(result.b-c[4])<0.001,"FPS badge colour threshold wrong")
+        assert(math.abs(result.fps-c[1])<0.001 and math.abs(result.r-c[2])<0.001 and math.abs(result.g-c[3])<0.001 and math.abs(result.b-c[4])<0.001,"FPS badge colour threshold wrong")
         self.hud_index=self.hud_index+1;self.hud_probe_result=nil;self.hud_waiting=false
     end
     if self.hud_index>#cases then
@@ -462,7 +462,7 @@ function M.hud_tick(self,dt)
         self.testcase="done"
     elseif not self.hud_waiting then
         self.hud_waiting=true
-        msg.post("main:/loader#ui","hud_probe",{fps=cases[self.hud_index][1]})
+        msg.post("main:/loader#ui","hud_probe",{frame_ms=1000/cases[self.hud_index][1]})
     end
 end
 function M.fixed(self,dt)

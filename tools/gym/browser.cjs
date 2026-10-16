@@ -87,8 +87,10 @@ async function main() {
           if(data.name==='select_preset'){
             await page.keyboard.up('ArrowUp');await openTuning();
             const p=await guiPoint('presets',data.key);
+            const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
             await page.mouse.move(p.x,p.y);await page.mouse.down();
-            await page.waitForFunction(key=>window.riderTelemetry.preset===key&&!window.riderTelemetry.modified,data.key);
+            // Reselecting the already active A still needs a fresh owner acknowledgement.
+            await page.waitForFunction(({key,resets})=>window.riderTelemetry.preset===key&&!window.riderTelemetry.modified&&window.riderTelemetry.reset_count===resets+1,{key:data.key,resets});
             await page.mouse.up();
           }
           if(data.name==='preset_drive')await page.keyboard.down('ArrowUp');

@@ -119,9 +119,11 @@ end
 function on_message(self,id,data,sender)
     if id==hash("hud_probe") then
         assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
-        gui.set_color(self.metrics[4],fps_color(data.fps))
+        -- The probe specifies integer FPS via its inverse interval; remove inversion rounding noise.
+        local fps=math.floor(1000/data.frame_ms+0.5)
+        gui.set_color(self.metrics[4],fps_color(fps))
         local c=gui.get_color(self.metrics[4])
-        msg.post(sender,"hud_probe_result",{fps=data.fps,r=c.x,g=c.y,b=c.z})
+        msg.post(sender,"hud_probe_result",{fps=fps,r=c.x,g=c.y,b=c.z})
     elseif id==hash("cancel_drag") then cancel_drag(self)
     elseif id==hash("graph") then
         graph.draw(self.graph,data)
@@ -214,9 +216,12 @@ function update(self,dt)
     -- Small/portrait FIT views still need a usable editor and a legible graph.
     gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
     local height=html5 and tonumber(html5.run("innerHeight")) or 540
-    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-16)/(446*base)))
+    local bottom=html5 and not enabled and 52 or 16
+    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-bottom)/(446*base)))
     gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
     layout.readable(base)
+    local narrow=html5 and tonumber(html5.run("innerWidth"))<520
+    graph.visible(self.graph,not (open and narrow))
     if html5 then
         local function point(n)
             local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
