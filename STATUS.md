@@ -4,6 +4,9 @@ Updated 2026-10-16. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
+M3 scope audit corrected the premature technical-completion claim: all five assigned issues remain open (#58, #28, #29, #68, #69). #68 and #69 were omitted from the prior execution; they are implementation work, not device-only acceptance. Claudio reauthorized completing M3. Current work: #68 grounded engine braking and wheel rolling drag, with declared 6–15 m stopping distance from 5 m/s and brake-tap/rest regression; then #69 compact HUD. M4 remains unauthorized. Real-device criteria are not replaced by CI.
+
+
 Claudio authorized starting and completing M3 on 2026-10-16. **A12b presentation is technically complete and merged in [PR #63](https://github.com/bongohorse/rider/pull/63), `b42040a`.** Final source `ceacf4d` passed [required CI 38883421693](https://github.com/bongohorse/rider/actions/runs/38883421693); final desktop/landscape/portrait images were reviewed. Resizing, all nine slider endpoint pairs and input release, camera proportions and both DPI modes passed. CI software-browser DPI2 callback means: ON 37.736 ms / OFF 16.667 ms; this is not phone/GPU performance. #58 stays open for real-device evidence.
 
 **A13 is technically complete and merged in [PR #64](https://github.com/bongohorse/rider/pull/64), `a285f08`.** Final source `ce41b60` passed [required CI 38885765551](https://github.com/bongohorse/rider/actions/runs/38885765551), including eleven release touch cases, actual 30-second capture, fullscreen driving, editor capture release and all existing regressions. Final compact landscape/portrait images were reviewed. #28 stays open for actual-phone criteria.

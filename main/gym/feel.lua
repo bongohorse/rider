@@ -2,7 +2,7 @@
 local M = {}
 M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 local allowed={a=true,b=true,c=true}
-M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
+M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","coast_torque","rolling_resistance","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
 function M.preset(requested)
     local valid=allowed[requested]==true
     local key=valid and requested or "a"
@@ -44,6 +44,8 @@ M.sliders={
     {key="lean_torque",label="Air lean",min=0,max=200,unit="N m"},
     {key="lean_rate_max",label="Air rate",min=1,max=16,unit="rad/s"},
     {key="ground_lean_torque",label="Ground lean",min=0,max=400,unit="N m"},
+    {key="coast_torque",label="Coast cap",min=0,max=1500,unit="binding u"},
+    {key="rolling_resistance",label="Rolling drag",min=0,max=0.5,unit="N m s"},
     {key="camera_response",label="Camera response",min=2,max=12,unit="1/s"},
     {key="camera_look_seconds",label="Look ahead",min=0,max=0.6,unit="s"}
 }
