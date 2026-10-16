@@ -46,6 +46,13 @@ async function main() {
           if(data.name==='release_for_redrive')await page.keyboard.up('ArrowUp');
           if(data.name==='reverse_request')await page.keyboard.up('ArrowUp');
           if(data.name==='air_lean'){await page.keyboard.up('ArrowDown');await page.keyboard.down('a');}
+          if(data.name==='enable_crash')await page.keyboard.down('c');
+          if(data.name==='disable_crash_overlay'){
+            await page.keyboard.up('c');
+            const box=await page.locator('canvas').first().boundingBox();
+            await page.mouse.move(box.x+box.width*780/960,box.y+box.height*140/540);
+            await page.mouse.down();
+          }
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);
         if(data.event==='suite_end')resolveDone(data);
@@ -56,9 +63,15 @@ async function main() {
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');
     let timer;
     try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),30000))]);}
+    catch(error){
+      await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
+      fs.writeFileSync(path.join(root,'failed-telemetry.json'),JSON.stringify(await page.evaluate(()=>window.riderTelemetry||null).catch(()=>null),null,2));
+      throw error;
+    }
     finally {clearTimeout(timer);}
     if(result.status!=='PASS')throw Error('Gym test failed');
     await input;
+    await page.mouse.up();
     await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
     await page.evaluate(()=>new Promise(requestAnimationFrame));
     await page.screenshot({path:path.join(root,'gym.png')});

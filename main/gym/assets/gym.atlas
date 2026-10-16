@@ -2,3 +2,4 @@ images { image: "/main/gym/assets/checker.png" }
 extrude_borders: 2
 images { image: "/main/gym/assets/chassis.png" }
 images { image: "/main/gym/assets/wheel.png" }
+images { image: "/main/gym/assets/rider.png" }
