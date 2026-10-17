@@ -5,7 +5,6 @@
     "deny": [
       "write_file(*)",
       "command(*)",
-      "unsandboxed(*)",
       "mcp(*)",
       "execute_url(*)",
       "read_file(/mnt/)",
