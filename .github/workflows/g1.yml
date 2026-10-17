@@ -73,6 +73,8 @@ jobs:
         run: python tools/gym/smoke.py --output artifacts/g1/stations --case a15
       - name: Measure ramp ladders and neutral downhill starts
         run: python tools/gym/smoke.py --output artifacts/g1/ramps --case a16
+      - name: Measure step ladders and repeatable compression
+        run: python tools/gym/smoke.py --output artifacts/g1/steps --case a17
       - name: Build and run current Gym smoke
         run: python tools/gym/smoke.py --output artifacts/g1/gym --case a3
       - name: Verify reverse and airborne lean through normal commands

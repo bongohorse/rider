@@ -20,11 +20,15 @@ run_id=str(uuid.uuid4())
 settings=out/'gym.settings'
 settings.write_text(f'[project]\ndependencies =\n[rider]\nsource_sha = {sha}\nrun_id = {run_id}\ngym_test = {args.case}\n')
 build('wasm-web',out,settings,variant='debug')
-runner='ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+runner='steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
 process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case],cwd=ROOT,start_new_session=True)
-try: code=process.wait(timeout=360 if args.case=='a16' else 90)
+try: code=process.wait(timeout=360 if args.case in ('a16','a17') else 90)
 finally: stop(process)
 if code:raise SystemExit(code)
+if args.case=='a17':
+    report=json.loads((out/'steps-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==16
+    print(json.dumps(report));raise SystemExit(0)
 if args.case=='a16':
     report=json.loads((out/'ramps-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==25

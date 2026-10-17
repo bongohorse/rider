@@ -94,7 +94,7 @@ function init(self)
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
     end
-    if self.testcase=="a16" then
+    if self.testcase=="a16" or self.testcase=="a17" then
         assert(sys.get_engine_info().is_debug,"Ramp trial requires debug engine")
         self.ramp_trial=require "main.gym.ramp_trial"
     end
@@ -133,6 +133,9 @@ function update(self, dt)
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
+        -- Factories can receive an engine step before attach. Use Retry's
+        -- canonical pose before the very first authored speed start too.
+        vehicle.reset(self.vehicle)
         stations.restart(self)
         self.target = self.vehicle.ids.chassis
         emit(self,"vehicle_ready",{bodies=3,joints=2})

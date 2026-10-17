@@ -152,6 +152,7 @@ async function main(){
     results.push(await require('./mobile.cjs')(browser,url,sha,out));
     results.push(await require('./tilt.cjs')(browser,url,sha,out));
     results.push(await require('./ramps.cjs')(browser,url,sha,out));
+    results.push(await require('./steps.cjs')(browser,url,sha,out));
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
     console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));
   }catch(error){

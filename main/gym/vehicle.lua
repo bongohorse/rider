@@ -47,6 +47,8 @@ function M.reset(v)
     v.joints = {}
     local c = M.config
     local bodies = {v.chassis,v.wheels[1],v.wheels[2]}
+    -- Drop cached contacts before teleporting retained bodies. Bodies/shapes stay valid.
+    for _,b in ipairs(bodies) do b2d.body.set_active(b,false) end
     for i,b in ipairs(bodies) do
         assert(b2d.body.is_valid(b), "Retained body invalid")
         local x = c.spawn_x + (i>1 and c.wheel_x[i-1] or 0)
@@ -65,6 +67,7 @@ function M.reset(v)
         assert(math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001, "Noncanonical reset pose")
         assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
     end
+    for _,b in ipairs(bodies) do b2d.body.set_active(b,true);b2d.body.set_awake(b,true) end
     assert(b2d.shape.is_valid(v.head) and #b2d.body.get_shapes(v.chassis)==2,"Retry changed sensor ownership")
     v.reverse_time,v.reversing,v.coasting=0,false,false
     joints(v)

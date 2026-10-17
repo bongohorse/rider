@@ -44,17 +44,24 @@ function M.validate(d)
             objects=objects+1
         end
     end
-    if d.kind=="ramps" and not d.sections then return nil,"Missing ramp sections" end
+    if (d.kind=="ramps" or d.kind=="steps") and not d.sections then return nil,"Missing station sections" end
     if d.sections then
-        if d.kind~="ramps" or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
+        if (d.kind~="ramps" and d.kind~="steps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
         local ids={}
         for _,section in ipairs(d.sections) do
             if type(section)~="table" or type(section.id)~="string" or ids[section.id] or type(section.name)~="string" or not point(section.spawn) then return nil,"Invalid section identity/start" end
             ids[section.id]=true
+            if section.stop_probe~=nil and (d.kind~="steps" or type(section.stop_probe)~="boolean") then return nil,"Invalid step probe" end
             if section.spawn[1]<=b[1] or section.spawn[1]>=b[2] or section.spawn[2]<=b[3] or section.spawn[2]>=b[4] then return nil,"Section spawn outside bounds" end
             if section.mode~="up" and section.mode~="down" then return nil,"Invalid ramp mode" end
-            for _,key in ipairs({"start_speed","ramp_start","top_x","top_y","end_x","angle","length"}) do if not finite(section[key]) then return nil,"Invalid ramp measurement" end end
-            if section.start_speed<0 or section.start_speed>30 or section.length<=0 or section.end_x<=section.ramp_start or section.angle<=0 or section.angle>90 then return nil,"Invalid ramp limits" end
+            if not finite(section.start_speed) or section.start_speed<0 or section.start_speed>30 then return nil,"Invalid section speed" end
+            if d.kind=="ramps" then
+                for _,key in ipairs({"ramp_start","top_x","top_y","end_x","angle","length"}) do if not finite(section[key]) then return nil,"Invalid ramp measurement" end end
+                if section.length<=0 or section.end_x<=section.ramp_start or section.angle<=0 or section.angle>90 then return nil,"Invalid ramp limits" end
+            else
+                for _,key in ipairs({"step_x","top_y","end_x","height"}) do if not finite(section[key]) then return nil,"Invalid step measurement" end end
+                if section.height<=0 or section.height>.5 or section.spawn[1]>=section.step_x-1 or section.end_x<=section.step_x+1 then return nil,"Invalid step limits" end
+            end
         end
     end
     if d.markers then
