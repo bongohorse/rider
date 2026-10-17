@@ -35,7 +35,7 @@ function init(self)
     hud_textures()
     self.station_next=layout.box(vmath.vector3(392,432,0),vmath.vector3(54,24,0),"left_top")
     gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
-    local next_label=layout.text(vmath.vector3(392,432,0),"Next","left_top");gui.set_font(next_label,"default");gui.set_scale(next_label,vmath.vector3(0.5,0.5,1))
+    self.station_next_label=layout.text(vmath.vector3(392,432,0),"Next","left_top");gui.set_font(self.station_next_label,"default");gui.set_scale(self.station_next_label,vmath.vector3(0.5,0.5,1))
     self.station=layout.text(vmath.vector3(12,432,0),"Straight | start 0 m/s [1-9]","left_top")
     gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
     self.station_result=layout.text(vmath.vector3(12,414,0),"","left_top")
@@ -127,6 +127,7 @@ end
 function on_message(self,id,data,sender)
     if id==hash("station_loading") then
         self.session_generation=data.generation;self.latest=nil;self.station_error=nil
+        if html5 then html5.run("window.riderStationError=null") end
         cancel_drag(self);gui.set_text(self.station,"Loading station...")
     elseif id==hash("station_error") then
         if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
@@ -211,6 +212,7 @@ local function copy_feedback(self)
 end
 function update(self,dt)
     local enabled=mobile.enabled()
+    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label}) do gui.set_visible(node,not enabled) end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)
     gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)

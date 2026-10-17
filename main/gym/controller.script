@@ -31,7 +31,7 @@ local function reset(self)
     stations.restart(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
-    assert(#shapes==#self.station.chains+#(self.station.hulls or {}), "Retry changed station topology")
+    assert(#shapes==#self.segments+#(self.station.hulls or {}), "Retry changed station topology")
     for _,shape in ipairs(self.segments) do
         assert(b2d.shape.is_valid(shape.shape_id) and b2d.shape.are_sensor_events_enabled(shape.shape_id),"Retry lost chain/sensor handle")
     end

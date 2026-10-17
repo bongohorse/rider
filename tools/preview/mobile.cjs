@@ -57,6 +57,12 @@ module.exports=async function mobile(browser,url,sha,out){
     assert(toast&&bar&&toast.y>=bar.y+bar.height&&toast.x>=0&&toast.x+toast.width<=page.viewportSize().width);
     await page.waitForFunction(()=>document.querySelector('#rider-mobile .toast').hidden,null,{timeout:5000});
     pass('retry_toast_clear_and_expires');
+    const loads=await page.evaluate(()=>window.riderTelemetry.world_loads);
+    await page.getByRole('button',{name:'Next station',exact:true}).click();
+    await page.waitForFunction(n=>window.riderTelemetry.world_loads===n+1,loads);
+    await neutral();await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
+    assert.equal(await page.locator('#rider-mobile').count(),1);
+    pass('station_switch_fresh_input_single_mobile_surface');
     const before=await point('throttle',1);
     await page.getByRole('button',{name:'Layout A · mirror',exact:true}).click();
     await page.waitForFunction(()=>window.riderMobile.mirrored);

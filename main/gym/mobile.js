@@ -36,7 +36,7 @@
     const data=window.riderTelemetry;
     if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
-      hud.textContent=`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m`;
+      hud.textContent=`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
     if(enabled){
       const tilt=window.riderTilt;

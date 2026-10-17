@@ -104,15 +104,23 @@ Start with [A12b / #58](https://github.com/bongohorse/rider/issues/58): full-win
 
 ### M4 – Stations
 
+Revised live issue scope (2026-10-16), authorized 2026-10-17. Each station is directly selectable; later stations do not require driving through earlier ones. One issue per PR. Report measured limits separately from Claudio's final drive test.
+
 | # | Title and scope | Acceptance | Depends on |
 | --- | --- | --- | --- |
-| A15 | **Straight with distance markers** (1 m / 10 m) | Top speed and braking distance readable | A5 |
-| A16 | **Track format** (polyline JSON with version field) and **ramps** at 10°, 20°, 30° | Ramps are built from data, not code | A15 |
-| A17 | **Steps** of 0.1 m, 0.25 m, 0.5 m | Suspension bottoming is reproducible | A16 |
-| A18 | **Seam strip, chain vs hull** | Ghost-bump measurement at 5, 15, 30 m/s; D8 confirmed or revised | A16 |
-| A19 | **Gaps and landing zones** | Same input gives a reproducible jump | A16 |
-| A20 | **Station teleport, pause and slow motion** (`set_time_step`); station selectable by URL (`?station=ramps`) | Every station reachable by key and URL | A15, A9 |
-| A21 | **Record inputs and replay them with another preset**, with a translucent ghost of the recording | The same run with two presets visible side by side | A9, A20 |
+| A15 / #30 | **Station framework + straight:** validated JSON, single-station loader, keys/URL/Next, speed start and Retry, 1/10 m markers | 8 m/s first-step speed ±0.2; safe switching/retry; speed/braking readable | A5 |
+| A16 / #31 | **Ramp ladder:** 5–45° plus impossible 60°, short/long variants | Labelled data ramps; per-ramp climb/failure and launch measurements | A15 |
+| A17 / #32 | **Step ladder:** 0.05–0.5 m up/down | Per-step climb/stuck/compression measurements; repeatable bottoming | A15 |
+| A18 / #33 | **Seams:** chain vs hull, 20 seams at 5/15/30 m/s | Valid measured speed windows and ghost-bump results; D8 confirmed/revised | A15 |
+| A19 / #34 | **Gap ladder:** increasing 1–10 m gaps and landing variants | Predeclared repeatability tolerance; per-gap clear/miss/distance/impact | A15 |
+| A19b / #55 | **Bumps:** 0.05–0.3 m waves, long/short wavelength, crest/dip | Contact loss, compression, pitch and lift-off speed measured | A15 |
+| A19c / #56 | **Air:** long-airtime launch and safe landing zones | Airtime, rotation, landing angle/impact; full-lean rotation measured | A15, A6 |
+| A19d / #57 | **Balance:** raised short platforms and dynamic seesaw | Controlled crossing/full-throttle contrast; repeatable seesaw/reset | A15 |
+| A15a / #70 | **Rider visual reaction:** damped lean/bob on acceleration and landing | Bounded visible reaction; head sensor/physics unchanged | M4 approval |
+| A20 / #35 | **Pause and slow motion:** collection-proxy time scale; optional parcours | Physics/input pause; neutral resume; measured slow motion | A15 |
+| A21 / #36 | **Record and replay:** commands/transforms from station start, ghost against candidate preset | Same start/speed and inputs with visible reference comparison | A9, A15 |
+
+M4 review follow-ups: measure downhill neutral motor braking at ramps; retain the mobile performance NOT RUN limits and run MOBILE_TRIAL before Phase B; keep station logic outside the controller. Debug test resources and Bridge exclusion remain Phase B release work.
 
 ### M5 – Lock in
 
@@ -171,11 +179,11 @@ This later feedback updates the initial handoff wherever duration or optionality
 | M3 | [A12b / #58](https://github.com/bongohorse/rider/issues/58) | Full-window rendering and HiDPI |
 | M3 | [A13 / #28](https://github.com/bongohorse/rider/issues/28) | Touch controls v0 |
 | M3 | [A14 / #29](https://github.com/bongohorse/rider/issues/29) | Experiment: tilt steering |
-| M4 | [A15 / #30](https://github.com/bongohorse/rider/issues/30) | Straight with distance markers |
-| M4 | [A16 / #31](https://github.com/bongohorse/rider/issues/31) | Track format |
+| M4 | [A15 / #30](https://github.com/bongohorse/rider/issues/30) | Station framework and straight |
+| M4 | [A16 / #31](https://github.com/bongohorse/rider/issues/31) | Ramp ladder |
 | M4 | [A17 / #32](https://github.com/bongohorse/rider/issues/32) | Steps |
 | M4 | [A18 / #33](https://github.com/bongohorse/rider/issues/33) | Seam strip, chain vs hull |
 | M4 | [A19 / #34](https://github.com/bongohorse/rider/issues/34) | Gaps and landing zones |
-| M4 | [A20 / #35](https://github.com/bongohorse/rider/issues/35) | Station teleport, pause and slow motion |
+| M4 | [A20 / #35](https://github.com/bongohorse/rider/issues/35) | Pause and slow motion |
 | M4 | [A21 / #36](https://github.com/bongohorse/rider/issues/36) | Record inputs and replay them with another preset |
 | M5 | [A22 / #37](https://github.com/bongohorse/rider/issues/37) | Regression tests from tick traces |

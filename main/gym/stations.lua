@@ -114,17 +114,17 @@ function M.observe(self,state)
     else self.station_brake_x=nil end
 end
 function M.enrich(self,sample)
-        sample.station=self.station.id
-        sample.station_name=self.station.name
-        sample.station_note=self.station_note or ""
-        sample.start_speed=self.station.start_speed
-        sample.first_tick_speed=self.first_tick_speed or 0
-        sample.first_tick_omega=self.first_tick_omega or 0
-        sample.world_loads=self.world_loads or 1
-        sample.session_generation=self.session_generation
-        sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
-        sample.station_top_speed=self.station_top_speed or 0
-        sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
-        sample.station_brake_distance=self.station_brake_distance or 0
+    sample.station=self.station.id
+    sample.station_name=self.station.name
+    sample.station_note=self.station_note or ""
+    sample.start_speed=self.station.start_speed
+    sample.first_tick_speed=self.first_tick_speed or 0
+    sample.first_tick_omega=self.first_tick_omega or 0
+    sample.world_loads=self.world_loads or 1
+    sample.session_generation=self.session_generation
+    sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
+    sample.station_top_speed=self.station_top_speed or 0
+    sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
+    sample.station_brake_distance=self.station_brake_distance or 0
 end
 return M
