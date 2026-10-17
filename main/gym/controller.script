@@ -94,7 +94,7 @@ function init(self)
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
     end
-    if self.testcase=="a16" then
+    if self.testcase=="a16" or self.testcase=="a17" then
         assert(sys.get_engine_info().is_debug,"Ramp trial requires debug engine")
         self.ramp_trial=require "main.gym.ramp_trial"
     end
