@@ -6,6 +6,10 @@ on:
         description: Let the calling CI own cancellation and isolate this run
         type: boolean
         default: false
+      run_windows_native:
+        description: Include Windows native physics in a called CI matrix
+        type: boolean
+        default: true
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +30,7 @@ jobs:
           - os: windows-2025
             platform: x86_64-win32
             configuration: debug
+        exclude: ${{ fromJSON(inputs.caller_managed_concurrency && !inputs.run_windows_native && '[{"os":"windows-2025"}]' || '[]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
