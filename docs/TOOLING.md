@@ -143,7 +143,7 @@ less tools/security/setup_gemini_reviewer.sh
 bash tools/security/setup_gemini_reviewer.sh
 ```
 
-The script refuses dirty Git state, symlinks in the tracked archive, privileged reviewer groups, replacement of an existing differing Gemini policy, reviewer write access to the snapshot or reviewer ability to traverse the maintainer's home/read known credential paths. If it fails because `~/` is traversable by other users, inspect the impact on other Linux accounts before choosing `chmod 700 "$HOME"` and rerun. Do **not** run `sudo agy` or authenticate the review account with the maintainer's GitHub credentials.
+The script refuses dirty Git state, symlinks in the tracked archive, privileged reviewer groups, replacement of an existing differing Gemini policy, reviewer write access to the snapshot or reviewer ability to traverse the maintainer's home/read known credential paths. It also repairs directory traversal on an existing root-owned snapshot if a prior invocation stopped at `FAIL: Gemini reviewer cannot read the snapshot` (the earlier GNU `cp -a` implementation copied the private temporary directory mode). Re-run the same script after updating `main`; do **not** delete the snapshot, relax it to world-writable, or recreate accounts manually. If it fails because `~/` is traversable by other users, inspect the impact on other Linux accounts before choosing `chmod 700 "$HOME"` and rerun. Do **not** run `sudo agy` or authenticate the review account with the maintainer's GitHub credentials.
 
 The native `agy` binary was installed for the maintainer account only. Install the official Linux CLI **again under the separate reviewer account** and sign in to Google there, using no GitHub PAT:
 
