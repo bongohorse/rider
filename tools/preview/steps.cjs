@@ -23,9 +23,21 @@ module.exports=async function steps(browser,url,sha,out){
   await page.screenshot({path:path.join(out,'steps-down-release.png')});
   cases.push('release_down_ladder_direct_url');
   await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud?.tuning);await page.keyboard.up('t');
-  const slider=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderControls[0];return {x:r.x+s.right.x/c.width*r.width,y:r.y+(1-s.right.y/c.height)*r.height};});
-  await page.mouse.move(slider.x,slider.y);await page.mouse.down();
-  await page.waitForFunction(()=>window.riderTelemetry.modified&&window.riderStationReport?.comparable===false);await page.mouse.up();
+  const slider=await page.evaluate(()=>{
+   const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderControls[0];
+   return {x:r.x+s.right.x/c.width*r.width,y:r.y+(1-s.right.y/c.height)*r.height,
+     centreX:r.x+(s.left.x+s.right.x)*.5/c.width*r.width,
+     midpoint:(s.min+s.max)*.5*s.sign,tolerance:(s.max-s.min)*.01,
+     value:s.max*s.sign};
+  });
+  // Begin inside the track and drag beyond the edge: exact-edge clicks may
+  // miss the pick node because of browser/device-pixel rounding (see A12b).
+  await page.mouse.move(slider.centreX,slider.y);await page.mouse.down();
+  await page.waitForFunction(p=>Math.abs(window.riderControls[0].value-p.midpoint)<p.tolerance,slider);
+  await page.mouse.move(slider.x+4,slider.y);
+  await page.waitForFunction(p=>Math.abs(window.riderControls[0].value-p.value)<.01&&window.riderTelemetry.modified&&window.riderStationReport?.comparable===false,slider);
+  await page.mouse.move(2,2);await page.mouse.up();
+  await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
   assert.equal(await page.evaluate(()=>window.riderStationReport.highest_climbed_m),0);
   await page.keyboard.down('r');await page.waitForFunction(()=>window.riderStationReport?.comparable===true&&window.riderStationReport.tuning_at_start.spring_hz===12);await page.keyboard.up('r');
   cases.push('live_tuning_invalidates_comparison_until_retry');
