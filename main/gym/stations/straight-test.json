@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "id": "straight-test",
+  "name": "Station switch fixture",
+  "units": "metres",
+  "spawn": [
+    0,
+    1.7
+  ],
+  "start_speed": 5,
+  "run_in": 10,
+  "run_out": 40,
+  "bounds": [
+    -39,
+    79,
+    -5,
+    20
+  ],
+  "chains": [
+    [
+      [
+        81.92,
+        0.8
+      ],
+      [
+        -40.96,
+        0.8
+      ]
+    ]
+  ],
+  "hulls": [
+    {
+      "vertices": [
+        [
+          20,
+          0.8
+        ],
+        [
+          21,
+          0.8
+        ],
+        [
+          21,
+          1.1
+        ],
+        [
+          20,
+          1.1
+        ]
+      ]
+    }
+  ],
+  "markers": {
+    "from_m": -40,
+    "to_m": 80,
+    "minor_m": 1,
+    "major_m": 10
+  }
+}

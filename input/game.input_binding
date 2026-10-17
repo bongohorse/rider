@@ -12,3 +12,12 @@ key_trigger { input: KEY_F action: "feedback" }
 key_trigger { input: KEY_P action: "preset_cycle" }
 key_trigger { input: KEY_T action: "tuning_toggle" }
 key_trigger { input: KEY_H action: "help_toggle" }
+key_trigger { input: KEY_1 action: "station_1" }
+key_trigger { input: KEY_2 action: "station_2" }
+key_trigger { input: KEY_3 action: "station_3" }
+key_trigger { input: KEY_4 action: "station_4" }
+key_trigger { input: KEY_5 action: "station_5" }
+key_trigger { input: KEY_6 action: "station_6" }
+key_trigger { input: KEY_7 action: "station_7" }
+key_trigger { input: KEY_8 action: "station_8" }
+key_trigger { input: KEY_9 action: "station_9" }

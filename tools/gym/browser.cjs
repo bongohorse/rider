@@ -99,14 +99,14 @@ async function main() {
             await page.waitForFunction(()=>window.riderFeedback?.status==='Copied feedback [F]');
             await page.keyboard.up('f');
             const copied=await page.evaluate(()=>navigator.clipboard.readText());
-            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','m/s','km/h','ground_lean_torque','lean_rate_max','Wheel contact:','Suspension:','FPS:','physics step','Tuning:'])if(!copied.includes(field))throw Error('Missing feedback field: '+field);
+            for(const field of ['Commit: '+expected,'Preset: A','Station: straight','Speed:','m/s','km/h','ground_lean_torque','lean_rate_max','Wheel contact:','Suspension:','FPS:','physics step','Tuning:'])if(!copied.includes(field))throw Error('Missing feedback field: '+field);
             fs.writeFileSync(path.join(root,'copied-feedback.md'),copied);
             await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
             await page.keyboard.down('f');
             await page.waitForFunction(()=>window.riderFeedback?.visible===true);
             await page.keyboard.up('f');
             const fallback=await page.locator('#rider-feedback-text').inputValue();
-            for(const field of ['Commit: '+expected,'Preset: A','Station: flat-gym','Speed:','Tuning:'])if(!fallback.includes(field))throw Error('Incomplete denied-copy fallback');
+            for(const field of ['Commit: '+expected,'Preset: A','Station: straight','Speed:','Tuning:'])if(!fallback.includes(field))throw Error('Incomplete denied-copy fallback');
             feedbackChecked=true;
           }
           if(data.name==='graph_spike')await page.screenshot({path:path.join(root,'suspension-spike.png')});

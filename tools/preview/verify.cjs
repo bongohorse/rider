@@ -103,11 +103,6 @@ async function main(){
       await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
       await page.screenshot({path:path.join(out,name+'-compact-hud.png')});
       const before=await page.evaluate(()=>({preset:window.riderTelemetry.preset,resets:window.riderTelemetry.reset_count,seq:window.riderTelemetry.sequence}));
-      for(const key of ['1','2','3','4','5','6','7','8','9']){
-        const seq=await page.evaluate(()=>window.riderTelemetry.sequence);
-        await page.keyboard.down(key);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);await page.keyboard.up(key);
-      }
-      if(await page.evaluate(()=>window.riderTelemetry.preset)!==before.preset||await page.evaluate(()=>window.riderTelemetry.reset_count)!==before.resets)throw Error('Station keys changed preset');
       for(const key of ['b','c','a']){
         await page.keyboard.down('p');await page.waitForFunction(k=>window.riderTelemetry.preset===k,key);await page.keyboard.up('p');
         const seq=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);

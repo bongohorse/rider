@@ -1,10 +1,10 @@
 # Rider status
 
-Updated 2026-10-16. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
+Updated 2026-10-17. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
 
 ## Current work
 
-M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is not authorized and has not started.
+M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. Started #30 (A15): validated station data, straight markers, speed start, retry and serialized proxy switching. Implementation checks are in progress; no M4 drive-test acceptance claimed.
 
 | M3 issue | Completion evidence |
 | --- | --- |
@@ -17,6 +17,10 @@ M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: 
 Accepted implementation: `6df34ecf4c0f79f7003bce96670cf6aec5a05125`, public build `38962932203-1`. [Final CI and public runtime](https://github.com/bongohorse/rider/actions/runs/38962932203) covers twelve touch and twelve tilt cases, all eleven slider endpoint pairs at desktop/portrait/20:9/896×400, fullscreen driving and A5–A12 regressions. Automated evidence and human acceptance remain separate.
 
 Closure exception (owner: Claudio): his explicit instruction to close M3 after successful browser/phone testing is accepted as a qualitative sign-off without the originally requested full Chrome version, locked 60/144-Hz captures, measured phone DPI cost, numerical physics budget or measured interpolation decision. Those measurements remain NOT RUN / not supplied, not PASS. Risk: device performance margins remain unquantified. Retain the initial 60 FPS / 16.666667 ms frame target, no invented physics limit and the current presentation without adding interpolation. Follow up with the reusable mobile capture procedure if pacing problems appear; sustained performance acceptance remains Phase E. Detailed rotation/lifecycle and layout-comparison observations were not supplied. This acceptance does not imply M2 audio listening or APK installation.
+
+A15 is implemented in [PR #76](https://github.com/bongohorse/rider/pull/76). Technical baseline at `0354566` / [CI 38986524075 attempt 2](https://github.com/bongohorse/rider/actions/runs/38986524075): required PASS after retrying an npm ECONNRESET in the release job. Station suite PASS: first-step speed 8.000637 m/s and retry 8.001246 m/s (target 8 ±0.2), wheel spin -36.363636 rad/s, Retry without reload, A→B→A with held-input release and hull loading, invalid schema/URL fallback, straight measurements/feedback. All retained HTML5/native/Bridge/Android regressions PASS. Release desktop/portrait/landscape/896×400 screenshots reviewed; thirteen synthetic touch cases (including station switching) and twelve injected tilt cases PASS. Ordinary sprites render terrain/ticks in release; labels are below the road.
+
+Final A15 follow-up: freeze the displayed braking distance at the first speed below 0.1 m/s before reversing. The new regression holds the brake through reverse and checks that distance stays fixed. Final current-head required remains pending before merge. M4 human drive-test acceptance is not claimed. Next: #31 (ramp ladder), including neutral downhill motor-braking observations.
 
 The completed M2 implementation evidence remains below.
 
@@ -39,14 +43,14 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 **Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #74 for the final HUD/current M3 main/deployment evidence; PR #73 records the coasting fix.
 
-M3 drive test is accepted. [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md) remains a reusable diagnostic procedure; [PLATFORM_MATRIX.md](docs/PLATFORM_MATRIX.md) distinguishes Claudio's qualitative acceptance from unmeasured performance. Stop here and await explicit M4 approval.
+M3 drive test is accepted. [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md) remains a reusable diagnostic procedure; [PLATFORM_MATRIX.md](docs/PLATFORM_MATRIX.md) distinguishes Claudio's qualitative acceptance from unmeasured performance. M4 authorized on 2026-10-17. Work through its eleven assigned issues one PR at a time, starting with #30. At the end, stop for Claudio’s browser/phone drive test; M5 is not authorized.
 
 ## M3 checkpoint
 
 - Keep the single fixed owner, reset/preset paths and unit adapter. Touch and tilt remain input sources rather than simulation loops.
 - Check the live milestone assignment list at closure: the original audit missed #68 and #69.
 - Full-window panel roots, GUI-mapped picking and engine input/release acknowledgements caught gaps that static boot checks missed. Preserve these regression checks.
-- Claudio accepted the browser/phone adjustments and tilt. Keep optional tilt and the current controls; no additional tuning was requested. M4 remains stopped.
+- Claudio accepted the browser/phone adjustments and tilt. Keep optional tilt and the current controls; no additional tuning was requested. M4 approval subsequently granted on 2026-10-17; keep the M3 acceptance limits above.
 
 ## M2 checkpoint: what worked / what changes next
 

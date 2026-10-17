@@ -1,3 +1,4 @@
+local stations=require "main.gym.stations"
 local mobile=require "main.gym.mobile"
 local history=require "main.gym.history"
 local audio=require "main.gym.audio"
@@ -9,7 +10,6 @@ local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
-local bounds = {min_x=-3900,max_x=7900,min_y=-500}
 local function request_reset(self,reason)
     if self.vehicle and self.vehicle.ready and not self.pending_reset then
         self.pending_reset = {generation=self.generation,reason=reason,requested=socket.gettime()}
@@ -28,9 +28,13 @@ local function reset(self)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
+    stations.restart(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
-    assert(#shapes==1 and shapes[1].is_chain_segment, "Retry changed terrain chain")
+    assert(#shapes==#self.segments+#(self.station.hulls or {}), "Retry changed station topology")
+    for _,shape in ipairs(self.segments) do
+        assert(b2d.shape.is_valid(shape.shape_id) and b2d.shape.are_sensor_events_enabled(shape.shape_id),"Retry lost chain/sensor handle")
+    end
     go.set_position(vmath.vector3(vehicle.config.spawn_x,feel.values.camera_height,500),"/camera")
     self.camera_zoom=feel.values.camera_zoom
     go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
@@ -63,23 +67,15 @@ end
 local function setup(self)
     self.terrain = b2d.get_body("/terrain#body")
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
-    -- A collision resource must contain a shape in this engine. Replace its
-    -- temporary seed with a script-created chain in this safe update window.
-    b2d.body.destroy_shape(self.terrain, 1)
-    assert(b2d.body.is_valid(self.terrain), "Seed removal invalidated terrain body")
-    self.chain, self.segments = b2d.body.create_chain(self.terrain, {
-        vertices = {vmath.vector3(8192, 0, 0), vmath.vector3(-4096, 0, 0)},
-        prev_vertex = vmath.vector3(8448, 0, 0), next_vertex = vmath.vector3(-4352, 0, 0),
-        friction = 0.8, restitution = 0, enable_sensor_events = true, filter = {category_bits = 1, mask_bits = 1}
-    })
-    for _,shape in ipairs(self.segments) do
-        assert(b2d.shape.are_sensor_events_enabled(shape.shape_id),"Terrain must participate in head sensor overlaps")
+    if not self.station then
+        msg.post("main:/loader#ui","station_error",{note=self.station_note or "Invalid station"})
+        self.ready=true;return
     end
-    local shapes = b2d.body.get_shapes(self.terrain)
-    assert(#shapes == 1 and shapes[1].is_chain_segment, "Terrain must contain only the chain")
-    for x = -4096 + 128, 8192 - 128, 256 do
-        factory.create("#checker", vmath.vector3(x, 16, -1))
-    end
+    stations.configure(self.station)
+    local chains
+    chains,self.segments=stations.build(self.terrain,self.station)
+    self.chain=chains[1]
+    stations.decorate(self.station)
     if self.testcase ~= "a1" then self.vehicle = vehicle.spawn() end
     self.ready = true
     msg.post("main:/loader#script", "gym_ready")
@@ -87,6 +83,7 @@ local function setup(self)
     if self.scenario then self.scenario.setup(self) end
 end
 function init(self)
+    self.station,self.station_note=stations.initial()
     mobile.init()
     self.mobile={}
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
@@ -112,6 +109,7 @@ function init(self)
     self.metrics = telemetry.new()
     self.held = {}
     self.generation, self.reset_count, self.bounds_count = 1,0,0
+    self.session_generation=1
     self.reset_ms, self.latency_ms = {},0
     self.drive_tick = 0
     self.max_angle = 0
@@ -121,13 +119,16 @@ function init(self)
 end
 function update(self, dt)
     if not self.ready then setup(self); return end
+    if not self.station then return end
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
     if self.mobile.retry then request_reset(self,"manual") end
+    if self.mobile.station then msg.post("main:/loader#script","select_station",{id=self.mobile.station,preset=self.preset}) end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
+        stations.restart(self)
         self.target = self.vehicle.ids.chassis
         emit(self,"vehicle_ready",{bodies=3,joints=2})
         show_preset(self)
@@ -148,6 +149,7 @@ function update(self, dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
+            stations.enrich(self,sample)
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count
@@ -182,6 +184,12 @@ function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
     if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
     if self.ui_captured then return end
+    for i,id in ipairs(stations.ids) do
+        if action_id==hash("station_"..i) then
+            if action.pressed then msg.post("main:/loader#script","select_station",{id=id,preset=self.preset}) end
+            return
+        end
+    end
     if action_id==hash("preset_cycle") then
         if action.pressed then self.pending_preset=({a="b",b="c",c="a"})[self.preset] end
         return
@@ -204,7 +212,7 @@ function fixed_update(self, dt)
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
         if self.scenario then self.scenario.check_pose(self,state) end
-        if state.x<bounds.min_x or state.x>bounds.max_x or state.y<bounds.min_y then request_reset(self,"bounds") end
+        if stations.outside(self.station,state) then request_reset(self,"bounds") end
         if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
         else self.head_contact=rider.contact(self.vehicle) end
         if self.head_contact then
@@ -228,6 +236,7 @@ function fixed_update(self, dt)
         end
         self.last_command = command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
+        stations.observe(self,vehicle.state(self.vehicle))
         history.push(self.history,telemetry.sample(self.vehicle),dt)
     end
     if self.scenario then self.scenario.fixed(self,dt) end
@@ -240,7 +249,11 @@ function final(self)
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
 end
 function on_message(self,id,data,sender)
-    if id==hash("world_load_count") then self.world_loads=data.count
+    if id==hash("configure_station") and not self.ready then
+        self.station,self.station_note=stations.load(data.id,data.speed)
+        self.preset=feel.preset(data.preset or "a")
+        self.session_generation=data.generation or 1
+    elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)

@@ -69,6 +69,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Build and run HTML5 physics
         run: python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5
+      - name: Verify station speed start, retry, switching and invalid data
+        run: python tools/gym/smoke.py --output artifacts/g1/stations --case a15
       - name: Build and run current Gym smoke
         run: python tools/gym/smoke.py --output artifacts/g1/gym --case a3
       - name: Verify reverse and airborne lean through normal commands

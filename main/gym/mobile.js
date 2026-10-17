@@ -9,6 +9,7 @@
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
+  api.cancel=()=>{api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}};
   api.clear=(preserveTilt=false)=>{
     if(!preserveTilt)window.riderTilt?.pause("Input cleared — calibrate to resume");
     pointers.clear();
@@ -35,7 +36,7 @@
     const data=window.riderTelemetry;
     if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
-      hud.textContent='';
+      hud.textContent=`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
     if(enabled){
       const tilt=window.riderTilt;
@@ -107,6 +108,10 @@
     b.addEventListener('contextmenu',e=>e.preventDefault());parent.append(b);return b;
   }
   button('Retry',toolbar,()=>{pending.retry=true;});
+  button('Next station',toolbar,()=>{
+    const ids=api.stations||['straight'];const index=ids.indexOf(window.riderTelemetry?.station);
+    pending.station=ids[(index+1)%ids.length];
+  });
   button('Layout A · mirror',toolbar,b=>{
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
