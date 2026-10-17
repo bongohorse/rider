@@ -25,7 +25,9 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
         self.assertIn("sudo chown -R root:root", script)
         self.assertIn("sudo chmod -R a-w", script)
         self.assertIn('sudo -u "$review_user" -H test -w', script)
-        self.assertIn('sudo -u "$review_user" -H test -r "$owner_gh"', script)
+        self.assertIn('sudo -u "$review_user" -H test -x "$HOME"', script)
+        self.assertIn("for secret in", script)
+        self.assertIn('sudo -u "$review_user" -H test -r "$secret"', script)
 
 if __name__ == "__main__":
     unittest.main()
