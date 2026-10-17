@@ -99,7 +99,7 @@ function M.restart(self)
     M.start(self.vehicle,self.station)
     self.start_probe=2
     self.station_top_speed,self.station_brake_distance=0,0
-    self.station_brake_x=nil
+    self.station_brake_x,self.station_brake_stopped=nil,false
 end
 function M.observe(self,state)
     if self.start_probe then
@@ -112,8 +112,14 @@ function M.observe(self,state)
     end
     self.station_top_speed=math.max(self.station_top_speed or 0,math.abs(feel.metres(state.vx)))
     if self.last_command and self.last_command.brake_reverse>0 then
-        self.station_brake_x=self.station_brake_x or state.x
-        self.station_brake_distance=math.abs(feel.metres(state.x-self.station_brake_x))
+        if not self.station_brake_x then
+            self.station_brake_x,self.station_brake_stopped=state.x,false
+            self.station_brake_distance=0
+        end
+        if not self.station_brake_stopped then
+            self.station_brake_distance=math.abs(feel.metres(state.x-self.station_brake_x))
+            self.station_brake_stopped=math.abs(feel.metres(state.vx))<0.1
+        end
     else self.station_brake_x=nil end
 end
 function M.enrich(self,sample)
@@ -129,5 +135,6 @@ function M.enrich(self,sample)
     sample.station_top_speed=self.station_top_speed or 0
     sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
     sample.station_brake_distance=self.station_brake_distance or 0
+    sample.station_brake_stopped=self.station_brake_stopped or false
 end
 return M

@@ -24,7 +24,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.keyboard.down('3');await page.waitForFunction(()=>window.riderStationError?.includes('schema'));await page.keyboard.up('3');
   assert.equal((await state()).world_loads,3);cases.push('invalid_schema_visible_no_reload');
   await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderTelemetry.station_top_speed>3);await page.keyboard.up('ArrowUp');
-  await page.keyboard.down('ArrowDown');await page.waitForFunction(()=>window.riderTelemetry.station_brake_distance>.1);await page.keyboard.up('ArrowDown');
+  await page.keyboard.down('ArrowDown');await page.waitForFunction(()=>window.riderTelemetry.station_brake_stopped&&window.riderTelemetry.station_brake_distance>.1);
+  const stoppedDistance=(await state()).station_brake_distance;
+  await page.waitForFunction(()=>window.riderTelemetry.velocity_x< -50);
+  assert.equal((await state()).station_brake_distance,stoppedDistance);await page.keyboard.up('ArrowDown');
+  measurements.first_stop_distance_m=stoppedDistance;cases.push('braking_distance_frozen_during_reverse');
   assert((await page.evaluate(()=>window.riderFeedback.text)).includes('Start speed:'));t=await state();measurements.straight={top_speed_mps:t.station_top_speed,brake_distance_m:t.station_brake_distance,distance_m:t.station_distance};cases.push('distance_top_braking_feedback');
   await page.screenshot({path:path.join(out,'stations.png')});
   await page.goto(url+'?station=unknown&speed=NaN');await page.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderTelemetry.station_note.includes('Invalid speed'));
