@@ -1,6 +1,8 @@
 """Static checks for the restricted Gemini review policy and setup entry point."""
 
+import copy
 import json
+import os
 from pathlib import Path
 import shutil
 import stat
@@ -12,6 +14,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SETTINGS = ROOT / "tools/security/gemini-readonly-settings.json"
 SETUP = ROOT / "tools/security/setup_gemini_reviewer.sh"
+sys.path.insert(0, str(ROOT / "tools/security"))
+from reconcile_gemini_settings import reconcile  # noqa: E402
 
 class GeminiReviewerPolicyTests(unittest.TestCase):
     def test_explicit_deny_with_no_permission_bypass(self):
@@ -23,6 +27,49 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
             self.assertIn(item, settings["permissions"]["deny"])
         self.assertEqual(settings["permissions"]["ask"], ["read_url(*)"])
         self.assertNotIn("unsandboxed(*)", settings["permissions"]["deny"])
+
+
+    def test_known_legacy_policy_migrates_once_without_loosening_denies(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous = Path(temp) / "installed.json"
+            desired = json.loads(SETTINGS.read_text(encoding="utf-8"))
+            old = copy.deepcopy(desired)
+            old["permissions"]["deny"].insert(
+                old["permissions"]["deny"].index("command(*)") + 1,
+                "unsandboxed(*)",
+            )
+            previous.write_text(json.dumps(old, indent=2) + "\n", encoding="utf-8")
+            if os.name == "posix":
+                previous.chmod(0o600)
+            expected_uid = os.getuid() if hasattr(os, "getuid") else None
+            self.assertEqual(reconcile(SETTINGS, previous, expected_uid), "MIGRATED")
+            self.assertEqual(json.loads(previous.read_text(encoding="utf-8")), desired)
+            self.assertEqual(reconcile(SETTINGS, previous, expected_uid), "UNCHANGED")
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(previous.stat().st_mode), 0o600)
+
+    def test_unrecognized_custom_config_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as temp:
+            current = Path(temp) / "installed.json"
+            custom = json.loads(SETTINGS.read_text(encoding="utf-8"))
+            custom["permissions"]["allow"].append("command(git)")
+            original = json.dumps(custom)
+            current.write_text(original, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "refusing overwrite"):
+                reconcile(SETTINGS, current)
+            self.assertEqual(current.read_text(encoding="utf-8"), original)
+
+    def test_symlinked_settings_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            real = Path(temp) / "settings.json"
+            real.write_text(SETTINGS.read_text(encoding="utf-8"), encoding="utf-8")
+            symlink = Path(temp) / "linked-settings.json"
+            try:
+                symlink.symlink_to(real)
+            except (OSError, NotImplementedError):
+                self.skipTest("OS disallows symlinks without privilege")
+            with self.assertRaisesRegex(ValueError, "not a regular file"):
+                reconcile(SETTINGS, symlink)
 
     def test_bash_syntax_on_linux(self):
         bash = shutil.which("bash")
