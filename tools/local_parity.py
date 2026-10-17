@@ -41,7 +41,9 @@ def collect():
     node = node_result.removeprefix("v") if node_result else None
     js = """const p=require('playwright/package.json');
 const {chromium}=require('playwright');
-const b=require('playwright-core/browsers.json').browsers.find(x=>x.name==='chromium');
+const path=require('node:path');
+const coreRoot=path.dirname(require.resolve('playwright-core/package.json'));
+const b=require(path.join(coreRoot,'browsers.json')).browsers.find(x=>x.name==='chromium');
 console.log(JSON.stringify({version:p.version,revision:b.revision,executable:chromium.executablePath()}));"""
     raw = read_command("node", "-e", js)
     try:
@@ -56,12 +58,13 @@ console.log(JSON.stringify({version:p.version,revision:b.revision,executable:chr
         "playwright": compare(expected_pw, browser.get("version")),
         "chromium_installed": compare(True, installed),
     }
+    dirty = read_command("git", "status", "--porcelain")
     return {
         "schema_version": 1,
         "scope": "R81_LOCAL_CI_VERSION_INVENTORY",
         "status": "MATCH" if all(v["exact_match"] for v in checks.values()) else "DEVIATION",
         "source_sha": read_command("git", "rev-parse", "HEAD"),
-        "working_tree_dirty": bool(read_command("git", "status", "--porcelain")),
+        "working_tree_dirty": bool(dirty) if dirty is not None else None,
         "python_executable": sys.executable,
         "node_executable": read_command("which", "node"),
         "checks": checks,
