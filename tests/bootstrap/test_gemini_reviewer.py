@@ -42,7 +42,7 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
             destination.mkdir(mode=0o755)
             (source / "AGENTS.md").write_text("test", encoding="utf-8")
 
-            subprocess.run(["cp", "-a", str(source / "."), str(destination)], check=True)
+            subprocess.run(["cp", "-a", str(source) + "/.", str(destination)], check=True)
             subprocess.run(["chmod", "-R", "a-w", str(destination)], check=True)
             self.assertFalse(stat.S_IMODE(destination.stat().st_mode) & stat.S_IXOTH)
 
