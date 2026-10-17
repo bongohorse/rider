@@ -1,0 +1,7 @@
+size { x: 160.0 y: 24.0 }
+color { x: 0.75 y: 0.95 z: 0.85 w: 1.0 }
+text: "0 m"
+font: "/builtins/fonts/default.font"
+material: "/builtins/fonts/label-df.material"
+blend_mode: BLEND_MODE_ALPHA
+pivot: PIVOT_CENTER

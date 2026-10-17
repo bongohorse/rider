@@ -20,10 +20,15 @@ run_id=str(uuid.uuid4())
 settings=out/'gym.settings'
 settings.write_text(f'[project]\ndependencies =\n[rider]\nsource_sha = {sha}\nrun_id = {run_id}\ngym_test = {args.case}\n')
 build('wasm-web',out,settings,variant='debug')
-process=subprocess.Popen(['node',str(ROOT/'tools/gym/browser.cjs'),str(out),sha,run_id,args.case],cwd=ROOT,start_new_session=True)
+runner='stations.cjs' if args.case=='a15' else 'browser.cjs'
+process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case],cwd=ROOT,start_new_session=True)
 try: code=process.wait(timeout=90)
 finally: stop(process)
 if code:raise SystemExit(code)
+if args.case=='a15':
+    report=json.loads((out/'stations-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and len(report['cases'])==7
+    print(json.dumps(report));raise SystemExit(0)
 report=json.loads((out/'gym-result.json').read_text())
 assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
 cases=report['cases']

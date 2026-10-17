@@ -1,23 +1,44 @@
+-- Proxy is the only world-switch owner; messages serialize confirmed unload/load.
+local stations=require "main.gym.stations"
 function init(self)
-    msg.post(".", "acquire_input_focus")
-    self.world_loads = 0
-    self.loading = true
-    self.deadline = 0
-    msg.post("#world", "load")
+    msg.post(".","acquire_input_focus")
+    self.world_loads,self.generation=0,1
+    self.loading,self.deadline=true,0
+    local d=stations.initial();self.station=d and d.id or "straight"
+    self.speed=d and d.start_speed or 0
+    msg.post("#world","load")
 end
-function update(self, dt)
+function update(self,dt)
     if self.loading then
-        self.deadline = self.deadline + dt
-        assert(self.deadline < 15, "Gym initialization timed out")
+        self.deadline=self.deadline+dt
+        if self.deadline>15 and not self.failed then
+            self.failed=true
+            msg.post("#ui","station_error",{note="Station loading timed out. Reload to retry."})
+            msg.post("#world","disable")
+        end
     end
 end
-function on_message(self, id, data, sender)
-    if id == hash("proxy_loaded") then
-        self.world_loads = self.world_loads+1
-        msg.post(sender, "init")
-        msg.post(sender, "enable")
-    elseif id == hash("gym_ready") then
-        self.loading = false
-        msg.post(sender,"world_load_count",{count=self.world_loads})
+function on_message(self,id,data,sender)
+    if id==hash("select_station") and not self.loading then
+        local d,note=stations.load(data.id,data.speed)
+        if not d then msg.post("#ui","station_error",{note=note});return end
+        self.station,self.speed=d.id,d.start_speed
+        self.preset=data.preset or self.preset or "a"
+        self.generation=self.generation+1
+        self.loading,self.deadline=true,0
+        msg.post("#ui","cancel_drag")
+        msg.post("#world","disable")
+        msg.post("#world","final")
+        msg.post("#world","unload")
+    elseif id==hash("proxy_unloaded") then
+        msg.post("#world","load")
+    elseif id==hash("proxy_loaded") then
+        self.world_loads=self.world_loads+1
+        msg.post(sender,"init")
+        if self.world_loads>1 then msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset or "a"}) end
+        msg.post(sender,"enable")
+    elseif id==hash("gym_ready") then
+        self.loading=false
+        msg.post(sender,"world_load_count",{count=self.world_loads,generation=self.generation})
     end
 end

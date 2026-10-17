@@ -1,3 +1,4 @@
+local stations=require "main.gym.stations"
 local mobile=require "main.gym.mobile"
 local layout=require "main.gym.layout"
 local feel=require "main.gym.feel"
@@ -32,6 +33,13 @@ function init(self)
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
     hud_textures()
+    self.station_next=layout.box(vmath.vector3(392,432,0),vmath.vector3(54,24,0),"left_top")
+    gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
+    local next_label=layout.text(vmath.vector3(392,432,0),"Next","left_top");gui.set_font(next_label,"default");gui.set_scale(next_label,vmath.vector3(0.5,0.5,1))
+    self.station=layout.text(vmath.vector3(12,432,0),"Straight | start 0 m/s [1-9]","left_top")
+    gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
+    self.station_result=layout.text(vmath.vector3(12,414,0),"","left_top")
+    gui.set_font(self.station_result,"default");gui.set_pivot(self.station_result,gui.PIVOT_W);gui.set_scale(self.station_result,vmath.vector3(0.48,0.48,1))
     self.tuning_open=false
     self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy")
     gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
@@ -117,7 +125,10 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
-    if id==hash("hud_probe") then
+    if id==hash("station_error") then
+        if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
+        gui.set_text(self.station,data.note);gui.set_color(self.station,vmath.vector4(1,0.3,0.2,1))
+    elseif id==hash("hud_probe") then
         assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
         -- The probe specifies integer FPS via its inverse interval; remove inversion rounding noise.
         local fps=math.floor(1000/data.frame_ms+0.5)
@@ -142,6 +153,8 @@ function on_message(self,id,data,sender)
     elseif id==hash("measurements") then
         self.owner=sender
         self.latest=data
+        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,data.station_note or ""))
+        gui.set_text(self.station_result,string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
         gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
@@ -247,6 +260,11 @@ function update(self,dt)
     end
 end
 function on_input(self,id,action)
+    if id==hash("ui_pointer") and action.pressed and self.latest and gui.pick_node(self.station_next,action.x,action.y) then
+        local index=1;for i,key in ipairs(stations.ids) do if key==self.latest.station then index=i end end
+        msg.post("main:/loader#script","select_station",{id=stations.ids[index%#stations.ids+1],preset=self.preset or "a"})
+        return true
+    end
     if id==hash("feedback") and action.pressed then
         if html5 then if self.owner then msg.post(self.owner,"clear_input") end else copy_feedback(self) end
         return true

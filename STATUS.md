@@ -1,10 +1,10 @@
 # Rider status
 
-Updated 2026-10-16. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
+Updated 2026-10-17. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
 
 ## Current work
 
-M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is not authorized and has not started.
+M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. Started #30 (A15): validated station data, straight markers, speed start, retry and serialized proxy switching. Implementation checks are in progress; no M4 drive-test acceptance claimed.
 
 | M3 issue | Completion evidence |
 | --- | --- |
@@ -39,14 +39,14 @@ Before M3, Claudio authorized closing docs-only [#59](https://github.com/bongoho
 
 **Preview:** https://bongohorse.github.io/rider/ . [build.json](https://bongohorse.github.io/rider/build.json) identifies the exact deployed SHA and run/attempt. Main preview deployment is permanently authorized and waits for green `required`; use PR #74 for the final HUD/current M3 main/deployment evidence; PR #73 records the coasting fix.
 
-M3 drive test is accepted. [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md) remains a reusable diagnostic procedure; [PLATFORM_MATRIX.md](docs/PLATFORM_MATRIX.md) distinguishes Claudio's qualitative acceptance from unmeasured performance. Stop here and await explicit M4 approval.
+M3 drive test is accepted. [MOBILE_TRIAL.md](docs/MOBILE_TRIAL.md) remains a reusable diagnostic procedure; [PLATFORM_MATRIX.md](docs/PLATFORM_MATRIX.md) distinguishes Claudio's qualitative acceptance from unmeasured performance. M4 authorized on 2026-10-17. Work through its eleven assigned issues one PR at a time, starting with #30. At the end, stop for Claudio’s browser/phone drive test; M5 is not authorized.
 
 ## M3 checkpoint
 
 - Keep the single fixed owner, reset/preset paths and unit adapter. Touch and tilt remain input sources rather than simulation loops.
 - Check the live milestone assignment list at closure: the original audit missed #68 and #69.
 - Full-window panel roots, GUI-mapped picking and engine input/release acknowledgements caught gaps that static boot checks missed. Preserve these regression checks.
-- Claudio accepted the browser/phone adjustments and tilt. Keep optional tilt and the current controls; no additional tuning was requested. M4 remains stopped.
+- Claudio accepted the browser/phone adjustments and tilt. Keep optional tilt and the current controls; no additional tuning was requested. M4 approval subsequently granted on 2026-10-17; keep the M3 acceptance limits above.
 
 ## M2 checkpoint: what worked / what changes next
 
