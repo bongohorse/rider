@@ -18,7 +18,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   t=await state();assert.equal(t.start_speed,8);assert(Math.abs(t.first_tick_speed-8)<=.2);assert.equal(t.world_loads,1);cases.push('moving_retry_without_reload');
   async function select(key,id,loads){await page.keyboard.down(key);await page.waitForFunction(({id,loads})=>window.riderTelemetry.station===id&&window.riderTelemetry.world_loads===loads,{id,loads});await page.keyboard.up(key);await page.waitForFunction(()=>window.riderTelemetry.sequence>2);}
   await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
-  await select('2','straight-test',2);await page.keyboard.up('ArrowUp');t=await state();assert.equal(t.command.throttle,0);assert.equal(t.start_speed,5);assert(Math.abs(t.first_tick_speed-5)<=.2);cases.push('switch_clears_held_input_and_hulls_load');
+  await select('2','straight-test',2);await page.keyboard.up('ArrowUp');t=await state();assert.equal(t.command.throttle,0);assert.equal(t.start_speed,5);assert.equal(t.terrain_shapes,2);assert.equal(t.session_generation,2);assert(Math.abs(t.first_tick_speed-5)<=.2);cases.push('switch_clears_held_input_and_hulls_load');
   await select('1','straight',3);t=await state();assert.equal(t.start_speed,0);assert.equal(t.reset_count,0);cases.push('A_B_A_fresh_world');
   // Invalid files stay in the current world and produce a GUI diagnostic.
   await page.keyboard.down('3');await page.waitForFunction(()=>window.riderStationError?.includes('schema'));await page.keyboard.up('3');

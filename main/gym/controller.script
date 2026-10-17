@@ -113,6 +113,7 @@ function init(self)
     self.metrics = telemetry.new()
     self.held = {}
     self.generation, self.reset_count, self.bounds_count = 1,0,0
+    self.session_generation=1
     self.reset_ms, self.latency_ms = {},0
     self.drive_tick = 0
     self.max_angle = 0
@@ -128,6 +129,7 @@ function update(self, dt)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
     if self.mobile.retry then request_reset(self,"manual") end
+    if self.mobile.station then msg.post("main:/loader#script","select_station",{id=self.mobile.station,preset=self.preset}) end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
@@ -161,6 +163,8 @@ function update(self, dt)
             sample.first_tick_speed=self.first_tick_speed or 0
             sample.first_tick_omega=self.first_tick_omega or 0
             sample.world_loads=self.world_loads or 1
+            sample.session_generation=self.session_generation
+            sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
             sample.station_top_speed=self.station_top_speed or 0
             sample.station_distance=feel.metres(vehicle.state(self.vehicle).x)-self.station.spawn[1]
             sample.station_brake_distance=self.station_brake_distance or 0
@@ -278,6 +282,7 @@ function on_message(self,id,data,sender)
     if id==hash("configure_station") and not self.ready then
         self.station,self.station_note=stations.load(data.id,data.speed)
         self.preset=feel.preset(data.preset or "a")
+        self.session_generation=data.generation or 1
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("select_preset") then self.pending_preset=data.key

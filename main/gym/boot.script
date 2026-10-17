@@ -26,6 +26,7 @@ function on_message(self,id,data,sender)
         self.preset=data.preset or self.preset or "a"
         self.generation=self.generation+1
         self.loading,self.deadline=true,0
+        msg.post("#ui","station_loading",{generation=self.generation})
         msg.post("#ui","cancel_drag")
         msg.post("#world","disable")
         msg.post("#world","final")
@@ -35,7 +36,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("proxy_loaded") then
         self.world_loads=self.world_loads+1
         msg.post(sender,"init")
-        if self.world_loads>1 then msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset or "a"}) end
+        if self.world_loads>1 then msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset or "a",generation=self.generation}) end
         msg.post(sender,"enable")
     elseif id==hash("gym_ready") then
         self.loading=false

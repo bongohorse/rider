@@ -125,8 +125,12 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
-    if id==hash("station_error") then
+    if id==hash("station_loading") then
+        self.session_generation=data.generation;self.latest=nil;self.station_error=nil
+        cancel_drag(self);gui.set_text(self.station,"Loading station...")
+    elseif id==hash("station_error") then
         if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
+        self.station_error=data.note
         gui.set_text(self.station,data.note);gui.set_color(self.station,vmath.vector4(1,0.3,0.2,1))
     elseif id==hash("hud_probe") then
         assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
@@ -151,9 +155,10 @@ function on_message(self,id,data,sender)
         self.tuning=data
         controls.sync(self.controls,data)
     elseif id==hash("measurements") then
+        if data.session_generation and data.session_generation<(self.session_generation or 1) then return end
         self.owner=sender
         self.latest=data
-        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,data.station_note or ""))
+        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,self.station_error or data.station_note or ""))
         gui.set_text(self.station_result,string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
