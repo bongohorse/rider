@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 import stat
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -30,6 +31,8 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
         subprocess.run([bash, "-n", str(SETUP)], check=True)
 
     def test_copied_snapshot_directories_are_traversable_but_read_only(self):
+        if not sys.platform.startswith("linux"):
+            self.skipTest("POSIX mode preservation regression is Linux-specific")
         # Reproduces GNU cp -a preserving mktemp's private 0700 directory
         # mode on an already-existing destination. Does not use sudo or
         # change the actual WSL user/snapshot.
