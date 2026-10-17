@@ -1,6 +1,20 @@
 # Rider status
 
-Updated 2026-10-17. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
+Updated 2026-10-18. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
+
+## Native Bridge network acceptance (#81, 2026-10-18 local / 2026-10-17 UTC)
+
+**BLOCKED: LAN isolation and mitigation acceptance.** Checkout inspected clean on main `b6dffc14483269f4a7a73d7da498a587d68e9867`. Owned Xvfb test reused existing debug/release bundles identifying source `296f3ae084d39da2a98b6be6bdeac426c548f602`, Defold 1.14.0 `a81dbb0478e8b73931dc2d671563204f6ac0ef82`, pinned Bridge release 2.5.0; this is not a fresh build of the checkout. Local artifacts: `artifacts/g2/network-acceptance/` (ignored, not CI evidence).
+
+Observed debug PID **100614**: IPv4 **0.0.0.0:34421** engine/Bridge, **0.0.0.0:8002** redirect, **0.0.0.0:43425** log and **0.0.0.0:17815** profiler. Socket inode correlation and matching `ss -ltnp` rows captured; no owned IPv6 TCP LISTEN rows. Wrapper health PASS with matching process ID. TCP self-connect PASS through loopback and the host's private LAN IPv4; `::1` refused. LAN address redacted from committed evidence. This proves wildcard IPv4 binding and local reachability, **not second-device access**. Upstream Bridge registers on the engine-owned web server; neither the wrapper's localhost destination nor the profiler's localhost log URL constrains listener binding.
+
+Release PID **100700** owned no TCP listeners. Repeated release-only with PID **100955**, deleting the old readiness file first: fresh readiness reports debug=false, module absent, expected pinned engine; live process owns no TCP listeners. All three owned processes terminated and were reaped (return -9 via existing stop helper); no process is intentionally left running. Prior bundle run IDs are reused, not represented as fresh build identities.
+
+Read-only host observations: `wslinfo --networking-mode` reports **consomme**, not NAT/mirrored; its routing/isolation semantics have not been established. Windows Domain/Private/Public profiles enabled with default inbound Block; portproxy listing empty. WSL Hyper-V setting enabled, inbound/outbound Block, loopback enabled and host-policy merge enabled. Active rules include LocalSubnet/loopback allow and general/default block entries; their effective precedence/interface applicability is unresolved. Do not infer effective LAN blocking from defaults alone. No firewall, forwarding, networking-mode or pinned dependency changes made. No off-host/public test performed; absence of publicly reachable services is **NOT ESTABLISHED**. Debug tests stopped after the wildcard finding under the requested stop condition.
+
+Local validation on Python 3.14.8: `tools/bootstrap_check.py` PASS; all 35 bootstrap tests and all 6 G2 unit tests PASS; `git diff --check` PASS. No new runtime regression PASS is claimed. PIDs 100614/100700/100955 and all four captured debug listener inodes are absent after cleanup. Pinned HTTP source explicitly binds `DM_UNIVERSAL_BIND_ADDRESS_IPV4`; the inspected creation path has no bind-address parameter. No focused runtime regression was added because remediation is blocked and this PR changes documentation only.
+
+Next: maintainer-coordinated single-port health request from one trusted second LAN device using [the safe procedure](docs/TOOLING.md#native-bridge-network-acceptance-on-wsl-81); investigate mode/rule applicability before selecting any administrator-approved restriction. Prefer upstream-supported loopback binding for all debug listeners; do not patch pinned dependencies or open ports. Bridge runtime regression rerun is blocked by unresolved exposure; existing native smoke PASS remains historical evidence. Codex primary / maintainer-invoked optional Claude preference is now documented; required CI and applicable review gates remain intact. A18 and M4 remain STOPPED.
 
 ## Gemini settings migration follow-up (#81, 2026-10-17)
 
