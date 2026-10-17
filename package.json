@@ -12,6 +12,6 @@
   },
   "devDependencies": {
     "playwright": "1.64.1",
-    "renovate": "44.161.2"
+    "renovate": "44.166.0"
   }
 }
