@@ -170,7 +170,7 @@ git -C ~/rider status --short --branch
 Replace `<source-SHA>` with the exact SHA reported by the script. Never paste tokens, browser login codes or auth file contents into issue logs. Do not launch `agy` as the original `mega` WSL user for Rider reviews: the already-installed maintainer-user `agy` remains outside the new account's CLI policy and retains that user's ordinary filesystem and GitHub permissions. Do not claim technical isolation until **both** agent-tool deny behavior and cross-user filesystem negative checks are observed on the actual WSL host. Linux account separation does not secure Windows user files, mounted Windows drives or any external services independently; do not expose those paths or grant the reviewer sudo/network-write capabilities. To review newer code, generate a new SHA snapshot explicitly; do not let Gemini modify the tracked working tree.
 
 
-## Native Bridge network acceptance on WSL (#81, security follow-up #112)
+## Native Bridge network acceptance on WSL (#81)
 
 [Bridge contract](contracts/automation/bridge.md) explains the server/client distinction; [STATUS.md](../STATUS.md) records current host observations; [#112](https://github.com/bongohorse/rider/issues/112) owns residual wildcard-listener hardening. Do not infer loopback binding from a client URL or Remotery's printed URL. WSL networking mode must be observed with `wslinfo --networking-mode`, not inferred from the presence of WSL2 or a configuration template. Record unexpected modes verbatim.
 
