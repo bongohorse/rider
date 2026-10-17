@@ -1,13 +1,13 @@
 {
   "window.title": "Rider — ${activeEditorShort}${separator}${rootName}",
   "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#F2C94C",
-    "titleBar.activeForeground": "#24200E",
-    "titleBar.inactiveBackground": "#9B823C",
-    "titleBar.inactiveForeground": "#211B09",
-    "statusBar.background": "#F2C94C",
-    "statusBar.foreground": "#24200E",
-    "statusBar.noFolderBackground": "#F2C94C"
+    "titleBar.activeBackground": "#263C45",
+    "titleBar.activeForeground": "#E8F2F3",
+    "titleBar.inactiveBackground": "#1D2B31",
+    "titleBar.inactiveForeground": "#91A5AA",
+    "statusBar.background": "#2D5058",
+    "statusBar.foreground": "#E8F2F3",
+    "statusBar.noFolderBackground": "#2D5058"
   },
   "chat.disableAIFeatures": true,
   "chat.commandCenter.enabled": false,
