@@ -2,7 +2,7 @@
 
 > **Status: proposal for independent technical review (2026-10-17). Not proof of local installation or acceptance.** This document describes the developer-environment change only; it is not a new gameplay plan, toolchain approval, or instruction to start A18. See [STATUS.md](../STATUS.md) for current project status and stop gates.
 
-**Tracking:** [Review issue #81](https://github.com/bongohorse/rider/issues/81) · [VS Code profile PR #80](https://github.com/bongohorse/rider/pull/80) (separate proposed implementation; verify current merge status before reviewing).
+**Tracking:** [Review issue #81](https://github.com/bongohorse/rider/issues/81) · [VS Code profile PR #80](https://github.com/bongohorse/rider/pull/80) (merged on 2026-10-17; no Windows/WSL host acceptance implied).
 
 ## 1. Goal and hard constraints
 
@@ -17,7 +17,7 @@ The Windows VS Code **Rider** profile should be one-click/reopenable like Goblin
 | Component | Verified repository fact | Proposed target / still unverified |
 | --- | --- | --- |
 | Rider source | [GitHub repository](https://github.com/bongohorse/rider); [AGENTS.md](../AGENTS.md), [docs index](README.md) and [tooling](TOOLING.md) exist | Clone at `~/rider` **inside the Ubuntu WSL filesystem**; local install NOT RUN |
-| VS Code | Goblin already uses `.vscode/settings.json` and task files; Rider currently lacks a merged setup | Import the proposed Rider profile from [PR #80](https://github.com/bongohorse/rider/pull/80); Windows/WSL import and real yellow window NOT RUN |
+| VS Code | Rider profile, `.vscode/settings.json`, and launcher are merged via [PR #80](https://github.com/bongohorse/rider/pull/80) | Import the merged profile on Windows; profile persistence, WSL extension placement and real yellow window NOT RUN |
 | Profile PR | [#80](https://github.com/bongohorse/rider/pull/80) adds `profiles/Rider.code-profile`, `.vscode/settings.json`, `tools/open-rider.ps1`, and a tooling guide extension | PR CI run [39000249857](https://github.com/bongohorse/rider/actions/runs/39000249857) succeeded; this does **not** test the profile in Windows VS Code or WSL |
 | OS | CI uses Ubuntu 26.04 for its main HTML5, preview, Linux native, Bridge and Android-build jobs; bootstrap also checks Ubuntu 24.04 and Windows | **Ubuntu 26.04 LTS on WSL2**, if the distro name is available locally. Do not assert it was installed |
 | Agents | Repository has common [AGENTS.md](../AGENTS.md), no verified `CLAUDE.md` on main | Codex CLI + Claude Code CLI; short Claude entry point referencing the same rules; installations/authentication NOT RUN |
@@ -65,9 +65,11 @@ Inspect the **diff**, not just the PR description. In particular:
 - The WSL extension (`ms-vscode-remote.remote-wsl`) remains available; no AI agent extension is required.
 - The repo-only yellow chrome provides clear visual distinction and readable focused/unfocused text; does not recolor Goblin or MGD.
 - Built-in Copilot Chat / secondary sidebar is **really hidden** on startup and reopened workspaces, without disabling terminal CLIs, other GitHub features or global settings.
-- Confirm that `code --new-window --profile Rider .` works **from inside WSL**; confirm `tools/open-rider.ps1` uses the actual distro name, correct `~/rider` path and appropriate Windows/WSL VS Code behavior.
+- Confirm that `code --new-window --profile Rider .` works **from inside WSL**; confirm `tools/open-rider.ps1` uses the actual installed distro name (not the hard-coded default), correct `~/rider` path and appropriate Windows/WSL VS Code behavior. The PowerShell script lives in the Linux checkout; it is not automatically available as a Windows-relative `tools/open-rider.ps1` path.
 - Prefer **minimal** workspace config; personal theme/editor keybindings belong to the profile/user. `.vscode/tasks.json`, if added later, should expose only bootstrap, physics, HTML5 release and preview verification.
 - Re-import should not silently overwrite other profiles. Document the one-time import and explicit profile switching.
+
+**Verified upstream caveats (2026-10-17):** The [VS Code CLI contract](https://code.visualstudio.com/docs/configure/command-line) says an unknown `--profile Rider` name **creates an empty profile**. Verify that the Rider profile was *imported* in the Windows **Profiles** UI before launching with that flag; yellow workspace colors alone do not prove import. The [VS Code profiles reference](https://code.visualstudio.com/docs/configure/profiles) says extensions do **not** synchronize between local and WSL remote windows; check the Windows WSL extension and any remote extensions in their respective environments. [Microsoft WSL commands](https://learn.microsoft.com/en-us/windows/wsl/basic-commands) distinguish installed distros (`wsl --list --verbose`) from installable distros (`wsl --list --online`).
 
 **PR #80 CI success is not proof of any of the interactive bullets above.** These remain **NOT RUN** until confirmed on the Windows host.
 
@@ -82,7 +84,7 @@ Inspect the **diff**, not just the PR description. In particular:
 
 ## 7. Minimum local acceptance gates (all currently NOT RUN on user's WSL Rider instance)
 
-1. **Windows/WSL integration:** confirm WSL feature, available Ubuntu 26.04 distro name via `wsl --list --online`, clean clone under `~/rider`, `code .` connected to WSL and fast enough file watch/reload. No mandatory Docker/WSLC.
+1. **Windows/WSL integration:** check available Ubuntu distros using `wsl --list --online`, then identify the *actually installed* distro and its **VERSION 2** using `wsl --list --verbose`; confirm clean clone under `~/rider`, `code .` connected to WSL and acceptable file watch/reload. Do not assume the installed distro is named `Ubuntu-26.04`. No mandatory Docker/WSLC.
 2. **Identity/tools:** `git status --short`; `python --version`, `node --version`, `java -version`, `npx playwright --version`, correct Bob SHA; `bash tools/doctor.sh --json --require-g2` (understand that requiring G2 also checks the matching Bridge wrapper). Capture machine and effective versions.
 3. **Dependencies/network:** `python -m pip install -r requirements-dev.txt` in a virtual environment; `npm ci --ignore-scripts`; `npx playwright install --with-deps chromium`; verify real Defold buildserver path by building, not only DNS.
 4. **Tests:** `bash tools/verify.sh --suite bootstrap` and affected native/HTML5 physics; ensure explicit PASS/FAIL/BLOCKED and complete test inventory.
@@ -91,24 +93,41 @@ Inspect the **diff**, not just the PR description. In particular:
 7. **GitHub workflow:** `gh auth status` and `gh pr checks --watch` work; branch protection remains effective; do not auto-merge without green `required`.
 8. **Boundaries:** document anything NOT RUN (real Android input/device test, visible Windows editor, GUI debugging) separately from synthetic browser touch and headless Linux observations.
 
+### Read-only Windows / WSL host preflight — NOT RUN
+
+From **Windows PowerShell**, before any profile launch, collect:
+
+```powershell
+wsl.exe --status
+wsl.exe --list --online     # downloadable distro names (not installed inventory)
+wsl.exe --list --verbose    # installed name, state, WSL 1 vs 2
+code --version
+```
+
+Open VS Code **Profiles: Switch Profile** and confirm that the imported **Rider** profile is selectable. After confirming import, from Windows PowerShell use `code --list-extensions --profile Rider` to inspect the local profile. From the *selected installed* WSL distro, check `cd ~/rider && git status --short && command -v code && command -v node && command -v python && command -v java`; require a WSL VS Code window and independently inspect extensions shown under **Local** and **WSL**. Record the actual distro, VS Code version and effective tool versions; report missing prerequisites as BLOCKED. None of this has been run on the user's machine.
+
 ### Exact local preview-release verification recipe
 
-Prerequisites: pinned Java/Bob, Python dependencies, Node/npm dependencies and Playwright Chromium are installed. Run at repository root; use a **fresh** output directory per execution because `package.py` deliberately refuses to mix previews:
+Prerequisites: pinned Java/Bob, Python dependencies, Node/npm dependencies and Playwright Chromium are installed. Run at repository root after checking `git status --short`; use a **fresh** output directory per execution because `package.py` deliberately refuses to mix previews:
 
 ```bash
 set -euo pipefail
 SOURCE_SHA="$(git rev-parse HEAD)"
 BUILD_ID="$(date +%s)-1"
-BUNDLE="artifacts/preview/bundle"
+BUNDLE="artifacts/preview/bundle-$BUILD_ID"
 SITE="artifacts/preview/site-$BUILD_ID"
 EVIDENCE="artifacts/preview/verification-$BUILD_ID"
 
+# Also executed by .github/workflows/preview.yml before its release build.
+node --test tests/mobile/tilt.test.cjs
 python tools/project.py build --target html5 --configuration release --fixture gym --output "$BUNDLE"
 python tools/preview/package.py --bundle "$BUNDLE" --output "$SITE" --sha "$SOURCE_SHA" --build-id "$BUILD_ID"
 node tools/preview/verify.cjs "$SITE" "$SOURCE_SHA" "$BUILD_ID" "$EVIDENCE"
 ```
 
-This is the workflow's local equivalent, **not a claimed passing local run**. It may require adaptation if the build output already exists or network/service prerequisites are missing. Do not weaken tests to obtain a green result; report exact failures.
+This reproduces the preview job's tilt unit test followed by its **build → package → verify** sequence, **not a claimed passing local run**. A local checkout's `SOURCE_SHA=HEAD` can differ from GitHub's synthetic **PR merge commit** tested by CI; record both SHA values and do not claim identical source if they differ. The release verifier must produce `result.json` plus `mobile`, `tilt`, `ramps` and `steps` result evidence. Local parity does not include CI artifact upload, Linux native/Bridge, APK checks, deployment, or physical Android input. Report network/toolchain failures as BLOCKED; do not weaken tests to obtain green.
+
+**R0 findings:** See [independent repository audit](https://github.com/bongohorse/rider/issues/81#issuecomment-6234804959). R81-01/02 remain **host-required** (profile identity and installed distro/launcher), R81-03 has a documentation recipe correction above, R81-04/05/06 remain **host-required** (exact pins, Bridge/Android prerequisites and Linux Chromium), and R81-07 is a future profile/workspace drift risk. A different independent agent review is still required; this documentation update is not that review.
 
 ## 8. Suggested implementation sequence — only after review
 
