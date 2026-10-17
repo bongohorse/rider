@@ -95,6 +95,17 @@ class RequiredCheck(unittest.TestCase):
             tampered[name]["result"] = "skipped"
             self.assertNotEqual(run_required(job, tampered).returncode, 0)
 
+    def test_g1_keeps_linux_and_conditionally_selects_windows(self):
+        g1 = yaml.load((ROOT / ".github/workflows/g1.yml").read_text(), Loader=yaml.BaseLoader)
+        native = g1["jobs"]["native"]
+        win = g1["jobs"]["native-windows"]
+        self.assertEqual([item["os"] for item in native["strategy"]["matrix"]["include"]],
+                         ["ubuntu-26.04"])
+        self.assertEqual(win["runs-on"], "windows-2025")
+        self.assertEqual(win["if"],
+                         "${{ !inputs.caller_managed_concurrency || inputs.run_windows_native }}")
+        self.assertIn("html5", g1["jobs"])
+
     def test_nightly_full_and_notification_scoped(self):
         workflow = load_workflow()
         self.assertIn("schedule", workflow["on"])
