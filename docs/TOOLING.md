@@ -62,4 +62,4 @@ The required PR check always runs workflow/schema and CI-regression checks. Mark
 
 Bootstrap pip downloads are cached by requirements; npm uses the lockfile, and Playwright Chromium uses a lockfile-keyed browser cache. The cached actionlint archive is SHA-256 verified before use; Bob hash verification remains mandatory. No compiled game is reused between runs.
 
-[CI link-check negative probe](nonexistent-ci-65-target.md)
+[CI link-check positive probe](README.md)
