@@ -14,6 +14,9 @@ Read [STATUS.md](STATUS.md), the current issue and its affected contract. [Docum
 - Keep [STATUS.md](STATUS.md) as the only current progress/blocker source. Evidence rules and status definitions live in [evidence policy](docs/contracts/evidence.md). Never invent builds, tests, screenshots or device observations.
 - Public HTML5 preview deployment on main merges and manual dispatch is permanently authorized. Store distribution remains a later phase. Android first; no iOS builds before Phase G.
 
+## Local CLI-agent security boundary (#81)
+
+Git worktrees isolate checked-out files and build outputs, **not** the shared WSL user credentials. A read-only reviewer is not authorized to edit files, run arbitrary write commands, push, invoke `gh pr merge`/mutating API calls, modify branch protection or use blanket bypass flags. The currently authenticated broad owner `gh` token is not a least-privilege review credential. Reserve merge decisions for the maintainer/designee; do not claim independent enforcement from two agents running under one GitHub identity. Require an explicit security decision before changing protected-branch review policy. See [local workflow guidance](docs/TOOLING.md#local-version-evidence-and-agent-worktrees).
 ## Technical boundaries
 
 - Keep the pinned toolchain and Renovate without automerge. Use Defold-owned bodies/worlds and a single tick owner; no custom physics extension, second simulation loop or manual stepping. Convert units once at the boundary; preserve handle/reset contracts.
