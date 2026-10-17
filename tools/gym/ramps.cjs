@@ -45,6 +45,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+2,n);await page.keyboard.up('r');
   assert.equal(await page.evaluate(()=>window.riderStationReport.section),'25');
   assert((await page.evaluate(()=>window.riderFeedback.text)).includes('Station result:'));
+  // Authored station defaults are not silently turned into a URL speed override.
+  await page.goto(url+'?station=ramps');
+  await page.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderStationReport?.section==='5');
+  await page.keyboard.down('1');await page.waitForFunction(()=>window.riderTelemetry.station==='straight');await page.keyboard.up('1');
+  await page.keyboard.down('2');await page.waitForFunction(()=>window.riderTelemetry.station==='ramps'&&window.riderStationReport?.section==='5');await page.keyboard.up('2');
+  for(let i=0;i<11;i++){
+   const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
+   await page.keyboard.down('v');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resets);await page.keyboard.up('v');
+  }
+  await page.waitForFunction(()=>window.riderStationReport.section==='down-10'&&window.riderTelemetry.start_speed===1);
   // Synthetic mobile selection (not a physical device driving result).
   const ctx=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true});const phone=await ctx.newPage();
   phone.on('pageerror',e=>errors.push(e.message));await phone.goto(url+'?station=ramps&touch=1');
