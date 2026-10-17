@@ -12,6 +12,7 @@ Read STATUS.md, the current issue and only its affected contract. Work is organi
 | Units, tick order, reset/ownership | [G1 verified baseline](contracts/physics/G1_CONTRACT.md); affected [physics contract](contracts/physics/) |
 | Automation and runner changes | [Automation contracts](contracts/automation/), [Bridge](contracts/automation/bridge.md) |
 | Tool setup/build/run | [Tooling](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md) |
+| VS Code / WSL move and independent agent audit | [VS Code migration review dossier](VSCODE_MIGRATION_REVIEW.md) |
 | M3 touch/tilt trial procedure | [Mobile trial](MOBILE_TRIAL.md) |
 | Device evidence | [Platform matrix](PLATFORM_MATRIX.md) |
 | CI/protection, dependencies, repository operations | [Repository setup](REPOSITORY_SETUP.md) |
