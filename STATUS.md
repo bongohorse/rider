@@ -4,6 +4,8 @@ Updated 2026-10-17. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
+CI audit follow-up / #86 is in progress: unify PR checks on the synthetic merge source, isolate standalone workflow cancellation, reuse one debug Gym build, consolidate Android build/inspection, cache verified downloads and add pinned actionlint. This tooling authorization does not resume A18 or further M4 work. Local checks PASS: actionlint, project contract, 5 CI/bundle, 2 launch, 15 bootstrap, 7 G1 and 6 G2 tests. Current-head full CI is pending; no new runtime/device result claimed.
+
 M3 was accepted by Claudio after his browser/phone drive test on 2026-10-16; issues #58, #28, #29, #68 and #69 are closed. M4 was authorized on 2026-10-17. A15 / #30 was merged in PR #76 (`20ebb02`, required CI 38987492033 PASS); A16 / #31 was merged in PR #77 (`3a85777`, required CI 38989165890 PASS). A17 / #32 was merged in [PR #78](https://github.com/bongohorse/rider/pull/78) (`427009f`) after current-head required PASS at `d345f7f` / [CI 38995378164](https://github.com/bongohorse/rider/actions/runs/38995378164). Three of eleven M4 implementations are technically complete. A17 includes labelled up/down step ladders, independent starts, in-world Retry, read-only compression/contact results and a separate diagnostic hard-stop trial; all required native, HTML5, Bridge, Android-build, preview/release and regression checks passed on the PR head. Post-merge main CI/public deployment is separate and must be verified; physical-phone A17 testing and final M4 driving acceptance remain NOT RUN. Claudio explicitly requested STOP after A17 on 2026-10-17: do not start A18/#33 or any other M4 issue without a new Go.
 
 | M3 issue | Completion evidence |

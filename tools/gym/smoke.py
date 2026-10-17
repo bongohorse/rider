@@ -7,21 +7,22 @@ import uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/g1'))
-from build import build
+from bundle import build_bundle, verify_bundle
 from run import stop
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--output',required=True)
 parser.add_argument('--case',default='a1')
+parser.add_argument('--bundle', help='Reuse a verified shared debug Gym build')
 args=parser.parse_args()
 out=Path(args.output).resolve();out.mkdir(parents=True,exist_ok=True)
 sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
 run_id=str(uuid.uuid4())
-settings=out/'gym.settings'
-settings.write_text(f'[project]\ndependencies =\n[rider]\nsource_sha = {sha}\nrun_id = {run_id}\ngym_test = {args.case}\n')
-build('wasm-web',out,settings,variant='debug')
+bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
+if not args.bundle:build_bundle(bundle,sha)
+verify_bundle(bundle,sha)
 runner='steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
-process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case],cwd=ROOT,start_new_session=True)
+process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True)
 try: code=process.wait(timeout=360 if args.case in ('a16','a17') else 90)
 finally: stop(process)
 if code:raise SystemExit(code)

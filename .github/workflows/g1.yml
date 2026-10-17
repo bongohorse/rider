@@ -1,12 +1,18 @@
 name: G1 physics
 on:
   workflow_call:
+    inputs:
+      caller_managed_concurrency:
+        description: Let the calling CI own cancellation and isolate this run
+        type: boolean
+        default: false
   workflow_dispatch:
 permissions:
   contents: read
+# The caller owns CI cancellation. Standalone dispatches must not cancel its jobs.
 concurrency:
-  group: g1-${{ github.ref }}
-  cancel-in-progress: true
+  group: g1-${{ inputs.caller_managed_concurrency && github.run_id || 'manual' }}-${{ github.ref }}
+  cancel-in-progress: ${{ !inputs.caller_managed_concurrency }}
 jobs:
   native:
     name: G1 native (${{ matrix.os }})
@@ -26,10 +32,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14.8'
+      - name: Cache verified Bob download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/g1/bob.jar
+          key: bob-v1-${{ hashFiles('tools/toolchain-lock.json') }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
@@ -54,10 +64,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14.8'
+      - name: Cache verified Bob download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/g1/bob.jar
+          key: bob-v1-${{ hashFiles('tools/toolchain-lock.json') }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
@@ -65,40 +79,45 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.21.0'
+          cache: npm
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - name: Build and run HTML5 physics
         run: python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5
+      - name: Verify per-case engine startup injection
+        run: node --test tests/ci/launch.test.cjs
+      - name: Build shared debug Gym bundle
+        run: python tools/gym/bundle.py --output artifacts/g1/gym-bundle
       - name: Verify station speed start, retry, switching and invalid data
-        run: python tools/gym/smoke.py --output artifacts/g1/stations --case a15
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/stations --case a15
       - name: Measure ramp ladders and neutral downhill starts
-        run: python tools/gym/smoke.py --output artifacts/g1/ramps --case a16
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
       - name: Measure step ladders and repeatable compression
-        run: python tools/gym/smoke.py --output artifacts/g1/steps --case a17
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/steps --case a17
       - name: Build and run current Gym smoke
-        run: python tools/gym/smoke.py --output artifacts/g1/gym --case a3
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gym --case a3
       - name: Verify reverse and airborne lean through normal commands
-        run: python tools/gym/smoke.py --output artifacts/g1/feel --case a6
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/feel --case a6
       - name: Coasting and brake-tap regression
-        run: python tools/gym/smoke.py --output artifacts/g1/coast --case coast
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/coast --case coast
       - name: Verify injected HUD FPS colour thresholds
-        run: python tools/gym/smoke.py --output artifacts/g1/hud --case hud
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/hud --case hud
       - name: Verify head sensor and both crash switches
-        run: python tools/gym/smoke.py --output artifacts/g1/head --case a7
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/head --case a7
       - name: Verify live slider and captured input
-        run: python tools/gym/smoke.py --output artifacts/g1/sliders --case a8
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/sliders --case a8
       - name: Verify expanded feel controls and grounded keyboard lean
-        run: python tools/gym/smoke.py --output artifacts/g1/feedback-feel --case m2feedback
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/feedback-feel --case m2feedback
       - name: Verify URL presets and all three drivable candidates
-        run: python tools/gym/smoke.py --output artifacts/g1/presets --case a9
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/presets --case a9
       - name: Verify invalid URL fallback
-        run: python tools/gym/smoke.py --output artifacts/g1/preset-invalid --case a9invalid
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/preset-invalid --case a9invalid
       - name: Verify engine audio activation and wheel pitch
-        run: python tools/gym/smoke.py --output artifacts/g1/audio --case a10
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/audio --case a10
       - name: Verify feedback clipboard and visible permission failure
-        run: python tools/gym/smoke.py --output artifacts/g1/feedback --case a11
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/feedback --case a11
       - name: Verify five-second history and physical stop spike
-        run: python tools/gym/smoke.py --output artifacts/g1/history --case a12
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/history --case a12
       - name: Keep Gym screenshot separately for visual review
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -110,29 +129,5 @@ jobs:
         if: always()
         with:
           name: g1-html5-${{ github.run_id }}
-          path: artifacts/g1/
-          retention-days: 14
-  android-attempt:
-    name: G1 Android build attempt
-    runs-on: ubuntu-26.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.14.8'
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: '25.0.4+101.0.LTS'
-      - name: Attempt debug APK and record actual result
-        run: python tools/g1/android_attempt.py
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: g1-android-${{ github.run_id }}
           path: artifacts/g1/
           retention-days: 14

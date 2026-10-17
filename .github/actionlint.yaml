@@ -1,0 +1,4 @@
+# Explicit compatibility label until the pinned actionlint runner catalogue catches up.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
