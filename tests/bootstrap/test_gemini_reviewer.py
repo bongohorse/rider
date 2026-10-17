@@ -2,6 +2,8 @@
 
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,12 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
                      "mcp(*)", "execute_url(*)"):
             self.assertIn(item, settings["permissions"]["deny"])
         self.assertEqual(settings["permissions"]["ask"], ["read_url(*)"])
+
+    def test_bash_syntax_on_linux(self):
+        bash = shutil.which("bash")
+        if bash is None:
+            self.skipTest("bash unavailable on this CI host")
+        subprocess.run([bash, "-n", str(SETUP)], check=True)
 
     def test_script_refuses_root_and_reserves_snapshot_for_root(self):
         script = SETUP.read_text(encoding="utf-8")
