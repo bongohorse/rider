@@ -4,6 +4,7 @@
 
 **Tracking:** [Review issue #81](https://github.com/bongohorse/rider/issues/81) · [VS Code profile PR #80](https://github.com/bongohorse/rider/pull/80) (merged on 2026-10-17; no Windows/WSL host acceptance implied).
 
+**2026-10-17 host-evidence update:** The original proposal/snapshot below predates actual local runs. The maintainer has since reported bootstrap PASS, 3/3 tilt unit tests PASS, HTML5 WASM release build PASS, packaged desktop/phone/mobile/tilt/ramps/steps Playwright verification PASS, G2 doctor PASS, and native Xvfb Bridge debug/release suite PASS after CI-matching OpenAL/Mesa installation. The [second independent review and reconciliation](https://github.com/bongohorse/rider/issues/81#issuecomment-6238540673) accepts native WSL2 with changes; high-priority agent credential/merge boundaries and the optional launcher/default distro mismatch are not evidence of already-enforced security. Use [STATUS.md](../STATUS.md) and [issue #81](https://github.com/bongohorse/rider/issues/81) for current host evidence; the original NOT RUN entries remain as the historic review snapshot, not current outcomes. The [read-only local parity inventory](../tools/local_parity.py) records effective Python/Node/Playwright/Chromium versions without claiming a real Android test.
 ## 1. Goal and hard constraints
 
 Enable a repeatable, low-friction **Windows 11 → VS Code → Linux WSL2 → Rider** workflow, with **Codex CLI** primarily implementing changes and **Claude Code CLI** performing independent focused reviews; both run in the VS Code integrated terminal, **not** via their VS Code extensions.
@@ -18,7 +19,7 @@ The Windows VS Code **Rider** profile should be one-click/reopenable like Goblin
 | --- | --- | --- |
 | Rider source | [GitHub repository](https://github.com/bongohorse/rider); [AGENTS.md](../AGENTS.md), [docs index](README.md) and [tooling](TOOLING.md) exist | Clone at `~/rider` **inside the Ubuntu WSL filesystem**; local install NOT RUN |
 | VS Code | Rider profile, `.vscode/settings.json`, and launcher are merged via [PR #80](https://github.com/bongohorse/rider/pull/80) | Import the merged profile on Windows; profile persistence, WSL extension placement and real yellow window NOT RUN |
-| Profile PR | [#80](https://github.com/bongohorse/rider/pull/80) adds `profiles/Rider.code-profile`, `.vscode/settings.json`, `tools/open-rider.ps1`, and a tooling guide extension | PR CI run [39000249857](https://github.com/bongohorse/rider/actions/runs/39000249857) succeeded; this does **not** test the profile in Windows VS Code or WSL |
+| Profile PR | [#80](https://github.com/bongohorse/rider/pull/80) adds `profiles/Rider.code-profile`, `.vscode/settings.json`, `tools/open-rider.ps1`, and a tooling guide extension | current-head PR CI run [39034151859](https://github.com/bongohorse/rider/actions/runs/39034151859) succeeded; this does **not** test the profile in Windows VS Code or WSL |
 | OS | CI uses Ubuntu 26.04 for its main HTML5, preview, Linux native, Bridge and Android-build jobs; bootstrap also checks Ubuntu 24.04 and Windows | **Ubuntu 26.04 LTS on WSL2**, if the distro name is available locally. Do not assert it was installed |
 | Agents | Repository has common [AGENTS.md](../AGENTS.md), no verified `CLAUDE.md` on main | Codex CLI + Claude Code CLI; short Claude entry point referencing the same rules; installations/authentication NOT RUN |
 | Tests | [preview workflow](../.github/workflows/preview.yml) builds release HTML5, packages exact commit/build identity, then runs `tools/preview/verify.cjs` | Repeat **that exact local pipeline**, including `steps.cjs`; no successful local WSL execution claimed |
@@ -82,7 +83,7 @@ Inspect the **diff**, not just the PR description. In particular:
 - Avoid blanket bypass flags / unrestricted shell permissions. Agents may read untrusted repo text; review executable install scripts, network access, credential scopes and destructive commands.
 - Local token saving is a hypothesis, not a guarantee: compare repeated context reads, local test cycles, API/subscription usage and GitHub CI reruns using the same task.
 
-## 7. Minimum local acceptance gates (all currently NOT RUN on user's WSL Rider instance)
+## 7. Minimum local acceptance gates (original checklist; current host evidence tracked in #81)
 
 1. **Windows/WSL integration:** check available Ubuntu distros using `wsl --list --online`, then identify the *actually installed* distro and its **VERSION 2** using `wsl --list --verbose`; confirm clean clone under `~/rider`, `code .` connected to WSL and acceptable file watch/reload. Do not assume the installed distro is named `Ubuntu-26.04`. No mandatory Docker/WSLC.
 2. **Identity/tools:** `git status --short`; `python --version`, `node --version`, `java -version`, `npx playwright --version`, correct Bob SHA; `bash tools/doctor.sh --json --require-g2` (understand that requiring G2 also checks the matching Bridge wrapper). Capture machine and effective versions.

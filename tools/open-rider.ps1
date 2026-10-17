@@ -1,10 +1,16 @@
 param(
-    [string]$Distro = "Ubuntu-26.04"
+    # Empty uses the Windows default WSL distro; the Rider host registers it as "Ubuntu".
+    [string]$Distro = ""
 )
 
 $ErrorActionPreference = "Stop"
-# The repository lives in the Linux filesystem for native performance.
-& wsl.exe -d $Distro -- bash -lc 'cd ~/rider && code --new-window --profile Rider .'
+# Import the Rider profile in Windows VS Code before using --profile.
+if ($Distro) {
+    & wsl.exe -d $Distro -- bash -lc 'cd ~/rider && code --new-window --profile Rider .'
+} else {
+    & wsl.exe -- bash -lc 'cd ~/rider && code --new-window --profile Rider .'
+}
 if ($LASTEXITCODE -ne 0) {
-    throw "Could not open Rider with the VS Code Rider profile in WSL distro $Distro (exit $LASTEXITCODE)."
+    $selected = if ($Distro) { $Distro } else { "default WSL distribution" }
+    throw "Could not open Rider in $selected with the imported VS Code Rider profile (exit $LASTEXITCODE)."
 }
