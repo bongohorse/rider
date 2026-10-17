@@ -22,7 +22,27 @@ def read_paths(filename):
     return paths
 
 
+def is_gym_only(paths):
+    """Conservative allowlist: gym paths plus normal Markdown docs only."""
+    return (
+        bool(paths)
+        and any(path.startswith("main/gym/") for path in paths)
+        and all(path.startswith("main/gym/") or is_docs_only([path]) for path in paths)
+    )
+
+
+def selection(paths):
+    if is_docs_only(paths):
+        return "true", "false", "markdown-only"
+    if is_gym_only(paths):
+        return "false", "true", "gym-and-markdown-only"
+    return "false", "false", "unknown-or-shared-change-full"
+
+
 if __name__ == "__main__":
     paths = read_paths(sys.argv[1])
     print(f"Changed paths: {len(paths)}", file=sys.stderr)
-    print(f"docs_only={'true' if is_docs_only(paths) else 'false'}")
+    docs_only, skip_special, reason = selection(paths)
+    print(f"docs_only={docs_only}")
+    print(f"skip_special={skip_special}")
+    print(f"selection_reason={reason}")

@@ -51,7 +51,10 @@ def validate(root):
                 permissions = job.get('permissions')
                 pages_deploy = (p.name, job_id) in {('ci.yml','pages'),('pages.yml','deploy')}
                 if permissions is not None:
-                    allowed = {'contents':'read','pages':'write','id-token':'write'} if pages_deploy else {'contents':'read'}
+                    nightly_notifier = (p.name, job_id) == ('ci.yml', 'nightly_alert')
+                    allowed = ({'contents':'read','pages':'write','id-token':'write'} if pages_deploy
+                               else {'contents':'read','issues':'write'} if nightly_notifier
+                               else {'contents':'read'})
                     if permissions != allowed:
                         errors.append(f'{p.name}/{job_id}: unexpected job permissions')
                 if pages_deploy:

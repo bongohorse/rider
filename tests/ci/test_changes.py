@@ -39,6 +39,21 @@ class ClassificationTest(unittest.TestCase):
             f.write_bytes(b"")
             self.assertEqual(read_paths(f), [])
             self.assertFalse(is_docs_only(read_paths(f)))
+    
+    def test_gym_selection_and_conservative_fallback(self):
+        from classify_changes import is_gym_only, selection
+        self.assertTrue(is_gym_only(["main/gym/game.script", "docs/TOOLING.md"]))
+        self.assertEqual(selection(["main/gym/game.script"])[1], "true")
+        self.assertEqual(selection(["docs/README.md"])[0], "true")
+        for path in (
+            "tools/project.py", ".github/workflows/ci.yml", "game.project",
+            "main/physics.appmanifest", "requirements-dev.txt",
+            "package-lock.json", "main/physics/rig.lua", "main/bridge/fixture.lua",
+            ".vscode/settings.json"
+        ):
+            with self.subTest(path=path):
+                self.assertFalse(is_gym_only(["main/gym/game.script", path]))
+                self.assertEqual(selection(["main/gym/game.script", path])[1], "false")
 
 
 if __name__ == "__main__":

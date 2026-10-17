@@ -18,9 +18,10 @@ def load_workflow():
 
 
 def run_required(job, needs):
-    code = job["steps"][0]["run"].split("<<'PYTHON'\n", 1)[1].rsplit("\nPYTHON", 1)[0]
+    # Run the exact script configured in the required workflow job.
+    assert job["steps"][-1]["run"] == "python3 tools/ci/required_gate.py"
     return subprocess.run(
-        [sys.executable, "-c", code],
+        [sys.executable, str(ROOT / "tools/ci/required_gate.py")],
         env={**os.environ, "RESULTS": json.dumps(needs)},
         capture_output=True, text=True,
     )
@@ -70,11 +71,49 @@ class RequiredCheck(unittest.TestCase):
                          "${{ steps.classify.outputs.docs_only }}")
         for job in ("bootstrap", "renovate", "physics", "tooling", "bridge", "preview"):
             self.assertEqual(workflow["jobs"][job]["needs"], "changes")
-            self.assertEqual(workflow["jobs"][job]["if"], "needs.changes.outputs.docs_only != 'true'")
+            expected = "needs.changes.outputs.docs_only != 'true'"
+            if job == "bridge":
+                expected += " && needs.changes.outputs.skip_special != 'true'"
+            self.assertEqual(workflow["jobs"][job]["if"], expected)
+        self.assertEqual(workflow["jobs"]["physics"]["with"]["run_windows_native"],
+                         "${{ needs.changes.outputs.skip_special != 'true' }}")
+        self.assertEqual(workflow["jobs"]["tooling"]["with"]["run_negative"],
+                         "${{ needs.changes.outputs.skip_special != 'true' }}")
         for job, name in (("physics", "g1"), ("tooling", "g2"), ("bridge", "bridge"), ("preview", "preview")):
             self.assertEqual(workflow["jobs"][job]["uses"], f"./.github/workflows/{name}.yml")
             called = yaml.load((ROOT / f".github/workflows/{name}.yml").read_text(), Loader=yaml.BaseLoader)
             self.assertIn("workflow_call", called["on"])
+
+    def test_gameplay_mode_omits_only_explicit_special_jobs(self):
+        job = load_workflow()["jobs"]["required"]
+        baseline = {name: {"result": "success"} for name in job["needs"]}
+        baseline["changes"]["outputs"] = {"docs_only": "false", "skip_special": "true"}
+        baseline["bridge"]["result"] = "skipped"
+        self.assertEqual(run_required(job, baseline).returncode, 0)
+        for name in ("physics", "tooling", "preview", "bootstrap", "renovate"):
+            tampered = json.loads(json.dumps(baseline))
+            tampered[name]["result"] = "skipped"
+            self.assertNotEqual(run_required(job, tampered).returncode, 0)
+
+    def test_g1_keeps_linux_and_conditionally_selects_windows(self):
+        g1 = yaml.load((ROOT / ".github/workflows/g1.yml").read_text(), Loader=yaml.BaseLoader)
+        native = g1["jobs"]["native"]
+        win = g1["jobs"]["native-windows"]
+        self.assertEqual([item["os"] for item in native["strategy"]["matrix"]["include"]],
+                         ["ubuntu-26.04"])
+        self.assertEqual(win["runs-on"], "windows-2025")
+        self.assertEqual(win["if"],
+                         "${{ !inputs.caller_managed_concurrency || inputs.run_windows_native }}")
+        self.assertIn("html5", g1["jobs"])
+
+    def test_nightly_full_and_notification_scoped(self):
+        workflow = load_workflow()
+        self.assertIn("schedule", workflow["on"])
+        self.assertEqual(workflow["on"]["schedule"][0]["cron"], "17 2 * * *")
+        notifier = workflow["jobs"]["nightly_alert"]
+        self.assertEqual(notifier["needs"], "required")
+        self.assertEqual(notifier["permissions"], {"contents": "read", "issues": "write"})
+        self.assertEqual(notifier["if"], "${{ always() && github.event_name == 'schedule' }}")
 
     def test_pages_deploy_waits_for_required_and_only_main_full_suite(self):
         workflow = load_workflow()
