@@ -133,6 +133,9 @@ function update(self, dt)
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
+        -- Factories can receive an engine step before attach. Use Retry's
+        -- canonical pose before the very first authored speed start too.
+        vehicle.reset(self.vehicle)
         stations.restart(self)
         self.target = self.vehicle.ids.chassis
         emit(self,"vehicle_ready",{bodies=3,joints=2})
