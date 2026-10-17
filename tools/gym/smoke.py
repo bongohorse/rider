@@ -29,7 +29,7 @@ if code:raise SystemExit(code)
 if args.case=='a18':
     report=json.loads((out/'seams-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==6
-    print(json.dumps({'status':report['status'],'comparison':report['comparison']}));raise SystemExit(0)
+    print(json.dumps({'status':report['status'],'acceptance':report['acceptance'],'d8':report['d8'],'comparison':report['comparison']}));raise SystemExit(0)
 if args.case=='a17':
     report=json.loads((out/'steps-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==16

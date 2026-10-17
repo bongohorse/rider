@@ -52,6 +52,8 @@ function M.observe(self,state,dt,sample)
     local dv=prev and math.abs(vy-prev.vy) or 0
     local command=self.last_command or {}
     local expected=r.freewheel and 0 or math.min(1,math.max(0,r.nominal_mps/(math.abs(r.tuning_at_start.motor_speed)*.22)))
+    local motors={b2d.joint.is_motor_enabled(self.vehicle.joints[1]),b2d.joint.is_motor_enabled(self.vehicle.joints[2])}
+    if r.freewheel and (motors[1] or motors[2]) then invalidate(r,"freewheel motor unexpectedly enabled") end
     if (command.measurement_freewheel==true)~=r.freewheel then invalidate(r,"motor conditions differ from protocol") end
     if not command.throttle or math.abs(command.throttle-expected)>.000001 or command.brake_reverse~=0 or command.lean~=0 then invalidate(r,"commands differ from protocol") end
     if x>=self.station.baseline[1] and x<=self.station.baseline[2] then
@@ -62,8 +64,8 @@ function M.observe(self,state,dt,sample)
         if not c1 or not c2 then invalidate(r,"baseline lacks loaded wheel contact") end
     end
     if x>=self.station.baseline[1] and x<=self.station.window[2]+1 then
-        -- Lossless sampled values (JSON numbers, no rounding), retained once/run.
-        r.trace[#r.trace+1]={r.elapsed_s,dt,x,y,vx,vy,w[1],w[2],c1,c2,command.throttle,command.brake_reverse,command.lean}
+        -- Raw sampled values, retained without application-level rounding.
+        r.trace[#r.trace+1]={r.elapsed_s,dt,x,y,vx,vy,w[1],w[2],c1,c2,command.throttle,command.brake_reverse,command.lean,motors[1],motors[2],b2d.body.get_angular_velocity(self.vehicle.wheels[1]),b2d.body.get_angular_velocity(self.vehicle.wheels[2])}
     end
     local enter=self.station.window[1];local finish=self.station.window[2]
     if x>=enter and not r.entry_mps then
