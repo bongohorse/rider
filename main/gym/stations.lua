@@ -42,14 +42,14 @@ function M.build(body,d)
         local first,last=vertices[1],vertices[#vertices]
         local chain,shapes=b2d.body.create_chain(body,{vertices=vertices,
             prev_vertex=first+(first-vertices[2]),next_vertex=last+(last-vertices[#vertices-1]),
-            friction=0.8,restitution=0,enable_sensor_events=true,filter={category_bits=1,mask_bits=1}})
+            friction=0.8,restitution=0,enable_sensor_events=true,filter={category_bits=1,mask_bits=1,group_index=0}})
         chains[#chains+1]=chain
         for _,s in ipairs(shapes) do segments[#segments+1]=s end
     end
     for _,h in ipairs(d.hulls or {}) do
         local vertices={};for _,v in ipairs(h.vertices) do vertices[#vertices+1]=p(v) end
         local shape=b2d.body.create_shape(body,{type=b2d.shape.SHAPE_TYPE_POLYGON,vertices=vertices,friction=0.8,restitution=0,
-            filter={category_bits=1,mask_bits=1}})
+            filter={category_bits=1,mask_bits=1,group_index=0}})
         b2d.shape.enable_sensor_events(shape.shape_id,true)
     end
     return chains,segments
@@ -91,5 +91,40 @@ function M.draw(d)
             line(vmath.vector3(x/scale,80,0),vmath.vector3(x/scale,major and 105 or 90,0))
         end
     end
+end
+function M.restart(self)
+    M.start(self.vehicle,self.station)
+    self.start_probe=2
+    self.station_top_speed,self.station_brake_distance=0,0
+    self.station_brake_x=nil
+end
+function M.observe(self,state)
+    if self.start_probe then
+        self.start_probe=self.start_probe-1
+        if self.start_probe==0 then
+            self.first_tick_speed=feel.metres(state.vx)
+            self.first_tick_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[1])
+            self.start_probe=nil
+        end
+    end
+    self.station_top_speed=math.max(self.station_top_speed or 0,math.abs(feel.metres(state.vx)))
+    if self.last_command and self.last_command.brake_reverse>0 then
+        self.station_brake_x=self.station_brake_x or state.x
+        self.station_brake_distance=math.abs(feel.metres(state.x-self.station_brake_x))
+    else self.station_brake_x=nil end
+end
+function M.enrich(self,sample)
+        sample.station=self.station.id
+        sample.station_name=self.station.name
+        sample.station_note=self.station_note or ""
+        sample.start_speed=self.station.start_speed
+        sample.first_tick_speed=self.first_tick_speed or 0
+        sample.first_tick_omega=self.first_tick_omega or 0
+        sample.world_loads=self.world_loads or 1
+        sample.session_generation=self.session_generation
+        sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
+        sample.station_top_speed=self.station_top_speed or 0
+        sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
+        sample.station_brake_distance=self.station_brake_distance or 0
 end
 return M

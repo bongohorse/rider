@@ -28,11 +28,7 @@ local function reset(self)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
-    stations.start(self.vehicle,self.station)
-    self.start_probe=2
-    self.station_origin=self.station.spawn[1]
-    self.station_top_speed,self.station_brake_distance=0,0
-    self.station_brake_x=nil
+    stations.restart(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
     assert(#shapes==#self.station.chains+#(self.station.hulls or {}), "Retry changed station topology")
@@ -133,9 +129,7 @@ function update(self, dt)
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
         vehicle.attach(self.vehicle)
-        stations.start(self.vehicle,self.station)
-        self.start_probe=2
-        self.station_top_speed,self.station_brake_distance=0,0
+        stations.restart(self)
         self.target = self.vehicle.ids.chassis
         emit(self,"vehicle_ready",{bodies=3,joints=2})
         show_preset(self)
@@ -156,18 +150,7 @@ function update(self, dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
-            sample.station=self.station.id
-            sample.station_name=self.station.name
-            sample.station_note=self.station_note or ""
-            sample.start_speed=self.station.start_speed
-            sample.first_tick_speed=self.first_tick_speed or 0
-            sample.first_tick_omega=self.first_tick_omega or 0
-            sample.world_loads=self.world_loads or 1
-            sample.session_generation=self.session_generation
-            sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
-            sample.station_top_speed=self.station_top_speed or 0
-            sample.station_distance=feel.metres(vehicle.state(self.vehicle).x)-self.station.spawn[1]
-            sample.station_brake_distance=self.station_brake_distance or 0
+            stations.enrich(self,sample)
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count
@@ -229,19 +212,7 @@ function fixed_update(self, dt)
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
-        if self.start_probe then
-            self.start_probe=self.start_probe-1
-            if self.start_probe==0 then
-                self.first_tick_speed=feel.metres(state.vx)
-                self.first_tick_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[1])
-                self.start_probe=nil
-            end
-        end
-        self.station_top_speed=math.max(self.station_top_speed or 0,math.abs(feel.metres(state.vx)))
-        if self.last_command and self.last_command.brake_reverse>0 then
-            self.station_brake_x=self.station_brake_x or state.x
-            self.station_brake_distance=math.abs(feel.metres(state.x-self.station_brake_x))
-        else self.station_brake_x=nil end
+        stations.observe(self,state)
         if self.scenario then self.scenario.check_pose(self,state) end
         if stations.outside(self.station,state) then request_reset(self,"bounds") end
         if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
