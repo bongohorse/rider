@@ -5,3 +5,4 @@ components { id: "chassis" component: "/main/gym/chassis.factory" }
 components { id: "wheel" component: "/main/gym/wheel.factory" }
 components { id: "marker" component: "/main/gym/marker.factory" }
 components { id: "engine" component: "/main/gym/engine.sound" }
+components { id: "line" component: "/main/gym/line.factory" }

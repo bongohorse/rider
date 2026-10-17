@@ -120,7 +120,6 @@ end
 function update(self, dt)
     if not self.ready then setup(self); return end
     if not self.station then return end
-    stations.draw(self.station)
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end

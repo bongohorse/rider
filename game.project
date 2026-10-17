@@ -38,3 +38,9 @@ scale_mode = stretch
 htmlfile = /main/html5/index.html
 show_fullscreen_button = 0
 show_made_with_defold = 0
+
+[sprite]
+max_count = 1024
+
+[label]
+max_count = 1024

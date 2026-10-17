@@ -67,28 +67,31 @@ function M.outside(d,s)
     local b=d.bounds;local scale=sys.get_config_number("physics.scale",0.01)
     return s.x*scale<b[1] or s.x*scale>b[2] or s.y*scale<b[3] or s.y*scale>b[4]
 end
+-- Normal sprites/labels render in release too; debug draw_line does not.
 function M.decorate(d)
     local scale=sys.get_config_number("physics.scale",0.01)
-    for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1)) end
-    if d.markers then
-        for x=d.markers.from_m,d.markers.to_m,d.markers.major_m do
-            local id=factory.create("#marker",vmath.vector3(x/scale,115,0))
-            label.set_text(msg.url(nil,id,"label"),string.format("%g m",x))
-        end
+    local function stroke(a,b,width)
+        local dx,dy=(b[1]-a[1])/scale,(b[2]-a[2])/scale
+        local id=factory.create("#line",vmath.vector3((a[1]+b[1])/2/scale,(a[2]+b[2])/2/scale,0),
+            vmath.quat_rotation_z(math.atan2(dy,dx)),nil,vmath.vector3(math.sqrt(dx*dx+dy*dy)/4,width/4,1))
+        go.set(msg.url(nil,id,"sprite"),"tint",vmath.vector4(0.45,0.85,0.75,1))
     end
-end
-function M.draw(d)
-    local scale=sys.get_config_number("physics.scale",0.01)
-    local color=vmath.vector4(0.3,0.9,0.7,1)
-    local function line(a,b) msg.post("@render:","draw_line",{start_point=a,end_point=b,color=color}) end
+    for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1)) end
     for _,chain in ipairs(d.chains) do
-        for i=2,#chain do local a,b=chain[i-1],chain[i];line(vmath.vector3(a[1]/scale,a[2]/scale,0),vmath.vector3(b[1]/scale,b[2]/scale,0)) end
+        for i=2,#chain do stroke(chain[i-1],chain[i],2) end
+    end
+    for _,h in ipairs(d.hulls or {}) do
+        for i,p in ipairs(h.vertices) do stroke(p,h.vertices[i%#h.vertices+1],2) end
     end
     if d.markers then
         local m=d.markers
         for x=m.from_m,m.to_m,m.minor_m do
             local major=math.abs(x/m.major_m-math.floor(x/m.major_m+0.5))<0.001
-            line(vmath.vector3(x/scale,80,0),vmath.vector3(x/scale,major and 105 or 90,0))
+            stroke({x,0.8},{x,major and 0.6 or 0.7},major and 2 or 1)
+            if major then
+                local id=factory.create("#marker",vmath.vector3(x/scale,40,0))
+                label.set_text(msg.url(nil,id,"label"),string.format("%g m",x))
+            end
         end
     end
 end
