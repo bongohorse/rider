@@ -85,6 +85,13 @@ if ! sudo test -d "$snapshot"; then
   sudo chmod -R a-w "$snapshot"
 fi
 
+# `cp -a "$scratch/." "$snapshot/"` copies the mktemp source directory's 0700
+# mode onto the existing destination directory. After a-w it becomes 0500:
+# root can read it, but rider-gemini cannot traverse it. Repair even on a
+# repeat run, where the snapshot already exists and copying is skipped.
+# Grant directory search/read only; never grant reviewer write permission.
+sudo find "$snapshot" -type d -exec chmod a+rx {} +
+
 # Evidence only: never print or read the secret contents.
 if ! sudo -u "$review_user" -H test -r "$snapshot/AGENTS.md"; then
   echo "FAIL: Gemini reviewer cannot read the snapshot" >&2
