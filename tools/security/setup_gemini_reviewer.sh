@@ -76,30 +76,85 @@ if [[ "$review_home" != "/home/$review_user" ]]; then
   echo "Unexpected reviewer home: $review_home" >&2
   exit 2
 fi
-for path in "$settings_root" "$settings_dir" "$settings"; do
+for path in "$review_home" "$settings_root" "$settings_dir" "$settings"; do
   if sudo test -L "$path"; then
     echo "Refusing symbolic link in Gemini settings path: $path" >&2
     exit 2
   fi
 done
-if sudo test -e "$settings_root"; then
-  current_owner="$(sudo stat -c '%u' "$settings_root")"
-  if [[ "$current_owner" != 0 && "$current_owner" != "$review_uid" ]]; then
-    echo "Unexpected owner of Gemini settings root: $current_owner" >&2
-    exit 2
+for path in "$review_home" "$settings_root" "$settings_dir"; do
+  if sudo test -e "$path"; then
+    if ! sudo test -d "$path"; then
+      echo "Refusing non-directory Gemini settings parent" >&2
+      exit 2
+    fi
+    current_owner="$(sudo stat -c '%u' "$path")"
+    # Only ~/.gemini has a known root-owned legacy installation.
+    if [[ "$current_owner" != "$review_uid" ]] &&
+       ! [[ "$path" == "$settings_root" && "$current_owner" == 0 ]]; then
+      echo "Unexpected owner of Gemini settings parent" >&2
+      exit 2
+    fi
   fi
-fi
-sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_root"
-sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_dir"
+done
+# Pin directories before the sole legacy root ownership repair. Never run
+# root install/chown/chmod through a reviewer-controlled path.
+sudo python3 - "$review_home" "$review_uid" "$(id -g "$review_user")" <<'PYTHON'
+import os, stat, sys
+home, uid, gid = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+base = os.open("/home", flags)
+home_fd = os.open(home.removeprefix("/home/"), flags, dir_fd=base)
+if os.fstat(home_fd).st_uid != uid:
+    raise SystemExit("Unexpected reviewer home owner")
+try:
+    root_fd = os.open(".gemini", flags, dir_fd=home_fd)
+except FileNotFoundError:
+    root_fd = None
+if root_fd is not None:
+    owner = os.fstat(root_fd).st_uid
+    if owner not in (0, uid):
+        raise SystemExit("Unexpected Gemini root owner")
+    if owner == 0:
+        os.fchown(root_fd, uid, gid)
+        os.fchmod(root_fd, 0o700)
+    os.close(root_fd)
+os.setgroups([])
+os.setgid(gid)
+os.setuid(uid)
+# All further operations use reviewer privileges and pinned directory handles.
+try:
+    os.mkdir(".gemini", 0o700, dir_fd=home_fd)
+except FileExistsError:
+    pass
+root_fd = os.open(".gemini", flags, dir_fd=home_fd)
+os.fchmod(root_fd, 0o700)
+try:
+    os.mkdir("antigravity-cli", 0o700, dir_fd=root_fd)
+except FileExistsError:
+    pass
+cli_fd = os.open("antigravity-cli", flags, dir_fd=root_fd)
+if os.fstat(cli_fd).st_uid != uid:
+    raise SystemExit("Unexpected Gemini settings directory owner")
+os.fchmod(cli_fd, 0o700)
+for fd in (cli_fd, root_fd, home_fd, base):
+    os.close(fd)
+PYTHON
 
-# Never overwrite unexpected user-edited settings or auth state. The sole
-# supported migration removes obsolete unsandboxed(*) from the exact
-# previous repo policy; the already-denied command(*) covers commands.
+# Validate security rules, preserve unrelated CLI/user settings and remove
+# only obsolete unsandboxed(*). Never touch auth state. Stop agy first.
 if sudo test -e "$settings"; then
   sudo python3 "$repo/tools/security/reconcile_gemini_settings.py" \
     "$policy" "$settings" "$review_uid"
 else
-  sudo install -m 600 -o "$review_user" -g "$review_group" "$policy" "$settings"
+  # Read the public repository policy as the maintainer; create exclusively
+  # with reviewer privileges, so even a concurrent path swap cannot gain root.
+  sudo -u "$review_user" python3 -c '
+import os, sys
+fd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+with os.fdopen(fd, "wb") as out:
+    out.write(sys.stdin.buffer.read())
+' "$settings" < "$policy"
 fi
 
 sudo install -d -m 755 -o root -g root "$snapshots"
