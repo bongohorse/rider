@@ -2,6 +2,14 @@
 
 Updated 2026-10-18. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
 
+## A18 / #33 — authorized implementation (2026-10-18)
+
+Latest [explicit GO](https://github.com/bongohorse/rider/issues/33) authorizes A18 only after merged #110; previous A18 STOP notes below are historical. Codex implements in isolated branch `feat/33-seams`; the maintainer's `.vscode/settings.json` change in the original checkout remains untouched. No additional agent or Claude reviewer invoked. A19 and all later M4 implementations remain unauthorized.
+
+Implementation in progress: matched chain/21-hull strips with 20 internal seams, independent 5/15/30 m/s starts, per-tick traces/contact/vertical spikes, explicit ±5% validity and in-world Retry. [Protocol v2](docs/A18_SEAM_PROTOCOL.md) documents the original powered protocol and transparent debug-only free-roll revision. Exploratory powered runs built from dirty source based on `750dbce`: 5 m/s both valid; 15/30 m/s invalid due to measured speed loss (30 m/s hull also incomplete). These are excluded from high-speed seam conclusions. D8 remains unchanged pending qualified v2 results. No tuning coefficients changed.
+
+Local checks so far: bootstrap_check, 35 bootstrap, 7 G1, 6 G2 and 19 CI Python tests PASS; four independent trace-qualification regressions and workflow lint PASS. Initial sandbox DNS/listen denials were resolved with approved build/test execution. Fresh committed-source runtime evidence, release checks, PR review and current-head `required` remain pending. Real-phone A18 driving is NOT RUN. Stop after A18 and request Claudio's drive feedback; do not start A19.
+
 ## Rider development workflow sign-off and M4 authorization (2026-10-18)
 
 **Workflow acceptance: maintainer GO.** WSL2 Ubuntu 26.04.1 development environment, exact Python/Node/toolchain and local build parity, Windows VS Code Rider profile/reopening/WSL integration and CLI-only layout, isolated Gemini read-only tests all have separately reported host evidence (below and issue #81). [PR #111](https://github.com/bongohorse/rider/pull/111) was merged with green CI to use dark petrol instead of yellow; maintainer confirmed the repo update was pulled locally. Codex is primary implementer; optional Claude review is at the maintainer's discretion, without duplicated parallel implementation. Open debug-server wildcard binding is **not** a security PASS: track and resolve in [#112](https://github.com/bongohorse/rider/issues/112); run only owned, short-lived debug tests and do not publish it to LAN or internet. This follow-up is not required for normal HTML5 gameplay iteration, but must be resolved before widening the debug-service trust boundary. **Maintainer authorized closing #81 and continuing M4 A18/#33** on 2026-10-18. No technical A18 acceptance is claimed yet.
