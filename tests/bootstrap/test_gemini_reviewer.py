@@ -16,7 +16,8 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
         self.assertTrue(settings["enableTerminalSandbox"])
         self.assertEqual(settings["permissions"]["allow"], [])
         for item in ("write_file(*)", "command(*)", "unsandboxed(*)",
-                     "mcp(*)", "execute_url(*)"):
+                     "mcp(*)", "execute_url(*)", "read_file(/mnt/)",
+                     "read_file(/home/mega/)"):
             self.assertIn(item, settings["permissions"]["deny"])
         self.assertEqual(settings["permissions"]["ask"], ["read_url(*)"])
 
