@@ -4,6 +4,14 @@ on:
     branches: [main, setup/g0-bootstrap]
   pull_request:
   workflow_dispatch:
+    inputs:
+      full_run:
+        description: Force the complete regression suite (manual runs are always full)
+        type: boolean
+        required: false
+        default: true
+  schedule:
+    - cron: '17 2 * * *' # 02:17 UTC, unconditional full suite
 permissions:
   contents: read
 concurrency:
@@ -16,6 +24,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
+      skip_special: ${{ steps.classify.outputs.skip_special }}
+      selection_reason: ${{ steps.classify.outputs.selection_reason }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,15 +51,38 @@ jobs:
           case "$GITHUB_EVENT_NAME" in
             pull_request) BASE="$PR_BASE" ;;
             push) BASE="$PUSH_BEFORE" ;;
-            *) echo "docs_only=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            *) {
+              echo "docs_only=false"
+              echo "skip_special=false"
+              echo "selection_reason=scheduled-or-manual-full"
+            } >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
           if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "docs_only=false"
+              echo "skip_special=false"
+              echo "selection_reason=missing-base-full"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git cat-file -e "$BASE^{commit}"
           git diff --no-renames --name-only -z "$BASE" HEAD -- > "$RUNNER_TEMP/changed-paths"
           python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" >> "$GITHUB_OUTPUT"
+      - name: Explain CI selection
+        if: always()
+        env:
+          DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
+          SKIP_SPECIAL: ${{ steps.classify.outputs.skip_special }}
+          REASON: ${{ steps.classify.outputs.selection_reason }}
+        shell: bash
+        run: |
+          {
+            echo "### CI selection"
+            echo "- Reason: $REASON"
+            echo "- Docs-only: $DOCS_ONLY"
+            echo "- Windows/Bridge/negative-build skipped: $SKIP_SPECIAL"
+            echo "- Linux native, HTML5 and Android stay selected for gameplay."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Validate changed Markdown relative links
         if: steps.classify.outputs.docs_only == 'true'
         run: python3 tools/ci/check_docs_links.py "$RUNNER_TEMP/changed-paths"
@@ -131,15 +164,17 @@ jobs:
     uses: ./.github/workflows/g1.yml
     with:
       caller_managed_concurrency: true
+      run_windows_native: ${{ needs.changes.outputs.skip_special != 'true' }}
   tooling:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/g2.yml
     with:
       caller_managed_concurrency: true
+      run_negative: ${{ needs.changes.outputs.skip_special != 'true' }}
   bridge:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.skip_special != 'true'
     uses: ./.github/workflows/bridge.yml
     with:
       caller_managed_concurrency: true
@@ -162,21 +197,28 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
-      - name: Reject failed, cancelled or skipped dependencies
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify strict selected-job outcomes
         env:
           RESULTS: ${{ toJSON(needs) }}
-        run: |
-          python - <<'PYTHON'
-          import json, os, sys
-          results = json.loads(os.environ['RESULTS'])
-          for name, job in results.items():
-              print(f"{name}: {job['result']}")
-          if results.get('changes', {}).get('result') != 'success':
-              sys.exit('Change classification failed; required refuses to pass')
-          docs_only = results['changes'].get('outputs', {}).get('docs_only') == 'true'
-          expected = 'skipped' if docs_only else 'success'
-          checked = {name: job for name, job in results.items() if name != 'changes'}
-          if len(checked) != 6 or any(job['result'] != expected for job in checked.values()):
-              sys.exit(f"Unexpected CI dependencies; expected all {expected}")
-          print(f"required PASS ({'docs-only fast path' if docs_only else 'complete regression suite'})")
-          PYTHON
+        run: python3 tools/ci/required_gate.py
+  nightly_alert:
+    name: Nightly full-suite issue alert
+    if: ${{ always() && github.event_name == 'schedule' }}
+    needs: required
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create/update one tooling issue on failure; close on recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUIRED_RESULT: ${{ needs.required.result }}
+        run: python3 tools/ci/nightly_alert.py
