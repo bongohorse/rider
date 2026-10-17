@@ -4,7 +4,7 @@
 
 ## CI and branch protection
 
-S1 introduces one `required` job in CI. It depends on Bootstrap (all OS matrix entries), Renovate validation/extraction and reusable physics, tooling/Android and native Bridge workflows. CI runs for pull requests and pushes to main; reusable workflows also support manual dispatch. `required` uses `always()` and accepts only success from every dependency, so failure, cancellation or skip cannot pass.
+S1 introduces one `required` job in CI. It depends on Bootstrap (all OS matrix entries), Renovate validation/extraction and reusable physics, tooling/Android and native Bridge workflows. CI runs for pull requests and pushes to main; reusable workflows also support manual dispatch. A cheap, tested `changes` job classifies PR/push Git diffs with `--no-renames`: **only root-level Markdown and `docs/**/*.md` count as documentation-only**; an empty/unknown diff, workflow/script change, mixed change or manual dispatch runs the full matrix. On docs-only commits the heavy bootstrap, Renovate, physics, tooling, Bridge and release preview jobs are deliberately skipped, but the stable `required` job still runs and passes **only** if `changes` passed and all six heavy jobs were skipped. On other commits it requires all six heavy jobs to succeed. Failures, unexpected skips and cancellations cannot pass. Never use whole-workflow `paths-ignore` for the protected `required` check.
 
 Use **only `required`** as the required status check for main; preserve force-push/deletion protections and the other saved settings. Do not bypass protection to merge. The negative physics-to-required run is [38743590528](https://github.com/bongohorse/rider/actions/runs/38743590528). Claudio saved the protection update on 2026-10-15; branch metadata readback confirms context `required`, Actions app 15368 and enforcement `everyone`. Full administration endpoint access remains unavailable (403); the remaining settings rely on Claudio's saved configuration.
 
@@ -22,7 +22,7 @@ Hosted Renovate activity is evidenced by [dashboard #4](https://github.com/bongo
 
 ## Preview and distribution
 
-Public HTML5 preview at https://bongohorse.github.io/rider/ is permanently authorized for main-merge auto deployment and manual dispatch. A4 implements it with visible source SHA and unique per-build filenames. Do not claim a deployed build before observing it. Android release is Phase F; iOS builds wait until Phase G. The native Bridge must be excluded from distributed apps before Phase B sideload/distribution.
+Public HTML5 preview at https://bongohorse.github.io/rider/ is permanently authorized for **game/tooling-affecting main merges** and manual dispatch. Docs-only main merges skip redundant compilation and publication; the prior public build remains deployed. A4 implements it with visible source SHA and unique per-build filenames. Do not claim a deployed build before observing it. Android release is Phase F; iOS builds wait until Phase G. The native Bridge must be excluded from distributed apps before Phase B sideload/distribution.
 
 ## Evidence retention
 
