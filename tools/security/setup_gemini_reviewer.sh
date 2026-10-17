@@ -95,15 +95,24 @@ if sudo -u "$review_user" -H test -w "$snapshot/AGENTS.md" ||
   echo "FAIL: Gemini reviewer can write to snapshot" >&2
   exit 1
 fi
-owner_gh="$HOME/.config/gh/hosts.yml"
-if [[ -e "$owner_gh" ]] && sudo -u "$review_user" -H test -r "$owner_gh"; then
-  echo "FAIL: Gemini reviewer can read maintainer GitHub credentials" >&2
+# The reviewer must not be able to enter the maintainer's home directory,
+# even if some non-secret individual files have loose permissions.
+if sudo -u "$review_user" -H test -x "$HOME"; then
+  echo "FAIL: reviewer can traverse maintainer HOME ($HOME)." >&2
+  echo "After checking that no other local users need access, run: chmod 700 \"$HOME\"" >&2
   exit 1
 fi
+for secret in "$HOME/.config/gh/hosts.yml" "$HOME/.codex/auth.json" \
+              "$HOME/.claude/.credentials.json"; do
+  if [[ -e "$secret" ]] && sudo -u "$review_user" -H test -r "$secret"; then
+    echo "FAIL: reviewer can read a maintainer credential path" >&2
+    exit 1
+  fi
+done
 
 echo "PASS: separate unprivileged OS identity: $review_user"
 echo "PASS: root-owned read-only snapshot: $snapshot"
-echo "PASS: secret-access negative check (owner GitHub credentials)"
+echo "PASS: non-traversable maintainer home and credential negative checks"
 echo "PASS: restrictive Antigravity config: $settings"
 echo "Next: install and authenticate agy while logged into the separate reviewer OS user."
 echo "Use: sudo -iu $review_user"
