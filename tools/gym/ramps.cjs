@@ -14,6 +14,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const section of ['5','10','15','20','25','30','35','40','45','60','90']){
     await page.goto(url+`?station=${station}&section=${section}`);
     await page.waitForFunction(({sha,runId,station,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station&&window.riderStationReport.section===section,{sha,runId,station,section});
+    if(section==='30'){await page.waitForFunction(()=>window.riderTelemetry?.station_distance>=2.5);await page.screenshot({path:path.join(out,station+'-30-approach.png')});}
     await page.waitForFunction(id=>window.riderStationReport?.records.find(r=>r.id===id)?.done,section,{timeout:15000});
     const report=await page.evaluate(()=>window.riderStationReport),r=report.records.find(x=>x.id===section);
     assert.equal(report.start_speed,8);assert.equal(r.throttle_min,1);assert.equal(r.throttle_max,1);assert.equal(r.brake_max,0);assert.equal(r.lean_max,0);
@@ -53,6 +54,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   for(let i=0;i<11;i++){
    const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
    await page.keyboard.down('v');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resets);await page.keyboard.up('v');
+   // Down/up can land between engine input samples: await a fresh release window.
+   const releasedSequence=await page.evaluate(()=>window.riderTelemetry.sequence);
+   await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,releasedSequence);
   }
   await page.waitForFunction(()=>window.riderStationReport.section==='down-10'&&window.riderTelemetry.start_speed===1);
   // Synthetic mobile selection (not a physical device driving result).
