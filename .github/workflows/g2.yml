@@ -6,6 +6,10 @@ on:
         description: Let the calling CI own cancellation and isolate this run
         type: boolean
         default: false
+      run_negative:
+        description: Run isolated broken-build regression from caller CI
+        type: boolean
+        default: true
   workflow_dispatch:
 permissions:
   contents: read
@@ -35,6 +39,7 @@ jobs:
           distribution: temurin
           java-version: '25.0.4+101.0.LTS'
       - name: Reject injected Lua error and rebuild restored isolated source
+        if: ${{ !inputs.caller_managed_concurrency || inputs.run_negative }}
         run: python tools/g2/negative_build.py --output artifacts/g2/negative-build
       - name: Build debug APK through shared CLI
         run: python tools/project.py build --target android --configuration debug --output artifacts/g2/android
