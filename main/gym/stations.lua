@@ -15,7 +15,7 @@ function M.load(id,speed)
     if not valid or d.id~=id then return nil,err or "Station id mismatch" end
     local message
     d.start_speed,message=data.speed(speed,d.start_speed)
-    return d,message or note
+    return d,message and (note~="" and note.."; "..message or message) or note
 end
 function M.initial()
     local id=sys.get_config_string("rider.station","straight")

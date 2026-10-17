@@ -18,6 +18,8 @@ Accepted implementation: `6df34ecf4c0f79f7003bce96670cf6aec5a05125`, public buil
 
 Closure exception (owner: Claudio): his explicit instruction to close M3 after successful browser/phone testing is accepted as a qualitative sign-off without the originally requested full Chrome version, locked 60/144-Hz captures, measured phone DPI cost, numerical physics budget or measured interpolation decision. Those measurements remain NOT RUN / not supplied, not PASS. Risk: device performance margins remain unquantified. Retain the initial 60 FPS / 16.666667 ms frame target, no invented physics limit and the current presentation without adding interpolation. Follow up with the reusable mobile capture procedure if pacing problems appear; sustained performance acceptance remains Phase E. Detailed rotation/lifecycle and layout-comparison observations were not supplied. This acceptance does not imply M2 audio listening or APK installation.
 
+A15 implementation is in [PR #76](https://github.com/bongohorse/rider/pull/76). Preliminary runtime evidence at `6e46b5c` / [CI 38985943961](https://github.com/bongohorse/rider/actions/runs/38985943961): new station suite PASS (8 m/s ±0.2 first-step speed and wheel spin, moving Retry without reload, A→B→A with held-input release and hull loading, invalid schema/URL fallback, straight measurements/feedback). Native Linux/Windows physics, Bridge, Android build and isolated build-error regression PASS. Final browser regressions and final-head review remain pending; this is not merged/deployed or human M4 acceptance.
+
 The completed M2 implementation evidence remains below.
 
 | Step | Implementation / evidence |

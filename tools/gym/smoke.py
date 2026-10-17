@@ -27,7 +27,7 @@ finally: stop(process)
 if code:raise SystemExit(code)
 if args.case=='a15':
     report=json.loads((out/'stations-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and len(report['cases'])==7
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==7
     print(json.dumps(report));raise SystemExit(0)
 report=json.loads((out/'gym-result.json').read_text())
 assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id

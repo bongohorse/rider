@@ -212,7 +212,6 @@ function fixed_update(self, dt)
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
-        stations.observe(self,state)
         if self.scenario then self.scenario.check_pose(self,state) end
         if stations.outside(self.station,state) then request_reset(self,"bounds") end
         if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
@@ -238,6 +237,7 @@ function fixed_update(self, dt)
         end
         self.last_command = command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
+        stations.observe(self,vehicle.state(self.vehicle))
         history.push(self.history,telemetry.sample(self.vehicle),dt)
     end
     if self.scenario then self.scenario.fixed(self,dt) end
