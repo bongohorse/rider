@@ -106,6 +106,24 @@ git -C ~/rider worktree list
 
 A second worktree **does not inherit** ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`. If implementation is **explicitly approved**, provision those per worktree (or point `RIDER_BOB_JAR` at a verified shared cached Bob), use a dedicated feature branch, and keep one writing agent per worktree. A read-only review need not install anything. Before any PR/merge, inspect source SHA, working tree and CI; `gh pr checks --watch <PR_NUMBER>` requires an existing PR. Require current-head `required` PASS and an authorized merge; do not weaken CI, assume independent reviewers are enforced, or start A18.
 
+## Agent CI completion watch
+
+**Preferred workflow for active WSL Codex and Claude CLI agents:** Stay attached to the GitHub pull request instead of asking the maintainer to write “CI fertig”. GitHub CLI refreshes a PR's checks every **10 seconds** by default; it returns when checks finish or at the first failure with `--fail-fast` ([official manual](https://cli.github.com/manual/gh_pr_checks)).
+
+```bash
+# Use the current PR number after pushing/creating the PR.
+gh pr checks <PR_NUMBER> --repo bongohorse/rider --watch --fail-fast --interval 10
+
+# After the watch exits successfully:
+gh pr view <PR_NUMBER> --repo bongohorse/rider \
+  --json headRefOid,mergeable,url
+gh pr checks <PR_NUMBER> --repo bongohorse/rider --required
+```
+
+Treat a failed/cancelled run, absent checks, head revision change, unresolved independent-review findings, unexpected base changes, or missing current-head `required` PASS as a **non-merge** outcome. On a failing check, inspect the linked workflow and job logs, repair only the authorized scope and start a **new** watch for the new PR head. When green, have a different agent review the implementation; merge only if the existing issue authorization permits and the PR source still matches. Continue to the next authorized step, or stop at the user's requested milestone gate (A18 remains paused).
+
+**Important delivery distinction:** `gh pr checks --watch` resumes the **terminal command that is still running**; it does not send an unsolicited message to ChatGPT or revive a closed/paused ChatGPT chat. GitHub `workflow_run: completed` supports webhooks and follow-up Actions, but a separate always-on receiver/bot would be needed to route such an event into an agent service. There is no direct incoming webhook to this conversation, so do not promise an automatic ChatGPT chat notification. Native GitHub/mobile/email notifications can alert the **maintainer**; they do not substitute for the agent-side watcher. Avoid storing GitHub tokens in webhook scripts or exposing new public endpoints merely to get a “CI completed” ping.
+
 ## Gemini / Antigravity: isolated read-only reviewer (issue #81)
 
 Claude and Codex retain **equal developer privileges**. Gemini is a **read-only adviser**. A prompt or CLI permission rule alone cannot protect files and credentials from another process running as the same WSL OS user. The reviewed setup is therefore intentionally **not** `agy` running directly in `~/rider` as the maintainer. It creates:
