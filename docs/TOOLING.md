@@ -51,7 +51,7 @@ The repository contains [`profiles/Rider.code-profile`](../profiles/Rider.code-p
 1. In **Windows PowerShell**, use `wsl.exe --list --online` to see installable distros and **`wsl.exe --list --verbose`** to identify the *installed* distro and require WSL **VERSION 2**. `Ubuntu-26.04` is a proposed name, not an observed local install.
 2. Install VS Code on Windows and its **WSL** extension (`ms-vscode-remote.remote-wsl`). In Windows VS Code import `profiles/Rider.code-profile` with **Profiles: Import Profile...** and confirm **Rider** exists in **Profiles: Switch Profile**. Import **before** using `--profile Rider`: an unknown name otherwise silently creates an empty profile. Extensions installed locally are not automatically synchronized into WSL.
 3. In the **actual installed** WSL distro, clone the repository at `~/rider` (or update the clone) and open `cd ~/rider && code --new-window --profile Rider .`. Check that the window is attached to WSL, the correct profile persists after reopening, and the yellow title/status bar and hidden AI chat behave as requested.
-4. The optional `tools/open-rider.ps1` launcher defaults to `Ubuntu-26.04`, supports `-Distro <installed-name>`, and assumes `~/rider`. It resides **inside the Linux checkout**, so an arbitrary Windows PowerShell session cannot run it by a simple relative path; use the WSL command in step 3 until a Windows-side launcher path is set up and tested. The script does not install tooling.
+4. The optional `tools/open-rider.ps1` launcher defaults to the installed distro name `Ubuntu`, supports `-Distro <installed-name>`, and assumes `~/rider`. It resides **inside the Linux checkout**, so an arbitrary Windows PowerShell session cannot run it by a simple relative path; use the WSL command in step 3 until a Windows-side launcher path is set up and tested. The script does not install tooling.
 5. VS Code remembers the selected profile for the opened folder. Switch via **Profiles: Switch Profile** or **File > New Window with Profile**; workspace chat disabling affects Rider, not Goblin/MGD. Use standalone `codex` and `claude` commands in separate integrated WSL terminals only after installation/authentication; never commit credentials or API keys. For precise host acceptance and preview parity see [migration review §7](VSCODE_MIGRATION_REVIEW.md#7-minimum-local-acceptance-gates-all-currently-not-run-on-users-wsl-rider-instance).
 
 VS Code's WSL extension is separate from AI extensions. The actual WSL/toolchain setup and required build/verification commands are described above. The profile files do not install pinned JDK/Bob/Playwright themselves.
@@ -67,3 +67,44 @@ Bootstrap pip downloads are cached by requirements; npm uses the lockfile, and P
 Changes limited to main/gym/ and Markdown docs skip the Windows native matrix entry, Bridge workflow, and the deliberate negative-build step. Linux native physics, HTML5 coverage, Android APK/signature validation, and release preview remain selected. Any shared, unknown, toolchain, or workflow change runs the complete suite. Every PR shows the classification reason. The required gate rejects unexpected missing, failed, cancelled, or skipped dependencies.
 
 The nightly schedule always runs the entire suite at 02:17 UTC regardless of the previous diff. If required fails, a single tooling issue is opened or updated with the run link; recovery closes it. Manual CI dispatch is always conservative and full, including when its full_run switch is set. The existing post-merge run and Pages behavior remain intact.
+
+## Agent CLIs and isolated review worktrees
+
+Current **user-reported WSL inventory (2026-10-17)**: `gh 2.102.0`, `codex 0.163.0`, `agy 1.4.0`, `claude 2.1.302`. These are host observations, **not repo-enforced version pins**. Use official installers and review any upgrades; check `command -v`, `--version` and the intended subscription/API billing path before running an agent. Never print token values or API keys. `ANTHROPIC_API_KEY` may direct Claude to API billing. Avoid unrestricted approval flags and untrusted install commands.
+
+Treat every CLI agent with access to the maintainer's WSL home as potentially able to read the same `gh` credentials. **Git worktrees separate files, not credentials or GitHub identities.** The current maintainer OAuth login has broad `repo`/`workflow` rights; reserve push/merge and workflow changes for deliberate maintainer authorization. A same-account second token is not an independent GitHub reviewer. Consider distinct restricted identities/OS users before claiming enforceable separation; do not impose required second reviewers on a solo-maintainer repo without ensuring an eligible reviewer. Review agents should receive strictly read-only instructions, minimal tools, and no blanket shell approvals.
+
+Read-only audit preparation, from a clean checkout at `~/rider`:
+
+```sh
+cd ~/rider
+git status --short --branch
+mkdir -p ~/rider-worktrees
+git worktree add --detach ~/rider-worktrees/r81-review HEAD
+cd ~/rider-worktrees/r81-review
+git status --short --branch
+```
+
+A detached worktree has **none of the ignored runtime files** from `~/rider`: `.venv`, `node_modules`, `.cache/g1/bob.jar`, `automation-bridge-python` and `artifacts/`. Use a separate virtualenv and `npm ci --ignore-scripts` only if runtime tests are required, and point `RIDER_BOB_JAR` explicitly at the hash-verified shared jar. Native Bridge tests also require the pinned wrapper installed in that worktree. Keep generated artifacts inside each worktree; do not copy credentials or use a shared writable output directory. Recheck `git status --short` after the agent completes; from the main checkout clean up with `git worktree remove ~/rider-worktrees/r81-review` after preserving findings, then `git worktree prune`.
+
+## Local versus CI version evidence
+
+The Python project contract accepts **Python >=3.12**; GitHub CI currently uses **3.14.8**, while the tested WSL host reported **3.14.4**. Passing local tests on 3.14.4 is valid local evidence, **not exact CI interpreter parity**. Record these explicitly along with Java vendor/build, Node, npm, Playwright and the installed Chromium binary revision. Activate `source .venv/bin/activate` in WSL (otherwise `python` may not be on PATH). The executable paths can be inspected with:
+
+```sh
+cd ~/rider && source .venv/bin/activate
+git status --short --branch
+git rev-parse HEAD
+python --version; command -v python
+node --version; npm --version; command -v node
+java -version
+npx --no-install playwright --version
+ls -d ~/.cache/ms-playwright/chromium-* 2>/dev/null || true
+bash tools/doctor.sh --json --require-g2
+```
+
+Pinning every CLI on a developer workstation is not a prerequisite for running the already verified local builds. For a strict equivalence claim, compare against current workflow pins and archive the versions with the build SHA and the generated `results.json`/`result.json`. Do not claim physical Android evidence from synthetic phone emulation.
+
+## Local Bridge networking check
+
+The preview verifier listens on `127.0.0.1`, but upstream native Bridge bindings are not proven loopback-only. During an *owned* Bridge debug process, inspect `ss -ltnp` to see actual listeners and use the Windows Hyper-V/WSL firewall status to assess inbound exposure. Do not expose the development service to a public interface or copy credentials to the worktree. A successful smoke is not proof of firewall isolation.
