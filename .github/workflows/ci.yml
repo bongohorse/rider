@@ -10,7 +10,42 @@ concurrency:
   group: bootstrap-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
+  changes:
+    name: Change classification
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check fast-path classification rules
+        run: python3 -m unittest discover -s tests/ci -v
+      - name: Detect Markdown-only change (fail closed)
+        id: classify
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) BASE="$PR_BASE" ;;
+            push) BASE="$PUSH_BEFORE" ;;
+            *) echo "docs_only=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git cat-file -e "$BASE^{commit}"
+          git diff --no-renames --name-only -z "$BASE" HEAD -- > "$RUNNER_TEMP/changed-paths"
+          python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" >> "$GITHUB_OUTPUT"
   bootstrap:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: Bootstrap (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -48,6 +83,8 @@ jobs:
         shell: pwsh
         run: ./tools/doctor.ps1 --json
   renovate:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: Renovate validation and scan
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -76,16 +113,24 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
   physics:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/g1.yml
   tooling:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/g2.yml
   bridge:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/bridge.yml
   preview:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/preview.yml
   pages:
-    if: github.ref == 'refs/heads/main'
-    needs: required
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.docs_only != 'true'
+    needs: [changes, required]
     permissions:
       contents: read
       pages: write
@@ -94,7 +139,7 @@ jobs:
   required:
     name: required
     if: ${{ always() }}
-    needs: [bootstrap, renovate, physics, tooling, bridge, preview]
+    needs: [changes, bootstrap, renovate, physics, tooling, bridge, preview]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
@@ -107,5 +152,12 @@ jobs:
           results = json.loads(os.environ['RESULTS'])
           for name, job in results.items():
               print(f"{name}: {job['result']}")
-          sys.exit(0 if results and all(job['result'] == 'success' for job in results.values()) else 1)
+          if results.get('changes', {}).get('result') != 'success':
+              sys.exit('Change classification failed; required refuses to pass')
+          docs_only = results['changes'].get('outputs', {}).get('docs_only') == 'true'
+          expected = 'skipped' if docs_only else 'success'
+          checked = {name: job for name, job in results.items() if name != 'changes'}
+          if len(checked) != 6 or any(job['result'] != expected for job in checked.values()):
+              sys.exit(f"Unexpected CI dependencies; expected all {expected}")
+          print(f"required PASS ({'docs-only fast path' if docs_only else 'complete regression suite'})")
           PYTHON

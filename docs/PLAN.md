@@ -14,7 +14,7 @@ Authoritative plan, adopted from the approved English handoff. [STATUS.md](../ST
 - **D2** Rider with a head sensor; crash detection has an on/off switch (key + overlay). Off by default in the gym (crash is only displayed), on in challenges.
 - **D3** GitHub issues + milestones replace gate documents. One issue = one PR, 1–3 testable acceptance criteria.
 - **D4** The browser (HTML5) is the main test platform; Claudio runs the milestone drive tests.
-- **D5** Public HTML5 preview on GitHub Pages at `bongohorse.github.io/rider`, deployed automatically on every merge to `main` and manually via `workflow_dispatch`. This deployment authorisation is permanent for the preview.
+- **D5** Public HTML5 preview on GitHub Pages at `bongohorse.github.io/rider`, deployed automatically on every game/tooling-affecting merge to `main` and manually via `workflow_dispatch`; documentation-only merges preserve the existing deployed build without rebuilding it. This deployment authorisation is permanent for the preview.
 - **D6** Android first; iOS only after the Play Store launch. No iOS builds until then. Keep desktop/web/other exports possible (no platform-specific gameplay logic).
 - **D7** Keep Defold 1.14.0 + integrated Box2D 3.1.0; no custom physics extension, no manual world stepping.
 - **D8** Terrain = chain shapes (`b2d.body.create_chain`) built from polyline data; obstacles = hull collision objects. Subject to the seam measurement in A18.

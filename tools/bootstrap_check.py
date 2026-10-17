@@ -54,8 +54,12 @@ def validate(root):
                     allowed = {'contents':'read','pages':'write','id-token':'write'} if pages_deploy else {'contents':'read'}
                     if permissions != allowed:
                         errors.append(f'{p.name}/{job_id}: unexpected job permissions')
-                if pages_deploy and (job.get('if') != "github.ref == 'refs/heads/main'" or permissions is None):
-                    errors.append(f'{p.name}/{job_id}: Pages permission requires main-only guard')
+                if pages_deploy:
+                    main_guard = "github.ref == 'refs/heads/main'"
+                    if (p.name, job_id) == ('ci.yml', 'pages'):
+                        main_guard += " && needs.changes.outputs.docs_only != 'true'"
+                    if job.get('if') != main_guard or permissions is None:
+                        errors.append(f'{p.name}/{job_id}: Pages permission requires main-only guard (plus exact docs-only condition when applicable)')
                 use = job.get('uses', '')
                 if use and not re.fullmatch(r'\./\.github/workflows/[\w.-]+\.ya?ml', use):
                     errors.append(f'{p.name}: only local reusable workflows are allowed: {use}')
