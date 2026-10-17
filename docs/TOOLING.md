@@ -105,3 +105,49 @@ git -C ~/rider worktree list
 ```
 
 A second worktree **does not inherit** ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`. If implementation is **explicitly approved**, provision those per worktree (or point `RIDER_BOB_JAR` at a verified shared cached Bob), use a dedicated feature branch, and keep one writing agent per worktree. A read-only review need not install anything. Before any PR/merge, inspect source SHA, working tree and CI; `gh pr checks --watch <PR_NUMBER>` requires an existing PR. Require current-head `required` PASS and an authorized merge; do not weaken CI, assume independent reviewers are enforced, or start A18.
+
+## Gemini / Antigravity: isolated read-only reviewer (issue #81)
+
+Claude and Codex retain **equal developer privileges**. Gemini is a **read-only adviser**. A prompt or CLI permission rule alone cannot protect files and credentials from another process running as the same WSL OS user. The reviewed setup is therefore intentionally **not** `agy` running directly in `~/rider` as the maintainer. It creates:
+
+- An unprivileged Linux account `rider-gemini` without sudo or Docker access and with a separate home, Google login and Antigravity configuration;
+- A root-owned, non-writable, **tracked-source-only** snapshot at `/opt/rider-gemini-review/<source SHA>`. No `.git`, ignored secrets, working copies or developer build outputs are copied;
+- [Deny rules](../tools/security/gemini-readonly-settings.json) for `write_file(*)`, `command(*)`, `unsandboxed(*)`, `mcp(*)` and `execute_url(*)`; additionally, `read_file(/home/mega/)` and `read_file(/mnt/)` block reads of the owner home and WSL-mounted Windows drives. New website reads require interactive approval. The terminal sandbox is explicitly enabled. **Deny wins over Allow** per [Antigravity CLI permissions](https://www.antigravity.google/docs/permissions?tab=cli) and [terminal sandbox](https://www.antigravity.google/docs/cli/sandbox) documentation.
+
+**Maintainer-host installation (not performed by CI or this repository change):**
+
+```bash
+cd ~/rider
+git pull --ff-only
+git status --short --branch
+# Inspect this sudo-using script before running it.
+less tools/security/setup_gemini_reviewer.sh
+bash tools/security/setup_gemini_reviewer.sh
+```
+
+The script refuses dirty Git state, symlinks in the tracked archive, privileged reviewer groups, replacement of an existing differing Gemini policy, reviewer write access to the snapshot or reviewer ability to traverse the maintainer's home/read known credential paths. If it fails because `~/` is traversable by other users, inspect the impact on other Linux accounts before choosing `chmod 700 "$HOME"` and rerun. Do **not** run `sudo agy` or authenticate the review account with the maintainer's GitHub credentials.
+
+The native `agy` binary was installed for the maintainer account only. Install the official Linux CLI **again under the separate reviewer account** and sign in to Google there, using no GitHub PAT:
+
+```bash
+sudo -iu rider-gemini
+export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL https://antigravity.google/cli/install.sh -o "$HOME/antigravity-install.sh"
+less "$HOME/antigravity-install.sh"
+bash "$HOME/antigravity-install.sh"
+agy --version
+# Use the exact snapshot path printed by the setup script:
+cd /opt/rider-gemini-review/<source-SHA>
+agy
+```
+
+Inside Gemini, perform only a **read-only** analysis of `AGENTS.md`; then deliberately request to write a harmless file in the snapshot and confirm **DENIED** (not silently created, and not a permission request that can be bypassed). After exiting Gemini, recheck the snapshot from the maintainer's shell:
+
+```bash
+sudo -u rider-gemini test ! -w /opt/rider-gemini-review/<source-SHA>/AGENTS.md
+sudo -u rider-gemini test ! -r "$HOME/.config/gh/hosts.yml"
+git -C ~/rider status --short --branch
+```
+
+Replace `<source-SHA>` with the exact SHA reported by the script. Never paste tokens, browser login codes or auth file contents into issue logs. Do not launch `agy` as the original `mega` WSL user for Rider reviews: the already-installed maintainer-user `agy` remains outside the new account's CLI policy and retains that user's ordinary filesystem and GitHub permissions. Do not claim technical isolation until **both** agent-tool deny behavior and cross-user filesystem negative checks are observed on the actual WSL host. Linux account separation does not secure Windows user files, mounted Windows drives or any external services independently; do not expose those paths or grant the reviewer sudo/network-write capabilities. To review newer code, generate a new SHA snapshot explicitly; do not let Gemini modify the tracked working tree.
+

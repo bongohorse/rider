@@ -1,0 +1,18 @@
+{
+  "enableTerminalSandbox": true,
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "write_file(*)",
+      "command(*)",
+      "unsandboxed(*)",
+      "mcp(*)",
+      "execute_url(*)",
+      "read_file(/mnt/)",
+      "read_file(/home/mega/)"
+    ],
+    "ask": [
+      "read_url(*)"
+    ]
+  }
+}

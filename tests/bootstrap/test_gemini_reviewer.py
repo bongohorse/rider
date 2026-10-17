@@ -1,0 +1,42 @@
+"""Static checks for the restricted Gemini review policy and setup entry point."""
+
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+SETTINGS = ROOT / "tools/security/gemini-readonly-settings.json"
+SETUP = ROOT / "tools/security/setup_gemini_reviewer.sh"
+
+class GeminiReviewerPolicyTests(unittest.TestCase):
+    def test_explicit_deny_with_no_permission_bypass(self):
+        settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        self.assertTrue(settings["enableTerminalSandbox"])
+        self.assertEqual(settings["permissions"]["allow"], [])
+        for item in ("write_file(*)", "command(*)", "unsandboxed(*)",
+                     "mcp(*)", "execute_url(*)", "read_file(/mnt/)",
+                     "read_file(/home/mega/)"):
+            self.assertIn(item, settings["permissions"]["deny"])
+        self.assertEqual(settings["permissions"]["ask"], ["read_url(*)"])
+
+    def test_bash_syntax_on_linux(self):
+        bash = shutil.which("bash")
+        if bash is None:
+            self.skipTest("bash unavailable on this CI host")
+        subprocess.run([bash, "-n", str(SETUP)], check=True)
+
+    def test_script_refuses_root_and_reserves_snapshot_for_root(self):
+        script = SETUP.read_text(encoding="utf-8")
+        self.assertIn("id -u", script)
+        self.assertIn("git -C \"$repo\" archive", script)
+        self.assertIn("sudo chown -R root:root", script)
+        self.assertIn("sudo chmod -R a-w", script)
+        self.assertIn('sudo -u "$review_user" -H test -w', script)
+        self.assertIn('sudo -u "$review_user" -H test -x "$HOME"', script)
+        self.assertIn("for secret in", script)
+        self.assertIn('sudo -u "$review_user" -H test -r "$secret"', script)
+
+if __name__ == "__main__":
+    unittest.main()
