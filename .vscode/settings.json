@@ -1,0 +1,15 @@
+{
+  "window.title": "Rider — ${activeEditorShort}${separator}${rootName}",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#F2C94C",
+    "titleBar.activeForeground": "#24200E",
+    "titleBar.inactiveBackground": "#9B823C",
+    "titleBar.inactiveForeground": "#211B09",
+    "statusBar.background": "#F2C94C",
+    "statusBar.foreground": "#24200E",
+    "statusBar.noFolderBackground": "#F2C94C"
+  },
+  "chat.disableAIFeatures": true,
+  "chat.commandCenter.enabled": false,
+  "workbench.secondarySideBar.defaultVisibility": "hidden"
+}

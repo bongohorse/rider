@@ -1,0 +1,6 @@
+{
+  "name": "Rider",
+  "shortName": "RD",
+  "settings": "{\"settings\":\"{\\n  \\\"window.title\\\": \\\"Rider — ${activeEditorShort}${separator}${rootName}\\\",\\n  \\\"workbench.colorCustomizations\\\": {\\n    \\\"titleBar.activeBackground\\\": \\\"#F2C94C\\\",\\n    \\\"titleBar.activeForeground\\\": \\\"#24200E\\\",\\n    \\\"titleBar.inactiveBackground\\\": \\\"#9B823C\\\",\\n    \\\"titleBar.inactiveForeground\\\": \\\"#211B09\\\",\\n    \\\"statusBar.background\\\": \\\"#F2C94C\\\",\\n    \\\"statusBar.foreground\\\": \\\"#24200E\\\",\\n    \\\"statusBar.noFolderBackground\\\": \\\"#F2C94C\\\"\\n  },\\n  \\\"chat.disableAIFeatures\\\": true,\\n  \\\"chat.commandCenter.enabled\\\": false,\\n  \\\"workbench.secondarySideBar.defaultVisibility\\\": \\\"hidden\\\"\\n}\"}",
+  "extensions": "[{\"identifier\":{\"id\":\"ms-vscode-remote.remote-wsl\"},\"displayName\":\"WSL\"}]"
+}

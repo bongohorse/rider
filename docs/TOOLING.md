@@ -43,3 +43,15 @@ All PR jobs check out GitHub's synthetic merge commit (the default checkout ref)
 CI builds Android debug once through the G2 shared CLI and requires APK signature/manifest inspection. The historical G1 Android-attempt script remains available for diagnosis; CI no longer repeats that equivalent build. Native, physics-fixture, Bridge debug/release and release-preview builds retain their distinct coverage.
 
 The npm download cache follows `package-lock.json`; Bob's cache follows the toolchain lock and its SHA-256 is checked on every use. Compiled game output is never restored from a cross-run cache. Workflow classification also runs actionlint 1.7.12 from a SHA-256-verified archive (`tools/ci/actionlint-lock.json`); optional shellcheck/pyflakes integrations are disabled for consistent syntax/expression validation.
+
+## VS Code Rider profile (WSL, CLI agents)
+
+The repository contains [`profiles/Rider.code-profile`](../profiles/Rider.code-profile) (importable VS Code profile) and [`.vscode/settings.json`](../.vscode/settings.json) (Rider-specific yellow window chrome and no built-in Copilot/Chat panel). These are configuration templates, not evidence that a user profile was installed on the Windows machine. Codex CLI and Claude Code CLI run in the WSL terminal; no agent extensions are required.
+
+1. Install VS Code on Windows and its **WSL** extension (`ms-vscode-remote.remote-wsl`). Open **File > Preferences > Profiles > Import Profile...** and select `profiles/Rider.code-profile`. Create the profile named **Rider**. You only need to import once.
+2. Open the WSL distro **Ubuntu-26.04**, clone this repository at `~/rider` (or update your existing clone), then open Rider in its profile: `cd ~/rider && code --new-window --profile Rider .`.
+3. Alternatively, launch from Windows PowerShell with `tools/open-rider.ps1`; it targets `Ubuntu-26.04` and `~/rider`. Use `-Distro <name>` if your installed WSL distro has another name. This launcher does not install WSL or tooling.
+4. VS Code remembers the selected profile for the opened folder. Switch project profiles via **Profiles: Switch Profile** or **File > New Window with Profile**. Built-in AI is disabled **only for the Rider workspace/profile**, not in unrelated projects.
+5. Run `codex` or `claude` in the integrated WSL terminal after their respective standalone CLIs are installed. Authenticate interactively; do not commit credentials or API keys.
+
+VS Code's WSL extension is separate from AI extensions. The actual WSL/toolchain setup and required build/verification commands are described above. The profile files do not install pinned JDK/Bob/Playwright themselves.
