@@ -36,6 +36,10 @@ function init(self)
     self.station_next=layout.box(vmath.vector3(270,390,0),vmath.vector3(54,24,0),"left_top")
     gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
     self.station_next_label=layout.text(vmath.vector3(270,390,0),"Next","left_top");gui.set_font(self.station_next_label,"default");gui.set_scale(self.station_next_label,vmath.vector3(0.5,0.5,1))
+    self.section_next=layout.box(vmath.vector3(374,390,0),vmath.vector3(116,24,0),"left_top")
+    gui.set_color(self.section_next,vmath.vector4(0.12,0.3,0.3,1))
+    self.section_label=layout.text(vmath.vector3(374,390,0),"Section [V]","left_top")
+    gui.set_font(self.section_label,"default");gui.set_scale(self.section_label,vmath.vector3(0.5,0.5,1))
     self.station=layout.text(vmath.vector3(240,434,0),"Straight | start 0 m/s [1-9]","left_top")
     gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
     self.station_result=layout.text(vmath.vector3(240,414,0),"","left_top")
@@ -160,7 +164,7 @@ function on_message(self,id,data,sender)
         self.owner=sender
         self.latest=data
         gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,self.station_error or data.station_note or ""))
-        gui.set_text(self.station_result,string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
+        gui.set_text(self.station_result,data.station_result or string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
         gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
@@ -212,6 +216,8 @@ local function copy_feedback(self)
 end
 function update(self,dt)
     local enabled=mobile.enabled()
+    gui.set_visible(self.section_next,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
+    gui.set_visible(self.section_label,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
     for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label}) do gui.set_visible(node,not enabled) end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)
@@ -267,6 +273,9 @@ function update(self,dt)
     end
 end
 function on_input(self,id,action)
+    if id==hash("ui_pointer") and action.pressed and self.latest and (self.latest.section_count or 0)>1 and gui.pick_node(self.section_next,action.x,action.y) then
+        msg.post(self.owner,"next_section");return true
+    end
     if id==hash("ui_pointer") and action.pressed and self.latest and gui.pick_node(self.station_next,action.x,action.y) then
         local index=1;for i,key in ipairs(stations.ids) do if key==self.latest.station then index=i end end
         msg.post("main:/loader#script","select_station",{id=stations.ids[index%#stations.ids+1],preset=self.preset or "a"})

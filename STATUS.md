@@ -4,7 +4,7 @@ Updated 2026-10-17. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
-M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. Started #30 (A15): validated station data, straight markers, speed start, retry and serialized proxy switching. Implementation checks are in progress; no M4 drive-test acceptance claimed.
+M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. A15 / #30 is merged through PR #76 (`20ebb02`), with current-head required PASS at `da26a10` / CI 38987492033. Started #31 (A16): JSON ramp ladders, direct section starts, per-section measurements and neutral downhill probes. No M4 drive-test acceptance claimed.
 
 | M3 issue | Completion evidence |
 | --- | --- |
@@ -20,7 +20,7 @@ Closure exception (owner: Claudio): his explicit instruction to close M3 after s
 
 A15 is implemented in [PR #76](https://github.com/bongohorse/rider/pull/76). Technical baseline at `0354566` / [CI 38986524075 attempt 2](https://github.com/bongohorse/rider/actions/runs/38986524075): required PASS after retrying an npm ECONNRESET in the release job. Station suite PASS: first-step speed 8.000637 m/s and retry 8.001246 m/s (target 8 ±0.2), wheel spin -36.363636 rad/s, Retry without reload, A→B→A with held-input release and hull loading, invalid schema/URL fallback, straight measurements/feedback. All retained HTML5/native/Bridge/Android regressions PASS. Release desktop/portrait/landscape/896×400 screenshots reviewed; thirteen synthetic touch cases (including station switching) and twelve injected tilt cases PASS. Ordinary sprites render terrain/ticks in release; labels are below the road.
 
-Final A15 follow-up: freeze the displayed braking distance at the first speed below 0.1 m/s before reversing. The new regression holds the brake through reverse and checks that distance stays fixed. Final current-head required remains pending before merge. M4 human drive-test acceptance is not claimed. Next: #31 (ramp ladder), including neutral downhill motor-braking observations.
+Final A15 follow-up: freeze the displayed braking distance at the first speed below 0.1 m/s before reversing. The new regression holds the brake through reverse and checks that distance stays fixed. Final current-head required PASS at `da26a10` / CI 38987492033; merged in #76 as `20ebb02`. M4 human drive-test acceptance is not claimed. Current: #31 (ramp ladder), including neutral downhill motor-braking observations; implementation checks pending.
 
 The completed M2 implementation evidence remains below.
 

@@ -36,9 +36,10 @@
     const data=window.riderTelemetry;
     if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
-      hud.textContent=`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
+      hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
     if(enabled){
+      if(api.sectionButton)api.sectionButton.hidden=!(data?.section_count>1);
       const tilt=window.riderTilt;
       tiltHud.textContent=tilt.mode==='active'?`Tilt input ${tilt.lean().toFixed(2)} · touch lean overrides`:
         tilt.mode==='off'?'':tilt.reason||'Calibrate tilt';
@@ -112,6 +113,7 @@
     const ids=api.stations||['straight'];const index=ids.indexOf(window.riderTelemetry?.station);
     pending.station=ids[(index+1)%ids.length];
   });
+  api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
   button('Layout A · mirror',toolbar,b=>{
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
@@ -132,6 +134,7 @@
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;
+    toastNode.style.top=Math.max(toolbar.getBoundingClientRect().bottom+8,matchMedia('(orientation:portrait)').matches?196:56)+'px';
     clearTimeout(api.toastTimer);api.toastTimer=setTimeout(()=>{toastNode.hidden=true;},1500);
   };
   measure=document.createElement('div');measure.className='measure';
