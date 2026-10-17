@@ -21,6 +21,11 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Cache SHA-verified actionlint archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/ci/actionlint.tar.gz
+          key: actionlint-archive-v1-${{ hashFiles('tools/ci/actionlint-lock.json') }}
       - name: Lint workflow syntax and expressions
         run: python3 tools/ci/lint_workflows.py
       - name: Check fast-path classification rules
@@ -45,6 +50,9 @@ jobs:
           git cat-file -e "$BASE^{commit}"
           git diff --no-renames --name-only -z "$BASE" HEAD -- > "$RUNNER_TEMP/changed-paths"
           python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" >> "$GITHUB_OUTPUT"
+      - name: Validate changed Markdown relative links
+        if: steps.classify.outputs.docs_only == 'true'
+        run: python3 tools/ci/check_docs_links.py "$RUNNER_TEMP/changed-paths"
   bootstrap:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
@@ -62,6 +70,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14.8'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
       - run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
       - run: python -m unittest discover -s tests/g2 -v
       - name: Linux unified verification
