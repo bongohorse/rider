@@ -13,6 +13,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function trial(station,section){
    await page.goto(url+`?station=${station}&section=${section}`);
    await page.waitForFunction(({sha,runId,station,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station&&window.riderStationReport.section===section,{sha,runId,station,section});
+   if(section==='0.3'){await page.waitForFunction(id=>Number.isFinite(window.riderStationReport.records.find(r=>r.id===id)?.obstacle_entry_mps),section);await page.screenshot({path:path.join(out,station+'-approach.png')});}
    await page.waitForFunction(id=>window.riderStationReport.records.find(r=>r.id===id)?.done,section,{timeout:15000});
    const report=await page.evaluate(()=>window.riderStationReport),r=report.records.find(x=>x.id===section);
    assert.equal(report.start_speed,5);assert.equal(report.hard_suspension_stop,false);assert.equal(r.independent,true);

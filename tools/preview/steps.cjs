@@ -17,6 +17,11 @@ module.exports=async function steps(browser,url,sha,out){
   await page.keyboard.down('v');await page.waitForFunction(n=>window.riderStationReport.section==='0.2'&&window.riderTelemetry.reset_count===n+1,before.reset);await page.keyboard.up('v');
   const after=await page.evaluate(()=>window.riderTelemetry);assert.equal(after.reset_count,before.reset+1);assert.equal(after.world_loads,before.loads);assert.equal(after.start_speed,0);
   cases.push('release_section_without_world_reload');
+  target.search='?station=steps-down&section=0.5&speed=0&touch=0';await page.goto(target.href);
+  await page.waitForFunction(()=>window.riderStationReport?.station==='steps-down'&&window.riderStationReport.section==='0.5'&&window.riderTelemetry?.sequence>2);
+  assert.equal(await page.evaluate(()=>window.riderStationReport.automated),false);
+  await page.screenshot({path:path.join(out,'steps-down-release.png')});
+  cases.push('release_down_ladder_direct_url');
  }finally{await context.close();}
  const mobile=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
  phone.on('pageerror',e=>errors.push(e.message));
