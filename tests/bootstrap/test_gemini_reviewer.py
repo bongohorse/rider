@@ -18,11 +18,11 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
         settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
         self.assertTrue(settings["enableTerminalSandbox"])
         self.assertEqual(settings["permissions"]["allow"], [])
-        for item in ("write_file(*)", "command(*)", "unsandboxed(*)",
-                     "mcp(*)", "execute_url(*)", "read_file(/mnt/)",
+        for item in ("write_file(*)", "command(*)", "mcp(*)", "execute_url(*)", "read_file(/mnt/)",
                      "read_file(/home/mega/)"):
             self.assertIn(item, settings["permissions"]["deny"])
         self.assertEqual(settings["permissions"]["ask"], ["read_url(*)"])
+        self.assertNotIn("unsandboxed(*)", settings["permissions"]["deny"])
 
     def test_bash_syntax_on_linux(self):
         bash = shutil.which("bash")
@@ -68,6 +68,8 @@ class GeminiReviewerPolicyTests(unittest.TestCase):
         self.assertIn("git -C \"$repo\" archive", script)
         self.assertIn("sudo chown -R root:root", script)
         self.assertIn("sudo chmod -R a-w", script)
+        self.assertIn('sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_root"', script)
+        self.assertNotIn('sudo chown -R', script.split("# Evidence only:")[0].replace("sudo chown -R root:root", ""))
         self.assertIn('sudo find "$snapshot" -type d -exec chmod a+rx {} +', script)
         self.assertIn('sudo -u "$review_user" -H test -w', script)
         self.assertIn('sudo -u "$review_user" -H test -x "$HOME"', script)
