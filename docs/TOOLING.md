@@ -112,7 +112,7 @@ Claude and Codex retain **equal developer privileges**. Gemini is a **read-only 
 
 - An unprivileged Linux account `rider-gemini` without sudo or Docker access and with a separate home, Google login and Antigravity configuration;
 - A root-owned, non-writable, **tracked-source-only** snapshot at `/opt/rider-gemini-review/<source SHA>`. No `.git`, ignored secrets, working copies or developer build outputs are copied;
-- [Deny rules](../tools/security/gemini-readonly-settings.json) for `write_file(*)`, `command(*)`, `unsandboxed(*)`, `mcp(*)` and `execute_url(*)`, and interactive approval for reading new websites. The terminal sandbox is explicitly enabled. **Deny wins over Allow** per [Antigravity CLI permissions](https://www.antigravity.google/docs/permissions?tab=cli) and [terminal sandbox](https://www.antigravity.google/docs/cli/sandbox) documentation.
+- [Deny rules](../tools/security/gemini-readonly-settings.json) for `write_file(*)`, `command(*)`, `unsandboxed(*)`, `mcp(*)` and `execute_url(*)`; additionally, `read_file(/home/mega/)` and `read_file(/mnt/)` block reads of the owner home and WSL-mounted Windows drives. New website reads require interactive approval. The terminal sandbox is explicitly enabled. **Deny wins over Allow** per [Antigravity CLI permissions](https://www.antigravity.google/docs/permissions?tab=cli) and [terminal sandbox](https://www.antigravity.google/docs/cli/sandbox) documentation.
 
 **Maintainer-host installation (not performed by CI or this repository change):**
 
@@ -149,5 +149,5 @@ sudo -u rider-gemini test ! -r "$HOME/.config/gh/hosts.yml"
 git -C ~/rider status --short --branch
 ```
 
-Replace `<source-SHA>` with the exact SHA reported by the script. Never paste tokens, browser login codes or auth file contents into issue logs. Do not claim technical isolation until **both** agent-tool deny behavior and cross-user filesystem negative checks are observed on the actual WSL host. Linux account separation does not secure Windows user files, mounted Windows drives or any external services independently; do not expose those paths or grant the reviewer sudo/network-write capabilities. To review newer code, generate a new SHA snapshot explicitly; do not let Gemini modify the tracked working tree.
+Replace `<source-SHA>` with the exact SHA reported by the script. Never paste tokens, browser login codes or auth file contents into issue logs. Do not launch `agy` as the original `mega` WSL user for Rider reviews: the already-installed maintainer-user `agy` remains outside the new account's CLI policy and retains that user's ordinary filesystem and GitHub permissions. Do not claim technical isolation until **both** agent-tool deny behavior and cross-user filesystem negative checks are observed on the actual WSL host. Linux account separation does not secure Windows user files, mounted Windows drives or any external services independently; do not expose those paths or grant the reviewer sudo/network-write capabilities. To review newer code, generate a new SHA snapshot explicitly; do not let Gemini modify the tracked working tree.
 
