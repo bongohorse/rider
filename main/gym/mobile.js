@@ -9,7 +9,7 @@
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
-  api.cancel=()=>{api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;};
+  api.cancel=()=>{api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}};
   api.clear=(preserveTilt=false)=>{
     if(!preserveTilt)window.riderTilt?.pause("Input cleared — calibrate to resume");
     pointers.clear();
