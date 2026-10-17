@@ -1,3 +1,4 @@
+const {configure}=require('./launch.cjs');
 const {chromium} = require('playwright');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -10,7 +11,7 @@ async function main() {
     const p = path.join(dir,e.name); const hit = e.isDirectory() ? find(p) : e.name==='index.html' ? p : null;
     if(hit) return hit;
   }};
-  const index=find(root); if(!index) throw Error('Missing gym bundle');
+  const index=find(path.resolve(process.argv[6])); if(!index) throw Error('Missing gym bundle');
   const web=path.dirname(index), lines=[], errors=[];
   let browser;
   const server=http.createServer((req,res)=>{
@@ -26,6 +27,7 @@ async function main() {
   try {
     browser=await chromium.launch();
     const page=await browser.newPage({viewport:{width:960,height:540}});
+    await configure(page, runId, process.argv[5]);
     if(process.argv[5]==='a11')await page.context().grantPermissions(['clipboard-read','clipboard-write']);
     let feedbackChecked=false;
     let resolveDone, rejectDone;

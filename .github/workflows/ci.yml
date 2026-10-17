@@ -21,6 +21,8 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Lint workflow syntax and expressions
+        run: python3 tools/ci/lint_workflows.py
       - name: Check fast-path classification rules
         run: python3 -m unittest discover -s tests/ci -v
       - name: Detect Markdown-only change (fail closed)
@@ -95,6 +97,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.21.0'
+          cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run renovate:validate
       - name: Real dependency extraction scan
@@ -116,14 +119,20 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/g1.yml
+    with:
+      caller_managed_concurrency: true
   tooling:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/g2.yml
+    with:
+      caller_managed_concurrency: true
   bridge:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     uses: ./.github/workflows/bridge.yml
+    with:
+      caller_managed_concurrency: true
   preview:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
