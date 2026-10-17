@@ -19,7 +19,6 @@
       "matchUpdateTypes": [
         "major"
       ],
-      "dependencyDashboardApproval": true,
       "labels": [
         "dependencies",
         "major-update"
