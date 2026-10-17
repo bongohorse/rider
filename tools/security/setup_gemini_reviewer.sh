@@ -41,10 +41,10 @@ python3 - "$policy" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     settings = json.load(f)
-expected = {"write_file(*)", "command(*)", "unsandboxed(*)",
-            "mcp(*)", "execute_url(*)"}
+expected = {"write_file(*)", "command(*)", "mcp(*)", "execute_url(*)"}
 actual = set(settings.get("permissions", {}).get("deny", []))
-if not expected.issubset(actual) or settings.get("enableTerminalSandbox") is not True:
+if (not expected.issubset(actual) or "unsandboxed(*)" in actual
+        or settings.get("enableTerminalSandbox") is not True):
     raise SystemExit("Gemini deny/sandbox policy is incomplete")
 PY
 
@@ -63,17 +63,42 @@ done
 
 review_home="$(getent passwd "$review_user" | cut -d: -f6)"
 review_group="$(id -gn "$review_user")"
-settings_dir="$review_home/.gemini/antigravity-cli"
+review_uid="$(id -u "$review_user")"
+settings_root="$review_home/.gemini"
+settings_dir="$settings_root/antigravity-cli"
 settings="$settings_dir/settings.json"
 
-# Never overwrite existing Gemini auth or user-maintained settings.
-if sudo test -e "$settings"; then
-  if ! sudo cmp -s "$policy" "$settings"; then
-    echo "Existing Gemini settings differ: $settings. Reconcile manually; no overwrite." >&2
+# GNU install -d -o USER on a deep path can create *intermediate*
+# directories as root. Prior versions created ~/.gemini as root-owned,
+# making Antigravity's ~/.gemini/config/projects creation fail.
+# Repair only that specific directory, never recursively chown the home.
+if [[ "$review_home" != "/home/$review_user" ]]; then
+  echo "Unexpected reviewer home: $review_home" >&2
+  exit 2
+fi
+for path in "$settings_root" "$settings_dir" "$settings"; do
+  if sudo test -L "$path"; then
+    echo "Refusing symbolic link in Gemini settings path: $path" >&2
     exit 2
   fi
+done
+if sudo test -e "$settings_root"; then
+  current_owner="$(sudo stat -c '%u' "$settings_root")"
+  if [[ "$current_owner" != 0 && "$current_owner" != "$review_uid" ]]; then
+    echo "Unexpected owner of Gemini settings root: $current_owner" >&2
+    exit 2
+  fi
+fi
+sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_root"
+sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_dir"
+
+# Never overwrite unexpected user-edited settings or auth state. The sole
+# supported migration removes obsolete unsandboxed(*) from the exact
+# previous repo policy; the already-denied command(*) covers commands.
+if sudo test -e "$settings"; then
+  sudo python3 "$repo/tools/security/reconcile_gemini_settings.py" \
+    "$policy" "$settings" "$review_uid"
 else
-  sudo install -d -m 700 -o "$review_user" -g "$review_group" "$settings_dir"
   sudo install -m 600 -o "$review_user" -g "$review_group" "$policy" "$settings"
 fi
 
