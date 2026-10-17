@@ -33,3 +33,15 @@ G1 baseline: native headless physics and HTML5 debug. G2 extends Windows to the 
 Native Bridge verification uses the same result CLI: `verify --suite bridge` under Linux graphics/Xvfb. Install the pinned wrapper with `python tools/setup_bridge.py`; use `build --target desktop --configuration debug --fixture bridge` for the interactive native fixture. See [BRIDGE.md](contracts/automation/bridge.md) for explicit commands and verified debug/release behavior. HTML5 does not load the native extension.
 
 Gym runtime smoke: `python tools/gym/smoke.py --output artifacts/gym/a1 --case a1`. It checks chain support and camera following in HTML5; CI retains its screenshot and logs.
+
+## VS Code Rider profile (WSL, CLI agents)
+
+The repository contains [`profiles/Rider.code-profile`](../profiles/Rider.code-profile) (importable VS Code profile) and [`.vscode/settings.json`](../.vscode/settings.json) (Rider-specific yellow window chrome and no built-in Copilot/Chat panel). These are configuration templates, not evidence that a user profile was installed on the Windows machine. Codex CLI and Claude Code CLI run in the WSL terminal; no agent extensions are required.
+
+1. Install VS Code on Windows and its **WSL** extension (`ms-vscode-remote.remote-wsl`). Open **File > Preferences > Profiles > Import Profile...** and select `profiles/Rider.code-profile`. Create the profile named **Rider**. You only need to import once.
+2. Open the WSL distro **Ubuntu-26.04**, clone this repository at `~/rider` (or update your existing clone), then open Rider in its profile: `cd ~/rider && code --new-window --profile Rider .`.
+3. Alternatively, launch from Windows PowerShell with `tools/open-rider.ps1`; it targets `Ubuntu-26.04` and `~/rider`. Use `-Distro <name>` if your installed WSL distro has another name. This launcher does not install WSL or tooling.
+4. VS Code remembers the selected profile for the opened folder. Switch project profiles via **Profiles: Switch Profile** or **File > New Window with Profile**. Built-in AI is disabled **only for the Rider workspace/profile**, not globally for Goblin or MGD.
+5. Run `codex` or `claude` in the integrated WSL terminal after their respective standalone CLIs are installed. Authenticate interactively; do not commit credentials or API keys.
+
+VS Code's WSL extension is separate from AI extensions. The actual WSL/toolchain setup and required build/verification commands are described above. The profile files do not install pinned JDK/Bob/Playwright themselves.
