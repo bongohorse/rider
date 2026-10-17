@@ -20,7 +20,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    assert(['VALID','INVALID / NOT COMPARABLE'].includes(r.status));assert.equal(r.comparable,r.status==='VALID');
    if(r.comparable){assert(qualify(r).comparable,JSON.stringify(qualify(r)));assert.equal(r.reasons.length,0);assert(r.speed_min_mps>=r.nominal_mps*.95);assert(r.speed_max_mps<=r.nominal_mps*1.05);assert(r.seams.every(s=>s.samples>=2&&s.wheel1_crossed&&s.wheel2_crossed));}
    else assert(r.reasons.length>0);
-   if(r.exit_mps!==undefined)for(const seam of r.seams){
+   for(const seam of r.seams){
     const p=peaks(r,seam.x_m);assert.equal(p.samples,seam.samples);
     assert(Math.abs(p.vy-seam.vy_peak_mps)<1e-8);assert(Math.abs(p.dvy-seam.dvy_peak_mps)<1e-8);assert(Math.abs(p.rise-seam.rise_m)<1e-8);
     assert.equal(p.loss1,seam.wheel1_loss_samples);assert.equal(p.loss2,seam.wheel2_loss_samples);

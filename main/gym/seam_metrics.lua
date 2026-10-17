@@ -99,18 +99,23 @@ function M.observe(self,state,dt,sample)
         end
         if x>=finish then
             r.done=true;r.exit_mps=vx;r.drift_mps=vx-r.entry_mps
-            for _,s in ipairs(r.seams) do
-                if s.samples<2 or not s.wheel1_crossed or not s.wheel2_crossed then invalidate(r,"incomplete seam coverage") end
-                s.ghost_bump=s.vy_peak_mps>r.threshold_vy_mps or s.dvy_peak_mps>r.threshold_dvy_mps or s.rise_m>r.threshold_rise_m
-                if s.ghost_bump then r.ghost_bumps=r.ghost_bumps+1 end
-                s.wheel1_loss_s=s.wheel1_loss_samples*M.protocol.dt_s;s.wheel2_loss_s=s.wheel2_loss_samples*M.protocol.dt_s
-            end
-            r.comparable=#r.reasons==0
-            r.status=r.comparable and "VALID" or "INVALID / NOT COMPARABLE"
         end
     end
     if r.elapsed_s>=M.protocol.max_elapsed_s and not r.done then
-        invalidate(r,"incomplete window after 30 s observation");r.done=true;r.status="INVALID / NOT COMPARABLE"
+        invalidate(r,"incomplete window after 30 s observation");r.done=true
+    end
+    if r.done then
+        -- Finalize observed diagnostics for completed AND incomplete windows.
+        -- Missing/unobserved seams never acquire a comparison verdict.
+        for _,s in ipairs(r.seams) do
+            s.complete=s.samples>=2 and s.wheel1_crossed==true and s.wheel2_crossed==true
+            if not s.complete then invalidate(r,"incomplete seam coverage") end
+            s.ghost_bump=s.samples>0 and (s.vy_peak_mps>(r.threshold_vy_mps or math.huge) or s.dvy_peak_mps>(r.threshold_dvy_mps or math.huge) or s.rise_m>(r.threshold_rise_m or math.huge))
+            if s.ghost_bump then r.ghost_bumps=r.ghost_bumps+1 end
+            s.wheel1_loss_s=s.wheel1_loss_samples*M.protocol.dt_s;s.wheel2_loss_s=s.wheel2_loss_samples*M.protocol.dt_s
+        end
+        r.comparable=#r.reasons==0
+        r.status=r.comparable and "VALID" or "INVALID / NOT COMPARABLE"
     end
     self.seam_previous={x=x,vy=vy,c1=c1,c2=c2,w=w}
 end
