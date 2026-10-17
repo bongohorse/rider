@@ -51,6 +51,7 @@ function M.validate(d)
         for _,section in ipairs(d.sections) do
             if type(section)~="table" or type(section.id)~="string" or ids[section.id] or type(section.name)~="string" or not point(section.spawn) then return nil,"Invalid section identity/start" end
             ids[section.id]=true
+            if section.stop_probe~=nil and (d.kind~="steps" or type(section.stop_probe)~="boolean") then return nil,"Invalid step probe" end
             if section.spawn[1]<=b[1] or section.spawn[1]>=b[2] or section.spawn[2]<=b[3] or section.spawn[2]>=b[4] then return nil,"Section spawn outside bounds" end
             if section.mode~="up" and section.mode~="down" then return nil,"Invalid ramp mode" end
             if not finite(section.start_speed) or section.start_speed<0 or section.start_speed>30 then return nil,"Invalid section speed" end

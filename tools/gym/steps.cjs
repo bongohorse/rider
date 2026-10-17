@@ -16,7 +16,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    if(section==='0.3'){await page.waitForFunction(id=>Number.isFinite(window.riderStationReport.records.find(r=>r.id===id)?.obstacle_entry_mps),section);await page.screenshot({path:path.join(out,station+'-approach.png')});}
    await page.waitForFunction(id=>window.riderStationReport.records.find(r=>r.id===id)?.done,section,{timeout:15000});
    const report=await page.evaluate(()=>window.riderStationReport),r=report.records.find(x=>x.id===section);
-   assert.equal(report.start_speed,5);assert.equal(report.hard_suspension_stop,false);assert.equal(r.independent,true);
+   assert.equal(report.start_speed,5);assert.equal(report.hard_suspension_stop,section==='stop-probe');assert.equal(r.independent,true);
    assert.equal(r.throttle_min,station==='steps'?1:0);assert.equal(r.throttle_max,r.throttle_min);assert.equal(r.brake_max,0);assert.equal(r.lean_max,0);
    assert(['CLIMBED','LANDED','STUCK'].includes(r.status));assert(Number.isFinite(r.compression_m)&&r.compression_m>=0);
    assert(Number.isFinite(r.obstacle_entry_mps),'obstacle was reached');
@@ -27,6 +27,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    if(section==='0.3')await page.screenshot({path:path.join(out,station+'.png')});
   }
   assert(results.some(r=>r.status==='CLIMBED'));assert(results.some(r=>r.status==='LANDED'));
+  const stopProbe=await trial('steps','stop-probe');
+  assert(stopProbe.bottomed&&stopProbe.compression_m>=.175&&stopProbe.compression_m<=.20,'diagnostic stop must actually bottom');
+  const stopRepeat=await trial('steps','stop-probe');
+  assert(stopRepeat.bottomed&&Math.abs(stopRepeat.compression_m-stopProbe.compression_m)<=.005);
+  await page.screenshot({path:path.join(out,'steps-stop-probe.png')});
   // Repeat the greatest measured compression at the exact same authored start.
   const peak=results.reduce((a,b)=>a.compression_m>b.compression_m?a:b),repeated=await trial(peak.station,peak.section);
   assert.equal(repeated.status,peak.status);assert.equal(repeated.underbody_contact,peak.underbody_contact);
@@ -43,7 +48,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(await page.evaluate(()=>window.riderTelemetry.start_speed),3);
   await page.keyboard.down('v');await page.waitForFunction(()=>window.riderStationReport.section==='0.25');await page.keyboard.up('v');
   assert.equal(await page.evaluate(()=>window.riderTelemetry.start_speed),3);
-  const report={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),results,repeat:{first:peak,repeated,retry},highest_climbed_m:Math.max(...results.filter(r=>r.status==='CLIMBED').map(r=>r.height_m)),real_device:'NOT RUN'};
+  const report={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),results,repeat:{first:peak,repeated,retry},stop_probe:{first:stopProbe,repeated:stopRepeat},highest_climbed_m:Math.max(...results.filter(r=>r.status==='CLIMBED').map(r=>r.height_m)),real_device:'NOT RUN'};
   if(errors.length)throw Error(errors.join('\n'));
   fs.writeFileSync(path.join(out,'steps-result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
  }catch(e){if(page){await page.screenshot({path:path.join(out,'steps-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'steps-failed-state.json'),JSON.stringify({results,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}

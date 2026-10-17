@@ -75,6 +75,13 @@ function M.build(body,d)
     return chains,segments
 end
 function M.start(v,d)
+    local section=d.sections and d.sections[d.section_index]
+    local probe=section and section.stop_probe==true or false
+    for _,joint in ipairs(v.joints) do
+        if probe then b2d.joint.set_limits(joint,-20,18) end
+        b2d.joint.enable_limit(joint,probe)
+        assert(b2d.joint.is_limit_enabled(joint)==probe,"Station stop probe leaked")
+    end
     local speed=d.start_speed/sys.get_config_number("physics.scale",0.01)
     b2d.body.set_linear_velocity(v.chassis,vmath.vector3(speed,0,0))
     for _,wheel in ipairs(v.wheels) do

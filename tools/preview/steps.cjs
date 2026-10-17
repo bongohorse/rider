@@ -22,6 +22,13 @@ module.exports=async function steps(browser,url,sha,out){
   assert.equal(await page.evaluate(()=>window.riderStationReport.automated),false);
   await page.screenshot({path:path.join(out,'steps-down-release.png')});
   cases.push('release_down_ladder_direct_url');
+  await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud?.tuning);await page.keyboard.up('t');
+  const slider=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderControls[0];return {x:r.x+s.right.x/c.width*r.width,y:r.y+(1-s.right.y/c.height)*r.height};});
+  await page.mouse.move(slider.x,slider.y);await page.mouse.down();
+  await page.waitForFunction(()=>window.riderTelemetry.modified&&window.riderStationReport?.comparable===false);await page.mouse.up();
+  assert.equal(await page.evaluate(()=>window.riderStationReport.highest_climbed_m),0);
+  await page.keyboard.down('r');await page.waitForFunction(()=>window.riderStationReport?.comparable===true&&window.riderStationReport.tuning_at_start.spring_hz===12);await page.keyboard.up('r');
+  cases.push('live_tuning_invalidates_comparison_until_retry');
  }finally{await context.close();}
  const mobile=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
  phone.on('pageerror',e=>errors.push(e.message));
