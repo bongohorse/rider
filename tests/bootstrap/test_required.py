@@ -1,4 +1,7 @@
-"""Exercise the actual required job script with failed/cancelled/skipped required dependencies."""
+"""Exercise the real required job script in full and docs-only modes.
+
+Docs-only must skip expensive suites deliberately; all other cases fail closed.
+"""
 import json
 import os
 from pathlib import Path
@@ -9,35 +12,81 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
+
+def load_workflow():
+    return yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
+
+
+def run_required(job, needs):
+    code = job["steps"][0]["run"].split("<<'PYTHON'\n", 1)[1].rsplit("\nPYTHON", 1)[0]
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        env={**os.environ, "RESULTS": json.dumps(needs)},
+        capture_output=True, text=True,
+    )
+
+
 class RequiredCheck(unittest.TestCase):
-    def test_dependency_results_fail_closed(self):
-        workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
-        job = workflow['jobs']['required']
-        self.assertEqual(job['if'], '${{ always() }}')
-        self.assertEqual(set(job['needs']), {'bootstrap', 'renovate', 'physics', 'tooling', 'bridge', 'preview'})
-        for dependency in job['needs']:
-            for state in ['success', 'failure', 'cancelled', 'skipped']:
-                with self.subTest(dependency=dependency,state=state):
-                    needs = {name: {'result': 'success'} for name in job['needs']}
-                    needs[dependency]['result'] = state
-                    result = subprocess.run([sys.executable, '-c', job['steps'][0]['run'].split("<<'PYTHON'\n", 1)[1].rsplit('\nPYTHON', 1)[0]],
-                        env={**os.environ, 'RESULTS': json.dumps(needs)}, capture_output=True, text=True)
-                    self.assertEqual(result.returncode, 0 if state == 'success' else 1, result.stderr)
+    def test_dependency_results_fail_closed_in_full_mode(self):
+        job = load_workflow()["jobs"]["required"]
+        self.assertEqual(job["if"], "${{ always() }}")
+        expected = {"changes", "bootstrap", "renovate", "physics", "tooling", "bridge", "preview"}
+        self.assertEqual(set(job["needs"]), expected)
+        baseline = {name: {"result": "success"} for name in expected}
+        baseline["changes"]["outputs"] = {"docs_only": "false"}
+        self.assertEqual(run_required(job, baseline).returncode, 0)
+        for dependency in job["needs"]:
+            for state in ("failure", "cancelled", "skipped"):
+                with self.subTest(dependency=dependency, state=state):
+                    needs = json.loads(json.dumps(baseline))
+                    needs[dependency]["result"] = state
+                    result = run_required(job, needs)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
 
-    def test_physics_runs_for_pr_and_main_via_reusable_workflows(self):
-        workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
-        self.assertIn('pull_request', workflow['on'])
-        self.assertIn('main', workflow['on']['push']['branches'])
-        for job, name in [('physics', 'g1'), ('tooling', 'g2'), ('bridge', 'bridge'), ('preview', 'preview')]:
-            self.assertEqual(workflow['jobs'][job]['uses'], f'./.github/workflows/{name}.yml')
-            called = yaml.load((ROOT / f'.github/workflows/{name}.yml').read_text(), Loader=yaml.BaseLoader)
-            self.assertIn('workflow_call', called['on'])
+    def test_docs_only_mode_requires_exactly_skipped_heavy_jobs(self):
+        job = load_workflow()["jobs"]["required"]
+        others = {name: {"result": "skipped"} for name in job["needs"] if name != "changes"}
+        expected = {"changes": {"result": "success", "outputs": {"docs_only": "true"}}, **others}
+        self.assertEqual(run_required(job, expected).returncode, 0)
+        for dependency in others:
+            for state in ("success", "failure", "cancelled"):
+                with self.subTest(dependency=dependency, state=state):
+                    needs = json.loads(json.dumps(expected))
+                    needs[dependency]["result"] = state
+                    self.assertNotEqual(run_required(job, needs).returncode, 0)
+        for bad in ("failure", "cancelled", "skipped"):
+            needs = json.loads(json.dumps(expected))
+            needs["changes"]["result"] = bad
+            self.assertNotEqual(run_required(job, needs).returncode, 0)
+        needs = json.loads(json.dumps(expected))
+        del needs["preview"]
+        self.assertNotEqual(run_required(job, needs).returncode, 0)
 
-    def test_pages_deploy_waits_for_required_and_only_main(self):
-        workflow = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
-        deploy = workflow['jobs']['pages']
-        self.assertEqual(deploy['needs'], 'required')
-        self.assertEqual(deploy['if'], "github.ref == 'refs/heads/main'")
-        self.assertEqual(deploy['uses'], './.github/workflows/pages.yml')
-        self.assertIn('workflow_dispatch', workflow['on'])
-        self.assertEqual(workflow['concurrency']['cancel-in-progress'], "${{ github.ref != 'refs/heads/main' }}")
+    def test_change_gating_is_scoped_to_heavy_jobs(self):
+        workflow = load_workflow()
+        self.assertIn("pull_request", workflow["on"])
+        self.assertIn("main", workflow["on"]["push"]["branches"])
+        self.assertEqual(workflow["jobs"]["changes"]["outputs"]["docs_only"],
+                         "${{ steps.classify.outputs.docs_only }}")
+        for job in ("bootstrap", "renovate", "physics", "tooling", "bridge", "preview"):
+            self.assertEqual(workflow["jobs"][job]["needs"], "changes")
+            self.assertEqual(workflow["jobs"][job]["if"], "needs.changes.outputs.docs_only != 'true'")
+        for job, name in (("physics", "g1"), ("tooling", "g2"), ("bridge", "bridge"), ("preview", "preview")):
+            self.assertEqual(workflow["jobs"][job]["uses"], f"./.github/workflows/{name}.yml")
+            called = yaml.load((ROOT / f".github/workflows/{name}.yml").read_text(), Loader=yaml.BaseLoader)
+            self.assertIn("workflow_call", called["on"])
+
+    def test_pages_deploy_waits_for_required_and_only_main_full_suite(self):
+        workflow = load_workflow()
+        deploy = workflow["jobs"]["pages"]
+        self.assertEqual(deploy["needs"], ["changes", "required"])
+        self.assertEqual(deploy["if"],
+                         "github.ref == 'refs/heads/main' && needs.changes.outputs.docs_only != 'true'")
+        self.assertEqual(deploy["uses"], "./.github/workflows/pages.yml")
+        self.assertIn("workflow_dispatch", workflow["on"])
+        self.assertEqual(workflow["concurrency"]["cancel-in-progress"],
+                         "${{ github.ref != 'refs/heads/main' }}")
+
+
+if __name__ == "__main__":
+    unittest.main()

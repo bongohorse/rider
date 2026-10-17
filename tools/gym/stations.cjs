@@ -1,13 +1,15 @@
+const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;
  function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
- const web=path.dirname(find(out)),errors=[],cases=[],measurements={};
+ const web=path.dirname(find(path.resolve(process.argv[6]))),errors=[],cases=[],measurements={};
  const server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(file).pipe(res);});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{
   browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1280,height:720}});
+  await configure(page,runId,process.argv[5]);
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   const url='http://127.0.0.1:'+server.address().port+'/index.html';
   await page.goto(url+'?station=straight&speed=8');

@@ -1,25 +1,35 @@
 name: G2 tooling
 on:
   workflow_call:
+    inputs:
+      caller_managed_concurrency:
+        description: Let the calling CI own cancellation and isolate this run
+        type: boolean
+        default: false
   workflow_dispatch:
 permissions:
   contents: read
+# The caller owns CI cancellation. Standalone dispatches must not cancel its jobs.
 concurrency:
-  group: g2-${{ github.ref }}
-  cancel-in-progress: true
+  group: g2-${{ inputs.caller_managed_concurrency && github.run_id || 'manual' }}-${{ github.ref }}
+  cancel-in-progress: ${{ !inputs.caller_managed_concurrency }}
 jobs:
   negative-build:
-    name: G2 isolated build-error regression
+    name: G2 build-error regression and verified Android APK
     runs-on: ubuntu-26.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14.8'
+      - name: Cache verified Bob download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/g1/bob.jar
+          key: bob-v1-${{ hashFiles('tools/toolchain-lock.json') }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
