@@ -28,6 +28,11 @@ jobs:
           node-version: '24.21.0'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Cache pinned Playwright Chromium
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-v1-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - name: Verify screen-aware tilt mapping and normalization
         run: node --test tests/mobile/tilt.test.cjs
