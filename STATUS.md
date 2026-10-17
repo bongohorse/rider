@@ -4,7 +4,7 @@ Updated 2026-10-17. This is the sole current progress/blocker source. Evidence b
 
 ## Current work
 
-M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. Started #30 (A15): validated station data, straight markers, speed start, retry and serialized proxy switching. Implementation checks are in progress; no M4 drive-test acceptance claimed.
+M3 is accepted by Claudio on 2026-10-16 after his browser and phone drive test: he is satisfied with the adjustments, reports that tilt works well, and explicitly authorizes complete M3 closure. All five assigned issues are complete under this acceptance: #58, #28, #29, #68 and #69. M4 is authorized by Claudio on 2026-10-17. A15 / #30 is merged through PR #76 (`20ebb02`), with current-head required PASS at `da26a10` / CI 38987492033. A16 / #31 is implemented and verified in PR #77 (code `9773757`, required CI 38989165890 PASS). M4 has two technically completed implementations out of eleven; PR #77 records its merge state. Next issue: #32 (step ladder). No M4 drive-test acceptance claimed.
 
 | M3 issue | Completion evidence |
 | --- | --- |
@@ -20,7 +20,19 @@ Closure exception (owner: Claudio): his explicit instruction to close M3 after s
 
 A15 is implemented in [PR #76](https://github.com/bongohorse/rider/pull/76). Technical baseline at `0354566` / [CI 38986524075 attempt 2](https://github.com/bongohorse/rider/actions/runs/38986524075): required PASS after retrying an npm ECONNRESET in the release job. Station suite PASS: first-step speed 8.000637 m/s and retry 8.001246 m/s (target 8 ±0.2), wheel spin -36.363636 rad/s, Retry without reload, A→B→A with held-input release and hull loading, invalid schema/URL fallback, straight measurements/feedback. All retained HTML5/native/Bridge/Android regressions PASS. Release desktop/portrait/landscape/896×400 screenshots reviewed; thirteen synthetic touch cases (including station switching) and twelve injected tilt cases PASS. Ordinary sprites render terrain/ticks in release; labels are below the road.
 
-Final A15 follow-up: freeze the displayed braking distance at the first speed below 0.1 m/s before reversing. The new regression holds the brake through reverse and checks that distance stays fixed. Final current-head required remains pending before merge. M4 human drive-test acceptance is not claimed. Next: #31 (ramp ladder), including neutral downhill motor-braking observations.
+Final A15 follow-up: freeze the displayed braking distance at the first speed below 0.1 m/s before reversing. The new regression holds the brake through reverse and checks that distance stays fixed. Final current-head required PASS at `da26a10` / CI 38987492033; merged in #76 as `20ebb02`. M4 human drive-test acceptance is not claimed. A16 / #31: [PR #77](https://github.com/bongohorse/rider/pull/77), final gameplay/test source `9773757` / [required CI 38989165890](https://github.com/bongohorse/rider/actions/runs/38989165890) PASS. All 25 independent physical runs and section reset/keyboard/mobile selection checks pass. Normal release keyboard/section/touch tests and existing desktop/phone/tilt regressions pass; release ramp screenshots reviewed. One debug HTML5 build covers the whole ladder; gameplay tuning is unchanged.
+
+| Default controlled A16 observation | Result |
+| --- | --- |
+| 1 m kick ramps, 8 m/s start, throttle held, no lean | 5–45° CLIMBED; 60° and 12 m wall FAILED |
+| 4 m climb ramps, same commands/start | 5–35° CLIMBED; 40°/45°/60°/wall FAILED |
+| Neutral long 10° descent, authored 1 m/s start | First slope contact 1.040 → foot 2.209 m/s; 88% grounded ticks |
+| Neutral long 20° descent | 1.040 → 3.563 m/s; 83% grounded |
+| Neutral long 30° descent | 1.040 → 4.140 m/s; 80% grounded |
+
+These are current-preset limits under the stated protocol, not maximum possible player performance. The motor brake does not hold these tested descents. Actual phone performance and M4 driving acceptance remain unmeasured. Full per-ramp entry/pedal/launch records, source/run identity and screenshots are CI artifacts in #77. Next is #32; retain all eleven M4 assignments and stop for Claudio's drive test only at milestone completion.
+
+M4 checkpoint so far: keep versioned data and station observers outside the controller; preserve the sole physics owner and in-world section Retry. Release rendering needed real sprites, not debug-only lines. The repeated-key runner initially missed release frames; it now awaits fresh owner telemetry after key-up, retaining all physical assertions. No new engine-pitfall entry duplicates the existing input-sampling rule.
 
 The completed M2 implementation evidence remains below.
 

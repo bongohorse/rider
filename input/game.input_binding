@@ -21,3 +21,4 @@ key_trigger { input: KEY_6 action: "station_6" }
 key_trigger { input: KEY_7 action: "station_7" }
 key_trigger { input: KEY_8 action: "station_8" }
 key_trigger { input: KEY_9 action: "station_9" }
+key_trigger { input: KEY_V action: "section_cycle" }

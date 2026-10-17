@@ -22,7 +22,7 @@ function on_message(self,id,data,sender)
     if id==hash("select_station") and not self.loading then
         local d,note=stations.load(data.id,data.speed)
         if not d then msg.post("#ui","station_error",{note=note});return end
-        self.station,self.speed=d.id,d.start_speed
+        self.station,self.speed=d.id,data.speed or ""
         self.preset=data.preset or self.preset or "a"
         self.generation=self.generation+1
         self.loading,self.deadline=true,0

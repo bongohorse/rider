@@ -1,10 +1,11 @@
 local data=require "main.gym.station_data"
 local feel=require "main.gym.feel"
-local M={ids={"straight"}}
+local ramps=require "main.gym.ramp_metrics"
+local M={ids={"straight","ramps","ramps-long"}}
 if sys.get_config_string("rider.gym_test","")=="a15" and sys.get_engine_info().is_debug then
     M.ids={"straight","straight-test","invalid-test"}
 end
-function M.load(id,speed)
+function M.load(id,speed,section)
     local found=false
     for _,key in ipairs(M.ids) do if id==key then found=true end end
     local note=not found and "Unknown station; using Straight" or ""
@@ -14,8 +15,25 @@ function M.load(id,speed)
     if ok then valid,err=data.validate(d) else err="Unreadable station file" end
     if not valid or d.id~=id then return nil,err or "Station id mismatch" end
     local message
+    if d.sections then
+        local index=1
+        if section and section~="" then
+            index=nil
+            for i,s in ipairs(d.sections) do if s.id==tostring(section) then index=i end end
+            if not index then index=1;note=note.." Unknown section; using first" end
+        end
+        d.speed_override=speed and speed~="" and speed or nil
+        M.select(d,index)
+    end
     d.start_speed,message=data.speed(speed,d.start_speed)
     return d,message and (note~="" and note.."; "..message or message) or note
+end
+function M.select(d,index)
+    local s=d.sections and d.sections[index]
+    if not s then return false end
+    d.section_index=index;d.spawn={s.spawn[1],s.spawn[2]}
+    d.start_speed=data.speed(d.speed_override,s.start_speed)
+    return true
 end
 function M.initial()
     local id=sys.get_config_string("rider.station","straight")
@@ -24,7 +42,8 @@ function M.initial()
         id=html5.run("new URLSearchParams(location.search).get('station') || 'straight'")
         speed=html5.run("new URLSearchParams(location.search).get('speed') || ''")
     end
-    return M.load(id,speed)
+    local section=html5 and html5.run("new URLSearchParams(location.search).get('section') || ''") or sys.get_config_string("rider.section","")
+    return M.load(id,speed,section)
 end
 function M.configure(d)
     local scale=sys.get_config_number("physics.scale",0.01)
@@ -76,7 +95,11 @@ function M.decorate(d)
             vmath.quat_rotation_z(math.atan2(dy,dx)),nil,vmath.vector3(math.sqrt(dx*dx+dy*dy)/4,width/4,1))
         go.set(msg.url(nil,id,"sprite"),"tint",vmath.vector4(0.45,0.85,0.75,1))
     end
-    for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1)) end
+    if d.id:match("^straight") then for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1)) end end
+    for _,spec in ipairs(d.labels or {}) do
+        local id=factory.create("#marker",vmath.vector3(spec.position[1]/scale,spec.position[2]/scale,0))
+        label.set_text(msg.url(nil,id,"label"),spec.text)
+    end
     for _,chain in ipairs(d.chains) do
         for i=2,#chain do stroke(chain[i-1],chain[i],2) end
     end
@@ -96,12 +119,14 @@ function M.decorate(d)
     end
 end
 function M.restart(self)
+    if self.station.kind=="ramps" then ramps.restart(self) end
     M.start(self.vehicle,self.station)
     self.start_probe=2
     self.station_top_speed,self.station_brake_distance=0,0
     self.station_brake_x,self.station_brake_stopped=nil,false
 end
-function M.observe(self,state)
+function M.observe(self,state,dt,sample)
+    if self.station.kind=="ramps" then ramps.observe(self,state,dt,sample) end
     if self.start_probe then
         self.start_probe=self.start_probe-1
         if self.start_probe==0 then
@@ -123,8 +148,12 @@ function M.observe(self,state)
     else self.station_brake_x=nil end
 end
 function M.enrich(self,sample)
+    sample.section_count=self.station.sections and #self.station.sections or 0
+    sample.section_index=self.station.section_index or 0
+    if self.station.kind=="ramps" then ramps.enrich(self,sample)
+    elseif html5 then html5.run("window.riderStationReport=null") end
     sample.station=self.station.id
-    sample.station_name=self.station.name
+    sample.station_name=self.station.name..(self.station.sections and " ["..self.station.sections[self.station.section_index].id.."]" or "")
     sample.station_note=self.station_note or ""
     sample.start_speed=self.station.start_speed
     sample.first_tick_speed=self.first_tick_speed or 0
