@@ -36,10 +36,18 @@ module.exports=async function steps(browser,url,sha,out){
   await page.waitForFunction(p=>Math.abs(window.riderControls[0].value-p.midpoint)<p.tolerance,slider);
   await page.mouse.move(slider.x+4,slider.y);
   await page.waitForFunction(p=>Math.abs(window.riderControls[0].value-p.value)<.01&&window.riderTelemetry.modified&&window.riderStationReport?.comparable===false,slider);
-  await page.mouse.move(2,2);await page.mouse.up();
+  // Release in place: moving to (2,2) while held sends one more
+  // slider update and would overwrite the max value with the minimum.
+  await page.mouse.up();
   await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
+  const adjusted=await page.evaluate(()=>window.riderControls[0].value);
+  assert(Math.abs(adjusted-slider.value)<.01,'released slider must retain right endpoint');
   assert.equal(await page.evaluate(()=>window.riderStationReport.highest_climbed_m),0);
-  await page.keyboard.down('r');await page.waitForFunction(()=>window.riderStationReport?.comparable===true&&window.riderStationReport.tuning_at_start.spring_hz===12);await page.keyboard.up('r');
+  const resetBefore=await page.evaluate(()=>window.riderTelemetry.reset_count);
+  await page.keyboard.down('r');
+  await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resetBefore);
+  await page.keyboard.up('r');
+  await page.waitForFunction(value=>window.riderStationReport?.comparable===true&&Math.abs(window.riderStationReport.tuning_at_start.spring_hz-value)<.01,adjusted);
   cases.push('live_tuning_invalidates_comparison_until_retry');
  }finally{await context.close();}
  const mobile=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
