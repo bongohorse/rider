@@ -209,9 +209,6 @@ function M.enrich(self,sample)
     sample.world_loads=self.world_loads or 1
     sample.session_generation=self.session_generation
     sample.terrain_shapes=#b2d.body.get_shapes(self.terrain)
-    -- Load timings use socket.gettime (1 ms steps on HTML5); absent when the world had no trigger.
-    sample.switch_ms,sample.parse_ms=self.load.switch_ms,self.load.parse_ms
-    sample.build_ms,sample.decorate_ms=self.load.build_ms,self.load.decorate_ms
     sample.station_top_speed=self.station_top_speed or 0
     sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
     sample.station_brake_distance=self.station_brake_distance or 0

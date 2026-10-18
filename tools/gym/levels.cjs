@@ -28,17 +28,17 @@ function hulls(length,count,vertices){
  }
  return out;
 }
+// The start is 0.9 m above the chain polyline (the collision shape), not above the sampled sine.
+function height(chains,x){
+ for(const p of chains)for(let i=1;i<p.length;i++){const [a,b]=[p[i-1],p[i]];if(b[0]<=x&&x<=a[0])return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}
+ throw Error('Start outside the chains');
+}
 function level(id,name,{length,segments,chains=1,hullCount=0,hullVertices=4,spawnX=START[0]}){
- const d={schema:1,id,name,units:'metres',spawn:[spawnX,round(surface(spawnX)+.9)],start_speed:SPEED,run_in:10,run_out:20,
-  bounds:[spawnX===START[0]?-8:round(spawnX-8),length,-10,25],chains:ground(length,segments,chains)};
+ const ground_=ground(length,segments,chains);
+ const d={schema:1,id,name,units:'metres',spawn:[spawnX,round(height(ground_,spawnX)+.9)],start_speed:SPEED,run_in:10,run_out:20,
+  bounds:[spawnX===START[0]?-8:round(spawnX-8),length,-10,25],chains:ground_};
  if(hullCount)d.hulls=hulls(length,hullCount,hullVertices);
  return d;
-}
-// The 100-segment chain is linear between its points; a far start uses that line, not the sine.
-function farStart(d,x){
- const p=d.chains[0];let i=0;while(p[i+1][0]>x)i++;
- const [a,b]=[p[i],p[i+1]],y=a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);
- d.spawn=[x,round(y+.9)];return d;
 }
 const objects=d=>d.chains.reduce((n,c)=>n+c.length-1,0)+(d.hulls||[]).reduce((n,h)=>n+h.vertices.length,0)+(d.labels||[]).length;
 const LONG=99000;
@@ -48,8 +48,8 @@ function cases(){
   ['length',level('len-1km','LE1b length 1 km',{length:1000,segments:100})],
   ['length',level('len-10km','LE1b length 10 km',{length:10000,segments:100})],
   ['length',level('len-99km','LE1b length 99 km',{length:LONG,segments:100})],
-  // Start distance from the origin on the 99 km course (float32 precision in Box2D metres).
-  ...[1000,1500,2000,4000,98800].map(x=>['start',farStart(level('start-'+x+'m','LE1b 99 km, start at '+x/1000+' km',{length:LONG,segments:100,spawnX:x}),x)]),
+  // Start distance from the origin on the 99 km course: float32 positions against the 0.01-unit reset-pose guard.
+  ...[1000,1500,2000,4000,98800].map(x=>['start',level('start-'+x+'m','LE1b 99 km, start at '+x/1000+' km',{length:LONG,segments:100,spawnX:x})]),
   ['segments',level('seg-100','LE1b 400 m, 100 segments',{length:400,segments:100})],
   ['segments',level('seg-200','LE1b 400 m, 200 segments',{length:400,segments:200})],
   ['segments',level('seg-400','LE1b 400 m, 400 segments',{length:400,segments:400})],

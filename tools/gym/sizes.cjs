@@ -7,7 +7,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 const REPEATS=Number(process.env.LE1B_REPEATS||5),WARMUP_MS=1000,SAMPLE_MS=Number(process.env.LE1B_SAMPLE_MS||6000);
 // Page-side probes, installed before the engine starts. They only observe:
 // riderReady is written by the world in the same engine frame that makes the vehicle drive-ready;
-// riderMobile.poll runs once per world update with (dt, Box2D step profile); rAF wraps the engine frame callback.
+// riderMobile.poll runs once per world update with (dt, Box2D step profile); rAF wraps every frame callback.
+// The world's setup frame (terrain build) and the proxy load frames run no poll, so switch windows use all callbacks.
 function probes(){
  const p=window.__le1b={ready:[],polls:[],frames:[],world:[]};
  for(const [name,list] of [['riderReady',p.ready],['riderWorld',p.world]]){
@@ -18,7 +19,7 @@ function probes(){
   const mobile=window.riderMobile;
   if(mobile&&!mobile.__le1b){const poll=mobile.poll;mobile.poll=(dt,physics)=>{p.polled=true;p.polls.push({at:performance.now(),dt:dt*1000,physics});return poll(dt,physics);};mobile.__le1b=true;}
   p.polled=false;const start=performance.now();
-  try{cb(ts);}finally{if(p.polled)p.frames.push({start,work:performance.now()-start});}
+  try{cb(ts);}finally{p.frames.push({start,work:performance.now()-start,polled:p.polled});}
  });
 }
 function stats(values){
@@ -93,17 +94,17 @@ function markdown(r){
    const mark=errors.length,t=await trigger(value);loads++;
    const outcome=await until(async()=>errors.length>mark?'error':await page.evaluate(n=>window.__le1b.ready.length>n,t.before)&&'ready',60000);
    if(outcome==='error'){
-    const error=errors.slice(mark).join('\n');
-    if(!PLACEMENT.test(error))throw Error(error);
-    errors.splice(mark);
+    // Let the broken world settle; every error it raised must be a placement guard.
     await page.waitForTimeout(3000);
-    return {failed:error.match(PLACEMENT)[0],status:await page.evaluate(()=>window.riderCustomStatus),switch_ms:null};
+    const raised=errors.splice(mark),unknown=raised.filter(e=>!PLACEMENT.test(e));
+    if(unknown.length)throw Error(unknown.join('\n'));
+    return {failed:raised[0].match(PLACEMENT)[0],status:await page.evaluate(()=>window.riderCustomStatus),switch_ms:null};
    }
-   await page.waitForFunction(({id,loads})=>window.riderTelemetry?.station===id&&window.riderTelemetry.world_loads===loads&&window.riderTelemetry.sequence>2&&window.riderCustomStatus==='Saved',{id:c.id,loads},{timeout:60000});
+   await page.waitForFunction(({id,loads})=>window.riderTelemetry?.station===id&&window.riderTelemetry.world_loads===loads&&window.riderTelemetry.sequence>2&&window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry.session_generation,{id:c.id,loads},{timeout:60000});
    return page.evaluate(({t})=>{
-    const p=window.__le1b,ready=p.ready[t.before].at,tm=window.riderTelemetry,in_window=p.frames.filter(f=>f.start>=t.at&&f.start<=ready);
+    const p=window.__le1b,ready=p.ready[t.before].at,tm=window.riderTelemetry,lt=window.riderLoad,in_window=p.frames.filter(f=>f.start>=t.at&&f.start<=ready);
     return {switch_ms:ready-t.at,longest_frame_ms:Math.max(0,...in_window.map(f=>f.work)),frames:in_window.length,
-     lua:{switch_ms:tm.switch_ms??null,parse_ms:tm.parse_ms??null,build_ms:tm.build_ms??null,decorate_ms:tm.decorate_ms??null},
+     lua:{switch_ms:lt.switch_ms??null,parse_ms:lt.parse_ms??null,build_ms:lt.build_ms??null,decorate_ms:lt.decorate_ms??null},
      counts:{terrain_shapes:tm.terrain_shapes,decor_sprites:tm.decor_sprites,decor_labels:tm.decor_labels,custom_snapshots:tm.custom_snapshots}};
    },{t});
   }
@@ -136,7 +137,7 @@ function markdown(r){
     const from=await page.evaluate(()=>performance.now());
     await page.waitForTimeout(SAMPLE_MS);
     window_=await page.evaluate(from=>{
-     const p=window.__le1b,to=performance.now(),polls=p.polls.filter(x=>x.at>=from&&x.at<=to),frames=p.frames.filter(x=>x.start>=from&&x.start<=to);
+     const p=window.__le1b,to=performance.now(),polls=p.polls.filter(x=>x.at>=from&&x.at<=to),frames=p.frames.filter(x=>x.polled&&x.start>=from&&x.start<=to);
      return {from,to,intervals:polls.slice(1).map((x,i)=>x.at-polls[i].at),dt:polls.map(x=>x.dt),physics:polls.map(x=>x.physics),work:frames.map(x=>x.work),
       world:p.world.filter(x=>x.at>=from&&x.at<=to).map(x=>x.data),telemetry:window.riderTelemetry};
     },from);

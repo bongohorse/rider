@@ -163,6 +163,10 @@ function update(self, dt)
         stations.restart(self)
         self.target = self.vehicle.ids.chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
+        -- Load timings use socket.gettime (1 ms steps on HTML5); switch is absent without a trigger (page load).
+        -- A separate message keeps the measurements payload clear of msg.post's 2 KiB cap.
+        msg.post("main:/loader#ui","load_timing",{generation=self.session_generation,switch_ms=self.load.switch_ms,parse_ms=self.load.parse_ms,
+            build_ms=self.load.build_ms,decorate_ms=self.load.decorate_ms})
         emit(self,"vehicle_ready",{bodies=3,joints=2})
         show_preset(self)
     end
