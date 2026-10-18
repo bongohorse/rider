@@ -1,6 +1,8 @@
-# M3 reference-phone trial
+# Reference-phone trial
 
-Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](https://bongohorse.github.io/rider/). Claudio accepted M3 after browser/phone testing on 2026-10-16 and reports that tilt works well. Tilt is retained opt-in, default OFF. See STATUS.md and PLATFORM_MATRIX.md for the closure exception covering measurements not supplied. The procedure below remains available for future diagnostics; it is not an outstanding M3 approval request. Browser automation remains synthetic evidence only.
+Device: Xiaomi Mi 10T Pro, Android 12, Android Chrome, [public gym](https://bongohorse.github.io/rider/). Reusable procedure for phone diagnostics and the performance capture due before Phase B. M3 was accepted on 2026-10-16 without these measurements ([platform matrix](PLATFORM_MATRIX.md)). Browser automation is synthetic evidence only.
+
+**Contents:** [Touch and layout](#touch-and-layout) · [Coasting and HUD](#coasting-and-hud) · [Comparable phone captures](#comparable-phone-captures) · [Tilt comparison](#tilt-comparison)
 
 ## Touch and layout
 
@@ -8,13 +10,13 @@ Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](h
 - Hold Throttle and either Lean button with two fingers. Hold both pedals to check braking priority. Brake near standstill to reverse.
 - Try **Layout A · mirror** and **Layout B · mirror**. Compare comfort, accidental presses and readable space; neither layout is preselected as the winner.
 - Retry while holding a zone; the vehicle must reset and wait for a fresh press. Drag a finger outside a zone and release. Rotate, switch tabs/apps and return; no stuck pedal or lean is allowed.
-- **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows FPS/frame interval, speed, contact dots, spring travel and a small graph; the build SHA is dim at the bottom. Tuning contains A/B/C chips, crash/sound/copy actions and eleven sliders. P cycles presets; 1–9 are reserved for stations. Landscape is recommended for the detailed editor.
+- **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows FPS/frame interval, speed, contact dots, spring travel and a small graph; the build SHA is dim at the bottom. Tuning contains A/B/C chips, crash/sound/copy actions and eleven sliders. P cycles presets; 1–9 select stations. Landscape is recommended for the detailed editor.
 
-## Coasting and HUD follow-up (#68 / #69)
+## Coasting and HUD
 
 - Accelerate on flat ground and release Throttle. The buggy should slow down naturally; a short brake tap followed by no input must not leave it rolling indefinitely. Automated baseline: 5 m/s to below 0.1 m/s in 11.53 m; phone feel is still your observation.
 - Confirm the default HUD leaves the vehicle/centre clear and text is readable. Open/close Tuning, adjust a slider, release outside it, then drive again. On short views the expanded editor scales to fit; extra toolbar buttons hide while editing.
-- Report clipping, overlap, unreadable values or uncomfortable coast strength. These checks are part of the same M3 phone trial, not a separate assumed acceptance.
+- Report clipping, overlap, unreadable values or uncomfortable coast strength.
 
 ## Comparable phone captures
 
@@ -26,9 +28,9 @@ Device: Xiaomi Mi 10T Pro, Android 12. Use Android Chrome and the [public gym](h
 
 Capture time is a measurement window, never a gym deadline. Rotation, focus loss, long frame interruption or opening tuning cancels an active capture. The report retains engine callback intervals (mean/p95/max), engine dt, physics profile, zero-profile counts, over-25-ms intervals, browser/source, viewport/DPR/quality, layout, preset/tuning and reset counts. It does not assert physical refresh, touch quality or fun. Zero profile samples may be below timing resolution.
 
-The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget is inferred from qualitative acceptance. Claudio has now tried and accepted tilt; retain the current implementation. Do not proceed to M4 without his approval.
+The source/build report and actual observations determine concrete phone frame/physics budgets and whether interpolation is needed. No numeric physics budget is inferred from qualitative acceptance.
 
-## Tilt comparison (A14)
+## Tilt comparison
 
 1. Open **Tilt → Enable tilt**. Allow motion access if Chrome requests it. If the page reports unavailable, denied or no data, use touch and report the exact outcome; that is not a successful tilt trial.
 2. Hold the phone in a comfortable neutral position and tap **Calibrate neutral**. The panel closes; drive with Throttle and tilt gently left/right. The HUD shows normalized tilt input.
@@ -36,4 +38,4 @@ The source/build report and actual observations determine concrete phone frame/p
 4. Retry, rotation, focus loss or app/tab switching pauses tilt. Calibrate again before it resumes. Disable tilt to compare directly with touch under the same preset and DPI setting.
 5. Copy the report and add: tilt direction correct, comfortable full-lean angle/dead zone, accidental leaning, touch vs tilt preference, and **keep / tune / drop** recommendation. The report includes sensor mode, calibration and candidate settings. Default settings are trial values, not a retention decision.
 
-Only initial sensor acquisition times out. Valid orientation may remain unchanged without new events (the W3C event model fires on significant changes), so sample age alone does not prove a failure. The flat gym tests input/comfort and ground assistance; ramps and actual airborne feel remain M4. No sensor, actual-device or keep/drop acceptance is inferred from synthetic CI.
+Only initial sensor acquisition times out. Valid orientation may remain unchanged without new events (the W3C event model fires on significant changes), so sample age alone does not prove a failure. Use the stations (1–9, Next station) for ramps and air control. No sensor, actual-device or keep/drop acceptance is inferred from synthetic CI.

@@ -4,6 +4,8 @@ Binding rules for the developer level editor ([epic #118](https://github.com/bon
 
 Rules apply from the task named in them; a task issue lists the rules it implements. Where engine behaviour is assumed, verify it against the pinned engine ([engine references](../ENGINE_REFERENCES.md)) and record the sources in the PR.
 
+**Contents:** [Rules (R1–R18)](#rules-r1r18) · [Screen layout (desktop, Defold GUI)](#screen-layout-desktop-defold-gui) · [Controls (Edit mode only; game keys keep working in Play)](#controls-edit-mode-only-game-keys-keep-working-in-play) · [Editing basics (part of the first usable version)](#editing-basics-part-of-the-first-usable-version) · [Data model](#data-model) · [Prefab library v1 (static, parametric, each with handles)](#prefab-library-v1-static-parametric-each-with-handles) · [Storage](#storage) · [Additional implementation and acceptance checks](#additional-implementation-and-acceptance-checks) · [Technical constraints](#technical-constraints)
+
 ## Rules (R1–R18)
 **R1 Source vs. compiled data.** In the editor the **source objects** (lines, curves, prefabs, connections) are authoritative. Play and Export always **recompile** `chains`/`hulls`/`labels`/`spawn`/`start_speed`/`finish`/`bounds` from them (full field contract in "Data model"). The `editor` block carries its own `editor_version` and `compiler_version` **from the first saved draft (LE2)**. Opening never silently overwrites geometry:
 - **Known/supported editor and compiler versions, unexpectedly different compiled data for the same source revision:** show the difference; the user deliberately chooses "keep compiled geometry (open as lines)" or "recompile from source".

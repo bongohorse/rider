@@ -35,18 +35,50 @@ def targets(text):
             yield line_number, ref.group(1)
 
 
+HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
+
+
+def anchors(text):
+    """GitHub-style heading slugs, including -1/-2 suffixes for duplicates."""
+    seen = {}
+    result = set()
+    marker = None
+    for line in text.splitlines():
+        match = FENCE.match(line)
+        if match:
+            chars = match.group(1)
+            if marker is None:
+                marker = chars
+            elif chars[0] == marker[0] and len(chars) >= len(marker):
+                marker = None
+            continue
+        heading = None if marker else HEADING.match(line)
+        if not heading:
+            continue
+        slug = re.sub(r"[^\w\- ]", "", heading.group(1).lower()).replace(" ", "-")
+        count = seen.get(slug, 0)
+        seen[slug] = count + 1
+        result.add(slug if count == 0 else f"{slug}-{count}")
+    return result
+
+
 def missing(root, filename, raw):
+    """Return a reason for a broken local link target or anchor, else None."""
     url = raw.strip().strip("<>")
-    if not url or url.startswith(("#", "/", "//")):
-        return False
+    if not url or url.startswith(("/", "//")):
+        return None
     parsed = urlsplit(url)
     if parsed.scheme or parsed.netloc:
-        return False
+        return None
     path = unquote(parsed.path)
-    if not path:
-        return False
-    target = (root / filename).parent.joinpath(path).resolve()
-    return not target.is_relative_to(root.resolve()) or not target.exists()
+    target = (root / filename).parent.joinpath(path).resolve() if path else (root / filename).resolve()
+    if not target.is_relative_to(root.resolve()) or not target.exists():
+        return "missing relative link target"
+    fragment = unquote(parsed.fragment)
+    if fragment and target.is_file() and target.suffix.lower() == ".md":
+        if fragment.lower() not in anchors(target.read_text(encoding="utf-8")):
+            return "missing anchor"
+    return None
 
 
 def check_paths(root, paths):
@@ -56,8 +88,9 @@ def check_paths(root, paths):
         if not file.is_file() or file.suffix.lower() != ".md":
             continue
         for line, dest in targets(file.read_text(encoding="utf-8")):
-            if missing(root, name, dest):
-                errors.append(f"{name}:{line}: missing relative link target {dest}")
+            reason = missing(root, name, dest)
+            if reason:
+                errors.append(f"{name}:{line}: {reason} {dest}")
     return errors
 
 

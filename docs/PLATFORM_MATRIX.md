@@ -1,6 +1,6 @@
 # Platform evidence matrix
 
-[Current status](../STATUS.md) · [Platform strategy](PLAN.md)
+Evidence per platform and the reference phone. Status values: [evidence policy](contracts/evidence.md); phone procedure: [MOBILE_TRIAL.md](MOBILE_TRIAL.md).
 
 | Target | Environment / identity | Evidence and limits |
 | --- | --- | --- |

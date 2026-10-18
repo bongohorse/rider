@@ -4,16 +4,18 @@ A 2D mobile driving game built with Defold and integrated Box2D 3, combining pre
 
 [HTML5 preview](https://bongohorse.github.io/rider/) · [Current status](STATUS.md) · [Documentation](docs/README.md)
 
-Start with STATUS.md for progress and blockers, then read only the plan or contract needed for the task. Android is the first release target; iOS follows the Play Store launch. The public preview is permanently authorized for automatic deployment on merges to main and manual dispatch; the pipeline builds and checks the release gym before publishing.
+## Playing the gym
 
-The M1 gym is unrestricted practice: **W / Up** throttle, **S / Down** brake, **R** retry at the start. Retry clears held input; release and press again to resume driving. The lower edge shows the build commit. Reopen the preview root link to load the newest build. Phone loading can be checked now; touch driving arrives in A13.
+The Driving Gym is unrestricted practice with test stations. Reopen the preview root link to load the newest build; the build commit is shown at the bottom.
+
+- **Keyboard:** W/Up throttle, S/Down brake and reverse, A/D lean, R retry, 1–9 stations, V next section, P cycle preset, T tuning, H help, C crash reset, M mute, F copy feedback.
+- **Touch:** on-screen zones with mirrored layouts; tilt lean is opt-in.
+- **URL:** `?station=<id>`, `&section=<id>`, `&speed=<m/s>`, `?preset=a|b|c`.
 
 ## Development
 
-See [tooling](docs/TOOLING.md) and the [pinned toolchain](docs/TOOLCHAIN_LOCK.md) for setup, build and verification commands. UI and active agent documentation are English. No code or assets are imported from the former buggy project.
+Android is the first release target; iOS follows the Play Store launch. Setup, build and tests: [TOOLING.md](docs/TOOLING.md). Agent rules: [AGENTS.md](AGENTS.md). UI and documentation are English. No code or assets are imported from the former buggy project.
 
 ## Licensing
 
-No project-wide redistribution license has been selected. Public visibility does not grant a software license. Third-party dependencies retain their terms; the [Bridge provenance finding](docs/contracts/automation/bridge.md) remains unresolved under the user's explicit implementation authorization.
-
-Gym controls: W/Up throttle, S/Down brake/reverse, A/D lean, R retry, P cycle preset, T tuning, H help, C crash reset, M mute, F copy feedback. Keys 1–9 are reserved for stations. Touch has on-screen controls and mirrored layouts; tilt is an opt-in trial.
+No project-wide redistribution license has been selected. Public visibility does not grant a software license. Third-party dependencies retain their terms; the [Bridge license finding](docs/contracts/bridge.md#limits-and-license) remains unresolved under the maintainer's explicit implementation authorization.

@@ -1,248 +1,128 @@
 # Gym implementation notes
 
-A1 boots `/main/gym/boot.collection`, whose proxy owns the `gym` world. The controller is the sole gym physics owner. G1 remains `/main/main.collection` and is selected explicitly by the physics runner / `build --fixture physics`.
+How the Driving Gym works and how each feature is tested. Binding rules: [physics contract](../../docs/contracts/physics.md), [vehicle contract](../../docs/contracts/vehicle.md), [engine pitfalls](../../docs/contracts/engine-pitfalls.md). Results and evidence: [STATUS.md](../../STATUS.md) and the linked PRs. Test commands: [TOOLING.md](../../docs/TOOLING.md#gym-tests).
 
-All geometry/camera lengths are engine units; at the existing `physics.scale=0.01`, 100 units correspond to one metre. The pinned chain binding scales vertices and ghost vertices itself: do not scale twice. The right-to-left flat chain has its front face above the floor. A falling radius-15 probe must rest at y=95 ±2 on y=80 before the A1 smoke passes. A follow-target move is checked separately; this is not a gameplay acceptance.
+**Contents:** [World and terrain](#world-and-terrain) · [Vehicle and controls](#vehicle-and-controls) · [Retry and recovery](#retry-and-recovery) · [Head sensor](#head-sensor) · [Rider visual reaction](#rider-visual-reaction) · [Telemetry, budget and graphs](#telemetry-budget-and-graphs) · [Tuning and presets](#tuning-and-presets) · [Audio](#audio) · [Feedback copy](#feedback-copy) · [Browser presentation](#browser-presentation) · [Touch and tilt](#touch-and-tilt) · [Public preview](#public-preview) · [Generated art](#generated-art) · [Stations](#stations) · [Ramps](#ramps) · [Steps](#steps) · [Seams](#seams) · [Gaps and landings](#gaps-and-landings) · [Test cases](#test-cases)
 
-A collision resource must contain a shape (`resources/box2d/res_collision_object_box2d.cpp`). During the safe initial update the owner removes the sole seed shape at index 1, verifies the borrowed body remains valid, then creates the chain; it asserts that the resulting shape is the chain segment. Shape indices are not stable across creation: a first smoke caught deletion of the chain when index 1 was used after creation. Defold owns the static body/chain lifetime; session references are discarded on finalization. Geometry creation is not performed in contacts.
+## World and terrain
 
-Sources actually consulted: Defold 1.14.0 / `a81dbb0478e8b73931dc2d671563204f6ac0ef82`, `script_box2d_chain_v3.cpp` (scaled vertices, open ghosts, world-lock checks), `script_box2d_body_v3.cpp` (shape indices/ownership), collision resource loader above, `camera_ddf.proto`, `sprite_ddf.proto`, `atlas_ddf.proto`, collection-proxy and camera manuals. The camera uses orthographic Auto Fit; the proxy is initialized only after `proxy_loaded`. This keeps the world compatible with later proxy time scaling without implementing A20 early.
+- `/main/gym/boot.collection` boots; its proxy owns the `gym` world, initialized only after `proxy_loaded` (compatible with A20 proxy time scaling). `controller.script` is the sole physics owner. G1 stays `/main/main.collection` (`build --fixture physics`).
+- Lengths are engine units; `physics.scale = 0.01` (100 units = 1 m). The chain binding scales vertices and ghost vertices itself: do not scale twice.
+- A collision resource must contain a shape. In the safe initial update the owner removes the seed shape (index 1), verifies the body, then creates the chain and asserts the new shape is a chain segment. Shape indices change on creation (pitfall 4).
+- Terrain chains enable `enable_sensor_events`; Box2D excludes shapes without it from sensor overlaps.
+- Camera: orthographic Auto Fit; render-dt exponential following, signed velocity look-ahead (0.22 s, max 130 u), zoom 1 → 0.82 with speed. Checkerboard art is procedural test art.
 
-`python tools/gym/smoke.py --output artifacts/gym/a1 --case a1` builds the HTML5 default gym with a unique run ID/source SHA and requires a complete matching runtime result plus a browser screenshot. Synthetic browser evidence does not prove physical-phone input or performance. Checkerboard pixels are original procedural test art, not production assets.
+## Vehicle and controls
 
-## A2 vehicle baseline
+- Three Defold-owned bodies (40 kg chassis, two 4 kg wheels, radius 22 u) and two wheel joints in the gym world. `vehicle.lua` applies all writes via the sole owner; input only records held actions.
+- Commands are normalized throttle/brake/lean plus `allow_reverse`. Brake wins over throttle. With throttle released, speed below 8 u/s for 0.25 s latches reverse (8 rad/s) until brake release; retry clears the latch.
+- Motors: active throttle/brake call `wake_bodies` first (setters do not wake, pitfall 2). Torque caps are binding-input units (1800 drive / 3000 brake), scaled once by the binding.
+- Lean: A/D apply raw chassis torque (body torque is not scaled, pitfall 3): air assistance 48/72/96 N m (presets A/B/C, soft rate threshold 8/10/12 rad/s) and separate ground pitch assistance 120/180/240 N m (2.5 rad/s); either wheel contact selects ground. Thresholds stop adding same-direction torque; counter-steering stays possible. Not a moving centre of mass.
+- Wheel targets A/B/C: 32/64/96 rad/s (7.04/14.08/21.12 m/s theoretical); slider range 8–140 rad/s. Actual top rolling speed is capped near 10 m/s by Box2D's rotation limit ([#114](https://github.com/bongohorse/rider/issues/114)).
+- Coasting (A13a): neutral grounded wheels keep zero-speed motors with `coast_torque` (default 400) plus wheel-only `rolling_resistance` (0.15 N m s). Target: 5 m/s to below 0.1 m/s within 6–15 m; a brake tap settles within two seconds.
+- HUD/report speeds are m/s and km/h; history keeps engine units.
 
-The controller creates three Defold-owned bodies, waits one update, then creates two wheel joints in the same gym world. Keyboard input only records held actions; the sole fixed owner normalizes throttle/brake commands and applies motors. Brake wins if both are held. Up/W throttle; Down/S brake. Coasting disables the motors. Reverse/air lean and camera feel are M2, not silently included in A2.
+## Retry and recovery
 
-Source consulted at the same pinned engine commit: `script_box2d_joint_v3.cpp`, `Joint_CreateWheel`, `Joint_SetMotorSpeed`, `Joint_SetMaxMotorTorque`; `script_box2d_body_v3.cpp`, body position/angle/velocity/contact data. Anchors remain engine units, wheel speed rad/s, spring hertz Hz and damping dimensionless. Torque caps are explicitly named binding-input values (1800 drive / 3000 brake), scaled once by the binding; no claim that the final feel is approved. Body masses are 40 kg / two 4 kg wheels in their resources.
+- R queues one generation-tagged request; duplicates coalesce. The owner consumes it outside contacts: clears held commands, keeps the three bodies, destroys both joints (old handles invalid), disables/re-enables the bodies to clear old contacts, restores canonical pose and zero velocities on **both** GO and body (dynamic GO transforms overwrite body-only resets, pitfall 1), wakes bodies and recreates the joints. Terrain is unchanged; no collection reload.
+- Still-held keys do not resume driving; a fresh press does. Camera, history, metrics and UI reason reset.
+- Safety bounds come from each station file. Leaving them uses the same reset path with a reason label. No camera-exit, inactivity, stuck or timer reset.
+- The first station start after attach calls the same `vehicle.reset` before applying the authored speed.
 
-`--case a2` uses actual browser keyboard events after 60 settle ticks: throttle for 180 ticks, then brake while throttle stays held for the first 60 braking ticks. Predeclared checks: forward distance >150 units and speed >100 units/s; max chassis angle <0.6 rad throughout; after 120 braking ticks |vx|<12 units/s; both wheels have actual contacts; camera x follows within 12 units. Input actions go through normal on_input/normalized-command handling, not direct pose writes. The A1 probe remains independently runnable with `--case a1`.
+## Head sensor
 
-## A3 retry lifecycle
+A placeholder rider (`tools/art/rider.py`) has a script-created zero-density sensor circle at chassis-local (0, 56), radius 12 u; no ragdoll or solid head. Own bodies are excluded from overlaps. C or the overlay toggles the crash rule (default off: display only, red rider; on: reason-labelled retry). Overlaps are read in `fixed_update`; after a retry two completed-step reads are skipped. The filter table needs all three fields including `group_index = 0`.
 
-R queues one generation-tagged request; duplicates coalesce. The sole fixed owner consumes it outside contacts, clears held commands, retains three validated bodies, destroys both tracked joints (old handles must become invalid), restores canonical pose/zero linear and angular velocity, wakes bodies and recreates disabled-motor joints. The static chain remains unchanged. Any assertion failure leaves retry paused with a script diagnostic. There are no async retry timers/listeners or collection reloads. Fresh key presses resume control; still-held keys do not. UI reason and camera return to the canonical start. The boot loader counts actual proxy loads.
+## Rider visual reaction
 
-Trial bounds: x outside [-3900,7900] or y below -500 engine units. These margins sit inside the authored floor ends. There is no upper-y, camera-exit, inactivity, stuck or elapsed-time rule. Retry always returns to the gym spawn; stations and touch Retry arrive in their planned issues.
+The rider sprite is a child GO of the chassis pivoting at the hip (A15a). The owner only reads chassis velocity/spin changes in chassis space; each frame applies them as kicks to a damped spring per axis (`feel.rider`: 3 Hz, damping 0.55): acceleration leans back, braking leans forward, vertical changes bob/squash, airborne lean input biases the angle. Clamped to ±5/±8 u and ±0.25 rad; retry resets it. No physics writes; the head sensor stays on the chassis.
 
-Pinned source additionally consulted: `script_box2d_body_v3.cpp` set_transform/set_linear_velocity (binding scales once), angular velocity (rad/s), set_awake and get_joints; `script_box2d_joint_v3.cpp` destroy (tracked joints only, world-lock rejection, handle invalidation); LuaSocket `timeout.c` and HTML5 module registration (`socket.gettime`, wall-clock seconds). Body transforms are only for explicit retry or the test's disclosed out-of-bounds fault injection.
+## Telemetry, budget and graphs
 
-`--case a3` retains A2 checks, presses R while throttle is held, then executes 100 total resets through the same request/consume path. Reset 50 is actual configured bounds recovery after a test-only below-floor injection. Every reset validates poses/velocities, retained bodies, replaced joint invalidity, new joints and unchanged terrain. It checks one proxy load, the GUI bounds label acknowledgement, no resumed held command during 120 settle ticks, and fresh keyboard drive over 120 ticks. Reports min/p50/max synchronous operation time and max request-to-READY latency in wall-clock milliseconds; these are not rendered-frame latency, phone performance, or a preapproved budget. Timing samples are retained only in test mode.
+- `telemetry.lua` is read-only: speed and signed vx, wheel contacts, signed spring travel along chassis Y (positive = compression; no hard stop exists), FPS/frame interval over 0.25 s and `profile.step` (engine ms, not a device benchmark).
+- `budget.json` (custom resource): 60 FPS / 16.666667 ms target; physics budget unset until Phase E. Breaches show red. Means can hide stutter.
+- `history.lua` keeps at most 301 samples (5 s at 60 Hz) in 50 min/max buckets per signal; retry/preset clears it. Graphs render every bucket spike; FPS colours ≥55 green, 30–54 orange, <30 red.
+- Compact HUD (A13b): FPS, speed, contact dots, spring travel and a 200×80 graph; tuning (T) and help (H) start closed; retry reasons are 1.5 s toasts. In narrow portrait tuning hides the graph.
+- Debug scenarios (`scenarios.lua`) load only for a configured test; the module is still packaged in release (exclusion is Phase B work).
 
-Reset source follow-up: pinned `engine/engine/src/engine.cpp` defaults `physics.allow_dynamic_transforms` to 1. `engine/physics/src/physics/box2d/box2d_physics.cpp`, StepWorld2D, copies GO transforms to dynamic bodies before stepping. Retry therefore synchronizes both owning GO pose and body pose, preserving sprite z, and the smoke checks persistence on the next tick. Initial body-only reset/fault injection was rejected by the runtime test. The bounds fault injection likewise moves both representations.
+## Tuning and presets
 
-Browser input synchronization: the smoke holds R until the controller confirms manual retry, and waits for the engine-observed throttle release before a fresh press. Same-frame down/up pulses are not treated as reliable sampled engine input. The first retry must be manual; an incidental bounds reset cannot substitute for it.
+- `feel.lua` owns all drive/spring/camera values and slider bounds; geometry and bounds are not tuning. Eleven sliders: spring Hz, damping, wheel target, motor cap, air lean, air rate, ground lean, camera response, look-ahead, coast torque, rolling resistance. The owner validates and applies changes live (spring changes wake bodies once).
+- During a slider drag gameplay commands are zeroed; held input clears on capture and release.
+- `presets/a.json`, `b.json`, `c.json` (schema 1) hold complete value sets; A is the baseline, B/C progressively stronger. P cycles; chips select; selection performs a canonical retry. `?preset=b` opens B; invalid values fall back visibly to A. Live edits show Modified.
 
-The re-drive interval begins only after the engine observes the fresh throttle press, so browser/runner input delivery delay is excluded from the declared 120 driving ticks.
+## Audio
 
-Sleep follow-up: Box2D 3.1.0 `src/wheel_joint.c` motor enable/speed/torque setters do not wake sleeping bodies. Pinned Defold `script_box2d_joint_v3.cpp` forwards those setters and exposes `wake_bodies`. Active throttle/brake now wakes the connected bodies before applying motors; coasting still permits sleep. The post-reset smoke explicitly requires all three bodies asleep before the fresh press, then requires actual travel over 120 commanded ticks. Initial warm-spawn driving alone missed this behavior.
+`engine.wav` is an original 0.4 s loop (`tools/art/engine_loop.py`, CC0). One voice starts after the first gameplay input, follows average wheel speed (playback 0.65–2.2) and survives retries; M mutes. Never autoplays. Gain/speed are component properties (`go.set`), not `sound.set_speed`.
 
-## A4 public preview
+## Feedback copy
 
-CI's `preview` job builds the exact PR-head/main SHA as an HTML5 release with the native Bridge dependency cleared. It packages all bundle files inside `builds/<full-sha>/<run-id>-<attempt>/`, tests the release loader/runtime on desktop and a 20:9 phone viewport, and uploads the deployable Pages artifact. `required` now includes this preview job. Only `main`, after `required` succeeds, can call the deployment workflow with Pages/OIDC write permissions. Other jobs retain contents-read. A manual run of **CI** on `main` follows the same checks and deployment. Pages must use GitHub Actions as its source.
+F or Copy feedback formats Markdown with source SHA, preset, station, velocity, contacts, travel, FPS/profile, crash rule, tuning and station results. HTML5 uses `navigator.clipboard.writeText` after the gesture and reports success only when it resolves; otherwise a selectable read-only fallback appears. Native builds show the report. F respects Ctrl/Meta/Alt shortcuts.
 
-The public root loader fetches a cache-busted `build.json` with `cache: no-store`, validates its SHA/path, then redirects to the per-build directory (including manual rebuilds of the same source) while preserving query and fragment. Engine, scripts and archive files inherit that unique full path. The current commit's first 12 characters appear in-game. Existing versioned tabs remain that build; reopen the root URL for the current build. The page exposes only read-only build/READY diagnostics for the release smoke, no world mutation/debug service. Keyboard remains the M1 interface; actual phone loading/visibility awaits Claudio, and touch driving is A13.
+## Browser presentation
 
-Sources consulted: official `actions/starter-workflows/pages/static.yml`; configure-pages v5 `action.yml`/`src/api-client.js` (existing Pages site; no enablement token requested), upload-pages-artifact v4 and deploy-pages v5 `action.yml`; action tag refs resolved to the committed SHAs. Pinned Defold `engine/script/src/script_html5_js.cpp` confirms HTML5-only `html5.run`, synchronous string JS evaluation; only JSON-encoded build/READY data is assigned. Existing GUI text/font API retained. Public post-deploy verification checks the actual SHA and READY on both viewport configurations and stores screenshots/browser version. Browser emulation is not physical-phone evidence.
+The page fills the viewport. High DPI ON uses the device pixel ratio, OFF one buffer pixel per CSS pixel (`?dpi=0|1`, reload). Resize, rotation and fullscreen keep the world. Auto Fit keeps world proportions. GUI panel roots own edge anchors and safe-area adjustment; children share their root's FIT space. Slider picking converts `action.screen_x/y` with `gui.screen_to_local`.
 
-## Pre-M2 wheel art correction (#45)
+## Touch and tilt
 
-`python tools/art/wheel.py` reads the circle radius from `wheel.convexshape`, constructs centred circle/rectangle SVG primitives, and exports `assets/wheel.svg`, a 3× RGBA `wheel.png`, and `wheel.sprite`. The same SVG primitives are rasterized by the deliberately small circle/rectangle renderer using Pillow 12.3.0 (developer/CI dependency only). No external SVG engine or runtime drawing dependency is introduced. At radius 22, the solid visual diameter is 44 engine units, with a 48-unit transparent canvas. The texture is 144×144; manual sprite size stays 48×48, preserving the body's scale, mass, joints, spring and motor parameters. Spokes and hub are mirror-symmetric, allowing rotation/slip inspection. High-resolution subpixel coverage is reduced with BOX filtering to avoid ringing halos.
+- `mobile.js` owns DOM pointer capture, four simultaneous zones, mirrored layouts A/B, the compact touch toolbar and the 30 s capture; `mobile.lua` polls its normalized state into the same commands. Resets, UI capture, blur and rotation clear pointers and keys. Touch unlocks Defold's shared audio context in the trusted gesture. `?touch=1|0` forces the mode.
+- `tilt.js` (opt-in, default off) listens after the user enables it, requests permission when needed and maps beta/gamma to a screen-horizontal angle (W3C Z-X-Y). Calibration, full-lean angle, dead zone and inversion map to [-1, 1]; touch/keyboard lean take priority. Retry, UI capture, focus loss and view changes require recalibration. Denial, missing first data (3 s) or invalid samples fall back visibly to touch.
+- Browser runners wait for engine acknowledgements before the next press (pitfall 5), including two fresh telemetry updates after fullscreen changes. Phone procedure: [MOBILE_TRIAL.md](../../docs/MOBILE_TRIAL.md).
 
-The old 48×48 inclusive ellipse occupied pixel indices 2..46, centring alpha at (24,24) instead of (23.5,23.5), and a 45-pixel silhouette exceeded the collision diameter by one unit. Pixel-boundary SVG coordinates plus an inclusive-end correction in the rasterizer remove both errors.
+## Public preview
 
-Bootstrap CI measures the actual committed alpha centroid (≤0.25 source pixels from canvas centre), the 50%-coverage silhouette diameter against the collision radius (≤0.25 engine units), interior mirror symmetry, and centroids after sample rotations. It also rejects the former off-centre asset and a centred oversized negative fixture. `--check` verifies regenerated SVG/sprite bytes and decoded PNG pixels; PNG compression bytes can differ across OS/zlib versions. Add future circular vehicle graphics to `ROUND_ASSETS` to apply the same contract. These are pixel/geometry checks, not a claim of physical-device appearance.
+The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>/<run-id>-<attempt>/`. The root loader fetches `build.json` (no-store), validates SHA/path and redirects with query and fragment. The first 12 SHA characters show in-game. The page exposes only read-only build/READY diagnostics. Deployment: [TOOLING.md](../../docs/TOOLING.md#preview-deployment).
 
-Official references consulted: Defold sprite manual (manual size and centred display), pinned 1.14.0 `sprite_ddf.proto` SizeMode/size, and `comp_sprite.cpp` component creation: pivot defaults to (0.5,0.5), manual mode uses resource size; Slice9 is disabled when its margins are zero. This allows a 3× texture without scaling the physics GO. Pillow 12.3.0 distribution metadata/version was verified from PyPI. Existing physics contracts are unchanged.
+## Generated art
 
-## A5 measurements
+`tools/art/wheel.py` builds `assets/wheel.svg`, a 3× `wheel.png` (144×144) and `wheel.sprite` (48×48) from the collision radius; Bootstrap CI checks centroid, silhouette diameter against the collision radius and mirror symmetry (`--check` verifies regenerated bytes). Add circular vehicle graphics to `ROUND_ASSETS`. Rider art: `tools/art/rider.py`.
 
-The controller remains the only fixed-tick owner. `scenarios.lua` contains the A1/A2/A3 fixture orchestration, all original predicates, input acknowledgements and A3 fault injection. It is loaded only for an explicitly configured debug scenario. Release packaging still contains its compiled module through Defold's static require discovery, but cannot activate it; physical exclusion needs a build-time resource split and is deferred rather than silently dropping smoke coverage.
+## Stations
 
-`telemetry.lua` is read-only: actual linear speed magnitude and signed vx (engine units/s), touching wheel contacts, signed spring translation on the chassis-local Y axis (engine units), average update FPS/frame interval over 0.25 seconds, and the last completed world's `profile.step` in milliseconds. This is engine profile time, not Lua callback time or a device benchmark. No hard suspension stop exists yet; travel is displacement from the authored zero-length spring anchor, positive in compression, not a percentage of an invented limit.
+- `stations/*.json` (schema 1) in world metres: id, spawn [x, y], `start_speed` (-30..30 m/s), run-in/run-out, safety bounds, right-to-left chain polylines, optional convex CCW hulls (3–8 vertices), `labels` and `sections` (id, spawn, start speed, mode, measurement extents). The whole file validates before terrain creation; unknown ids fall back visibly; bad files fail without replacing the world. Keep segments at least 1 cm.
+- `stations.lua` owns selection, data, terrain, markers and unit conversion; the controller starts and retries the vehicle. Start translates all three bodies with the authored speed and matches wheel spin.
+- Switching serializes disable/final/unload → `proxy_unloaded` → load → `proxy_loaded` → init → `gym_ready` (15 s failure diagnostic). Preset identity survives; modified sliders reset.
+- Selection: keys 1–9, Next station, `?station=<id>&speed=<m/s>&section=<id>`; V / Next section switches sections in the same world; R retries the current section. Test-only stations exist only in the debug runner.
+- Release rendering uses ordinary sprites for edges, hulls and ticks (debug lines are absent in release); at most 800 render objects per station; sprite/label pools are 1024.
+- Metric observers (`ramp_metrics`, `step_metrics`, `seam_metrics`, `gap_metrics`) are read-only and called by the owner. Measurement never stops or resets practice. Results persist across section retries only with matching full tuning and start speed; a live tuning change makes a run non-comparable.
 
-`budget.json` is a bundled custom resource. Initial target is 60 FPS / 16.666667 ms mean frame interval; physics budget is unset until representative-load measurement in Phase E (see `docs/PLATFORM_MATRIX.md`). Budget breaches show red. Means can conceal individual stutters; Measure actual pacing separately. The GUI acknowledges displayed measurements to the smoke, which checks both floor contacts, finite plausible spring travel, profile availability and the loaded budget classification in addition to all A3 predicates.
+## Ramps
 
-Sources read: pinned Defold 1.14.0 `script_box2d_body_v3.cpp` (`get_local_point`, `get_position`, velocity, contacts and world); `script_box2d_joint_v3.cpp` (`get_joint_translation` rejects wheel joints, hence geometric projection); `script_box2d_world_v3.cpp` (`get_profile.step`, no scaling); upstream Box2D v3.1.0 `include/box2d/types.h` (`b2Profile` times in ms). Positions are converted by the binding once; telemetry performs no second physics conversion.
+`ramps` (1 m kick ramps) and `ramps-long` (4 m climbs): 5–45° in 5° steps, 60° and a 12 m wall. Up sections start at 8 m/s; `down-<angle>` sections start neutral at 1 m/s. Climb = chassis clears the crest by 0.46 m and stays 0.3 m above the surface; failure after a 1 s stall or 6 s without clearance. Descents report contact share and speed change. Debug `ramp_trial.lua` supplies constant commands from the first step (up: full throttle; down: neutral).
 
-Bundling follow-up: pinned Bob 1.14.0 `com/dynamo/bob/meta.properties` declares `custom_resources` in `[project]`; an initial `[resource]` entry compiled but omitted the JSON and correctly failed both browser suites. The bootstrap regression checks the real section/path. Pinned `script_sys.cpp` verifies `get_engine_info().is_debug`; `script_json.cpp` documents JSON null decoding to nil by default.
+## Steps
 
-## A6 feel trial
+`steps` / `steps-down`: 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5 m, each followed by 12 m flat; independent starts 4 m before the edge at 5 m/s. Results: approach/entry speed, input ranges, peak compression per wheel (window from 0.8 m before the edge), chassis and underside contact (impulse at local y ≤ -13 u). CLIMBED/LANDED needs rear wheel past the edge, chassis above the surface, pitch < 0.8 rad and 0.25 s wheel contact; otherwise STUCK. `section=stop-probe` repeats 0.2 m with disclosed wheel limits [-0.20, +0.18] m; normal sections keep limits disabled.
 
-`feel.lua` owns all drive/spring/camera values; authored shape/mass resources and recovery bounds are geometry/safety, not hidden tuning. The initial A6 16 rad/s wheel target is superseded by the #61 candidates below; A retains the 1800/3000 binding motor caps and 5 Hz/0.8 spring baseline. Engine-unit positions/velocities and joint cap inputs pass unchanged through the named adapter; body lean torque is raw N m (the pinned body binding does not scale it). Display conversion to metres uses physics.scale once, outside the physics setters.
+## Seams
 
-Down/S brakes first. With throttle released, speed below 8 units/s for 0.25 seconds latches reverse at 8 rad/s until brake release; simultaneous pedals remain brake-only. Reverse latch clears on retry. A/D applies the separate ground or airborne pitch assistance described under #61 below. Soft rate thresholds stop adding same-direction torque; counter-steering remains possible. These are trial values, not accepted feel.
+`seams-chain` (key 6) and `seams-hull` (key 7): 20 seams on flat ground, speeds 5/7/9 m/s. Protocol, thresholds and reproduction: [A18 protocol](../../docs/A18_SEAM_PROTOCOL.md).
 
-Camera uses render-dt exponential following, signed velocity look-ahead (0.22 s, capped at 130 u), and zoom from 1 to 0.82 with speed. Retry restores position and zoom. The A1 direct focus probe remains separate. A3 still tests full braking and brake priority by keeping both pedals held through its stop observation, then retry while throttle is held. A6 separately releases throttle while brake remains held and requires actual reverse distance/speed; its disclosed debug-only +400 u lift then checks rotation under real keyboard lean during flight. It checks camera direction/symmetric zoom and applied camera property, not 60/144 Hz visual smoothness acceptance.
+## Gaps and landings
 
-Additional pinned sources actually read: body `apply_torque` forwards unscaled torque and wakes; joint `set_max_motor_torque` scales its binding input, wheel spring setters are supported. Pinned `comp_camera.cpp` exposes `orthographic_zoom` as a writable camera property. No new simulation owner or manual step.
-
-## A7 head-contact trial
-
-A geometric original placeholder rider is attached visually to the chassis (reproducible `tools/art/rider.py`). Its head circle at local (0,56), radius 12 u is a script-created zero-density sensor; no extra rigid body/ragdoll or solid head collider is added. Creation verifies unchanged chassis mass. Own wheels/chassis are excluded from overlaps by their borrowed body handles. C or the clickable overlay toggles the rule, default OFF. Off displays contact/red rider; on queues the same reason-labelled in-world retry as R/bounds. Retry retains the sensor on its retained body, asserts exactly two chassis shapes, clears contact and skips two completed-step overlap reads to avoid stale pre-reset data.
-
-Pinned 1.14.0 sources read: body `create_shape` returns a shape-info table including shape_id; shape `CheckShapeDef`, `CheckShapeCreateDef`, `enable_sensor_events`, `get_sensor_overlaps`, `get_body`, `is_valid`. Circle positions/radii are scaled inside the binding. The owner reads overlaps in fixed_update outside callbacks, and consumes resets there; rendering only tints the sprite. No mutation in contact callbacks.
-
-A7 smoke uses a disclosed debug-only inverted canonical pose held with test-only zero gravity to create head/floor overlap until the GUI acknowledges its display (gravity restored after recovery): requires off to detect without resetting, actual C input to enable a reason-labelled reset with retained sensor/no shape leak, and an actual overlay mouse click to disable. A3's 100 resets now also check sensor validity/shape count. Fairness, real touch and final art remain Claudio's later drive test; the synthetic probe is not challenge acceptance.
-
-Sensor binding follow-up: `CheckFilterData` requires all three numeric fields, including `group_index=0`; unlike the terrain chain definition it does not default this field when a filter table is supplied. CI rejected the omitted field before any sensor acceptance.
-
-Tint follow-up: the pinned sprite module has no `sprite.set_constant`; use `go.set(sprite_url,"tint",value)`. Pinned `CompSpriteSetProperty` routes material constants via `SetConstant`. CI rejected the obsolete call; no failure was waived.
-
-Release verification now requires two further owner-to-GUI telemetry sequences after initial READY. Release engines can suppress diagnostics, so READY plus a static screenshot alone did not establish a continuing controller; the new progress assertion closes that observed verification gap.
-
-Sensor participation follow-up: pinned Defold chain creation forwards `enable_sensor_events`; upstream Box2D 3.1.0 `src/sensor.c` excludes visitor shapes with sensor events disabled. The authored terrain chain now explicitly enables this flag and asserts it on returned segment handles. Enabling the sensor alone was insufficient and the focused test timed out as intended. Physics geometry/contact assertions are unchanged. Failed browser runs now retain a screenshot and last GUI telemetry for diagnosis.
-
-A7 input follow-up: the browser now holds overlay mouse-down until the engine acknowledges the switch, then releases at completion. An immediate same-frame down/up pulse was not a reliable sampled Defold action (the same boundary already applies to keyboard retry). The observer no longer reinjects the inverted pose after the normal owner has already consumed the C-triggered reset; the one-reset assertion stays intact.
-
-## A8 live tuning
-
-Nine sliders edit spring Hz, damping ratio, wheel target rad/s, motor cap (binding units), air lean N m, air rate rad/s, ground lean N m, camera response 1/s and look-ahead seconds. Bounds/labels live with tuning in `feel.lua`; geometry and unknown/invalid/non-finite values cannot be edited through the command. GUI sends messages, the sole fixed owner validates/applies them and acknowledges current values. Changed spring settings wake bodies once and update existing wheel joints; no reset/reload is needed.
-
-During a captured drag, gameplay commands are zeroed and held input clears on both capture/release. Release outside the track is handled by the captured pointer path. Layout uses the existing 960×540 fit GUI; reference-phone touch and lifecycle testing remain M3. Required A8 smoke holds real mouse input, changes spring Hz to 12, checks the actual joint getter without reset/reload, attempts throttle during capture and requires neutral release. Test routing now lives entirely in `scenarios.fixed`, still called only by the sole physics owner.
-
-Pinned source consulted: wheel spring hertz/damping setters/getter and `wake_bodies` in `script_box2d_joint_v3.cpp`; existing GUI pick/text/box APIs used. No custom world/tick owner.
-
-## A9 candidate presets
-
-All drive/camera values now live in `presets/a.json`, `b.json`, `c.json` (schema 1); geometry stays authored separately. A preserves the prior baseline, B and C progressively increase wheel target/torque, spring/lean strength and camera anticipation. These are comparison candidates without an assumed winner. `P` cycles presets; overlay chips select a complete replacement and canonical in-world retry, clearing held input and preserving one world. Live edits show Modified; reselecting any preset restores its data.
-
-`?preset=b` opens B; only a/b/c are valid file selectors. An invalid query visibly falls back to A. The loader validates schema, numeric/finite values and the complete field inventory. GUI receives only flat numeric slider snapshots. Pinned `script_html5_js.cpp` was read: html5.run returns the evaluated result as a string and throws on JavaScript errors. URLSearchParams is used only on HTML5; native launch defaults to A or explicit rider.preset settings.
-
-Required A9 browser runs select B by URL and test invalid fallback separately. Each then uses actual pointer events on the preset chips to drive all three candidates for 120 observed throttle ticks, checks travel/angle and actual spring replacement, and requires exactly three retries with one world load. Existing A3/A6/A7/A8 cases remain mandatory. Real-device feel and winning values remain Claudio's test.
-
-## A10 engine audio
-
-`engine.wav` is an original seamless 0.4 s mono PCM placeholder generated from integer-cycle sine harmonics by `tools/art/engine_loop.py`; CC0-1.0 provenance is beside the file. No external sample/dependency. One sound voice starts after the first gameplay input, stays across retries/preset switches, and stops explicitly on final. Actual average absolute wheel angular speed sets playback ratio from 0.65 to 2.2, including reverse/airborne wheel spin. M or the overlay mutes it; it never autoplays at page load.
-
-Pinned Defold sources read: `script_sound.cpp` sound.play/stop; `comp_sound.cpp` writable gain/speed and their getters (there is no sound.set_speed); `sound_ddf.proto` looping; `engine/sound/src/js/library_sound.js` shared AudioContext resume/state. Required A10 browser smoke checks silence before input, one voice, increased wheel-dependent speed property, and a running AudioContext after initial throttle without waiting for key release. Browser errors remain fatal. Headless automated playback is not a human listening/device-audio acceptance; Claudio's M2 test includes that check.
-
-## A11 feedback copy
-
-F (a real browser key handler) or Copy feedback uses the latest acknowledged measurements to format Markdown with source SHA, preset/Modified, flat-gym station, signed velocity/speed, contacts, signed travel, FPS/mean frame/profile step, crash rule and nine live tuning values. The action clears held gameplay input; opening the fallback captures commands until close. It never creates/sends an issue.
-
-HTML5 calls navigator.clipboard.writeText only after the action. Success is shown only after its promise resolves. Missing API/insecure context/permission denial shows a selectable, read-only report plus retry/close; fullscreen is exited if necessary to expose this DOM fallback. Native builds explicitly show the report rather than claiming OS clipboard support. Pending requests are generation-guarded against stale dialog updates. The small helper is bundled as a custom resource, with no external script.
-
-Read sources: pinned Defold `script_html5_js.cpp` run's result/error behavior; W3C Clipboard API working draft (2026-06-24), writeText and permission model, https://www.w3.org/TR/clipboard-apis/ . Browser policy support is established separately by runtime. Required A11 smoke uses an actual F gesture and the isolated CI browser clipboard, reads back/verifies all fields and current SHA, then injects a rejected write to verify the visible selectable fallback. It does not claim every browser permission policy or native clipboard support.
-
-## A12 five-second graphs
-
-A fixed-capacity ring observes actual speed and both signed spring translations once per owner tick. It retains at most 301 samples at pinned 60 Hz. Fifty 100-ms min/max buckets preserve short excursions instead of dropping them between GUI updates. Empty history is hidden, displayed values are quantized to 0.1 u, both spring plots share a symmetric scale, and every retry/preset clears history with a generation tag. Each series is a separate payload below the message budget; there is no graph framework, new tick callback or world step.
-
-The production baseline still has no authored hard suspension stop; the plot is signed travel, not an invented bottoming percentage. A12's focused debug-only probe enables wheel limits [-20,+18] u and gives the wheels an upward 1000 u/s pulse. It requires an actual positive compression peak in [16,20] u and a GUI acknowledgement that this spike was drawn, then disables the test limits. At eight seconds it requires bounded history and expiry of the old spike in both data and GUI. `suspension-spike.png` records the short stop event. This proves the graph can expose bottoming before A17's authored step station; it does not approve production stops or claim final device performance.
-
-Pinned sources read: wheel `set_limits`, `enable_limit`, `get_upper_limit` (engine-unit scaling in the binding) and body set_linear_velocity (one conversion). All probe changes live in debug scenarios called by the sole owner. Existing A3/A6/A7/A8/A9/A10/A11 tests remain required. Feedback F now respects browser Ctrl/Meta/Alt shortcuts; no clipboard behavior is broadened.
-
-M2 final review: the graph panel is narrowed to leave the velocity-look-ahead vehicle clear, with explicit zero baselines. The probe additionally verifies disabled test limits, zero retries and one world load, so reset cannot masquerade as normal history expiry.
-
-## M2 feedback follow-up (#61)
-
-Claudio authorized expanded feel controls on 2026-10-16, leaving ramps and human airborne/flip testing in M4. Candidate A/B/C wheel targets are 32/64/96 rad/s (negative sign for forward), corresponding to theoretical no-slip 7.04/14.08/21.12 m/s at radius 0.22 m. The live range is 8–140 rad/s (up to 30.8 m/s theoretical); these are targets, not promised chassis speeds. Existing torque caps, braking and geometry remain unchanged. M4 #33 must report measured speed at seams, not assume launch speed stays constant under a lower motor target. Gap ladders deliberately include unreachable sections.
-
-Air torque is 48/72/96 N m with soft rate thresholds 8/10/12 rad/s. Live ranges: 0–200 N m and 1–16 rad/s. Ground assistance is separate chassis pitch torque 120/180/240 N m, live 0–400, with a 2.5 rad/s soft threshold. A/D use the existing normalized lean command; either wheel's contact data selects ground assistance, otherwise air assistance. This does not move the centre of mass. Zero ground torque disables the assistance. Thresholds stop adding same-direction torque rather than clamping existing spin; counter-steering stays available. Final strength/fairness awaits human testing.
-
-All writes remain in vehicle.apply via the sole fixed owner. Pinned Defold 1.14.0 `a81dbb0478e8b73931dc2d671563204f6ac0ef82`, `engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp` was read: Body_ApplyTorque passes raw N m to Box2D with wake=true; GetAngularVelocity returns rad/s; GetContactData returns the current body's contact table. No new engine API or dependency.
-
-HUD/report speed is m/s and km/h; report retains signed vx in m/s. Graph labels use m/s while history/message values retain engine units and existing scale. Nine sliders fit the existing panel; coordinates and input mapping remain tied to the fixed-fit GUI until #58, which must adapt drawing, picking and drag normalization together. Compiled test resources in release remain the documented Phase B exclusion task.
-
-Required `m2feedback` smoke uses real keyboard A/D on the flat floor, checks disabled assistance leaves the chassis neutral, signed chassis pitch both ways, two neutral resets and one world, new control limits/preset restore, then selects C and verifies upright actual chassis speed above 8 m/s (old target ceiling 7.92). Existing A6 controlled airborne probe remains a technical response regression, not a ramp/flip playtest. Clipboard smoke checks readable speed units and the added tuning fields.
-
-
-## A12b browser presentation
-
-The HTML5 page uses the full viewport. Its CSS size and back buffer are separate: High DPI ON uses the current device pixel ratio, OFF uses one buffer pixel per CSS pixel. `?dpi=0` / `?dpi=1` and the quality button select the comparison mode (page reload required). Resizing/rotation/fullscreen preserve the running world. Browser zoom/DPR changes invalidate the buffer even if the CSS dimensions stay equal. The orthographic Auto Fit camera preserves world proportions; the scene covers the viewport. GUI panels use edge anchors and safe-area adjustment; slider dragging converts `action.screen_x/y` with `gui.screen_to_local`, so picking and values share the adjusted track space.
-
-The release preview verifier records 1280×720, 1920×1080, 2560×1440, 20:9 landscape and portrait screenshots, exercises all eleven slider endpoints and releases outside, then records two seconds of browser callback and engine telemetry samples per quality mode. CI software-browser timings are not phone performance evidence. Actual desktop browser zoom/fullscreen behavior, Xiaomi high-DPI cost and readability still need human verification. The default ON follows #58's requested trial setting; it is not a measured phone-performance verdict.
-
-Sources read: Defold HTML5 manual (scale modes, template interface, DPI); GUI 1.14.0 API (`screen_to_local`, anchors, safe areas); pinned engine `a81dbb0478e8b73931dc2d671563204f6ac0ef82`: `engine/engine/content/builtins/manifests/web/engine_template.html`, `com.dynamo.cr/com.dynamo.cr.bob/src/com/dynamo/bob/bundle/resources/web/dmloader.js` (resize callback and DPI invalidation), `engine/gui/src/gui_script.cpp` / `gui.cpp` (screen coordinate conversion), and `engine/render/src/render/camera.cpp` (Auto Fit uses uniform minimum axis zoom). Runtime compatibility awaits required CI; no physics behavior was changed.
-
-A12b review correction: disabled endpoint probes retained cached pre-resize transforms. Invalidate their positions before exporting screen geometry; visible tracks already re-rendered correctly. The preview verifier also checks the actual camera projection against the viewport aspect, so a stretched world cannot pass on CSS size alone. Consulted the Defold 1.14.0 camera API (`camera.get_projection`) and pinned GUI transform invalidation.
-
-The responsive runner also waits for GUI drag and owner input-capture release acknowledgements before pressing again. Immediate mouse-up/down or mouse-up/key-down can collapse inside one engine input sample, particularly in mobile emulation (the existing browser input handshake pitfall). This tests release explicitly rather than treating a browser dispatch as engine evidence.
-
-A12b visual review correction: panel roots own edge anchoring; all child positions and sizes share their root's uniform FIT space (legacy child adjustment). Independent child anchors distorted slider knob ranges and graph bar spacing at non-16:9 ratios. Slider conversion remains screen_to_local, now into the correct shared panel space.
-
-## A13 browser touch trial
-
-`mobile.js` owns DOM pointer capture, four simultaneous zones, layout mirroring, compact HUD and the optional 30-second capture. `mobile.lua` polls its normalized state; the existing controller merges it with keyboard input and writes only through the fixed owner. Retry uses the existing generation-aware request path. Resets and UI capture clear browser pointers too; abort/blur/rotation clears keyboard state on the next owner update. DOM controls unlock the existing Defold-owned audio context in the trusted pointer gesture; no second context is created. The detailed GUI is hidden with `gui.set_visible`, preserving graph enable states, and its picking is skipped in compact mode.
-
-The release `tools/preview/mobile.cjs` runner dispatches real browser touch events into the release engine and observes owner telemetry: combined drive/lean, pedal priority, cancellation/outside release, Retry, mirrored direction, rotation without reload, audio, a real 30-second capture and report fallback. Synthetic browser events do not establish physical-phone acceptance.
-
-Fullscreen runner follow-up: the public `998248b` build passed responsive checks and ten touch cases, then a touch sent immediately after `fullscreenElement` changed was cleared before owner acknowledgement. The WHATWG Fullscreen Standard's parallel viewport-resize steps do not make that property an engine-input completion signal. The runner now waits for two fresh owner telemetry updates and matching viewport dimensions before pressing, checks zone bounds, and requires three entry/drive/release/exit cycles without reload. This changes only test synchronization; resize/focus input clearing and the throttle assertion remain intact. Public failure evidence: main run 38949687918, job 117140018997.
-
-Sources read: Defold 1.14.0 HTML5 API (`html5.run` string result), mouse/touch manual (single-touch mouse mapping and distinct multi-touch binding), GUI API (`set_visible`), MDN Pointer Events / `setPointerCapture`. The browser adapter avoids mixing DOM controls with canvas mouse emulation. Pinned `external/glfw/js/library_glfw.js` resumes audio only for canvas input; pinned `engine/sound/src/js/library_sound.js` exposes the one shared context through `_dmJSDeviceShared`, used here only for trusted-gesture resume and verified by the runtime audio-state assertion. Input semantics remain platform neutral; native builds retain keyboard controls. See docs/MOBILE_TRIAL.md for real-device evidence.
-
-## A14 tilt trial
-
-`tilt.js` listens only after the user enables motion, checks HTTPS/API support and invokes `requestPermission()` when exposed. Finite beta/gamma samples become a screen-horizontal gravity angle using the W3C Z-X-Y rotation matrix; no compass/yaw permission is needed. Calibration, adjustable full-lean angle/dead zone and inversion map to [-1,1]. The controller uses that same existing lean command only when no touch/keyboard lean buttons are held. Retry, UI capture, focus loss and view changes require calibration again. The adapter disables its sensor listener on world finalization and invalidates pending permission callbacks; native builds keep their existing keyboard path.
-
-Permission denial/API absence, missing first data (3 seconds) and invalid active samples produce visible touch fallback. A quiet but valid orientation has no artificial inactivity timeout because W3C permits events only on significant change. The trial is OFF by default; no product retention is selected. Source/build, orientation mode/calibration/settings and initial/final tilt state are included in the feedback/capture. Detailed editor capture also releases when feedback clears input.
-
-Sources read: W3C Device Orientation and Motion, sections 3.1, 6.1 and worked rotation matrix (Z-X-Y), permission transient activation, secure context/null values and significant-change event model; MDN DeviceOrientationEvent and requestPermission documentation/support limits; Defold 1.14.0 HTML5 string bridge and GUI/input sources already recorded above. This is a browser input adapter, not a physics binding.
-
-Verification: `node --test tests/mobile/tilt.test.cjs` covers all four screen orientations, neutral/dead zone/proportional/clamped/inverted mapping and invalid data. The release injected-orientation runner proves permission/unsupported/no-data/invalid fallbacks, calibration, actual body response through the owner, touch override, Retry, live sensitivity/dead zone, inversion and rotation without reload. Those events do not prove physical sensors; Claudio's mandatory phone keep/tune/drop comparison remains open. See docs/MOBILE_TRIAL.md.
-
-A14 runner evidence: read the official Chrome DevTools Protocol DeviceOrientation domain and WHATWG DOM event semantics (`isTrusted`, capture listeners and `stopImmediatePropagation`). The CDP override produced no relative orientation samples on the pinned CI browser. The controlled runner therefore suppresses native hardware events in a test-only capture listener installed before the app, and dispatches explicit DOM orientation events, including invalid null samples. No-data testing dispatches nothing for the acquisition timeout. This verifies application plumbing and strict fallback, not browser sensor delivery or real permission prompts; production handling is unchanged.
-
-## A13a coasting trial
-
-Neutral input on grounded wheels keeps the zero-speed wheel motors enabled with a `coast_torque` cap (default 400 binding units). `rolling_resistance` adds wheel-only viscous torque (default 0.15 N m s); neither writes airborne chassis torque. Both fields are sliders, preset values and feedback fields. Driving and braking retain priority. The automated flat-ground target is 6–15 m from 5 m/s to below 0.1 m/s; contact jitter tolerance is 0.01 m/s per sample. A short real brake press must settle and stay below 0.1 m/s for two seconds. These are candidate feel values, not human acceptance.
-
-## A13b compact HUD
-
-Default: FPS/frame interval, speed, two contact dots, spring travel and a 200×80 history panel (26% of the old area). Tuning (`T`) and help (`H`) start closed. Retry reasons are 1.5-second toasts; touch uses a DOM toast below its toolbar (below the graph in portrait) so it stays readable. `P` cycles A/B/C; panel chips and `?preset=` still select directly. Keys 1–9 are reserved for M4 stations. Eleven sliders show name/value left of the track, with picking derived from actual GUI geometry. `C` crash toggle, `M` sound and `F` feedback remain available; physics timing is in the expanded panel.
-
-The graph retains 50 min/max buckets per signal over five seconds; feathered line segments connect centres and render every min/max spike. Width is derived from GUI-to-back-buffer scale for a roughly 1.5-pixel core. It is rendering only; history/physics are unchanged. FPS colours: ≥55 green, 30–54 orange, <30 red. Debug GUI probes inject boundary frame intervals and derive FPS and inspect the actual node tint. Release checks exercise `P`, all reserved numeric keys, `H`, `T`, eleven resized slider pairs, touch/editor transitions and screenshots. While tuning in a narrow portrait view, the graph is hidden to avoid panel overlap; history continues collecting. Real-phone readability still needs the M3 trial.
-
-
-## A15 stations
-
-`stations/*.json` schema 1 stores world metres: identity, spawn [x,y], start_speed (signed horizontal m/s, -30..30), run_in/run_out lengths, safety bounds [minX,maxX,minY,maxY], right-to-left chain polylines and optional convex CCW hulls (3–8 vertices). The entire file validates before terrain creation; unknown ids fall back visibly; bad files fail visibly without replacing the current world. Speed starts currently assume a horizontal spawn surface. Ghost endpoints extrapolate each line's first/last segment. Avoid segments shorter than 1 cm.
-
-`stations.lua` owns selection/data/terrain/markers/unit conversion. The fixed controller alone starts/retries the vehicle. Initial and retry start translate all three bodies by the same velocity and match wheel spin to the authored 22-unit radius. The first completed-step velocity is reported. Retry retains terrain and resets history and metrics; switching serializes disable/final/unload → proxy_unloaded → load → proxy_loaded → init/configure/enable → gym_ready with a 15-second failure diagnostic. New input sources are empty. Preset identity survives switches; modified slider values reset to that preset. URL speed applies to initial station/retries; selecting a station starts its authored default speed.
-
-Straight has minor 1 m and labelled major 10 m markers, station start speed, travelled distance, top speed and brake distance (from the latest brake press to the first speed below 0.1 m/s; frozen during subsequent reversing). Keys 1–9 address registered stations; Next cycles every station, including future stations beyond nine. `?station=straight&speed=8` and R exercise the same moving start. Test-only station entries are enabled only by the debug A15 runner; not normal/release selection.
-
-Sources actually read at Defold 1.14.0 commit a81dbb0: `script_box2d_body_v3.cpp` (linear velocities scale at the binding; angular velocities are rad/s; create_chain returns chain/segment handles), `script_box2d_shape_v3.cpp` and `script_box2d.cpp` (polygon vertices, numeric SHAPE_TYPE_POLYGON, explicit sensor-event enabling), and `comp_collection_proxy.cpp` (confirmed loaded/unloaded messages and final/unload ownership). Sources support these API choices; runtime evidence is separate and comes from the required HTML5 A15 runner and retained G1/Gym regressions.
-
-A15 release visual review: debug `draw_line` was absent from release screenshots. Terrain edges, hull outlines and meter ticks now use ordinary solid sprites; meter labels sit below the surface. Validation caps the combined edge/tick/label render budget at 800 objects to stay within the existing instance pool. These objects have no collision bodies and never write physics.
-The pinned factory API accepts a positive vector3 scale; sprite and label component sources use `sprite.max_count` / `label.max_count`. Both pools are explicitly 1024 for the bounded station geometry. These pinned sources were read for the release-rendering fix.
-
-
-## A16 ramp ladders
-
-`?station=ramps` selects 1 m kick ramps; `?station=ramps-long` selects 4 m climbs. Both contain 5/10/15/20/25/30/35/40/45/60° sections plus a 12 m, 90° wall beyond the normal start's available ballistic height. Every angle/length is labelled. Geometry is authored JSON; no ramp construction branches exist in the terrain loader.
-
-Small schema-1 additions: `labels` (world-metre position + text), and validated `sections` (id/name, horizontal spawn, start_speed, up/down mode and measurement extents/angle/length). `?section=30` starts directly before that angle; `?section=down-20` uses the matching return slope with an authored 1 m/s neutral start. Up sections start at 8 m/s. `&speed=` overrides either, including section cycling. V / Section / mobile Next section advances the start in the same world via the existing generation-checked reset; R retries the selected section. Station keys/Next continue switching entire worlds. Unknown sections visibly fall back to the first.
-
-`ramp_metrics.lua` is a read-only observer called by the single fixed owner. It reports per-section entry speed, pedal ranges, lean, reached/not-run/failed/climbed status and vertical rise after a grounded takeoff. Climb = chassis clears the crest by 0.46 m and stays at least 0.3 m above its surface. A 1-second stall or a 6-second observation window without clearance is reported as failure; practice is never stopped or reset by a timer. Later clearance can be tested with Retry or another input. A fresh independent section start is the limit comparison; continuous ladder runs report their actual entry speed. Completed measurements can be retained across section retries only with matching full preset configuration and start speed. Feedback includes the full structured browser report; the HUD shows the active result/highest angle/launch rise. Neutral downhill probes report contact share and speed change between first slope contact and its foot; they measure the current coast settings, not a tuning target.
-
-Automated protocol: debug-only `ramp_trial.lua` supplies constant normal-owner tick commands from the first step (up: throttle=1, brake=0, lean=0; down: all zero). This avoids browser navigation latency changing the authored speed-start run. It is not a real-keyboard or phone drive test; existing G1/Gym and release touch tests retain input coverage. One HTML5 build measures every up section in both variants and 10/20/30° neutral descents on the long variant, with section Retry/keyboard/mobile selection checks and screenshots. Results and any current-preset limits belong in the CI report; human M4 acceptance is separate.
-
-API impact: existing pinned factory/label/shape/velocity and reset paths from A15 are reused. No new physics API, world, binding, stepping or tuning values. Data validation checks new bounds/ids/finite measurement fields before use; unrelated flat checker tiles are omitted for non-straight stations so ramps/gaps are not presented as a false flat surface. Section buttons use the existing normalized mobile message path; retry toast placement follows the actual toolbar bottom when it wraps.
-
-
-## A17 step ladders
-
-`?station=steps` / `?station=steps-down` load 0.05/0.1/0.15/0.2/0.25/0.3/0.4/0.5 m chain-vertex steps. Twelve metres of flat follow each edge, with independent section starts four metres before it. Default speed is 5 m/s; `&speed=3` overrides it; `&section=0.3`, V/Next section and R reuse the existing in-world reset. Heights are labelled in release too. No vehicle tuning changed.
-
-`step_metrics.lua` runs as a read-only observer under the existing owner. Each result records actual approach/obstacle-entry speeds, input ranges, positive peak left/right compression in metres, chassis contact and underside contact. Compression excludes the initial spawn settling: its window begins 0.8 m before the edge. Clear requires the rear wheel past the edge (chassis +0.8 m), chassis above the new surface, pitch <0.8 rad and wheel contact for 0.25 s. Status is CLIMBED/LANDED or STUCK after the section end, one-second stall or six-second observation; measurement never resets/stops practice. Independent results with matching full tuning/speed can persist through section Retry; highest climbed excludes continuous approaches. A live tuning change invalidates comparisons and clears the archive until Retry; the report retains full tuning-at-start and marks the mixed run non-comparable. Feedback exports structured records.
-
-There is still **no hard suspension stop**. A positive spring-travel peak is not labelled a hard-stop hit. `underbody_contact` specifically requires an impulse-bearing chassis contact at local Y <= -13 engine units (authored underside -14), distinct from a front-face strike. Report any absent bottoming evidence honestly rather than introducing unapproved stops.
-
-Sources actually read: official Defold **1.14.0** [body API](https://defold.com/ref/b2d.body-lua/) get_contact_data and [contact records](https://defold.com/ref/b2d-lua/) points/normal_impulse/total_normal_impulse, plus existing get_local_point semantics. Touching contact tables and engine-space local points are read only; the existing unit adapter converts compression once. Reuses A15 chain/factory/label and A16 section/reset paths, with finite step-schema bounds. No new physics world/owner/stepping. Required CI runs 16 independent physical approaches, repeats greatest compression with <=5 mm / <=0.02 m/s entry tolerance, tests R without reload, section/speed persistence and normal release keyboard/mobile driving. This is CI evidence, not Claudio's phone drive test.
-
-A17 diagnostic stop section: `?station=steps&section=stop-probe` repeats the 0.2 m edge with A12's disclosed wheel limits [-0.20,+0.18] m. The HUD explicitly says STOP PROBE; normal sections/presets keep disabled limits, verified on every start. Peak >=0.175 m indicates reaching the 0.18 m stop within 5 mm. Probe results are excluded from normal highest-step comparisons and have a separate archive identity. This provides an actual repeatable stop trial without claiming the unlimited baseline bottomed; the first normal 16 runs had no underbody strike.
-
-First A17 runtime review (`4347564`, CI 38992965769): 0.05–0.15 m climbed, >=0.2 m stuck; all eight descents landed. Fresh-load peak-compression repeat passed, but in-world Retry changed the 0.2 m peak from 0.2322 to 0.2050 m (5 mm criterion FAIL). Reset now disables the retained bodies after destroying joints, restores poses/velocities, then re-enables all before joint recreation, to clear old contacts; the original 5 mm assertion remains. This is a candidate fix until required CI passes, not a measured explanation proven by source alone.
-
-Additional pinned sources actually read: `engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp` Body_SetActive (b2Body_Disable/Enable, same retained handle), Body_GetLocalPoint (scale once); `script_box2d_joint_v3.cpp` Joint_SetLimits (wheel limits scale at the binding). Official 1.14.0 body/joint API pages were read for set_active, set_limits, enable_limit and get_upper_limit. Limit numbers enter in engine units (-20,+18); no manual stepping or body recreation. G1/native/100-reset/head-sensor/ramps regressions and stop-probe leakage checks remain mandatory.
-
-Initial-start review: factory bodies can step before asynchronous attach, while Retry starts from an exact canonical pose. After attach, the first station start now calls the same vehicle.reset before applying authored speed. This equalizes pose/vertical state rather than relying only on the horizontal speed setter. Both first start and Retry retain the same three bodies, two joints and head sensor.
-
-## A19 gap ladder and landings
-
-`?station=gaps` (key 8) has ten sections with 1/1.5/2/2.5/3/4/5/6/8/10 m gaps; `?station=gaps-landing` (key 9) has a 2 m gap with flat, 15° downslope and 15° upslope landings. Every section starts 2 m before a 15° chain ramp to a 1 m lip; a pit floor 3 m below ground spans the gap. The ladder lands on ground level (1 m below the lip), the downslope starts 0.3 m below the lip, the upslope rises from ground level to lip height. Default speed 7 m/s (preset A full-throttle cruise); `&speed=9` compares a faster entry, `&section=`, V/Next section and R reuse the in-world reset. Gap widths are labelled in release too. No vehicle tuning changed.
-
-Declared protocol (debug `a19`): independent starts, throttle 1, no brake/lean. Loaded wheel support uses touching or impulsive manifold points only. Takeoff = both wheels past the lip and unloaded; jump distance = first loaded wheel centre x minus lip x; cleared = both wheels loaded on the landing side and |pitch| < 0.8 rad for 0.25 s; missed = chassis 0.6 m below the landing deck, 1 s stall or 8 s observation. A first touchdown up to one wheel radius short of the landing edge is reported as `edge_strike`, not as a miss. Impact = vertical speed just before touchdown, pitch at touchdown and peak suspension compression within 0.5 s. Repeat tolerances declared before runs: takeoff speed 0.02 m/s, jump distance 0.05 m, compression 5 mm, identical status; checked on a fresh load for the widest cleared gap, the first missed gap and the flat landing, and once more through in-world R.
-
-These are limits of the current preset under this protocol, not tuning targets. Results and evidence live in STATUS.md.
+`gaps` (key 8): 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10 m; `gaps-landing` (key 9): 2 m with flat, 15° downslope and 15° upslope landings. Each section starts 2 m before a 15° chain ramp to a 1 m lip over a pit 3 m below ground; default 7 m/s, `&speed=9` for comparison. Protocol (debug `a19`): full throttle, no brake/lean. Takeoff = both wheels past the lip and unloaded; jump distance = first loaded wheel x minus lip x; cleared = both wheels loaded on the landing side with |pitch| < 0.8 rad for 0.25 s; missed = chassis 0.6 m below the deck, 1 s stall or 8 s; a touchdown up to one wheel radius short is `edge_strike`. Repeat tolerances: takeoff 0.02 m/s, distance 0.05 m, compression 5 mm, same status.
+
+## Test cases
+
+`python tools/gym/smoke.py --case <id>` (HTML5 debug gym):
+
+| Case | Checks |
+| --- | --- |
+| `a1` | Chain support (probe rests at y = 95 ±2 on y = 80), camera follow |
+| `a2` | Real keyboard drive and braking with brake priority |
+| `a3` | 100 resets incl. bounds recovery, joint invalidation, sleep re-drive, timing |
+| `a6` | Reverse, airborne lean, camera direction/zoom |
+| `a7` | Head contact off/on via C and overlay click |
+| `a8` | Live spring change without reset, neutral release |
+| `a9`, `a9invalid` | Preset by URL and chips; invalid fallback |
+| `a10` | Silent before input, one voice, wheel-dependent speed |
+| `a11` | Clipboard readback and denial fallback |
+| `a12` | Graph spike with disclosed test wheel limits, expiry |
+| `m2feedback` | Ground/air assistance, preset C above 8 m/s |
+| `coast` | Coasting distance and brake-tap settle |
+| `hud` | FPS colour boundaries (55/54/30/29) |
+| `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
+| `a15a` | Rider lean/bob bounds and return to rest |
+| `a16`, `a17`, `a18`, `a19` | Ramp, step, seam and gap protocols above |
+
+Release behavior (keyboard, touch, tilt, stations, screenshots) is verified by `tools/preview/*.cjs` in CI.

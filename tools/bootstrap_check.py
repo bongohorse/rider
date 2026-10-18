@@ -9,7 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = ['README.md', 'AGENTS.md', '.gitignore', '.gitattributes', '.editorconfig',
             'renovate.json', 'tools/doctor.py', 'tools/doctor.ps1', 'tools/doctor.sh',
-            'docs/history/G1_ACCEPTANCE.md', 'docs/history/TOOLCHAIN_CANDIDATES.md',
+            'STATUS.md', 'docs/README.md',
             'tools/toolchain-candidates.json', '.github/workflows/ci.yml']
 
 

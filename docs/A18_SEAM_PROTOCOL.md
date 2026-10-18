@@ -2,6 +2,8 @@
 
 Each protocol version was declared before its corresponding runs. Defold 1.14.0 / integrated Box2D 3.1.0, existing buggy and preset A, no tuning changes. Technical browser trials are separate from Claudio's phone/drive acceptance. The engine owns simulation and all bodies; the existing fixed owner applies normalized commands.
 
+**Contents:** [Revision history](#revision-history) · [Fixed commands and qualification](#fixed-commands-and-qualification) · [Sampling and bump definition](#sampling-and-bump-definition) · [Reproduction and artifacts](#reproduction-and-artifacts) · [Engine boundary found during the experiment](#engine-boundary-found-during-the-experiment)
+
 Two selectable JSON stations: `seams-chain` (key 6) and `seams-hull` (key 7). URLs accept `?station=seams-chain&speed=5`, likewise hull and speeds 7/9 (station default 9). R retries at the same start without reloading the world; Next station switches through A15. Normal play uses player commands; the debug test alone supplies the fixed protocol commands. Player commands outside the protocol explicitly invalidate a comparison.
 
 Geometry is flat at y=0.8 m with 20 internal vertices/abutments at x=40,42,...78 m. Chain has 21 connected segments and ghost vertices; hull has 21 flush, neighboring CCW rectangles, bottom y=-0.2 m (1 m thick). Both use the existing friction 0.8, restitution 0, category/mask 1 and the same static terrain body. Chain is one sided with zero thickness; hull is solid and two sided. Only loaded contact from above is compared; neither underside nor end contacts are part of this experiment. Initial chassis (0,1.7) and rolling wheel velocities use A15's canonical start.
