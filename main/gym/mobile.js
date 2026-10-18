@@ -114,6 +114,8 @@
     pending.station=ids[(index+1)%ids.length];
   });
   api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
+  // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
+  button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
   button('Layout A · mirror',toolbar,b=>{
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
