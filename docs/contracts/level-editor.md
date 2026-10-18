@@ -133,6 +133,22 @@ Implemented in `main/gym/custom.lua` (loader side), `custom.js` (HTML helper), `
 - **Input:** the open panel captures game input like the feedback fallback (held commands cleared). Browser keys reach the engine only while the canvas is focused ([library_glfw.js L190](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/external/glfw/js/library_glfw.js#L190)), so typing in the panel never drives. `html5.run` returns the helper's text through `eval` and `lua_pushstring` ([script_html5_js.cpp L91](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/script/src/script_html5_js.cpp#L91)).
 - **Evidence:** debug case `le1a` ([gym notes](../../main/gym/README.md#custom-levels)): import A → invalid → B → A with identical shape/sprite/label counts, queued import during a load, retry and bounds reset, real page reloads, an injected Emscripten write error and a build failure. Samples: `main/gym/samples/`.
 
+### Custom level measurement (LE1b)
+
+Report, protocol and phone procedure: [LE1b report](../LE1B_REPORT.md) (debug case `le1b`, generator `tools/gym/levels.cjs`). Desktop results in CI, within the unchanged limits:
+- Import → drive-ready takes 55–68 ms (median).
+- The longest switch frame reaches 21–26 ms at 612–800 render objects.
+- Physics steps stay at the 0.1 ms clock resolution.
+- Length up to 99 km costs nothing measurable; Box2D memory grows by about 1 KiB per terrain shape.
+- A full level uses 804 of the 1024 sprites (220 left for editor overlays).
+
+Open for later tasks:
+- A start 1.5 km or more from the origin fails vehicle placement, and the level is still saved.
+- Unbounded text fields versus the 2 KiB `msg.post` cap.
+- No import entry in touch mode once a level is saved.
+
+Phone values are NOT RUN until Claudio supplies them. `Level load` in the feedback report shows switch/parse/terrain/decoration times on any device.
+
 ## Additional implementation and acceptance checks
 
 Evidence each task must provide in addition to its issue's acceptance criteria. These refine the tasks; they are not additional feature packages.

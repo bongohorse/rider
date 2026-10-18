@@ -79,9 +79,12 @@ local function setup(self)
     -- A failed build leaves a vehicle-less error world; the next load replaces it entirely.
     local built,err=pcall(function()
         local chains
+        local started=socket.gettime()
         chains,self.segments=stations.build(self.terrain,self.station)
+        local built_at=socket.gettime()
         self.chain=chains[1]
         self.decor_sprites,self.decor_labels=stations.decorate(self.station)
+        self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
     if not built then
         print("GYM_BUILD_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
@@ -113,6 +116,7 @@ function init(self)
         assert(sys.get_engine_info().is_debug,"Ramp trial requires debug engine")
         self.ramp_trial=require "main.gym.ramp_trial"
     end
+    if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
     if self.testcase=="a18" or self.testcase=="a18powered" then
         assert(sys.get_engine_info().is_debug,"Seam trial requires debug engine")
         self.seam_trial=require "main.gym.seam_trial"
@@ -133,6 +137,7 @@ function init(self)
     self.held = {}
     self.generation, self.reset_count, self.bounds_count = 1,0,0
     self.session_generation=1
+    self.load={}
     self.reset_ms, self.latency_ms = {},0
     self.drive_tick = 0
     self.max_angle = 0
@@ -157,6 +162,11 @@ function update(self, dt)
         vehicle.reset(self.vehicle)
         stations.restart(self)
         self.target = self.vehicle.ids.chassis
+        if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
+        -- Load timings use socket.gettime (1 ms steps on HTML5); switch is absent without a trigger (page load).
+        -- A separate message keeps the measurements payload clear of msg.post's 2 KiB cap.
+        msg.post("main:/loader#ui","load_timing",{generation=self.session_generation,switch_ms=self.load.switch_ms,parse_ms=self.load.parse_ms,
+            build_ms=self.load.build_ms,decorate_ms=self.load.decorate_ms})
         emit(self,"vehicle_ready",{bodies=3,joints=2})
         show_preset(self)
     end
@@ -188,6 +198,13 @@ function update(self, dt)
             sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
+            -- LE1b only: Box2D counters/profile parts and the Lua heap go straight to the page (msg.post caps payloads at 2 KiB).
+            if self.testcase=="le1b" and html5 then
+                local world=b2d.body.get_world(self.terrain)
+                local c,p=b2d.world.get_counters(world),b2d.world.get_profile(world)
+                html5.run("window.riderWorld="..json.encode({sequence=sample.sequence,station=sample.station,bytes=c.byte_count,shapes=c.shape_count,contacts=c.contact_count,
+                    static_tree_height=c.static_tree_height,step_ms=p.step,pairs_ms=p.pairs,collide_ms=p.collide,solve_ms=p.solve,sensors_ms=p.sensors,lua_kib=collectgarbage("count")}))
+            end
             for i,series in ipairs(history.series(self.history)) do
                 local encoded=json.encode(series.values)
                 assert(#encoded<1500,"Graph message exceeds safe payload budget")
@@ -293,6 +310,7 @@ function on_message(self,id,data,sender)
         if not self.station and data.note then self.station_note=data.note end
         self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset
         self.session_generation=data.generation or 1
+        self.load={requested=data.requested,parse_ms=data.parse_ms}
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("next_section") then self.pending_section=true

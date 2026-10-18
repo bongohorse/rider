@@ -12,7 +12,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Physics, units, tick owner, reset | [physics contract](contracts/physics.md), [engine pitfalls](contracts/engine-pitfalls.md); measured API table in [G1 baseline](contracts/g1-baseline.md) |
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
-| Level editor | [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)) |
+| Level editor | [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](LE1B_REPORT.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
 | Native Bridge | [bridge contract](contracts/bridge.md) |
 | Setup, build, tests, CI, preview | [TOOLING.md](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md) |
@@ -33,6 +33,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [ENGINE_REFERENCES.md](ENGINE_REFERENCES.md) | Official Defold/Box2D sources | Read only what the task needs · Defold · Box2D · Automation Bridge · Build, platforms and gameplay evidence · Maintenance |
 | [PLATFORM_MATRIX.md](PLATFORM_MATRIX.md) | Evidence per platform and device | — |
 | [MOBILE_TRIAL.md](MOBILE_TRIAL.md) | Reference-phone test procedure | Touch and layout · Coasting and HUD · Comparable phone captures · Tilt comparison |
+| [LE1B_REPORT.md](LE1B_REPORT.md) | Custom level size, performance and world-switch measurement (`le1b` case) | Summary · Protocol · Desktop results · Phone results · Phone procedure · Findings for later tasks · Reproduction · Engine sources |
 | [A18_SEAM_PROTOCOL.md](A18_SEAM_PROTOCOL.md) | Chain vs hull seam experiment (`a18` case) | Revision history · Fixed commands and qualification · Sampling and bump definition · Reproduction · Engine boundary |
 | [contracts/physics.md](contracts/physics.md) | Binding physics rules | API and platform · Units · Lifecycle and tick owner · Ownership and reset · Collisions and sensors · Scenario and result data · Pause, slow motion and live tuning · Command playback and ghosts |
 | [contracts/g1-baseline.md](contracts/g1-baseline.md) | Measured G1 API/unit matrix and fixture | API and units · Start state · Ownership and cleanup · Running and protocol |

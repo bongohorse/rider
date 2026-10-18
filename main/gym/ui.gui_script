@@ -131,13 +131,16 @@ end
 function on_message(self,id,data,sender)
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
-        self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false
+        self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
         if html5 then html5.run("window.riderStationError=null;window.riderCustomStatus=null") end
         cancel_drag(self);gui.set_text(self.station,"Loading station...");gui.set_color(self.station,vmath.vector4(1,1,1,1))
     elseif id==hash("station_error") then
         if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
         self.station_error=data.note
         gui.set_text(self.station,data.note);gui.set_color(self.station,vmath.vector4(1,0.3,0.2,1))
+    elseif id==hash("load_timing") and data.generation==(self.session_generation or 1) then
+        self.load_timing=data
+        if html5 then html5.run("window.riderLoad="..json.encode(data)) end
     elseif id==hash("custom_status") then
         self.custom_status=data.text
         if html5 then html5.run("window.riderCustomStatus="..json.encode(data.text)) end
@@ -171,7 +174,7 @@ function on_message(self,id,data,sender)
         if data.custom then note=note..(note~="" and " | " or "")..(self.custom_status or "Saved level") end
         gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,note))
         gui.set_text(self.station_result,data.station_result or string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
-        self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
+        self.report_text=feedback.report(data,self.preset,self.modified,self.tuning,self.load_timing)
         feedback.update(self.report_text)
         gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
         if html5 then

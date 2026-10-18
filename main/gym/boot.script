@@ -1,9 +1,12 @@
 -- Proxy is the only world-switch owner; messages serialize confirmed unload/load.
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
+local socket=require "socket"
 local function switch(self,request)
     self.station,self.speed=request.id,request.speed or ""
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
+    -- Loop latency (R15): the world reports trigger -> drive-ready from this loader-side trigger time.
+    self.requested,self.parse_ms=request.requested,request.parse_ms
     self.preset=request.preset or self.preset
     self.generation=self.generation+1
     self.loading,self.deadline=true,0
@@ -15,6 +18,7 @@ local function switch(self,request)
 end
 -- Import = read/validate, freeze a snapshot, then reload the world. Save only after it loaded.
 local function import(self,request)
+    local requested=socket.gettime()
     local d,err=custom.parse(request.text)
     if not d then
         custom.notify(request.request,"error","Import failed: "..err..". The current level and its save are unchanged.")
@@ -22,7 +26,7 @@ local function import(self,request)
     end
     local snapshot=custom.freeze(d,request.text)
     custom.notify(request.request,"loading","Loading "..d.name.."...")
-    local next={id="custom",snapshot=snapshot,import=request.request}
+    local next={id="custom",snapshot=snapshot,import=request.request,requested=requested,parse_ms=(socket.gettime()-requested)*1000}
     if self.loading then
         -- Never replace the snapshot an in-flight load reads; run the newest import afterwards.
         self.queued=next
@@ -74,7 +78,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("select_station") and not self.loading then
         local d,note=stations.load(data.id,data.speed)
         if not d then msg.post("#ui","station_error",{note=note});return end
-        switch(self,{id=d.id,speed=data.speed,preset=data.preset})
+        switch(self,{id=d.id,speed=data.speed,preset=data.preset,requested=socket.gettime()})
     elseif id==hash("proxy_unloaded") then
         msg.post("#world","load")
     elseif id==hash("proxy_loaded") then
@@ -82,7 +86,7 @@ function on_message(self,id,data,sender)
         msg.post(sender,"init")
         if self.world_loads>1 or self.station=="custom" then
             msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,generation=self.generation,
-                snapshot=self.snapshot,note=self.note})
+                snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms})
         end
         msg.post(sender,"enable")
     elseif id==hash("gym_ready") and data.generation==self.generation then

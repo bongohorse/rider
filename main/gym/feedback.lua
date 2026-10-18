@@ -1,6 +1,8 @@
 local feel=require "main.gym.feel"
 local M={}
-function M.report(data,preset,modified,tuning)
+-- socket.gettime has 1 ms steps on HTML5: never print a sub-step value as zero cost.
+local function ms(v) return not v and "n/a" or v<1 and "<1 ms" or string.format("%.0f ms",v) end
+function M.report(data,preset,modified,tuning,load)
     if not data then return nil end
     return table.concat({"## Rider gym feedback",
         "- Commit: "..sys.get_config_string("rider.source_sha","development"),
@@ -12,6 +14,8 @@ function M.report(data,preset,modified,tuning)
         string.format("- Wheel contact: L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
         string.format("- Suspension: L %+.3f / R %+.3f u",data.travel1,data.travel2),
         string.format("- FPS: %.2f; mean frame %.3f ms; physics step %.3f ms",data.fps,data.frame_ms,data.physics_ms),
+        string.format("- Level load: switch %s; parse %s; terrain %s; decoration %s; terrain shapes %d; decoration sprites %d, labels %d",
+            ms(load and load.switch_ms),ms(load and load.parse_ms),ms(load and load.build_ms),ms(load and load.decorate_ms),data.terrain_shapes or 0,data.decor_sprites or 0,data.decor_labels or 0),
         "- Crash reset: "..tostring(data.crash_enabled).."; head contact: "..tostring(data.head_contact),
         "- Tuning: "..json.encode(tuning or {}),"","## What I noticed",""},"\n")
 end
