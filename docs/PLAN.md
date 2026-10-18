@@ -17,7 +17,7 @@ Authoritative plan, adopted from the approved English handoff. [STATUS.md](../ST
 - **D5** Public HTML5 preview on GitHub Pages at `bongohorse.github.io/rider`, deployed automatically on every game/tooling-affecting merge to `main` and manually via `workflow_dispatch`; documentation-only merges preserve the existing deployed build without rebuilding it. This deployment authorisation is permanent for the preview.
 - **D6** Android first; iOS only after the Play Store launch. No iOS builds until then. Keep desktop/web/other exports possible (no platform-specific gameplay logic).
 - **D7** Keep Defold 1.14.0 + integrated Box2D 3.1.0; no custom physics extension, no manual world stepping.
-- **D8** Terrain = chain shapes (`b2d.body.create_chain`) built from polyline data; obstacles = hull collision objects. Subject to the seam measurement in A18.
+- **D8** Terrain = chain shapes (`b2d.body.create_chain`) built from polyline data; obstacles = hull collision objects. Confirmed by A18 (protocol v3, 5/7/9 m/s): chain 0 ghost bumps, neighboring hull terrain 20/20 seams at every speed; do not build drivable terrain from abutting hulls.
 - **D9** Retry resets the running world without a collection reload; proxy reload only for track switches. Subject to measurement in A3.
 - **D10** Feel before infrastructure: tests, docs and tooling grow only with what the gym actually needs.
 - **D11** All agent-facing documents in English. Game UI stays English.
@@ -111,7 +111,7 @@ Revised live issue scope (2026-10-16), authorized 2026-10-17. Each station is di
 | A15 / #30 | **Station framework + straight:** validated JSON, single-station loader, keys/URL/Next, speed start and Retry, 1/10 m markers | 8 m/s first-step speed ±0.2; safe switching/retry; speed/braking readable | A5 |
 | A16 / #31 | **Ramp ladder:** 5–45° plus impossible 60°, short/long variants | Labelled data ramps; per-ramp climb/failure and launch measurements | A15 |
 | A17 / #32 | **Step ladder:** 0.05–0.5 m up/down | Per-step climb/stuck/compression measurements; repeatable bottoming | A15 |
-| A18 / #33 | **Seams:** chain vs hull, 20 seams at 5/15/30 m/s | Valid measured speed windows and ghost-bump results; D8 confirmed/revised | A15 |
+| A18 / #33 | **Seams:** chain vs hull, 20 seams at 5/7/9 m/s (revised 2026-10-18 from 5/15/30: rotation cap, #114) | Valid measured speed windows and ghost-bump results; D8 confirmed/revised | A15 |
 | A19 / #34 | **Gap ladder:** increasing 1–10 m gaps and landing variants | Predeclared repeatability tolerance; per-gap clear/miss/distance/impact | A15 |
 | A19b / #55 | **Bumps:** 0.05–0.3 m waves, long/short wavelength, crest/dip | Contact loss, compression, pitch and lift-off speed measured | A15 |
 | A19c / #56 | **Air:** long-airtime launch and safe landing zones | Airtime, rotation, landing angle/impact; full-lean rotation measured | A15, A6 |
