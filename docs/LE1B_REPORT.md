@@ -151,20 +151,20 @@ NOT RUN. Claudio's values from the [phone procedure](#phone-procedure) go here, 
 
 ## Phone procedure
 
-The **Import level** button is hidden in touch mode, so each import uses a fresh private tab, where no level is saved yet and the Import panel opens on its own.
+Touch mode hides the page tools; its toolbar has its own **Import level** button, which opens the same Import panel.
 
 1. On the phone, download [`seg-800.json`](https://github.com/bongohorse/rider/raw/main/main/gym/samples/seg-800.json) (400 m, 800 segments: the largest accepted level) and [`len-99km.json`](https://github.com/bongohorse/rider/raw/main/main/gym/samples/len-99km.json) (99 km, 100 segments).
 2. Note the Chrome version (Chrome → About), set the phone to 60 Hz, keep High DPI ON and preset A.
-3. Close all private tabs, open a new private tab with <https://bongohorse.github.io/rider/?station=custom>, choose `seg-800.json` in the Import panel and wait until it drives.
+3. Open <https://bongohorse.github.io/rider/?station=custom>. Without a saved level the Import panel opens by itself; otherwise tap **Import level** in the toolbar. Choose `seg-800.json` and wait until it drives. Opening Import leaves fullscreen and the file picker may hide the page; both cancel a running capture, so start the capture only after the import.
 4. Tap **Measure**, select the refresh mode, tap **Record 30 s** and drive the level with Throttle (Retry as needed). After 30 s tap **Copy report** and paste it into #123. The report contains the line `Level load: switch … ms; parse …; terrain …; decoration …` and the capture values.
-5. Repeat steps 3–4 twice more with `seg-800.json` (three switch times), then once with `len-99km.json`.
+5. Repeat steps 3–4 twice more with `seg-800.json` (three switch times; **Import level** → the same file), then once with `len-99km.json`.
 6. Drive `seg-800` to its end and add visible stutter (none / occasional / frequent) and anything that felt different from the built-in stations.
 
 ## Findings for later tasks
 
 1. **Start distance from the origin (LE2/LE3, decision for Claudio).**
    - **What happens:** a level that passes validation, with its start 1.5 km or more from x = 0, fails when the vehicle is placed: `vehicle.lua:68: Noncanonical reset pose`. The world shows no station error and the vehicle stays inert.
-   - **The broken level is still saved:** LE1a saves after the world reports ready, which is before vehicle placement, so a reload restores the same broken level. Importing another level recovers.
+   - **The broken level is still saved:** the save status was `Saved` after every placement failure. LE1a saves when the world reports ready, which is before vehicle placement, so a reload should restore the same broken level; this is inferred, not tested. Importing another level recovers.
    - **Cause:** the reset guard allows 0.01 engine units (0.1 mm). Engine positions are float32, and between about 655 m and 2.6 km one float32 step is 1/128–1/64 unit, so whether a value passes depends on the exact coordinate. This is the tolerance of that guard, not evidence that the physics itself breaks down.
    - **Options:**
      - (a) The LE2 source validator limits starts (and later checkpoints) to 1 km from the origin.
@@ -174,8 +174,8 @@ The **Import level** button is hidden in touch mode, so each import uses a fresh
    - **Not measured:** driving more than about 50 m away from the start, so precision effects far from the origin are unknown.
 2. **Switch-frame spike at full budget:** 21–26 ms at 612–800 objects on desktop. It matters for LE3/LE5 re-checks with editor overlays, and for phone values.
 3. **Validator wording (R16):** coordinates at or beyond 100 km report `Non-finite bounds` although the values are finite but out of range. The source validator should name the range.
-4. **Text fields are unbounded:** the level `name` reaches the measurements message as `station_name`, and `msg.post` caps payloads at 2048 bytes. A very long name could exceed that (not tested). LE2's source validator should bound text fields.
-5. **Touch import entry:** in touch mode the page tools, including **Import level**, are hidden. Once a level is saved, a phone cannot import another one without a new private tab. The editor is desktop-first per this contract; decide in LE4 whether phones need import.
+4. **Text fields were unbounded:** the level `name` reaches the measurements message as `station_name`, and `msg.post` caps payloads at 2048 bytes. Since [PR #140](https://github.com/bongohorse/rider/pull/140) the station validator limits id and name (and section id/name) to 64 bytes; the `le1a` case loads a 64-byte id with a 64-byte multi-byte name and gets telemetry. Text fields that LE2 adds still need their own byte tests.
+5. **Touch import entry:** found here and fixed in [PR #142](https://github.com/bongohorse/rider/pull/142): the touch toolbar has its own **Import level** button. The release preview case `touch_import_entry_with_saved_level` covers it in Chromium touch emulation: imports from a built-in station, with a saved level, and after reloading `?station=custom`; held throttle goes neutral; portrait layout. On a real phone: NOT RUN.
 6. **Not covered:** hull contact cost (the generated hulls do not touch the vehicle), GPU/render time, the JS heap and phone devices.
 
 ## Reproduction
