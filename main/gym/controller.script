@@ -62,6 +62,8 @@ local function emit(self, event, data)
 end
 local function show_preset(self)
     msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=self.invalid_preset or false})
+    -- Imports reload the world from the loader, which must keep the current preset like a station switch.
+    msg.post("main:/loader#script","preset_changed",{key=self.preset})
     msg.post("main:/loader#ui","tuning",feel.snapshot())
 end
 local function setup(self)
@@ -69,16 +71,29 @@ local function setup(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
     if not self.station then
         msg.post("main:/loader#ui","station_error",{note=self.station_note or "Invalid station"})
-        self.ready=true;return
+        self.ready=true
+        msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation})
+        return
     end
     stations.configure(self.station)
-    local chains
-    chains,self.segments=stations.build(self.terrain,self.station)
-    self.chain=chains[1]
-    stations.decorate(self.station)
+    -- A failed build leaves a vehicle-less error world; the next load replaces it entirely.
+    local built,err=pcall(function()
+        local chains
+        chains,self.segments=stations.build(self.terrain,self.station)
+        self.chain=chains[1]
+        self.decor_sprites,self.decor_labels=stations.decorate(self.station)
+    end)
+    if not built then
+        print("GYM_BUILD_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
+        msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station").." could not be built. Import another level [I]."})
+        self.station,self.segments,self.chain=nil,nil,nil
+        self.ready=true
+        msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation})
+        return
+    end
     if self.testcase ~= "a1" then self.vehicle = vehicle.spawn() end
     self.ready = true
-    msg.post("main:/loader#script", "gym_ready")
+    msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
     emit(self, "ready", {chain_segments = #self.segments, tiles = 48, floor_y = 80})
     if self.scenario then self.scenario.setup(self) end
 end
@@ -274,8 +289,9 @@ function final(self)
 end
 function on_message(self,id,data,sender)
     if id==hash("configure_station") and not self.ready then
-        self.station,self.station_note=stations.load(data.id,data.speed)
-        self.preset=feel.preset(data.preset or "a")
+        self.station,self.station_note=stations.load(data.id,data.speed,nil,data.snapshot)
+        if not self.station and data.note then self.station_note=data.note end
+        self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset
         self.session_generation=data.generation or 1
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled

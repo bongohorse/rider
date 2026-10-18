@@ -129,6 +129,8 @@ jobs:
         run: python tools/gym/bundle.py --output artifacts/g1/gym-bundle
       - name: Verify station speed start, retry, switching and invalid data
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/stations --case a15
+      - name: Verify custom level import, switching, persistence and recovery
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/custom --case le1a
       - name: Measure ramp ladders and neutral downhill starts
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
       - name: Measure step ladders and repeatable compression

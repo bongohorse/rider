@@ -6,7 +6,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 
 ## Now
 
-- **Next:** Level Editor LE1a [#122](https://github.com/bongohorse/rider/issues/122). **No task is active; LE1a starts only with Claudio's GO.** The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)). No editor implementation or evidence exists yet.
+- **Active:** Level Editor LE1a [#122](https://github.com/bongohorse/rider/issues/122) (custom level runtime, import and storage), GO by Claudio 2026-10-18. After merge: stop for Claudio's drive test and a new GO before LE1b [#123](https://github.com/bongohorse/rider/issues/123). The editor tasks run strictly in order ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
 - Remaining M4 issues (A19b–d, A20, A21) are paused until after the Level Editor (Claudio, 2026-10-18).
 - **Preview:** https://bongohorse.github.io/rider/ — [build.json](https://bongohorse.github.io/rider/build.json) names the deployed SHA and run.
 
@@ -29,7 +29,7 @@ Received: A15a rider reaction "works, subtle, OK for now"; A18 "hull strip drive
 | M2 – It is measurable | Complete, plus feedback round [#61](https://github.com/bongohorse/rider/issues/61) | PRs #47–#54, #62 |
 | M3 – Mobile | Accepted by Claudio 2026-10-16 (browser and phone; tilt kept opt-in, default off) with a measurement exception, see [platform matrix](docs/PLATFORM_MATRIX.md) | PRs #63, #64, #67, #72–#74 |
 | M4 – Stations | 6 of 11 merged: A15 [#76](https://github.com/bongohorse/rider/pull/76), A16 [#77](https://github.com/bongohorse/rider/pull/77), A17 [#78](https://github.com/bongohorse/rider/pull/78), A18 [#113](https://github.com/bongohorse/rider/pull/113), A15a [#115](https://github.com/bongohorse/rider/pull/115), A19 [#117](https://github.com/bongohorse/rider/pull/117); paused for the Level Editor | PR descriptions and CI runs |
-| Level Editor | Prepared ([epic #118](https://github.com/bongohorse/rider/issues/118)); awaits GO | — |
+| Level Editor | LE1a active ([epic #118](https://github.com/bongohorse/rider/issues/118)) | — |
 | M5 – Lock in | Not authorized | — |
 
 ## Measured limits

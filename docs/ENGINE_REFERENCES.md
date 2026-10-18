@@ -58,6 +58,7 @@ Use [bridge.md](contracts/bridge.md) for exact versions, capabilities, wrapper p
 | Touch/input | [Mouse and touch](https://defold.com/manuals/input-mouse-and-touch/) | [Platforms and real-device requirements](PLATFORM_MATRIX.md) |
 | Screen layout | [Screen sizes](https://defold.com/manuals/adapting-graphics-to-screen-size/) | [Gym notes](../main/gym/README.md), [platform matrix](PLATFORM_MATRIX.md) |
 | Android/HTML5 lifecycle | Locate the relevant platform manual through the official manuals index | [Platform matrix requirements](PLATFORM_MATRIX.md), [runner protocol](contracts/automation.md#enginerunner-protocol) |
+| Saving, HTML5 storage, JS bridge | [sys API](https://defold.com/ref/sys-lua/), [HTML5 manual](https://defold.com/manuals/html5/), [html5 API](https://defold.com/ref/html5-lua/) | [Custom level save (LE1a)](contracts/level-editor.md#custom-level-runtime-and-save-le1a) |
 | Performance | Locate profiling/optimization manuals through the official manuals index | [Phase E measurements](PLAN.md#later-phases-no-issues-yet) |
 | Vehicle behavior | Box2D and Defold references above | [Vehicle commands](contracts/vehicle.md), [Game design](GAME_DESIGN.md), [plan](PLAN.md) |
 
