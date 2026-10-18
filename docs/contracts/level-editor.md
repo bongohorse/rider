@@ -148,6 +148,44 @@ Open for later tasks:
 
 The touch toolbar has its own **Import level** entry ([PR #142](https://github.com/bongohorse/rider/pull/142)). Phone values are NOT RUN until Claudio supplies them. `Level load` in the feedback report shows switch/parse/terrain/decoration times on any device.
 
+#### Decisions after LE1b (Claudio, 2026-10-18)
+
+Each item separates what LE1b **tested**, what is only **assumed**, and what is still **open**. Assumptions are not limits.
+
+1. **Save only a drive-ready level (LE2, before new editor features).**
+   - **Rule:** an import or Play result replaces the saved level only after the vehicle is drive-ready. A failure while building or placing the vehicle (including the reset-pose guards) leaves:
+     - a safe error state without a half-placed vehicle
+     - the previous save unchanged, also across a reload
+     - a working re-import
+   - **Tested:** after a placement failure LE1b recorded the save status `Saved` for all four failing starts (start-distance series).
+   - **Inferred, not tested:** a reload restores the broken level, because LE1a saves when the world reports ready, which is before the vehicle is placed.
+   - **Open:** the LE2 tests must show all three outcomes for a real placement failure.
+2. **Provisional start limit: |x| ≤ 1 km from the origin.**
+   - **Rule:** applies to START and to temporary test starts (R10), later (proposed) also to checkpoints and other respawn points. It is checked by the source validator **and** in the actual load path before the vehicle is placed, with a clear error message.
+   - **Tested:** one start at x = 1000 m was placed; starts at 1.5, 2, 4 and 98.8 km failed `vehicle.lua:68: Noncanonical reset pose`.
+   - **Assumed, not proven:** that every allowed start works. ±1 km is a provisional restriction, not a demonstrated safe zone.
+   - **Open, LE2 placement tests with the full vehicle (chassis, both wheels, rider; first placement and Retry):**
+     - positive and negative positions
+     - fractional coordinates
+     - different start heights
+     - boundary values: exactly ±1000 m, just inside, and just outside (rejected by the validator and by the load-path check)
+     - A grid alone does not prove that every position in between works. If any allowed position fails, tighten the limit or choose one of the later options.
+   - **Not adopted:** a total level extent limit of ±10 km (an estimate). Driving far from the start is unmeasured.
+   - **Later options**, only if far test starts or checkpoints are needed:
+     - shift coordinates at compile time
+     - a guard tolerance that scales with coordinate size. This helps only if the guard alone is the problem; it does not improve physics precision.
+3. **Text fields.**
+   - **Rule:** a level name of at most 64 characters is a usability rule. The technical limit is the 2048-**byte** `msg.post` payload, which other fields share.
+   - **Open (LE2 tests):** umlauts, emoji and maximum lengths in all text fields at once, checked against the size of the whole message, not only the name.
+4. **World reload stays the Play baseline (R15).**
+   - **Tested (desktop CI):** Import → drive-ready median 55–68 ms.
+   - **Assumed:** 300 ms as a target for phones. It is a proposed value, not a proven usability limit; Claudio's impression in the drive test counts.
+   - **Open:** phone values.
+5. **Sprite budget is checked early in LE3,** before the grid and handles are complete.
+   - **Tested:** a full level uses 804 of the 1024 sprites.
+   - **Assumed until shown otherwise:** hidden sprites still count against the budget.
+6. **Touch import entry:** done in [PR #142](https://github.com/bongohorse/rider/pull/142). Covered by touch emulation; phone: NOT RUN.
+
 ## Additional implementation and acceptance checks
 
 Evidence each task must provide in addition to its issue's acceptance criteria. These refine the tasks; they are not additional feature packages.
@@ -156,7 +194,7 @@ Evidence each task must provide in addition to its issue's acceptance criteria. 
 |---|---|
 | **LE1a** | Custom A → B → A and invalid import between valid imports; previous valid save survives failure; no leaked terrain/decorations or stale async mutations. Implement R14, document storage use/limits, and show the import/recovery entry point. |
 | **LE1b** | Vary physical length and geometry complexity independently, including several accepted complexity steps and rejected limits. Fix and report sample duration/repeats, build/source/browser identity, viewport/DPR and preset. Separate build time, observed frame times (including tail/spikes) and available physics profile samples; values below timer resolution are not zero-cost evidence. Record save size and memory observations when measurable; mark unavailable metrics NOT RUN/unknown. No bypass of existing validation limits. |
-| **LE2** | R15–R17 foundation: explicit Edit state, minimal source validator, revision-aware draft persistence, stable IDs, bounded Undo and safe version rejection. Repeat Edit ↔ Play enough times to demonstrate stable shape/sprite/joint counts. Save/reload an unfinished draft and continue editing. Held throttle → Edit → release → Play must be neutral. |
+| **LE2** | R15–R17 foundation: explicit Edit state, minimal source validator, revision-aware draft persistence, stable IDs, bounded Undo and safe version rejection. Repeat Edit ↔ Play enough times to demonstrate stable shape/sprite/joint counts. Save/reload an unfinished draft and continue editing. Held throttle → Edit → release → Play must be neutral. Apply the [decisions after LE1b](#decisions-after-le1b-claudio-2026-10-18) 1–3: save only drive-ready levels, the provisional start limit with its placement tests, byte-based text field tests. |
 | **LE3** | Connected edit → Undo → Redo restores geometry and references. Multi-selection moves a run once. Define supported topology and screen-space selection/snap behavior; re-check editor budget. |
 | **LE4** | Save failures preserve a usable backup; reload recovery is tested. Export → import keeps **lines, hulls, markers (START/FINISH), connections and level settings** equal; only explicitly defined identity fields may change, no byte equality. Copy/paste obeys identity/connection/marker rules. Known versus unsupported versions and expected stale compiled data are distinguished. |
 | **LE5a** | Prefab parameters survive save/reload and export/import. Invalid parameters produce useful errors without silently changing the intended shape. Editor budget re-check with prefabs. |
