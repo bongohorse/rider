@@ -89,6 +89,11 @@ elif args.case=='m2feedback':
 elif args.case=='hud':
     assert set(cases)=={'fps_green_55','fps_orange_54','fps_orange_30','fps_red_29'}
     assert all(cases.values())
+elif args.case=='a15a':
+    assert set(cases)=={'lean_back','lean_forward','landing_squash','bounded','rest','physics_unchanged'}
+    assert cases['lean_back']>=0.05 and cases['lean_forward']<=-0.05 and cases['landing_squash']<=-2
+    assert all(cases[k] is True for k in ['bounded','rest','physics_unchanged'])
+    for name in ('rider-throttle.png','rider-brake.png','rider-landing.png'): assert (out/name).is_file(), name
 elif args.case=='coast':
     assert set(cases)=={'coast_distance_m','brake_tap_stopped','rest_speed_mps'}
     assert 6<=cases['coast_distance_m']<=15 and cases['brake_tap_stopped'] and cases['rest_speed_mps']<0.1

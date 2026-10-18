@@ -8,6 +8,7 @@ function M.spawn()
     local c = M.config
     local v = {ids = {}, wheels = {}, joints = {}}
     v.ids.chassis = factory.create("#chassis", vmath.vector3(c.spawn_x, c.spawn_y, 0))
+    rider.spawn(v)
     for i,x in ipairs(c.wheel_x) do
         v.ids[i] = factory.create("#wheel", vmath.vector3(c.spawn_x+x, c.spawn_y+c.wheel_y, 1))
     end
@@ -72,6 +73,7 @@ function M.reset(v)
     v.reverse_time,v.reversing,v.coasting=0,false,false
     joints(v)
     assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")
+    rider.rest(v)
 end
 function M.apply(v,command,dt)
     local c=M.config

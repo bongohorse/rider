@@ -111,6 +111,8 @@ async function main() {
             for(const field of ['Commit: '+expected,'Preset: A','Station: straight','Speed:','Tuning:'])if(!fallback.includes(field))throw Error('Incomplete denied-copy fallback');
             feedbackChecked=true;
           }
+          if(data.name==='release_drive'){await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');}
+          if(data.name==='screenshot'&&/^[a-z0-9-]+\.png$/.test(data.file))await page.screenshot({path:path.join(root,data.file)});
           if(data.name==='graph_spike')await page.screenshot({path:path.join(root,'suspension-spike.png')});
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
         }).catch(rejectDone);

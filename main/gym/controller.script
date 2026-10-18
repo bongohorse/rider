@@ -89,7 +89,7 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     self.test = self.testcase == "a1"
-    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" or self.testcase=="hud" then
+    if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" or self.testcase=="hud" or self.testcase=="a15a" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
         self.scenario = require "main.gym.scenarios"
         self.scenario.bind(emit,request_reset)
@@ -156,6 +156,7 @@ function update(self, dt)
     end
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
+        rider.animate(self.vehicle,dt)
         rider.paint(self.vehicle,self.head_contact)
         local sample = telemetry.frame(self.metrics,self.vehicle,dt)
         if sample then
@@ -257,6 +258,7 @@ function fixed_update(self, dt)
         end
         self.last_command = self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
+        rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
         stations.observe(self,vehicle.state(self.vehicle),dt,sample)
         history.push(self.history,sample,dt)

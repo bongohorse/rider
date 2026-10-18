@@ -465,6 +465,53 @@ function M.hud_tick(self,dt)
         msg.post("main:/loader#ui","hud_probe",{frame_ms=1000/cases[self.hud_index][1]})
     end
 end
+-- A15a: visual rider reaction is bounded, readable and returns to rest;
+-- the physics vehicle and head sensor are unchanged by it.
+function M.reaction_tick(self,dt)
+    local v,c=self.vehicle,require("main.gym.feel").rider
+    local r=v.reaction
+    self.rx_tick=(self.rx_tick or 0)+1
+    local t=self.rx_tick
+    assert(math.abs(r.angle)<=c.max_angle+1e-9 and math.abs(r.x)<=c.max_x+1e-9 and math.abs(r.y)<=c.max_y+1e-9,"Rider visual exceeded its limits")
+    local function at_rest() return math.abs(r.angle)<0.005 and math.abs(r.x)<0.3 and math.abs(r.y)<0.3 end
+    if t==60 then
+        assert(at_rest(),"Rider not at rest before input")
+        self.rx_mass,self.rx_shapes=b2d.body.get_mass(v.chassis),#b2d.body.get_shapes(v.chassis)
+        emit(self,"phase",{name="throttle"})
+    elseif t>60 and t<=150 then
+        self.rx_back=math.max(self.rx_back or 0,r.angle)
+        if t==90 then emit(self,"phase",{name="screenshot",file="rider-throttle.png"}) end
+        if t==150 then emit(self,"phase",{name="brake"}) end
+    elseif t>150 and t<=230 then
+        self.rx_forward=math.min(self.rx_forward or 0,r.angle)
+        if t==160 then emit(self,"phase",{name="screenshot",file="rider-brake.png"}) end
+        if t==230 then emit(self,"phase",{name="release_drive"}) end
+    elseif t==320 then
+        -- Drop the resting buggy 1.5 m; body and GO poses move together.
+        for i,body in ipairs({v.chassis,v.wheels[1],v.wheels[2]}) do
+            local p=b2d.body.get_position(body)
+            local id=i==1 and v.ids.chassis or v.ids[i-1]
+            local pos=vmath.vector3(p.x,p.y+150,0)
+            go.set_position(vmath.vector3(pos.x,pos.y,go.get_position(id).z),id)
+            b2d.body.set_transform(body,pos,b2d.body.get_angle(body))
+            b2d.body.set_linear_velocity(body,vmath.vector3())
+            b2d.body.set_awake(body,true)
+        end
+    elseif t>320 and t<620 then
+        self.rx_squash=math.min(self.rx_squash or 0,r.y)
+        if r.y<-3 and not self.rx_shot then self.rx_shot=true;emit(self,"phase",{name="screenshot",file="rider-landing.png"}) end
+    elseif t==620 then
+        assert(at_rest(),"Rider did not return to rest: "..r.angle.." "..r.x.." "..r.y)
+        assert(b2d.shape.is_valid(v.head) and b2d.shape.is_sensor(v.head),"Head sensor changed")
+        assert(#b2d.body.get_shapes(v.chassis)==self.rx_shapes and math.abs(b2d.body.get_mass(v.chassis)-self.rx_mass)<1e-6,"Visual changed vehicle physics")
+        assert(self.rx_back>=0.05,"No visible lean back on throttle: "..self.rx_back)
+        assert(self.rx_forward<=-0.05,"No visible lean forward on brake: "..self.rx_forward)
+        assert(self.rx_squash<=-2,"No visible landing squash: "..self.rx_squash)
+        emit(self,"suite_end",{status="PASS",cases={lean_back=self.rx_back,lean_forward=self.rx_forward,landing_squash=self.rx_squash,
+            bounded=true,rest=true,physics_unchanged=true}})
+        self.testcase="done"
+    end
+end
 function M.fixed(self,dt)
     if self.vehicle and self.vehicle.ready then
         if self.testcase=="a2" or self.testcase=="a3" or self.testcase=="a6" or self.testcase=="a10" then
@@ -476,6 +523,7 @@ function M.fixed(self,dt)
         elseif self.testcase=="a12" then M.graph_tick(self,dt)
         elseif self.testcase=="hud" then M.hud_tick(self,dt)
         elseif self.testcase=="coast" then M.coast_tick(self,dt)
+        elseif self.testcase=="a15a" then M.reaction_tick(self,dt)
         elseif self.testcase=="m2feedback" then M.feedback_feel_tick(self,dt) end
     end
     M.probe_tick(self,dt)
