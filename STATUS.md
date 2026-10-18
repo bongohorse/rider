@@ -6,7 +6,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 
 ## Now
 
-- **Active:** Level Editor LE1a [#122](https://github.com/bongohorse/rider/issues/122) (custom level runtime, import and storage), GO by Claudio 2026-10-18. After merge: stop for Claudio's drive test and a new GO before LE1b [#123](https://github.com/bongohorse/rider/issues/123). The editor tasks run strictly in order ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
+- **Next:** Level Editor LE1b [#123](https://github.com/bongohorse/rider/issues/123) (size, performance and world-switch report). **No task is active; LE1b starts only with Claudio's GO.** LE1a merged in [PR #136](https://github.com/bongohorse/rider/pull/136). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
 - Remaining M4 issues (A19b–d, A20, A21) are paused until after the Level Editor (Claudio, 2026-10-18).
 - **Preview:** https://bongohorse.github.io/rider/ — [build.json](https://bongohorse.github.io/rider/build.json) names the deployed SHA and run.
 
@@ -15,6 +15,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 | Item | State |
 | --- | --- |
 | A19 gaps and landings ([PR #117](https://github.com/bongohorse/rider/pull/117)) | Merged; Claudio's drive feedback pending |
+| LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected. Restore after a browser reload not yet reported |
 | M4 final drive test | After the remaining M4 stations |
 | M4 stations on the real phone | NOT RUN |
 | Engine sound by ear (A10) | NOT RUN |
@@ -29,7 +30,7 @@ Received: A15a rider reaction "works, subtle, OK for now"; A18 "hull strip drive
 | M2 – It is measurable | Complete, plus feedback round [#61](https://github.com/bongohorse/rider/issues/61) | PRs #47–#54, #62 |
 | M3 – Mobile | Accepted by Claudio 2026-10-16 (browser and phone; tilt kept opt-in, default off) with a measurement exception, see [platform matrix](docs/PLATFORM_MATRIX.md) | PRs #63, #64, #67, #72–#74 |
 | M4 – Stations | 6 of 11 merged: A15 [#76](https://github.com/bongohorse/rider/pull/76), A16 [#77](https://github.com/bongohorse/rider/pull/77), A17 [#78](https://github.com/bongohorse/rider/pull/78), A18 [#113](https://github.com/bongohorse/rider/pull/113), A15a [#115](https://github.com/bongohorse/rider/pull/115), A19 [#117](https://github.com/bongohorse/rider/pull/117); paused for the Level Editor | PR descriptions and CI runs |
-| Level Editor | LE1a active ([epic #118](https://github.com/bongohorse/rider/issues/118)) | — |
+| Level Editor | 1 of 8 merged: LE1a [#136](https://github.com/bongohorse/rider/pull/136); LE1b awaits GO ([epic #118](https://github.com/bongohorse/rider/issues/118)) | PR description and CI runs |
 | M5 – Lock in | Not authorized | — |
 
 ## Measured limits
