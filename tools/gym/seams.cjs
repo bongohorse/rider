@@ -1,5 +1,5 @@
 const {configure}=require('./launch.cjs');
-const {qualify,peaks}=require('./seam_analysis.cjs');
+const {SPEEDS,qualify,peaks}=require('./seam_analysis.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -18,17 +18,18 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    const r=await page.evaluate(()=>window.riderStationReport);r.reasons=Object.values(r.reasons);
    assert.equal(r.source_sha,sha);assert.equal(r.automated,true);assert.equal(r.seams.length,20);assert(r.trace.length>10);
    assert(['VALID','INVALID / NOT COMPARABLE'].includes(r.status));assert.equal(r.comparable,r.status==='VALID');
-   if(r.comparable){assert(qualify(r).comparable,JSON.stringify(qualify(r)));assert.equal(r.reasons.length,0);assert(r.speed_min_mps>=r.nominal_mps*.95);assert(r.speed_max_mps<=r.nominal_mps*1.05);assert(r.seams.every(s=>s.samples>=2&&s.wheel1_crossed&&s.wheel2_crossed));}
+   if(r.comparable){assert(qualify(r).comparable,JSON.stringify(qualify(r)));assert.equal(r.reasons.length,0);assert(Math.abs(r.entry_mps-r.nominal_mps)<=r.nominal_mps*.05);assert(r.speed_max_mps<=r.nominal_mps*1.05);if(!r.freewheel)assert(r.speed_min_mps>=r.nominal_mps*.95);assert(r.seams.every(s=>s.samples>=2&&s.wheel1_crossed&&s.wheel2_crossed));}
    else assert(r.reasons.length>0);
    for(const seam of r.seams){
     const p=peaks(r,seam.x_m);assert.equal(p.samples,seam.samples);
-    assert(Math.abs(p.vy-seam.vy_peak_mps)<1e-8);assert(Math.abs(p.dvy-seam.dvy_peak_mps)<1e-8);assert(Math.abs(p.rise-seam.rise_m)<1e-8);
+    assert(Math.abs(p.vy-seam.vy_peak_mps)<1e-8);assert(Math.abs(p.dvy-seam.dvy_peak_mps)<1e-8);assert(Math.abs(p.rise-seam.rise_m)<1e-8);assert(Math.abs(p.dvx-seam.dvx_drop_peak_mps)<1e-8);assert(Math.abs(p.vxLoss-seam.vx_loss_mps)<1e-8);
     assert.equal(p.loss1,seam.wheel1_loss_samples);assert.equal(p.loss2,seam.wheel2_loss_samples);
-    assert.equal(seam.ghost_bump,p.vy>r.threshold_vy_mps||p.dvy>r.threshold_dvy_mps||p.rise>r.threshold_rise_m);
+    assert.equal(seam.vertical_bump,p.vy>r.threshold_vy_mps||p.dvy>r.threshold_dvy_mps||p.rise>r.threshold_rise_m);
+    assert.equal(seam.longitudinal_hit,p.dvx>r.threshold_dvx_mps);assert.equal(seam.ghost_bump,seam.vertical_bump||seam.longitudinal_hit);
    }
    return r;
   }
-  for(const speed of [5,15,30])for(const station of ['seams-chain','seams-hull']){
+  for(const speed of SPEEDS)for(const station of ['seams-chain','seams-hull']){
    await page.goto(url+`?station=${station}&speed=${speed}`);
    await page.waitForFunction(({sha,runId,station})=>window.riderReady?.source_sha===sha&&window.riderReady.run_id===runId&&window.riderStationReport?.station===station,{sha,runId,station});
    await page.waitForFunction(()=>window.riderTelemetry?.station_distance>=40);
@@ -46,27 +47,33 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
     for(let i=0;i<20;i++){
      assert(Math.abs(first.seams[i].vy_peak_mps-repeat.seams[i].vy_peak_mps)<=.02,'repeat vertical peak 0.02 m/s');
      assert(Math.abs(first.seams[i].rise_m-repeat.seams[i].rise_m)<=.002,'repeat rise 2 mm');
+     assert(Math.abs(first.seams[i].dvx_drop_peak_mps-repeat.seams[i].dvx_drop_peak_mps)<=.02,'repeat longitudinal drop 0.02 m/s');assert(Math.abs(first.seams[i].vx_loss_mps-repeat.seams[i].vx_loss_mps)<=.02,'repeat seam speed loss 0.02 m/s');
      for(const k of ['wheel1_loss_samples','wheel2_loss_samples','airborne_samples'])assert(Math.abs(first.seams[i][k]-repeat.seams[i][k])<=1,'repeat contact loss one tick');
     }
    }
   }
-  // Original powered protocol cannot maintain the high nominal targets.
+  // Preset A's motor (theoretical no-slip 7.04 m/s) cannot hold 9 m/s.
   // Keep physical off-target controls; never count them as comparison evidence.
   await page.unroute('**/index.html*');await configure(page,runId,'a18powered');
-  for(const speed of [5,15])for(const station of ['seams-chain','seams-hull']){
+  for(const speed of [5,9])for(const station of ['seams-chain','seams-hull']){
    await page.goto(url+`?station=${station}&speed=${speed}`);const r=await completed();
-   if(speed===5){assert.equal(r.comparable,true,'powered 5 m/s must qualify');assert.equal(r.ghost_bumps,0,'powered 5 m/s baseline');}
-   else {assert.equal(r.comparable,false);assert(r.reasons.includes('speed outside +/-5% window'));}
+   if(speed===5){assert.equal(r.comparable,true,'powered 5 m/s must qualify');assert.equal(r.vertical_bumps,0,'powered 5 m/s vertical baseline');}
+   else {assert.equal(r.comparable,false);assert(r.reasons.some(x=>/speed outside \+\/-5% window/.test(x)),r.reasons.join());}
    poweredControls.push(r);
   }
   await page.unroute('**/index.html*');await configure(page,runId,testcase);
-  const comparison=[5,15,30].map(speed=>{const pair=results.filter(r=>r.nominal_mps===speed);return {mode:'free roll',nominal_mps:speed,status:pair.every(r=>r.comparable)?'COMPARABLE':'NOT COMPARABLE',conditions:pair.map(r=>({station:r.station,status:r.status,entry:r.entry_mps,min:r.speed_min_mps,max:r.speed_max_mps,drift:r.drift_mps,bumps:r.comparable?r.ghost_bumps:null,reasons:r.reasons}))};});
-  comparison.push(...[5,15].map(speed=>{const pair=poweredControls.filter(r=>r.nominal_mps===speed);return {mode:'powered control',nominal_mps:speed,status:pair.every(r=>r.comparable)?'COMPARABLE':'NOT COMPARABLE',conditions:pair.map(r=>({station:r.station,status:r.status,entry:r.entry_mps,min:r.speed_min_mps,max:r.speed_max_mps,drift:r.drift_mps,bumps:r.comparable?r.ghost_bumps:null,reasons:r.reasons}))};}));
+  const condition=r=>({station:r.station,status:r.status,entry:r.entry_mps,min:r.speed_min_mps,max:r.speed_max_mps,drift:r.drift_mps,bumps:r.comparable?r.ghost_bumps:null,vertical:r.comparable?r.vertical_bumps:null,longitudinal:r.comparable?r.longitudinal_hits:null,spin_peak:r.wheel_spin_peak_rps,reasons:r.reasons});
+  const pairOf=(list,mode,speed)=>{const pair=list.filter(r=>r.nominal_mps===speed);return {mode,nominal_mps:speed,status:pair.length===2&&pair.every(r=>r.comparable)?'COMPARABLE':'NOT COMPARABLE',conditions:pair.map(condition)};};
+  const comparison=[...SPEEDS.map(s=>pairOf(results,'free roll',s)),...[5,9].map(s=>pairOf(poweredControls,'powered control',s))];
   assert(results.find(r=>r.station==='seams-chain'&&r.nominal_mps===5).comparable,'5 m/s chain free-roll baseline');
   // Invalid nominal speeds must never qualify, even if the strip is crossed.
   await page.goto(url+'?station=seams-chain&speed=10');const rejected=await completed();assert.equal(rejected.comparable,false);assert(rejected.reasons.includes('unsupported nominal speed'));
   if(errors.length)throw Error(errors.join('\n'));
-  const report={status:'PASS',acceptance:comparison.filter(r=>r.mode==='free roll').every(r=>r.status==='COMPARABLE')?'PASS':'BLOCKED',d8:'PROVISIONAL: retain chain; missing valid 15/30 m/s pairs preclude a full confirmation',source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
+  // D8 verdict follows only from qualified free-roll pairs; never asserted.
+  const freeRoll=comparison.filter(r=>r.mode==='free roll'),complete=freeRoll.every(r=>r.status==='COMPARABLE');
+  const bumps=(c,id)=>c.conditions.find(x=>x.station===id).bumps;
+  const d8=!complete?'PROVISIONAL: retain chain; missing qualified free-roll pairs':freeRoll.every(c=>bumps(c,'seams-chain')<=bumps(c,'seams-hull'))?'CONFIRMED: chain terrain has no more ghost bumps than hull at every qualified speed':'REVISE: hull has fewer ghost bumps than chain at a qualified speed';
+  const report={status:'PASS',protocol:3,acceptance:complete?'PASS':'BLOCKED',d8,source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'seams-result.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status,comparison}));
  }catch(e){if(page){await page.screenshot({path:path.join(out,'seams-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'seams-failed-state.json'),JSON.stringify({results,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}

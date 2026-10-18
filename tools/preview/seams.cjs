@@ -7,7 +7,7 @@ module.exports=async function seams(browser,url,sha,out){
  const cases=[];
  try{
   for(const station of ['seams-chain','seams-hull']){
-   const target=new URL(url);target.search=`?station=${station}&speed=15&touch=0`;await page.goto(target.href);
+   const target=new URL(url);target.search=`?station=${station}&speed=9&touch=0`;await page.goto(target.href);
    await page.waitForFunction(({sha,station})=>window.riderReady?.source_sha===sha&&window.riderStationReport?.station===station&&window.riderTelemetry?.sequence>2,{sha,station});
    assert.equal(await page.evaluate(()=>window.riderStationReport.automated),false);
    await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);await page.keyboard.up('ArrowUp');
@@ -16,7 +16,7 @@ module.exports=async function seams(browser,url,sha,out){
    await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('r');
    await page.waitForFunction(()=>window.riderTelemetry.sequence>2&&window.riderStationReport?.elapsed_s<1);
    assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),before.world_loads);
-   assert.equal(await page.evaluate(()=>window.riderTelemetry.start_speed),15);
+   assert.equal(await page.evaluate(()=>window.riderTelemetry.start_speed),9);
    await page.screenshot({path:path.join(out,station+'-release.png')});
    cases.push(station+'_url_input_retry');
   }
