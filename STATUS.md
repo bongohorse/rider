@@ -16,7 +16,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 | --- | --- |
 | A19 gaps and landings ([PR #117](https://github.com/bongohorse/rider/pull/117)) | Merged; Claudio's drive feedback pending |
 | LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected; after a browser reload (F5) the same level was playable. Accepted |
-| LE1b size and performance report ([PR #139](https://github.com/bongohorse/rider/pull/139)) | Merged; desktop values from CI. Touch **Import level** entry for the phone procedure: [PR #142](https://github.com/bongohorse/rider/pull/142) (GO 2026-10-18). Claudio's [phone procedure](docs/LE1B_REPORT.md#phone-procedure) and drive test on `seg-800`: NOT RUN |
+| LE1b size and performance report ([PR #139](https://github.com/bongohorse/rider/pull/139)) | Merged; desktop values from CI. Touch **Import level** entry for the phone procedure merged in [PR #142](https://github.com/bongohorse/rider/pull/142) (GO 2026-10-18). Claudio's [phone procedure](docs/LE1B_REPORT.md#phone-procedure) and drive test on `seg-800`: NOT RUN |
 | M4 final drive test | After the remaining M4 stations |
 | M4 stations on the real phone | NOT RUN |
 | Engine sound by ear (A10) | NOT RUN |
@@ -59,5 +59,5 @@ Preset A under the declared automated protocols; not player limits or tuning tar
   - A validated start 1.5 km or more from x = 0 fails vehicle placement (`Noncanonical reset pose`).
   - The broken level is still saved and restored after a reload.
   - Also open: unbounded level text fields against the 2 KiB `msg.post` cap.
-  - Options: [report findings](docs/LE1B_REPORT.md#findings-for-later-tasks).
+  - Decided 2026-10-18 for LE2: save only drive-ready levels, a provisional start limit of ±1 km with placement tests, byte-based text field tests ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±1 km is not a proven safe zone.
 - **Follow-ups:** npm audit/upgrade [#101](https://github.com/bongohorse/rider/issues/101); CI nightly/timing [#95](https://github.com/bongohorse/rider/issues/95).
