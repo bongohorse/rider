@@ -2,7 +2,7 @@
   if (window.riderCustom) return;
   // Web file/paste helper only (D-E1). Lua owns parsing, validation, loading and saving.
   const limit = 256 * 1024;
-  const api = window.riderCustom = {visible:false,request:0,pending:null,state:'',message:'',syncFailed:false};
+  const api = window.riderCustom = {visible:false,request:0,pending:null,state:'',message:'',syncFailed:false,syncStopped:false};
   let panel;
   function status(text, error) {
     const node = panel?.querySelector(error ? '#rider-custom-error' : '#rider-custom-status');
@@ -11,11 +11,21 @@
     if (!error && panel) panel.querySelector('#rider-custom-error').textContent = '';
   }
   function reject(message) {api.state = 'error';api.message = message + ' The current level and its save are unchanged.';status(api.message, true);}
-  function submit(text) {
+  // Each import takes its request number when it starts, so a slower older file read cannot win.
+  function submit(text, request = ++api.request) {
+    if (request !== api.request) return;
     if (text.length > limit) {reject('The level file is larger than 256 KiB.');return;}
-    api.pending = {request: ++api.request, text};
+    api.pending = {request, text};
     api.state = 'reading';api.message = 'Checking level...';status(api.message);
   }
+  api.importFile = async chosen => {
+    const request = ++api.request;
+    if (chosen.size > limit) {reject('The level file is larger than 256 KiB.');return;}
+    let text;
+    try {text = await chosen.text();}
+    catch (error) {if (request === api.request) reject('The level file could not be read.');return;}
+    submit(text, request);
+  };
   api.open = message => {
     if (!panel) {
       panel = document.createElement('section');panel.id = 'rider-custom-panel';
@@ -25,12 +35,9 @@
       const note = document.createElement('p');note.id = 'rider-custom-note';note.style.margin = '0 0 8px';
       const file = document.createElement('input');file.type = 'file';file.id = 'rider-custom-file';file.accept = '.json,application/json';
       file.setAttribute('aria-label', 'Level file');
-      file.onchange = async () => {
+      file.onchange = () => {
         const chosen = file.files?.[0];file.value = '';
-        if (!chosen) return;
-        if (chosen.size > limit) {reject('The level file is larger than 256 KiB.');return;}
-        try {submit(await chosen.text());}
-        catch (error) {reject('The level file could not be read.');}
+        if (chosen) api.importFile(chosen);
       };
       const field = document.createElement('textarea');field.id = 'rider-custom-text';field.placeholder = 'Or paste level JSON here';
       field.setAttribute('aria-label', 'Level JSON');
@@ -65,8 +72,18 @@
     else status(result.message, result.state === 'error');
   };
   // The pinned dmloader syncs MEM->IndexedDB after each file close and only logs errors.
+  // Once its retries are exhausted, _startSyncFS leaves _syncInProgress set for good and never
+  // syncs again in this page, so that call is recorded as a terminal failure.
+  if (typeof Module !== 'undefined' && typeof Module._startSyncFS === 'function') {
+    const start = Module._startSyncFS;
+    Module._startSyncFS = function () {
+      if (!(Module._syncMaxTries > Module._syncTries)) api.syncStopped = true;
+      return start.apply(this, arguments);
+    };
+  }
   api.syncState = () => {
     if (typeof Module === 'undefined' || Module.persistentStorage !== true) return 'session';
+    if (api.syncStopped) return 'failed';
     if (Module._syncTries > 0) api.syncFailed = true;
     if (Module._syncInProgress || Module._syncNeeded) return 'syncing';
     return api.syncFailed ? 'failed' : 'saved';
