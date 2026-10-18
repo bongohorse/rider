@@ -20,7 +20,8 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
    assert.equal(r.throttle_min,1);assert.equal(r.throttle_max,1);assert.equal(r.brake_max,0);assert.equal(r.lean_max,0);
    assert(['CLEARED','MISSED'].includes(r.status));assert(Number.isFinite(r.takeoff_speed_mps),'lip was reached');
    if(r.status==='CLEARED'){
-    assert(r.landed_on_deck&&Number.isFinite(r.jump_distance_m)&&r.jump_distance_m>=r.gap_m,'cleared jump lands beyond the gap');
+    // An edge strike touches with the wheel centre at most one radius (0.22 m) short.
+    assert(Number.isFinite(r.jump_distance_m)&&r.jump_distance_m>=r.gap_m-(r.edge_strike?.25:0),'cleared jump reaches the landing side');
     assert(Number.isFinite(r.touchdown_vy_mps)&&Number.isFinite(r.landing_angle_rad)&&r.peak_compression_m>=0&&r.airtime_s>0);
    }
   }

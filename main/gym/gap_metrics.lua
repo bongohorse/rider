@@ -58,17 +58,18 @@ function M.observe(self,state,dt,sample)
                     r.jump_distance_m=wheel[k]-s.lip_x
                     r.touchdown_vy_mps=r.vy_before_mps or vy
                     r.landing_angle_rad=state.angle
-                    r.landed_on_deck=wheel[k]>=s.land_x
+                    -- A wheel can touch the landing edge with its centre up to one radius short.
+                    r.edge_strike=wheel[k]<s.land_x
                 end
             end
             if r.touchdown_at and r.elapsed-r.touchdown_at<=.5 then
                 r.peak_compression_m=math.max(r.peak_compression_m,feel.metres(sample.travel1),feel.metres(sample.travel2))
             end
-            local on_deck=r.landed_on_deck and wheel[1]>=s.land_x and wheel[2]>=s.land_x and support[1] and support[2] and math.abs(state.angle)<.8
+            local on_deck=r.touchdown_at and wheel[1]>=s.land_x and wheel[2]>=s.land_x and support[1] and support[2] and math.abs(state.angle)<.8
             r.settled=on_deck and (r.settled or 0)+dt or 0
             r.stalled=math.abs(vx)<.1 and x>=s.ramp_start and (r.stalled or 0)+dt or 0
             local fell=y<s.deck_y-.6
-            if r.settled>=.25 or fell or (r.touchdown_at and not r.landed_on_deck) or x>=s.end_x or r.stalled>=1 or r.elapsed>=8 then
+            if r.settled>=.25 or fell or x>=s.end_x or r.stalled>=1 or r.elapsed>=8 then
                 r.status=r.settled>=.25 and "CLEARED" or "MISSED"
                 r.done=true;self.gap_archive[r.id]=r
             end
@@ -87,7 +88,7 @@ function M.report(self)
         source_sha=sys.get_config_string("rider.source_sha","development"),preset=self.preset,modified=self.modified or false,
         automated=self.testcase=="a19",tuning=feel.snapshot(),start_speed=self.station.start_speed,
         widest_cleared_m=widest,records=records,comparable=not self.gaps.tuning_changed,tuning_at_start=self.gap_tuning,
-        conditions="Independent authored starts 2 m before a 15 deg ramp to a 1 m lip (landing deck at ground level unless a landing variant); automated throttle=1, no brake/lean. Loaded wheel support (touching or impulsive manifold). Jump distance = first loaded wheel centre x after the lip minus lip x. Cleared = both wheels loaded on the landing side, |pitch|<0.8 rad for 0.25 s; missed = first touchdown short of the landing edge, falling 0.6 m below the landing deck, 1 s stall or 8 s observation. Impact = touchdown vertical speed and peak suspension compression within 0.5 s."}
+        conditions="Independent authored starts 2 m before a 15 deg ramp to a 1 m lip (landing deck at ground level unless a landing variant); automated throttle=1, no brake/lean. Loaded wheel support (touching or impulsive manifold). Jump distance = first loaded wheel centre x after the lip minus lip x. Cleared = both wheels loaded on the landing side, |pitch|<0.8 rad for 0.25 s; edge strike = first touchdown wheel centre short of the landing edge (reported, not a miss); missed = falling 0.6 m below the landing deck, 1 s stall or 8 s observation. Impact = touchdown vertical speed and peak suspension compression within 0.5 s."}
 end
 function M.enrich(self,sample)
     local report=M.report(self)
