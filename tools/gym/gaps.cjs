@@ -25,7 +25,7 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
    }
   }
   async function trial(station,section,speed,shot){
-   await page.goto(url+`?station=${station}&section=${section}`+(speed===9?'':`&speed=${speed}`));
+   await page.goto(url+`?station=${station}&section=${section}`+(speed===7?'':`&speed=${speed}`));
    await page.waitForFunction(({sha,runId,station,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station&&window.riderStationReport.section===section,{sha,runId,station,section});
    if(shot){await page.waitForFunction(id=>Number.isFinite(window.riderStationReport.records.find(r=>r.id===id)?.airborne_at),section,{timeout:15000});await page.screenshot({path:path.join(out,shot)});}
    await page.waitForFunction(id=>window.riderStationReport.records.find(r=>r.id===id)?.done,section,{timeout:15000});
@@ -34,22 +34,22 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
    return {station,section,speed,...r};
   }
   const ladders={};
-  for(const speed of [9,7]){
+  for(const speed of [7,9]){
    ladders[speed]=[];
-   for(const section of LADDER)ladders[speed].push(await trial('gaps',section,speed,speed===9&&section==='2'?'gaps-air.png':null));
+   for(const section of LADDER)ladders[speed].push(await trial('gaps',section,speed,speed===7&&section==='2'?'gaps-air.png':null));
    results.push(...ladders[speed]);
   }
-  const ladder=ladders[9],cleared=ladder.filter(r=>r.status==='CLEARED');
+  const ladder=ladders[7],cleared=ladder.filter(r=>r.status==='CLEARED');
   assert(cleared.length>0,'default ladder must clear at least one gap');
   assert.equal(ladder.at(-1).status,'MISSED','10 m is deliberately too wide');
   const landings=[];
-  for(const section of LANDINGS)landings.push(await trial('gaps-landing',section,9,`gaps-landing-${section}.png`));
+  for(const section of LANDINGS)landings.push(await trial('gaps-landing',section,7,`gaps-landing-${section}.png`));
   results.push(...landings);
   // Same start speed and commands repeat the jump within the declared tolerances.
   const repeats=[];
   const widest=cleared.reduce((a,b)=>a.gap_m>b.gap_m?a:b),firstMiss=ladder.find(r=>r.status==='MISSED');
   for(const first of [widest,firstMiss,landings[0]]){
-   const again=await trial(first.station,first.section,9);
+   const again=await trial(first.station,first.section,7);
    assert.equal(again.status,first.status,'repeat status');
    assert(Math.abs(again.takeoff_speed_mps-first.takeoff_speed_mps)<=TOL.takeoff_mps,'repeat takeoff speed');
    if(Number.isFinite(first.jump_distance_m))assert(Math.abs(again.jump_distance_m-first.jump_distance_m)<=TOL.jump_m,'repeat jump distance');
@@ -57,7 +57,7 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
    repeats.push({first,again});
   }
   // R is an in-world retry back to the section start, repeating the same jump.
-  await trial('gaps',widest.section,9);
+  await trial('gaps',widest.section,7);
   const before=await page.evaluate(()=>window.riderTelemetry);
   await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('r');
   await page.waitForFunction(id=>window.riderStationReport.records.find(r=>r.id===id)?.done,widest.section,{timeout:15000});
@@ -67,7 +67,7 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
   if(errors.length)throw Error(errors.join('\n'));
   const widestAt=speed=>Math.max(0,...ladders[speed].filter(r=>r.status==='CLEARED').map(r=>r.gap_m));
   const report={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,
-   widest_cleared_m:{default_9_mps:widestAt(9),cruise_7_mps:widestAt(7)},results,repeats,retry,real_device:'NOT RUN'};
+   widest_cleared_m:{default_7_mps:widestAt(7),fast_9_mps:widestAt(9)},results,repeats,retry,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'gaps-result.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status,widest_cleared_m:report.widest_cleared_m,
    ladder:results.map(r=>`${r.station}/${r.section}@${r.speed}: ${r.status} takeoff ${r.takeoff_speed_mps?.toFixed(2)} jump ${r.jump_distance_m?.toFixed(2)} vy ${r.touchdown_vy_mps?.toFixed(2)} comp ${r.peak_compression_m?.toFixed(3)}`)}));

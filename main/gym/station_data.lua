@@ -67,7 +67,7 @@ function M.validate(d)
                 for _,key in ipairs({"ramp_start","top_x","top_y","end_x","angle","length"}) do if not finite(section[key]) then return nil,"Invalid ramp measurement" end end
                 if section.length<=0 or section.end_x<=section.ramp_start or section.angle<=0 or section.angle>90 then return nil,"Invalid ramp limits" end
             elseif d.kind=="gaps" then
-                for _,key in ipairs({"ramp_start","lip_x","lip_y","land_x","gap","end_x"}) do if not finite(section[key]) then return nil,"Invalid gap measurement" end end
+                for _,key in ipairs({"ramp_start","lip_x","lip_y","land_x","deck_y","gap","end_x"}) do if not finite(section[key]) then return nil,"Invalid gap measurement" end end
                 if section.landing~="flat" and section.landing~="down" and section.landing~="up" then return nil,"Invalid gap landing" end
                 if section.gap<=0 or section.gap>12 or math.abs(section.land_x-section.lip_x-section.gap)>.001 or section.spawn[1]>=section.ramp_start
                     or section.ramp_start>=section.lip_x or section.end_x<=section.land_x+2 then return nil,"Invalid gap limits" end

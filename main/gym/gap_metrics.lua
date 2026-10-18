@@ -67,7 +67,7 @@ function M.observe(self,state,dt,sample)
             local on_deck=r.landed_on_deck and wheel[1]>=s.land_x and wheel[2]>=s.land_x and support[1] and support[2] and math.abs(state.angle)<.8
             r.settled=on_deck and (r.settled or 0)+dt or 0
             r.stalled=math.abs(vx)<.1 and x>=s.ramp_start and (r.stalled or 0)+dt or 0
-            local fell=y<s.lip_y-1
+            local fell=y<s.deck_y-.6
             if r.settled>=.25 or fell or (r.touchdown_at and not r.landed_on_deck) or x>=s.end_x or r.stalled>=1 or r.elapsed>=8 then
                 r.status=r.settled>=.25 and "CLEARED" or "MISSED"
                 r.done=true;self.gap_archive[r.id]=r
@@ -87,7 +87,7 @@ function M.report(self)
         source_sha=sys.get_config_string("rider.source_sha","development"),preset=self.preset,modified=self.modified or false,
         automated=self.testcase=="a19",tuning=feel.snapshot(),start_speed=self.station.start_speed,
         widest_cleared_m=widest,records=records,comparable=not self.gaps.tuning_changed,tuning_at_start=self.gap_tuning,
-        conditions="Independent authored starts 2 m before a 15 deg ramp to a 0.5 m lip; automated throttle=1, no brake/lean. Loaded wheel support (touching or impulsive manifold). Jump distance = first loaded wheel centre x after the lip minus lip x. Cleared = both wheels loaded on the landing side, |pitch|<0.8 rad for 0.25 s; missed = first touchdown short of the landing edge, falling 1 m below the lip, 1 s stall or 8 s observation. Impact = touchdown vertical speed and peak suspension compression within 0.5 s."}
+        conditions="Independent authored starts 2 m before a 15 deg ramp to a 1 m lip (landing deck at ground level unless a landing variant); automated throttle=1, no brake/lean. Loaded wheel support (touching or impulsive manifold). Jump distance = first loaded wheel centre x after the lip minus lip x. Cleared = both wheels loaded on the landing side, |pitch|<0.8 rad for 0.25 s; missed = first touchdown short of the landing edge, falling 0.6 m below the landing deck, 1 s stall or 8 s observation. Impact = touchdown vertical speed and peak suspension compression within 0.5 s."}
 end
 function M.enrich(self,sample)
     local report=M.report(self)
