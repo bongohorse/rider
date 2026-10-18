@@ -57,7 +57,7 @@ Preset A under the declared automated protocols; not player limits or tuning tar
 - **Review enforcement:** `required` is the only protected check; zero approving reviews are required, so independent review is a workflow rule, not technically enforced.
 - **Custom level start distance (LE1b finding, decision for LE2/LE3):**
   - A validated start 1.5 km or more from x = 0 fails vehicle placement (`Noncanonical reset pose`).
-  - The broken level is still saved and restored after a reload.
+  - The broken level is still saved (recorded); that a reload restores it is inferred, not tested.
   - Also open: unbounded level text fields against the 2 KiB `msg.post` cap.
   - Decided 2026-10-18 for LE2: save only drive-ready levels, a provisional start limit of ±1 km with placement tests, byte-based text field tests ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±1 km is not a proven safe zone.
 - **Follow-ups:** npm audit/upgrade [#101](https://github.com/bongohorse/rider/issues/101); CI nightly/timing [#95](https://github.com/bongohorse/rider/issues/95).

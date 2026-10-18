@@ -164,7 +164,7 @@ Touch mode hides the page tools; its toolbar has its own **Import level** button
 
 1. **Start distance from the origin (LE2/LE3, decision for Claudio).**
    - **What happens:** a level that passes validation, with its start 1.5 km or more from x = 0, fails when the vehicle is placed: `vehicle.lua:68: Noncanonical reset pose`. The world shows no station error and the vehicle stays inert.
-   - **The broken level is still saved:** LE1a saves after the world reports ready, which is before vehicle placement, so a reload restores the same broken level. Importing another level recovers.
+   - **The broken level is still saved:** the save status was `Saved` after every placement failure. LE1a saves when the world reports ready, which is before vehicle placement, so a reload should restore the same broken level; this is inferred, not tested. Importing another level recovers.
    - **Cause:** the reset guard allows 0.01 engine units (0.1 mm). Engine positions are float32, and between about 655 m and 2.6 km one float32 step is 1/128–1/64 unit, so whether a value passes depends on the exact coordinate. This is the tolerance of that guard, not evidence that the physics itself breaks down.
    - **Options:**
      - (a) The LE2 source validator limits starts (and later checkpoints) to 1 km from the origin.

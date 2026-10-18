@@ -157,17 +157,18 @@ Each item separates what LE1b **tested**, what is only **assumed**, and what is 
      - a safe error state without a half-placed vehicle
      - the previous save unchanged, also across a reload
      - a working re-import
-   - **Tested:** today a placement failure is saved and restored after a reload (LE1b start-distance series).
+   - **Tested:** after a placement failure LE1b recorded the save status `Saved` for all four failing starts (start-distance series).
+   - **Inferred, not tested:** a reload restores the broken level, because LE1a saves when the world reports ready, which is before the vehicle is placed.
    - **Open:** the LE2 tests must show all three outcomes for a real placement failure.
 2. **Provisional start limit: |x| ≤ 1 km from the origin.**
-   - **Rule:** applies to START and to temporary test starts (R10), later also to checkpoints and other respawn points. It is checked by the source validator **and** in the actual load path before the vehicle is placed, with a clear error message.
+   - **Rule:** applies to START and to temporary test starts (R10), later (proposed) also to checkpoints and other respawn points. It is checked by the source validator **and** in the actual load path before the vehicle is placed, with a clear error message.
    - **Tested:** one start at x = 1000 m was placed; starts at 1.5, 2, 4 and 98.8 km failed `vehicle.lua:68: Noncanonical reset pose`.
    - **Assumed, not proven:** that every allowed start works. ±1 km is a provisional restriction, not a demonstrated safe zone.
    - **Open, LE2 placement tests with the full vehicle (chassis, both wheels, rider; first placement and Retry):**
      - positive and negative positions
      - fractional coordinates
      - different start heights
-     - boundary values: exactly ±1000 m and just inside
+     - boundary values: exactly ±1000 m, just inside, and just outside (rejected by the validator and by the load-path check)
      - A grid alone does not prove that every position in between works. If any allowed position fails, tighten the limit or choose one of the later options.
    - **Not adopted:** a total level extent limit of ±10 km (an estimate). Driving far from the start is unmeasured.
    - **Later options**, only if far test starts or checkpoints are needed:
