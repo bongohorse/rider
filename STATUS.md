@@ -15,7 +15,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 | Item | State |
 | --- | --- |
 | A19 gaps and landings ([PR #117](https://github.com/bongohorse/rider/pull/117)) | Merged; Claudio's drive feedback pending |
-| LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected. Restore after a browser reload not yet reported |
+| LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected; after a browser reload (F5) the same level was playable. Accepted |
 | M4 final drive test | After the remaining M4 stations |
 | M4 stations on the real phone | NOT RUN |
 | Engine sound by ear (A10) | NOT RUN |
