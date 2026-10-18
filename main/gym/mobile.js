@@ -114,6 +114,8 @@
     pending.station=ids[(index+1)%ids.length];
   });
   api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
+  // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
+  button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
   button('Layout A · mirror',toolbar,b=>{
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
@@ -181,7 +183,7 @@
     for(const [command,label] of commands){
       const b=button(label,pair);b.dataset.command=command;
       b.addEventListener('pointerdown',e=>{
-        if(e.button!==0||api.details||window.riderFeedback?.visible)return;
+        if(e.button!==0||api.details||window.riderFeedback?.visible||window.riderCustom?.visible)return;
         e.preventDefault();b.setPointerCapture(e.pointerId);pointers.set(e.pointerId,command);
         // Resume the existing Defold-owned context in this trusted DOM gesture;
         // DOM controls do not reach GLFW's canvas-only audio unlock listener.

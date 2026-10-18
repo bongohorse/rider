@@ -145,9 +145,8 @@ Report, protocol and phone procedure: [LE1b report](../LE1B_REPORT.md) (debug ca
 Open for later tasks:
 - A start 1.5 km or more from the origin fails vehicle placement, and the level is still saved.
 - Unbounded text fields versus the 2 KiB `msg.post` cap.
-- No import entry in touch mode once a level is saved.
 
-Phone values are NOT RUN until Claudio supplies them. `Level load` in the feedback report shows switch/parse/terrain/decoration times on any device.
+The touch toolbar has its own **Import level** entry ([PR #142](https://github.com/bongohorse/rider/pull/142)). Phone values are NOT RUN until Claudio supplies them. `Level load` in the feedback report shows switch/parse/terrain/decoration times on any device.
 
 ## Additional implementation and acceptance checks
 
