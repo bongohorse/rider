@@ -15,6 +15,7 @@ Read STATUS.md, the current issue and only its affected contract. Work is organi
 | VS Code / WSL move and independent agent audit | [VS Code migration review dossier](VSCODE_MIGRATION_REVIEW.md) |
 | M3 touch/tilt trial procedure | [Mobile trial](MOBILE_TRIAL.md) |
 | A18 seam geometry, qualification and reproduction | [Seam protocol](A18_SEAM_PROTOCOL.md) |
+| Level editor rules, data model, evidence | [Level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)) |
 | Device evidence | [Platform matrix](PLATFORM_MATRIX.md) |
 | CI/protection, dependencies, repository operations | [Repository setup](REPOSITORY_SETUP.md) |
 | Status meanings and reporting | [Evidence policy](contracts/evidence.md) |
