@@ -3,12 +3,38 @@
 import sys
 from pathlib import Path
 
+PROJECT = Path(__file__).resolve().parents[2] / "game.project"
 
-def is_docs_only(paths):
-    """Only repository-root Markdown and Markdown in docs/ are non-runtime changes."""
+
+def bundled_paths(project=PROJECT):
+    """custom_resources entries are packaged into builds; None when unreadable."""
+    try:
+        text = project.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    paths = []
+    for line in text.splitlines():
+        key, sep, value = line.partition("=")
+        if sep and key.strip() == "custom_resources":
+            paths += [entry.strip().strip("/") for entry in value.split(",") if entry.strip("/ ")]
+    return paths
+
+
+def is_bundled(path, bundled):
+    return any(path == entry or path.startswith(entry + "/") for entry in bundled)
+
+
+def is_docs_only(paths, project=PROJECT):
+    """Markdown is non-runtime unless it lies in a bundled custom resource path."""
+    bundled = bundled_paths(project)
+    if bundled is None:
+        # Without a readable project file, only root and docs/ Markdown are trusted.
+        return bool(paths) and all(
+            path.endswith(".md") and ("/" not in path or path.startswith("docs/"))
+            for path in paths
+        )
     return bool(paths) and all(
-        path.endswith(".md") and ("/" not in path or path.startswith("docs/"))
-        for path in paths
+        path.endswith(".md") and not is_bundled(path, bundled) for path in paths
     )
 
 
