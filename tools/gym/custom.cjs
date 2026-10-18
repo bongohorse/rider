@@ -77,11 +77,13 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   await uncaptured();await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');
   await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
   await page.keyboard.press('i');await page.waitForFunction(()=>window.riderTelemetry.command.throttle===0);
+  await page.keyboard.up('ArrowUp'); // released while the panel has focus: the engine never sees this keyup
   await page.locator('#rider-custom-text').fill(text('kicker-platform'));
   await page.getByRole('button',{name:'Import text',exact:true}).click();
-  t=await ready('kicker-platform',3);await page.keyboard.up('ArrowUp');
+  t=await ready('kicker-platform',3);
   assert.equal(t.command.throttle,0);assert.equal(t.world_loads,loadsA+1);assert.equal(t.start_speed,7);assert.equal(t.custom_snapshots,1);
   measurements.kicker_platform=counts(t);cases.push('held_input_released_on_import');
+  // The first fresh press after the import must drive (no key left stuck from before the panel).
   t=await drive(24);assert.equal(t.reset_count,0);measurements.kicker_drive_m=t.station_distance;
   await page.screenshot({path:path.join(out,'custom-kicker.png')});cases.push('kicker_platform_drives');
 
@@ -109,11 +111,14 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   await page.goto(url);t=await ready('rolling-hills',1,null);assert.deepEqual(counts(t),a1);
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);cases.push('reload_restores_last_valid');
 
+  // Make the two save slots differ (older: B, newer: A) so a write to the wrong slot would be detected.
+  await importFile('kicker-platform');await ready('kicker-platform',2);
+  await importFile('rolling-hills');await ready('rolling-hills',3);
   // Injected browser write failure: B still loads, its save fails, the previous save survives a reload.
   assert(await page.evaluate(()=>typeof FS==='object'&&typeof FS.write==='function'&&typeof FS.ErrnoError==='function'),'Emscripten FS unavailable for fault injection');
   await page.evaluate(()=>{const write=FS.write;window.__riderRestoreWrite=()=>{FS.write=write;};
    FS.write=function(stream,...rest){if(String(stream?.path||'').includes('custom-level'))throw new FS.ErrnoError(29);return write.call(this,stream,...rest);};});
-  await importFile('kicker-platform');t=await ready('kicker-platform',2,null);
+  await importFile('kicker-platform');t=await ready('kicker-platform',4,null);
   await page.waitForFunction(()=>window.riderCustomStatus?.startsWith('Save failed'));measurements.save_failure=await page.evaluate(()=>window.riderCustomStatus);
   await page.evaluate(()=>window.__riderRestoreWrite());
   await page.goto(url);t=await ready('rolling-hills',1,null);assert.deepEqual(counts(t),a1);cases.push('failed_save_keeps_previous');

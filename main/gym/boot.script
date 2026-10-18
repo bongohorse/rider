@@ -97,6 +97,9 @@ function on_message(self,id,data,sender)
         end
         -- The ready world has read its snapshot; keep only that one.
         custom.retain(loaded and {[loaded]=true} or {})
+        if not self.import and self.station=="custom" and not data.ok then
+            custom.open(self.note or "The saved level could not be built. Import another level file.")
+        end
         if self.import then
             local request=self.import;self.import=nil
             if not loaded then
