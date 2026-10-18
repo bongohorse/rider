@@ -59,7 +59,7 @@ Use [BRIDGE.md](contracts/automation/bridge.md) for exact versions, capabilities
 | Performance | Locate profiling/optimization manuals through the official manuals index | [Phase E measurements](PLAN.md) |
 | Vehicle behavior | Box2D and Defold references above | [Vehicle commands](contracts/vehicle.md), [Game design](GAME_DESIGN.md), [plan](PLAN.md) |
 
-Android is the first release target, HTML5 the main test platform. iOS builds wait until Phase G after Play Store launch. Keep gameplay platform-neutral and existing manifest exports possible. The reference phone and evidence limits are in PLATFORM_MATRIX.md; A13 establishes concrete budgets after measurement. This page does not invent completed measurements or approvals.
+Android is the first release target, HTML5 the main test platform. iOS builds wait until Phase G after Play Store launch. Keep gameplay platform-neutral and existing manifest exports possible. The reference phone and evidence limits are in PLATFORM_MATRIX.md; Current budget and interpolation decisions are in PLATFORM_MATRIX.md and PLAN.md (D13). This page does not invent completed measurements or approvals.
 
 ## Maintenance and review
 
