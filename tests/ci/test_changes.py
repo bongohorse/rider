@@ -5,24 +5,46 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "ci"))
-from classify_changes import is_docs_only, read_paths
+from classify_changes import bundled_paths, is_docs_only, read_paths
 
 
 class ClassificationTest(unittest.TestCase):
     def test_docs_only(self):
         self.assertTrue(is_docs_only(["docs/README.md", "docs/VSCODE_MIGRATION_REVIEW.md"]))
         self.assertTrue(is_docs_only(["README.md", "STATUS.md", "AGENTS.md", "docs/PLAN.md"]))
+        self.assertTrue(is_docs_only(["main/gym/README.md", "main/README.md"]))
+        self.assertTrue(is_docs_only([".github/PULL_REQUEST_TEMPLATE.md"]))
+        self.assertTrue(is_docs_only(["main/gym/stations.md"]))
 
     def test_not_docs_only(self):
         for paths in (
             [], ["main/buggy.script"], ["docs/README.md", "main/buggy.script"],
             [".github/workflows/ci.yml"], ["tools/preview/verify.cjs"],
             ["tools/ci/classify_changes.py"], [".vscode/settings.json"],
-            ["docs/review.json"], ["main/README.md"],
+            ["docs/review.json"],
+            ["main/gym/stations/notes.md"], ["main/gym/presets/README.md"],
             ["docs/README.md", "tools/old.script"],  # rename with --no-renames
         ):
             with self.subTest(paths=paths):
                 self.assertFalse(is_docs_only(paths))
+
+    def test_bundled_paths_from_project(self):
+        bundled = bundled_paths()
+        self.assertIn("main/gym/stations", bundled)
+        self.assertIn("main/gym/presets", bundled)
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "game.project"
+            f.write_text("[project]\ncustom_resources = /a/b, /c.json,\n", encoding="utf-8")
+            self.assertEqual(bundled_paths(f), ["a/b", "c.json"])
+            self.assertFalse(is_docs_only(["a/b/x.md"], f))
+            self.assertTrue(is_docs_only(["a/bc.md"], f))
+            self.assertIsNone(bundled_paths(Path(tmp) / "missing.project"))
+
+    def test_unreadable_project_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing.project"
+            self.assertFalse(is_docs_only(["main/gym/README.md"], missing))
+            self.assertTrue(is_docs_only(["docs/README.md"], missing))
 
     def test_git_nul_path_list(self):
         with tempfile.TemporaryDirectory() as tmp:
