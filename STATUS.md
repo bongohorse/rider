@@ -15,7 +15,7 @@ Updated 2026-10-18. The only source for current progress, open acceptance and bl
 | Item | State |
 | --- | --- |
 | A19 gaps and landings ([PR #117](https://github.com/bongohorse/rider/pull/117)) | Merged; Claudio's drive feedback pending |
-| LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected; after a browser reload (F5) the same level was playable. Accepted |
+| LE1a custom levels ([PR #136](https://github.com/bongohorse/rider/pull/136)) | Drive test 2026-10-18: both sample levels imported and drove; the invalid sample was rejected; after a browser reload (F5) the same level was playable. Accepted. Review fixes (id/name byte limit, stale file reads, stuck sync status) in [PR #140](https://github.com/bongohorse/rider/pull/140) |
 | LE1b size and performance report ([PR #139](https://github.com/bongohorse/rider/pull/139)) | Merged; desktop values from CI. Claudio's [phone procedure](docs/LE1B_REPORT.md#phone-procedure) and drive test on `seg-800`: NOT RUN |
 | M4 final drive test | After the remaining M4 stations |
 | M4 stations on the real phone | NOT RUN |
