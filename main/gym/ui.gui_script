@@ -130,13 +130,17 @@ local function toggle_help(self)
 end
 function on_message(self,id,data,sender)
     if id==hash("station_loading") then
-        self.session_generation=data.generation;self.latest=nil;self.station_error=nil
-        if html5 then html5.run("window.riderStationError=null") end
-        cancel_drag(self);gui.set_text(self.station,"Loading station...")
+        -- A new world starts uncaptured; re-send an open modal once it reports measurements.
+        self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false
+        if html5 then html5.run("window.riderStationError=null;window.riderCustomStatus=null") end
+        cancel_drag(self);gui.set_text(self.station,"Loading station...");gui.set_color(self.station,vmath.vector4(1,1,1,1))
     elseif id==hash("station_error") then
         if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
         self.station_error=data.note
         gui.set_text(self.station,data.note);gui.set_color(self.station,vmath.vector4(1,0.3,0.2,1))
+    elseif id==hash("custom_status") then
+        self.custom_status=data.text
+        if html5 then html5.run("window.riderCustomStatus="..json.encode(data.text)) end
     elseif id==hash("hud_probe") then
         assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
         -- The probe specifies integer FPS via its inverse interval; remove inversion rounding noise.
@@ -163,7 +167,9 @@ function on_message(self,id,data,sender)
         if data.session_generation and data.session_generation<(self.session_generation or 1) then return end
         self.owner=sender
         self.latest=data
-        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,self.station_error or data.station_note or ""))
+        local note=self.station_error or data.station_note or ""
+        if data.custom then note=note..(note~="" and " | " or "")..(self.custom_status or "Saved level") end
+        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,note))
         gui.set_text(self.station_result,data.station_result or string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
         self.report_text=feedback.report(data,self.preset,self.modified,self.tuning)
         feedback.update(self.report_text)
@@ -259,15 +265,17 @@ function update(self,dt)
     end
     if html5 then
         local status,visible=feedback.state()
+        -- The custom import panel captures input like the feedback fallback.
+        local modal=visible or html5.run("!!window.riderCustom?.visible")=="true"
         gui.set_text(self.feedback_label,"Copy [F]")
-        if self.owner then
-            if status~=self.last_feedback_status or visible~=self.feedback_modal then
-                self.last_feedback_status=status
+        if self.owner and self.latest then
+            if status~=self.last_feedback_status or visible~=self.feedback_visible then
+                self.last_feedback_status,self.feedback_visible=status,visible
                 msg.post(self.owner,"feedback_status",{status=status,visible=visible})
             end
-            if visible~=self.feedback_modal then
-                self.feedback_modal=visible
-                msg.post(self.owner,"ui_capture",{active=visible})
+            if modal~=self.feedback_modal then
+                self.feedback_modal=modal
+                msg.post(self.owner,"ui_capture",{active=modal})
             end
         end
     end

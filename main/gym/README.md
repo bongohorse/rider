@@ -2,7 +2,7 @@
 
 How the Driving Gym works and how each feature is tested. Binding rules: [physics contract](../../docs/contracts/physics.md), [vehicle contract](../../docs/contracts/vehicle.md), [engine pitfalls](../../docs/contracts/engine-pitfalls.md). Results and evidence: [STATUS.md](../../STATUS.md) and the linked PRs. Test commands: [TOOLING.md](../../docs/TOOLING.md#gym-tests).
 
-**Contents:** [World and terrain](#world-and-terrain) · [Vehicle and controls](#vehicle-and-controls) · [Retry and recovery](#retry-and-recovery) · [Head sensor](#head-sensor) · [Rider visual reaction](#rider-visual-reaction) · [Telemetry, budget and graphs](#telemetry-budget-and-graphs) · [Tuning and presets](#tuning-and-presets) · [Audio](#audio) · [Feedback copy](#feedback-copy) · [Browser presentation](#browser-presentation) · [Touch and tilt](#touch-and-tilt) · [Public preview](#public-preview) · [Generated art](#generated-art) · [Stations](#stations) · [Ramps](#ramps) · [Steps](#steps) · [Seams](#seams) · [Gaps and landings](#gaps-and-landings) · [Test cases](#test-cases)
+**Contents:** [World and terrain](#world-and-terrain) · [Vehicle and controls](#vehicle-and-controls) · [Retry and recovery](#retry-and-recovery) · [Head sensor](#head-sensor) · [Rider visual reaction](#rider-visual-reaction) · [Telemetry, budget and graphs](#telemetry-budget-and-graphs) · [Tuning and presets](#tuning-and-presets) · [Audio](#audio) · [Feedback copy](#feedback-copy) · [Browser presentation](#browser-presentation) · [Touch and tilt](#touch-and-tilt) · [Public preview](#public-preview) · [Generated art](#generated-art) · [Stations](#stations) · [Ramps](#ramps) · [Steps](#steps) · [Seams](#seams) · [Gaps and landings](#gaps-and-landings) · [Custom levels](#custom-levels) · [Test cases](#test-cases)
 
 ## World and terrain
 
@@ -102,6 +102,12 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 
 `gaps` (key 8): 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10 m; `gaps-landing` (key 9): 2 m with flat, 15° downslope and 15° upslope landings. Each section starts 2 m before a 15° chain ramp to a 1 m lip over a pit 3 m below ground; default 7 m/s, `&speed=9` for comparison. Protocol (debug `a19`): full throttle, no brake/lean. Takeoff = both wheels past the lip and unloaded; jump distance = first loaded wheel x minus lip x; cleared = both wheels loaded on the landing side with |pitch| < 0.8 rad for 0.25 s; missed = chassis 0.6 m below the deck, 1 s stall or 8 s; a touchdown up to one wheel radius short is `edge_strike`. Repeat tolerances: takeoff 0.02 m/s, distance 0.05 m, compression 5 mm, same status.
 
+## Custom levels
+
+- `?station=custom` loads the last valid imported level, or shows the Import panel. **I** or **Import level** imports a station JSON file or pasted JSON (schema 1, no `kind`). Rules, save files and limits: [level-editor contract](../../docs/contracts/level-editor.md#custom-level-runtime-and-save-le1a).
+- The loader (`boot.script` + `custom.lua`) validates, freezes a snapshot and reloads the world; the world reads the snapshot by id. Retry, bounds reset, keys 1–9 and presets behave as for built-in stations. Custom levels never get the Straight checker background.
+- Samples for drive tests in `samples/`: `rolling-hills` (chain-only, seven 1.2 m hills), `kicker-platform` (15° kicker, 2 m pit gap, landing on a hull platform, start 7 m/s) and `invalid-bounds`, which must fail with `Import failed: Invalid safety bounds. The current level and its save are unchanged.`
+
 ## Test cases
 
 `python tools/gym/smoke.py --case <id>` (HTML5 debug gym):
@@ -124,5 +130,6 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
 | `a15a` | Rider lean/bob bounds and return to rest |
 | `a16`, `a17`, `a18`, `a19` | Ramp, step, seam and gap protocols above |
+| `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure |
 
 Release behavior (keyboard, touch, tilt, stations, screenshots) is verified by `tools/preview/*.cjs` in CI.

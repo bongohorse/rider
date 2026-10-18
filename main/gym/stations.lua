@@ -4,11 +4,24 @@ local ramps=require "main.gym.ramp_metrics"
 local gaps=require "main.gym.gap_metrics"
 local seams=require "main.gym.seam_metrics"
 local steps=require "main.gym.step_metrics"
+local custom=require "main.gym.custom"
 local M={ids={"straight","ramps","ramps-long","steps","steps-down","seams-chain","seams-hull","gaps","gaps-landing"}}
 if sys.get_config_string("rider.gym_test","")=="a15" and sys.get_engine_info().is_debug then
     M.ids={"straight","straight-test","invalid-test"}
 end
-function M.load(id,speed,section)
+-- Custom levels come from a loader-owned snapshot, never from a resource id lookup.
+local function load_custom(snapshot,speed)
+    local d=snapshot and custom.read(snapshot)
+    if not d then return nil,"No custom level loaded. Import a level file [I]." end
+    local valid,err=data.validate(d)
+    if not valid then return nil,err end
+    d.custom,d.snapshot=true,snapshot
+    local message
+    d.start_speed,message=data.speed(speed,d.start_speed)
+    return d,message or ""
+end
+function M.load(id,speed,section,snapshot)
+    if id=="custom" then return load_custom(snapshot,speed) end
     local found=false
     for _,key in ipairs(M.ids) do if id==key then found=true end end
     local note=not found and "Unknown station; using Straight" or ""
@@ -38,7 +51,7 @@ function M.select(d,index)
     d.start_speed=data.speed(d.speed_override,s.start_speed)
     return true
 end
-function M.initial()
+function M.query()
     local id=sys.get_config_string("rider.station","straight")
     local speed=sys.get_config_string("rider.start_speed","")
     if html5 then
@@ -46,6 +59,12 @@ function M.initial()
         speed=html5.run("new URLSearchParams(location.search).get('speed') || ''")
     end
     local section=html5 and html5.run("new URLSearchParams(location.search).get('section') || ''") or sys.get_config_string("rider.section","")
+    return id,speed,section
+end
+function M.initial()
+    local id,speed,section=M.query()
+    -- The loader restores the saved custom level and hands its snapshot over via configure_station.
+    if id=="custom" then return nil,"Loading custom level..." end
     return M.load(id,speed,section)
 end
 function M.configure(d)
@@ -97,16 +116,20 @@ function M.outside(d,s)
     return s.x*scale<b[1] or s.x*scale>b[2] or s.y*scale<b[3] or s.y*scale>b[4]
 end
 -- Normal sprites/labels render in release too; debug draw_line does not.
+-- Returns the sprite and label objects this world created.
 function M.decorate(d)
     local scale=sys.get_config_number("physics.scale",0.01)
+    local sprites,labels=0,0
     local function stroke(a,b,width)
+        sprites=sprites+1
         local dx,dy=(b[1]-a[1])/scale,(b[2]-a[2])/scale
         local id=factory.create("#line",vmath.vector3((a[1]+b[1])/2/scale,(a[2]+b[2])/2/scale,0),
             vmath.quat_rotation_z(math.atan2(dy,dx)),nil,vmath.vector3(math.sqrt(dx*dx+dy*dy)/4,width/4,1))
         go.set(msg.url(nil,id,"sprite"),"tint",vmath.vector4(0.45,0.85,0.75,1))
     end
-    if d.id:match("^straight") then for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1)) end end
+    if d.id:match("^straight") and not d.custom then for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1));sprites=sprites+1 end end
     for _,spec in ipairs(d.labels or {}) do
+        labels=labels+1
         local id=factory.create("#marker",vmath.vector3(spec.position[1]/scale,spec.position[2]/scale,0))
         label.set_text(msg.url(nil,id,"label"),spec.text)
     end
@@ -122,11 +145,13 @@ function M.decorate(d)
             local major=math.abs(x/m.major_m-math.floor(x/m.major_m+0.5))<0.001
             stroke({x,0.8},{x,major and 0.6 or 0.7},major and 2 or 1)
             if major then
+                labels=labels+1
                 local id=factory.create("#marker",vmath.vector3(x/scale,40,0))
                 label.set_text(msg.url(nil,id,"label"),string.format("%g m",x))
             end
         end
     end
+    return sprites,labels
 end
 function M.restart(self)
     if self.station.kind=="ramps" then ramps.restart(self)
@@ -172,7 +197,11 @@ function M.enrich(self,sample)
     elseif self.station.kind=="gaps" then gaps.enrich(self,sample)
     elseif html5 then html5.run("window.riderStationReport=null") end
     sample.station=self.station.id
-    sample.station_name=self.station.name..(self.station.sections and " ["..self.station.sections[self.station.section_index].id.."]" or "")
+    sample.custom=self.station.custom or false
+    sample.snapshot=self.station.snapshot or ""
+    sample.decor_sprites,sample.decor_labels=self.decor_sprites or 0,self.decor_labels or 0
+    sample.custom_snapshots=custom.count()
+    sample.station_name=(self.station.custom and "Custom: " or "")..self.station.name..(self.station.sections and " ["..self.station.sections[self.station.section_index].id.."]" or "")
     sample.station_note=self.station_note or ""
     sample.start_speed=self.station.start_speed
     sample.first_tick_speed=self.first_tick_speed or 0

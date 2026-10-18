@@ -1,11 +1,52 @@
 -- Proxy is the only world-switch owner; messages serialize confirmed unload/load.
 local stations=require "main.gym.stations"
+local custom=require "main.gym.custom"
+local function switch(self,request)
+    self.station,self.speed=request.id,request.speed or ""
+    self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
+    self.preset=request.preset or self.preset
+    self.generation=self.generation+1
+    self.loading,self.deadline=true,0
+    msg.post("#ui","station_loading",{generation=self.generation})
+    msg.post("#ui","cancel_drag")
+    msg.post("#world","disable")
+    msg.post("#world","final")
+    msg.post("#world","unload")
+end
+-- Import = read/validate, freeze a snapshot, then reload the world. Save only after it loaded.
+local function import(self,request)
+    local d,err=custom.parse(request.text)
+    if not d then
+        custom.notify(request.request,"error","Import failed: "..err..". The current level and its save are unchanged.")
+        return
+    end
+    local snapshot=custom.freeze(d,request.text)
+    custom.notify(request.request,"loading","Loading "..d.name.."...")
+    local next={id="custom",snapshot=snapshot,import=request.request}
+    if self.loading then
+        -- Never replace the snapshot an in-flight load reads; run the newest import afterwards.
+        self.queued=next
+        custom.retain({[self.snapshot or ""]=true,[snapshot]=true})
+    else switch(self,next) end
+end
 function init(self)
     msg.post(".","acquire_input_focus")
+    custom.init()
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
-    local d=stations.initial();self.station=d and d.id or "straight"
-    self.speed=d and d.start_speed or 0
+    local id,speed=stations.query()
+    if id=="custom" then
+        self.station,self.speed=id,speed
+        local saved=custom.restore()
+        if saved then self.snapshot=custom.freeze(saved.doc,saved.text)
+        else
+            self.note="No saved custom level. Import a level file [I]."
+            custom.open(self.note)
+        end
+    else
+        local d=stations.initial();self.station=d and d.id or "straight"
+        self.speed=d and d.start_speed or 0
+    end
     msg.post("#world","load")
 end
 function update(self,dt)
@@ -17,29 +58,61 @@ function update(self,dt)
             msg.post("#world","disable")
         end
     end
+    local request=custom.take()
+    if request then import(self,request) end
+    if self.syncing then
+        local state=custom.sync_state()
+        if state~="syncing" then
+            self.syncing=false
+            msg.post("#ui","custom_status",{text=state=="saved" and "Saved" or state=="session" and "Saved for this session only (browser storage unavailable)"
+                or "Browser storage sync failed; the level may not survive a reload"})
+        end
+    end
 end
 function on_message(self,id,data,sender)
-    if id==hash("select_station") and not self.loading then
+    if id==hash("preset_changed") then self.preset=data.key
+    elseif id==hash("select_station") and not self.loading then
         local d,note=stations.load(data.id,data.speed)
         if not d then msg.post("#ui","station_error",{note=note});return end
-        self.station,self.speed=d.id,data.speed or ""
-        self.preset=data.preset or self.preset or "a"
-        self.generation=self.generation+1
-        self.loading,self.deadline=true,0
-        msg.post("#ui","station_loading",{generation=self.generation})
-        msg.post("#ui","cancel_drag")
-        msg.post("#world","disable")
-        msg.post("#world","final")
-        msg.post("#world","unload")
+        switch(self,{id=d.id,speed=data.speed,preset=data.preset})
     elseif id==hash("proxy_unloaded") then
         msg.post("#world","load")
     elseif id==hash("proxy_loaded") then
         self.world_loads=self.world_loads+1
         msg.post(sender,"init")
-        if self.world_loads>1 then msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset or "a",generation=self.generation}) end
+        if self.world_loads>1 or self.station=="custom" then
+            msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,generation=self.generation,
+                snapshot=self.snapshot,note=self.note})
+        end
         msg.post(sender,"enable")
-    elseif id==hash("gym_ready") then
+    elseif id==hash("gym_ready") and data.generation==self.generation then
         self.loading=false
         msg.post(sender,"world_load_count",{count=self.world_loads,generation=self.generation})
+        local loaded=self.station=="custom" and data.ok and self.snapshot
+        if self.queued then
+            local next=self.queued;self.queued=nil
+            custom.retain({[next.snapshot]=true})
+            switch(self,next)
+            return
+        end
+        -- The ready world has read its snapshot; keep only that one.
+        custom.retain(loaded and {[loaded]=true} or {})
+        if self.import then
+            local request=self.import;self.import=nil
+            if not loaded then
+                custom.notify(request,"error","Import failed: the level could not be built. The previous saved level is kept.")
+                custom.open("The level could not be built. Import another level file.")
+            else
+                local saved,err=custom.save(custom.text(loaded))
+                if saved then
+                    custom.notify(request,"loaded","Loaded.")
+                    self.syncing=true
+                    msg.post("#ui","custom_status",{text="Saving..."})
+                else
+                    custom.notify(request,"loaded","Loaded.")
+                    msg.post("#ui","custom_status",{text="Save failed; the previous saved level is kept ("..err..")"})
+                end
+            end
+        end
     end
 end

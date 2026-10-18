@@ -46,3 +46,26 @@ class GymResources(unittest.TestCase):
         for i,section in enumerate(hull['hulls']):
             a,b=ends[i][0],ends[i+1][0]
             self.assertEqual(section['vertices'],[[a,-.2],[b,-.2],[b,.8],[a,.8]])
+
+    def test_custom_level_helper_and_samples(self):
+        config = configparser.ConfigParser()
+        config.read(ROOT / 'game.project')
+        self.assertIn('/main/gym/custom.js', config.get('project', 'custom_resources').split(','))
+        samples = ROOT / 'main/gym/samples'
+        for name in ('rolling-hills', 'kicker-platform'):
+            level = json.loads((samples / f'{name}.json').read_text())
+            self.assertEqual(level['id'], name)
+            self.assertNotIn('kind', level)
+            x0, x1, y0, y1 = level['bounds']
+            self.assertTrue(x0 < level['spawn'][0] < x1 and y0 < level['spawn'][1] < y1)
+            objects = len(level.get('labels', [])) + sum(len(h['vertices']) for h in level.get('hulls', []))
+            for chain in level['chains']:
+                objects += len(chain) - 1
+                # Right-to-left like the built-in stations: solid side below the line.
+                self.assertTrue(all(b[0] <= a[0] for a, b in zip(chain, chain[1:])))
+                self.assertTrue(all((a[0]-b[0])**2 + (a[1]-b[1])**2 >= 0.0001 for a, b in zip(chain, chain[1:])))
+                # The vehicle cannot leave the bounds sideways without passing the chain ends.
+                self.assertTrue(chain[-1][0] < x0 and chain[0][0] > x1)
+            self.assertLessEqual(objects, 800)
+        invalid = json.loads((samples / 'invalid-bounds.json').read_text())
+        self.assertLessEqual(invalid['spawn'][0], invalid['bounds'][0])
