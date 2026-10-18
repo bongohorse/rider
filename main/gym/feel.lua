@@ -22,6 +22,10 @@ function M.preset(requested)
     return key,valid
 end
 M.preset("a")
+-- Visual-only rider reaction (A15a); not a preset key, never touches physics.
+-- Offsets in engine units, angles in rad, gains per m/s of chassis velocity change.
+M.rider={hz=3,damping=0.55,max_x=5,max_y=8,max_angle=0.25,
+    gain_x=40,gain_y=30,gain_angle=12,gain_spin=0.15,air_lean_angle=0.12}
 -- Body torque is raw Box2D N m; joint motor caps are scaled binding inputs.
 -- Keep these distinct. Gameplay lengths/linear speed stay in engine units.
 function M.motor_torque(binding_units) return binding_units end
