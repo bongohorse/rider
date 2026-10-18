@@ -21,11 +21,15 @@ run_id=str(uuid.uuid4())
 bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
 if not args.bundle:build_bundle(bundle,sha)
 verify_bundle(bundle,sha)
-runner='seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+runner='gaps.cjs' if args.case=='a19' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
 process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True)
-try: code=process.wait(timeout=600 if args.case=='a18' else 360 if args.case in ('a16','a17') else 90)
+try: code=process.wait(timeout=600 if args.case=='a18' else 360 if args.case in ('a16','a17','a19') else 90)
 finally: stop(process)
 if code:raise SystemExit(code)
+if args.case=='a19':
+    report=json.loads((out/'gaps-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==23
+    print(json.dumps({k:report[k] for k in ('status','widest_cleared_m')}));raise SystemExit(0)
 if args.case=='a18':
     report=json.loads((out/'seams-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==6
