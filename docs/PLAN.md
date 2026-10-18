@@ -2,6 +2,8 @@
 
 Binding goal, decisions, roadmap and stop points. [STATUS.md](../STATUS.md) holds current progress; GitHub issues hold each task's scope and acceptance; [AGENTS.md](../AGENTS.md) holds the working rules. Historical gate documents do not govern current work.
 
+**Contents:** [Goal](#goal) · [Decisions](#decisions) · [Roadmap](#roadmap) · [Stop points](#stop-points) · [Later phases (no issues yet)](#later-phases-no-issues-yet)
+
 ## Goal
 
 Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built with Defold and its integrated Box2D. A **Driving Gym** with test stations comes first: feel before infrastructure. Design intent and open design choices are in [GAME_DESIGN.md](GAME_DESIGN.md).

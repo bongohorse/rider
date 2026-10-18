@@ -1,183 +1,109 @@
 # Project tooling
 
-[Documentation index](README.md) · [G2 state](history/G2_ACCEPTANCE.md)
+Setup, build, test and CI operations. Versions: [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md) and [toolchain-lock.json](../tools/toolchain-lock.json). Test/result rules: [automation contract](contracts/automation.md).
 
-Use the repository root. Bash and PowerShell wrappers forward to the same Python implementation:
+**Contents:** [Prerequisites](#prerequisites) · [Commands](#commands) · [Gym tests](#gym-tests) · [Local environment (WSL, VS Code)](#local-environment-wsl-vs-code) · [Worktrees](#worktrees) · [CI and required check](#ci-and-required-check) · [Agent CI completion watch](#agent-ci-completion-watch) · [Dependencies and Renovate](#dependencies-and-renovate) · [Preview deployment](#preview-deployment) · [Gemini read-only reviewer setup](#gemini-read-only-reviewer-setup)
+
+## Prerequisites
+
+Eclipse Temurin 25.0.4.1+1 on PATH, Python >=3.12 (CI 3.14.8) with `requirements-dev.txt`, Git. HTML5 runtime tests additionally need `npm ci --ignore-scripts` and `npx playwright install --with-deps chromium`. Builds enforce the exact JDK build and Bob SHA-256. `python tools/local_parity.py` records local versions against the CI pins (`--require-ci-parity` fails on deviation).
+
+## Commands
+
+Run from the repository root. Bash and PowerShell (`./tools/*.ps1`) wrappers call the same Python implementation:
 
 ```sh
-bash tools/doctor.sh --json
+bash tools/doctor.sh --json                      # environment inventory; --require-g2 checks JDK/Bob/wrapper
 bash tools/verify.sh --suite bootstrap --output artifacts/g2/bootstrap
 bash tools/verify.sh --suite physics --target desktop --output artifacts/g2/physics
 bash tools/verify.sh --suite physics --target html5 --output artifacts/g2/html5
 bash tools/build.sh --target desktop --configuration debug --fixture gym
 bash tools/build.sh --target html5 --configuration release
 bash tools/build.sh --target android --configuration debug
-```
-
-Windows equivalents: `./tools/doctor.ps1`, `./tools/verify.ps1`, `./tools/build.ps1` with the same arguments. The default doctor remains an explicit environment inventory; use `--require-g2` for exact JDK/Bob and read-only wrapper-source verification. `--require-g1` requires JDK/Bob presence and never claims a Bridge connection or runtime approval. Builds additionally enforce the exact approved JDK build and Bob hash. Set PATH to Eclipse Temurin 25.0.4.1+1; Python >=3.12, Git and installed bootstrap requirements are needed. HTML5 runtime verification additionally needs `npm ci --ignore-scripts` and `npx playwright install --with-deps chromium`.
-
-`verify --suite physics` delegates to the existing G1 runner, then requires the two complete physics inventories and their scale/render comparison. It does not create another simulation loop. `verify --suite bootstrap` requires the project contract and actual nonzero bootstrap/protocol test counts. `build` defaults to the gym. Use `--fixture physics` for the retained G1 boot or `--fixture bridge` for native automation. `build` produces debug/release bundles, with source/run identity settings; it does not assert successful runtime, installation or game readiness.
-
-Every invocation writes `results.json` (schema 1) and `junit.xml` alongside logs. Default output is `artifacts/g2/<uuid>/`. Exit 0=PASS, 1=FAIL, 2=BLOCKED. BLOCKED is a failing CI result, never green. Missing or duplicate expected IDs and zero inventory fail. JSON contains exact Git source, test IDs, status, measurements where available and relative artifact paths. Per-case physics timing is `null` (not measured); the overall runner duration is measured. `assertions: 1` counts the collector verdict for each reported case, not the number of internal Lua predicates. Timeouts kill process trees; incomplete physics cases are represented as failures. JSON/JUnit PASS is tooling evidence, not whole-G2 approval.
-
-A real build regression is separate:
-
-```sh
 python tools/g2/negative_build.py --output artifacts/g2/negative-build
 ```
 
-It copies the current project into a temporary directory, injects an invalid Lua statement, requires a build error naming that script, restores the exact original bytes, builds the restored copy successfully, and verifies the original working tree is unchanged. The broken copy is never committed. CI uploads both logs and the restoration report. Its Linux APK job also builds through the shared CLI, verifies the signature with Android `apksigner`, and parses the package with `aapt2`; these checks do not claim an actual device installation. The four CLI unit tests separately cover nonzero subprocess exits, zero-test rejection, timeout and incomplete inventory.
+- `build` defaults to the gym; `--fixture physics` selects the G1 boot, `--fixture bridge` the native automation fixture ([bridge](contracts/bridge.md)). A build does not prove runtime, installation or game readiness.
+- `verify --suite physics` runs the G1 runner on two configurations plus the scale/render comparison. `verify --suite bridge` runs the native Bridge suite under Xvfb.
+- Every invocation writes `results.json` (schema 1), `junit.xml` and logs to `artifacts/g2/<uuid>/` by default. Exit 0 PASS, 1 FAIL, 2 BLOCKED (never green).
+- `negative_build.py` injects a Lua error into a temporary copy, requires the named build error, restores the bytes and rebuilds; the working tree stays unchanged. The Android job also verifies the APK with `apksigner`/`aapt2` (not a device install).
 
-G1 baseline: native headless physics and HTML5 debug. G2 extends Windows to the normal debug engine with CI software OpenGL and proves Linux native Bridge graphics/input plus release-negative behavior. Android APK build success does not prove installation or real device/touch behavior. No editor launch or local port/session is assumed by these commands.
+Baseline checks for any change: `python tools/bootstrap_check.py`, `python -m unittest discover -s tests/bootstrap -v`, plus affected `tests/g1`, `tests/g2`, `tests/ci` (Python and `node --test tests/ci/*.cjs`) and `node --test tests/mobile/*.cjs`.
 
-Native Bridge verification uses the same result CLI: `verify --suite bridge` under Linux graphics/Xvfb. Install the pinned wrapper with `python tools/setup_bridge.py`; use `build --target desktop --configuration debug --fixture bridge` for the interactive native fixture. See [BRIDGE.md](contracts/automation/bridge.md) for explicit commands and verified debug/release behavior. HTML5 does not load the native extension.
-
-Gym runtime smoke: `python tools/gym/smoke.py --output artifacts/gym/a1 --case a1`. It checks chain support and camera following in HTML5; CI retains its screenshot and logs.
-
-## CI build reuse
-
-All PR jobs check out GitHub's synthetic merge commit (the default checkout ref), so `required` covers the integration source consistently. Preview manifests identify that tested merge SHA. The parent CI owns cancellation; reusable G1/G2/Bridge calls use run-specific concurrency groups, while standalone manual runs have separate branch-scoped groups.
-
-`python tools/gym/bundle.py --output artifacts/gym-bundle` builds the debug Gym once. Run each case with `python tools/gym/smoke.py --bundle artifacts/gym-bundle --output artifacts/gym/a15 --case a15`. Reuse requires matching source/platform/debug identity and an unchanged SHA-256 file inventory. Each case opens a fresh browser and receives its own `rider.run_id` and `rider.gym_test` through Defold's engine startup arguments, injected only in the local test server response. The archived bundle and production template are unchanged. Standalone smoke commands still build their own bundle when `--bundle` is omitted. All existing case assertions and screenshots remain separate.
-
-CI builds Android debug once through the G2 shared CLI and requires APK signature/manifest inspection. The historical G1 Android-attempt script remains available for diagnosis; CI no longer repeats that equivalent build. Native, physics-fixture, Bridge debug/release and release-preview builds retain their distinct coverage.
-
-The npm download cache follows `package-lock.json`; Bob's cache follows the toolchain lock and its SHA-256 is checked on every use. Compiled game output is never restored from a cross-run cache. Workflow classification also runs actionlint 1.7.12 from a SHA-256-verified archive (`tools/ci/actionlint-lock.json`); optional shellcheck/pyflakes integrations are disabled for consistent syntax/expression validation.
-
-## VS Code Rider profile (WSL, CLI agents)
-
-The repository contains [`profiles/Rider.code-profile`](../profiles/Rider.code-profile) (importable VS Code profile) and [`.vscode/settings.json`](../.vscode/settings.json) (Rider-specific yellow window chrome and no built-in Copilot/Chat panel). These are configuration templates, not evidence that a user profile was installed on the Windows machine. Codex CLI and Claude Code CLI run in the WSL terminal; no agent extensions are required.
-
-1. In **Windows PowerShell**, use `wsl.exe --list --online` to see installable distros and **`wsl.exe --list --verbose`** to identify the *installed* distro and require WSL **VERSION 2**. `Ubuntu-26.04` is a proposed name, not an observed local install.
-2. Install VS Code on Windows and its **WSL** extension (`ms-vscode-remote.remote-wsl`). In Windows VS Code import `profiles/Rider.code-profile` with **Profiles: Import Profile...** and confirm **Rider** exists in **Profiles: Switch Profile**. Import **before** using `--profile Rider`: an unknown name otherwise silently creates an empty profile. Extensions installed locally are not automatically synchronized into WSL.
-3. In the **actual installed** WSL distro, clone the repository at `~/rider` (or update the clone) and open `cd ~/rider && code --new-window --profile Rider .`. Check that the window is attached to WSL, the correct profile persists after reopening, and the yellow title/status bar and hidden AI chat behave as requested.
-4. The optional `tools/open-rider.ps1` launcher uses the Windows default WSL distro, supports `-Distro <installed-name>`, and assumes `~/rider`. It resides **inside the Linux checkout**, so an arbitrary Windows PowerShell session cannot run it by a simple relative path; use the WSL command in step 3 until a Windows-side launcher path is set up and tested. The script does not install tooling.
-5. VS Code remembers the selected profile for the opened folder. Switch via **Profiles: Switch Profile** or **File > New Window with Profile**; workspace chat disabling affects Rider, not Goblin/MGD. Use standalone `codex` and `claude` commands in separate integrated WSL terminals only after installation/authentication; never commit credentials or API keys. For precise host acceptance and preview parity see [migration review §7](VSCODE_MIGRATION_REVIEW.md#7-minimum-local-acceptance-gates-original-checklist-current-host-evidence-tracked-in-81).
-
-VS Code's WSL extension is separate from AI extensions. The actual WSL/toolchain setup and required build/verification commands are described above. The profile files do not install pinned JDK/Bob/Playwright themselves.
-
-## CI fast path and dependency downloads
-
-The required PR check always runs workflow/schema and CI-regression checks. Markdown-only changes (any `.md` outside the `custom_resources` paths in `game.project`, which are bundled into builds) additionally validate relative link targets in changed Markdown, so a broken local link fails the fast path. Changes to tooling or workflow configuration trigger the full suite. The HTML5 tests reuse a single debug Gym bundle with fresh browser contexts; release preview has separate build and test evidence.
-
-Bootstrap pip downloads are cached by requirements; npm uses the lockfile, and Playwright Chromium uses a lockfile-keyed browser cache. The cached actionlint archive is SHA-256 verified before use; Bob hash verification remains mandatory. No compiled game is reused between runs.
-
-## Selective CI and scheduled full regression
-
-Changes limited to main/gym/ and Markdown docs skip the Windows native matrix entry, Bridge workflow, and the deliberate negative-build step. Linux native physics, HTML5 coverage, Android APK/signature validation, and release preview remain selected. Any shared, unknown, toolchain, or workflow change runs the complete suite. Every PR shows the classification reason. The required gate rejects unexpected missing, failed, cancelled, or skipped dependencies.
-
-The nightly schedule always runs the entire suite at 02:17 UTC regardless of the previous diff. If required fails, a single tooling issue is opened or updated with the run link; recovery closes it. Manual CI dispatch is always conservative and full, including when its full_run switch is set. The existing post-merge run and Pages behavior remain intact.
-
-## Local version evidence and agent worktrees
-
-For #81, Windows VS Code uses the imported **Rider** profile, connected to **WSL: Ubuntu** (registered distro `Ubuntu`, guest OS Ubuntu 26.04.1). Import the profile in **Windows Profiles UI** before using `--profile Rider`; a missing profile name may silently create an empty profile. From WSL: `cd ~/rider && code --new-window --profile Rider .`. The optional PowerShell launcher defaults to the Windows default WSL distro, or accepts `-Distro Ubuntu`; it resides inside the Linux checkout, not an arbitrary Windows working directory. Validate profile persistence/Chat visibility with the Windows UI; yellow workspace colors alone are not sufficient proof.
-
-The project allows Python >=3.12, but CI pins **3.14.8** versus local **3.14.4** as of 2026-10-17. Record exact effective versions and the source identity without modifying any dependencies:
+## Gym tests
 
 ```sh
-cd ~/rider
-source .venv/bin/activate
-python tools/local_parity.py --output artifacts/g2/local-tool-versions.json
-# Optional strict mode: reports DEVIATION/nonzero when Python differs from CI
-python tools/local_parity.py --require-ci-parity
+python tools/gym/bundle.py --output artifacts/gym-bundle                     # build the debug gym once
+python tools/gym/smoke.py --bundle artifacts/gym-bundle --output artifacts/gym/a15 --case a15
 ```
 
-The inventory reads CI Python/Node pins, the installed Playwright/Chromium version/revision and executable paths. It does **not** imply identical GitHub CI merge SHA, Android-device testing, or Bridge runtime approval; run the separate `doctor`, build and verifier for those. CLI tools observed locally: `gh 2.102.0`, `codex-cli 0.163.0`, `agy 1.4.0` (Google Antigravity) and `claude 2.1.302`; these are **observations**, not pinned Rider build dependencies. Inspect the login/billing path in the actual VS Code terminal, but never print access tokens or API keys.
+Cases include `a1`–`a3`, `a6`–`a12`, `a15`–`a19`, `a15a`, `coast`, `hud`, `m2feedback` and `a9invalid`; the full list is in `.github/workflows/g1.yml`. Without `--bundle` a case builds its own bundle. Reuse requires matching source/platform/debug identity and an unchanged SHA-256 inventory. Each case gets a fresh browser and its own `rider.run_id`/`rider.gym_test` via engine startup arguments injected only by the local test server. Release preview tests live in `tools/preview/` (`verify.cjs`, `mobile.cjs`, `tilt.cjs` and per-station runners). Behavior notes per station and feature: [gym notes](../main/gym/README.md).
 
-**Agent roles:** No fixed roles (maintainer decision 2026-10-18). Codex and Claude work as equal AI agents within approved scope, one implementing agent per task; routine changes do not require a second AI reviewer. Review/fix, current-head green `required`, merge authorization and all stop gates remain mandatory. Gemini / Antigravity CLI is used only occasionally for review or ideas and stays **read-only**: no file edits, installs, commits, pushes, PR creation/merging, mutating GitHub actions or secrets access without explicit task-specific approval.
+Remove `build/` and `.internal/` before a debug bundle if the checkout produced release builds: a stale release engine once replaced the debug gym.
 
-**Access boundary:** These permissions are a **documented policy, not yet OS-level enforcement**. Worktrees separate source trees, not credentials in `~/.config/gh`, `~/.codex` or `~/.claude`. The shared owner token could let Gemini write if given unrestricted shell/home access even while its prompt says read-only. Do **not** claim Gemini is technically restricted until it runs in an isolated OS/user environment without the owner's credentials, with a separate least-privilege read-only GitHub token (or no token), and the restriction is tested. Different PATs belonging to the same GitHub account cannot enforce independent GitHub review. Keep branch protection changes and credential policy decisions separately approved; no blanket bypass flags.
+## Local environment (WSL, VS Code)
 
-For a *read-only* independent audit (one agent/worktree):
+Development runs in WSL2 Ubuntu (`~/rider`) with Windows VS Code and the **Rider** profile ([`profiles/Rider.code-profile`](../profiles/Rider.code-profile), [`.vscode/settings.json`](../.vscode/settings.json): dark petrol window chrome, built-in AI chat disabled). AI CLIs (Codex, Claude) run in WSL terminals; no editor extensions are required.
+
+1. Install VS Code and its WSL extension (`ms-vscode-remote.remote-wsl`) on Windows. Import `profiles/Rider.code-profile` via **Profiles: Import Profile...** before using `--profile Rider` (an unknown name silently creates an empty profile).
+2. In WSL: `cd ~/rider && code --new-window --profile Rider .`. The optional `tools/open-rider.ps1` launcher (`-Distro <name>`) lives inside the Linux checkout.
+3. Never commit or print credentials, tokens or API keys.
+
+Native debug builds need the CI-documented OpenAL/Mesa packages; Bob builds need `build.defold.com` reachable (network failures are BLOCKED, not a reason to switch toolchains).
+
+## Worktrees
+
+A worktree separates source trees, not credentials (`~/.config/gh`, `~/.codex`, `~/.claude`). It does not inherit ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`; reuse the main checkout's `.venv` or set `RIDER_BOB_JAR` to a verified Bob. One writing agent per worktree and feature branch.
 
 ```sh
-cd ~/rider
-git status --short --branch && git rev-parse HEAD
-mkdir -p ~/rider-worktrees
-git worktree add --detach ~/rider-worktrees/r81-claude-audit HEAD
-cd ~/rider-worktrees/r81-claude-audit
-git status --short --branch
-# Read/review only: no file edits, package installs, commits, push or gh merge.
-git status --short --branch
-# Cleanup only after the reviewer has exited, from ~/rider:
-git -C ~/rider worktree remove ~/rider-worktrees/r81-claude-audit
-git -C ~/rider worktree list
+git -C ~/rider worktree add -b <branch> ~/rider-worktrees/<name> origin/main
+git -C ~/rider worktree remove ~/rider-worktrees/<name>   # after merge
 ```
 
-A second worktree **does not inherit** ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`. If implementation is **explicitly approved**, provision those per worktree (or point `RIDER_BOB_JAR` at a verified shared cached Bob), use a dedicated feature branch, and keep one writing agent per worktree. A read-only review need not install anything. Before any PR/merge, inspect source SHA, working tree and CI; `gh pr checks --watch <PR_NUMBER>` requires an existing PR. Require current-head `required` PASS and an authorized merge; do not weaken CI, assume independent reviewers are enforced, or start a milestone without the maintainer's explicit approval.
+## CI and required check
+
+- `required` (in `ci.yml`) is the only required status check on `main`. It aggregates bootstrap, Renovate, physics (native + HTML5), tooling/Android, Bridge and release preview, and fails on any failed, cancelled or unexpectedly skipped dependency. Never bypass it or use whole-workflow `paths-ignore`; keep the force-push/deletion protections on `main`.
+- PR jobs test GitHub's merge commit; preview manifests identify that SHA.
+- **Fast path:** `tools/ci/classify_changes.py` classifies the diff. Markdown outside the `custom_resources` paths in `game.project` (which are bundled into builds) is docs-only: only workflow lint, CI regression tests and the link/anchor check on changed Markdown run. Changes limited to `main/gym/` and Markdown skip the Windows native entry, Bridge and negative build. Anything else, an unknown diff or manual dispatch runs the full suite. The PR summary shows the reason.
+- **Nightly:** 02:17 UTC full suite; a failing `required` opens or updates one tooling issue, recovery closes it.
+- Caches: pip by requirements, npm and Playwright by lockfile, Bob by lock with SHA-256 check, actionlint from a verified archive. Compiled game output is never reused across runs. CI artifacts are kept 14 days; commit summaries and run links, not binary dumps.
 
 ## Agent CI completion watch
 
-**Preferred workflow for active WSL Codex and Claude CLI agents:** Stay attached to the GitHub pull request instead of asking the maintainer to write “CI fertig”. GitHub CLI refreshes a PR's checks every **10 seconds** by default; it returns when checks finish or at the first failure with `--fail-fast` ([official manual](https://cli.github.com/manual/gh_pr_checks)).
+Watch your own PR instead of asking the maintainer whether CI finished:
 
 ```bash
-# Use the current PR number after pushing/creating the PR.
-gh pr checks <PR_NUMBER> --repo bongohorse/rider --watch --fail-fast --interval 10
-
-# After the watch exits successfully:
-gh pr view <PR_NUMBER> --repo bongohorse/rider \
-  --json headRefOid,mergeable,url
-gh pr checks <PR_NUMBER> --repo bongohorse/rider --required
+gh pr checks <PR> --repo bongohorse/rider --watch --fail-fast --interval 10
+gh pr view <PR> --repo bongohorse/rider --json headRefOid,mergeStateStatus
+gh pr checks <PR> --repo bongohorse/rider --required
 ```
 
-Treat a failed/cancelled run, absent checks, head revision change, unresolved independent-review findings, unexpected base changes, or missing current-head `required` PASS as a **non-merge** outcome. On a failing check, inspect the linked workflow and job logs, repair only the authorized scope and start a **new** watch for the new PR head. When green, complete applicable review requirements; merge only if the existing issue authorization permits and the PR source still matches. Continue to the next authorized step, or stop at the user's requested milestone gate (M4 A18/#33 explicitly approved on 2026-10-18; subsequent milestone stop gates remain in force).
+A failed/cancelled run, missing checks, a changed head, `BEHIND`/blocked merge state or missing current-head `required` PASS means no merge. On failure read the job logs, fix within scope and watch the new head. When green, merge only with existing authorization and stop at PLAN.md stop points. The watch only resumes a running terminal command; it does not notify a paused chat.
 
-**Important delivery distinction:** `gh pr checks --watch` resumes the **terminal command that is still running**; it does not send an unsolicited message to ChatGPT or revive a closed/paused ChatGPT chat. GitHub `workflow_run: completed` supports webhooks and follow-up Actions, but a separate always-on receiver/bot would be needed to route such an event into an agent service. There is no direct incoming webhook to this conversation, so do not promise an automatic ChatGPT chat notification. Native GitHub/mobile/email notifications can alert the **maintainer**; they do not substitute for the agent-side watcher. Avoid storing GitHub tokens in webhook scripts or exposing new public endpoints merely to get a “CI completed” ping.
+## Dependencies and Renovate
 
-## Gemini / Antigravity: isolated read-only reviewer (issue #81)
+Keep exact pins; Renovate never automerges and keeps major/runner/engine updates separate ([dashboard #4](https://github.com/bongohorse/rider/issues/4)). `npm run renovate:validate` checks the config, `npm run renovate:scan` runs local extraction. New dependencies need purpose, version/commit, source, license, update/removal path and platform evidence; no floating URLs. Version changes follow [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md).
 
-Claude and Codex retain **equal developer privileges**. Gemini is a **read-only adviser**. A prompt or CLI permission rule alone cannot protect files and credentials from another process running as the same WSL OS user. The reviewed setup is therefore intentionally **not** `agy` running directly in `~/rider` as the maintainer. It creates:
+## Preview deployment
 
-- An unprivileged Linux account `rider-gemini` without sudo or Docker access and with a separate home, Google login and Antigravity configuration;
-- A root-owned, non-writable, **tracked-source-only** snapshot at `/opt/rider-gemini-review/<source SHA>`. No `.git`, ignored secrets, working copies or developer build outputs are copied;
-- [Deny rules](../tools/security/gemini-readonly-settings.json) for `write_file(*)`, `command(*)`, `mcp(*)` and `execute_url(*)`; additionally, `read_file(/home/mega/)` and `read_file(/mnt/)` block reads of the owner home and WSL-mounted Windows drives. New website reads require interactive approval. The terminal sandbox is explicitly enabled. **Deny wins over Allow** per [Antigravity CLI permissions](https://www.antigravity.google/docs/permissions?tab=cli) and [terminal sandbox](https://www.antigravity.google/docs/cli/sandbox) documentation.
+The `preview` job builds an HTML5 release of the tested SHA (native Bridge cleared) into `builds/<sha>/<run-id>-<attempt>/` and verifies desktop and 20:9 phone viewports. Only `main`, after `required` passes, deploys to GitHub Pages; docs-only merges keep the existing build. The root loader reads `build.json` (no-store) and redirects to the current build; [build.json](https://bongohorse.github.io/rider/build.json) identifies the deployed SHA. Do not claim a deployed build before observing it.
 
-**Maintainer-host installation (not performed by CI or this repository change):**
+## Gemini read-only reviewer setup
+
+Gemini / Antigravity may only review or suggest ideas. A prompt rule cannot protect files or credentials from a process running as the same OS user, so Gemini runs in a separate identity:
+
+- unprivileged account `rider-gemini` (no sudo/Docker, own home and Google login, no GitHub token);
+- root-owned, read-only, tracked-files-only snapshot at `/opt/rider-gemini-review/<SHA>`;
+- [deny rules](../tools/security/gemini-readonly-settings.json) for writes, commands, MCP and URL execution, plus reads of `/home/mega/` and `/mnt/`; terminal sandbox enabled.
+
+Setup on the maintainer host (inspect the sudo-using script first; rerun after updating `main`):
 
 ```bash
-cd ~/rider
-git pull --ff-only
-git status --short --branch
-# Inspect this sudo-using script before running it.
+cd ~/rider && git pull --ff-only && git status --short --branch
 less tools/security/setup_gemini_reviewer.sh
 bash tools/security/setup_gemini_reviewer.sh
+sudo -iu rider-gemini          # install the official CLI here, sign in to Google only
+cd /opt/rider-gemini-review/<SHA> && agy
 ```
 
-The script refuses dirty Git state, symlinks in the tracked archive, privileged reviewer groups, unsafe permission changes in existing Gemini settings, reviewer write access to the snapshot or reviewer ability to traverse the maintainer's home/read known credential paths. It also repairs directory traversal on an existing root-owned snapshot if a prior invocation stopped at `FAIL: Gemini reviewer cannot read the snapshot` (the earlier GNU `cp -a` implementation copied the private temporary directory mode). Re-run the same script after updating `main`; do **not** delete the snapshot, relax it to world-writable, or recreate accounts manually. If it fails because `~/` is traversable by other users, inspect the impact on other Linux accounts before choosing `chmod 700 "$HOME"` and rerun. The October 17 Antigravity CLI 1.4.1 host test found `unsandboxed(*)` to be an **invalid and ignored** permission rule despite its presence in the CLI docs. We removed it because `command(*)` already denies shell commands. A prior setup also created `/home/rider-gemini/.gemini` as a root-owned intermediate directory, blocking `~/.gemini/config/projects` creation; the setup now repairs **only** that directory's owner and mode (700), never recursively changes other home content. The migration validates the sandbox and required permission lists before removing only `unsandboxed(*)`. It preserves unrelated settings (including CLI-written `trustedWorkspaces`) and accepts an omitted empty `allow` list, as observed after Antigravity 1.4.1 saved the host configuration. Nonempty or malformed allow lists, missing required denies/asks and unknown permission fields/rules fail safely. JSON key order and formatting do not affect validation. Already-correct settings remain byte-for-byte unchanged; migrations preserve owner, group and mode. Settings-file symlinks, symlinked parents, unexpected ownership, multiple hard links and group/other write access are rejected. The migration helper loads only the repository policy as root, then drops supplementary groups, GID and UID before accessing reviewer-controlled paths; stop the CLI before setup to avoid concurrent settings changes. Stop `agy` before rerunning the setup and start it anew afterward. Do **not** run `sudo agy` or authenticate the review account with the maintainer's GitHub credentials.
-
-The native `agy` binary was installed for the maintainer account only. Install the official Linux CLI **again under the separate reviewer account** and sign in to Google there, using no GitHub PAT:
-
-```bash
-sudo -iu rider-gemini
-export PATH="$HOME/.local/bin:$PATH"
-curl -fsSL https://antigravity.google/cli/install.sh -o "$HOME/antigravity-install.sh"
-less "$HOME/antigravity-install.sh"
-bash "$HOME/antigravity-install.sh"
-agy --version
-# Use the exact snapshot path printed by the setup script:
-cd /opt/rider-gemini-review/<source-SHA>
-agy
-```
-
-Inside Gemini, perform only a **read-only** analysis of `AGENTS.md`; then deliberately request to write a harmless file in the snapshot and confirm **DENIED** (not silently created, and not a permission request that can be bypassed). After exiting Gemini, recheck the snapshot from the maintainer's shell:
-
-```bash
-sudo -u rider-gemini test ! -w /opt/rider-gemini-review/<source-SHA>/AGENTS.md
-sudo -u rider-gemini test ! -r "$HOME/.config/gh/hosts.yml"
-git -C ~/rider status --short --branch
-```
-
-Replace `<source-SHA>` with the exact SHA reported by the script. Never paste tokens, browser login codes or auth file contents into issue logs. Do not launch `agy` as the original `mega` WSL user for Rider reviews: the already-installed maintainer-user `agy` remains outside the new account's CLI policy and retains that user's ordinary filesystem and GitHub permissions. Do not claim technical isolation until **both** agent-tool deny behavior and cross-user filesystem negative checks are observed on the actual WSL host. Linux account separation does not secure Windows user files, mounted Windows drives or any external services independently; do not expose those paths or grant the reviewer sudo/network-write capabilities. To review newer code, generate a new SHA snapshot explicitly; do not let Gemini modify the tracked working tree.
-
-
-## Native Bridge network acceptance on WSL (#81)
-
-[Bridge contract](contracts/automation/bridge.md) explains the server/client distinction; [STATUS.md](../STATUS.md) records current host observations; [#112](https://github.com/bongohorse/rider/issues/112) owns residual wildcard-listener hardening. Do not infer loopback binding from a client URL or Remotery's printed URL. WSL networking mode must be observed with `wslinfo --networking-mode`, not inferred from the presence of WSL2 or a configuration template. Record unexpected modes verbatim.
-
-For a coordinated host test, run only the owned fixture under Xvfb, set `DM_SERVICE_PORT=dynamic`, capture its PID and announced engine port, and correlate `/proc/<PID>/fd` socket inodes with LISTEN rows in `/proc/<PID>/net/tcp{,6}`. Save only matching PID rows from `ss -ltnp`; do not probe unrelated listeners. Connect to that observed port locally and verify health identity matches the PID. A connection to the host's own LAN address is still a self-connect, not off-host evidence. For release, delete its readiness file before launch, require a newly written readiness record and the live process's listener absence. Terminate/reap every owned process in `finally`, including Xvfb; verify PIDs and listener inodes disappear. Record bundle source separately from checkout source when reusing prior artifacts.
-
-Read-only Windows inspection: `netsh interface portproxy show all`, `Get-NetFirewallProfile`, and `Get-NetFirewallHyperVVMSetting -PolicyStore ActiveStore -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'`. Inspect applicable active firewall rules as well: default Block is not proof when allow rules or host-policy merging exist. Do not add rules, forward ports, alter networking mode or inspect credentials. Microsoft's [WSL networking documentation](https://learn.microsoft.com/en-us/windows/wsl/networking) describes NAT forwarding and direct LAN access in mirrored mode; neither description establishes the behavior of an unexpected observed mode.
-
-**Coordinated second-device procedure (maintainer required):** Agree a short test window on the trusted home LAN before starting another debug fixture. With no firewall/router changes, record the owned PID, the newly observed Bridge port, and the current LAN IPv4 address. On one maintainer-controlled second device on the same trusted LAN run `curl --noproxy '*' --connect-timeout 3 --max-time 5 http://<HOST_LAN_IPV4>:<OBSERVED_PORT>/automation-bridge/v2/health`. Request health only; do not send input/eval, scan ports, test public addresses or create a tunnel. Save success/timeout/refusal and timestamp; on success verify health process_id against the owned PID. Stop the fixture immediately, verify PID/socket cleanup, and repeat that same single-port request to confirm it no longer answers. A failed IPv4 request does not certify IPv6, other interfaces or internet isolation. Stop on unexpected access; do not widen firewall access to make the test pass.
-
-Prefer an upstream-supported loopback bind covering engine HTTP, redirect, log and profiler services. Client settings do not restrict servers. If the pinned engine exposes no suitable bind option, propose an administrator-reviewed firewall restriction for the exact development context covering all debug listeners while preserving loopback, both IP families and current required protections. Do not apply it automatically, patch pinned upstream dependencies, or mistake a dynamic-port-only rule for complete protection. Validate local Bridge smoke and off-host denial after any separately authorized mitigation.
+The script refuses dirty state, symlinks, privileged reviewer groups, unsafe settings and reviewer write/credential access, and migrates existing settings without dropping unrelated keys. Verify after a session: a write request inside Gemini is DENIED, then `sudo -u rider-gemini test ! -w /opt/rider-gemini-review/<SHA>/AGENTS.md` and `sudo -u rider-gemini test ! -r "$HOME/.config/gh/hosts.yml"`. Never run `sudo agy` or Rider reviews with the maintainer's own `agy`; never paste tokens or login codes into logs.

@@ -1,10 +1,12 @@
-# G1 implemented physics contract
+# G1 physics baseline
 
-[Documentation index](../../README.md) · [Acceptance](../../history/G1_ACCEPTANCE.md)
+Measured API/unit matrix and fixture of the G1 baseline ([run 38697533465](https://github.com/bongohorse/rider/actions/runs/38697533465)). Rules: [physics contract](physics.md).
+
+**Contents:** [API and units](#api-and-units) · [Start state, assertions and callback order](#start-state-assertions-and-callback-order) · [Ownership and cleanup](#ownership-and-cleanup) · [Running and protocol](#running-and-protocol)
 
 ## API and units
 
-Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), integrated Box2D 3.1.0. The original G1 native baseline used the headless engine. G2 extends Windows to ordinary debug with per-process Mesa software OpenGL; Linux Bridge graphics/input are tested separately. See [Bridge evidence](../automation/bridge.md). HTML5 uses the debug WebAssembly engine in Playwright Chromium; its exact browser version is an artifact.
+Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), integrated Box2D 3.1.0. The original G1 native baseline used the headless engine. G2 extends Windows to ordinary debug with per-process Mesa software OpenGL; Linux Bridge graphics/input are tested separately. See [Bridge](bridge.md). HTML5 uses the debug WebAssembly engine in Playwright Chromium; its exact browser version is an artifact.
 
 | Used API/resource | Input/output convention | Evidence/case |
 |---|---|---|
@@ -26,7 +28,7 @@ Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), in
 | `b2d.body.is_valid` / `b2d.joint.is_valid` | Safe validity query on retained stale handles | All 100 resets and confirmed collection unload |
 | `b2d.joint.destroy(joint)` | Explicit removal, only while valid | 50 explicit-reset cases |
 
-The fixture speaks engine units at the binding boundary; it does not additionally scale coordinates/velocities. Configured gravity is -981 engine units/s². Two runs use scale 0.01 and 0.02. Force, body torque and impulse are not used by this PoC; source observations about them in the progress report do not approve later vehicle adapters.
+The fixture speaks engine units at the binding boundary; it does not additionally scale coordinates/velocities. Configured gravity is -981 engine units/s². Two runs use scale 0.01 and 0.02. Force, body torque and impulse are not used by this fixture; their binding conversions are listed in the [physics contract](physics.md#units).
 
 Sources: official [body binding](https://github.com/defold/defold/blob/1.14.0/engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp), [joint binding](https://github.com/defold/defold/blob/1.14.0/engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_joint_v3.cpp), [physics step](https://github.com/defold/defold/blob/1.14.0/engine/physics/src/physics/box2d/box2d_physics.cpp). The latter calls `b2World_Step` with `step_context.m_Box2DSubStepCount`; the effective config is asserted as 4. Four solver substeps are not four Lua callbacks.
 
@@ -63,7 +65,7 @@ Render frequency and scale change together in the second run, while initial stat
 | Shared Lua session entry | Root creates a run-ID-keyed entry before load | Root releases entry after successful unload; proxy drops its reference in `final` |
 | Runner process/page | External runner | Native and browser process groups are terminated on timeout and after completion; browser closes context and HTTP server |
 
-Proxy setup notifies the root by a message carrying the active generation. Unexpected/stale phase messages fail the suite. Body creation/destruction occurs in `update` or lifecycle handlers, never a contact callback. No contact listener or deferred contact mutation is needed by this PoC. State is local to explicit sessions, with no globals persisting scenario parameters. Larger input/timer/switch recovery cases are added with the gym reset, touch and station-switch issues; the revised plan determines their scope.
+Proxy setup notifies the root by a message carrying the active generation. Unexpected/stale phase messages fail the suite. Body creation/destruction occurs in `update` or lifecycle handlers, never a contact callback. No contact listener or deferred contact mutation is needed by this PoC. State is local to explicit sessions, with no globals persisting scenario parameters. Gym reset, touch and station-switch recovery are tested by the gym suites.
 
 ## Running and protocol
 

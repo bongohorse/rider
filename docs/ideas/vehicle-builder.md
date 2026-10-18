@@ -2,6 +2,8 @@
 
 Status: **worked out** · Added 2026-10-16 (Claudio) · Not scheduled
 
+**Contents:** [Idea](#idea) · [Why it is fun](#why-it-is-fun) · [Smallest playable version](#smallest-playable-version) · [Technical approach (plausible, not verified)](#technical-approach-plausible-not-verified) · [Risks](#risks) · [Open questions](#open-questions) · [Prerequisites before it could be scheduled](#prerequisites-before-it-could-be-scheduled)
+
 ## Idea
 
 Players build their own vehicle from parts and drive it on the normal tracks. Inspiration: Bad Piggies, Main Assembly, Trailmakers, Hill Climb Racing's tuning screen — but simple enough for a phone.

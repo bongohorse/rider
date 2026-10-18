@@ -24,10 +24,23 @@ class RelativeLinks(unittest.TestCase):
             (root / "README.md").write_text("# Home\n")
             (root / "docs").mkdir()
             (root / "docs" / "readme.md").write_text(
+                "# Heading\n"
                 "[home](../README.md#home) [anchor](#heading) "
                 "[site](https://example.org/foo) ![icon](../README.md)\n"
             )
             self.assertEqual(check_paths(root, ["docs/readme.md"]), [])
+
+    def test_missing_anchor_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "README.md").write_text("# Home\n\n## Stop points (R1–R2)\n\n```md\n## Fake\n```\n## Dup\n## Dup\n")
+            (root / "a.md").write_text(
+                "[ok](README.md#stop-points-r1r2) [dup](README.md#dup-1) [self](#local)\n## Local\n"
+                "[gone](README.md#level-editor) [fenced](README.md#fake) [selfgone](#nope)\n"
+            )
+            errors = check_paths(root, ["a.md"])
+            self.assertEqual([e.split(": ", 1)[0] for e in errors], ["a.md:3", "a.md:3", "a.md:3"])
+            self.assertTrue(all("missing anchor" in e for e in errors))
 
     def test_reference_and_fenced_code(self):
         inline = chr(96) + "[inline](missing.md)" + chr(96)

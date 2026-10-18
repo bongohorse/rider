@@ -2,6 +2,8 @@
 
 [Documentation index](README.md) · [Version lock](TOOLCHAIN_LOCK.md) · [Machine lock](../tools/toolchain-lock.json)
 
+**Contents:** [Read only what the task needs](#read-only-what-the-task-needs) · [Defold](#defold) · [Box2D: integrated physics](#box2d-integrated-physics) · [Automation Bridge and native extension work](#automation-bridge-and-native-extension-work) · [Build, platforms and gameplay evidence](#build-platforms-and-gameplay-evidence) · [Maintenance and review](#maintenance-and-review)
+
 ## Read only what the task needs
 
 1. Identify the affected subsystem and pinned version from the machine lock.
@@ -34,7 +36,7 @@ Current lock: Defold/Bob 1.14.0, engine commit above. The machine lock remains a
 
 The current engine lock records integrated Box2D 3.1.0. Upstream docs explain simulation semantics; they do not establish which APIs Defold exposes. Check the pinned Defold integration for adaptations and the actual Lua signature. Upstream headers establish C signatures only. `main/docs` is discovery material, not the compatibility authority for 3.1.0. Keep Defold-owned worlds/bodies and the existing fixed-tick lifecycle; do not introduce a separate Box2D binding or simulation.
 
-Project contracts: [implemented G1 fixture](contracts/physics/G1_CONTRACT.md), [API/platform requirements](contracts/physics/api.md), [units](contracts/physics/units.md), [lifecycle](contracts/physics/lifecycle.md), [ownership/reset](contracts/physics/ownership.md), [collisions](contracts/physics/collisions.md).
+Project contracts: [physics contract](contracts/physics.md) (API, units, lifecycle, ownership/reset, collisions), [G1 baseline](contracts/g1-baseline.md) (measured API matrix), [engine pitfalls](contracts/engine-pitfalls.md).
 
 ## Automation Bridge and native extension work
 
@@ -46,17 +48,17 @@ The Automation Bridge controls debug inspection/input/screenshots. It is not a p
 - [Engine service](https://defold.com/manuals/engine-service/)
 - [Automated testing](https://defold.com/manuals/automated-testing/)
 
-Use [BRIDGE.md](contracts/automation/bridge.md) for exact versions, capabilities, wrapper provenance, lifecycle, release boundaries and unresolved license evidence. Use [interface distinctions](contracts/automation/interfaces.md) before touching editor/runtime automation. HTTP API discovery is live; runtime capabilities must be negotiated rather than inferred from documentation.
+Use [bridge.md](contracts/bridge.md) for exact versions, capabilities, wrapper provenance, lifecycle, release boundaries and unresolved license evidence. Use [interface distinctions](contracts/automation.md#interfaces) before touching editor/runtime automation. HTTP API discovery is live; runtime capabilities must be negotiated rather than inferred from documentation.
 
 ## Build, platforms and gameplay evidence
 
 | Work | Official starting point | Existing Rider contract |
 |---|---|---|
-| Builds/tool versions | [Bob](https://defold.com/manuals/bob/), [project settings](https://defold.com/manuals/project-settings/) | [Tooling and commands](TOOLING.md), [lock/update rules](TOOLCHAIN_LOCK.md), [version policy](TOOLCHAIN_LOCK.md) |
+| Builds/tool versions | [Bob](https://defold.com/manuals/bob/), [project settings](https://defold.com/manuals/project-settings/) | [Tooling and commands](TOOLING.md#commands), [lock/update rules](TOOLCHAIN_LOCK.md) |
 | Touch/input | [Mouse and touch](https://defold.com/manuals/input-mouse-and-touch/) | [Platforms and real-device requirements](PLATFORM_MATRIX.md) |
-| Screen layout | [Screen sizes](https://defold.com/manuals/adapting-graphics-to-screen-size/) | [Gym plan](PLAN.md), [platform matrix](PLATFORM_MATRIX.md) |
-| Android/HTML5 lifecycle | Locate the relevant platform manual through the official manuals index | [Platform matrix requirements](PLATFORM_MATRIX.md), [test protocol](contracts/automation/test-protocol.md) |
-| Performance | Locate profiling/optimization manuals through the official manuals index | [Phase E measurements](PLAN.md) |
+| Screen layout | [Screen sizes](https://defold.com/manuals/adapting-graphics-to-screen-size/) | [Gym notes](../main/gym/README.md), [platform matrix](PLATFORM_MATRIX.md) |
+| Android/HTML5 lifecycle | Locate the relevant platform manual through the official manuals index | [Platform matrix requirements](PLATFORM_MATRIX.md), [runner protocol](contracts/automation.md#enginerunner-protocol) |
+| Performance | Locate profiling/optimization manuals through the official manuals index | [Phase E measurements](PLAN.md#later-phases-no-issues-yet) |
 | Vehicle behavior | Box2D and Defold references above | [Vehicle commands](contracts/vehicle.md), [Game design](GAME_DESIGN.md), [plan](PLAN.md) |
 
 Android is the first release target, HTML5 the main test platform. iOS builds wait until Phase G after Play Store launch. Keep gameplay platform-neutral and existing manifest exports possible. The reference phone and evidence limits are in PLATFORM_MATRIX.md; Current budget and interpolation decisions are in PLATFORM_MATRIX.md and PLAN.md (D13). This page does not invent completed measurements or approvals.

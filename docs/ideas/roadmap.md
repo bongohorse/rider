@@ -1,7 +1,9 @@
 # Future feature roadmap (ideas, not approved work)
 
 Status: **worked out** — idea backlog, **not** approved work. Entry gates below are proposals; scheduling still requires Claudio's explicit approval and an issue with a milestone.
-Owner of priorities: Claudio. Last revised: 2026-10-16.
+Owner of priorities: Claudio. Last revised: 2026-10-18.
+
+**Contents:** [How to read this](#how-to-read-this) · [Guiding rules](#guiding-rules) · [Overview](#overview) · [Wave 0 – Core loop (move into the current plan)](#wave-0--core-loop-move-into-the-current-plan) · [Wave 1 – Identity: surfaces, obstacles, feel](#wave-1--identity-surfaces-obstacles-feel) · [Wave 2 – Content tooling: track editor](#wave-2--content-tooling-track-editor) · [Wave 3 – Atmosphere: light and weather](#wave-3--atmosphere-light-and-weather) · [Wave 4 – Second vehicle and customisation](#wave-4--second-vehicle-and-customisation) · [Wave 5 – Modes and replay value](#wave-5--modes-and-replay-value) · [Wave 6 – Online and community (needs a backend decision)](#wave-6--online-and-community-needs-a-backend-decision) · [Experiments (timeboxed spikes, no commitment)](#experiments-timeboxed-spikes-no-commitment) · [Open decisions](#open-decisions)
 
 ## How to read this
 
@@ -25,7 +27,7 @@ Owner of priorities: Claudio. Last revised: 2026-10-16.
 |---|---|---|
 | 0 | Core loop proposals for Phases B/C | Claudio's scope decision; existing plan remains authoritative |
 | 1 | Identity: surfaces, reactive obstacles, feel | Phase B fun acceptance passed |
-| 2 | Content tooling: track editor | Phase C (three challenges) done; track format stable |
+| 2 | Content tooling: track editor | 2a **scheduled** as the Level Editor milestone ([#118](https://github.com/bongohorse/rider/issues/118)); 2b open |
 | 3 | Atmosphere: light and weather | Phase D art style chosen; frame budget measured with real art |
 | 4 | Second vehicle and customisation | Wave 1 surfaces done; buggy feel signed off |
 | 5 | More modes and replay value | Enough tracks (≥ 15) to support modes |
@@ -92,6 +94,8 @@ Note: rolling resistance and tangent speed from Box2D 3.1 are not reachable from
 ---
 
 ## Wave 2 – Content tooling: track editor
+
+**Status:** step 2a (dev editor) is scheduled as the Level Editor milestone ([epic #118](https://github.com/bongohorse/rider/issues/118), [contract](../contracts/level-editor.md)); the contract supersedes the 2a rows below. Step 2b remains an idea.
 
 The editor is a long-term flagship feature. Build it in two steps that share code and the track format.
 
