@@ -131,6 +131,23 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   await importFile('kicker-platform');t=await ready('kicker-platform',3);assert.equal(t.reset_count,0);cases.push('build_failure_safe_state');
   await page.goto(url);t=await ready('kicker-platform',1,null);cases.push('reload_after_recovery');
 
+  // Ids and names travel in every telemetry message (2048-byte msg.post cap): 65 bytes are rejected,
+  // a 64-byte id and a 64-byte multi-byte name load, drive and report telemetry.
+  const named=(id,name)=>{const d=JSON.parse(text('kicker-platform'));d.id=id;d.name=name;return JSON.stringify(d);};
+  await importText(named('a'.repeat(65),'Long id'));
+  await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('limited to 64 bytes'));
+  await importText(named('long-id','é'.repeat(33)));
+  await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('limited to 64 bytes'));
+  assert.equal((await state()).station,'kicker-platform');
+  const longId='l'+'o'.repeat(63);await importText(named(longId,'é'.repeat(32)));t=await ready(longId,2);
+  assert.equal(t.station_name,'Custom: '+'é'.repeat(32));t=await drive(10);assert.equal(t.station,longId);cases.push('id_name_byte_limit');
+
+  // Exhausted dmloader sync retries leave its in-progress flag set for good: the status must end, not stay at Saving.
+  assert(await page.evaluate(()=>typeof Module._startSyncFS==='function'&&Module._syncMaxTries>0),'dmloader sync internals changed');
+  await page.evaluate(()=>{Module._syncTries=Module._syncMaxTries;});
+  await importFile('rolling-hills');t=await ready('rolling-hills',3,'Browser storage sync failed; the level may not survive a reload');
+  assert.equal(await page.evaluate(()=>Module._syncInProgress),true);cases.push('sync_retries_exhausted');
+
   if(errors.length)throw Error(errors.join('\n'));
   fs.writeFileSync(path.join(out,'custom-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));

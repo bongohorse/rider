@@ -124,7 +124,7 @@ jobs:
       - name: Build and run HTML5 physics
         run: python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5
       - name: Verify per-case engine startup injection
-        run: node --test tests/ci/launch.test.cjs tests/ci/seams.test.cjs tests/ci/levels.test.cjs
+        run: node --test tests/ci/launch.test.cjs tests/ci/seams.test.cjs tests/ci/levels.test.cjs tests/ci/custom.test.cjs
       - name: Build shared debug Gym bundle
         run: python tools/gym/bundle.py --output artifacts/g1/gym-bundle
       - name: Verify station speed start, retry, switching and invalid data

@@ -1,11 +1,15 @@
 -- Version 1: world metres, converted once at the engine boundary by stations.lua.
 -- Pure validation: no engine calls, no partially constructed terrain on failure.
 local M={}
+local TEXT_LIMIT=64
 local function finite(x) return type(x)=="number" and x==x and math.abs(x)<100000 end
 local function point(p) return type(p)=="table" and #p==2 and finite(p[1]) and finite(p[2]) end
+-- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
+local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
     if type(d)~="table" or d.schema~=1 or d.units~="metres" then return nil,"Unsupported station schema/units" end
     if type(d.id)~="string" or not d.id:match("^[a-z][a-z0-9%-]*$") or type(d.name)~="string" then return nil,"Invalid station identity" end
+    if not text(d.id) or not text(d.name) then return nil,"Station id and name are limited to "..TEXT_LIMIT.." bytes" end
     if not point(d.spawn) or not finite(d.start_speed) or math.abs(d.start_speed)>30 then return nil,"Invalid station start" end
     if not finite(d.run_in) or d.run_in<0 or not finite(d.run_out) or d.run_out<0 then return nil,"Invalid run-in/out" end
     local b=d.bounds
@@ -57,7 +61,7 @@ function M.validate(d)
         if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
         local ids={}
         for _,section in ipairs(d.sections) do
-            if type(section)~="table" or type(section.id)~="string" or ids[section.id] or type(section.name)~="string" or not point(section.spawn) then return nil,"Invalid section identity/start" end
+            if type(section)~="table" or not text(section.id) or ids[section.id] or not text(section.name) or not point(section.spawn) then return nil,"Invalid section identity/start" end
             ids[section.id]=true
             if section.stop_probe~=nil and (d.kind~="steps" or type(section.stop_probe)~="boolean") then return nil,"Invalid step probe" end
             if section.spawn[1]<=b[1] or section.spawn[1]>=b[2] or section.spawn[2]<=b[3] or section.spawn[2]>=b[4] then return nil,"Section spawn outside bounds" end

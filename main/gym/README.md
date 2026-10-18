@@ -79,7 +79,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 
 ## Stations
 
-- `stations/*.json` (schema 1) in world metres: id, spawn [x, y], `start_speed` (-30..30 m/s), run-in/run-out, safety bounds, right-to-left chain polylines, optional convex CCW hulls (3–8 vertices), `labels` and `sections` (id, spawn, start speed, mode, measurement extents). The whole file validates before terrain creation; unknown ids fall back visibly; bad files fail without replacing the world. Keep segments at least 1 cm.
+- `stations/*.json` (schema 1) in world metres: id and name (at most 64 bytes each, as are section ids and names; they travel in every telemetry message), spawn [x, y], `start_speed` (-30..30 m/s), run-in/run-out, safety bounds, right-to-left chain polylines, optional convex CCW hulls (3–8 vertices), `labels` and `sections` (id, spawn, start speed, mode, measurement extents). The whole file validates before terrain creation; unknown ids fall back visibly; bad files fail without replacing the world. Keep segments at least 1 cm.
 - `stations.lua` owns selection, data, terrain, markers and unit conversion; the controller starts and retries the vehicle. Start translates all three bodies with the authored speed and matches wheel spin.
 - Switching serializes disable/final/unload → `proxy_unloaded` → load → `proxy_loaded` → init → `gym_ready` (15 s failure diagnostic). Preset identity survives; modified sliders reset.
 - Selection: keys 1–9, Next station, `?station=<id>&speed=<m/s>&section=<id>`; V / Next section switches sections in the same world; R retries the current section. Test-only stations exist only in the debug runner.
@@ -131,7 +131,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
 | `a15a` | Rider lean/bob bounds and return to rest |
 | `a16`, `a17`, `a18`, `a19` | Ramp, step, seam and gap protocols above |
-| `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure |
+| `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure, 64-byte id/name limit, exhausted storage-sync retries |
 | `le1b` | Custom level size/performance: generated length, start-distance, segment, chain and hull series; 1 + 5 imports each (switch time), 6 s full-throttle window (frame intervals, callback work, Box2D profile/counters, memory), rejected limit messages. Writes `sizes-result.json` and `sizes-report.md` ([report](../../docs/LE1B_REPORT.md)) |
 
 Release behavior (keyboard, touch, tilt, stations, screenshots) is verified by `tools/preview/*.cjs` in CI.
