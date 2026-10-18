@@ -135,6 +135,8 @@ jobs:
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/steps --case a17
       - name: Measure 20 seams with validated speed windows and retries
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/seams --case a18
+      - name: Measure gap ladder, landing variants and jump repeatability
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gaps --case a19
       - name: Build and run current Gym smoke
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gym --case a3
       - name: Verify reverse and airborne lean through normal commands
