@@ -143,15 +143,32 @@ module.exports=async function mobile(browser,url,sha,out){
     pass('fullscreen_controls_remain_drivable');
     await page.screenshot({path:path.join(out,'mobile-landscape.png')});
     // The page tools are hidden in touch mode; the toolbar opens the same LE1a import panel.
-    // Two imports: the second one runs with a saved level, where the panel no longer opens by itself.
+    // Imports: from a built-in station, with a saved level, and after a reload of ?station=custom
+    // (the saved level restores and the panel no longer opens by itself, as on the phone).
     const sample=name=>path.join(__dirname,'../../main/gym/samples',name+'.json');
-    for(const name of ['rolling-hills','kicker-platform']){
-      const importButton=page.getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
-      assert.equal(await importButton.count(),1,'One visible touch import entry');
-      const box=await importButton.boundingBox();
+    const importButton=()=>page.getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
+    for(const [step,name] of [[0,'rolling-hills'],[1,'kicker-platform'],[2,'rolling-hills']]){
+      if(step===2){
+        const custom=new URL(url);custom.search='?station=custom&touch=1';
+        await page.goto(custom.href);
+        await page.waitForFunction(()=>window.riderTelemetry?.station==='kicker-platform'&&window.riderTelemetry.sequence>=2&&!window.riderCustom.visible);
+      }
+      assert.equal(await importButton().count(),1,'One visible touch import entry');
+      const box=await importButton().boundingBox();
       assert(box&&box.x>=0&&box.y>=0&&box.x+box.width<=page.viewportSize().width&&box.height>=32,'Touch import entry must be usable');
-      await dispatch('touchStart',[{x:box.x+box.width/2,y:box.y+box.height/2,id:20}]);await dispatch('touchEnd',[]);
-      await page.waitForFunction(()=>window.riderCustom.visible&&window.riderTelemetry.ui_captured);
+      if(step<2){
+        // A single-finger tap on the entry opens the panel and captures input.
+        await dispatch('touchStart',[{x:box.x+box.width/2,y:box.y+box.height/2,id:20}]);await dispatch('touchEnd',[]);
+        await page.waitForFunction(()=>window.riderCustom.visible&&window.riderTelemetry.ui_captured);
+      }else{
+        // Browsers synthesize no click for a second finger; like Retry above, click while throttle is held:
+        // the panel clears the held command.
+        await dispatch('touchStart',[await point('throttle',1)]);
+        await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+        await importButton().click();
+        await page.waitForFunction(()=>window.riderCustom.visible&&window.riderTelemetry.ui_captured&&window.riderTelemetry.command.throttle===0);
+        await dispatch('touchEnd',[]);
+      }
       const panel=await page.locator('#rider-custom-panel').boundingBox();
       assert(panel&&panel.x>=0&&panel.y>=0&&panel.x+panel.width<=page.viewportSize().width+1&&panel.y+panel.height<=page.viewportSize().height+1,'Import panel must fit the viewport');
       await page.locator('#rider-custom-file').setInputFiles(sample(name));
@@ -163,6 +180,12 @@ module.exports=async function mobile(browser,url,sha,out){
     }
     assert((await page.evaluate(()=>window.riderFeedback.text)).includes('- Level load: switch '));
     await page.screenshot({path:path.join(out,'mobile-import.png')});
+    // Portrait: the longer toolbar still shows the entry inside the viewport, above the driving zones.
+    await page.setViewportSize({width:486,height:1080});await neutral();await layout();
+    const portrait=await importButton().boundingBox(),zone=await page.locator('[data-command="throttle"]').boundingBox();
+    assert(portrait&&portrait.x>=0&&portrait.x+portrait.width<=486&&portrait.y+portrait.height<=zone.y,'Portrait import entry must stay usable');
+    await page.screenshot({path:path.join(out,'mobile-import-portrait.png')});
+    await page.setViewportSize({width:1080,height:486});await layout();
     pass('touch_import_entry_with_saved_level');
     if(errors.length)throw Error(errors.join('\n'));
     return {name:'mobile-touch-emulation',status:'PASS',cases,physicalDevice:'NOT RUN'};

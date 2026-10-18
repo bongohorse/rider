@@ -10,7 +10,7 @@ Device: Xiaomi Mi 10T Pro, Android 12, Android Chrome, [public gym](https://bong
 - Hold Throttle and either Lean button with two fingers. Hold both pedals to check braking priority. Brake near standstill to reverse.
 - Try **Layout A · mirror** and **Layout B · mirror**. Compare comfort, accidental presses and readable space; neither layout is preselected as the winner.
 - Retry while holding a zone; the vehicle must reset and wait for a fresh press. Drag a finger outside a zone and release. Rotate, switch tabs/apps and return; no stuck pedal or lean is allowed.
-- **Import level** opens the custom level Import panel (file or pasted JSON); it works on any station, also when a level is already saved.
+- **Import level** opens the custom level Import panel (file or pasted JSON), also when a level is already saved (checked in touch emulation; phone NOT RUN). Opening it leaves fullscreen and cancels a running capture.
 - **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows FPS/frame interval, speed, contact dots, spring travel and a small graph; the build SHA is dim at the bottom. Tuning contains A/B/C chips, crash/sound/copy actions and eleven sliders. P cycles presets; 1–9 select stations. Landscape is recommended for the detailed editor.
 
 ## Coasting and HUD

@@ -183,7 +183,7 @@
     for(const [command,label] of commands){
       const b=button(label,pair);b.dataset.command=command;
       b.addEventListener('pointerdown',e=>{
-        if(e.button!==0||api.details||window.riderFeedback?.visible)return;
+        if(e.button!==0||api.details||window.riderFeedback?.visible||window.riderCustom?.visible)return;
         e.preventDefault();b.setPointerCapture(e.pointerId);pointers.set(e.pointerId,command);
         // Resume the existing Defold-owned context in this trusted DOM gesture;
         // DOM controls do not reach GLFW's canvas-only audio unlock listener.

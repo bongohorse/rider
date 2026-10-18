@@ -155,7 +155,7 @@ Touch mode hides the page tools; its toolbar has its own **Import level** button
 
 1. On the phone, download [`seg-800.json`](https://github.com/bongohorse/rider/raw/main/main/gym/samples/seg-800.json) (400 m, 800 segments: the largest accepted level) and [`len-99km.json`](https://github.com/bongohorse/rider/raw/main/main/gym/samples/len-99km.json) (99 km, 100 segments).
 2. Note the Chrome version (Chrome → About), set the phone to 60 Hz, keep High DPI ON and preset A.
-3. Open <https://bongohorse.github.io/rider/?station=custom>. Without a saved level the Import panel opens by itself; otherwise tap **Import level** in the toolbar. Choose `seg-800.json` and wait until it drives.
+3. Open <https://bongohorse.github.io/rider/?station=custom>. Without a saved level the Import panel opens by itself; otherwise tap **Import level** in the toolbar. Choose `seg-800.json` and wait until it drives. Opening Import leaves fullscreen and the file picker may hide the page; both cancel a running capture, so start the capture only after the import.
 4. Tap **Measure**, select the refresh mode, tap **Record 30 s** and drive the level with Throttle (Retry as needed). After 30 s tap **Copy report** and paste it into #123. The report contains the line `Level load: switch … ms; parse …; terrain …; decoration …` and the capture values.
 5. Repeat steps 3–4 twice more with `seg-800.json` (three switch times; **Import level** → the same file), then once with `len-99km.json`.
 6. Drive `seg-800` to its end and add visible stutter (none / occasional / frequent) and anything that felt different from the built-in stations.
@@ -175,7 +175,7 @@ Touch mode hides the page tools; its toolbar has its own **Import level** button
 2. **Switch-frame spike at full budget:** 21–26 ms at 612–800 objects on desktop. It matters for LE3/LE5 re-checks with editor overlays, and for phone values.
 3. **Validator wording (R16):** coordinates at or beyond 100 km report `Non-finite bounds` although the values are finite but out of range. The source validator should name the range.
 4. **Text fields are unbounded:** the level `name` reaches the measurements message as `station_name`, and `msg.post` caps payloads at 2048 bytes. A very long name could exceed that (not tested). LE2's source validator should bound text fields.
-5. **Touch import entry:** found here and fixed in [PR #142](https://github.com/bongohorse/rider/pull/142): the touch toolbar has its own **Import level** button. Release preview case `touch_import_entry_with_saved_level` covers it.
+5. **Touch import entry:** found here and fixed in [PR #142](https://github.com/bongohorse/rider/pull/142): the touch toolbar has its own **Import level** button. The release preview case `touch_import_entry_with_saved_level` covers it in Chromium touch emulation: imports from a built-in station, with a saved level, and after reloading `?station=custom`; held throttle goes neutral; portrait layout. On a real phone: NOT RUN.
 6. **Not covered:** hull contact cost (the generated hulls do not touch the vehicle), GPU/render time, the JS heap and phone devices.
 
 ## Reproduction
