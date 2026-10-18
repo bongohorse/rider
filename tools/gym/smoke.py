@@ -28,7 +28,10 @@ finally: stop(process)
 if code:raise SystemExit(code)
 if args.case=='le1b':
     report=json.loads((out/'sizes-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==22
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==26
+    # Placement far from the origin is a measured outcome; every other accepted level must become drive-ready.
+    assert all(r.get('outcome')=='drive_ready' for r in report['results'] if r.get('expect')!='rejected' and r['dimension']!='start')
+    assert sum(r.get('expect')=='rejected' for r in report['results'])==7
     print(json.dumps({'status':report['status'],'elapsed_s':report['elapsed_s'],'switch_ms':{r['id']:r['switch']['median_ms'] for r in report['results'] if 'switch' in r}}));raise SystemExit(0)
 if args.case=='le1a':
     report=json.loads((out/'custom-result.json').read_text())

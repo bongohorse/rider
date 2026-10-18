@@ -48,7 +48,8 @@ function cases(){
   ['length',level('len-1km','LE1b length 1 km',{length:1000,segments:100})],
   ['length',level('len-10km','LE1b length 10 km',{length:10000,segments:100})],
   ['length',level('len-99km','LE1b length 99 km',{length:LONG,segments:100})],
-  ['length',farStart(level('len-99km-far','LE1b length 99 km, start at 98.8 km',{length:LONG,segments:100,spawnX:98800}),98800)],
+  // Start distance from the origin on the 99 km course (float32 precision in Box2D metres).
+  ...[1000,1500,2000,4000,98800].map(x=>['start',farStart(level('start-'+x+'m','LE1b 99 km, start at '+x/1000+' km',{length:LONG,segments:100,spawnX:x}),x)]),
   ['segments',level('seg-100','LE1b 400 m, 100 segments',{length:400,segments:100})],
   ['segments',level('seg-200','LE1b 400 m, 200 segments',{length:400,segments:200})],
   ['segments',level('seg-400','LE1b 400 m, 400 segments',{length:400,segments:400})],
@@ -80,7 +81,7 @@ function cases(){
 }
 const text=d=>JSON.stringify(d);
 // The committed phone samples are the largest accepted length and complexity levels.
-const PHONE=['seg-800','len-99km','len-99km-far'];
+const PHONE=['seg-800','len-99km'];
 module.exports={cases,text,objects,surface,PHONE};
 if(require.main===module){
  const out=path.resolve(process.argv[2]||'.');fs.mkdirSync(out,{recursive:true});

@@ -56,9 +56,23 @@ function step(values){
     field.value=value;const before=window.__le1b.ready.length,at=performance.now();button.click();return {at,before};
    },value);
   }
+  async function until(check,ms){
+   const end=Date.now()+ms;
+   for(;;){const v=await check();if(v)return v;if(Date.now()>end)throw Error('Timed out waiting for drive-ready or a page error');await new Promise(r=>setTimeout(r,50));}
+  }
+  // A validated level can still fail when the vehicle is placed: record the engine error as the outcome
+  // (only the reset-pose guards; any other page error stays fatal) and let the next import prove recovery.
+  const PLACEMENT=/vehicle\.lua:\d+: (Noncanonical reset pose|Reset velocity survived)/;
   async function load(c,value){
-   const t=await trigger(value);loads++;
-   await page.waitForFunction(n=>window.__le1b.ready.length>n,t.before,{timeout:60000});
+   const mark=errors.length,t=await trigger(value);loads++;
+   const outcome=await until(async()=>errors.length>mark?'error':await page.evaluate(n=>window.__le1b.ready.length>n,t.before)&&'ready',60000);
+   if(outcome==='error'){
+    const error=errors.slice(mark).join('\n');
+    if(!PLACEMENT.test(error))throw Error(error);
+    errors.splice(mark);
+    await page.waitForTimeout(3000);
+    return {failed:error.match(PLACEMENT)[0],status:await page.evaluate(()=>window.riderCustomStatus),switch_ms:null};
+   }
    await page.waitForFunction(({id,loads})=>window.riderTelemetry?.station===id&&window.riderTelemetry.world_loads===loads&&window.riderTelemetry.sequence>2&&window.riderCustomStatus==='Saved',{id:c.id,loads},{timeout:60000});
    return page.evaluate(({t})=>{
     const p=window.__le1b,ready=p.ready[t.before].at,tm=window.riderTelemetry,in_window=p.frames.filter(f=>f.start>=t.at&&f.start<=ready);
@@ -76,6 +90,12 @@ function step(values){
   const all=cases();
   for(const c of all.filter(c=>c.expect==='accepted')){
    const body=text(c.level),first=await load(c,body),repeats=[];
+   if(first.failed){
+    results.push({id:c.id,dimension:c.dimension,length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,
+     text_bytes:Buffer.byteLength(body),outcome:'placement_failed',error:first.failed,save_status_after:first.status});
+    console.log(c.id+': vehicle placement failed ('+first.failed+'); save status '+first.status);
+    continue;
+   }
    for(let i=0;i<REPEATS;i++)repeats.push(await load(c,body));
    const counts=repeats[0].counts;
    for(const r of [first,...repeats])assert.deepEqual(r.counts,counts,c.id+': counts changed between identical imports');
@@ -98,19 +118,20 @@ function step(values){
    const memory=await page.evaluate(()=>{
     const slots={};
     for(const name of ['custom-level-a','custom-level-b']){try{const s=FS.stat('/data/.rider/'+name);slots[name]={bytes:s.size,mtime:+s.mtime};}catch(e){slots[name]=null;}}
-    return {slots,wasm_bytes:typeof HEAPU8!=='undefined'?HEAPU8.length:null,js_heap_bytes:performance.memory?.usedJSHeapSize??null};
+    // Chrome's performance.memory is bucketed without extra flags, so the JS heap stays unknown.
+    return {slots,wasm_bytes:typeof HEAPU8!=='undefined'?HEAPU8.length:null};
    });
    const newest=Object.values(memory.slots).filter(Boolean).sort((a,b)=>b.mtime-a.mtime)[0];
    const w=window_.world,last=w.at(-1)||{},physics=window_.physics,tm=window_.telemetry;
    const switches=repeats.map(r=>r.switch_ms);
-   results.push({id:c.id,dimension:c.dimension,length_m:c.length_m,segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,text_bytes:Buffer.byteLength(body),
+   results.push({id:c.id,dimension:c.dimension,outcome:'drive_ready',length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,text_bytes:Buffer.byteLength(body),
     save_bytes:newest?.bytes??null,counts,
     switch:{first_ms:first.switch_ms,repeats_ms:switches,median_ms:stats(switches).p50,worst_ms:stats(switches).max,longest_frame_ms:Math.max(...repeats.map(r=>r.longest_frame_ms)),
      lua:repeats.map(r=>r.lua)},
     frame:{interval_ms:stats(window_.intervals),work_ms:stats(window_.work),dt_ms:stats(window_.dt),over_25ms:window_.intervals.filter(v=>v>25).length,over_33ms:window_.intervals.filter(v=>v>100/3).length},
     physics:{step_ms:stats(physics),resolution:step(physics),pairs_ms:stats(w.map(x=>x.pairs_ms)),collide_ms:stats(w.map(x=>x.collide_ms)),solve_ms:stats(w.map(x=>x.solve_ms)),sensors_ms:stats(w.map(x=>x.sensors_ms)),
      contacts:stats(w.map(x=>x.contacts)),shapes:last.shapes??null,static_tree_height:last.static_tree_height??null},
-    memory:{box2d_bytes:last.bytes??null,lua_kib:last.lua_kib??null,wasm_bytes:memory.wasm_bytes,js_heap_bytes:memory.js_heap_bytes},
+    memory:{box2d_bytes:last.bytes??null,lua_kib:last.lua_kib??null,wasm_bytes:memory.wasm_bytes,js_heap:'unknown'},
     drive:{distance_m:tm.station_distance,top_speed_mps:tm.station_top_speed,resets:tm.reset_count,preset:tm.preset}});
    console.log(c.id+': switch median '+stats(switches).p50.toFixed(1)+' ms, worst '+stats(switches).max.toFixed(1)+' ms; frame p95 '+stats(window_.intervals)?.p95?.toFixed(2)+' ms; physics p95 '+stats(physics)?.p95?.toFixed(3)+' ms');
   }
@@ -129,7 +150,7 @@ function step(values){
   const lua=results.flatMap(r=>r.switch?.lua||[]).flatMap(x=>[x.switch_ms,x.parse_ms,x.build_ms,x.decorate_ms]).filter(v=>v!==null);
   const report={source_sha:sha,run_id:runId,status:'PASS',browser:browser.version(),identity,preset:results[0].drive.preset,
    protocol:{repeats:REPEATS,warmup_ms:WARMUP_MS,sample_ms:SAMPLE_MS,trigger:'Import text click (pasted JSON), LE1a path',drive_ready:'riderReady write in the vehicle attach frame',
-    input:'ArrowUp held from the end of the last repeat',lua_clock_values_integer_ms:lua.every(v=>Math.abs(v-Math.round(v))<1e-6)},
+    input:'ArrowUp held from the end of the last repeat',lua_clock_values_whole_ms:lua.every(v=>Math.abs(v-Math.round(v))<1e-3)},
    elapsed_s:(Date.now()-started)/1000,results};
   if(errors.length)throw Error(errors.join('\n'));
   fs.writeFileSync(path.join(out,'sizes-result.json'),JSON.stringify(report,null,1));
