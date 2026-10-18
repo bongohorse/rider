@@ -2,6 +2,10 @@
 
 Updated 2026-10-18. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
 
+## Level Editor / #118 — preparation (2026-10-18)
+
+**Level Editor preparation is next; implementation awaits Claudio's GO. Further M4 implementation is paused. A19 is merged; its outstanding drive acceptance remains open.** Claudio decided the milestone order (editor before the remaining M4 issues). Binding rules: [level-editor contract](docs/contracts/level-editor.md); order and stop points: [plan](docs/PLAN.md#level-editor). Tasks in milestone *Level Editor*, strictly sequential, each stopping for Claudio's drive test and GO: LE1a [#122](https://github.com/bongohorse/rider/issues/122) → LE1b [#123](https://github.com/bongohorse/rider/issues/123) → LE2 [#124](https://github.com/bongohorse/rider/issues/124) → LE3 [#125](https://github.com/bongohorse/rider/issues/125) → LE4 [#126](https://github.com/bongohorse/rider/issues/126) → LE5a [#127](https://github.com/bongohorse/rider/issues/127) → LE5b [#128](https://github.com/bongohorse/rider/issues/128) → LE6 [#129](https://github.com/bongohorse/rider/issues/129). No task is active; LE1a becomes active only with the GO. No implementation, build or test evidence exists for the editor yet.
+
 ## A19 / #34 — gap ladder and landings (2026-10-18)
 
 **Merged: [PR #117](https://github.com/bongohorse/rider/pull/117)** (`31814ec`, main CI 39089770992 PASS, public build `39089770992-1`; CI measurement matched local results); awaiting Claudio's drive feedback. Maintainer authorized A19 after A15a drive feedback. New stations `gaps` (1–10 m ladder) and `gaps-landing` (2 m gap: flat / downslope / upslope), 15° ramp to a 1 m lip, pit 3 m below ground; protocol and tolerances in [gym notes](main/gym/README.md#a19-gap-ladder-and-landings). A first geometry with a 0.5 m lip and same-height landing only grazed the deck (flight apex ~0.15 m) and gave section-dependent distances; it was replaced before any evidence was recorded.

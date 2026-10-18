@@ -122,6 +122,23 @@ Revised live issue scope (2026-10-16), authorized 2026-10-17. Each station is di
 
 M4 review follow-ups: measure downhill neutral motor braking at ramps; retain the mobile performance NOT RUN limits and run MOBILE_TRIAL before Phase B; keep station logic outside the controller. Debug test resources and Bridge exclusion remain Phase B release work.
 
+### Level Editor
+
+Decided by Claudio on 2026-10-18 ([epic #118](https://github.com/bongohorse/rider/issues/118)): an in-game developer level editor (roadmap Wave 2a) as its own milestone, scheduled **before the remaining M4 issues** (A19b–A21). Binding rules: [level-editor contract](contracts/level-editor.md). Gameplay objects (#120) and visual authoring (#121) are later, separate epics.
+
+Strictly sequential. **Each task stops after merge for Claudio's drive test and a new GO** (D-E8); creating the issues authorizes none of them. Later tasks are sharpened from preceding results before they start.
+
+| # | Title and scope | Acceptance (summary) | Depends on |
+| --- | --- | --- | --- |
+| LE1a / [#122](https://github.com/bongohorse/rider/issues/122) | **Custom runtime, import, storage:** `?station=custom`, HTML import, snapshot handover, persistence/recovery, sample files | A → invalid → B → A safe; reload restores; drives like built-in stations | Claudio's GO |
+| LE1b / [#123](https://github.com/bongohorse/rider/issues/123) | **Size/performance/world-switch report** within unchanged limits | Length/complexity steps, rejected cases, trigger → drive-ready time; phone results separate | LE1a |
+| LE2 / [#124](https://github.com/bongohorse/rider/issues/124) | **Editor shell and test loop:** Edit state, camera, START/FINISH, test starts, Undo, draft recovery, minimal template access | No data loss Edit ↔ Play; FINISH rules; unfinished draft survives reload | LE1b |
+| LE3 / [#125](https://github.com/bongohorse/rider/issues/125) | **Draw tool, connections, snapping** | Course drawn without JSON; connected edit + Undo/Redo | LE2 |
+| LE4 / [#126](https://github.com/bongohorse/rider/issues/126) | **Document management, export/import, duplication** | Round-trip of lines/hulls/markers/connections; safe recovery | LE3 |
+| LE5a / [#127](https://github.com/bongohorse/rider/issues/127) | **Parametric static prefabs** | Ten-object course; parameters survive save/export | LE4 |
+| LE5b / [#128](https://github.com/bongohorse/rider/issues/128) | **Curve tool and adaptive sampling** | Smooth-hill reference; curve data round-trip | LE5a |
+| LE6 / [#129](https://github.com/bongohorse/rider/issues/129) | **Polish and full practical acceptance** | Claudio's complete construction task | LE5b |
+
 ### M5 – Lock in
 
 | # | Title and scope | Acceptance | Depends on |
