@@ -8,4 +8,4 @@ Measure render frequency, fixed callbacks and actual physical progress separatel
 
 Never create/destroy bodies or joints inside unsupported/locked contact callbacks. Queue mutations into a proven safe window, defining order, errors and returned-handle validity. Keep the queue no larger than actual gym needs.
 
-On stalls/background: measure engine delta/catch-up behavior, do not introduce unlimited catch-up, clear held inputs after prolonged inactivity, and pause/resume safely without extra forced steps. A13 measures pacing on the reference phone before deciding on visual interpolation. Report discarded simulation time or slowdown separately from tick-state comparisons.
+On stalls/background: measure engine delta/catch-up behavior, do not introduce unlimited catch-up, clear held inputs after prolonged inactivity, and pause/resume safely without extra forced steps. Visual interpolation stays unchanged unless measured pacing problems require it ([platform matrix](../../PLATFORM_MATRIX.md)). Report discarded simulation time or slowdown separately from tick-state comparisons.
