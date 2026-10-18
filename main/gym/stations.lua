@@ -1,8 +1,9 @@
 local data=require "main.gym.station_data"
 local feel=require "main.gym.feel"
 local ramps=require "main.gym.ramp_metrics"
+local seams=require "main.gym.seam_metrics"
 local steps=require "main.gym.step_metrics"
-local M={ids={"straight","ramps","ramps-long","steps","steps-down"}}
+local M={ids={"straight","ramps","ramps-long","steps","steps-down","seams-chain","seams-hull"}}
 if sys.get_config_string("rider.gym_test","")=="a15" and sys.get_engine_info().is_debug then
     M.ids={"straight","straight-test","invalid-test"}
 end
@@ -128,7 +129,8 @@ function M.decorate(d)
 end
 function M.restart(self)
     if self.station.kind=="ramps" then ramps.restart(self)
-    elseif self.station.kind=="steps" then steps.restart(self) end
+    elseif self.station.kind=="steps" then steps.restart(self)
+    elseif self.station.kind=="seams" then seams.restart(self) end
     M.start(self.vehicle,self.station)
     self.start_probe=2
     self.station_top_speed,self.station_brake_distance=0,0
@@ -136,7 +138,8 @@ function M.restart(self)
 end
 function M.observe(self,state,dt,sample)
     if self.station.kind=="ramps" then ramps.observe(self,state,dt,sample)
-    elseif self.station.kind=="steps" then steps.observe(self,state,dt,sample) end
+    elseif self.station.kind=="steps" then steps.observe(self,state,dt,sample)
+    elseif self.station.kind=="seams" then seams.observe(self,state,dt,sample) end
     if self.start_probe then
         self.start_probe=self.start_probe-1
         if self.start_probe==0 then
@@ -162,6 +165,7 @@ function M.enrich(self,sample)
     sample.section_index=self.station.section_index or 0
     if self.station.kind=="ramps" then ramps.enrich(self,sample)
     elseif self.station.kind=="steps" then steps.enrich(self,sample)
+    elseif self.station.kind=="seams" then seams.enrich(self,sample)
     elseif html5 then html5.run("window.riderStationReport=null") end
     sample.station=self.station.id
     sample.station_name=self.station.name..(self.station.sections and " ["..self.station.sections[self.station.section_index].id.."]" or "")

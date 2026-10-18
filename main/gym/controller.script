@@ -98,6 +98,10 @@ function init(self)
         assert(sys.get_engine_info().is_debug,"Ramp trial requires debug engine")
         self.ramp_trial=require "main.gym.ramp_trial"
     end
+    if self.testcase=="a18" or self.testcase=="a18powered" then
+        assert(sys.get_engine_info().is_debug,"Seam trial requires debug engine")
+        self.seam_trial=require "main.gym.seam_trial"
+    end
     local requested=sys.get_config_string("rider.preset","a")
     if html5 then
         local query=html5.run("new URLSearchParams(location.search).get('preset') || ''")
@@ -251,7 +255,7 @@ function fixed_update(self, dt)
                 show_preset(self)
             end
         end
-        self.last_command = self.ramp_trial and self.ramp_trial.command(self.station) or command(self)
+        self.last_command = self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
         local sample=telemetry.sample(self.vehicle)
         stations.observe(self,vehicle.state(self.vehicle),dt,sample)

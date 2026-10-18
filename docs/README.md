@@ -14,6 +14,7 @@ Read STATUS.md, the current issue and only its affected contract. Work is organi
 | Tool setup/build/run | [Tooling](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md) |
 | VS Code / WSL move and independent agent audit | [VS Code migration review dossier](VSCODE_MIGRATION_REVIEW.md) |
 | M3 touch/tilt trial procedure | [Mobile trial](MOBILE_TRIAL.md) |
+| A18 seam geometry, qualification and reproduction | [Seam protocol](A18_SEAM_PROTOCOL.md) |
 | Device evidence | [Platform matrix](PLATFORM_MATRIX.md) |
 | CI/protection, dependencies, repository operations | [Repository setup](REPOSITORY_SETUP.md) |
 | Status meanings and reporting | [Evidence policy](contracts/evidence.md) |

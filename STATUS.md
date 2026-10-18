@@ -2,6 +2,24 @@
 
 Updated 2026-10-18. This is the sole current progress/blocker source. Evidence below identifies the tested source; CI, merged main, deployment and Claudio's acceptance remain distinct.
 
+## A18 / #33 — seams, protocol v3 (2026-10-18)
+
+**Technically complete; D8 CONFIRMED (chain).** Claudio's drive feedback is still to be requested; real-phone A18 driving NOT RUN. A19 and later M4 issues remain unauthorized. A18 STOP notes further below are historical. Codex built v1/v2; on the maintainer's instruction Claude took over the v3 revision in the same branch while Codex paused (one implementing agent).
+
+Scope decision (maintainer, 2026-10-18): the original 5/15/30 m/s windows cannot exist for this vehicle. Preset A's motor reaches about 7.04 m/s, and pinned Box2D caps ordinary angular speed at 0.25π/full dt ≈ 47.124 rad/s (0.22 m wheels ≈ 10.37 m/s theoretical, ≈9.95 m/s observed free-roll plateau; Defold exposes no `allowFastRotation`). Nominal speeds became **5/7/9 m/s**. In free roll, validity is now judged on baseline and entry speed, and per-seam speed loss became a declared longitudinal metric (one-step vx drop > max(0.02 m/s, 3 × baseline)). That metric was defined after inspecting v2 traces and fixed before any v3 run; see the [protocol](docs/A18_SEAM_PROTOCOL.md). No engine, timestep, geometry, preset coefficient or motor/spring change. The game-wide ~10 m/s rolling ceiling is a separate design question: [#114](https://github.com/bongohorse/rider/issues/114).
+
+Local v3 evidence (source tree of `00b6913`, identical to the PR's v3 commit; Chromium 156.0.8078.4, pinned Defold 1.14.0 debug Gym bundle): all three free-roll pairs VALID, acceptance PASS.
+
+| Free roll | Chain: entry → exit, ghost bumps | Hull: entry → exit, ghost bumps (vertical / longitudinal) |
+| --- | --- | --- |
+| 5 m/s | 4.992 → 4.992, **0** | 4.992 → 3.186, **20** (6 / 20) |
+| 7 m/s | 6.983 → 6.983, **0** | 6.983 → 4.187, **20** (20 / 20) |
+| 9 m/s | 8.974 → 8.974, **0** | 8.974 → 5.384, **20** (20 / 20) |
+
+Hull one-step vx drops per seam are 0.031–0.099 (5), 0.053–0.127 (7) and 0.060–0.184 m/s (9), against a 0.02 m/s threshold; chain is 0.000 throughout and has no wheel support loss. All six retained-world retries repeat status and bump counts. Powered controls: 5 m/s pair VALID (chain 0, hull 20 longitudinal / 0 vertical); 9 m/s pair rejected as expected (motor limit). The unsupported 10 m/s request is rejected. Local unit tests (10 seam-trace tests) PASS. Final-head CI evidence: see [PR #113](https://github.com/bongohorse/rider/pull/113).
+
+Consequence for D8: keep chain terrain; do not build drivable ground from abutting hull sections. Earlier v1/v2 records (blocked 15/30 m/s windows) remain in the PR history as superseded evidence.
+
 ## Rider development workflow sign-off and M4 authorization (2026-10-18)
 
 **Workflow acceptance: maintainer GO.** WSL2 Ubuntu 26.04.1 development environment, exact Python/Node/toolchain and local build parity, Windows VS Code Rider profile/reopening/WSL integration and CLI-only layout, isolated Gemini read-only tests all have separately reported host evidence (below and issue #81). [PR #111](https://github.com/bongohorse/rider/pull/111) was merged with green CI to use dark petrol instead of yellow; maintainer confirmed the repo update was pulled locally. Codex is primary implementer; optional Claude review is at the maintainer's discretion, without duplicated parallel implementation. Open debug-server wildcard binding is **not** a security PASS: track and resolve in [#112](https://github.com/bongohorse/rider/issues/112); run only owned, short-lived debug tests and do not publish it to LAN or internet. This follow-up is not required for normal HTML5 gameplay iteration, but must be resolved before widening the debug-service trust boundary. **Maintainer authorized closing #81 and continuing M4 A18/#33** on 2026-10-18. No technical A18 acceptance is claimed yet.

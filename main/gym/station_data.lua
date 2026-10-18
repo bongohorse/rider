@@ -12,7 +12,7 @@ function M.validate(d)
     if type(b)~="table" or #b~=4 then return nil,"Missing safety bounds" end
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
-    if type(d.chains)~="table" or #d.chains<1 or #d.chains>32 then return nil,"Missing/too many chains" end
+    if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
     local objects=0
     for _,chain in ipairs(d.chains) do
         if type(chain)~="table" or #chain<2 or #chain>2048 then return nil,"Invalid chain length" end
@@ -35,6 +35,14 @@ function M.validate(d)
                     if j~=i and j~=i%#h.vertices+1 and (q[1]-p[1])*(v[2]-p[2])-(q[2]-p[2])*(v[1]-p[1])<=0 then return nil,"Hull must be convex CCW" end
                 end
             end
+        end
+    end
+    if objects==0 then return nil,"Empty station terrain" end
+    if d.kind=="seams" then
+        if type(d.seams)~="table" or #d.seams~=20 or not point(d.baseline) or not point(d.window) then return nil,"Invalid seam protocol" end
+        if not (d.spawn[1]<d.baseline[1] and d.baseline[1]<d.baseline[2] and d.baseline[2]<d.window[1] and d.window[2]<b[2]) then return nil,"Invalid seam windows" end
+        for i,x in ipairs(d.seams) do
+            if not finite(x) or x<=d.window[1] or x>=d.window[2] or (i>1 and x-d.seams[i-1]<2) then return nil,"Invalid seam positions" end
         end
     end
     if d.labels then

@@ -97,7 +97,11 @@ function M.apply(v,command,dt)
     for _,wheel in ipairs(v.wheels) do
         if #b2d.body.get_contact_data(wheel)>0 then grounded=true end
     end
-    local coasting=not brake and not drive and grounded
+    -- A18 diagnostic only: open drivetrain, no motor/coast/rolling moments.
+    -- This changes experimental actuator conditions, never preset coefficients.
+    local freewheel=command.measurement_freewheel==true
+    assert(not freewheel or (sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a18"),"Freewheel is debug A18 only")
+    local coasting=not brake and not drive and grounded and not freewheel
     local motor_speed=drive and c.motor_speed*command.throttle or reverse and c.reverse_speed*command.brake_reverse or 0
     for _,joint in ipairs(v.joints) do
         if brake or drive or (coasting and not v.coasting) then b2d.joint.wake_bodies(joint) end
