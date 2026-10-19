@@ -163,7 +163,9 @@ local function canonical_handles(kind,p)
     end
     local kx=M.kicker_length(p)
     local x0=kx+p.gap
-    return {{name="lip",p={kx,p.lip},label="lip height, kicker angle"},{name="gap",p={x0,0},label="gap"},
+    -- Jumping left, the landing side holds the entry: the gap handle sits on the kicker's back-wall foot,
+    -- the side that moves.
+    return {{name="lip",p={kx,p.lip},label="lip height, kicker angle"},{name="gap",p=p.facing=="left" and {kx,0} or {x0,0},label="gap"},
         {name="end",p={x0+p.landing_length,landing_rise(p)},label=p.landing=="flat" and "landing length" or "landing length, angle"}}
 end
 -- World handles {name, p, label}. A handle on the entry is left out: the entry stays fixed on every
@@ -194,16 +196,16 @@ local function clamp(kind,key,v)
     if f.magnitude and math.abs(v)<f.magnitude then v=v<0 and -f.magnitude or f.magnitude end
     return v
 end
--- A handle drag: the handle's start position moved by the drag delta d (world metres; mirrored for a
--- prefab facing left), converted into parameters. Lengths round to steps.length, angles to
+-- A handle drag: the handle's start position moved by the drag delta d (world metres), converted into
+-- parameters. Jumping left only the lip and gap handles exist; both read the delta unmirrored (moving
+-- the lip right lengthens the kicker, moving the back wall right widens the gap). Lengths round to steps.length, angles to
 -- steps.angle (nil = unrounded); values stop at their range limits. Returns new parameters.
 function M.drag(o,name,p0,d,steps)
     local kind,p=o.kind,copy(p0)
     local h
     for _,c in ipairs(canonical_handles(kind,p0)) do if c.name==name then h=c.p end end
     if not h then return p end
-    local sx=p0.facing=="left" and -1 or 1
-    local x,y=h[1]+sx*d[1],h[2]+d[2]
+    local x,y=h[1]+d[1],h[2]+d[2]
     local L,A=function(v) return round(v,steps.length) end,function(v) return round(v,steps.angle) end
     local function angle_of(dy,dx) return math.deg(math.atan2(dy,math.max(dx,1e-6))) end
     if kind=="flat" then p.length=clamp(kind,"length",L(x))
@@ -221,7 +223,7 @@ function M.drag(o,name,p0,d,steps)
     elseif name=="lip" then
         p.lip=clamp(kind,"lip",L(y))
         p.angle=clamp(kind,"angle",A(angle_of(p.lip,x)))
-    elseif name=="gap" then p.gap=clamp(kind,"gap",L(x-M.kicker_length(p)))
+    elseif name=="gap" then p.gap=clamp(kind,"gap",L(p0.gap+d[1]))
     else
         local x0=M.kicker_length(p)+p.gap
         p.landing_length=clamp(kind,"landing_length",L(x-x0))
@@ -242,7 +244,8 @@ function M.set(kind,p0,key,text)
     return p
 end
 -- A choice field steps to its next value. The ramp input mode converts the stored value so the
--- shape stays the same; the other choices change the shape (the entry stays fixed).
+-- shape stays the same; when the converted value is outside its range the switch is refused (nil and
+-- the reason). The other choices change the shape (the entry stays fixed).
 function M.cycle(kind,p0,key)
     local f=field(kind,key)
     local p=copy(p0)
@@ -251,6 +254,11 @@ function M.cycle(kind,p0,key)
     p[key]=f.choices[i%#f.choices+1]
     if kind=="ramp" then
         if p.mode=="height" then p.height=M.rise(p0);p.angle=nil else p.angle=M.slope(p0);p.height=nil end
+        local ok=M.check(kind,p)
+        if not ok then
+            local f2=field(kind,p.mode)
+            return nil,string.format("Input stays %s: the %s would be %s %s, outside %s to %s %s.",p0.mode,f2.label:lower(),fmt(p[p.mode]),f2.unit,fmt(f2.min),fmt(f2.max),f2.unit)
+        end
     end
     return p
 end

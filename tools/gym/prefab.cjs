@@ -150,6 +150,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   e=await revision(r0+5);assert.ok(e.message.startsWith('Changed, with a conflict: START overlaps flat o3. Undo'),e.message);
   assert.ok(e.errors.includes('START overlaps flat o3'),JSON.stringify(e.errors));measurements.conflict=e.message;
   await key('z',['Control']);e=await revision(r0+6);assert.equal(shape(await doc()),shape(calm));assert.ok(!e.errors.includes('START overlaps flat o3'));
+  // The handle drag readout names the same conflict before release; Esc cancels the drag unchanged.
+  await at([12,2*tan(20)]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');
+  const end=(await ed()).handles.find(x=>x.name==='end').p,ha=await world(end),hb=await world([end[0],end[1]+1.2]);
+  await page.mouse.move(ha.x,ha.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  for(let i=1;i<=5;i++){await page.mouse.move(ha.x,ha.y+(hb.y-ha.y)*i/5);await page.waitForTimeout(40);}
+  await page.waitForFunction(()=>window.riderEditor.readout.includes('conflict: START overlaps flat o3'));
+  measurements.drag_conflict=(await ed()).readout;
+  await key('Escape');await page.mouse.up();await page.waitForTimeout(100);
+  e=await ed();assert.equal(e.revision,r0+6);assert.equal(shape(await doc()),shape(calm));
   done('conflict_is_visible');
 
   // 4. Handles edit the same parameters: dragging the ramp's exit handle 2 m right sets the length on the grid
@@ -166,6 +175,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(obj(d,'o2').params.mode,'height');assert.ok(near(obj(d,'o2').params.height,4*tan(20)));assert.equal(obj(d,'o2').params.angle,undefined);
   assert.ok(nearPoint(obj(d,'o3').at,obj(calm,'o3').at));assert.equal(e.rows[2],'Height: 1.46 m');
   await key('z',['Control']);await revision(r1+4);assert.equal(shape(await doc()),shape(calm));
+  // A 100 m ramp at 30 deg rises 57.7 m, beyond the height range: the input switch is refused unchanged.
+  for(const [row,value,rev] of [['param_2','100',r1+5],['param_3','30',r1+6]]){
+   await button(row);await page.waitForFunction(()=>window.riderEditor.field_param);
+   await page.keyboard.type(value,{delay:40});await page.waitForFunction(v=>window.riderEditor.field===v,value);await key('Enter');await revision(rev);
+  }
+  await button('param_1');e=await ed();assert.ok(e.message.startsWith('Input stays angle: the height would be 57.74 m'),e.message);assert.equal(e.revision,r1+6);
+  await key('z',['Control']);await key('z',['Control']);await revision(r1+8);assert.equal(shape(await doc()),shape(calm));
   done('handles_edit_parameters');
 
   // 5. The remaining types complete a ten-object course: Step, Flat, Gap with pit, Flat, Kicker + landing,
@@ -182,7 +198,18 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('s');const kp=(await paths()).o8;await at([(kp[0][0]+kp[1][0])/2,(kp[0][1]+kp[1][1])/2]);
   await page.waitForFunction(()=>window.riderEditor.selection==='o8');e=await ed();
   assert.equal(e.rows.length,6);assert.deepEqual(e.handles.map(x=>x.name),['lip','gap','end']);
-  await page.screenshot({path:path.join(out,'prefab-course.png')});await key('Escape');
+  await page.screenshot({path:path.join(out,'prefab-course.png')});
+  // Jumping left swaps the kicker's parts: the edit world reloads. Its gap handle sits on the kicker's back
+  // wall and follows a drag (the landing end holds the entry).
+  const gen=e.view.generation,r5=e.revision;await button('param_1');e=await revision(r5+1);
+  await page.waitForFunction(g=>window.riderEditor.view.generation>g,gen);e=await ed();
+  assert.equal((await doc()).objects[7].params.facing,'left');assert.deepEqual(e.handles.map(x=>x.name),['lip','gap']);
+  const gh=e.handles.find(x=>x.name==='gap').p;const flipped=(await paths()).o8;assert.ok(nearPoint(gh,flipped[2]),JSON.stringify([gh,flipped]));
+  await drag(gh,[gh[0]+1,gh[1]]);e=await revision(r5+2);
+  assert.equal((await doc()).objects[7].params.gap,3);assert.ok(nearPoint(e.handles.find(x=>x.name==='gap').p,[gh[0]+1,gh[1]]),JSON.stringify(e.handles));
+  measurements.left_jump={view_generation:[gen,e.view.generation],gap_handle:gh};
+  await key('z',['Control']);await key('z',['Control']);await revision(r5+4);
+  assert.equal((await doc()).objects[7].params.facing,'right');await key('Escape');
   done('ten_object_course');
 
   // 6. Kicker + landing keeps a real jump gap: no compiled chain segment spans it (two chains), and a vehicle
@@ -249,8 +276,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(obj(d,'o13').params.facing,'left');assert.deepEqual({...obj(d,'o13').params,facing:'right'},obj(pre,'o8').params);
   assert.deepEqual(obj(d,'o14').params,obj(pre,'o9').params);
   assert.deepEqual(d.connections.filter(c=>c.from==='o13'||c.to==='o13'||c.from==='o14'||c.to==='o14'),[{from:'o14',to:'o13'}]);
-  const xs=[...prePaths.o8,...prePaths.o9].map(p=>p[0]),c2=Math.min(...xs)+Math.max(...xs);
-  const shift=Math.ceil((Math.max(...xs)-Math.min(...xs)+1)*2)/2;
+  // The mirror axis is rounded to the 0.5 m grid (the kicker length is not on it); the copy clears the original by 1 m.
+  const xs=[...prePaths.o8,...prePaths.o9].map(p=>p[0]),x0=Math.min(...xs),x1=Math.max(...xs),c2=Math.round((x0+x1)*2)/2;
+  const shift=Math.ceil((x1+1-(c2-x1))*2)/2;
+  assert.ok(c2-x1+shift>=x1+1-1e-9);
   for(const [copy,orig] of [['o13','o8'],['o14','o9']]){
    const want=[...prePaths[orig]].reverse().map(p=>[c2-p[0]+shift,p[1]]);
    assert.equal(post[copy].length,want.length);post[copy].forEach((p,i)=>assert.ok(nearPoint(p,want[i]),copy+' '+JSON.stringify([p,want[i]])));

@@ -151,11 +151,12 @@ local function tint(ids,colour)
         if go.exists(id) then pcall(go.set,url,"tint",colour) end
     end
 end
--- Structure of the drawn document: object ids, types and point counts (label texts, prefab types).
+-- Structure of the drawn document: object ids, types and point counts (label texts, prefab types; a
+-- Kicker + landing's direction swaps its parts, so a flip reloads).
 local function signature(e)
     local t={}
     for _,o in ipairs(e.objects) do
-        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or o.type=="prefab" and o.kind or #(o.points or o.vertices))
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or o.type=="prefab" and o.kind..(o.params.facing or "") or #(o.points or o.vertices))
     end
     return table.concat(t,"|")
 end

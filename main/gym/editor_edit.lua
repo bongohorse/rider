@@ -193,7 +193,12 @@ function M.disconnect(e,id,index)
     if not M.joint(e,id,index) then return nil,"The point is not a connection" end
     id=M.owner(e,id,index)
     for i,c in ipairs(e.connections) do
-        if c.from==id then table.remove(e.connections,i);return c.to end
+        if c.from==id then
+            table.remove(e.connections,i)
+            -- A remaining run without prefabs may now run right to left: orient both halves again.
+            M.orient(e,id);M.orient(e,c.to)
+            return c.to
+        end
     end
     return nil,"The point is not a connection"
 end
@@ -309,7 +314,8 @@ end
 function M.mirror(e,ids,side)
     local clip=M.copy(e,ids)
     local b=M.bbox(clip.objects)
-    local c2=b[1]+b[2]
+    -- The axis is rounded to the 0.5 m grid (a Kicker's length is not), so on-grid points stay on it.
+    local c2=math.floor((b[1]+b[2])*2+0.5)/2
     local function reflect(list)
         local r={};for i=#list,1,-1 do r[#r+1]={c2-list[i][1],list[i][2]} end;return r
     end
@@ -324,6 +330,8 @@ function M.mirror(e,ids,side)
     end
     local mirrored={objects=objects,connections={}}
     for _,c in ipairs(clip.connections) do mirrored.connections[#mirrored.connections+1]={from=c.to,to=c.from} end
-    return M.paste(e,mirrored,{side*math.ceil((b[2]-b[1]+1)*2)/2,0})
+    -- The mirrored copy spans c2-b[2]..c2-b[1]; it moves until it is at least 1 m clear of the original.
+    local shift=side>0 and math.ceil((b[2]+1-(c2-b[2]))*2)/2 or -math.ceil(((c2-b[1])-(b[1]-1))*2)/2
+    return M.paste(e,mirrored,{shift,0})
 end
 return M

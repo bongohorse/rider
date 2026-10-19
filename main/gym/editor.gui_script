@@ -376,8 +376,12 @@ local function connect(self)
     local e=editor.doc.editor
     if edit.joint(e,v.id,v.index) then
         local id,index=edit.owner(e,v.id,v.index)
+        local q=path(find(id))[index]
+        q={q[1],q[2]}
         if editor.commit(function(doc_e) local to,err=edit.disconnect(doc_e,id,index);if not to then return nil,err end end,true) then
-            editor.select(id,{id=id,index=index})
+            -- Disconnect may re-orient a remaining line run: select the same end by position.
+            local pts=path(find(id))
+            editor.select(id,{id=id,index=dist(pts[1],q)<1e-6 and 1 or #pts})
         end
         return
     end
@@ -576,7 +580,8 @@ local function param_click(self,i)
     local f=o and o.type=="prefab" and param_rows(o)[i]
     if not f then return end
     if f.choices then
-        apply_params(o.id,prefab.cycle(o.kind,o.params,f.key))
+        local params,err=prefab.cycle(o.kind,o.params,f.key)
+        if params then apply_params(o.id,params) else editor.message=err end
     else
         local t=number_text(o.params[f.key])
         self.field={text=t,initial=t,all=true,param=f.key,id=o.id,label=f.label,unit=f.unit}
@@ -904,10 +909,15 @@ local function canvas_move(self,action)
             local preview={}
             for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
             drag.downstream=math.max(0,#moved-1)
+            -- The same checks as live validation: the domain rules and the compile (START overlap).
             local known={}
             for _,m in ipairs(editor.errors) do known[m]=true end
+            local copy={schema=1,units="metres",id=editor.doc.id,name=editor.doc.name,editor=e}
+            local errors=doc_lib.problems(e)
+            local _,cerr=doc_lib.compile(copy,nil,errors)
+            if cerr and errors[1]~=cerr then errors[#errors+1]=cerr end
             drag.conflict=nil
-            for _,m in ipairs((doc_lib.problems(e))) do if not known[m] then drag.conflict=m;break end end
+            for _,m in ipairs(errors) do if not known[m] then drag.conflict=m;break end end
             editor.set_preview(preview)
         end
     elseif drag and drag.kind=="move" then
