@@ -415,15 +415,19 @@ function M.test_start(doc,p,mode)
     return pos
 end
 -- Snapshot undo (R17): bounded copies of authoring data only; one entry per completed action.
+-- Each entry carries the instance token of the document it belongs to (not its level id: two template
+-- copies of one station share the id), so Undo/Redo across a document replacement is recognisable.
 function M.history(limit) return {limit=limit or 100,undo={},redo={}} end
-function M.record(h,doc)
-    h.undo[#h.undo+1]=copy(doc);h.redo={}
+function M.record(h,doc,instance)
+    h.undo[#h.undo+1]={doc=copy(doc),instance=instance};h.redo={}
     if #h.undo>h.limit then table.remove(h.undo,1) end
 end
-function M.step(h,doc,back)
+-- Returns the restored document and its instance token.
+function M.step(h,doc,back,instance)
     local from,to=back and h.undo or h.redo,back and h.redo or h.undo
     if #from==0 then return nil end
-    to[#to+1]=copy(doc)
-    return table.remove(from)
+    to[#to+1]={doc=copy(doc),instance=instance}
+    local entry=table.remove(from)
+    return entry.doc,entry.instance
 end
 return M

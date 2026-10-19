@@ -6,9 +6,10 @@ local custom=require "main.gym.custom"
 local socket=require "socket"
 -- selection: primary id (or "start"/"finish"); selected: set of selected object ids (multi-select, LE3);
 -- vertex: {id,index} of the selected line point; preview_points: shapes during a drag (not committed).
--- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened counts document
--- replacements (template, other level) so tools can drop state that belonged to the old document.
-local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,
+-- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened is the instance token of
+-- the current document (a new one per open, restored with Undo/Redo entries) so tools can drop state
+-- that belonged to another document, even one with the same level id.
+local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
@@ -47,7 +48,7 @@ end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
 function M.open(doc,keep)
     if keep and M.doc then
-        doc_lib.record(M.history,M.doc)
+        doc_lib.record(M.history,M.doc,M.opened)
         local e=doc.editor
         local played=e.compiled_revision==e.revision
         e.revision=math.max(e.revision,M.doc.editor.revision+1)
@@ -55,7 +56,8 @@ function M.open(doc,keep)
         if played then e.compiled_revision=e.revision end
     else M.history=doc_lib.history() end
     M.doc=doc;M.selection,M.selected,M.vertex,M.vertex2=nil,{},nil,nil
-    M.opened=M.opened+1
+    -- Every opened document is a new instance; tokens are never reused (Undo may restore an older one).
+    M.instances=M.instances+1;M.opened=M.instances
     M.changed_at=socket.gettime()
     local s=doc.editor.start.position
     -- A new document starts with START near the left of an overview (about 60 m wide at 1280 px).
@@ -74,7 +76,7 @@ function M.commit(fn,geometry)
     end
     if err then M.doc=before;M.message=err;touch();return nil,err end
     M.message=""
-    doc_lib.record(M.history,before)
+    doc_lib.record(M.history,before,M.opened)
     M.doc.editor.revision=before.editor.revision+1
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     resolve_selection();check();touch(geometry)
@@ -82,11 +84,12 @@ function M.commit(fn,geometry)
 end
 function M.undo(back)
     local revision,next_id=M.doc.editor.revision,M.doc.editor.next_id
-    local restored=doc_lib.step(M.history,M.doc,back)
+    local restored,instance=doc_lib.step(M.history,M.doc,back,M.opened)
     if not restored then return false end
     local geometry=json.encode(restored.editor.objects)~=json.encode(M.doc.editor.objects)
-    -- Undo/Redo across a template or level replacement swaps documents: tools drop their state.
-    if restored.id~=M.doc.id then M.opened=M.opened+1 end
+    -- Undo/Redo across a template or level replacement swaps document instances (whatever their level
+    -- id): the restored entry's token becomes current, so tools drop state of the other instance.
+    M.opened=instance
     M.doc=restored
     -- Revisions and ids stay monotonic: an undone state is a new revision, ids are never reused.
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
