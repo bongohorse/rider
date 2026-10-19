@@ -1,7 +1,9 @@
--- Level editor source documents (level-editor contract R1-R3, R9, R10, R13, R16). Pure: no engine
+-- Level editor source documents (level-editor contract R1-R4, R9, R10, R13, R16). Pure: no engine
 -- calls besides json, metres throughout. The editor block is authoritative; Play recompiles from it.
 local data=require "main.gym.station_data"
-local M={EDITOR_VERSION=1,COMPILER_VERSION=1}
+-- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
+-- Version 1 documents have no connections and open upgraded; their single lines compile unchanged.
+local M={EDITOR_VERSION=2,COMPILER_VERSION=2}
 -- Explicit document limits (R16): drafts may be incomplete, never unbounded.
 M.MAX_OBJECTS,M.MAX_POINTS,M.MAX_TOTAL_POINTS=256,2048,8192
 -- Upright vehicle box around the spawn (chassis 1.08 x 0.28 m, wheels r 0.22 at +-0.46/-0.30, head top 0.68).
@@ -21,12 +23,21 @@ end
 M.copy=copy
 local function points(list) local out={};for i,p in ipairs(list) do out[i]={p[1],p[2]} end;return out end
 local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
+-- Connected ends coincide (R4); the editor makes them exactly equal, JSON keeps them equal.
+M.JOINT=1e-6
+local function same(a,b,eps) return math.abs(a[1]-b[1])<=(eps or M.JOINT) and math.abs(a[2]-b[2])<=(eps or M.JOINT) end
+M.same=same
 
 -- Station JSON (built-in or custom, without editor block) -> editable lines/hulls/labels (R2).
 local function from_station(d,id,name)
-    local e={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,revision=0,next_id=1,objects={},
+    local e={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,revision=0,next_id=1,objects={},connections={},
         start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
-    for _,chain in ipairs(d.chains or {}) do e.objects[#e.objects+1]={id=new_id(e),type="line",points=points(chain)} end
+    for _,chain in ipairs(d.chains or {}) do
+        -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
+        local list=points(chain)
+        if list[1][1]>list[#list][1] then local r={};for i=#list,1,-1 do r[#r+1]=list[i] end;list=r end
+        e.objects[#e.objects+1]={id=new_id(e),type="line",points=list}
+    end
     for _,h in ipairs(d.hulls or {}) do e.objects[#e.objects+1]={id=new_id(e),type="hull",vertices=points(h.vertices)} end
     for _,l in ipairs(d.labels or {}) do e.objects[#e.objects+1]={id=new_id(e),type="label",position={l.position[1],l.position[2]},text=l.text} end
     if type(d.finish)=="table" and point(d.finish.position) and type(d.finish.direction)=="table" then
@@ -60,7 +71,7 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if e.editor_version~=M.EDITOR_VERSION or e.compiler_version~=M.COMPILER_VERSION then
+    if (e.editor_version~=1 and e.editor_version~=2) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -86,7 +97,124 @@ function M.validate(doc)
     if type(s)~="table" or not point(s.position) or not finite(s.speed) or math.abs(s.speed)>30 then return nil,"Invalid START" end
     if e.finish~=nil and (type(e.finish)~="table" or not point(e.finish.position) or (e.finish.direction~=1 and e.finish.direction~=-1)) then return nil,"Invalid FINISH" end
     if e.compiled_revision~=nil and (type(e.compiled_revision)~="number" or e.compiled_revision>e.revision) then return nil,"Invalid compiled revision" end
+    -- Connections (R4, v2): exit (last point) of `from` to entry (first point) of `to`, ends coincide,
+    -- each end used once, no loops. Version 1 has none.
+    local conns=e.connections
+    if e.editor_version==1 then
+        if conns~=nil and (type(conns)~="table" or #conns>0) then return nil,"Connections need editor version 2" end
+    elseif type(conns)~="table" or #conns>M.MAX_OBJECTS then return nil,"Missing or too many connections" end
+    local lines,from,to={}, {}, {}
+    for _,o in ipairs(e.objects) do if o.type=="line" then lines[o.id]=o end end
+    for _,c in ipairs(conns or {}) do
+        local a,b=type(c)=="table" and lines[c.from],type(c)=="table" and lines[c.to]
+        if not a or not b or a==b then return nil,"Invalid connection" end
+        if from[c.from] or to[c.to] then return nil,"Connection end used twice: "..c.from.." -> "..c.to end
+        if not same(a.points[#a.points],b.points[1]) then return nil,"Connected ends do not meet: "..c.from.." -> "..c.to end
+        from[c.from],to[c.to]=c.to,c.from
+    end
+    for id in pairs(from) do
+        local n,seen=id,0
+        while from[n] do n=from[n];seen=seen+1;if n==id or seen>M.MAX_OBJECTS then return nil,"Connections form a loop at "..id end end
+    end
+    -- Upgrade a supported version 1 document in place: same geometry, no connections.
+    if e.editor_version==1 then e.editor_version,e.compiler_version,e.connections=2,2,{} end
     return doc
+end
+
+-- Connected runs (R4): lines linked exit -> entry, ordered from head to tail. Unconnected lines are
+-- runs of one piece. Every line is in exactly one run (the validator rules out loops).
+function M.links(e)
+    local next,prev={},{}
+    for _,c in ipairs(e.connections or {}) do next[c.from],prev[c.to]=c.to,c.from end
+    return next,prev
+end
+function M.runs(e)
+    local next,prev=M.links(e)
+    local list={}
+    for _,o in ipairs(e.objects) do
+        if o.type=="line" and not prev[o.id] then
+            local run,id={},o.id
+            while id do run[#run+1]=id;id=next[id] end
+            list[#list+1]=run
+        end
+    end
+    return list
+end
+function M.lines(e) local t={};for _,o in ipairs(e.objects) do if o.type=="line" then t[o.id]=o end end;return t end
+-- Merged run points (each joint once) and the line that owns each point.
+function M.run_points(e,run,lines)
+    lines=lines or M.lines(e)
+    local pts,owner={}, {}
+    for k,id in ipairs(run) do
+        for i,p in ipairs(lines[id].points) do
+            if k==1 or i>1 then pts[#pts+1]=p;owner[#pts]=id end
+        end
+    end
+    return pts,owner
+end
+
+-- Supported v1 terrain domain (R16), checked on every compile:
+-- * A run keeps one x direction: no overhangs or turning back; vertical steps are allowed.
+-- * Consecutive vertical segments must not fold back onto each other; a run cannot be vertical only.
+--   With these two rules a run cannot intersect itself or close a loop.
+-- * Points of a run are at least 1 cm apart (station rule), joints are merged first.
+-- * One chain per run (no seams, A18/D8): at most 32 runs and 2048 points per run.
+-- Orientation is the compiler's job: chains run right to left, so the solid side is below every
+-- non-vertical segment and step walls face the lower side. Logical entry/exit order stays as drawn.
+local function at(p) return string.format("(%.2f, %.2f) m",p[1],p[2]) end
+function M.problems(e)
+    local errors,warnings={},{}
+    local lines=M.lines(e)
+    local runs=M.runs(e)
+    local hulls=false
+    for _,o in ipairs(e.objects) do hulls=hulls or o.type=="hull" end
+    if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D]." end
+    if #runs>32 then errors[#errors+1]=#runs.." separate terrain runs; the limit is 32. Connect pieces into runs [J]." end
+    for _,run in ipairs(runs) do
+        local pts,owner=M.run_points(e,run,lines)
+        local name=#run>1 and "Run "..run[1].."-"..run[#run] or "Line "..run[1]
+        if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run." end
+        local sign,dy0
+        for i=2,#pts do
+            local a,b=pts[i-1],pts[i]
+            local dx,dy=b[1]-a[1],b[2]-a[2]
+            if dx*dx+dy*dy<0.0001 then errors[#errors+1]="Line "..owner[i].." has points closer than 1 cm at "..at(b)..".";break end
+            if math.abs(dx)>1e-9 then
+                local s=dx>0 and 1 or -1
+                if sign and s~=sign then
+                    errors[#errors+1]="Line "..owner[i].." turns back in x at "..at(a)..": terrain must keep one direction (vertical steps are fine). Use a hull for overhangs.";break
+                end
+                sign,dy0=s,nil
+            else
+                if dy0 and (dy>0)~=(dy0>0) then errors[#errors+1]="Line "..owner[i].." folds back on itself at "..at(a)..".";break end
+                dy0=dy
+            end
+        end
+        if not sign and #pts>=2 then errors[#errors+1]=name.." is vertical only; use a hull for walls." end
+    end
+    -- Ends that touch without a connection compile into two chains: a seam the wheels can bump on (A18).
+    local next,prev=M.links(e)
+    local ends={}
+    for _,o in ipairs(e.objects) do
+        if o.type=="line" then
+            if not prev[o.id] then ends[#ends+1]={o.id,"start",o.points[1]} end
+            if not next[o.id] then ends[#ends+1]={o.id,"end",o.points[#o.points]} end
+        end
+    end
+    -- Sorted by x, only ends within 1 cm in x are compared.
+    table.sort(ends,function(a,b) return a[3][1]<b[3][1] end)
+    for i=1,#ends do
+        local j=i+1
+        while ends[j] and ends[j][3][1]-ends[i][3][1]<=0.01 do
+            local a,b=ends[i],ends[j]
+            if a[1]~=b[1] and same(a[3],b[3],0.01) then
+                warnings[#warnings+1]=a[1].." "..a[2].." and "..b[1].." "..b[2].." touch but are not connected (seam bump). Select the end and press Connect [J]."
+            end
+            j=j+1
+        end
+    end
+    if not M.surface(e,e.start.position) then warnings[#warnings+1]="START has no terrain below it." end
+    return errors,warnings
 end
 
 -- Geometry helpers (metres).
@@ -157,16 +285,21 @@ function M.compile(doc,test)
     local e=doc.editor
     local d={schema=1,units="metres",id=doc.id,name=doc.name,spawn={e.start.position[1],e.start.position[2]},start_speed=e.start.speed,
         run_in=0,run_out=0,bounds=bounds(e),chains={},hulls={},labels={},checkpoints={}}
+    local errors=M.problems(e)
+    if errors[1] then return nil,errors[1] end
+    local lines=M.lines(e)
+    -- A connected run compiles into one chain (R4, D8): no seams between its pieces.
+    for _,run in ipairs(M.runs(e)) do
+        local chain=points((M.run_points(e,run,lines)))
+        -- Solid side below the drawn line: the built-in stations run right to left.
+        if chain[1][1]<chain[#chain][1] then
+            local r={};for i=#chain,1,-1 do r[#r+1]=chain[i] end;chain=r
+        end
+        d.chains[#d.chains+1]=chain
+    end
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then
-            local chain=points(o.points)
-            -- Solid side below the drawn line: the built-in stations run right to left.
-            if chain[1][1]<chain[#chain][1] then
-                local r={};for i=#chain,1,-1 do r[#r+1]=chain[i] end;chain=r
-            end
-            d.chains[#d.chains+1]=chain
-        elseif o.type=="hull" then d.hulls[#d.hulls+1]={vertices=points(o.vertices)}
-        else d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
+        if o.type=="hull" then d.hulls[#d.hulls+1]={vertices=points(o.vertices)}
+        elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
     end
     if e.finish then
         local f=e.finish.position

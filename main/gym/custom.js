@@ -101,4 +101,9 @@
     if (event.code !== 'KeyI' || event.repeat || window.riderEditing || event.ctrlKey || event.metaKey || event.altKey || api.visible || /^(INPUT|TEXTAREA|BUTTON|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return;
     event.preventDefault();api.open();
   });
+  // Level editor: Alt is the 0.1 m grid modifier (R6). While editing, keep the browser from treating a
+  // lone Alt press as a menu shortcut; the engine still receives the key.
+  for (const type of ['keydown', 'keyup']) document.addEventListener(type, event => {
+    if (window.riderEditing && event.key === 'Alt') event.preventDefault();
+  });
 })();

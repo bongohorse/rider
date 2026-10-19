@@ -1,14 +1,26 @@
--- Level editor shell (LE2). Its own game object sits on top of the input stack: in Edit mode every
--- action is consumed here (Defold only stops propagation between game objects, not between the
--- components of one), so game keys, the HUD and the world never see editor input (R15).
+-- Level editor (LE2 shell, LE3 drawing). Its own game object sits on top of the input stack: in Edit
+-- mode every action is consumed here (Defold only stops propagation between game objects, not between
+-- the components of one), so game keys, the HUD and the world never see editor input (R15).
 local editor=require "main.gym.editor"
 local doc_lib=require "main.gym.editor_doc"
+local edit=require "main.gym.editor_edit"
+local snap_lib=require "main.gym.editor_snap"
+local overlay=require "main.gym.editor_overlay"
 local stations=require "main.gym.stations"
 local socket=require "socket"
 local LOADER="main:/loader#script"
 local BUTTON=vmath.vector4(0.13,0.24,0.28,1)
 local ACTIVE=vmath.vector4(0.15,0.5,0.45,1)
 local PANEL=vmath.vector4(0.05,0.1,0.13,0.92)
+-- Screen-space behaviour (independent of zoom): pick tolerance, anchor snap radius, handle size,
+-- double-click time and distance. Grid steps are metres (R6).
+-- Pixel values are reference pixels (1280 x 720 CSS canvas), scaled like the GUI (HiDPI, window size).
+local PICK_PX,SNAP_PX,HANDLE_PX,DOUBLE_S,DOUBLE_PX=10,12,9,0.4,4
+local ui=1
+local C={vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=vmath.vector4(0.35,0.95,0.45,1),
+    selected=vmath.vector4(1,0.6,0.15,1),hover=vmath.vector4(1,0.95,0.35,1),connect=vmath.vector4(0.35,1,0.45,0.55),
+    draw=vmath.vector4(0.55,0.8,1,1),rubber=vmath.vector4(0.55,0.8,1,0.6),join=vmath.vector4(1,0.6,0.15,0.5),box=vmath.vector4(1,0.95,0.35,0.7),
+    anchor=vmath.vector4(0.35,1,0.45,1),angle=vmath.vector4(0.4,0.7,1,1),grid=vmath.vector4(0.85,0.85,0.85,1),off=vmath.vector4(1,0.35,0.3,1),free_snap=vmath.vector4(0.85,0.85,0.85,0.6)}
 local function node(self,pos,size,x,y,color)
     local n=gui.new_box_node(pos,size)
     gui.set_xanchor(n,x or gui.ANCHOR_NONE);gui.set_yanchor(n,y or gui.ANCHOR_NONE)
@@ -29,11 +41,14 @@ local function button(self,name,pos,size,label,x,y)
     self.buttons[name]={box=b,label=t}
     return b
 end
-local TOOLS={{"select","Select [S]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
+local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
 function init(self)
+    -- Overlays first: GUI nodes draw in creation order, so the panels stay on top of grid and handles.
+    self.overlay=overlay.init()
     self.nodes,self.buttons,self.held={},{},{}
-    -- Test state for the le2 runner only (debug engine); release builds never publish it.
-    self.debug=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le2"
+    -- Test state for the le2/le3 runners only (debug engine); release builds never publish it.
+    local case=sys.get_config_string("rider.gym_test","")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3")
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -42,14 +57,21 @@ function init(self)
     button(self,"template",vmath.vector3(770,525,0),vmath.vector3(96,22,0),"Template",R,T)
     button(self,"play",vmath.vector3(892,525,0),vmath.vector3(124,22,0),"Play > [E]",R,T)
     for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*30,0),vmath.vector3(92,24,0),tool[2],L,T) end
-    node(self,vmath.vector3(860,380,0),vmath.vector3(196,190,0),R,T,PANEL)
+    node(self,vmath.vector3(860,357,0),vmath.vector3(196,236,0),R,T,PANEL)
     self.properties=text(self,vmath.vector3(768,468,0),"",R,T,gui.PIVOT_NW,0.42)
     button(self,"minus",vmath.vector3(800,330,0),vmath.vector3(40,22,0),"-",R,T)
     button(self,"plus",vmath.vector3(848,330,0),vmath.vector3(40,22,0),"+",R,T)
     button(self,"direction",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Flip direction",R,T)
     button(self,"delete",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Delete [Del]",R,T)
+    button(self,"split",vmath.vector3(860,274,0),vmath.vector3(180,22,0),"Split here [K]",R,T)
+    button(self,"connect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Connect [J]",R,T)
+    button(self,"disconnect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Disconnect [J]",R,T)
     node(self,vmath.vector3(480,12,0),vmath.vector3(960,24,0),nil,B,PANEL)
     self.status=text(self,vmath.vector3(8,12,0),"",L,B,gui.PIVOT_W,0.42)
+    -- Top bar: the page's own High DPI / Fullscreen buttons cover the bottom-right corner.
+    button(self,"warnings",vmath.vector3(522,525,0),vmath.vector3(120,22,0),"",R,T)
+    self.warning_panel=node(self,vmath.vector3(470,462,0),vmath.vector3(700,76,0),nil,T,PANEL)
+    self.warning_text=text(self,vmath.vector3(128,496,0),"",nil,T,gui.PIVOT_NW,0.42)
     self.message=text(self,vmath.vector3(480,492,0),"",nil,T,gui.PIVOT_CENTER,0.5)
     self.templates={}
     for i,id in ipairs(stations.ids) do
@@ -60,6 +82,7 @@ function init(self)
     self.hint=text(self,vmath.vector3(12,40,0),"Edit level [E]",L,B,gui.PIVOT_W,0.42)
     self.play_message=text(self,vmath.vector3(480,470,0),"",nil,T,gui.PIVOT_CENTER,0.5)
     gui.set_color(self.play_message,vmath.vector4(1,0.6,0.4,1))
+    self.gui_nodes=self.overlay.nodes+#self.edit_nodes+#self.nodes
     msg.post(".","acquire_input_focus")
     window.set_listener(function(_,event)
         -- The first press after a focus loss is the click that brings focus back (its gained event may
@@ -68,60 +91,148 @@ function init(self)
         elseif event==window.WINDOW_EVENT_FOCUS_GAINED then self.refocus_until=socket.gettime()+1 end
     end)
 end
--- Held commands, gestures and previews never survive a mode change or focus loss (R15).
+-- Held commands, gestures and previews never survive a mode change or focus loss (R15). A polyline
+-- being drawn keeps its placed points on focus loss; a mode change ends it (see play).
 local function cancel(self)
-    self.drag,self.pan,self.held=nil,nil,{}
+    self.drag,self.pan,self.box,self.held=nil,nil,nil,{}
     if editor.preview then editor.preview=nil;editor.touch() end
+    if editor.preview_points then editor.set_preview(nil) end
 end
+local function map() return editor.map() end
 local function cursor(self,action)
-    local s=editor.screen
+    local s=map()
     if not s or not action.screen_x or s.ppm_x==0 or s.ppm_y==0 then return self.cursor end
     self.cursor={(action.screen_x-s.ox)/s.ppm_x,(action.screen_y-s.oy)/s.ppm_y}
+    self.cursor_px={action.screen_x,action.screen_y}
     return self.cursor
 end
-local function tolerance(px) local s=editor.screen;return px/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
-local function seg_dist(p,a,b)
+local function tolerance(px) local s=map();return px*ui/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
+local function to_px(p,s) return {s.ox+p[1]*s.ppm_x,s.oy+p[2]*s.ppm_y} end
+local function dist(a,b) return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2) end
+local function seg_t(p,a,b)
     local dx,dy=b[1]-a[1],b[2]-a[2]
-    local t=((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)
-    t=math.max(0,math.min(1,t))
-    local x,y=a[1]+dx*t-p[1],a[2]+dy*t-p[2]
-    return math.sqrt(x*x+y*y)
+    return math.max(0,math.min(1,((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)))
 end
--- Picking by stable document id: START, FINISH, labels, then the nearest line or hull edge.
-local function pick(p)
+local function seg_dist(p,a,b)
+    local t=seg_t(p,a,b)
+    return dist(p,{a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t})
+end
+local function find(id) return edit.find(editor.doc.editor,id) end
+-- Pick candidates under the cursor, best first (hover shows the first; Tab cycles; click picks the
+-- shown one): line points (every point of a selected line, the ends of every line; a joint once, as
+-- its upstream piece's last point), START, FINISH, labels, then lines and hulls by edge distance.
+local function candidates(p)
     local e=editor.doc.editor
-    local v,s=doc_lib.VEHICLE,e.start.position
-    if p[1]>=s[1]+v[1] and p[1]<=s[1]+v[2] and p[2]>=s[2]+v[3] and p[2]<=s[2]+v[4] then return "start" end
-    local tol=tolerance(10)
-    local f=e.finish
-    if f and math.abs(p[1]-f.position[1])<=tol and p[2]>=f.position[2]-doc_lib.FINISH_BELOW and p[2]<=f.position[2]+doc_lib.FINISH_ABOVE then return "finish" end
-    local best,best_d
+    local tol=tolerance(PICK_PX)
+    local next,prev=doc_lib.links(e)
+    local list,seen={},{}
+    local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
-        local d
-        if o.type=="label" then d=math.sqrt((p[1]-o.position[1])^2+(p[2]-o.position[2])^2)/1.5
-        else
-            local list=o.type=="line" and o.points or o.vertices
-            for i=2,#list+(o.type=="hull" and 1 or 0) do
-                local q=seg_dist(p,list[i-1],list[(i-1)%#list+1])
-                d=d and math.min(d,q) or q
+        if o.type=="line" then
+            local selected=editor.selected[o.id]
+            for i,q in ipairs(o.points) do
+                if (selected or i==1 or i==#o.points) and math.abs(q[1]-p[1])<=tol and math.abs(q[2]-p[2])<=tol then
+                    local d=dist(p,q)
+                    if d<=tol then
+                        local id,index=o.id,i
+                        if i==1 and prev[o.id] then id=prev[o.id];index=#find(id).points end
+                        add({kind="vertex",id=id,index=index,d=d,rank=1,key="v:"..id..":"..index})
+                    end
+                end
             end
         end
-        if d and d<=tol and (not best_d or d<best_d) then best,best_d=o.id,d end
     end
-    return best
+    local v,s=doc_lib.VEHICLE,e.start.position
+    if p[1]>=s[1]+v[1] and p[1]<=s[1]+v[2] and p[2]>=s[2]+v[3] and p[2]<=s[2]+v[4] then add({kind="start",id="start",d=0,rank=2,key="start"}) end
+    local f=e.finish
+    if f and math.abs(p[1]-f.position[1])<=tol and p[2]>=f.position[2]-doc_lib.FINISH_BELOW and p[2]<=f.position[2]+doc_lib.FINISH_ABOVE then
+        add({kind="finish",id="finish",d=math.abs(p[1]-f.position[1]),rank=2,key="finish"})
+    end
+    for _,o in ipairs(e.objects) do
+        local d,segment
+        if o.type=="label" then d=dist(p,o.position)/1.5
+        else
+            local pts=o.type=="line" and o.points or o.vertices
+            for i=2,#pts+(o.type=="hull" and 1 or 0) do
+                local q=seg_dist(p,pts[i-1],pts[(i-1)%#pts+1])
+                if not d or q<d then d,segment=q,i-1 end
+            end
+        end
+        if d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
+    end
+    table.sort(list,function(a,b) if a.rank~=b.rank then return a.rank<b.rank end;if a.d~=b.d then return a.d<b.d end;return a.key<b.key end)
+    return list
+end
+local function describe_candidate(c)
+    if not c then return "" end
+    if c.kind=="vertex" then return "point "..c.index.." of "..c.id end
+    if c.kind=="object" then return c.type.." "..c.id end
+    return c.kind=="start" and "START" or "FINISH"
+end
+-- Hover (R6 editing basics): the candidate a click would pick is highlighted before clicking.
+local function set_hover(self,list)
+    local keys={};for _,c in ipairs(list) do keys[#keys+1]=c.key end
+    local key=table.concat(keys,",")
+    if key~=self.hover_key then self.hover_key,self.hover_index=key,1 end
+    self.candidates=list
+    local c=list[self.hover_index]
+    local object=c and c.kind=="object" and c.id or nil
+    if editor.hover_object~=object then editor.hover_object=object;editor.touch() end
+    editor.hover=c
+end
+-- Anchors for snapping: every line point and hull vertex except those that move with the edit, plus
+-- extra points. Line ends carry their end so the draw tool can show and confirm a connect preview.
+local cache={}
+local function anchors(skip,extra)
+    local e=editor.doc.editor
+    -- Rebuilt only when the document, the moving set or the drawn points change (not per mouse move).
+    if cache.doc==editor.doc and cache.revision==e.revision and cache.skip==skip and cache.extra==(extra and #extra or 0)
+        and cache.last==(extra and extra[#extra]) then return cache.list end
+    local next,prev=doc_lib.links(e)
+    local list={}
+    for _,o in ipairs(e.objects) do
+        if not (skip and skip[o.id]) then
+            if o.type=="line" then
+                for i,q in ipairs(o.points) do
+                    local free=(i==1 and not prev[o.id]) or (i==#o.points and not next[o.id])
+                    local skip_point=skip and skip.vertex and skip.vertex[o.id..":"..i]
+                    if not skip_point then list[#list+1]={p=q,id=o.id,index=i,end_free=free and {id=o.id,index=i} or nil} end
+                end
+            elseif o.type=="hull" then for _,q in ipairs(o.vertices) do list[#list+1]={p=q,id=o.id} end end
+        end
+    end
+    for _,q in ipairs(extra or {}) do list[#list+1]={p=q} end
+    cache={doc=editor.doc,revision=e.revision,skip=skip,extra=extra and #extra or 0,last=extra and extra[#extra],list=list}
+    return list
+end
+local function snap_mode(self)
+    if self.held.ctrl then return "Snap off (Ctrl)" end
+    local parts={}
+    if self.held.alt then parts[#parts+1]="grid 0.1 m (Alt)" elseif editor.grid then parts[#parts+1]="grid 0.5 m" else parts[#parts+1]="grid off [G]" end
+    parts[#parts+1]="anchors"
+    if self.held.shift then parts[#parts+1]="15 deg (Shift)" end
+    return "Snap: "..table.concat(parts," + ")
+end
+local function snap(self,p,skip,from,extra)
+    local q,kind,anchor=snap_lib.snap(p,{off=self.held.ctrl,grid=editor.grid,fine=self.held.alt,from=self.held.shift and from or nil,
+        anchors=anchors(skip,extra),radius=tolerance(SNAP_PX)})
+    self.snapped={p=q,kind=kind,anchor=anchor}
+    return q,kind,anchor
 end
 local function selected_object()
     for _,o in ipairs(editor.doc.editor.objects) do if o.id==editor.selection then return o end end
 end
 local function delete(self)
     local s=editor.selection
+    local v=editor.vertex
+    if v then
+        if editor.commit(function(e) return edit.delete_point(e,v.id,v.index) end,true) then editor.select(v.id) end
+        return
+    end
     if s=="start" then editor.message="START cannot be deleted; move it instead.";return end
     if s=="finish" then editor.commit(function(e) e.finish=nil end);return end
-    if s and selected_object() then
-        editor.commit(function(e)
-            for i,o in ipairs(e.objects) do if o.id==s then table.remove(e.objects,i);break end end
-        end,true)
-    end
+    local ids=editor.selected_ids()
+    if #ids>0 then editor.commit(function(e) edit.remove(e,ids) end,true) end
 end
 local function place(target,p)
     editor.commit(function(e)
@@ -131,7 +242,81 @@ local function place(target,p)
     end)
     editor.select(target)
 end
+-- Drawing (D): each click places a snapped point; a click on the last point, a double-click or Enter
+-- finishes the piece; ending on a free end connects and finishes there; Backspace removes the last
+-- point; Esc discards the unfinished piece.
+local function finish_drawing(self)
+    local d=self.drawing
+    self.drawing=nil
+    if not d or #d.points<2 then return end
+    -- Connections are resolved when the piece is finished: a free end exactly at its first or last
+    -- point (snapped there, shown as a connect preview). Undo/Redo while drawing cannot leave stale ends.
+    local function free_end(p)
+        for _,c in ipairs(edit.ends(editor.doc.editor)) do if c.free and c.p[1]==p[1] and c.p[2]==p[2] then return {id=c.id,index=c.index} end end
+    end
+    -- Only a point placed with the anchor snap (the visible connect preview) connects; Ctrl never does.
+    local first=d.anchored[1] and free_end(d.points[1])
+    local last=d.anchored[#d.points] and free_end(d.points[#d.points])
+    if first and last and first.id==last.id and first.index==last.index then last=nil end
+    local id,note
+    local ok=editor.commit(function(e)
+        local err
+        id,err=edit.add_line(e,d.points,first,last)
+        if not id then return nil,err end
+        note=err
+    end,true)
+    if ok and id then editor.select(id);if note then editor.message=note end end
+end
+local function connect_target(v)
+    -- The nearest free end of another run within the snap radius of the selected free end.
+    local e=editor.doc.editor
+    if not v or edit.joint(e,v.id,v.index) then return nil end
+    local o=find(v.id)
+    if not o or (v.index~=1 and v.index~=#o.points) then return nil end
+    local run={};for _,id in ipairs(edit.run_of(e,v.id)) do run[id]=true end
+    local p=o.points[v.index]
+    local best,bd
+    for _,c in ipairs(edit.ends(e)) do
+        if c.free and not run[c.id] then
+            local d=dist(p,c.p)
+            if d<=math.max(0.01,tolerance(SNAP_PX)) and (not bd or d<bd) then best,bd=c,d end
+        end
+    end
+    return best
+end
+local function connect(self)
+    local v=editor.vertex
+    if not v then editor.message="Select a line end first.";return end
+    local e=editor.doc.editor
+    if edit.joint(e,v.id,v.index) then
+        local id,index=edit.owner(e,v.id,v.index)
+        if editor.commit(function(doc_e) local to,err=edit.disconnect(doc_e,id,index);if not to then return nil,err end end,true) then
+            editor.select(id,{id=id,index=index})
+        end
+        return
+    end
+    local target=connect_target(v)
+    if not target then editor.message="Connect needs a free line end that touches another free end (drag it onto the other end).";return end
+    local p=find(v.id).points[v.index]
+    local id=v.id
+    if editor.commit(function(doc_e) return edit.connect(doc_e,{id=v.id,index=v.index},{id=target.id,index=target.index}) end,true) then
+        -- The connected end is the joint at the target position; select it again by position.
+        local o=find(id)
+        local index=dist(o.points[1],target.p)<1e-6 and 1 or #o.points
+        local oid,oindex=edit.owner(editor.doc.editor,id,index)
+        editor.select(oid,{id=oid,index=oindex})
+    end
+end
+local function split(self)
+    local v=editor.vertex
+    if not v then editor.message="Select a point inside a line first.";return end
+    if editor.commit(function(e) local id,err=edit.split(e,v.id,v.index);if not id then return nil,err end end,true) then
+        editor.select(v.id,{id=v.id,index=#find(v.id).points})
+    end
+end
 local function play(self,test)
+    -- An unfinished piece is completed first, so Play never drops placed points.
+    if self.drawing then finish_drawing(self) end
     if editor.dirty then editor.save_draft() end
     cancel(self)
     msg.post(LOADER,"editor_play",{test=test})
@@ -156,12 +341,16 @@ local function open_template(self,id)
     editor.open(doc_lib.template(d),true)
     self.templates_open=false
 end
+local function set_tool(self,tool)
+    if self.drawing and tool~="draw" then finish_drawing(self) end
+    editor.tool=tool;editor.touch()
+end
 local function on_button(self,name)
     if name=="undo" or name=="redo" then
         if not editor.undo(name=="undo") then editor.message="Nothing to "..name.."." end
     elseif name=="template" then self.templates_open=not self.templates_open
     elseif name=="play" then play(self)
-    elseif name:match("^tool_") then editor.tool=name:sub(6);editor.touch()
+    elseif name:match("^tool_") then set_tool(self,name:sub(6))
     elseif name:match("^template_") then open_template(self,name:sub(10))
     elseif name=="minus" or name=="plus" then
         local step=(name=="plus" and 1 or -1)*(self.held.shift and 5 or 0.5)
@@ -171,12 +360,27 @@ local function on_button(self,name)
         else editor.test_speed=math.max(-30,math.min(30,editor.test_speed+step));editor.touch() end
     elseif name=="direction" and editor.doc.editor.finish then
         editor.commit(function(e) e.finish.direction=-e.finish.direction end)
-    elseif name=="delete" then delete(self) end
+    elseif name=="delete" then delete(self)
+    elseif name=="split" then split(self)
+    elseif name=="connect" or name=="disconnect" then connect(self)
+    elseif name=="warnings" then self.warnings_open=not self.warnings_open end
+end
+local function vertex_state()
+    local v=editor.vertex
+    if not v then return nil end
+    local o=find(v.id)
+    if not o then return nil end
+    return {inner=v.index>1 and v.index<#o.points,joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
 end
 local function visible_buttons(self)
-    local list={"undo","redo","template","play","minus","plus","tool_select","tool_start","tool_finish","tool_pan"}
+    local list={"undo","redo","template","play","minus","plus","tool_select","tool_draw","tool_start","tool_finish","tool_pan","warnings"}
+    local vs=vertex_state()
     if editor.selection=="finish" then list[#list+1]="direction"
     elseif editor.selection and editor.selection~="start" then list[#list+1]="delete" end
+    if vs then
+        if vs.inner then list[#list+1]="split" end
+        list[#list+1]=vs.joint and "disconnect" or (not vs.inner and "connect") or nil
+    end
     if self.templates_open then for _,name in ipairs(self.templates) do list[#list+1]=name end end
     return list
 end
@@ -184,47 +388,203 @@ local function hit(self,action)
     for _,name in ipairs(visible_buttons(self)) do
         if gui.pick_node(self.buttons[name].box,action.x,action.y) then return name end
     end
+    if self.warnings_open and gui.pick_node(self.warning_panel,action.x,action.y) then return "warning_panel" end
+end
+-- Translating a selection: each connected run moves once (R4, R17); the grabbed object's nearest
+-- point snaps (anchors outside the moving set, Shift 15 degree directions, grid).
+local function start_move(self,c,p)
+    local e=editor.doc.editor
+    local ids=editor.selected_ids()
+    local list,set=edit.closure(e,ids)
+    local o=find(c.id)
+    local ref
+    if o.type=="label" then ref=o.position
+    else
+        for _,q in ipairs(o.type=="line" and o.points or o.vertices) do if not ref or dist(p,q)<dist(p,ref) then ref=q end end
+    end
+    local base={}
+    for _,id in ipairs(list) do local x=find(id);base[id]=doc_lib.copy(editor.shape(x)) end
+    self.drag={kind="move",ids=ids,list=list,skip=set,ref={ref[1],ref[2]},press={p[1],p[2]},press_px=self.cursor_px,base=base,delta={0,0},moved=false}
+end
+local function start_vertex(self,c,p)
+    local e=editor.doc.editor
+    local o=find(c.id)
+    local skip={vertex={[c.id..":"..c.index]=true}}
+    -- An exit point carries its downstream run along: those points never snap to themselves.
+    if c.index==#o.points then
+        for _,id in ipairs(edit.downstream(e,c.id)) do skip[id]=true end
+    end
+    local from=o.points[c.index>1 and c.index-1 or 2]
+    self.drag={kind="vertex",id=c.id,index=c.index,skip=skip,from={from[1],from[2]},origin={o.points[c.index][1],o.points[c.index][2]},
+        offset={p[1]-o.points[c.index][1],p[2]-o.points[c.index][2]},press_px=self.cursor_px,moved=false}
 end
 local function canvas_press(self,action)
     local p=cursor(self,action)
     if not p then return end
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
-    local id=pick(p)
-    editor.select(id)
-    if id=="start" or id=="finish" then
-        local origin=id=="start" and editor.doc.editor.start.position or editor.doc.editor.finish.position
-        self.drag={target=id,offset={p[1]-origin[1],p[2]-origin[2]},origin={origin[1],origin[2]},moved=false}
-        editor.preview={target=id,position={origin[1],origin[2]}}
+    local now=socket.gettime()
+    local px=self.cursor_px
+    local double=self.last_press and now-self.last_press.t<=DOUBLE_S and dist(px,self.last_press.px)<=DOUBLE_PX*ui
+    -- A Shift+click only changes the selection; it never starts a double-click.
+    self.last_press=not self.held.shift and {t=now,px={px[1],px[2]}} or nil
+    if editor.tool=="draw" then
+        local d=self.drawing
+        local last=d and d.points[#d.points]
+        local q,kind,anchor=snap(self,p,nil,last,d and {unpack(d.points,1,#d.points-1)} or nil)
+        if not d then
+            self.drawing={points={q},anchored={kind=="anchor"}}
+        elseif double or dist(q,last)<0.01 then finish_drawing(self)
+        else
+            d.points[#d.points+1]=q;d.anchored[#d.points]=kind=="anchor"
+            -- Ending on another free end connects there and completes the piece (R5).
+            if kind=="anchor" and anchor.end_free then finish_drawing(self) end
+        end
+        editor.touch()
+        return
+    end
+    -- Select tool.
+    local list=candidates(p)
+    set_hover(self,list)
+    local c=list[self.hover_index]
+    if double and c and c.kind=="object" and c.type=="line" and editor.selected[c.id] then
+        -- Double-click on a selected line inserts a point exactly on the segment (shape unchanged).
+        local o=find(c.id)
+        local a,b=o.points[c.segment],o.points[c.segment+1]
+        local t=seg_t(p,a,b)
+        -- With grid snap the point gets a grid x (y for a vertical segment), still on the segment.
+        local step=not self.held.ctrl and (self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID)
+        local axis=math.abs(b[1]-a[1])>1e-9 and 1 or 2
+        local exact
+        if step then
+            local v=snap_lib.round(a[axis]+(b[axis]-a[axis])*t,step)
+            local u=(v-a[axis])/(b[axis]-a[axis])
+            if u>0 and u<1 then t,exact=u,v end
+        end
+        local q={a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t}
+        if exact then q[axis]=exact end
+        local index
+        if editor.commit(function(e) local i,err=edit.insert_point(e,c.id,c.segment,q);index=i;if not i then return nil,err end end,true) then
+            editor.select(c.id,{id=c.id,index=index})
+        end
+        self.last_press=nil
+        return
+    end
+    if not c then
+        if not self.held.shift then editor.select(nil) end
+        self.box={from={p[1],p[2]},to={p[1],p[2]},add=self.held.shift}
+        return
+    end
+    if self.held.shift and c.kind=="object" then editor.toggle(c.id);return end
+    if c.kind=="vertex" then
+        if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
+        else editor.selection,editor.vertex=c.id,{id=c.id,index=c.index};editor.touch() end
+        start_vertex(self,c,p)
+    elseif c.kind=="start" or c.kind=="finish" then
+        editor.select(c.id)
+        local origin=c.id=="start" and editor.doc.editor.start.position or editor.doc.editor.finish.position
+        self.drag={kind="marker",target=c.id,offset={p[1]-origin[1],p[2]-origin[2]},origin={origin[1],origin[2]},moved=false}
+        editor.preview={target=c.id,position={origin[1],origin[2]}}
+    else
+        if not editor.selected[c.id] then editor.select(c.id)
+        else editor.selection,editor.vertex=c.id,nil;editor.touch() end
+        start_move(self,c,p)
     end
 end
 local function canvas_move(self,action)
     local p=cursor(self,action)
-    local s=editor.screen
+    local s=map()
     if self.pan and action.screen_x and s then
         editor.camera.x=editor.camera.x-(action.screen_x-self.pan[1])/s.ppm_x
         editor.camera.y=editor.camera.y-(action.screen_y-self.pan[2])/s.ppm_y
         self.pan={action.screen_x,action.screen_y}
-    elseif self.drag and p then
-        local q={p[1]-self.drag.offset[1],p[2]-self.drag.offset[2]}
+        return
+    end
+    if not p then return end
+    local drag=self.drag
+    if drag and drag.kind=="marker" then
+        local q={p[1]-drag.offset[1],p[2]-drag.offset[2]}
         -- A click without movement selects only; it is not an edit.
-        if q[1]~=self.drag.origin[1] or q[2]~=self.drag.origin[2] then
-            editor.preview={target=self.drag.target,position=q}
-            self.drag.moved=true
+        if q[1]~=drag.origin[1] or q[2]~=drag.origin[2] then
+            editor.preview={target=drag.target,position=q}
+            drag.moved=true
             editor.touch()
         end
+    elseif drag and drag.kind~="marker" and not drag.moved and dist(self.cursor_px,drag.press_px)<DOUBLE_PX*ui then
+        -- A click is not a drag: snapping must not move an off-grid object that was only clicked.
+        return
+    elseif drag and drag.kind=="vertex" then
+        local raw={p[1]-drag.offset[1],p[2]-drag.offset[2]}
+        local q=snap(self,raw,drag.skip,drag.from)
+        if drag.moved or q[1]~=drag.origin[1] or q[2]~=drag.origin[2] then
+            drag.moved,drag.to=true,q
+            local e=doc_lib.copy(editor.doc.editor)
+            local preview={}
+            for _,id in ipairs(edit.move_vertex(e,drag.id,drag.index,q)) do preview[id]=edit.find(e,id).points end
+            editor.set_preview(preview)
+        end
+    elseif drag and drag.kind=="move" then
+        local raw={drag.ref[1]+p[1]-drag.press[1],drag.ref[2]+p[2]-drag.press[2]}
+        local q=snap(self,raw,drag.skip,drag.ref)
+        local d={q[1]-drag.ref[1],q[2]-drag.ref[2]}
+        if drag.moved or d[1]~=0 or d[2]~=0 then
+            drag.moved,drag.delta=true,d
+            local preview={}
+            for id,pts in pairs(drag.base) do
+                local t={};for i,q2 in ipairs(pts) do t[i]={q2[1]+d[1],q2[2]+d[2]} end
+                preview[id]=t
+            end
+            editor.set_preview(preview)
+        end
+    elseif self.box then self.box.to={p[1],p[2]}
+    elseif editor.tool=="draw" then
+        local d=self.drawing
+        snap(self,p,nil,d and d.points[#d.points],d and {unpack(d.points,1,#d.points-1)} or nil)
+    elseif editor.tool=="select" then set_hover(self,candidates(p)) end
+end
+local function box_select(self,b)
+    local x0,x1=math.min(b.from[1],b.to[1]),math.max(b.from[1],b.to[1])
+    local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
+    if not b.add then editor.selected={} end
+    for _,o in ipairs(editor.doc.editor.objects) do
+        for _,q in ipairs(o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}) do
+            if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then editor.selected[o.id]=true;break end
+        end
     end
+    editor.selection,editor.vertex=next(editor.selected),nil
+    for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
+    editor.touch()
 end
 local function canvas_release(self)
     self.pan=nil
-    local drag=self.drag
-    self.drag=nil
-    if drag and drag.moved and editor.preview then
-        local p=editor.preview.position
-        editor.preview=nil
-        -- A whole drag is one completed action (R12, R17).
-        place(drag.target,p)
-    elseif editor.preview then editor.preview=nil;editor.touch() end
+    local drag,box=self.drag,self.box
+    self.drag,self.box=nil,nil
+    if box then
+        -- A click on empty space only clears the selection; a real drag selects what it touches.
+        local s=map()
+        if s and dist(to_px(box.from,s),to_px(box.to,s))>=DOUBLE_PX*ui then box_select(self,box) end
+        return
+    end
+    if not drag then return end
+    if drag.kind=="marker" then
+        if drag.moved and editor.preview then
+            local p=editor.preview.position
+            editor.preview=nil
+            -- A whole drag is one completed action (R12, R17).
+            place(drag.target,p)
+        elseif editor.preview then editor.preview=nil;editor.touch() end
+        return
+    end
+    editor.set_preview(nil)
+    if not drag.moved then return end
+    if drag.kind=="vertex" then
+        local q=drag.to
+        if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
+        editor.commit(function(e) edit.move_vertex(e,drag.id,drag.index,q) end,true)
+    else
+        local d=drag.delta
+        if d[1]~=0 or d[2]~=0 then editor.commit(function(e) edit.translate(e,drag.ids,d) end,true) end
+    end
 end
 function on_input(self,action_id,action)
     if editor.mode~="edit" then
@@ -238,9 +598,10 @@ function on_input(self,action_id,action)
         return false
     end
     if self.focus_lost then self.focus_lost=false;cancel(self) end
-    for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"}}) do
+    for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"},{"editor_alt","alt"}}) do
         if action_id==hash(m[1]) then
-            if action.pressed then self.held[m[2]]=true elseif action.released then self.held[m[2]]=nil end
+            -- Held keys report every frame, so a modifier cleared by cancel() comes back while still down.
+            self.held[m[2]]=not action.released or nil
             return true
         end
     end
@@ -253,9 +614,10 @@ function on_input(self,action_id,action)
                 if not self.refocus_until or socket.gettime()<self.refocus_until then return true end
             end
             local name=hit(self,action)
-            if name then on_button(self,name)
-            elseif not self.templates_open then canvas_press(self,action)
-            else self.templates_open=false end
+            if name=="warning_panel" then return true
+            elseif name then on_button(self,name)
+            elseif self.templates_open then self.templates_open=false
+            else canvas_press(self,action) end
         elseif action.released then canvas_release(self) end
         canvas_move(self,action)
         return true
@@ -268,26 +630,54 @@ function on_input(self,action_id,action)
     if action_id==hash("editor_zoom_out") and action.pressed then cursor(self,action);zoom(self,1/1.2);return true end
     if not action.pressed then return true end
     if self.drag and action_id~=hash("editor_cancel") then return true end
-    if action_id==hash("editor_toggle") or action_id==hash("editor_play") then play(self)
+    if action_id==hash("editor_toggle") then play(self)
+    elseif action_id==hash("editor_play") then
+        -- Enter first completes a piece being drawn; otherwise it is Play.
+        if self.drawing then finish_drawing(self) else play(self) end
     elseif action_id==hash("editor_test") then test_start(self)
-    elseif action_id==hash("editor_tool_select") then editor.tool="select";editor.touch()
-    elseif action_id==hash("editor_delete") then delete(self)
+    elseif action_id==hash("editor_tool_select") then set_tool(self,"select")
+    elseif action_id==hash("editor_tool_draw") then set_tool(self,"draw")
+    elseif action_id==hash("editor_grid") then editor.grid=not editor.grid;editor.touch()
+    elseif action_id==hash("editor_cycle") then
+        -- Tab cycles through overlapping candidates under the cursor.
+        if self.candidates and #self.candidates>1 then self.hover_index=self.hover_index%#self.candidates+1;set_hover(self,self.candidates) end
+    elseif action_id==hash("editor_connect") then connect(self)
+    elseif action_id==hash("editor_split") then split(self)
+    elseif action_id==hash("editor_delete") then
+        if self.drawing then
+            table.remove(self.drawing.points)
+            if #self.drawing.points==0 then self.drawing=nil end
+            editor.touch()
+        else delete(self) end
     elseif action_id==hash("editor_z") and self.held.ctrl then
-        if not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
+        if self.drawing and not self.held.shift then
+            -- While drawing, Ctrl+Z removes the last placed point (like Backspace).
+            table.remove(self.drawing.points)
+            if #self.drawing.points==0 then self.drawing=nil end
+            editor.touch()
+        elseif not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
     elseif action_id==hash("editor_y") and self.held.ctrl then
         if not editor.undo(false) then editor.message="Nothing to redo." end
     elseif action_id==hash("editor_cancel") then
-        -- Esc first cancels the current action, then clears the selection.
-        if self.drag or self.pan then cancel(self)
+        -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
+        if self.drag or self.pan or self.box then cancel(self)
+        elseif self.drawing then self.drawing=nil;editor.touch()
         elseif self.templates_open then self.templates_open=false
+        elseif self.warnings_open then self.warnings_open=false
         else editor.select(nil) end
     end
     return true
 end
-local function describe()
+local function seg_text(a,b)
+    local length,angle=snap_lib.measure(a,b)
+    return string.format("%.2f m  %.1f deg",length,angle)
+end
+local function describe(self)
     local e=editor.doc.editor
     local s=editor.selection
     local lines={}
+    local ids=editor.selected_ids()
+    local v=editor.vertex
     if s=="start" then
         local p=editor.preview and editor.preview.target=="start" and editor.preview.position or e.start.position
         lines={"START",string.format("x %.2f m  y %.2f m",p[1],p[2]),string.format("Start speed %.1f m/s",e.start.speed)}
@@ -296,26 +686,148 @@ local function describe()
     elseif s=="finish" and e.finish then
         local p=e.finish.position
         lines={"FINISH",string.format("x %.2f m  y %.2f m",p[1],p[2]),"Direction "..(e.finish.direction<0 and "<- (left)" or "-> (right)")}
-    elseif s then
-        for _,o in ipairs(e.objects) do
-            if o.id==s then lines={o.type.." "..o.id,o.type=="label" and o.text or ((o.type=="line" and #o.points or #o.vertices).." points")} end
+    elseif v and find(v.id) then
+        local o=find(v.id)
+        local pts=editor.shape(o)
+        local p=pts[v.index]
+        lines={"Point "..v.index.." of "..#pts.." in line "..v.id,string.format("x %.2f m  y %.2f m",p[1],p[2])}
+        if v.index>1 then lines[#lines+1]="Before: "..seg_text(pts[v.index-1],p) end
+        if v.index<#pts then lines[#lines+1]="After: "..seg_text(p,pts[v.index+1]) end
+        local joint=edit.joint(e,v.id,v.index)
+        if joint then lines[#lines+1]="Joint "..v.id.." -> "..joint..": dragging moves the downstream run"
+        elseif v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
+        else
+            local target=connect_target(v)
+            lines[#lines+1]=target and "Touches "..target.id.." end: Connect [J]" or "Free end"
+            lines[#lines+1]=#pts>2 and "Delete shortens the line" or "Delete: not possible (2 points)"
         end
+    elseif #ids>1 then
+        local list=edit.closure(e,ids)
+        lines={#ids.." objects selected","Dragging moves "..#list.." pieces","(each connected run once)"}
+    elseif s and selected_object() then
+        local o=selected_object()
+        if o.type=="line" then
+            local length=0
+            for i=2,#o.points do length=length+dist(o.points[i-1],o.points[i]) end
+            local run=edit.run_of(e,o.id)
+            lines={"Line "..o.id,#o.points.." points, "..string.format("%.2f m",length),
+                #run>1 and "Run of "..#run.." pieces: "..table.concat(run," > ",1,math.min(#run,4))..(#run>4 and " ..." or "") or "Not connected",
+                "Drag moves the whole run","Double-click inserts a point"}
+        elseif o.type=="hull" then lines={"Hull "..o.id,#o.vertices.." vertices"}
+        else lines={"Label "..o.id,o.text} end
+    elseif editor.tool=="draw" then
+        lines={"Draw [D]","Click to place points","Click the last point, double-click","or Enter to finish; Backspace undoes","a point; Esc discards the piece.","Start or end on a free end to","connect (green ring).","","Snap: 0.5 m grid [G], Alt 0.1 m,","Shift 15 deg, Ctrl off."}
     else
         lines={editor.doc.name,string.format("Test start speed %.1f m/s",editor.test_speed),"F: test start on surface","Shift+F: drop here","Shift+click -/+: 5 m/s steps",
-            "Ctrl+Z / Ctrl+Y: undo / redo"}
+            "Ctrl+Z / Ctrl+Y: undo / redo","Tab: next item under the cursor","Shift+click: add to selection","Drag on empty space: box select"}
     end
     return table.concat(lines,"\n")
+end
+local function readout(self)
+    local d,drag=self.drawing,self.drag
+    if d and self.snapped and editor.tool=="draw" then
+        local last=d.points[#d.points]
+        local note=self.snapped.kind=="anchor" and self.snapped.anchor.end_free and "  connects to "..self.snapped.anchor.id or ""
+        return seg_text(last,self.snapped.p)..note
+    end
+    if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then return "starts at "..self.snapped.anchor.id.." end (connects)" end
+    if drag and drag.kind=="vertex" and drag.to then
+        local o=find(drag.id)
+        local pts=editor.shape(o)
+        local t={}
+        if drag.index>1 then t[#t+1]=seg_text(pts[drag.index-1],pts[drag.index]) end
+        if drag.index<#pts then t[#t+1]=seg_text(pts[drag.index],pts[drag.index+1]) end
+        return table.concat(t," | ")
+    end
+    if drag and drag.kind=="move" and drag.moved then return string.format("dx %.2f m  dy %.2f m",drag.delta[1],drag.delta[2]) end
+    if editor.tool=="select" and editor.hover then
+        local n=self.candidates and #self.candidates or 0
+        return describe_candidate(editor.hover)..(n>1 and string.format("  (%d/%d, Tab)",self.hover_index,n) or "")
+    end
+    return ""
+end
+-- Overlays for this frame: grid, handles (hover and selection first, then selected lines' points,
+-- then every line end in view), connect preview, draw and selection previews, snap and readout.
+local function draw_overlay(self)
+    local o=self.overlay
+    overlay.begin(o)
+    ui=o.s
+    local s=map()
+    local w,h=window.get_size()
+    if not s then overlay.finish(o);return end
+    local e=editor.doc.editor
+    overlay.grid(o,s,w,h,self.held.alt and snap_lib.FINE or snap_lib.GRID)
+    local function visible(q) return q[1]>=-20 and q[1]<=w+20 and q[2]>=-20 and q[2]<=h+20 end
+    local function handle(p,color,size,diamond) local q=to_px(p,s);if visible(q) then overlay.handle(o,q,color,size or HANDLE_PX,diamond) end end
+    local hover=editor.hover
+    local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
+    local hover_point=hovered and editor.shape(hovered)[hover.index]
+    if hover_point then handle(hover_point,C.hover,HANDLE_PX+5) end
+    local v=editor.vertex
+    if v and find(v.id) then
+        local pts=editor.shape(find(v.id))
+        handle(pts[v.index],C.selected,HANDLE_PX+3)
+        local vs=vertex_state()
+        -- Delete preview: an inner point's neighbours are joined.
+        if vs and vs.inner and not self.drag then overlay.line(o,to_px(pts[v.index-1],s),to_px(pts[v.index+1],s),C.join,2) end
+        local target=not self.drag and connect_target(v)
+        if target then handle(target.p,C.connect,HANDLE_PX+12) end
+    end
+    if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
+    local next,prev=doc_lib.links(e)
+    for _,obj in ipairs(e.objects) do
+        if obj.type=="line" and editor.selected[obj.id] then
+            for _,q in ipairs(editor.shape(obj)) do handle(q,C.vertex,HANDLE_PX-2) end
+        end
+    end
+    for _,obj in ipairs(e.objects) do
+        if obj.type=="line" then
+            local pts=editor.shape(obj)
+            handle(pts[1],prev[obj.id] and C.joint or C.free,HANDLE_PX-1,true)
+            if not next[obj.id] then handle(pts[#pts],C.free,HANDLE_PX-1,true) end
+        end
+    end
+    local d=self.drawing
+    if d then
+        for i=2,#d.points do overlay.line(o,to_px(d.points[i-1],s),to_px(d.points[i],s),C.draw,3) end
+        for _,q in ipairs(d.points) do handle(q,C.draw,HANDLE_PX-2) end
+        if self.snapped then overlay.line(o,to_px(d.points[#d.points],s),to_px(self.snapped.p,s),C.rubber,2) end
+    end
+    local b=self.box
+    if b then
+        local p0,p1=to_px(b.from,s),to_px(b.to,s)
+        overlay.line(o,{p0[1],p0[2]},{p1[1],p0[2]},C.box,1);overlay.line(o,{p1[1],p0[2]},{p1[1],p1[2]},C.box,1)
+        overlay.line(o,{p1[1],p1[2]},{p0[1],p1[2]},C.box,1);overlay.line(o,{p0[1],p1[2]},{p0[1],p0[2]},C.box,1)
+    end
+    local snapping=self.snapped and (editor.tool=="draw" or (self.drag and self.drag.kind~="marker"))
+    overlay.snap(o,snapping and to_px(self.snapped.p,s) or nil,snapping and (C[self.snapped.kind] or C.free_snap) or nil)
+    local text=readout(self)
+    overlay.readout(o,self.cursor_px,text)
+    self.readout_text=text
+    overlay.finish(o)
 end
 local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
 local function publish(self)
     local e=editor.doc and editor.doc.editor
     local buttons={}
     for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
+    local o=self.overlay
     html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
-        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,camera=editor.camera,screen=editor.screen,
+        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,camera=editor.camera,screen=editor.map(),
         id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
         start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,
-        redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,templates_open=self.templates_open or false}))
+        redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,templates_open=self.templates_open or false,
+        selected=editor.doc and editor.selected_ids() or {},vertex=editor.vertex or false,hover=editor.hover and editor.hover.key or "",hover_count=self.candidates and #self.candidates or 0,
+        drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
+        readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
+        overlay={nodes=self.gui_nodes,max_nodes=512,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,dropped=o.dropped,spacing=o.spacing or 0},
+        visible=visible_buttons(self)},{encode_empty_table_as_object=false}))
+    -- The document itself only when it changed (it can hold thousands of points).
+    local key=e and editor.doc.id..":"..e.revision
+    if key and key~=self.published then
+        self.published=key
+        html5.run("window.riderEditorDoc="..json.encode(e,{encode_empty_table_as_object=false}))
+    end
 end
 function update(self,dt)
     if not self.focused then
@@ -323,33 +835,63 @@ function update(self,dt)
         self.focused=true
         msg.post(".","acquire_input_focus")
     end
-    local edit=editor.mode=="edit" and editor.doc~=nil
-    for _,n in ipairs(self.edit_nodes) do gui.set_enabled(n,edit) end
-    gui.set_enabled(self.hint,not edit);gui.set_enabled(self.play_message,not edit)
-    gui.set_text(self.play_message,not edit and editor.message or "")
-    if self.focus_lost and edit then self.focus_lost=false;cancel(self) end
+    local edit_mode=editor.mode=="edit" and editor.doc~=nil
+    for _,n in ipairs(self.edit_nodes) do gui.set_enabled(n,edit_mode) end
+    gui.set_enabled(self.hint,not edit_mode);gui.set_enabled(self.play_message,not edit_mode)
+    gui.set_text(self.play_message,not edit_mode and editor.message or "")
+    if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
     editor.sync()
-    if edit then
+    if edit_mode then
         if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
         local e=editor.doc.editor
         gui.set_text(self.title,string.format("Editor: %s | %s",editor.doc.name,editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"))
-        gui.set_text(self.properties,describe())
+        gui.set_text(self.properties,describe(self))
         gui.set_text(self.message,editor.message or "")
         local p=self.cursor
-        gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
-            editor.camera.zoom,editor.tool,#e.objects,editor.problem and "Play blocked: "..editor.problem or "Ready to play"))
+        local snapped=self.snapped and self.snapped.kind~="free" and (editor.tool=="draw" or self.drag) and " -> "..self.snapped.kind or ""
+        gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
+            editor.camera.zoom,editor.tool,snap_mode(self),snapped,#e.objects,editor.problem and "Play blocked" or "Ready to play")
+            ..((self.overlay.dropped or 0)>0 and " | zoom in to see every point" or ""))
+        local errors,warnings=#editor.errors,#editor.warnings
+        local function plural(n,word) return n.." "..word..(n==1 and "" or "s") end
+        gui.set_text(self.buttons.warnings.label,errors>0 and plural(errors,"error")..", "..warnings.." w." or plural(warnings,"warning"))
+        gui.set_color(self.buttons.warnings.box,errors>0 and vmath.vector4(0.5,0.15,0.12,1) or warnings>0 and vmath.vector4(0.45,0.36,0.1,1) or BUTTON)
+        local list={}
+        for _,m in ipairs(editor.errors) do list[#list+1]="Error: "..m end
+        for _,m in ipairs(editor.warnings) do list[#list+1]="Warning: "..m end
+        if #list>6 then list={unpack(list,1,5)};list[6]="... "..(errors+warnings-5).." more" end
+        if #list==0 then list[1]="No errors or warnings." end
+        gui.set_text(self.warning_text,table.concat(list,"\n"))
+        gui.set_enabled(self.warning_panel,self.warnings_open or false);gui.set_enabled(self.warning_text,self.warnings_open or false)
         local shown={}
         for _,name in ipairs(visible_buttons(self)) do shown[name]=true end
         for name,b in pairs(self.buttons) do
             gui.set_enabled(b.box,shown[name] or false);gui.set_enabled(b.label,shown[name] or false)
-            gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON)
+            if name~="warnings" then gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON) end
         end
+        -- After any document change (edit, Undo/Redo, another document) hover is picked again at the cursor.
+        local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
+        if key~=self.seen then
+            self.seen=key
+            if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
+            else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
+        end
+        draw_overlay(self)
+        self.overlay_shown=true
+    elseif self.overlay_shown then
+        self.overlay_shown=false
+        overlay.hide(self.overlay)
     end
     if self.debug then publish(self) end
 end
 function on_message(self,id,data)
     if id==hash("editor_mode") then
-        cancel(self);self.templates_open=false
+        -- A structural edit reloads the edit world through the same path; only a real mode change
+        -- cancels gestures and an unfinished piece.
+        if data.mode~=self.mode then
+            self.mode=data.mode
+            cancel(self);self.templates_open,self.warnings_open,self.drawing=false,false,nil
+        end
         -- Back on top of the input stack for this mode.
         msg.post(".","acquire_input_focus")
     end

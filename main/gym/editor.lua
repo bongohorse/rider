@@ -4,8 +4,10 @@
 local doc_lib=require "main.gym.editor_doc"
 local custom=require "main.gym.custom"
 local socket=require "socket"
-local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,
-    camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,status="",message="",problem=nil}
+-- selection: primary id (or "start"/"finish"); selected: set of selected object ids (multi-select, LE3);
+-- vertex: {id,index} of the selected line point; preview_points: shapes during a drag (not committed).
+local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,grid=true,
+    camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"Draft is not valid JSON" end
@@ -14,17 +16,26 @@ end
 local function drafts() return custom.drafts(parse_draft) end
 local function touch(geometry)
     M.view_version=M.view_version+1
-    if geometry then M.geometry_version=M.geometry_version+1 end
+    if geometry then M.geometry_version,M.shape_version=M.geometry_version+1,M.shape_version+1 end
 end
+-- Live validation (LE3): every Play-blocking error and the non-blocking warnings, after each action.
 local function check()
-    local _,err=doc_lib.compile(M.doc)
-    M.problem=err
+    local errors,warnings=doc_lib.problems(M.doc.editor)
+    local level,err=doc_lib.compile(M.doc)
+    if err and errors[1]~=err then errors[#errors+1]=err end
+    M.problem,M.errors,M.warnings=errors[1],errors,warnings
+    M.chains=level and #level.chains or 0
 end
+-- Selection is resolved by stable id after every change (R17).
 local function resolve_selection()
+    local e=M.doc.editor
+    local ids={}
+    for _,o in ipairs(e.objects) do ids[o.id]=o end
+    for id in pairs(M.selected) do if not ids[id] then M.selected[id]=nil end end
     local s=M.selection
-    if s=="start" or (s=="finish" and M.doc.editor.finish) then return end
-    for _,o in ipairs(M.doc.editor.objects) do if o.id==s then return end end
-    M.selection=nil
+    if s~="start" and not (s=="finish" and e.finish) and not ids[s] then M.selection=next(M.selected) end
+    local v=M.vertex
+    if v and not (ids[v.id] and ids[v.id].type=="line" and v.index<=#ids[v.id].points and M.selection==v.id) then M.vertex=nil end
 end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
 function M.open(doc,keep)
@@ -36,7 +47,7 @@ function M.open(doc,keep)
         -- Opening an already played level unchanged keeps it played.
         if played then e.compiled_revision=e.revision end
     else M.history=doc_lib.history() end
-    M.doc=doc;M.selection=nil
+    M.doc=doc;M.selection,M.selected,M.vertex=nil,{},nil
     M.changed_at=socket.gettime()
     local s=doc.editor.start.position
     -- A new document starts with START near the left of an overview (about 60 m wide at 1280 px).
@@ -44,15 +55,22 @@ function M.open(doc,keep)
     if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at end
     check();touch(true)
 end
--- One completed action = one history entry and one revision (R12, R17).
+-- One completed action = one history entry and one revision (R12, R17). fn may refuse with nil, err;
+-- a result that fails the source validator (R16) is refused too. Either way nothing changes.
 function M.commit(fn,geometry)
     local before=doc_lib.copy(M.doc)
-    fn(M.doc.editor,M.doc)
+    local _,err=fn(M.doc.editor,M.doc)
+    if not err then
+        local valid,verr=doc_lib.validate(M.doc)
+        if not valid then err="Edit refused: "..verr end
+    end
+    if err then M.doc=before;M.message=err;touch();return nil,err end
     M.message=""
     doc_lib.record(M.history,before)
     M.doc.editor.revision=before.editor.revision+1
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     resolve_selection();check();touch(geometry)
+    return true
 end
 function M.undo(back)
     local revision,next_id=M.doc.editor.revision,M.doc.editor.next_id
@@ -63,6 +81,8 @@ function M.undo(back)
     -- Revisions and ids stay monotonic: an undone state is a new revision, ids are never reused.
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
+    -- A point index may now name another point (e.g. an undone Connect reversed a run): keep the line only.
+    M.vertex=nil
     resolve_selection();check();touch(geometry)
     return true
 end
@@ -70,7 +90,40 @@ function M.new_id()
     local e=M.doc.editor
     local id="o"..e.next_id;e.next_id=e.next_id+1;return id
 end
-function M.select(id) if M.selection~=id then M.selection=id;touch() end end
+function M.select(id,vertex)
+    M.selection,M.vertex,M.selected=id,vertex,{}
+    if id and id~="start" and id~="finish" then M.selected[id]=true end
+    touch()
+end
+-- Shift+click adds or removes one object (START/FINISH stay single selections).
+function M.toggle(id)
+    if M.selection=="start" or M.selection=="finish" then M.selection=nil end
+    M.selected[id]=not M.selected[id] or nil
+    M.vertex=nil
+    if M.selected[id] then M.selection=id elseif M.selection==id then M.selection=next(M.selected) end
+    touch()
+end
+function M.selected_ids()
+    local list={}
+    for _,o in ipairs(M.doc.editor.objects) do if M.selected[o.id] then list[#list+1]=o.id end end
+    return list
+end
+-- Shapes during a drag: drawn by the edit world, never committed until the drag ends.
+function M.set_preview(points) M.preview_points=points;M.shape_version=M.shape_version+1;touch() end
+function M.shape(o)
+    local p=M.preview_points and M.preview_points[o.id]
+    return p or o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}
+end
+-- Screen mapping for the GUI, extrapolated to the current camera: the edit world measures it once per
+-- frame, the GUI may run first in a frame, and the camera centre stays at the same pixel.
+function M.map()
+    local s,c=M.screen,M.camera
+    if not s then return nil end
+    local k=c.zoom/s.zoom
+    local px,py=s.ppm_x*k,s.ppm_y*k
+    local cx,cy=s.ox+s.cx*s.ppm_x,s.oy+s.cy*s.ppm_y
+    return {ox=cx-c.x*px,oy=cy-c.y*py,ppm_x=px,ppm_y=py}
+end
 function M.touch() touch() end
 -- Drafts: autosaved after completed actions; the status reflects the last save and the HTML5 sync.
 function M.save_draft()

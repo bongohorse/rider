@@ -1,11 +1,15 @@
 -- Edit-mode world (R15): no vehicle, no terrain physics, no follow camera or FINISH evaluation.
 -- It draws the loader-owned source document with release-capable sprites/labels and moves the camera
--- to the editor view. Geometry changes reload this world; markers and selection update in place.
+-- to the editor view. Moves, drags and Undo of moves update sprites in place; a structural change
+-- (objects or point counts) reloads this world. Grid, handles and previews are GUI overlays
+-- (editor.gui), so editing never takes sprites from the level (R7).
 local editor=require "main.gym.editor"
 local doc_lib=require "main.gym.editor_doc"
 local stations=require "main.gym.stations"
+local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.95,0.35,1)
+local HOVER=vmath.vector4(0.55,0.8,1,1)
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).
 local function count(v,ids,label)
@@ -54,33 +58,72 @@ local function move(m,p)
     for _,id in ipairs(m.ids) do go.set_position(go.get_position(id)+vmath.vector3(dx,dy,0),id) end
     m.position={p[1],p[2]}
 end
+local function points(list) local t={};for i,p in ipairs(list) do t[i]={p[1],p[2]} end;return t end
+-- Same transform as stations.line (sprite 4 x 4 units); the readable width stays as set.
+local function place_line(id,a,b,scale)
+    local dx,dy=(b[1]-a[1])/scale,(b[2]-a[2])/scale
+    go.set_position(vmath.vector3((a[1]+b[1])/2/scale,(a[2]+b[2])/2/scale,0),id)
+    go.set_rotation(vmath.quat_rotation_z(math.atan2(dy,dx)),id)
+    go.set(id,"scale.x",math.sqrt(dx*dx+dy*dy)/4)
+end
+local function changed(a,b)
+    if #a~=#b then return true end
+    for i,p in ipairs(a) do if p[1]~=b[i][1] or p[2]~=b[i][2] then return true end end
+end
+-- Redraw moved shapes (drag previews, committed moves, Undo of moves) without a world reload.
+local function refresh(v,e)
+    local scale=sys.get_config_number("physics.scale",0.01)
+    for _,o in ipairs(e.objects) do
+        local pts=editor.shape(o)
+        if changed(pts,v.shapes[o.id]) then
+            if o.type=="label" then
+                go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
+            else
+                local ids=v.objects[o.id]
+                for i,id in ipairs(ids) do place_line(id,pts[i],pts[i%#pts+1],scale) end
+            end
+            v.shapes[o.id]=points(pts)
+        end
+    end
+end
 local function tint(ids,colour)
     for _,id in ipairs(ids) do
         local url=msg.url(nil,id,"sprite")
         if go.exists(id) then pcall(go.set,url,"tint",colour) end
     end
 end
+-- Structure of the drawn document: object ids, types and point counts (and label texts).
+local function signature(e)
+    local t={}
+    for _,o in ipairs(e.objects) do
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or #(o.points or o.vertices))
+    end
+    return table.concat(t,"|")
+end
 function M.build(self)
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},geometry=editor.geometry_version}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},labels_by={},shapes={},tints={},geometry=editor.geometry_version}
     local e=editor.doc.editor
     for _,o in ipairs(e.objects) do
         if o.type=="line" then v.objects[o.id]=outline(v,o.points)
         elseif o.type=="hull" then v.objects[o.id]=outline(v,o.vertices,true)
         else
-            local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={}
+            local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={};v.labels_by[o.id]=id
         end
+        v.shapes[o.id]=points(editor.shape(o))
     end
+    v.signature=signature(e)
     v.start=start_marker(v,e.start.position)
     if e.finish then v.finish=finish_marker(v,e.finish) end
     self.view=v
     editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation}
 end
 -- Screen mapping for the loader GUI: canvas pixels of the world origin and pixels per metre.
-local function mapping()
+-- It also records the camera it was measured with, so the GUI can follow camera moves without lag.
+local function mapping(c)
     local scale=sys.get_config_number("physics.scale",0.01)
     local o=camera.world_to_screen(vmath.vector3(0,0,0),"/camera#camera")
     local u=camera.world_to_screen(vmath.vector3(1/scale,1/scale,0),"/camera#camera")
-    return {ox=o.x,oy=o.y,ppm_x=u.x-o.x,ppm_y=u.y-o.y}
+    return {ox=o.x,oy=o.y,ppm_x=u.x-o.x,ppm_y=u.y-o.y,cx=c.x,cy=c.y,zoom=c.zoom}
 end
 function M.update(self)
     local v=self.view
@@ -89,17 +132,24 @@ function M.update(self)
     local c=editor.camera
     go.set_position(vmath.vector3(c.x/scale,c.y/scale,500),"/camera")
     go.set("/camera#camera","orthographic_zoom",c.zoom)
-    editor.screen=mapping()
+    editor.screen=mapping(c)
     readable(v,c.zoom)
-    -- A geometry change (delete, Undo/Redo, template) reloads this world through the loader once.
-    if editor.geometry_version~=v.geometry then
-        if not v.reload_requested then
-            v.reload_requested=true
-            msg.post("main:/loader#script","editor_reload")
-        end
-        return
-    end
     local e=editor.doc.editor
+    -- A structural change (new or deleted objects or points, template) reloads this world through the
+    -- loader once; moves keep the world and only update transforms.
+    if editor.geometry_version~=v.geometry then
+        if signature(e)~=v.signature then
+            -- The loader ignores a reload while it is still loading this world: ask again after 0.5 s.
+            local now=socket.gettime()
+            if not v.reload_requested or now-v.reload_requested>0.5 then
+                v.reload_requested=now
+                msg.post("main:/loader#script","editor_reload")
+            end
+            return
+        end
+        v.geometry,v.shape=editor.geometry_version,nil
+    end
+    if v.shape~=editor.shape_version then v.shape=editor.shape_version;refresh(v,e) end
     local preview=editor.preview
     local start=preview and preview.target=="start" and preview.position or e.start.position
     move(v.start,start)
@@ -112,7 +162,11 @@ function M.update(self)
     if finish then move(v.finish,finish.position) end
     if v.drawn~=editor.view_version then
         v.drawn=editor.view_version
-        for id,ids in pairs(v.objects) do tint(ids,id==editor.selection and SELECTED or stations.TERRAIN_TINT) end
+        -- Only objects whose highlight changed are re-tinted (hover changes on mouse moves).
+        for id,ids in pairs(v.objects) do
+            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or stations.TERRAIN_TINT
+            if v.tints[id]~=state then v.tints[id]=state;tint(ids,state) end
+        end
         local blocked=doc_lib.blocked(e,start)
         tint({unpack(v.start.ids,1,#v.start.ids-1)},editor.selection=="start" and SELECTED or blocked and BLOCKED_TINT or START_TINT)
         if v.finish then tint({v.finish.ids[1]},editor.selection=="finish" and SELECTED or stations.FINISH_TINT) end

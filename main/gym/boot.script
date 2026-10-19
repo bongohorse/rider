@@ -107,7 +107,8 @@ function init(self)
     msg.post(".","acquire_input_focus")
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
-    self.debug_editor=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le2"
+    local case=sys.get_config_string("rider.gym_test","")
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3")
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
