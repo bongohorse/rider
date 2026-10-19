@@ -113,7 +113,9 @@ local function setup(self)
     end
     self.ready = true
     -- The loader treats a level as loaded (and saves it) only once the vehicle is drive-ready.
-    if self.testcase ~= "a1" then self.vehicle = vehicle.spawn()
+    if self.testcase ~= "a1" then
+        local spawned,spawn_err=pcall(function() self.vehicle = vehicle.spawn() end)
+        if not spawned then fail_placement(self,spawn_err);return end
     else msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation}) end
     emit(self, "ready", {chain_segments = #self.segments, tiles = 48, floor_y = 80})
     if self.scenario then self.scenario.setup(self) end

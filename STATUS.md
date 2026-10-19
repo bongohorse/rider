@@ -57,6 +57,6 @@ Preset A under the declared automated protocols; not player limits or tuning tar
 - **Review enforcement:** `required` is the only protected check; zero approving reviews are required, so independent review is a workflow rule, not technically enforced.
 - **Custom level start distance (LE2):**
   - Imports are saved only after the vehicle is drive-ready; a placement failure leaves a safe error state and the previous save (tested in `le1a`).
-  - The provisional start limit was **tightened from ±1 km to ±500 m in x and y**: a dense reset sweep failed for 2084 of 4000 starts within ±1 km (from 724 m in x, at 1000 m in y) and for none of 6000 within ±500 m ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±500 m passes the placement guard; driving far from the origin is unmeasured.
+  - The provisional start limit was **tightened from ±1 km to ±500 m in x and y**: a dense reset sweep failed for 257 of 4000 starts within ±1 km in x and y (from 724 m in x, at 1000 m in y) and for none of 6000 within ±500 m ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±500 m passes the placement guard; driving far from the origin is unmeasured.
   - Text fields: all at their 64-byte limits plus the speed note give a 1348-byte measurements message (2048-byte cap).
 - **Follow-ups:** npm audit/upgrade [#101](https://github.com/bongohorse/rider/issues/101); CI nightly/timing [#95](https://github.com/bongohorse/rider/issues/95).

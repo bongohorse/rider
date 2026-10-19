@@ -43,10 +43,12 @@ function init(self)
     local id,speed=stations.query()
     if id=="custom" then
         self.station,self.speed=id,speed
-        local saved=custom.restore()
-        if saved then self.snapshot=custom.freeze(saved.doc,saved.text)
+        local saved,rejected=custom.restore()
+        if saved then
+            self.snapshot=custom.freeze(saved.doc,saved.text)
+            self.restore_note=saved.skipped and "Restored the previous level; the newer save is no longer valid ("..saved.skipped..")"
         else
-            self.note="No saved custom level. Import a level file [I]."
+            self.note=rejected and "The saved custom level is no longer valid ("..rejected.."). Import a level file [I]." or "No saved custom level. Import a level file [I]."
             custom.open(self.note)
         end
     else
@@ -111,6 +113,8 @@ function on_message(self,id,data,sender)
         end
         -- The ready world has read its snapshot; keep only that one.
         custom.retain(loaded and {[loaded]=true} or {})
+        if self.restore_note and data.ok then msg.post("#ui","custom_status",{text=self.restore_note}) end
+        self.restore_note=nil
         if not self.import and self.station=="custom" and not data.ok then
             custom.open(self.note or "The saved level could not be loaded ("..(data.reason or "the level could not be built").."). Import another level file.")
         end

@@ -37,16 +37,28 @@ function M.retain(keep)
     for id in pairs(snapshots) do if not keep[id] then snapshots[id]=nil end end
 end
 function M.count() local n=0;for _ in pairs(snapshots) do n=n+1 end;return n end
-local function slot(i)
+local function raw(i)
     local ok,t=pcall(sys.load,sys.get_save_file(APP,SLOTS[i]))
-    if not ok or type(t)~="table" or t.format~=1 or type(t.seq)~="number" or type(t.text)~="string" then return nil end
-    local d=M.parse(t.text)
+    if ok and type(t)=="table" and t.format==1 and type(t.seq)=="number" and type(t.text)=="string" then return t end
+end
+local function slot(i)
+    local t=raw(i)
+    local d=t and M.parse(t.text)
     return d and {seq=t.seq,text=t.text,doc=d,slot=i}
 end
+-- Newest valid slot. A newer slot that no longer validates (e.g. a start beyond today's limit) is
+-- reported as skipped (or as the error when nothing valid is left), never silently hidden.
 function M.restore()
     local a,b=slot(1),slot(2)
-    if a and b then return a.seq>b.seq and a or b end
-    return a or b
+    local best=a and b and (a.seq>b.seq and a or b) or a or b
+    for i=1,2 do
+        local t=raw(i)
+        if t and (not best or t.seq>best.seq) then
+            local _,err=M.parse(t.text)
+            if best then best.skipped=err else return nil,err end
+        end
+    end
+    return best
 end
 function M.save(text)
     local current=M.restore()

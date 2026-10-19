@@ -1,5 +1,6 @@
 -- Debug le1a only: runs the full vehicle reset (and its pose guards) at many start positions in one live world.
--- Positions follow a golden-ratio sequence, so they are fractional and dense rather than a coarse grid.
+-- x and y follow independent low-discrepancy sequences (golden ratio, sqrt 2) plus the four corners,
+-- so positions are fractional and dense in both axes rather than a coarse grid.
 local vehicle=require "main.gym.vehicle"
 local feel=require "main.gym.feel"
 local M={}
@@ -10,8 +11,8 @@ function M.run(v,spec)
     local result={count=0,failed=0,max_error=0,failures={}}
     for i=1,spec.count do
         local x=spec.from+(spec.to-spec.from)*((i*0.6180339887498949)%1)
-        if i==1 then x=spec.from elseif i==2 then x=spec.to end
-        local y=spec.heights[(i-1)%#spec.heights+1]
+        local y=spec.y_from+(spec.y_to-spec.y_from)*((i*0.4142135623730951)%1)
+        if i<=4 then x,y=i%2==1 and spec.from or spec.to,i<=2 and spec.y_from or spec.y_to end
         feel.values.spawn_x,feel.values.spawn_y=x/scale,y/scale
         local ok,err=pcall(vehicle.reset,v)
         result.count=result.count+1

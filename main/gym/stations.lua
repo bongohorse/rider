@@ -71,7 +71,7 @@ end
 M.place_limit=data.START_LIMIT
 function M.placeable(d)
     if not data.start_allowed(d.spawn,M.place_limit) then
-        return nil,string.format("Start %.2f, %.2f m is outside the %g m start limit",d.spawn[1],d.spawn[2],M.place_limit)
+        return nil,string.format("Start %.3f, %.3f m is outside the %g m start limit",d.spawn[1],d.spawn[2],M.place_limit)
     end
     return true
 end
