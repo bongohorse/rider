@@ -177,22 +177,99 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   cases.push('snapping_alt_shift_ctrl_g');
 
   // 8. Unsupported shapes are refused with useful errors (R16) and block Play; Undo removes them.
-  await key('d');await at([15,5]);await at([19,6]);await at([17,7]);await key('Enter');e=await revision(r0+19);
-  assert.ok(e.errors.some(m=>m.includes('turns back in x')),JSON.stringify(e.errors));
-  await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked')&&window.riderEditor.message.includes('turns back'));
-  measurements.errors={overhang:(await ed()).errors[0]};
+  // A run that crosses itself and a segment that doubles back are refused; overhangs are allowed (step 9b).
+  await key('d');await at([15,5]);await at([19,7]);await at([19,5]);await at([15,7]);await key('Enter');e=await revision(r0+19);
+  assert.ok(e.errors.some(m=>m.includes('crosses itself')),JSON.stringify(e.errors));
+  await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked')&&window.riderEditor.message.includes('crosses itself'));
+  measurements.errors={crossing:(await ed()).errors[0]};
   await key('z',['Control']);e=await revision(r0+20);
-  await key('d');await at([24,4]);await at([24,7]);await key('Enter');e=await revision(r0+21);
-  assert.ok(e.errors.some(m=>m.includes('vertical only')),JSON.stringify(e.errors));measurements.errors.vertical=e.errors[0];
+  await key('d');await at([24,4]);await at([24,7]);await at([24,5]);await key('Enter');e=await revision(r0+21);
+  assert.ok(e.errors.some(m=>m.includes('doubles back')),JSON.stringify(e.errors));measurements.errors.doubles_back=e.errors[0];
   await button('warnings');await page.waitForFunction(()=>window.riderEditor.warnings_open);
   await key('z',['Control']);e=await revision(r0+22);assert.deepEqual(e.errors,[]);await key('Escape');
   cases.push('unsupported_shapes_refused');
+
+  // 8b. Box selection (LE3b): a line crossing the box is selected even with both ends outside; a box holding
+  // a whole line (and a joint of its neighbour) selects both; a box that touches nothing selects nothing.
+  await key('s');const boxes={};
+  for(const [name,from,to,expect] of [['crossing',[4,0.2],[6,3],['o2']],['contained',[11.6,0.4],[16.4,2.4],['o2','o3']],['outside',[20,4],[26,6],[]]]){
+   await key('Escape');await drag(from,to);await page.waitForTimeout(150);
+   boxes[name]=[...(await ed()).selected].sort();assert.deepEqual(boxes[name],expect,name);
+  }
+  measurements.box_select=boxes;await key('Escape');cases.push('box_select_crossing_contained_outside');
+
+  // 8c. Connect two separated free ends (LE3b): Shift+click the second end, J bridges them with a new piece;
+  // no end moves, the whole course becomes one run and one chain. Undo/Redo restore both states.
+  const bridgeBefore=await doc();
+  await at([16,2]);await page.waitForFunction(()=>window.riderEditor.vertex&&window.riderEditor.vertex.id==='o3');
+  await click(await world([18,1.5]),['Shift']);await page.waitForFunction(()=>window.riderEditor.vertex2&&window.riderEditor.vertex2.id==='o4');
+  await key('j');e=await revision(r0+23);d=await doc();
+  const bridge=d.objects.find(o=>!bridgeBefore.objects.some(b=>b.id===o.id));
+  assert.deepEqual(bridge.points,[[16,2],[18,1.5]]);
+  for(const o of bridgeBefore.objects)assert.equal(pts(d,o.id),JSON.stringify(o.points),'end moved: '+o.id);
+  assert.equal(d.connections.length,4);assert.equal(e.chains,1);
+  await key('e');t=await played('my-straight');assert.equal(t.terrain_shapes,5,'one chain over the bridged gap');
+  await key('e');e=await edit();
+  const bridged=JSON.stringify({o:d.objects,c:d.connections}),unbridged=JSON.stringify({o:bridgeBefore.objects,c:bridgeBefore.connections});
+  await key('z',['Control']);e=await revision(r0+24);d=await doc();assert.equal(JSON.stringify({o:d.objects,c:d.connections}),unbridged);assert.equal(e.chains,2);
+  await key('y',['Control']);e=await revision(r0+25);d=await doc();assert.equal(JSON.stringify({o:d.objects,c:d.connections}),bridged);
+  await key('z',['Control']);e=await revision(r0+26);
+  measurements.bridge={piece:bridge.id,points:bridge.points};cases.push('bridge_separated_ends_undo_redo');
+
+  // 8d. Opening another template while drawing discards the unfinished piece (LE3b); it never lands in the
+  // new document. Undo brings the course back.
+  await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
+  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('template_ramps');await page.waitForFunction(()=>window.riderEditor.id==='my-ramps');
+  e=await edit();await button('tool_select');await page.waitForTimeout(200);e=await ed();
+  assert.equal(e.drawing,0);assert.equal(e.objects,12);assert.ok(e.message.includes('discarded'),e.message);
+  d=await doc();assert.ok(!d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]'));
+  await key('z',['Control']);await page.waitForFunction(()=>window.riderEditor.id==='my-straight');e=await edit();
+  cases.push('template_change_discards_drawing');
 
   // 9. The unplayed draft keeps its pieces and connections across a reload.
   await page.waitForFunction(()=>window.riderEditor.status==='Saved');const kept=await doc();
   await page.goto(base+'?station=custom');e=await edit();d=await doc();
   assert.equal(JSON.stringify({o:d.objects,c:d.connections}),JSON.stringify({o:kept.objects,c:kept.connections}));
   await key('e');t=await played('my-straight');assert.equal(t.terrain_shapes,4);cases.push('draft_keeps_connections');
+
+  // 9b. Overhangs (LE3b): a ramp whose top curls back to the left compiles two-sided (its chain twice, once
+  // reversed) and drives: the wheels never pass through the wall and the chassis climbs past the point where
+  // the run turns back. Per-tick extremes come from the le3 track probe.
+  await key('e');e=await edit();
+  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.objects===1&&window.riderEditor.templates_open===false);
+  e=await edit();await at([10,0.8]);await page.waitForFunction(()=>window.riderEditor.selection!=='');await key('Delete');
+  await page.waitForFunction(()=>window.riderEditor.objects===0);
+  // The curl ends left of where the run starts: the old one-sided rule (orientation from the run's end
+  // points) would put the solid side above the run-up, so the control run falls through.
+  const curl=[[-1,1],[10,1],[12,1.5],[13.5,2.5],[14.5,3.5],[15,4.5],[14.5,5.5],[13.5,6],[-2.5,6.5]];
+  await key('d');for(const p of curl)await at(p);await key('Enter');
+  await page.waitForFunction(()=>window.riderEditor.objects===1&&window.riderEditor.drawing===0);
+  e=await ed();d=await doc();assert.ok([JSON.stringify(curl),JSON.stringify([...curl].reverse())].includes(JSON.stringify(d.objects[0].points)),JSON.stringify(d.objects[0].points));assert.deepEqual(e.errors,[]);
+  await key('s');await at([0,1.7]);await page.waitForFunction(()=>window.riderEditor.selection==='start');
+  for(let i=0;i<3;i++)await button('plus',['Shift']);
+  await page.waitForFunction(()=>window.riderEditor.start.speed===15);
+  await key('e');t=await played('my-straight');assert.equal(t.terrain_shapes,16,'8 segments, built twice');
+  const curlLevel=await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderSavedLevel).then(h=>h.jsonValue());
+  assert.deepEqual(curlLevel.two_sided,[true]);
+  async function drive(){
+   await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');
+   try{await page.waitForTimeout(4000);}finally{await page.keyboard.up('ArrowUp');}
+   return page.evaluate(()=>window.riderTrack);
+  }
+  const track=await drive();
+  // Control: the same level with the reversed chain left out (debug switch) lets the vehicle through.
+  await page.evaluate(()=>{window.riderDebugOneSided=true;});
+  await key('e');e=await edit();await key('e');t=await played('my-straight');assert.equal(t.terrain_shapes,8);
+  const control=await drive();await page.evaluate(()=>{window.riderDebugOneSided=false;});
+  measurements.curl={points:curl,two_sided:track,one_sided_control:control};
+  console.log('CURL '+JSON.stringify(measurements.curl));
+  assert.equal(track.resets,0,'two-sided run: no fall-through reset');
+  assert.ok(track.wheel_max_x<15,'a wheel passed through the wall: '+JSON.stringify(track));
+  assert.ok(track.max_y>4.5,'the chassis did not climb past the turn-back point (15, 4.5): '+JSON.stringify(track));
+  assert.ok(control.min_y<0||control.resets>0,'one-sided control unexpectedly held: '+JSON.stringify(control));
+  cases.push('overhang_curl_drives_two_sided');
 
   // 10. Editor budget re-check (R7) at the 800-segment sample: level sprites stay the only sprites; overlays
   // are GUI nodes within editor.gui max_nodes and drop handles (counted) instead of exceeding the pool.
@@ -219,6 +296,35 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.budget={play_decor_sprites:playSprites,edit:budget,editor_gui_max_nodes:Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/editor.gui'),'utf8'))[1])};
   assert.equal(measurements.budget.editor_gui_max_nodes,budget[0].overlay.max_nodes);
   cases.push('editor_budget_recheck');
+
+  // 11. Drafts above the sprite budget (LE3b): the source validator accepts them; the edit world checks the
+  // budget before building and lets sprites span several points. They open, edit and restore after a reload;
+  // Play stays blocked by the station validator.
+  const wave=(n,x0,y0)=>Array.from({length:n},(_,i)=>[Math.round((x0+i*0.5)*1000)/1000,Math.round((y0+0.2*Math.sin(i/10))*1000)/1000]);
+  const big=lines=>JSON.stringify({schema:1,units:'metres',id:'big',name:'Big draft',editor:{editor_version:2,compiler_version:2,revision:1,next_id:lines.length+1,
+   objects:lines.map((points,i)=>({id:'o'+(i+1),type:'line',points})),connections:[],start:{position:[0,1.7],speed:0}}});
+  const large=[];
+  for(const [name,lines] of [['1101 points',[wave(1101,-5,1)]],['7245 points',[wave(1101,-5,1),wave(2048,-5,10),wave(2048,-5,20),wave(2048,-5,30)]]]){
+   await page.evaluate(([text,seq])=>{window.riderDebugDraft={slot:1,seq,text,now:true};},[big(lines),100000*(large.length+1)]);
+   await page.waitForFunction(()=>window.riderDebugDraft===null);
+   await page.goto(base+'?station=custom');e=await edit();
+   assert.equal(e.id,'big');assert.equal(e.objects,lines.length);
+   assert.ok(e.view.sprites<=1024&&e.view.simplified,name+' '+JSON.stringify(e.view));assert.ok(e.display_note.includes('Display simplified'),e.display_note);
+   assert.ok(e.errors.some(m=>m.includes('800')),JSON.stringify(e.errors));
+   const entry={name,points:lines.reduce((n,l)=>n+l.length,0),view:e.view,note:e.display_note,error:e.errors.find(m=>m.includes('800'))};
+   if(large.length===0){
+    await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
+    await page.waitForTimeout(1100);await drag([10.02,1.03],[10.02,3.03]);e=await revision(2);d=await doc();
+    assert.ok(d.objects[0].points[0][1]>2,'line moved');const moved=JSON.stringify(d.objects[0].points.slice(0,3));
+    assert.ok(e.view.sprites<=1024,JSON.stringify(e.view));
+    await page.waitForFunction(()=>window.riderEditor.status==='Saved');
+    await page.goto(base+'?station=custom');e=await edit();d=await doc();
+    assert.equal(e.revision,2);assert.equal(JSON.stringify(d.objects[0].points.slice(0,3)),moved);assert.ok(e.view.sprites<=1024&&e.view.simplified);
+    entry.after_reload=e.view;
+   }
+   large.push(entry);
+  }
+  measurements.large_drafts=large;cases.push('drafts_above_sprite_budget');
 
   if(errors.length)throw Error(errors.join('\n'));
   await page.screenshot({path:path.join(out,'draw-budget.png')});

@@ -6,7 +6,9 @@ local custom=require "main.gym.custom"
 local socket=require "socket"
 -- selection: primary id (or "start"/"finish"); selected: set of selected object ids (multi-select, LE3);
 -- vertex: {id,index} of the selected line point; preview_points: shapes during a drag (not committed).
-local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,grid=true,
+-- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened counts document
+-- replacements (template, other level) so tools can drop state that belonged to the old document.
+local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
@@ -36,6 +38,7 @@ local function resolve_selection()
     if s~="start" and not (s=="finish" and e.finish) and not ids[s] then M.selection=next(M.selected) end
     local v=M.vertex
     if v and not (ids[v.id] and ids[v.id].type=="line" and v.index<=#ids[v.id].points and M.selection==v.id) then M.vertex=nil end
+    if not M.vertex then M.vertex2=nil end
 end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
 function M.open(doc,keep)
@@ -47,7 +50,8 @@ function M.open(doc,keep)
         -- Opening an already played level unchanged keeps it played.
         if played then e.compiled_revision=e.revision end
     else M.history=doc_lib.history() end
-    M.doc=doc;M.selection,M.selected,M.vertex=nil,{},nil
+    M.doc=doc;M.selection,M.selected,M.vertex,M.vertex2=nil,{},nil,nil
+    M.opened=M.opened+1
     M.changed_at=socket.gettime()
     local s=doc.editor.start.position
     -- A new document starts with START near the left of an overview (about 60 m wide at 1280 px).
@@ -82,7 +86,7 @@ function M.undo(back)
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     -- A point index may now name another point (e.g. an undone Connect reversed a run): keep the line only.
-    M.vertex=nil
+    M.vertex,M.vertex2=nil,nil
     resolve_selection();check();touch(geometry)
     return true
 end
@@ -91,7 +95,7 @@ function M.new_id()
     local id="o"..e.next_id;e.next_id=e.next_id+1;return id
 end
 function M.select(id,vertex)
-    M.selection,M.vertex,M.selected=id,vertex,{}
+    M.selection,M.vertex,M.vertex2,M.selected=id,vertex,nil,{}
     if id and id~="start" and id~="finish" then M.selected[id]=true end
     touch()
 end
@@ -99,7 +103,7 @@ end
 function M.toggle(id)
     if M.selection=="start" or M.selection=="finish" then M.selection=nil end
     M.selected[id]=not M.selected[id] or nil
-    M.vertex=nil
+    M.vertex,M.vertex2=nil,nil
     if M.selected[id] then M.selection=id elseif M.selection==id then M.selection=next(M.selected) end
     touch()
 end

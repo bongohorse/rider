@@ -248,7 +248,7 @@ end
 local function finish_drawing(self)
     local d=self.drawing
     self.drawing=nil
-    if not d or #d.points<2 then return end
+    if not d or #d.points<2 or d.opened~=editor.opened then return end
     -- Connections are resolved when the piece is finished: a free end exactly at its first or last
     -- point (snapped there, shown as a connect preview). Undo/Redo while drawing cannot leave stale ends.
     local function free_end(p)
@@ -295,8 +295,17 @@ local function connect(self)
         end
         return
     end
-    local target=connect_target(v)
-    if not target then editor.message="Connect needs a free line end that touches another free end (drag it onto the other end).";return end
+    local v2=editor.vertex2
+    if v2 and find(v2.id) and dist(find(v2.id).points[v2.index],find(v.id).points[v.index])>=0.01 then
+        -- Two separated free ends: a new piece bridges them; neither end moves (LE3b).
+        local id
+        if editor.commit(function(doc_e) local new,err=edit.bridge(doc_e,{id=v.id,index=v.index},{id=v2.id,index=v2.index});id=new;if not new then return nil,err end end,true) then
+            editor.select(id)
+        end
+        return
+    end
+    local target=v2 and {id=v2.id,index=v2.index,p=find(v2.id).points[v2.index]} or connect_target(v)
+    if not target then editor.message="Connect needs a second free end: Shift+click it, or drag this end onto it.";return end
     local p=find(v.id).points[v.index]
     local id=v.id
     if editor.commit(function(doc_e) return edit.connect(doc_e,{id=v.id,index=v.index},{id=target.id,index=target.index}) end,true) then
@@ -340,6 +349,8 @@ local function open_template(self,id)
     if not d then editor.message="Template unavailable: "..id;return end
     editor.open(doc_lib.template(d),true)
     self.templates_open=false
+    if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
+    cancel(self);self.snapped=nil
 end
 local function set_tool(self,tool)
     if self.drawing and tool~="draw" then finish_drawing(self) end
@@ -429,11 +440,12 @@ local function canvas_press(self,action)
     -- A Shift+click only changes the selection; it never starts a double-click.
     self.last_press=not self.held.shift and {t=now,px={px[1],px[2]}} or nil
     if editor.tool=="draw" then
+        if self.drawing and self.drawing.opened~=editor.opened then self.drawing=nil end
         local d=self.drawing
         local last=d and d.points[#d.points]
         local q,kind,anchor=snap(self,p,nil,last,d and {unpack(d.points,1,#d.points-1)} or nil)
         if not d then
-            self.drawing={points={q},anchored={kind=="anchor"}}
+            self.drawing={points={q},anchored={kind=="anchor"},opened=editor.opened}
         elseif double or dist(q,last)<0.01 then finish_drawing(self)
         else
             d.points[#d.points+1]=q;d.anchored[#d.points]=kind=="anchor"
@@ -476,6 +488,15 @@ local function canvas_press(self,action)
         return
     end
     if self.held.shift and c.kind=="object" then editor.toggle(c.id);return end
+    if self.held.shift and c.kind=="vertex" then
+        -- Shift+click a second free end: the pair Connect [J] joins or bridges.
+        local e=editor.doc.editor
+        local v=editor.vertex
+        local function free(x) local o=find(x.id);return o and (x.index==1 or x.index==#o.points) and not edit.joint(e,x.id,x.index) end
+        if v and free(v) and free(c) and not (c.id==v.id and c.index==v.index) then editor.vertex2={id=c.id,index=c.index};editor.touch()
+        else editor.message="Shift+click picks a second free end after selecting a free end." end
+        return
+    end
     if c.kind=="vertex" then
         if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
         else editor.selection,editor.vertex=c.id,{id=c.id,index=c.index};editor.touch() end
@@ -546,12 +567,19 @@ local function box_select(self,b)
     local x0,x1=math.min(b.from[1],b.to[1]),math.max(b.from[1],b.to[1])
     local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
     if not b.add then editor.selected={} end
+    -- An object is picked when the box contains one of its points or one of its edges crosses the box.
+    local box={x0,x1,y0,y1}
     for _,o in ipairs(editor.doc.editor.objects) do
-        for _,q in ipairs(o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}) do
-            if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then editor.selected[o.id]=true;break end
+        local pts=o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}
+        local hit=false
+        for i,q in ipairs(pts) do
+            if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then hit=true;break end
+            local r=pts[i+1] or (o.type=="hull" and pts[1])
+            if r and doc_lib.segment_box(q,r,box) then hit=true;break end
         end
+        if hit then editor.selected[o.id]=true end
     end
-    editor.selection,editor.vertex=next(editor.selected),nil
+    editor.selection,editor.vertex,editor.vertex2=next(editor.selected),nil,nil
     for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
     editor.touch()
 end
@@ -697,8 +725,12 @@ local function describe(self)
         if joint then lines[#lines+1]="Joint "..v.id.." -> "..joint..": dragging moves the downstream run"
         elseif v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
         else
+            local v2=editor.vertex2
+            local q=v2 and find(v2.id) and find(v2.id).points[v2.index]
             local target=connect_target(v)
-            lines[#lines+1]=target and "Touches "..target.id.." end: Connect [J]" or "Free end"
+            if q and dist(q,p)>=0.01 then lines[#lines+1]=string.format("Connect [J] bridges to %s (%.2f m)",v2.id,dist(q,p))
+            elseif q or target then lines[#lines+1]="Touches "..(q and v2.id or target.id).." end: Connect [J]"
+            else lines[#lines+1]="Free end; Shift+click another free end to connect" end
             lines[#lines+1]=#pts>2 and "Delete shortens the line" or "Delete: not possible (2 points)"
         end
     elseif #ids>1 then
@@ -712,6 +744,7 @@ local function describe(self)
             local run=edit.run_of(e,o.id)
             lines={"Line "..o.id,#o.points.." points, "..string.format("%.2f m",length),
                 #run>1 and "Run of "..#run.." pieces: "..table.concat(run," > ",1,math.min(#run,4))..(#run>4 and " ..." or "") or "Not connected",
+                doc_lib.one_sided((doc_lib.run_points(e,run))) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
         elseif o.type=="hull" then lines={"Hull "..o.id,#o.vertices.." vertices"}
         else lines={"Label "..o.id,o.text} end
@@ -770,8 +803,16 @@ local function draw_overlay(self)
         local vs=vertex_state()
         -- Delete preview: an inner point's neighbours are joined.
         if vs and vs.inner and not self.drag then overlay.line(o,to_px(pts[v.index-1],s),to_px(pts[v.index+1],s),C.join,2) end
-        local target=not self.drag and connect_target(v)
-        if target then handle(target.p,C.connect,HANDLE_PX+12) end
+        local v2=editor.vertex2 and find(editor.vertex2.id)
+        if v2 and not self.drag then
+            -- Second end for Connect: a bridge preview, or a ring when the ends touch.
+            local q=editor.shape(v2)[editor.vertex2.index]
+            handle(q,C.selected,HANDLE_PX+3)
+            if dist(q,pts[v.index])>=0.01 then overlay.line(o,to_px(pts[v.index],s),to_px(q,s),C.connect,3) else handle(q,C.connect,HANDLE_PX+12) end
+        else
+            local target=not self.drag and connect_target(v)
+            if target then handle(target.p,C.connect,HANDLE_PX+12) end
+        end
     end
     if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
     local next,prev=doc_lib.links(e)
@@ -819,7 +860,7 @@ local function publish(self)
         redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,templates_open=self.templates_open or false,
         selected=editor.doc and editor.selected_ids() or {},vertex=editor.vertex or false,hover=editor.hover and editor.hover.key or "",hover_count=self.candidates and #self.candidates or 0,
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
-        readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
+        readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=512,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,dropped=o.dropped,spacing=o.spacing or 0},
         visible=visible_buttons(self)},{encode_empty_table_as_object=false}))
     -- The document itself only when it changed (it can hold thousands of points).
@@ -852,13 +893,16 @@ function update(self,dt)
         gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
             editor.camera.zoom,editor.tool,snap_mode(self),snapped,#e.objects,editor.problem and "Play blocked" or "Ready to play")
             ..((self.overlay.dropped or 0)>0 and " | zoom in to see every point" or ""))
-        local errors,warnings=#editor.errors,#editor.warnings
+        -- The edit world's display note (large drafts, R7) is listed as a warning.
+        local notes={unpack(editor.warnings)}
+        if editor.display_note then table.insert(notes,1,editor.display_note) end
+        local errors,warnings=#editor.errors,#notes
         local function plural(n,word) return n.." "..word..(n==1 and "" or "s") end
         gui.set_text(self.buttons.warnings.label,errors>0 and plural(errors,"error")..", "..warnings.." w." or plural(warnings,"warning"))
         gui.set_color(self.buttons.warnings.box,errors>0 and vmath.vector4(0.5,0.15,0.12,1) or warnings>0 and vmath.vector4(0.45,0.36,0.1,1) or BUTTON)
         local list={}
         for _,m in ipairs(editor.errors) do list[#list+1]="Error: "..m end
-        for _,m in ipairs(editor.warnings) do list[#list+1]="Warning: "..m end
+        for _,m in ipairs(notes) do list[#list+1]="Warning: "..m end
         if #list>6 then list={unpack(list,1,5)};list[6]="... "..(errors+warnings-5).." more" end
         if #list==0 then list[1]="No errors or warnings." end
         gui.set_text(self.warning_text,table.concat(list,"\n"))
@@ -873,6 +917,12 @@ function update(self,dt)
         local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
         if key~=self.seen then
             self.seen=key
+            -- A piece being drawn belongs to the document it was started in (LE3b): opening another
+            -- document (template, E on another level) discards it with its gesture state.
+            if self.drawing and self.drawing.opened~=editor.opened then
+                self.drawing=nil;cancel(self);self.snapped=nil
+                editor.message="Unfinished piece discarded: another level was opened."
+            end
             if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
             else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
         end

@@ -145,6 +145,21 @@ function M.connect(e,a,b)
     M.orient(e,a.id)
     return true
 end
+-- Connect two separated free ends (LE3b): a new two-point piece bridges them, connected at both
+-- ends; neither end moves. Ends of the same run would close a loop and are refused.
+function M.bridge(e,a,b)
+    local oa,ob=find(e,a.id),find(e,b.id)
+    if not oa or not ob or oa.type~="line" or ob.type~="line" then return nil,"Only line ends can be connected" end
+    if (a.index~=1 and a.index~=#oa.points) or (b.index~=1 and b.index~=#ob.points) then return nil,"Only line ends can be connected" end
+    if M.joint(e,a.id,a.index) or M.joint(e,b.id,b.index) then return nil,"Only free ends can be connected" end
+    for _,id in ipairs(M.run_of(e,a.id)) do if id==b.id then return nil,"Connecting these ends would close a loop" end end
+    local pa,pb=oa.points[a.index],ob.points[b.index]
+    if (pa[1]-pb[1])^2+(pa[2]-pb[2])^2<0.0001 then return nil,"The ends touch; Connect joins them directly" end
+    local id,note=M.add_line(e,{{pa[1],pa[2]},{pb[1],pb[2]}},{id=a.id,index=a.index},{id=b.id,index=b.index})
+    if not id then return nil,note end
+    if note then return nil,note end
+    return id
+end
 function M.disconnect(e,id,index)
     if not M.joint(e,id,index) then return nil,"The point is not a connection" end
     id=M.owner(e,id,index)

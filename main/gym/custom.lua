@@ -96,9 +96,9 @@ local function store(slots,parse)
         return seq
     end
     -- Debug only: write raw text into a slot, bypassing validation (version-rejection tests).
-    function S.debug_write(i,seq,text)
+    function S.debug_write(i,seq,text,time)
         assert(sys.get_engine_info().is_debug,"Raw save writes require debug engine")
-        sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text})
+        sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text,time=time})
     end
     return S
 end

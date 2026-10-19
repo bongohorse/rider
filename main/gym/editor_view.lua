@@ -27,12 +27,40 @@ local function readable(v,zoom)
     for _,id in ipairs(v.line_ids) do if go.exists(id) then go.set(id,"scale.y",width) end end
     for _,id in ipairs(v.label_ids) do if go.exists(id) then go.set_scale(vmath.vector3(size,size,1),id) end end
 end
-local function outline(v,list,closed)
-    local ids={}
-    for i=2,#list do ids[#ids+1]=stations.line(list[i-1],list[i],2) end
-    if closed then ids[#ids+1]=stations.line(list[#list],list[1],2) end
+-- Sprite budget (R7, LE3b): the source validator allows more points than the sprite and game-object pools can draw
+-- one per segment. The budget is checked before building: while the document fits, every segment
+-- has its own sprite; above it each object keeps at least one sprite and the rest are shared out in
+-- proportion, each sprite spanning consecutive points. Display only: geometry, handles, picking and
+-- snapping use every point, and Play stays blocked by the station validator.
+-- Every line sprite and label is its own game object, so the world's instance limit counts too: the
+-- 4 objects of world.collection, START (4 sprites + label), FINISH (sprite + label), labels and spare.
+local RESERVE,WORLD_OBJECTS=8,4
+local function allocation(e)
+    local counts,total,n,labels={},0,0,0
+    for _,o in ipairs(e.objects) do
+        if o.type~="label" then
+            local c=o.type=="line" and #o.points-1 or #o.vertices
+            counts[o.id]=c;total,n=total+c,n+1
+        else labels=labels+1 end
+    end
+    local limit=math.min(sys.get_config_int("sprite.max_count",1024)-RESERVE,
+        sys.get_config_int("collection.max_instances",1024)-WORLD_OBJECTS-labels-RESERVE)
+    if total<=limit then return counts end
+    local k={}
+    for id,c in pairs(counts) do k[id]=1+math.floor((c-1)*(limit-n)/(total-n)) end
+    return k,{segments=total,sprites=limit}
+end
+-- Sprites for an outline; sprite j spans points ranges[j] (a closed outline wraps to its first point).
+local function outline(v,list,closed,k)
+    local n=#list-1+(closed and 1 or 0)
+    k=math.min(k or n,n)
+    local ids,ranges={},{}
+    for j=1,k do
+        local i0,i1=math.floor((j-1)*n/k)+1,math.floor(j*n/k)+1
+        ids[j]=stations.line(list[i0],list[i1] or list[1],2);ranges[j]={i0,i1}
+    end
     count(v,ids)
-    return ids
+    return ids,ranges
 end
 -- START: the upright vehicle box at the start position (same box as the clearance check).
 local function start_marker(v,p)
@@ -79,8 +107,8 @@ local function refresh(v,e)
             if o.type=="label" then
                 go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
             else
-                local ids=v.objects[o.id]
-                for i,id in ipairs(ids) do place_line(id,pts[i],pts[i%#pts+1],scale) end
+                local ranges=v.ranges[o.id]
+                for i,id in ipairs(v.objects[o.id]) do place_line(id,pts[ranges[i][1]],pts[ranges[i][2]] or pts[1],scale) end
             end
             v.shapes[o.id]=points(pts)
         end
@@ -101,11 +129,14 @@ local function signature(e)
     return table.concat(t,"|")
 end
 function M.build(self)
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},labels_by={},shapes={},tints={},geometry=editor.geometry_version}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},labels_by={},shapes={},tints={},geometry=editor.geometry_version}
     local e=editor.doc.editor
+    local k,simplified=allocation(e)
+    editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; Play needs 800 or fewer.",
+        simplified.segments,simplified.sprites) or nil
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then v.objects[o.id]=outline(v,o.points)
-        elseif o.type=="hull" then v.objects[o.id]=outline(v,o.vertices,true)
+        if o.type=="line" then v.objects[o.id],v.ranges[o.id]=outline(v,o.points,false,k[o.id])
+        elseif o.type=="hull" then v.objects[o.id],v.ranges[o.id]=outline(v,o.vertices,true,k[o.id])
         else
             local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={};v.labels_by[o.id]=id
         end
@@ -115,7 +146,7 @@ function M.build(self)
     v.start=start_marker(v,e.start.position)
     if e.finish then v.finish=finish_marker(v,e.finish) end
     self.view=v
-    editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation}
+    editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation,simplified=editor.display_note~=nil}
 end
 -- Screen mapping for the loader GUI: canvas pixels of the world origin and pixels per metre.
 -- It also records the camera it was measured with, so the GUI can follow camera moves without lag.
@@ -170,7 +201,7 @@ function M.update(self)
         local blocked=doc_lib.blocked(e,start)
         tint({unpack(v.start.ids,1,#v.start.ids-1)},editor.selection=="start" and SELECTED or blocked and BLOCKED_TINT or START_TINT)
         if v.finish then tint({v.finish.ids[1]},editor.selection=="finish" and SELECTED or stations.FINISH_TINT) end
-        editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation}
+        editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation,simplified=editor.display_note~=nil}
     end
 end
 return M
