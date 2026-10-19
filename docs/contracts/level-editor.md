@@ -1,6 +1,6 @@
 # Level editor contract
 
-Binding rules for the developer level editor ([epic #118](https://github.com/bongohorse/rider/issues/118), milestone **Level Editor**, tasks LE1a–LE6: #122–#129). The epic holds goal, decisions D-E1…D-E13, user flow, task order, out-of-scope items, later candidates and research. **This file is the single source for the rules below**; change them only by PR. Gameplay objects (#120) and visual authoring (#121) are outside this contract.
+Binding rules for the developer level editor ([epic #118](https://github.com/bongohorse/rider/issues/118), milestone **Level Editor**, tasks LE1a–LE6: #122–#129). The epic holds goal, decisions D-E1…D-E13, user flow, task order, out-of-scope items, later candidates and research. **This file is the single source for the rules below**; change them only by PR. The editor expansion milestones (Editor A–C and Future; epics #167–#170) build on the same rules: each expansion task lists the rules it implements or changes and updates this file in its implementation PR. Gameplay objects (#120) and visual authoring (#121) are outside this contract.
 
 Rules apply from the task named in them; a task issue lists the rules it implements. Where engine behaviour is assumed, verify it against the pinned engine ([engine references](../ENGINE_REFERENCES.md)) and record the sources in the PR.
 
