@@ -259,6 +259,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const unknown=JSON.stringify({schema:1,units:'metres',id:'future',name:'Future',editor:{editor_version:99,compiler_version:1,revision:0,next_id:1,objects:[],start:{position:[0,1.7],speed:0}}});
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:999,text};},unknown);
   await page.waitForFunction(()=>window.riderDebugDraft===null);
+  // sys.save only writes the in-memory file system: reload after the IndexedDB sync, or the draft is lost.
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  assert.equal(await page.evaluate(()=>window.riderCustom.syncState()),'saved','injected draft sync');
   await page.goto(base+'?station=custom');t=await played('flat-ltr');
   await page.locator('canvas').focus();await key('e');
   e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,'flat-ltr');
