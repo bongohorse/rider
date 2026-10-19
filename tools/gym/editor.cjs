@@ -212,13 +212,53 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(e.id,own);assert.equal(e.start.speed,3);assert.ok(e.undo>=1,'the previous document is one Undo step away');
   await key('e');await played(own);cases.push('reimport_same_id_opens_file');
 
-  // 16. An unsupported newest draft is refused and kept unchanged; the editor opens the level instead and saves around it.
+  // 16. An unplayed draft of another level reopens after a reload, whatever level is saved; once played, a reload drives it.
+  await key('e');e=await edit();assert.equal(e.id,own);
+  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('template_steps');await page.waitForFunction(()=>window.riderEditor.id==='my-steps');
+  e=await edit();await button('tool_finish');await click(await world([e.start.position[0]+12,1.2]));e=await revision(e.revision+1);
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved');
+  await page.goto(base+'?station=custom');e=await edit();
+  assert.equal(e.id,'my-steps');assert.ok(e.finish&&near(e.finish.position[0],e.start.position[0]+12,0.1),JSON.stringify(e.finish));
+  // A test run of the reopened draft (my-ramps still saved) returns to that draft, not to the saved level.
+  at=await world([e.start.position[0]+3,3]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(100);await key('f');await played('my-steps');
+  await key('e');e=await edit();assert.equal(e.id,'my-steps');
+  await key('e');await played('my-steps');
+  await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderEditor.status==='Saved');
+  await page.goto(base+'?station=custom');t=await played('my-steps');assert.equal((await ed()).mode,'play');cases.push('other_level_draft_reopens');
+
+  // 17. A level imported after unplayed edits wins after a reload; bounds include both ends of every edge.
+  await key('e');e=await edit();await button('tool_finish');await click(await world([e.start.position[0]+16,1.2]));e=await revision(e.revision+1);
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved');
+  at=await world([e.start.position[0]+3,3]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(100);await key('f');await played('my-steps');
+  await page.waitForTimeout(1100); // save times have whole-second resolution
+  const ltr={schema:1,id:'flat-ltr',name:'Left to right',units:'metres',spawn:[5,1.7],start_speed:0,run_in:0,run_out:0,bounds:[-5,105,-10,20],chains:[[[0,0.8],[100,0.8]]]};
+  await page.evaluate(text=>{window.riderCustom.open();document.querySelector('#rider-custom-text').value=text;
+   [...document.querySelectorAll('#rider-custom-panel button')].find(b=>b.textContent==='Import text').click();},JSON.stringify(ltr));
+  await page.waitForFunction(()=>!window.riderCustom.visible&&window.riderTelemetry?.station==='flat-ltr'&&window.riderCustomStatus==='Saved');
+  await page.goto(base+'?station=custom');await played('flat-ltr');assert.equal((await ed()).mode,'play');
+  await page.locator('canvas').focus();await key('e');e=await edit();assert.equal(e.id,'flat-ltr');assert.ok(e.undo>=1);
+  at=await world([45,3]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(100);await key('f');
+  t=await played('flat-ltr');assert.ok(near(t.spawn_x,45,0.05),'test start at 45 m: '+t.spawn_x);
+  await key('e');e=await edit();await key('e');await played('flat-ltr');
+  await page.waitForFunction(()=>window.riderSavedLevel?.id==='flat-ltr');
+  assert.deepEqual((await page.evaluate(()=>window.riderSavedLevel)).bounds.slice(0,2),[-10,110]);cases.push('bounds_include_line_end');
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved');
+
+  // 17b. Without a restorable level a played draft still reopens in the editor (not the Import panel).
+  // Remove both level slots and push that to IndexedDB (a reload reads the synced store).
+  await page.evaluate(()=>new Promise((resolve,reject)=>{for(const s of ['a','b'])try{FS.unlink('/data/.rider/custom-level-'+s);}catch(e){}FS.syncfs(false,e=>e?reject(e):resolve());}));
+  await page.goto(base+'?station=custom');e=await edit();assert.equal(e.id,'flat-ltr');
+  assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);
+  await key('e');await played('flat-ltr');await page.waitForFunction(()=>window.riderCustomStatus==='Saved');cases.push('draft_opens_without_level');
+
+  // 18. An unsupported newest draft is refused and kept unchanged; the editor opens the level instead and saves around it.
   const unknown=JSON.stringify({schema:1,units:'metres',id:'future',name:'Future',editor:{editor_version:99,compiler_version:1,revision:0,next_id:1,objects:[],start:{position:[0,1.7],speed:0}}});
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:999,text};},unknown);
   await page.waitForFunction(()=>window.riderDebugDraft===null);
-  await page.goto(base+'?station=custom');t=await played('my-ramps');
+  await page.goto(base+'?station=custom');t=await played('flat-ltr');
   await page.locator('canvas').focus();await key('e');
-  e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,own);
+  e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,'flat-ltr');
   measurements.unsupported_message=e.message;
   await button('tool_finish');await click(await world([e.start.position[0]+15,1.2]));e=await revision(e.revision+1);
   await page.waitForFunction(()=>window.riderEditor.status==='Saved');

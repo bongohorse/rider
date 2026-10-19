@@ -51,7 +51,8 @@ local function store(slots,parse)
         local t=raw(i)
         if not t then return nil end
         local d,err,unsupported=parse(t.text)
-        if d then return {seq=t.seq,text=t.text,doc=d,slot=i} end
+        -- time (os.time of the save) orders a draft against the level save; older saves have none.
+        if d then return {seq=t.seq,text=t.text,doc=d,slot=i,time=t.time or 0} end
         if unsupported then return {seq=t.seq,text=t.text,slot=i,unsupported=err} end
     end
     S.slot=slot
@@ -88,7 +89,7 @@ local function store(slots,parse)
         held=target==1 and a or b
         if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
         if html5 then html5.run("window.riderCustom.watchSync()") end
-        local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text})
+        local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time()})
         if not ok then return nil,tostring(err) end
         local back=slot(target)
         if not back or back.seq~=seq or back.text~=text then return nil,"Saved data could not be read back" end

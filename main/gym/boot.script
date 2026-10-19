@@ -52,7 +52,9 @@ local function open_current(self)
     -- The editor's own document or draft is reused only for a level it produced; an imported file
     -- with the same id opens as itself (one Undo step away from the previous document).
     local own=level and self.level_edited
-    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id)) then editor.message=notice or editor.message;return true end
+    -- An unplayed document stays current (also after a test run of it) unless a level was imported after its last edit.
+    local unplayed=editor.doc and editor.doc.editor.compiled_revision~=editor.doc.editor.revision and (editor.changed_at or 0)>(self.level_loaded_at or 0)
+    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id) or unplayed) then editor.message=notice or editor.message;return true end
     if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc);editor.message=notice or "";return true end
     if not editor.doc and saved and saved.doc then editor.open(saved.doc) end
     local doc,err,unsupported
@@ -76,7 +78,7 @@ local function play(self,test)
     if #text>custom.limit then editor.message="Play blocked: the level is larger than 256 KiB";return end
     -- The run may use a temporary test start; only the START level is saved and exported (R10).
     local snapshot=custom.freeze(run or level,run_text or text)
-    self.play_text,self.test_run=text,run~=nil
+    self.play_text,self.test_run,self.play_revision=text,run~=nil,editor.doc.editor.revision
     set_mode(self,"play")
     switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
 end
@@ -113,10 +115,14 @@ function init(self)
         self.station,self.speed=id,speed
         local saved,rejected=custom.restore()
         local draft=editor.saved_draft()
+        local draft_time=draft and draft.time
         draft=draft and draft.doc
-        -- Unplayed edits of this level (or a draft without any level) reopen the editor after a reload.
-        if draft and (not saved or (saved.doc.id==draft.id and (saved.doc.editor and saved.doc.editor.compiled_revision)~=draft.editor.revision)) then
-            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,true end
+        -- A draft with unplayed edits reopens the editor after a reload, whichever level is saved: the
+        -- draft records the revision its last successful Play compiled (compiled_revision).
+        -- A level saved after the draft (e.g. an import) wins; without any level the draft always opens.
+        local newer=draft and saved and (saved.time or 0)>(draft_time or 0)
+        if draft and (not saved or (draft.editor.compiled_revision~=draft.editor.revision and not newer)) then
+            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,saved.doc.id==draft.id end
             editor.open(draft)
             self.edit=true
             set_mode(self,"edit")
@@ -227,6 +233,9 @@ function on_message(self,id,data,sender)
             if saved then
                 self.syncing=true
                 msg.post("#ui","custom_status",{text="Saving..."})
+                -- The draft now matches a played level: a reload drives instead of reopening the editor.
+                local e=editor.doc and editor.doc.editor
+                if e and e.revision==self.play_revision then e.compiled_revision=e.revision;editor.save_draft() end
                 if self.debug_editor then html5.run("window.riderSavedLevel="..self.play_text) end
             else
                 msg.post("#ui","custom_status",{text="Save failed; the previous saved level is kept ("..err..")"})
@@ -244,6 +253,7 @@ function on_message(self,id,data,sender)
                 custom.open("Import failed: "..reason..". Import another level file.")
             else
                 local saved,err=custom.save(custom.text(loaded))
+                self.level_loaded_at=socket.gettime()
                 if saved then
                     custom.notify(request,"loaded","Loaded.")
                     self.syncing=true
