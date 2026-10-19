@@ -71,7 +71,7 @@ function M.touch() touch() end
 -- Drafts: autosaved after completed actions; the status reflects the last save and the HTML5 sync.
 function M.save_draft()
     M.dirty=false
-    local seq,err=drafts().save(json.encode(M.doc))
+    local seq,err=drafts().save(json.encode(M.doc,{encode_empty_table_as_object=false}))
     if not seq then M.status="Save failed ("..tostring(err)..")";return false end
     M.status="Saving...";M.syncing=true
     return true

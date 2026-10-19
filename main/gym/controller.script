@@ -62,12 +62,15 @@ local function check_finish(self,state)
     self.finish_prev=p
     if not q or self.finish_done then return end
     local a,b,d=f.line[1],f.line[2],f.direction
-    local s0=(q[1]-a[1])*d[1]+(q[2]-a[2])*d[2]
-    local s1=(p[1]-a[1])*d[1]+(p[2]-a[2])*d[2]
+    local lx,ly=b[1]-a[1],b[2]-a[2]
+    -- Side of the finish line along its normal, oriented to the finish direction (also for slanted lines).
+    local nx,ny=ly,-lx
+    if nx*d[1]+ny*d[2]<0 then nx,ny=-nx,-ny end
+    local s0=(q[1]-a[1])*nx+(q[2]-a[2])*ny
+    local s1=(p[1]-a[1])*nx+(p[2]-a[2])*ny
     if not (s0<0 and s1>=0) then return end
     local t=s0/(s0-s1)
     local x,y=q[1]+(p[1]-q[1])*t,q[2]+(p[2]-q[2])*t
-    local lx,ly=b[1]-a[1],b[2]-a[2]
     local u=((x-a[1])*lx+(y-a[2])*ly)/(lx*lx+ly*ly)
     if u<0 or u>1 then return end
     self.finish_done,self.finish_count,self.finish_time=true,(self.finish_count or 0)+1,self.attempt_time

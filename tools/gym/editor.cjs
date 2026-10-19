@@ -101,8 +101,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(t.command.throttle,0);assert.equal(t.finish,true);assert.equal(t.finish_count,0);
   await page.waitForFunction(()=>window.riderCustomStatus==='Saved');
   const saved=await page.evaluate(()=>window.riderSavedLevel);
-  assert.equal(saved.kind,undefined);assert.equal(saved.sections,undefined);assert.equal(saved.markers,undefined);assert.deepEqual(saved.checkpoints,{});
+  assert.equal(saved.kind,undefined);assert.equal(saved.sections,undefined);assert.equal(saved.markers,undefined);assert.deepEqual(saved.checkpoints,[]);
   assert.deepEqual(saved.spawn,start);assert.equal(saved.editor.compiled_revision,4);
+  // Keys pressed in Edit mode (P, C, M, T, 1, 2, R, V) changed nothing in the game.
+  assert.equal(t.preset,'a');assert.equal(t.crash_enabled,false);assert.equal(t.audio_muted,false);assert.equal(await page.evaluate(()=>window.riderHud.tuning),false);
   const play0=await counts();
   await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');
   try{await page.waitForFunction(()=>window.riderTelemetry.finish_count===1,null,{timeout:30000});await page.waitForTimeout(1500);}
@@ -143,6 +145,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('r');await page.waitForFunction(()=>window.riderTelemetry.reset_count===1&&window.riderTelemetry.finish_done===false);
   t=await tm();assert.deepEqual([t.spawn_x,t.spawn_y],testSpawn,'R repeats the test start');
   // Test starts are never saved or exported: the saved level keeps START, its bounds and the editor sources.
+  // A test run never replaces the save: the status says so and the saved level is the earlier START level.
+  await page.waitForFunction(()=>window.riderCustomStatus==='Test run; the saved level is unchanged');
   const afterTest=await page.evaluate(()=>window.riderSavedLevel);
   assert.deepEqual(afterTest.spawn,start);assert.deepEqual(afterTest.bounds,saved.bounds);assert.equal(afterTest.start_speed,8);
   measurements.high_speed={crossing_speed_mps:finishes.at(-1).speed,time_s:finishes.at(-1).time};cases.push('test_start_high_speed_finish');
@@ -199,16 +203,27 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   e=await edit();assert.equal(e.id,own);measurements.templates=templates;cases.push('all_templates_compile_undo_restores');
   await key('e');await played(own);
 
-  // 15. Unsupported editor versions are rejected and kept unchanged.
+  // 15. A re-imported file with the same id opens as itself, not as the editor's older document.
+  const changed=await page.evaluate(()=>window.riderSavedLevel);changed.start_speed=3;changed.editor.start.speed=3;
+  await page.evaluate(text=>{window.riderCustom.open();document.querySelector('#rider-custom-text').value=text;
+   [...document.querySelectorAll('#rider-custom-panel button')].find(b=>b.textContent==='Import text').click();},JSON.stringify(changed));
+  await page.waitForFunction(()=>!window.riderCustom.visible&&window.riderTelemetry?.start_speed===3&&window.riderCustomStatus==='Saved');
+  await page.locator('canvas').focus();await key('e');e=await edit();
+  assert.equal(e.id,own);assert.equal(e.start.speed,3);assert.ok(e.undo>=1,'the previous document is one Undo step away');
+  await key('e');await played(own);cases.push('reimport_same_id_opens_file');
+
+  // 16. An unsupported newest draft is refused and kept unchanged; the editor opens the level instead and saves around it.
   const unknown=JSON.stringify({schema:1,units:'metres',id:'future',name:'Future',editor:{editor_version:99,compiler_version:1,revision:0,next_id:1,objects:[],start:{position:[0,1.7],speed:0}}});
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:999,text};},unknown);
   await page.waitForFunction(()=>window.riderDebugDraft===null);
   await page.goto(base+'?station=custom');t=await played('my-ramps');
   await page.locator('canvas').focus();await key('e');
-  await page.waitForFunction(()=>window.riderEditor.message.includes('unsupported editor'));
-  e=await ed();assert.equal(e.mode,'play');
+  e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,own);
+  measurements.unsupported_message=e.message;
+  await button('tool_finish');await click(await world([e.start.position[0]+15,1.2]));e=await revision(e.revision+1);
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved');
   const raw=await page.evaluate(()=>{const b=FS.readFile('/data/.rider/custom-draft-a');return new TextDecoder('latin1').decode(b);});
-  assert.ok(raw.includes('"editor_version":99'),'unsupported draft changed');measurements.unsupported_message=e.message;cases.push('unsupported_version_rejected');
+  assert.ok(raw.includes('"editor_version":99'),'unsupported draft changed');cases.push('unsupported_version_rejected');
 
   if(errors.length)throw Error(errors.join('\n'));
   await page.screenshot({path:path.join(out,'editor-play.png')});

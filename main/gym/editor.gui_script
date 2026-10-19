@@ -32,6 +32,8 @@ end
 local TOOLS={{"select","Select [S]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
 function init(self)
     self.nodes,self.buttons,self.held={},{},{}
+    -- Test state for the le2 runner only (debug engine); release builds never publish it.
+    self.debug=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le2"
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -198,8 +200,8 @@ local function canvas_press(self,action)
 end
 local function canvas_move(self,action)
     local p=cursor(self,action)
-    if self.pan and action.screen_x then
-        local s=editor.screen
+    local s=editor.screen
+    if self.pan and action.screen_x and s then
         editor.camera.x=editor.camera.x-(action.screen_x-self.pan[1])/s.ppm_x
         editor.camera.y=editor.camera.y-(action.screen_y-self.pan[2])/s.ppm_y
         self.pan={action.screen_x,action.screen_y}
@@ -226,7 +228,9 @@ local function canvas_release(self)
 end
 function on_input(self,action_id,action)
     if editor.mode~="edit" then
-        if action_id==hash("editor_toggle") and action.pressed then
+        -- An open report or import panel keeps its input; E does not leave it behind.
+        local panel=html5 and html5.run("!!(window.riderFeedback?.visible||window.riderCustom?.visible)")=="true"
+        if action_id==hash("editor_toggle") and action.pressed and not panel then
             editor.message=""
             msg.post(LOADER,"editor_enter")
             return true
@@ -341,7 +345,7 @@ function update(self,dt)
             gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON)
         end
     end
-    if html5 then publish(self) end
+    if self.debug then publish(self) end
 end
 function on_message(self,id,data)
     if id==hash("editor_mode") then

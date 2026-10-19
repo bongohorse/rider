@@ -42,12 +42,18 @@ end
 -- stays one Undo step away.
 local function open_current(self)
     local saved=editor.saved_draft()
+    local notice
     if saved and saved.unsupported then
-        return nil,"The saved draft was made by an unsupported editor ("..saved.unsupported.."). It is kept unchanged; the editor cannot open it."
+        -- R1: only that draft is refused; its slot stays untouched (drafts are saved around it).
+        notice="The newest draft was made by an unsupported editor ("..saved.unsupported.."). It is kept unchanged and was not opened."
+        saved=nil
     end
     local level=self.station=="custom" and self.level_id and custom.peek(self.level_snapshot)
-    if editor.doc and level and editor.doc.id==level.id then return true end
-    if saved and saved.doc and level and saved.doc.id==level.id then editor.open(saved.doc);return true end
+    -- The editor's own document or draft is reused only for a level it produced; an imported file
+    -- with the same id opens as itself (one Undo step away from the previous document).
+    local own=level and self.level_edited
+    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id)) then editor.message=notice or editor.message;return true end
+    if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc);editor.message=notice or "";return true end
     if not editor.doc and saved and saved.doc then editor.open(saved.doc) end
     local doc,err,unsupported
     if level then doc,err,unsupported=doc_lib.open_level(level)
@@ -58,16 +64,19 @@ local function open_current(self)
     end
     if not doc then return nil,(unsupported and "The level was made by an unsupported editor ("..err.."); it is kept unchanged." or "The level cannot be opened: "..err) end
     editor.open(doc,editor.doc~=nil)
+    if notice then editor.message=notice end
     return true
 end
 local function play(self,test)
     local level,err,run=editor.compile(test)
     if not level then editor.message="Play blocked: "..err;return end
-    local text,run_text=json.encode(level),run and json.encode(run)
+    -- Empty lists stay JSON arrays (checkpoints, hulls, labels).
+    local list={encode_empty_table_as_object=false}
+    local text,run_text=json.encode(level,list),run and json.encode(run,list)
     if #text>custom.limit then editor.message="Play blocked: the level is larger than 256 KiB";return end
     -- The run may use a temporary test start; only the START level is saved and exported (R10).
     local snapshot=custom.freeze(run or level,run_text or text)
-    self.play_text=text
+    self.play_text,self.test_run=text,run~=nil
     set_mode(self,"play")
     switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
 end
@@ -107,12 +116,13 @@ function init(self)
         draft=draft and draft.doc
         -- Unplayed edits of this level (or a draft without any level) reopen the editor after a reload.
         if draft and (not saved or (saved.doc.id==draft.id and (saved.doc.editor and saved.doc.editor.compiled_revision)~=draft.editor.revision)) then
-            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id=saved.doc.id end
+            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,true end
             editor.open(draft)
             self.edit=true
             set_mode(self,"edit")
         elseif saved then
             self.snapshot=custom.freeze(saved.doc,saved.text)
+            self.restored_edited=draft~=nil and saved.doc.id==draft.id
             self.restore_note=saved.skipped and "Restored the previous level; the newer save is no longer valid ("..saved.skipped..")"
         else
             self.note=rejected and "The saved custom level is no longer valid ("..rejected.."). Import a level file [I]." or "No saved custom level. Import a level file [I]."
@@ -162,6 +172,8 @@ function on_message(self,id,data,sender)
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)
         if ok then enter_edit(self) else editor.message=err end
+    elseif (id==hash("editor_enter") or id==hash("editor_play")) and self.loading then
+        editor.message="The level is still loading; press "..(id==hash("editor_play") and "Play" or "E").." again."
     elseif id==hash("editor_play") and not self.loading and editor.mode=="edit" then play(self,data.test)
     elseif id==hash("editor_reload") and not self.loading and editor.mode=="edit" then enter_edit(self)
     elseif id==hash("select_station") and not self.loading and editor.mode=="play" then
@@ -182,7 +194,12 @@ function on_message(self,id,data,sender)
         self.loading=false
         msg.post(sender,"world_load_count",{count=self.world_loads,generation=self.generation})
         local loaded=self.station=="custom" and data.ok and self.snapshot
-        if loaded then self.level_snapshot,self.level_id=loaded,custom.peek(loaded).id end
+        -- A test run's snapshot carries a temporary start; the editor keeps opening from the saved level.
+        if loaded and not (self.play and self.test_run) then
+            self.level_snapshot,self.level_id=loaded,custom.peek(loaded).id
+            self.level_edited=self.play==true or (self.restored_edited==true and not self.import)
+            self.restored_edited=nil
+        end
         if self.queued then
             local next=self.queued;self.queued=nil
             custom.retain({[next.snapshot]=true})
@@ -198,6 +215,11 @@ function on_message(self,id,data,sender)
             self.play=false
             if not loaded then
                 enter_edit(self,"Play failed: "..(data.reason or "the level could not be built")..". The previous saved level is kept.")
+                return
+            end
+            -- A test start never replaces the save: its START was not the start that was driven.
+            if self.test_run then
+                msg.post("#ui","custom_status",{text="Test run; the saved level is unchanged"})
                 return
             end
             -- Play result: only a drive-ready level replaces the save (decisions after LE1b).
