@@ -61,7 +61,7 @@ function init(self)
     self.nodes,self.buttons,self.held={},{},{}
     -- Test state for the le2/le3/le4 runners only (debug engine); release builds never publish it.
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c")
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -89,6 +89,9 @@ function init(self)
     button(self,"split",vmath.vector3(860,274,0),vmath.vector3(180,22,0),"Split here [K]",R,T)
     button(self,"connect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Connect [J]",R,T)
     button(self,"disconnect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Disconnect [J]",R,T)
+    -- LE5c: a point's Corner/Smooth switch and a prefab's conversion to an editable path.
+    button(self,"smooth",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make smooth",R,T)
+    button(self,"convert",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Convert to editable path",R,T)
     button(self,"rename",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Rename level",R,T)
     for i=1,PARAMS do
         button(self,"param_"..i,vmath.vector3(860,190,0),vmath.vector3(180,22,0),"",R,T)
@@ -165,6 +168,7 @@ end
 local function tolerance(px) local s=map();return px*ui/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
 local function to_px(p,s) return {s.ox+p[1]*s.ppm_x,s.oy+p[2]*s.ppm_y} end
 local function dist(a,b) return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2) end
+local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
 local function seg_t(p,a,b)
     local dx,dy=b[1]-a[1],b[2]-a[2]
     return math.max(0,math.min(1,((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)))
@@ -194,8 +198,9 @@ local function curve_handles(o)
     local list={}
     for i,a in ipairs(o.anchors) do
         if not (i==1 and prev[o.id]) then list[#list+1]={name="a"..i,p=a.p,label="anchor "..i,anchor=i,index=i==1 and 1 or i==n and last or nil} end
-        if i>1 then list[#list+1]={name="i"..i,p={a.p[1]+a["in"][1],a.p[2]+a["in"][2]},label="tangent in, anchor "..i,anchor=i,tangent=true} end
-        if i<n then list[#list+1]={name="o"..i,p={a.p[1]+a.out[1],a.p[2]+a.out[2]},label="tangent out, anchor "..i,anchor=i,tangent=true} end
+        -- A corner (LE5c) has no tangents; the open ends have none either.
+        if i>1 and a.mode~="corner" then list[#list+1]={name="i"..i,p={a.p[1]+a["in"][1],a.p[2]+a["in"][2]},label="tangent in, anchor "..i,anchor=i,tangent=true} end
+        if i<n and a.mode~="corner" then list[#list+1]={name="o"..i,p={a.p[1]+a.out[1],a.p[2]+a.out[2]},label="tangent out, anchor "..i,anchor=i,tangent=true} end
     end
     return list
 end
@@ -564,12 +569,17 @@ local function mirror(self,side)
 end
 -- Prefabs (LE5a). A parameter change keeps the entry and moves the downstream run (edit.set_params);
 -- one Undo step. A change that adds a Play-blocking error is applied and named as a conflict.
-local function apply_params(id,params)
+local function apply_params(id,params,partner)
     local known={}
     for _,m in ipairs(editor.errors) do known[m]=true end
     -- params: prefab parameters, or the new anchors of a curve (LE5b, same R4 rule).
     local change=find(id).type=="curve" and edit.set_anchors or edit.set_params
-    if editor.commit(function(e) local moved,err=change(e,id,params);if not moved then return nil,err end end,true) then
+    if editor.commit(function(e)
+        local moved,err=change(e,id,params)
+        if not moved then return nil,err end
+        -- A smoothed joint's other tangent (LE5c) changes in the same Undo step.
+        if partner then local ok,perr=edit.set_anchors(e,partner.id,partner.anchors);if not ok then return nil,perr end end
+    end,true) then
         for _,m in ipairs(editor.errors) do
             if not known[m] then editor.message="Changed, with a conflict: "..m..(m:match("%.$") and "" or ".").." Undo [Ctrl+Z] restores the previous shape.";return true end
         end
@@ -614,10 +624,66 @@ local function place_prefab(self,p)
         editor.message="Placed "..prefab.name(place.kind).." "..id..(place.target and ", connected to "..place.target or "")..". Change its values on the right."
     end
 end
+-- Corner / Smooth (LE5c): the point a click picked (a curve anchor, a line point or a joint, owned by the
+-- upstream piece) and whether it is sharp now. Open ends have no corner; prefab points need a conversion.
+local function smooth_state()
+    local id,i
+    local a=editor.anchor
+    if a and a.id==editor.selection and find(a.id) then id,i=a.id,a.i
+    elseif editor.vertex and find(editor.vertex.id) then
+        local v=editor.vertex
+        local o=find(v.id)
+        id,i=v.id,(o.type=="curve" and v.index>1) and #o.anchors or v.index
+    end
+    if not id then return nil end
+    local e=editor.doc.editor
+    local next,prev=doc_lib.links(e)
+    local o=find(id)
+    local function n(x) return x.type=="line" and #x.points or x.type=="curve" and #x.anchors or #path(x) end
+    if i==1 and prev[id] then id=prev[id];o=find(id);i=n(o) end
+    if (i==1 or i==n(o)) and not (i==n(o) and next[id]) then return nil end
+    local corner=o.type~="curve" or o.anchors[i].mode=="corner"
+    local b=i==n(o) and find(next[id])
+    if b and not corner then
+        -- A joint is smooth only when both sides have tangents on one line (else Make smooth aligns them).
+        local t,u=o.anchors[i]["in"],b.type=="curve" and b.anchors[1].mode~="corner" and b.anchors[1].out
+        corner=not (u and length(t)>0 and length(u)>0 and (t[1]*u[1]+t[2]*u[2])/(length(t)*length(u))<-0.9999)
+    end
+    return {id=id,i=i,corner=corner,prefab=o.type=="prefab" or (b and b.type=="prefab")}
+end
+local function smooth_point(self)
+    local st=smooth_state()
+    if not st then editor.message="Select a point inside a line or curve, or a joint, first.";return end
+    local rid,ri
+    if editor.commit(function(e) local id,i=edit.set_corner(e,st.id,st.i,st.corner);rid,ri=id,i;if not id then return nil,i end end,true) then
+        editor.select(rid);editor.anchor={id=rid,i=ri}
+        editor.message=st.corner and "Smooth: the corner is rounded through the same point; drag its tangents (pink) to shape it." or "Corner: the point is sharp again."
+    end
+end
+-- Convert to editable path asks once more and says what it removes (contract: LE5c).
+local function convert_prefab(self)
+    local o=editor.selection and find(editor.selection)
+    if not (o and o.type=="prefab") then return end
+    if self.confirm_convert~=o.id then
+        self.confirm_convert,self.confirm_revision=o.id,editor.doc.editor.revision
+        editor.message="Converting removes the "..prefab.name(o.kind).."'s parameter fields and handles; its shape and connections stay. Click Sure? to convert."
+        return
+    end
+    self.confirm_convert=nil
+    local ids
+    if editor.commit(function(e) local list,err=edit.convert_prefab(e,o.id);ids=list;if not list then return nil,err end end,true) then
+        editor.select(ids[1])
+        editor.message="Converted to an editable path"..(#ids>1 and " ("..#ids.." lines; the jump gap stays open)" or "")..": its points can now be moved, smoothed [Make smooth] or deleted."
+    end
+end
 -- Number fields edit the same parameters as the handles; a choice field steps to its next value.
 local function number_text(v) return (string.format("%.4f",v):gsub("0+$",""):gsub("%.$","")) end
 local function param_rows(o)
-    if o.type=="curve" then return editor.anchor and editor.anchor.id==o.id and {{key="mode",label="Tangents",choices={"free","smooth","symmetric"}}} or {} end
+    if o.type=="curve" then
+        local a=editor.anchor
+        local inner=a and a.id==o.id and a.i>1 and a.i<#o.anchors and o.anchors[a.i].mode~="corner"
+        return inner and {{key="mode",label="Tangents",choices={"free","smooth","symmetric"}}} or {}
+    end
     return prefab.fields(o.kind,o.params,true)
 end
 -- A curve anchor's tangent mode (LE5b): free tangents move independently; smooth keeps them on one line
@@ -703,6 +769,7 @@ local function set_tool(self,tool)
 end
 local function on_button(self,name)
     if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
+    if name~="convert" then self.confirm_convert=nil end
     if name=="undo" or name=="redo" then
         if editor.undo(name=="undo")==false then editor.message="Nothing to "..name.."." end
     elseif name=="open" then
@@ -715,6 +782,8 @@ local function on_button(self,name)
         -- The whole name starts selected: typing replaces it, Backspace clears it.
         self.field={text=editor.doc.name,all=true};editor.message="Type the level name; Enter confirms, Esc cancels."
     elseif name=="mirror_left" or name=="mirror_right" then mirror(self,name=="mirror_left" and -1 or 1)
+    elseif name=="smooth" then smooth_point(self)
+    elseif name=="convert" then convert_prefab(self)
     elseif name:match("^param_%d$") then param_click(self,tonumber(name:sub(7)))
     elseif name:match("^kind_") then editor.prefab_kind=name:sub(6);set_tool(self,"prefab")
     elseif name=="paste" then paste_at(self,{editor.camera.x,editor.camera.y})
@@ -777,6 +846,9 @@ local function visible_buttons(self)
     -- A curve's inner anchor splits there (LE5b).
     local a=editor.anchor
     if o and o.type=="curve" and a and a.id==o.id and a.i>1 and a.i<#o.anchors and not (vs and vs.inner) then list[#list+1]="split" end
+    local st=smooth_state()
+    if st then list[#list+1]="smooth" end
+    if o and o.type=="prefab" and doc_lib.terrain(o) and #editor.selected_ids()==1 then list[#list+1]="convert" end
     if o and (o.type=="prefab" or o.type=="curve") and #editor.selected_ids()==1 then
         for i=1,#param_rows(o) do list[#list+1]="param_"..i end
     end
@@ -845,6 +917,22 @@ local function start_handle(self,id,name,p)
         local from=o.anchors[i>1 and i-1 or 2].p
         -- Only an anchor drag snaps (and shows the snap marker); tangents never snap to points.
         if name:sub(1,1)=="a" then self.drag.skip,self.drag.from=skip,{from[1],from[2]} end
+        -- A smoothed joint (LE5c): the neighbouring piece holds the other tangent, which follows.
+        local next,prev=doc_lib.links(editor.doc.editor)
+        local kind=name:sub(1,1)
+        local pid=(kind=="i" and i==#o.anchors and next[id]) or (kind=="o" and i==1 and prev[id])
+        local po=pid and find(pid)
+        if po and po.type=="curve" then
+            local pi,pkey=kind=="i" and 1 or #po.anchors,kind=="i" and "out" or "in"
+            local b,t=po.anchors[pi],o.anchors[i][kind=="i" and "in" or "out"]
+            local bt=b[pkey]
+            -- Only a smoothed joint couples: the other side is no corner and its tangent already points
+            -- the opposite way (a joint left with a kink stays independent).
+            local lt,lb=length(t),length(bt)
+            if b.mode~="corner" and lt>0 and lb>0 and (t[1]*bt[1]+t[2]*bt[2])/(lt*lb)<-0.9999 then
+                self.drag.partner={id=pid,i=pi,key=pkey,p0=doc_lib.copy(po.anchors)}
+            end
+        end
         editor.anchor={id=id,i=i};editor.touch()
     end
 end
@@ -853,7 +941,6 @@ local function anchor_key(anchors)
     for _,a in ipairs(anchors) do t[#t+1]=string.format("%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%s",a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2],a.mode) end
     return table.concat(t,";")
 end
-local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
 -- A curve handle drag: an anchor moves (snapped; its tangents move with it), a tangent changes and its
 -- partner follows the anchor's mode (smooth: on one line, symmetric: mirrored, free: unchanged).
 local function curve_drag(self,drag,p)
@@ -878,6 +965,14 @@ local function curve_drag(self,drag,p)
         if a.mode=="symmetric" then a[other]={-t[1],-t[2]}
         elseif a.mode=="smooth" then local l=length(a[other]);a[other]={-t[1]/lt*l,-t[2]/lt*l} end
     end
+    local pt=drag.partner
+    if pt and lt>0 and (a.mode=="smooth" or a.mode=="symmetric") then
+        local partner=doc_lib.copy(pt.p0)
+        local b=partner[pt.i]
+        if a.mode=="symmetric" then b[pt.key]={-t[1],-t[2]}
+        else local l=length(b[pt.key]);b[pt.key]={-t[1]/lt*l,-t[2]/lt*l} end
+        drag.partner_anchors=partner
+    end
     return anchors
 end
 -- The Bezier segment and parameter nearest to p (for inserting an anchor on a selected curve).
@@ -887,12 +982,17 @@ local function curve_nearest(o,p)
         local a,b=o.anchors[i],o.anchors[i+1]
         local p0,p3=a.p,b.p
         local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
-        for k=1,63 do
+        if a.mode=="corner" and b.mode=="corner" then
+            -- A straight chord (LE5c): the click projected onto it (insert_anchor places corners linearly).
+            local t=seg_t(p,p0,p3)
+            local dd=dist(p,{p0[1]+(p3[1]-p0[1])*t,p0[2]+(p3[2]-p0[2])*t})
+            if t>0 and t<1 and (not best or dd<best) then best,bi,bt=dd,i,t end
+        else for k=1,63 do
             local t=k/64;local u=1-t
             local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
             local dd=dist(p,q)
             if not best or dd<best then best,bi,bt=dd,i,t end
-        end
+        end end
     end
     return bi,bt
 end
@@ -902,6 +1002,7 @@ end
 local function canvas_press(self,action)
     local p=cursor(self,action)
     if not p then return end
+    self.confirm_convert=nil
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
@@ -1052,6 +1153,11 @@ local function canvas_move(self,action)
             -- as a conflict before the release applies it.
             local e=doc_lib.copy(editor.doc.editor)
             local moved=(o.type=="curve" and edit.set_anchors or edit.set_params)(e,drag.id,params) or {}
+            if drag.partner_anchors and edit.set_anchors(e,drag.partner.id,doc_lib.copy(drag.partner_anchors)) then
+                local listed=false
+                for _,id in ipairs(moved) do listed=listed or id==drag.partner.id end
+                if not listed then moved[#moved+1]=drag.partner.id end
+            end
             local preview={}
             for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
             drag.downstream=math.max(0,#moved-1)
@@ -1134,7 +1240,7 @@ local function canvas_release(self)
     if drag.kind=="handle" then
         local o=find(drag.id)
         local differs=drag.params and (o.type=="curve" and anchor_key(drag.params)~=anchor_key(drag.p0) or o.type~="curve" and not same_params(drag.params,drag.p0))
-        if differs then apply_params(drag.id,drag.params) end
+        if differs then apply_params(drag.id,drag.params,drag.partner_anchors and {id=drag.partner.id,anchors=drag.partner_anchors}) end
     elseif drag.kind=="vertex" then
         local q=drag.to
         if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
@@ -1338,7 +1444,7 @@ local function describe(self)
                 lines[#lines+1]=string.format("Join to %s: kink %.1f deg",next[o.id],kink({pts[n][1]-pts[n-1][1],pts[n][2]-pts[n-1][2]},{w[2][1]-w[1][1],w[2][2]-w[1][2]}))
             end
             local a=editor.anchor and editor.anchor.id==o.id and o.anchors[editor.anchor.i]
-            if a then lines[#lines+1]=string.format("Anchor %d: x %.2f  y %.2f m",editor.anchor.i,a.p[1],a.p[2]) end
+            if a then lines[#lines+1]=string.format("Anchor %d (%s): x %.2f  y %.2f m",editor.anchor.i,a.mode,a.p[1],a.p[2]) end
             lines[#lines+1]="Drag anchors and tangents (pink);"
             lines[#lines+1]="double-click adds an anchor."
         elseif o.type=="prefab" then
@@ -1547,7 +1653,7 @@ end
 local ROW,LINE=26,7.5
 local function layout(self,shown)
     local y=468-self.description_lines*LINE-6-ROW/2
-    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"}}
+    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"},{"smooth"},{"convert"}}
     for i=1,PARAMS do rows[#rows+1]={"param_"..i} end
     rows[#rows+1]={"mirror_left","mirror_right"}
     rows[#rows+1]={"paste"}
@@ -1706,6 +1812,12 @@ function update(self,dt)
                 gui.set_color(b.box,l and self.confirm_delete==l.key and DANGER or BUTTON)
             elseif name~="warnings" then gui.set_color(b.box,(name=="tool_"..editor.tool or name=="kind_"..editor.prefab_kind) and ACTIVE or BUTTON) end
         end
+        -- "Sure? Convert" belongs to one prefab and one document state: any edit, Undo or other selection drops it.
+        if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
+        local st=smooth_state()
+        gui.set_text(self.buttons.smooth.label,st and not st.corner and "Make corner" or "Make smooth")
+        gui.set_text(self.buttons.convert.label,self.confirm_convert and self.confirm_convert==editor.selection and "Sure? Convert" or "Convert to editable path")
+        gui.set_color(self.buttons.convert.box,self.confirm_convert and self.confirm_convert==editor.selection and DANGER or BUTTON)
         -- A selected prefab's fields: label and value, the focused one as an edit field.
         local sel=editor.selection and find(editor.selection)
         if sel and sel.type=="curve" and editor.anchor and editor.anchor.id==sel.id and sel.anchors[editor.anchor.i] then
