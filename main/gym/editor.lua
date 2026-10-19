@@ -53,13 +53,31 @@ local function resolve_selection()
     local o2=v2 and ids[v2.id]
     if not M.vertex or not (o2 and o2.type=="line" and (v2.index==1 or v2.index==#o2.points)) then M.vertex2=nil end
 end
+-- Saves the current document now when it has unsaved changes, a lagging My levels copy or no key yet
+-- although it belongs in My levels. Called before another document becomes current, so a pending
+-- autosave never lands in the new one.
+function M.flush()
+    if M.doc and (M.dirty or M.behind[M.opened] or (M.store[M.opened] and not M.key())) then return M.save_draft() end
+    return true
+end
+-- Before another document becomes current: the outgoing one must be saved, otherwise the next autosave
+-- would replace its draft and its edits would live only in Undo. A refused switch can be repeated
+-- within 10 s to continue anyway (e.g. browser storage unavailable).
+function M.leave()
+    if M.flush() then M.refused_at=nil;return true end
+    local now=socket.gettime()
+    if M.refused_at and now-M.refused_at<=10 then M.refused_at=nil;return true end
+    M.refused_at=now
+    M.message="Not switched: the open level could not be saved ("..M.status.."). Repeat within 10 s to continue anyway; its edits stay in Undo."
+    return false
+end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
 -- opts.key: its My levels key; opts.store: save it to My levels from the first autosave (New, Import);
 -- opts.saved: it was read from storage unchanged (a reload), so the status starts as Saved.
+-- Returns nil when the outgoing document could not be saved (M.leave; message set), true otherwise.
 function M.open(doc,keep,opts)
     opts=opts or {}
-    -- The outgoing document is saved first: its pending autosave must not land in the new one.
-    if M.doc and (M.dirty or M.behind[M.opened] or (M.store[M.opened] and not M.key())) then M.save_draft() end
+    if M.doc and not M.leave() then return nil end
     if keep and M.doc then
         doc_lib.record(M.history,M.doc,M.opened)
         local e=doc.editor
@@ -80,6 +98,7 @@ function M.open(doc,keep,opts)
     if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     else M.status=opts.saved and "Saved" or "" end
     check();touch(true)
+    return true
 end
 -- One completed action = one history entry and one revision (R12, R17). fn may refuse with nil, err;
 -- a result that fails the source validator (R16) is refused too. Either way nothing changes.
@@ -99,7 +118,11 @@ function M.commit(fn,geometry)
     resolve_selection();check();touch(geometry)
     return true
 end
+-- Returns false (nothing to step) or nil, "refused" when crossing into another document is refused.
 function M.undo(back)
+    local stack=back and M.history.undo or M.history.redo
+    local target=stack[#stack]
+    if target and target.instance~=M.opened and not M.leave() then return nil,"refused" end
     local revision,next_id=M.doc.editor.revision,M.doc.editor.next_id
     local restored,instance=doc_lib.step(M.history,M.doc,back,M.opened)
     if not restored then return false end
@@ -162,10 +185,17 @@ function M.save_draft()
     M.dirty=false
     local text=json.encode(M.doc,{encode_empty_table_as_object=false})
     local stored=M.store[M.opened] or M.key()
-    if stored and not M.key() then M.keys[M.opened]=library().new_key() end
+    local kerr
+    if stored and not M.key() then
+        -- Never below a key this page already uses (a draft's key may have no saved level yet).
+        local top=0
+        for _,k in pairs(M.keys) do top=math.max(top,k) end
+        M.keys[M.opened],kerr=library().new_key(top)
+    end
     -- The draft names its level's key; 0 marks an unsaved copy (drafts saved before LE4 have no key).
     local seq,err=drafts().save(text,M.key() or 0)
     if not seq then M.status="Save failed ("..tostring(err)..")";return false end
+    if kerr then M.behind[M.opened]=true;M.status="Save failed (My levels: "..tostring(kerr)..")";return false end
     if stored then
         local ok,lerr=library().save(M.key(),text,M.doc.id,M.doc.name)
         M.behind[M.opened]=not ok or nil
@@ -192,6 +222,7 @@ end
 function M.draft_store() return drafts() end
 -- True when the My levels copy of key differs from the draft text (its last level save failed).
 function M.library_behind(key,text)
+    if not library().has(key) then return true end
     local s=library().store(key).restore()
     return not s or s.text~=text
 end

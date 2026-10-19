@@ -15,7 +15,8 @@
   function submit(text, request = ++api.request) {
     if (request !== api.request) return;
     if (text.length > limit) {reject('The level file is larger than 256 KiB.');return;}
-    api.pending = {request, text};
+    // editor: opened by the level editor's Import (LE4); Lua routes it by this flag, not by the mode.
+    api.pending = {request, text, editor: api.editorImport};
     api.state = 'reading';api.message = 'Checking level...';status(api.message);
   }
   api.importFile = async chosen => {
@@ -31,6 +32,7 @@
     // gating). The editor's own Import button opens the panel with editor=true (LE4: opens as a copy).
     if (window.riderEditing && !editor) return;
     closeExport();
+    api.editorImport = !!editor;
     if (!panel) {
       panel = document.createElement('section');panel.id = 'rider-custom-panel';
       panel.setAttribute('aria-label', 'Import custom level');
@@ -68,6 +70,7 @@
     document.querySelector('canvas')?.focus();
   }
   api.exportLevel = ({name, text}) => {
+    if (panel) api.close();
     closeExport();
     const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
     const link = document.createElement('a');link.href = url;link.download = name;
@@ -91,6 +94,8 @@
     api.visible = true;field.focus();field.select();
   };
   api.closeExport = closeExport;
+  // Leaving the editor closes its panels: an editor import must not land in Play (LE4).
+  api.closeEditor = () => {closeExport();if (panel && api.editorImport) api.close();};
   api.close = () => {
     api.visible = false;
     if (panel) panel.remove();panel = null;

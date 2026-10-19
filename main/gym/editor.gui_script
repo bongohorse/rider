@@ -390,8 +390,7 @@ end
 local function open_template(self,id)
     local d=stations.resource(id)
     if not d then editor.message="Template unavailable: "..id;return end
-    editor.open(doc_lib.template(d),true)
-    opened(self)
+    if editor.open(doc_lib.template(d),true) then opened(self) end
 end
 -- My levels (LE4): open, delete (asks once more), new.
 local function refresh_library(self)
@@ -406,8 +405,7 @@ local function open_saved(self,key)
         editor.message=unsupported and "Not opened: this level was saved by an unsupported editor ("..err.."). It is kept unchanged." or "The level cannot be opened: "..tostring(err)
         return
     end
-    editor.open(doc,true,{key=key})
-    opened(self)
+    if editor.open(doc,true,{key=key}) then opened(self) end
 end
 local function delete_saved(self,key)
     if key==editor.key() then editor.message="The open level cannot be deleted; open another level first.";return end
@@ -420,9 +418,9 @@ end
 local function new_level(self)
     local n=#editor.library().list()+1
     local drawing=self.drawing
-    editor.open(doc_lib.blank("my-level-"..n,"New level "..n),true,{store=true})
+    if not editor.open(doc_lib.blank("my-level-"..n,"New level "..n),true,{store=true}) then return end
     opened(self)
-    if not drawing then editor.message="New level "..n.." in My levels: draw terrain [D]." end
+    if not drawing then editor.message="New level "..n..": draw terrain [D]." end
 end
 -- Copy/paste (R17): new ids, internal connections kept, outside connections dropped, no START/FINISH.
 local function copy_selection()
@@ -499,7 +497,7 @@ end
 local function on_button(self,name)
     if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
     if name=="undo" or name=="redo" then
-        if not editor.undo(name=="undo") then editor.message="Nothing to "..name.."." end
+        if editor.undo(name=="undo")==false then editor.message="Nothing to "..name.."." end
     elseif name=="open" then
         self.open_dialog=not self.open_dialog
         if self.open_dialog then self.page=0;refresh_library(self) end
@@ -524,8 +522,10 @@ local function on_button(self,name)
     elseif name=="conflict_source" then
         editor.conflict=nil;editor.message="Opened the editor source; Play and Export recompile from it."
     elseif name=="conflict_lines" then
+        -- The line copy replaces the source in My levels: it takes the source's key (saved first).
         local c=editor.conflict
-        editor.open(c.lines,true,{key=editor.key(),store=editor.store[editor.opened]})
+        editor.flush()
+        if not editor.open(c.lines,true,{key=editor.key(),store=editor.store[editor.opened]}) then return end
         opened(self)
         editor.message="Opened the compiled geometry as editable lines (one Undo step back to the source)."
     elseif name=="play" then play(self)
@@ -814,6 +814,11 @@ function on_input(self,action_id,action)
         return false
     end
     if self.focus_lost then self.focus_lost=false;cancel(self) end
+    -- An open Import/Export panel keeps all input: canvas clicks and keys never edit behind it.
+    if self.panel_open then
+        if action_id==hash("ui_pointer") and action.pressed then editor.message="Close the Import/Export panel first." end
+        return true
+    end
     for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"},{"editor_alt","alt"}}) do
         if action_id==hash(m[1]) then
             -- Held keys report every frame, so a modifier cleared by cancel() comes back while still down.
@@ -887,9 +892,9 @@ function on_input(self,action_id,action)
             table.remove(self.drawing.points)
             if #self.drawing.points==0 then self.drawing=nil end
             editor.touch()
-        elseif not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
+        elseif editor.undo(not self.held.shift)==false then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
     elseif action_id==hash("editor_y") and self.held.ctrl then
-        if not editor.undo(false) then editor.message="Nothing to redo." end
+        if editor.undo(false)==false then editor.message="Nothing to redo." end
     elseif action_id==hash("editor_c") and self.held.ctrl then copy_selection()
     elseif action_id==hash("editor_v") and self.held.ctrl then
         if self.drawing then finish_drawing(self) end
@@ -1087,6 +1092,7 @@ function update(self,dt)
         msg.post(".","acquire_input_focus")
     end
     local edit_mode=editor.mode=="edit" and editor.doc~=nil
+    self.panel_open=edit_mode and html5 and html5.run("String(!!window.riderCustom?.visible)")=="true"
     for _,n in ipairs(self.edit_nodes) do gui.set_enabled(n,edit_mode) end
     gui.set_enabled(self.hint,not edit_mode);gui.set_enabled(self.play_message,not edit_mode)
     gui.set_text(self.play_message,not edit_mode and editor.message or "")
@@ -1132,6 +1138,13 @@ function update(self,dt)
             gui.set_text(self.conflict_text,"The compiled geometry in this level differs from its editor source:\n"..editor.conflict.summary..
                 "\nRecompile from source, or keep the compiled geometry as editable lines (connections are not kept).")
         end
+        -- Another document became current (an import, Undo/Redo across documents): dialogs and the name
+        -- field belonged to the previous one. The open list follows saves and deletes while it is shown.
+        if self.last_opened~=editor.opened then
+            self.last_opened=editor.opened
+            self.open_dialog,self.field,self.confirm_delete=false,nil,nil
+        end
+        if self.open_dialog then refresh_library(self) end
         if self.open_dialog then
             local list=self.library or {}
             gui.set_text(self.library_title,self.library_error and "My levels: "..self.library_error or

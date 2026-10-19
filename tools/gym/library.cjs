@@ -93,6 +93,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Backspace');await page.waitForFunction(()=>window.riderEditor.field==='Kicker tes');await page.keyboard.type('t');
   await page.waitForFunction(()=>window.riderEditor.field==='Kicker test');await key('Enter');e=await revision(before+1);assert.equal(e.name,'Kicker test');assert.equal(e.field,false);assert.equal(e.tool,'draw');
   e=await saved();assert.deepEqual(e.library.map(l=>l.name),['Kicker test']);
+  // Esc cancels the field without an edit.
+  await button('rename');await page.waitForFunction(()=>window.riderEditor.field_all);await page.keyboard.type('x');
+  await page.waitForFunction(()=>window.riderEditor.field==='x');await key('Escape');
+  e=await ed();assert.equal(e.field,false);assert.equal(e.name,'Kicker test');assert.equal(e.revision,before+1);
   cases.push('new_level_and_name_field');
 
   // 2. A run-up, a ramp and a landing drawn as one connected run, START speed 1 m/s and FINISH.
@@ -169,6 +173,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(file.schema,1);assert.equal(file.chains.length,2);assert.equal(file.editor.compiled_revision,file.editor.revision);
   assert.equal(file.kind,undefined);assert.equal(shape(file.editor),kicker.shape);assert.equal(file.start_speed,1);
   assert.equal(await page.evaluate(()=>document.getElementById('rider-export-text').value),text);
+  // While the panel is open the editor takes no input: a canvas click neither selects nor edits.
+  const rx=e.revision;await at([5,0]);e=await ed();
+  assert.equal(e.selection,'');assert.equal(e.revision,rx);assert.equal(e.message,'Close the Import/Export panel first.');
   await page.getByRole('button',{name:'Close export',exact:true}).click();await refocused();
   e=await importText(text,'my-level-1.json');assert.ok(e.message.startsWith('Imported'),e.message);
   assert.equal(e.conflict,false);assert.ok(e.stored);assert.equal(e.id,file.id);assert.equal(e.name,file.name);
@@ -188,6 +195,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 8. Unexpectedly different compiled data for the same source revision: the user chooses (R1).
   const changed=JSON.parse(text);changed.chains[0][0][1]+=0.5;
+  const listed=(await ed()).library.length;
   e=await importText(JSON.stringify(changed),'changed.json');
   assert.ok(e.conflict.includes('chains'),e.conflict);assert.deepEqual(e.visible,['conflict_source','conflict_lines']);
   assert.equal(shape(await doc()),kicker.shape);
@@ -195,6 +203,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const r2=e.revision;await button('conflict_lines');e=await revision(r2+1);d=await doc();
   assert.equal(e.conflict,false);assert.equal(d.connections.length,0);assert.equal(d.objects.filter(o=>o.type==='line').length,2);
   assert.ok(d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points.at(-1))===JSON.stringify([22,2])),'compiled point kept');
+  // The line copy replaces the imported source in My levels (one new entry, not two).
+  e=await saved();assert.equal(e.library.length,listed+1);
   await key('z',['Control']);await revision(r2+2);assert.equal(shape(await doc()),kicker.shape);
   e=await importText(JSON.stringify(changed),'changed.json');assert.ok(e.conflict);
   await button('conflict_source');await page.waitForFunction(()=>window.riderEditor.conflict===false);
@@ -255,6 +265,26 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.library={levels:e.library.length,gui_nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
   assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));
   cases.push('delete_level_confirms');
+
+  // 12. An index that exists but cannot be read is never treated as empty: it stays unchanged, blocks every
+  // My levels write, and switching away from an unsaved level is refused (repeat within 10 s to continue).
+  e=await saved();
+  const levelFiles=await page.evaluate(()=>Object.fromEntries(FS.readdir('/data/.rider').filter(n=>n.startsWith('custom-doc-')).map(n=>[n,Array.from(FS.readFile('/data/.rider/'+n)).join(',')])));
+  await page.evaluate(()=>{for(const s of ['a','b'])FS.writeFile('/data/.rider/custom-index-'+s,'not a save file');});
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await page.goto(base+'?station=custom');e=await edit();assert.equal(e.key,kicker.key);assert.deepEqual(e.library,[]);
+  s=(await doc()).start.position;await drag(s,[s[0],s[1]+1]);
+  await page.waitForFunction(()=>window.riderEditor.status.includes('index cannot be read'));
+  await button('new');e=await ed();assert.ok(e.message.startsWith('Not switched'),e.message);assert.equal(e.key,kicker.key);
+  await button('new');await page.waitForFunction(k=>window.riderEditor.key!==k,kicker.key);
+  await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('index cannot be read'));
+  e=await ed();assert.equal(e.key,0);
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  const after=await page.evaluate(()=>({index:['a','b'].map(s=>new TextDecoder().decode(FS.readFile('/data/.rider/custom-index-'+s))),
+   files:Object.fromEntries(FS.readdir('/data/.rider').filter(n=>n.startsWith('custom-doc-')).map(n=>[n,Array.from(FS.readFile('/data/.rider/'+n)).join(',')]))}));
+  assert.deepEqual(after.index,['not a save file','not a save file']);assert.deepEqual(after.files,levelFiles);
+  measurements.unreadable_index=e.status;
+  cases.push('unreadable_index_blocks_writes');
 
   if(errors.length)throw Error(errors.join('\n'));
   await openDialog();await page.screenshot({path:path.join(out,'library-open.png')});await key('Escape');

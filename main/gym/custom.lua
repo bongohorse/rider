@@ -57,8 +57,15 @@ local function store(slots,parse)
         if unsupported then return {seq=t.seq,text=t.text,slot=i,unsupported=err} end
     end
     S.slot=slot
-    -- True when a slot file exists, readable or not (an unreadable store is never treated as empty).
-    function S.exists() return raw(1)~=nil or raw(2)~=nil end
+    -- True when a slot file exists, readable or not (an unreadable store is never treated as empty):
+    -- sys.load returns an empty table for a missing file and fails or returns other data for anything else.
+    function S.exists()
+        for i=1,2 do
+            local ok,t=pcall(sys.load,sys.get_save_file(APP,slots[i]))
+            if not ok or type(t)~="table" or next(t)~=nil then return true end
+        end
+        return false
+    end
     -- Newest slot, which may be unsupported; callers must not open an unsupported one.
     function S.newest()
         local a,b=slot(1),slot(2)
@@ -139,15 +146,23 @@ function M.library(parse)
         return docs[key]
     end
     L.store=doc_store
-    -- The index, or nil and why it cannot be used: existing but unreadable or unsupported index files are
-    -- kept unchanged and block every library write (they still list the levels' storage keys).
+    -- The index, or nil and why it cannot be used: index files that exist but cannot be read, or whose
+    -- newest slot is unsupported or invalid (e.g. written by a newer build), are kept unchanged and block
+    -- every library write, so no level drops out of the list and no storage key is handed out twice.
     function L.index()
         if cached then return cached end
+        local newest=index.newest()
         local r=index.restore()
-        if r then cached=r.doc
-        elseif index.exists() then return nil,"the My levels index cannot be read; it is kept unchanged"
+        if newest and newest.unsupported then return nil,"the My levels index is from a newer version; it is kept unchanged" end
+        if r and not r.skipped then cached=r.doc
+        elseif r or index.exists() then return nil,"the My levels index cannot be read; it is kept unchanged"
         else cached={format=1,next=1,levels={}} end
         return cached
+    end
+    function L.has(key)
+        local idx=L.index()
+        for _,l in ipairs(idx and idx.levels or {}) do if l.key==key then return true end end
+        return false
     end
     -- Entries newest first.
     function L.list()
@@ -157,11 +172,16 @@ function M.library(parse)
         table.sort(list,function(a,b) if a.time~=b.time then return a.time>b.time end;return a.key>b.key end)
         return list
     end
-    -- A key for a level that is saved for the first time; unique within this page even before saving.
-    function L.new_key()
-        local idx=L.index()
-        reserved=math.max(reserved+1,idx and idx.next or 1)
-        return reserved
+    -- A key for a level that is saved for the first time, or nil, error while the index is unusable.
+    -- Unique within this page even before saving, never below keep (e.g. a draft's key), and never a key
+    -- whose files exist (a level saved before its index entry was written).
+    function L.new_key(keep)
+        local idx,err=L.index()
+        if not idx then return nil,err end
+        local k=math.max(reserved+1,idx.next,(keep or 0)+1)
+        while doc_store(k).exists() do k=k+1 end
+        reserved=k
+        return k
     end
     -- Saves a level document under its key and updates its index entry (created on the first save).
     function L.save(key,text,id,name)

@@ -82,14 +82,25 @@ function M.open_level(d)
     return doc
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
+-- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
 local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish"}
+local function compiled(d)
+    local t={spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
+    for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
+    -- An absent two_sided list means all one-sided.
+    for i=1,#t.chains do t.two_sided[i]=d.two_sided and d.two_sided[i] or false end
+    if type(d.finish)=="table" then t.finish={position=d.finish.position,line=d.finish.line,direction=d.finish.direction} end
+    return t
+end
+local function describe(v) return type(v)=="table" and "a list" or v==nil and "absent" or tostring(v) end
 local function differ(a,b,path)
     if type(a)=="number" and type(b)=="number" then
         if math.abs(a-b)>1e-6 then return path..string.format(" is %.3f in the file, %.3f recompiled",b,a) end
         return nil
     end
     if type(a)~="table" or type(b)~="table" then
-        if a~=b then return path.." is "..tostring(b).." in the file, "..tostring(a).." recompiled" end
+        if a~=b then return path.." is "..describe(b).." in the file, "..describe(a).." recompiled" end
         return nil
     end
     if #a~=#b then return path.." has "..#b.." entries in the file, "..#a.." recompiled" end
@@ -106,14 +117,9 @@ end
 function M.compare(doc,d)
     local level,err=M.compile(doc)
     if not level then return "the editor source no longer compiles ("..err..")" end
+    local a,b=compiled(level),compiled(d)
     for _,f in ipairs(COMPILED) do
-        -- An absent two_sided list means all one-sided.
-        local a,b=level[f],d[f]
-        if f=="two_sided" then
-            local function on(t) if t then for _,x in ipairs(t) do if x then return t end end end end
-            a,b=on(a),on(b)
-        end
-        local r=differ(a,b,f)
+        local r=differ(a[f],b[f],f)
         if r then return r end
     end
 end
