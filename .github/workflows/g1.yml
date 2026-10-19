@@ -133,6 +133,8 @@ jobs:
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/custom --case le1a
       - name: Measure custom level size, frame, physics and world-switch cost
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/sizes --case le1b
+      - name: Verify the level editor shell and Edit/Play loop
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/editor --case le2
       - name: Measure ramp ladders and neutral downhill starts
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
       - name: Measure step ladders and repeatable compression

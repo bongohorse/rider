@@ -66,6 +66,19 @@ function M.validate(d)
             objects=objects+1
         end
     end
+    -- FINISH (LE2): position, a finish segment and the unit direction it must be crossed in.
+    if d.finish~=nil then
+        local f=d.finish
+        if type(f)~="table" or not point(f.position) or type(f.line)~="table" or #f.line~=2 or not point(f.line[1]) or not point(f.line[2])
+            or not point(f.direction) then return nil,"Invalid finish" end
+        local lx,ly=f.line[2][1]-f.line[1][1],f.line[2][2]-f.line[1][2]
+        local length=math.sqrt(lx*lx+ly*ly)
+        if length<0.1 or math.abs(math.sqrt(f.direction[1]^2+f.direction[2]^2)-1)>0.001 or math.abs(lx*f.direction[2]-ly*f.direction[1])/length<0.5 then return nil,"Invalid finish line/direction" end
+        for _,q in ipairs(f.line) do if q[1]<=b[1] or q[1]>=b[2] or q[2]<=b[3] or q[2]>=b[4] then return nil,"Finish outside bounds" end end
+        objects=objects+2
+    end
+    -- Reserved for later tasks; v1 levels carry an empty list.
+    if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
     if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps") and not d.sections then return nil,"Missing station sections" end
     if d.sections then
         if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end

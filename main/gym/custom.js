@@ -27,6 +27,8 @@
     submit(text, request);
   };
   api.open = message => {
+    // Import replaces the level; it is not offered while the level editor is open (R15 input gating).
+    if (window.riderEditing) return;
     if (!panel) {
       panel = document.createElement('section');panel.id = 'rider-custom-panel';
       panel.setAttribute('aria-label', 'Import custom level');
@@ -96,7 +98,7 @@
     tools.prepend(button);
   }
   document.addEventListener('keydown', event => {
-    if (event.code !== 'KeyI' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || api.visible || /^(INPUT|TEXTAREA|BUTTON|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return;
+    if (event.code !== 'KeyI' || event.repeat || window.riderEditing || event.ctrlKey || event.metaKey || event.altKey || api.visible || /^(INPUT|TEXTAREA|BUTTON|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return;
     event.preventDefault();api.open();
   });
 })();

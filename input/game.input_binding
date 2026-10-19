@@ -1,3 +1,8 @@
+key_trigger { input: KEY_LCTRL action: "editor_ctrl" }
+key_trigger { input: KEY_RCTRL action: "editor_ctrl" }
+key_trigger { input: KEY_LSHIFT action: "editor_shift" }
+key_trigger { input: KEY_RSHIFT action: "editor_shift" }
+key_trigger { input: KEY_SPACE action: "editor_space" }
 key_trigger { input: KEY_UP action: "throttle_up" }
 key_trigger { input: KEY_W action: "throttle_w" }
 key_trigger { input: KEY_DOWN action: "brake_down" }
@@ -22,3 +27,16 @@ key_trigger { input: KEY_7 action: "station_7" }
 key_trigger { input: KEY_8 action: "station_8" }
 key_trigger { input: KEY_9 action: "station_9" }
 key_trigger { input: KEY_V action: "section_cycle" }
+key_trigger { input: KEY_E action: "editor_toggle" }
+key_trigger { input: KEY_ENTER action: "editor_play" }
+key_trigger { input: KEY_KP_ENTER action: "editor_play" }
+key_trigger { input: KEY_F action: "editor_test" }
+key_trigger { input: KEY_S action: "editor_tool_select" }
+key_trigger { input: KEY_DEL action: "editor_delete" }
+key_trigger { input: KEY_BACKSPACE action: "editor_delete" }
+key_trigger { input: KEY_ESC action: "editor_cancel" }
+key_trigger { input: KEY_Z action: "editor_z" }
+key_trigger { input: KEY_Y action: "editor_y" }
+mouse_trigger { input: MOUSE_BUTTON_MIDDLE action: "editor_pan" }
+mouse_trigger { input: MOUSE_WHEEL_UP action: "editor_zoom_in" }
+mouse_trigger { input: MOUSE_WHEEL_DOWN action: "editor_zoom_out" }

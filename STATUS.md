@@ -6,7 +6,7 @@ Updated 2026-10-19. The only source for current progress, open acceptance and bl
 
 ## Now
 
-- **Active:** Level Editor LE2 [#124](https://github.com/bongohorse/rider/issues/124) (GO 2026-10-19). First the LE1b decisions 1–3 (drive-ready save, start limit, text fields), then the editor shell. LE1b merged in [PR #139](https://github.com/bongohorse/rider/pull/139); report: [LE1b report](docs/LE1B_REPORT.md). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
+- **Active:** Level Editor LE2 [#124](https://github.com/bongohorse/rider/issues/124) (GO 2026-10-19). LE1b decisions 1–3 merged in [PR #144](https://github.com/bongohorse/rider/pull/144) (drive-ready save, start limit ±500 m, text fields); the editor shell is in review (debug case `le2`). LE1b merged in [PR #139](https://github.com/bongohorse/rider/pull/139); report: [LE1b report](docs/LE1B_REPORT.md). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
 - Remaining M4 issues (A19b–d, A20, A21) are paused until after the Level Editor (Claudio, 2026-10-18).
 - **Preview:** https://bongohorse.github.io/rider/ — [build.json](https://bongohorse.github.io/rider/build.json) names the deployed SHA and run.
 

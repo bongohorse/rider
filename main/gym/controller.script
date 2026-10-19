@@ -9,6 +9,7 @@ local socket = require "socket"
 local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
+local editor_view = require "main.gym.editor_view"
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
 local function request_reset(self,reason)
     if self.vehicle and self.vehicle.ready and not self.pending_reset then
@@ -24,6 +25,7 @@ local function reset(self)
     self.mobile={}
     mobile.clear()
     self.head_contact,self.sensor_skip=false,2
+    self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
     self.history=history.new(self.history.generation+1)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
@@ -49,6 +51,28 @@ local function reset(self)
     if request.reason=="bounds" then self.bounds_count=self.bounds_count+1 end
     print("GYM_RESET "..json.encode({count=self.reset_count,reason=request.reason,x=before.x,y=before.y,vx=before.vx}))
     msg.post("main:/loader#ui","retry_done",{reason=request.reason})
+end
+-- FINISH (contract "Data model"): the chassis centre crosses the finish segment in its direction between
+-- two consecutive physics positions, so fast crossings are not missed. Once per attempt; Retry re-arms.
+local function check_finish(self,state)
+    local f=self.station.finish
+    if not f then return end
+    local p={feel.metres(state.x),feel.metres(state.y)}
+    local q=self.finish_prev
+    self.finish_prev=p
+    if not q or self.finish_done then return end
+    local a,b,d=f.line[1],f.line[2],f.direction
+    local s0=(q[1]-a[1])*d[1]+(q[2]-a[2])*d[2]
+    local s1=(p[1]-a[1])*d[1]+(p[2]-a[2])*d[2]
+    if not (s0<0 and s1>=0) then return end
+    local t=s0/(s0-s1)
+    local x,y=q[1]+(p[1]-q[1])*t,q[2]+(p[2]-q[2])*t
+    local lx,ly=b[1]-a[1],b[2]-a[2]
+    local u=((x-a[1])*lx+(y-a[2])*ly)/(lx*lx+ly*ly)
+    if u<0 or u>1 then return end
+    self.finish_done,self.finish_count,self.finish_time=true,(self.finish_count or 0)+1,self.attempt_time
+    print("GYM_FINISH "..json.encode({count=self.finish_count,time=self.attempt_time,speed=feel.metres(state.vx)}))
+    msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time})
 end
 local function emit(self, event, data)
     data = data or {}
@@ -81,6 +105,13 @@ end
 local function setup(self)
     self.terrain = b2d.get_body("/terrain#body")
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
+    if self.edit then
+        -- Edit mode: a vehicle-less world that only draws the editor document.
+        editor_view.build(self)
+        self.ready=true
+        msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation,edit=true})
+        return
+    end
     if not self.station then
         msg.post("main:/loader#ui","station_error",{note=self.station_note or "Invalid station"})
         self.ready=true
@@ -137,6 +168,7 @@ function init(self)
         self.ramp_trial=require "main.gym.ramp_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
+    if self.testcase=="le2" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
     if self.testcase=="le1a" then
         assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")
         self.placement_sweep=require "main.gym.placement_sweep"
@@ -171,6 +203,7 @@ function init(self)
 end
 function update(self, dt)
     if not self.ready then setup(self); return end
+    if self.edit then editor_view.update(self);return end
     if self.placement_report then
         self.placement_report=self.placement_report-1
         if self.placement_report==0 then
@@ -196,6 +229,7 @@ function update(self, dt)
             stations.restart(self)
         end)
         if not placed then fail_placement(self,err);return end
+        self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
@@ -245,6 +279,11 @@ function update(self, dt)
             msg.post("main:/loader#ui","measurements",sample)
             -- LE1a only: sys.serialize and msg.post share dmScript::CheckTable, so this is the exact payload size (2048-byte cap).
             if self.testcase=="le1a" and html5 then html5.run("window.riderMeasurementBytes="..#sys.serialize(sample)) end
+            -- LE2 only: world counters prove that Edit/Play switches leave no bodies, joints or shapes behind.
+            if self.testcase=="le2" and html5 then
+                local c=b2d.world.get_counters(b2d.body.get_world(self.terrain))
+                html5.run("window.riderWorldCounts="..json.encode({generation=self.session_generation,bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count}))
+            end
             -- LE1b only: Box2D counters/profile parts and the Lua heap go straight to the page (msg.post caps payloads at 2 KiB).
             if self.testcase=="le1b" and html5 then
                 local world=b2d.body.get_world(self.terrain)
@@ -275,7 +314,7 @@ end
 function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
     if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
-    if self.ui_captured then return end
+    if self.ui_captured or self.edit then return end
     for i,id in ipairs(stations.ids) do
         if action_id==hash("station_"..i) then
             if action.pressed then msg.post("main:/loader#script","select_station",{id=id,preset=self.preset}) end
@@ -305,6 +344,8 @@ function fixed_update(self, dt)
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
         if self.scenario then self.scenario.check_pose(self,state) end
+        self.attempt_time=(self.attempt_time or 0)+dt
+        check_finish(self,state)
         if stations.outside(self.station,state) then request_reset(self,"bounds") end
         if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
         else self.head_contact=rider.contact(self.vehicle) end
@@ -352,7 +393,10 @@ function final(self)
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
 end
 function on_message(self,id,data,sender)
-    if id==hash("configure_station") and not self.ready then
+    if id==hash("configure_station") and not self.ready and data.edit then
+        self.edit,self.station=true,nil
+        self.session_generation=data.generation or 1
+    elseif id==hash("configure_station") and not self.ready then
         self.station,self.station_note=stations.load(data.id,data.speed,nil,data.snapshot)
         if not self.station and data.note then self.station_note=data.note end
         self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset

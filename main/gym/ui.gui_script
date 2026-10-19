@@ -204,6 +204,14 @@ function on_message(self,id,data,sender)
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
             contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2})
+    elseif id==hash("editor_mode") then
+        -- The level editor draws its own panels; the driving HUD stays hidden while editing.
+        for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
+        cancel_drag(self)
+    elseif id==hash("finish_reached") then
+        self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
+        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time))
+        if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
     elseif id==hash("retry_done") then
         self.toast_time=1.5;gui.set_visible(self.reason,not mobile.enabled())
         gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or "Retry: manual")
