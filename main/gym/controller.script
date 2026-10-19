@@ -217,7 +217,7 @@ function update(self, dt)
         end
     end
     if not self.station then return end
-    if self.track then html5.run("window.riderTrack="..json.encode({generation=self.session_generation,resets=self.reset_count or 0,max_x=self.track.max_x,max_y=self.track.max_y,min_y=self.track.min_y,
+    if self.track and html5 then html5.run("window.riderTrack="..json.encode({generation=self.session_generation,resets=self.reset_count or 0,max_x=self.track.max_x,max_y=self.track.max_y,min_y=self.track.min_y,
         wheel_max_x=self.track.wheel_max_x,ticks=self.track.ticks,x=self.track.x,y=self.track.y,vx=self.track.vx})) end
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end

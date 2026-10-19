@@ -34,7 +34,9 @@ end
 -- snapping use every point, and Play stays blocked by the station validator.
 -- Every line sprite and label is its own game object, so the world's instance limit counts too: the
 -- 4 objects of world.collection, START (4 sprites + label), FINISH (sprite + label), labels and spare.
-local RESERVE,WORLD_OBJECTS=8,4
+-- The reserve also covers a FINISH flip, which creates its 2 new objects before the deleted ones are
+-- freed at the end of the frame.
+local RESERVE,WORLD_OBJECTS=12,4
 local function allocation(e)
     local counts,total,n,labels={},0,0,0
     for _,o in ipairs(e.objects) do

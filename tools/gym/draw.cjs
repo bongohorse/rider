@@ -224,7 +224,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   e=await edit();await button('tool_select');await page.waitForTimeout(200);e=await ed();
   assert.equal(e.drawing,0);assert.equal(e.objects,12);assert.ok(e.message.includes('discarded'),e.message);
   d=await doc();assert.ok(!d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]'));
-  await key('z',['Control']);await page.waitForFunction(()=>window.riderEditor.id==='my-straight');e=await edit();
+  // Undo across the document switch (the Undo button, not Ctrl+Z) also discards a piece started in my-ramps.
+  await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
+  await button('undo');await page.waitForFunction(()=>window.riderEditor.id==='my-straight');e=await edit();
+  await page.waitForTimeout(300);e=await ed();d=await doc();assert.equal(e.drawing,0,'the piece from my-ramps survived the undo');
+  assert.ok(!d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]'),'piece from my-ramps landed in my-straight');
+  await key('s');
   cases.push('template_change_discards_drawing');
 
   // 9. The unplayed draft keeps its pieces and connections across a reload.
@@ -304,11 +309,14 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const big=lines=>JSON.stringify({schema:1,units:'metres',id:'big',name:'Big draft',editor:{editor_version:2,compiler_version:2,revision:1,next_id:lines.length+1,
    objects:lines.map((points,i)=>({id:'o'+(i+1),type:'line',points})),connections:[],start:{position:[0,1.7],speed:0}}});
   const large=[];
+  // A pending autosave of the open document would get a higher slot sequence than the injected draft.
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
   for(const [name,lines] of [['1101 points',[wave(1101,-5,1)]],['7245 points',[wave(1101,-5,1),wave(2048,-5,10),wave(2048,-5,20),wave(2048,-5,30)]]]){
    await page.evaluate(([text,seq])=>{window.riderDebugDraft={slot:1,seq,text,now:true};},[big(lines),100000*(large.length+1)]);
    await page.waitForFunction(()=>window.riderDebugDraft===null);
    await page.goto(base+'?station=custom');e=await edit();
-   assert.equal(e.id,'big');assert.equal(e.objects,lines.length);
+   assert.equal(e.id,'big');
+   await page.waitForFunction(()=>window.riderEditor.status==='Saved'||!window.riderEditor.dirty);assert.equal(e.objects,lines.length);
    assert.ok(e.view.sprites<=1024&&e.view.simplified,name+' '+JSON.stringify(e.view));assert.ok(e.display_note.includes('Display simplified'),e.display_note);
    assert.ok(e.errors.some(m=>m.includes('800')),JSON.stringify(e.errors));
    const entry={name,points:lines.reduce((n,l)=>n+l.length,0),view:e.view,note:e.display_note,error:e.errors.find(m=>m.includes('800'))};
@@ -321,6 +329,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
     await page.goto(base+'?station=custom');e=await edit();d=await doc();
     assert.equal(e.revision,2);assert.equal(JSON.stringify(d.objects[0].points.slice(0,3)),moved);assert.ok(e.view.sprites<=1024&&e.view.simplified);
     entry.after_reload=e.view;
+    // FINISH and a direction flip at the full budget: the flip creates its objects before the old ones are freed.
+    await page.waitForTimeout(1100);await button('tool_finish');await at([20,1.6]);e=await revision(3);
+    await button('tool_select');await at([20,3]);await page.waitForFunction(()=>window.riderEditor.selection==='finish');
+    await button('direction');e=await revision(4);await page.waitForTimeout(300);e=await ed();
+    assert.equal(e.finish.direction,-1);assert.ok(e.view.sprites<=1024,JSON.stringify(e.view));entry.with_finish=e.view;
    }
    large.push(entry);
   }

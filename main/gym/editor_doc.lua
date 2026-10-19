@@ -188,8 +188,23 @@ local function cross(a,b,c,d)
     if ((d1>eps and d2<-eps) or (d1<-eps and d2>eps)) and ((d3>eps and d4<-eps) or (d3<-eps and d4>eps)) then return true end
     return (math.abs(d1)<=eps and on(c,d,a)) or (math.abs(d2)<=eps and on(c,d,b)) or (math.abs(d3)<=eps and on(a,b,c)) or (math.abs(d4)<=eps and on(a,b,d))
 end
+-- Grid cells a segment passes through, column by column (a conservative superset: boundaries and a
+-- 1e-9 m margin count on both sides), so two segments that meet always share a cell.
+local function cells(a,b,x0,y0,size,fn)
+    local eps=1e-9
+    local lo,hi=math.min(a[1],b[1]),math.max(a[1],b[1])
+    for i=math.floor((lo-eps-x0)/size),math.floor((hi+eps-x0)/size) do
+        local ya,yb=a[2],b[2]
+        if hi-lo>eps then
+            local xa,xb=math.max(lo,x0+i*size),math.min(hi,x0+(i+1)*size)
+            ya=a[2]+(b[2]-a[2])*(xa-a[1])/(b[1]-a[1])
+            yb=a[2]+(b[2]-a[2])*(xb-a[1])/(b[1]-a[1])
+        end
+        for j=math.floor((math.min(ya,yb)-eps-y0)/size),math.floor((math.max(ya,yb)+eps-y0)/size) do fn(i,j) end
+    end
+end
 -- First pair of non-adjacent segments of a run that cross or touch, via a uniform grid (cells sized
--- from the run's extent so each segment covers few cells). Returns the later segment's start index.
+-- from the run's extent). Returns the later segment's start index.
 local function self_cross(pts)
     local n=#pts-1
     if n<3 then return nil end
@@ -199,21 +214,21 @@ local function self_cross(pts)
     local grid={}
     for s=1,n do
         local a,b=pts[s],pts[s+1]
-        local checked={}
-        for i=math.floor((math.min(a[1],b[1])-x0)/size),math.floor((math.max(a[1],b[1])-x0)/size) do
-            for j=math.floor((math.min(a[2],b[2])-y0)/size),math.floor((math.max(a[2],b[2])-y0)/size) do
-                local key=i*1048576+j
-                local cell=grid[key]
-                if not cell then cell={};grid[key]=cell end
-                for _,t in ipairs(cell) do
-                    if not checked[t] and t<s-1 then
-                        checked[t]=true
-                        if cross(pts[t],pts[t+1],a,b) then return s end
-                    end
+        local checked,found={},false
+        cells(a,b,x0,y0,size,function(i,j)
+            if found then return end
+            local key=i*1048576+j
+            local cell=grid[key]
+            if not cell then cell={};grid[key]=cell end
+            for _,t in ipairs(cell) do
+                if not checked[t] and t<s-1 then
+                    checked[t]=true
+                    if cross(pts[t],pts[t+1],a,b) then found=true;return end
                 end
-                cell[#cell+1]=s
             end
-        end
+            cell[#cell+1]=s
+        end)
+        if found then return s end
     end
 end
 function M.problems(e)
@@ -340,11 +355,12 @@ end
 M.bounds=bounds
 -- Compiler (R1): writes every field the station validator requires from the editor sources.
 -- A test start replaces only the run's spawn and speed; bounds always come from the sources.
-function M.compile(doc,test)
+-- errors: the result of M.problems when the caller already has it (saves a second domain check).
+function M.compile(doc,test,errors)
     local e=doc.editor
     local d={schema=1,units="metres",id=doc.id,name=doc.name,spawn={e.start.position[1],e.start.position[2]},start_speed=e.start.speed,
         run_in=0,run_out=0,bounds=bounds(e),chains={},hulls={},labels={},checkpoints={}}
-    local errors=M.problems(e)
+    errors=errors or M.problems(e)
     if errors[1] then return nil,errors[1] end
     local lines=M.lines(e)
     -- A connected run compiles into one chain (R4, D8): no seams between its pieces. A run that

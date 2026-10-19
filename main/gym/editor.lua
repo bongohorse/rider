@@ -23,10 +23,12 @@ end
 -- Live validation (LE3): every Play-blocking error and the non-blocking warnings, after each action.
 local function check()
     local errors,warnings=doc_lib.problems(M.doc.editor)
-    local level,err=doc_lib.compile(M.doc)
+    local level,err=doc_lib.compile(M.doc,nil,errors)
     if err and errors[1]~=err then errors[#errors+1]=err end
     M.problem,M.errors,M.warnings=errors[1],errors,warnings
-    M.chains=level and #level.chains or 0
+    -- Physical chains: a two-sided run counts twice (as towards the 32-chain limit).
+    M.chains=0
+    for i=1,level and #level.chains or 0 do M.chains=M.chains+(level.two_sided and level.two_sided[i] and 2 or 1) end
 end
 -- Selection is resolved by stable id after every change (R17).
 local function resolve_selection()
@@ -38,7 +40,9 @@ local function resolve_selection()
     if s~="start" and not (s=="finish" and e.finish) and not ids[s] then M.selection=next(M.selected) end
     local v=M.vertex
     if v and not (ids[v.id] and ids[v.id].type=="line" and v.index<=#ids[v.id].points and M.selection==v.id) then M.vertex=nil end
-    if not M.vertex then M.vertex2=nil end
+    local v2=M.vertex2
+    local o2=v2 and ids[v2.id]
+    if not M.vertex or not (o2 and o2.type=="line" and (v2.index==1 or v2.index==#o2.points)) then M.vertex2=nil end
 end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
 function M.open(doc,keep)
@@ -81,6 +85,8 @@ function M.undo(back)
     local restored=doc_lib.step(M.history,M.doc,back)
     if not restored then return false end
     local geometry=json.encode(restored.editor.objects)~=json.encode(M.doc.editor.objects)
+    -- Undo/Redo across a template or level replacement swaps documents: tools drop their state.
+    if restored.id~=M.doc.id then M.opened=M.opened+1 end
     M.doc=restored
     -- Revisions and ids stay monotonic: an undone state is a new revision, ids are never reused.
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)

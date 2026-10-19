@@ -296,7 +296,7 @@ local function connect(self)
         return
     end
     local v2=editor.vertex2
-    if v2 and find(v2.id) and dist(find(v2.id).points[v2.index],find(v.id).points[v.index])>=0.01 then
+    if v2 and find(v2.id) and find(v2.id).points[v2.index] and dist(find(v2.id).points[v2.index],find(v.id).points[v.index])>=0.01 then
         -- Two separated free ends: a new piece bridges them; neither end moves (LE3b).
         local id
         if editor.commit(function(doc_e) local new,err=edit.bridge(doc_e,{id=v.id,index=v.index},{id=v2.id,index=v2.index});id=new;if not new then return nil,err end end,true) then
@@ -304,7 +304,8 @@ local function connect(self)
         end
         return
     end
-    local target=v2 and {id=v2.id,index=v2.index,p=find(v2.id).points[v2.index]} or connect_target(v)
+    local o2=v2 and find(v2.id)
+    local target=o2 and o2.points[v2.index] and {id=v2.id,index=v2.index,p=o2.points[v2.index]} or connect_target(v)
     if not target then editor.message="Connect needs a second free end: Shift+click it, or drag this end onto it.";return end
     local p=find(v.id).points[v.index]
     local id=v.id
@@ -499,7 +500,7 @@ local function canvas_press(self,action)
     end
     if c.kind=="vertex" then
         if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
-        else editor.selection,editor.vertex=c.id,{id=c.id,index=c.index};editor.touch() end
+        else editor.selection,editor.vertex,editor.vertex2=c.id,{id=c.id,index=c.index},nil;editor.touch() end
         start_vertex(self,c,p)
     elseif c.kind=="start" or c.kind=="finish" then
         editor.select(c.id)
@@ -806,7 +807,7 @@ local function draw_overlay(self)
         local v2=editor.vertex2 and find(editor.vertex2.id)
         if v2 and not self.drag then
             -- Second end for Connect: a bridge preview, or a ring when the ends touch.
-            local q=editor.shape(v2)[editor.vertex2.index]
+            local q=editor.shape(v2)[editor.vertex2.index] or pts[v.index]
             handle(q,C.selected,HANDLE_PX+3)
             if dist(q,pts[v.index])>=0.01 then overlay.line(o,to_px(pts[v.index],s),to_px(q,s),C.connect,3) else handle(q,C.connect,HANDLE_PX+12) end
         else
