@@ -309,9 +309,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const big=lines=>JSON.stringify({schema:1,units:'metres',id:'big',name:'Big draft',editor:{editor_version:2,compiler_version:2,revision:1,next_id:lines.length+1,
    objects:lines.map((points,i)=>({id:'o'+(i+1),type:'line',points})),connections:[],start:{position:[0,1.7],speed:0}}});
   const large=[];
-  // A pending autosave of the open document would get a higher slot sequence than the injected draft.
-  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
   for(const [name,lines] of [['1101 points',[wave(1101,-5,1)]],['7245 points',[wave(1101,-5,1),wave(2048,-5,10),wave(2048,-5,20),wave(2048,-5,30)]]]){
+   // A pending autosave of the open document would get a higher slot sequence than the injected draft.
+   await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
    await page.evaluate(([text,seq])=>{window.riderDebugDraft={slot:1,seq,text,now:true};},[big(lines),100000*(large.length+1)]);
    await page.waitForFunction(()=>window.riderDebugDraft===null);
    await page.goto(base+'?station=custom');e=await edit();
