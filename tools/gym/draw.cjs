@@ -314,6 +314,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
    await page.evaluate(([text,seq])=>{window.riderDebugDraft={slot:1,seq,text,now:true};},[big(lines),100000*(large.length+1)]);
    await page.waitForFunction(()=>window.riderDebugDraft===null);
+   // sys.save only writes the in-memory file system; wait for the IndexedDB sync before reloading.
+   await page.waitForTimeout(200);await page.waitForFunction(()=>window.riderCustom.syncState()==='saved');
    await page.goto(base+'?station=custom');e=await edit();
    assert.equal(e.id,'big');
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'||!window.riderEditor.dirty);assert.equal(e.objects,lines.length);
