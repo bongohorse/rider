@@ -12,6 +12,7 @@ These rules apply to every AI agent working in this repository.
 ## Workflow
 
 - Work only within approved scope: the next issue with completed dependencies, one issue per PR, one writing agent per task.
+- Parallel tracks (since 2026-10-20: level editor and M4 stations): one writing agent per track, each in its own worktree and branch ([worktrees](docs/TOOLING.md#worktrees)). Never switch branches or edit files in another agent's checkout; coordinate shared files and serialize merges (green first merges, the other rebases).
 - Stop where PLAN.md says (milestone end, or after each task where stated): give the preview URL, request Claudio's drive test and wait for a new GO.
 - Fix ordinary failures yourself. On a structural blocker, stop the affected work, report evidence and options, and continue independent work.
 - Watch your PR's CI yourself instead of asking the maintainer ([how](docs/TOOLING.md#agent-ci-completion-watch)); on failure, read the logs and fix.
