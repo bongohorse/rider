@@ -412,6 +412,11 @@ function M.insert_anchor(e,id,i,t)
     if not o or o.type~="curve" or i<1 or i>=#o.anchors then return nil,"No curve segment to insert into" end
     local a,b=o.anchors[i],o.anchors[i+1]
     local p0,p3=a.p,b.p
+    -- Between two corners (a straight chord) the new anchor is a corner on the chord.
+    if a.mode=="corner" and b.mode=="corner" then
+        table.insert(o.anchors,i+1,{p={p0[1]+(p3[1]-p0[1])*t,p0[2]+(p3[2]-p0[2])*t},["in"]={0,0},out={0,0},mode="corner"})
+        return i+1
+    end
     local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
     local function lerp(u,v) return {u[1]+(v[1]-u[1])*t,u[2]+(v[2]-u[2])*t} end
     local q0,q1,q2=lerp(p0,p1),lerp(p1,p2),lerp(p2,p3)
@@ -456,5 +461,82 @@ function M.mirror_curve(o,c2)
         n.anchors[#n.anchors+1]={p={c2-a.p[1],a.p[2]},["in"]={-a.out[1],a.out[2]},out={-a["in"][1],a["in"][2]},mode=a.mode}
     end
     return n
+end
+-- Editable paths (LE5c). A line becomes a curve with the same id (its connections stay) whose anchors are
+-- corners: it compiles to exactly the same points.
+function M.to_curve(e,id)
+    local o=find(e,id)
+    if o.type~="line" then return o end
+    local anchors={}
+    for i,p in ipairs(o.points) do anchors[i]={p={p[1],p[2]},["in"]={0,0},out={0,0},mode="corner"} end
+    o.type,o.points,o.anchors="curve",nil,anchors
+    return o
+end
+local function editable(o) return o.type=="line" or o.type=="curve" end
+local function count(o) return o.type=="line" and #o.points or #o.anchors end
+local function at_index(o,i) return o.type=="line" and o.points[i] or o.anchors[i].p end
+-- Corner / Smooth at point i of a line or curve (an anchor index; a joint is the upstream piece's last
+-- point). Smooth rounds the corner with a curve through the unchanged point: its tangents follow the
+-- neighbouring points (direction from the previous to the next point, a third of each distance). At a
+-- joint the upstream piece gets the in tangent and the downstream piece the out tangent, so both stay
+-- separate objects and the connection stays. Corner removes the tangents again: the straight segments
+-- come back exactly. Returns the id and anchor index to select.
+function M.set_corner(e,id,i,smooth)
+    local o=find(e,id)
+    if not o or not editable(o) then return nil,"Corner/Smooth works on lines and curves; convert a prefab to an editable path first" end
+    local next,prev=doc_lib.links(e)
+    if i==1 and prev[id] then
+        id=prev[id];o=find(e,id)
+        if not editable(o) then return nil,doc_lib.label(o).." is a prefab: convert it to an editable path first to round this joint" end
+        i=count(o)
+    end
+    local n=count(o)
+    local partner=i==n and next[id] and find(e,next[id])
+    if (i==1 or i==n) and not partner then return nil,"An open end has no corner to round" end
+    if partner and not editable(partner) then
+        return nil,doc_lib.label(partner).." is a prefab: convert it to an editable path first to round this joint"
+    end
+    local before=i>1 and at_index(o,i-1)
+    local after=i<n and at_index(o,i+1) or at_index(partner,2)
+    local p=at_index(o,i)
+    M.to_curve(e,o.id)
+    if partner then M.to_curve(e,partner.id) end
+    local a=o.anchors[i]
+    local b=partner and partner.anchors[1]
+    if not smooth then
+        a["in"],a.out,a.mode={0,0},{0,0},"corner"
+        if b then b["in"],b.out,b.mode={0,0},{0,0},"corner" end
+        return o.id,i
+    end
+    local dx,dy=after[1]-before[1],after[2]-before[2]
+    local l=math.sqrt(dx*dx+dy*dy)
+    if l<1e-9 then return nil,"The neighbouring points coincide; move one first" end
+    dx,dy=dx/l,dy/l
+    local lin=math.sqrt((p[1]-before[1])^2+(p[2]-before[2])^2)/3
+    local lout=math.sqrt((after[1]-p[1])^2+(after[2]-p[2])^2)/3
+    a["in"],a.mode={-dx*lin,-dy*lin},"smooth"
+    if b then
+        a.out={0,0}
+        b["in"],b.out,b.mode={0,0},{dx*lout,dy*lout},"smooth"
+    else a.out={dx*lout,dy*lout} end
+    return o.id,i
+end
+-- Convert to editable path (LE5c): a terrain prefab becomes a line with its current points and the same
+-- id, so its connections stay; its parameters are gone. A Kicker + landing becomes two lines (the landing
+-- takes a new id and the downstream connection), keeping its open gap. Returns the ids.
+function M.convert_prefab(e,id)
+    local o,pos=find(e,id)
+    if not o or o.type~="prefab" then return nil,"Select a prefab first" end
+    if not doc_lib.terrain(o) then return nil,"A Platform is an obstacle, not a terrain path" end
+    local parts=doc_lib.parts(o)
+    local function points(list) local t={};for i,q in ipairs(list) do t[i]={q[1],q[2]} end;return t end
+    o.type,o.kind,o.at,o.params,o.points="line",nil,nil,nil,points(parts[1])
+    local ids={id}
+    for k=2,#parts do
+        local n={id=new_id(e),type="line",points=points(parts[k])}
+        for _,c in ipairs(e.connections) do if c.from==ids[#ids] then c.from=n.id end end
+        table.insert(e.objects,pos+k-1,n);ids[#ids+1]=n.id
+    end
+    return ids
 end
 return M

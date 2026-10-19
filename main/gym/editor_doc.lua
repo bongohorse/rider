@@ -6,12 +6,14 @@ local sample=require "main.gym.editor_sample"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
 -- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
--- Step tread. Version 1-3 documents open upgraded; their lines, connections and prefabs compile unchanged.
-local M={EDITOR_VERSION=4,COMPILER_VERSION=4}
+-- Step tread. Version 5 (LE5c) adds corner anchors: a segment between two corners compiles as one straight
+-- chord, so a line turned into an editable path keeps its untouched segments exactly.
+-- Version 1-4 documents open upgraded; their lines, connections, prefabs and curves compile unchanged.
+local M={EDITOR_VERSION=5,COMPILER_VERSION=5}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
-M.MODES={free=true,smooth=true,symmetric=true}
+M.MODES={free=true,smooth=true,symmetric=true,corner=true}
 -- Explicit document limits (R16): drafts may be incomplete, never unbounded.
 M.MAX_OBJECTS,M.MAX_POINTS,M.MAX_TOTAL_POINTS=256,2048,8192
 -- Upright vehicle box around the spawn (chassis 1.08 x 0.28 m, wheels r 0.22 at +-0.46/-0.30, head top 0.68).
@@ -209,7 +211,7 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -247,6 +249,8 @@ function M.validate(doc)
             for _,x in ipairs(a) do
                 local function tangent(t) return type(t)=="table" and #t==2 and finite(t[1]) and finite(t[2]) and math.abs(t[1])<=1000 and math.abs(t[2])<=1000 end
                 if type(x)~="table" or not point(x.p) or not tangent(x["in"]) or not tangent(x.out) or not M.MODES[x.mode] then return nil,"Invalid anchor in "..o.id end
+                -- A corner (version 5) has no tangents.
+                if x.mode=="corner" and (e.editor_version<5 or x["in"][1]~=0 or x["in"][2]~=0 or x.out[1]~=0 or x.out[2]~=0) then return nil,"Invalid corner anchor in "..o.id end
             end
             total=total+3*#a
         elseif type(list)=="table" then
@@ -281,7 +285,8 @@ function M.validate(doc)
     end
     -- Upgrade a supported version 1-3 document in place: same geometry and connections (none in 1); the
     -- sampling settings are recorded.
-    if e.editor_version<4 then e.editor_version,e.compiler_version,e.connections,e.sampling=4,4,e.connections or {},{tolerance=M.SAMPLING.tolerance,max_segment=M.SAMPLING.max_segment} end
+    if e.editor_version<4 then e.sampling={tolerance=M.SAMPLING.tolerance,max_segment=M.SAMPLING.max_segment} end
+    if e.editor_version<5 then e.editor_version,e.compiler_version,e.connections=5,5,e.connections or {} end
     return doc
 end
 

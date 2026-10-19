@@ -40,10 +40,12 @@ local function chords(a,b,add)
     for i=1,n-1 do if not add({a[1]+(b[1]-a[1])*i/n,a[2]+(b[2]-a[2])*i/n}) then return false end end
     return add(b)
 end
--- A curve: anchors {p, in, out} (tangents relative to p). Segment i runs from anchor i to i+1 with
--- control points p_i, p_i + out_i, p_{i+1} + in_{i+1}, p_{i+1}. First R8 step: consecutive straight
--- segments on one line are merged (their join is no corner); every other anchor is kept as a point.
--- Returns the points, or nil when the shape needs more than MAX_POINTS.
+-- A curve: anchors {p, in, out, mode} (tangents relative to p). Segment i runs from anchor i to i+1 with
+-- control points p_i, p_i + out_i, p_{i+1} + in_{i+1}, p_{i+1}. A segment between two corner anchors
+-- (LE5c, compiler 5) is a straight chord exactly like a line segment. Otherwise the first R8 step merges
+-- consecutive straight segments on one line (never through a corner anchor: their join is no corner);
+-- every other anchor is kept as a point. Returns the points, or nil when the shape needs more than
+-- MAX_POINTS.
 function M.curve(anchors)
     local out,add=collector(anchors[1].p)
     local i=1
@@ -51,7 +53,10 @@ function M.curve(anchors)
         local a,b=anchors[i],anchors[i+1]
         local p0,p3=a.p,b.p
         local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
-        if straight(p0,p1,p2,p3) then
+        if a.mode=="corner" and b.mode=="corner" then
+            if not add(p3) then return nil end
+            i=i+1
+        elseif straight(p0,p1,p2,p3) then
             -- Extend over following straight segments that stay on the same line in the same direction.
             local j=i+1
             while j<#anchors do
@@ -59,7 +64,7 @@ function M.curve(anchors)
                 local q1,q2={c.p[1]+c.out[1],c.p[2]+c.out[2]},{d.p[1]+d["in"][1],d.p[2]+d["in"][2]}
                 local dx,dy=p3[1]-p0[1],p3[2]-p0[2]
                 local ex,ey=d.p[1]-c.p[1],d.p[2]-c.p[2]
-                if not straight(c.p,q1,q2,d.p) or math.abs(dx*ey-dy*ex)>1e-9*math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey)) or dx*ex+dy*ey<=0 then break end
+                if c.mode=="corner" or not straight(c.p,q1,q2,d.p) or math.abs(dx*ey-dy*ex)>1e-9*math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey)) or dx*ex+dy*ey<=0 then break end
                 p3=d.p;j=j+1
             end
             if not chords(p0,p3,add) then return nil end

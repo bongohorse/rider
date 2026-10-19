@@ -196,6 +196,8 @@ jobs:
             cases: 'le5a'
           - group: curve
             cases: 'le5b'
+          - group: path
+            cases: 'le5c'
           - group: controls
             cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -248,6 +250,9 @@ jobs:
       - name: Verify editor curves, Bump/wave, adaptive sampling and the smooth-hill reference drive
         if: contains(format(' {0} ', matrix.cases), ' le5b ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/curve --case le5b
+      - name: Verify editor corner/smooth points and prefab conversion to paths
+        if: contains(format(' {0} ', matrix.cases), ' le5c ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/path --case le5c
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
