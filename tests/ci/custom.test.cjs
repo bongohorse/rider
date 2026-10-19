@@ -53,20 +53,23 @@ test('a newer rejected file supersedes a file still being read',async()=>{
 
 test('sync state follows dmloader through success and a recovered failure',()=>{
  const pending=[],Module=dmloader(cb=>pending.push(cb)),api=load(Module);
- api.watchSync();Module.persistentSync();
+ Module.persistentSync();
  assert.equal(api.syncState(),'syncing');
  pending.shift()();assert.equal(api.syncState(),'saved');
- api.watchSync();Module.persistentSync();pending.shift()('io error');
+ Module.persistentSync();pending.shift()('io error');
  assert.equal(api.syncState(),'failed');
+ // The last completed attempt decides: a running retry is not latched as failed, and its success
+ // persists everything written before it.
+ Module.persistentSync();assert.equal(api.syncState(),'syncing');
+ pending.shift()();assert.equal(api.syncState(),'saved');
 });
 
 test('exhausted dmloader retries report failed instead of syncing forever',()=>{
  const pending=[],Module=dmloader(cb=>pending.push(cb)),api=load(Module);
- api.watchSync();
  for(let i=0;i<3;i++){Module.persistentSync();Module.persistentSync();pending.shift()('io error');}
  // The fourth start exceeds the retry limit: dmloader keeps _syncInProgress set and never clears it.
  assert.equal(Module._syncInProgress,true);assert.equal(pending.length,0);
  assert.equal(api.syncState(),'failed');
- api.watchSync();Module.persistentSync();
+ Module.persistentSync();
  assert.equal(api.syncState(),'failed');
 });

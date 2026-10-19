@@ -2,7 +2,7 @@
   if (window.riderCustom) return;
   // Web file/paste helper only (D-E1). Lua owns parsing, validation, loading and saving.
   const limit = 256 * 1024;
-  const api = window.riderCustom = {visible:false,request:0,pending:null,state:'',message:'',syncFailed:false,syncStopped:false};
+  const api = window.riderCustom = {visible:false,request:0,pending:null,state:'',message:'',syncStopped:false};
   let panel;
   function status(text, error) {
     const node = panel?.querySelector(error ? '#rider-custom-error' : '#rider-custom-status');
@@ -121,14 +121,15 @@
       return start.apply(this, arguments);
     };
   }
+  // The last completed attempt decides: dmloader counts failed attempts in _syncTries and resets it to 0
+  // on success, and a successful sync persists every file written before it. (Reading _syncTries while a
+  // retry is still running must not latch the earlier failure.)
   api.syncState = () => {
     if (typeof Module === 'undefined' || Module.persistentStorage !== true) return 'session';
     if (api.syncStopped) return 'failed';
-    if (Module._syncTries > 0) api.syncFailed = true;
     if (Module._syncInProgress || Module._syncNeeded) return 'syncing';
-    return api.syncFailed ? 'failed' : 'saved';
+    return Module._syncTries > 0 ? 'failed' : 'saved';
   };
-  api.watchSync = () => {api.syncFailed = false;};
   const tools = document.getElementById('page-tools');
   if (tools && !document.getElementById('custom-import')) {
     const button = document.createElement('button');button.id = 'custom-import';button.type = 'button';button.textContent = 'Import level';
