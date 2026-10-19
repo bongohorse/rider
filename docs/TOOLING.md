@@ -65,6 +65,7 @@ git -C ~/rider worktree remove ~/rider-worktrees/<name>   # after merge
 - `required` (in `ci.yml`) is the only required status check on `main`. It aggregates bootstrap, Renovate, physics (native + HTML5), tooling/Android, Bridge and release preview, and fails on any failed, cancelled or unexpectedly skipped dependency. Never bypass it or use whole-workflow `paths-ignore`; keep the force-push/deletion protections on `main`.
 - PR jobs test GitHub's merge commit; preview manifests identify that SHA.
 - **Fast path:** `tools/ci/classify_changes.py` classifies the diff. Markdown outside the `custom_resources` paths in `game.project` (which are bundled into builds) is docs-only: only workflow lint, CI regression tests and the link/anchor check on changed Markdown run. Changes limited to `main/gym/` and Markdown skip the Windows native entry, Bridge and negative build. Anything else, an unknown diff or manual dispatch runs the full suite. The PR summary shows the reason.
+- **Parallel browser suites:** build the debug Gym once per run, then run seams, sizes, terrain, editor and controls in five independent jobs. Build/package the release once, then verify desktop, phone emulation and stations in three independent jobs. All existing regression cases run before `required`; a failed matrix member fails the reusable workflow. SHA/run/attempt-scoped artifacts are transferred only within that run, never used as a build cache.
 - **Nightly:** 02:17 UTC full suite; a failing `required` opens or updates one tooling issue, recovery closes it.
 - Caches: pip by requirements, npm and Playwright by lockfile, Bob by lock with SHA-256 check, actionlint from a verified archive. Compiled game output is never reused across runs. CI artifacts are kept 14 days; commit summaries and run links, not binary dumps.
 
@@ -86,7 +87,9 @@ Keep exact pins; Renovate never automerges and keeps major/runner/engine updates
 
 ## Preview deployment
 
-The `preview` job builds an HTML5 release of the tested SHA (native Bridge cleared) into `builds/<sha>/<run-id>-<attempt>/` and verifies desktop and 20:9 phone viewports. Only `main`, after `required` passes, deploys to GitHub Pages; docs-only merges keep the existing build. The root loader reads `build.json` (no-store) and redirects to the current build; [build.json](https://bongohorse.github.io/rider/build.json) identifies the deployed SHA. Do not claim a deployed build before observing it.
+The `preview` job builds an HTML5 release of the tested SHA (native Bridge cleared) into `builds/<sha>/<run-id>-<attempt>/` and verifies desktop and 20:9 phone viewports. Only `main`, after `required` passes, deploys to GitHub Pages; docs-only merges keep the existing build. The root loader reads `build.json` (no-store) and redirects to the current build; [build.json](https://bongohorse.github.io/rider/build.json) identifies the deployed SHA. After deployment, `verify.cjs ... deployment` checks loader redirection, exact SHA/build ID, continuing controller telemetry and runtime errors on desktop and phone emulation. The full regression inventory already ran against the same packaged release before deployment; the live check no longer repeats it. `verify.cjs` without a mode still runs the full inventory. Do not claim a deployed build before observing it.
+
+Artifact transfer uses [actions/download-artifact v8.0.2](https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333) (GitHub, MIT, Node 24), pinned by SHA. Renovate tracks updates; removing parallel consumers removes this dependency. Platform evidence belongs in the implementation PR (Ubuntu CI artifact upload/download plus full regression result).
 
 ## Gemini read-only reviewer setup
 
