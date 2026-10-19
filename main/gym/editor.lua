@@ -31,13 +31,17 @@ function M.open(doc,keep)
     if keep and M.doc then
         doc_lib.record(M.history,M.doc)
         local e=doc.editor
+        local played=e.compiled_revision==e.revision
         e.revision=math.max(e.revision,M.doc.editor.revision+1)
+        -- Opening an already played level unchanged keeps it played.
+        if played then e.compiled_revision=e.revision end
     else M.history=doc_lib.history() end
     M.doc=doc;M.selection=nil
+    M.changed_at=socket.gettime()
     local s=doc.editor.start.position
     -- A new document starts with START near the left of an overview (about 60 m wide at 1280 px).
     M.camera={x=s[1]+20,y=s[2]+4,zoom=0.2}
-    if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved" end
+    if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at end
     check();touch(true)
 end
 -- One completed action = one history entry and one revision (R12, R17).
@@ -47,7 +51,7 @@ function M.commit(fn,geometry)
     M.message=""
     doc_lib.record(M.history,before)
     M.doc.editor.revision=before.editor.revision+1
-    M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved"
+    M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     resolve_selection();check();touch(geometry)
 end
 function M.undo(back)
@@ -58,7 +62,7 @@ function M.undo(back)
     M.doc=restored
     -- Revisions and ids stay monotonic: an undone state is a new revision, ids are never reused.
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
-    M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved"
+    M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     resolve_selection();check();touch(geometry)
     return true
 end
@@ -89,7 +93,7 @@ function M.saved_draft()
     local d=drafts().newest()
     if not d then return nil end
     if d.unsupported then return {unsupported=d.unsupported,text=d.text,slot=d.slot} end
-    return {doc=d.doc,slot=d.slot,seq=d.seq}
+    return {doc=d.doc,slot=d.slot,seq=d.seq,time=d.time}
 end
 function M.draft_store() return drafts() end
 -- Compile for Play: the level (START) and, for a test start, the temporary run.

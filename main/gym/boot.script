@@ -52,7 +52,9 @@ local function open_current(self)
     -- The editor's own document or draft is reused only for a level it produced; an imported file
     -- with the same id opens as itself (one Undo step away from the previous document).
     local own=level and self.level_edited
-    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id)) then editor.message=notice or editor.message;return true end
+    -- An unplayed document stays current (also after a test run of it) unless a level was imported after its last edit.
+    local unplayed=editor.doc and editor.doc.editor.compiled_revision~=editor.doc.editor.revision and (editor.changed_at or 0)>(self.level_loaded_at or 0)
+    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id) or unplayed) then editor.message=notice or editor.message;return true end
     if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc);editor.message=notice or "";return true end
     if not editor.doc and saved and saved.doc then editor.open(saved.doc) end
     local doc,err,unsupported
@@ -113,10 +115,13 @@ function init(self)
         self.station,self.speed=id,speed
         local saved,rejected=custom.restore()
         local draft=editor.saved_draft()
+        local draft_time=draft and draft.time
         draft=draft and draft.doc
         -- A draft with unplayed edits reopens the editor after a reload, whichever level is saved: the
         -- draft records the revision its last successful Play compiled (compiled_revision).
-        if draft and draft.editor.compiled_revision~=draft.editor.revision then
+        -- A level saved after the draft (e.g. an import) wins; without any level the draft always opens.
+        local newer=draft and saved and (saved.time or 0)>(draft_time or 0)
+        if draft and (not saved or (draft.editor.compiled_revision~=draft.editor.revision and not newer)) then
             if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,saved.doc.id==draft.id end
             editor.open(draft)
             self.edit=true
@@ -248,6 +253,7 @@ function on_message(self,id,data,sender)
                 custom.open("Import failed: "..reason..". Import another level file.")
             else
                 local saved,err=custom.save(custom.text(loaded))
+                self.level_loaded_at=socket.gettime()
                 if saved then
                     custom.notify(request,"loaded","Loaded.")
                     self.syncing=true
