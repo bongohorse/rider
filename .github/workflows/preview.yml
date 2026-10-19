@@ -85,6 +85,12 @@ jobs:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
         run: node tools/preview/verify.cjs _site "$SOURCE_SHA" "$BUILD_ID" artifacts/preview/verification/${{ matrix.group }} ${{ matrix.group }}
+      - name: Exercise public-deployment check against the packaged release
+        if: matrix.group == 'desktop'
+        env:
+          BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: node tools/preview/verify.cjs _site "$SOURCE_SHA" "$BUILD_ID" artifacts/preview/verification/deployment deployment
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
