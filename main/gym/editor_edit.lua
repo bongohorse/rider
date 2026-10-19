@@ -244,7 +244,6 @@ function M.add_line(e,pts,first,last)
     if last then
         -- The first connection may have reversed the new piece: find the drawn last point again.
         local index=o.points[1]==finish and 1 or #o.points
-        if o.type=="curve" then index=o.anchors[1].p==finish and 1 or #path(o) end
         local ok,err=M.connect(e,{id=o.id,index=index},last)
         if not ok then note="End not connected: "..err end
     end

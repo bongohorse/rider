@@ -184,6 +184,15 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   await hover([14,1]);for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
   await key('z',['Control']);await revision(r+4);await key('z',['Control']);await key('z',['Control']);await revision(r+6);
   assert.deepEqual(obj(await doc(),'o2').anchors,obj(before,'o2').anchors);
+  // A picked anchor does not outlive the next pick: anchor 2, then the curve body, then Delete removes the
+  // curve (with its connections), not the anchor. Undo restores it.
+  await hover([14,1]);for(let i=0;i<3;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}
+  await at(a2h);await page.waitForFunction(()=>window.riderEditor.rows.length===1);
+  const body=(await paths()).o2.reduce((b,p)=>Math.hypot(p[0]-16,p[1]-1.25)<Math.hypot(b[0]-16,b[1]-1.25)?p:b);
+  await at(body);e=await ed();assert.equal(e.selection,'o2');assert.deepEqual(e.rows,[]);
+  r=e.revision;await key('Delete');e=await revision(r+1);d=await doc();assert.equal(obj(d,'o2'),undefined);assert.equal(d.connections.length,0);
+  await key('z',['Control']);await revision(r+2);assert.deepEqual(obj(await doc(),'o2').anchors,obj(before,'o2').anchors);
+  await hover([14,1]);for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
   done('insert_delete_split_anchors');
 
   // 5. Bump/wave [P, 7]: placed on the Flat's exit (connects); a Flat follows. Its fields edit height,

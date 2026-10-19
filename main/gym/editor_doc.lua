@@ -38,16 +38,29 @@ local function same(a,b,eps) return math.abs(a[1]-b[1])<=(eps or M.JOINT) and ma
 M.same=same
 M.finite=finite
 -- Curves (LE5b): anchors {p, in, out, mode}, tangents relative to p. The sampled points are cached per
--- object and refreshed when its anchors change (a signature of every number).
+-- object and reused only while every anchor number is exactly the same (anchors are moved in place).
 local curves=setmetatable({},{__mode="k"})
-local function curve_samples(o)
+local function anchor_numbers(o)
     local t={}
-    for _,a in ipairs(o.anchors) do t[#t+1]=a.p[1]..","..a.p[2]..","..a["in"][1]..","..a["in"][2]..","..a.out[1]..","..a.out[2] end
-    local sig=table.concat(t,";")
+    for _,a in ipairs(o.anchors) do
+        t[#t+1],t[#t+2],t[#t+3],t[#t+4],t[#t+5],t[#t+6]=a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2]
+    end
+    return t
+end
+local function unchanged(o,nums)
+    if #nums~=6*#o.anchors then return false end
+    local k=0
+    for _,a in ipairs(o.anchors) do
+        if nums[k+1]~=a.p[1] or nums[k+2]~=a.p[2] or nums[k+3]~=a["in"][1] or nums[k+4]~=a["in"][2] or nums[k+5]~=a.out[1] or nums[k+6]~=a.out[2] then return false end
+        k=k+6
+    end
+    return true
+end
+local function curve_samples(o)
     local hit=curves[o]
-    if hit and hit.sig==sig then return hit end
+    if hit and unchanged(o,hit.nums) then return hit end
     local pts=sample.curve(o.anchors)
-    hit={sig=sig,points=pts}
+    hit={nums=anchor_numbers(o),points=pts}
     if not pts then
         -- Over the sampling budget: drawn through the anchors only; Play stays blocked (sample_error).
         hit.points,hit.error={},true

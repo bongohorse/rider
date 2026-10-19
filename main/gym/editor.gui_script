@@ -337,7 +337,9 @@ local function delete(self)
     local s=editor.selection
     local v=editor.vertex
     -- A curve anchor (or a curve end) deletes that anchor; a prefab end stands for the whole prefab.
+    -- Only an anchor of the single selected curve counts (never one left over from another selection).
     local a=editor.anchor
+    if a and not (a.id==editor.selection and #editor.selected_ids()==1) then a=nil end
     if not a and v and find(v.id) and find(v.id).type=="curve" then a={id=v.id,i=v.index==1 and 1 or #find(v.id).anchors} end
     if a and find(a.id) then
         if editor.commit(function(e) return edit.delete_anchor(e,a.id,a.i) end,true) then editor.select(a.id) end
@@ -441,7 +443,7 @@ local function connect(self)
 end
 local function split(self)
     local a=editor.anchor
-    if a and find(a.id) then
+    if a and find(a.id) and a.id==editor.selection and #editor.selected_ids()==1 then
         if editor.commit(function(e) local id,err=edit.split_curve(e,a.id,a.i);if not id then return nil,err end end,true) then editor.select(a.id) end
         return
     end
@@ -841,13 +843,14 @@ local function start_handle(self,id,name,p)
         local skip={[id]=true}
         if i==#o.anchors then for _,d in ipairs(edit.downstream(editor.doc.editor,id)) do skip[d]=true end end
         local from=o.anchors[i>1 and i-1 or 2].p
-        self.drag.skip,self.drag.from=skip,{from[1],from[2]}
+        -- Only an anchor drag snaps (and shows the snap marker); tangents never snap to points.
+        if name:sub(1,1)=="a" then self.drag.skip,self.drag.from=skip,{from[1],from[2]} end
         editor.anchor={id=id,i=i};editor.touch()
     end
 end
 local function anchor_key(anchors)
     local t={}
-    for _,a in ipairs(anchors) do t[#t+1]=a.p[1]..","..a.p[2]..","..a["in"][1]..","..a["in"][2]..","..a.out[1]..","..a.out[2]..a.mode end
+    for _,a in ipairs(anchors) do t[#t+1]=string.format("%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%s",a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2],a.mode) end
     return table.concat(t,";")
 end
 local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
@@ -981,7 +984,7 @@ local function canvas_press(self,action)
         start_handle(self,c.id,c.handle,p)
     elseif c.kind=="vertex" then
         if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
-        else editor.selection,editor.vertex,editor.vertex2=c.id,{id=c.id,index=c.index},nil;editor.touch() end
+        else editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,{id=c.id,index=c.index},nil,nil;editor.touch() end
         local o=find(c.id)
         if o.type=="prefab" then
             -- A prefab end: its exit handle changes parameters; otherwise the whole run moves.
@@ -996,7 +999,7 @@ local function canvas_press(self,action)
         editor.preview={target=c.id,position={origin[1],origin[2]}}
     else
         if not editor.selected[c.id] then editor.select(c.id)
-        else editor.selection,editor.vertex=c.id,nil;editor.touch() end
+        else editor.selection,editor.vertex,editor.anchor=c.id,nil,nil;editor.touch() end
         start_move(self,c,p)
     end
 end
@@ -1102,7 +1105,7 @@ local function box_select(self,b)
         end
         if hit then editor.selected[o.id]=true end
     end
-    editor.selection,editor.vertex,editor.vertex2=next(editor.selected),nil,nil
+    editor.selection,editor.vertex,editor.vertex2,editor.anchor=next(editor.selected),nil,nil,nil
     for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
     editor.touch()
 end

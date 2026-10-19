@@ -137,7 +137,7 @@ end
 -- is drawn coarsely (8 points per wavelength) and M.sample_error names the problem; Play stays blocked.
 local waves,wave_order={},{}
 local function wave_samples(p)
-    local key=p.height.."|"..p.wavelength.."|"..p.count
+    local key=string.format("%.17g|%.17g|%.17g",p.height,p.wavelength,p.count)
     local hit=waves[key]
     if hit then return hit end
     local pts=sample.wave(p.height,p.wavelength,p.count)
