@@ -2,10 +2,16 @@
 -- calls besides json, metres throughout. The editor block is authoritative; Play recompiles from it.
 local data=require "main.gym.station_data"
 local prefab=require "main.gym.editor_prefab"
+local sample=require "main.gym.editor_sample"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
--- Version 1 and 2 documents open upgraded; their lines and connections compile unchanged.
-local M={EDITOR_VERSION=3,COMPILER_VERSION=3}
+-- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
+-- Step tread. Version 1-3 documents open upgraded; their lines, connections and prefabs compile unchanged.
+local M={EDITOR_VERSION=4,COMPILER_VERSION=4}
+-- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
+-- reproduced; other values are a newer compiler's and are not recompiled.
+M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
+M.MODES={free=true,smooth=true,symmetric=true}
 -- Explicit document limits (R16): drafts may be incomplete, never unbounded.
 M.MAX_OBJECTS,M.MAX_POINTS,M.MAX_TOTAL_POINTS=256,2048,8192
 -- Upright vehicle box around the spawn (chassis 1.08 x 0.28 m, wheels r 0.22 at +-0.46/-0.30, head top 0.68).
@@ -31,19 +37,60 @@ M.JOINT=1e-6
 local function same(a,b,eps) return math.abs(a[1]-b[1])<=(eps or M.JOINT) and math.abs(a[2]-b[2])<=(eps or M.JOINT) end
 M.same=same
 M.finite=finite
+-- Curves (LE5b): anchors {p, in, out, mode}, tangents relative to p. The sampled points are cached per
+-- object and reused only while every anchor number is exactly the same (anchors are moved in place).
+local curves=setmetatable({},{__mode="k"})
+local function anchor_numbers(o)
+    local t={}
+    for _,a in ipairs(o.anchors) do
+        t[#t+1],t[#t+2],t[#t+3],t[#t+4],t[#t+5],t[#t+6]=a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2]
+    end
+    return t
+end
+local function unchanged(o,nums)
+    if #nums~=6*#o.anchors then return false end
+    local k=0
+    for _,a in ipairs(o.anchors) do
+        if nums[k+1]~=a.p[1] or nums[k+2]~=a.p[2] or nums[k+3]~=a["in"][1] or nums[k+4]~=a["in"][2] or nums[k+5]~=a.out[1] or nums[k+6]~=a.out[2] then return false end
+        k=k+6
+    end
+    return true
+end
+local function curve_samples(o)
+    local hit=curves[o]
+    if hit and unchanged(o,hit.nums) then return hit end
+    local pts=sample.curve(o.anchors)
+    hit={nums=anchor_numbers(o),points=pts}
+    if not pts then
+        -- Over the sampling budget: drawn through the anchors only; Play stays blocked (sample_error).
+        hit.points,hit.error={},true
+        for i,a in ipairs(o.anchors) do hit.points[i]={a.p[1],a.p[2]} end
+    end
+    curves[o]=hit
+    return hit
+end
+-- A curve or Bump/wave that needs more points than the sampler allows: the reason, else nil.
+function M.sample_error(o)
+    if o.type=="curve" and curve_samples(o).error then
+        return string.format("needs more than %d points at %d mm / %s m sampling: shorten it or split it [K]",sample.MAX_POINTS,sample.TOLERANCE*1000,sample.MAX_SEGMENT)
+    end
+    if o.type=="prefab" then return prefab.sample_error(o) end
+end
 
 -- Object geometry (LE5a). Terrain pieces are lines and terrain prefabs: each has an entry (first
 -- point) and an exit (last point) and belongs to a run. parts: the open polylines a piece adds to
 -- collision chains (a Kicker + landing has two, with its jump gap between them). path: every point of
 -- an object, entry to exit (hull and Platform: the closed outline; label: its position).
-function M.terrain(o) return o.type=="line" or (o.type=="prefab" and prefab.terrain(o.kind)) end
+function M.terrain(o) return o.type=="line" or o.type=="curve" or (o.type=="prefab" and prefab.terrain(o.kind)) end
 function M.parts(o)
     if o.type=="line" then return {o.points} end
+    if o.type=="curve" then return {curve_samples(o).points} end
     if o.type=="prefab" and o.kind~="platform" then return prefab.geometry(o).parts end
     return {}
 end
 function M.path(o)
     if o.type=="line" then return o.points end
+    if o.type=="curve" then return curve_samples(o).points end
     if o.type=="hull" then return o.vertices end
     if o.type=="prefab" then return prefab.path(o) end
     return {o.position}
@@ -53,7 +100,7 @@ function M.outline(o)
     if o.type=="hull" then return o.vertices end
     if o.type=="prefab" and o.kind=="platform" then return prefab.path(o) end
 end
-function M.entry(o) return o.type=="line" and o.points[1] or o.at end
+function M.entry(o) return o.type=="line" and o.points[1] or o.type=="curve" and o.anchors[1].p or o.at end
 function M.exit(o) local p=M.path(o);return p[#p] end
 -- Display name for messages: "Line o3", "Ramp o5".
 function M.label(o) return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
@@ -61,7 +108,7 @@ function M.label(o) return o.type=="prefab" and prefab.name(o.kind).." "..o.id o
 -- Station JSON (built-in or custom, without editor block) -> editable lines/hulls/labels (R2).
 local function from_station(d,id,name)
     local e={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,revision=0,next_id=1,objects={},connections={},
-        start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
+        sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -85,7 +132,7 @@ end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
 function M.blank(id,name)
     return {schema=1,units="metres",id=id,name=name,editor={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,
-        revision=0,next_id=1,objects={},connections={},start={position={0,1},speed=0}}}
+        revision=0,next_id=1,objects={},connections={},sampling=copy(M.SAMPLING),start={position={0,1},speed=0}}}
 end
 -- Opening a custom level (R1, R2, LE4). d is a validated station (custom.parse), so its compiled
 -- geometry is always usable. Returns doc, note, conflict:
@@ -162,11 +209,17 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
     if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Missing or too many editor objects" end
+    if e.editor_version>=4 then
+        local s=e.sampling
+        if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then
+            return nil,"Unsupported sampling settings "..(type(s)=="table" and tostring(s.tolerance).."/"..tostring(s.max_segment) or "(missing)"),true
+        end
+    elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
     local ids,total={},0
     for _,o in ipairs(e.objects) do
         if type(o)~="table" or type(o.id)~="string" then return nil,"Invalid editor object" end
@@ -179,9 +232,23 @@ function M.validate(doc)
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
         elseif o.type=="prefab" then
             if e.editor_version<3 then return nil,"Prefab "..o.id.." needs editor version 3" end
+            if (o.kind=="wave" and e.editor_version<4) then return nil,"Bump/wave "..o.id.." needs editor version 4" end
+            -- An LE5a (version 3) Step is a bare riser: it upgrades to tread 0, the same shape.
+            if e.editor_version==3 and o.kind=="step" and type(o.params)=="table" and o.params.length==nil and o.params.riser==nil then
+                o.params.length,o.params.riser=0,"start"
+            end
             local ok,err=prefab.validate(o,finite)
             if not ok then return nil,"Invalid prefab "..o.id..": "..err end
             total=total+prefab.count(o)
+        elseif o.type=="curve" then
+            if e.editor_version<4 then return nil,"Curve "..o.id.." needs editor version 4" end
+            local a=o.anchors
+            if type(a)~="table" or #a<2 or #a>M.MAX_POINTS then return nil,"Invalid anchor count in "..o.id end
+            for _,x in ipairs(a) do
+                local function tangent(t) return type(t)=="table" and #t==2 and finite(t[1]) and finite(t[2]) and math.abs(t[1])<=1000 and math.abs(t[2])<=1000 end
+                if type(x)~="table" or not point(x.p) or not tangent(x["in"]) or not tangent(x.out) or not M.MODES[x.mode] then return nil,"Invalid anchor in "..o.id end
+            end
+            total=total+3*#a
         elseif type(list)=="table" then
             if #list<(o.type=="line" and 2 or 3) or #list>(o.type=="line" and M.MAX_POINTS or 8) then return nil,"Invalid point count in "..o.id end
             for _,p in ipairs(list) do if not point(p) then return nil,"Invalid point in "..o.id end end
@@ -212,8 +279,9 @@ function M.validate(doc)
         local n,seen=id,0
         while from[n] do n=from[n];seen=seen+1;if n==id or seen>M.MAX_OBJECTS then return nil,"Connections form a loop at "..id end end
     end
-    -- Upgrade a supported version 1 or 2 document in place: same geometry and connections (none in 1).
-    if e.editor_version<3 then e.editor_version,e.compiler_version,e.connections=3,3,e.connections or {} end
+    -- Upgrade a supported version 1-3 document in place: same geometry and connections (none in 1); the
+    -- sampling settings are recorded.
+    if e.editor_version<4 then e.editor_version,e.compiler_version,e.connections,e.sampling=4,4,e.connections or {},{tolerance=M.SAMPLING.tolerance,max_segment=M.SAMPLING.max_segment} end
     return doc
 end
 
@@ -339,7 +407,11 @@ function M.problems(e)
     local runs=M.runs(e)
     local hulls=false
     for _,o in ipairs(e.objects) do hulls=hulls or M.outline(o)~=nil end
-    if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D] or place a prefab [P]." end
+    if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D] or a curve [C], or place a prefab [P]." end
+    for _,o in ipairs(e.objects) do
+        local err=M.sample_error(o)
+        if err then errors[#errors+1]=M.label(o).." "..err.."." end
+    end
     local chains=0
     for _,run in ipairs(runs) do
         local name=#run>1 and "Run "..run[1].."-"..run[#run] or M.label(pieces[run[1]])

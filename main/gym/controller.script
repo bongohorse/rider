@@ -1,5 +1,7 @@
 local stations=require "main.gym.stations"
 local mobile=require "main.gym.mobile"
+-- Read-only wheel-support helper for the LE5b reference drive (debug only).
+local seam_metrics
 local history=require "main.gym.history"
 local audio=require "main.gym.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
@@ -172,7 +174,10 @@ function init(self)
         self.ramp_trial=require "main.gym.ramp_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
-    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
+    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" or self.testcase=="le5b" then
+        assert(sys.get_engine_info().is_debug,"Editor probes require debug engine")
+        if self.testcase=="le5b" then seam_metrics=require "main.gym.seam_metrics" end
+    end
     if self.testcase=="le1a" then
         assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")
         self.placement_sweep=require "main.gym.placement_sweep"
@@ -218,7 +223,9 @@ function update(self, dt)
     end
     if not self.station then return end
     if self.track and html5 then html5.run("window.riderTrack="..json.encode({generation=self.session_generation,resets=self.reset_count or 0,max_x=self.track.max_x,max_y=self.track.max_y,min_y=self.track.min_y,
-        wheel_max_x=self.track.wheel_max_x,ticks=self.track.ticks,x=self.track.x,y=self.track.y,vx=self.track.vx})) end
+        wheel_max_x=self.track.wheel_max_x,ticks=self.track.ticks,x=self.track.x,y=self.track.y,vx=self.track.vx,
+        window=self.track.window and {ticks=self.track.window.ticks,airborne=self.track.window.airborne,unpowered=self.track.window.unpowered,losses=self.track.window.losses,dvy=self.track.window.dvy,
+            dvx_drop=self.track.window.dvx_drop,vx_min=self.track.window.vx_min or false,vx_max=self.track.window.vx_max or false,passed=self.track.window.passed or false} or false})) end
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
@@ -352,11 +359,33 @@ function fixed_update(self, dt)
         if self.scenario then self.scenario.check_pose(self,state) end
         self.attempt_time=(self.attempt_time or 0)+dt
         check_finish(self,state)
-        if self.testcase=="le3" or self.testcase=="le5a" then
-            -- LE3b and LE5a only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
+        if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" then
+            -- LE3b, LE5a, LE5b only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
             -- curl holds the vehicle and that a jump gap is open; a 0.25 s telemetry sample could miss a pass-through.
-            local t=self.track or {max_x=-math.huge,max_y=-math.huge,min_y=math.huge,wheel_max_x=-math.huge,ticks=0}
+            local t=self.track
+            if not t then
+                t={max_x=-math.huge,max_y=-math.huge,min_y=math.huge,wheel_max_x=-math.huge,ticks=0}
+                -- LE5b reference drive: completed-step observations inside a declared x window (read-only).
+                local ok,w=pcall(json.decode,self.testcase=="le5b" and html5.run("JSON.stringify(window.riderTrackWindow||null)") or "null")
+                if ok and type(w)=="table" then t.window={x0=w[1],x1=w[2],ticks=0,airborne=0,unpowered=0,losses={0,0},dvy=0,dvx_drop=0} end
+            end
             self.track=t
+            local w=t.window
+            if w then
+                local x,vx,vy=feel.metres(state.x),feel.metres(state.vx),feel.metres(b2d.body.get_linear_velocity(self.vehicle.chassis).y)
+                if x>=w.x0 and x<=w.x1 then
+                    local s={seam_metrics.supported(self.vehicle.wheels[1]),seam_metrics.supported(self.vehicle.wheels[2])}
+                    if w.last then
+                        for i=1,2 do if w.last.s[i] and not s[i] then w.losses[i]=w.losses[i]+1 end end
+                        w.dvy=math.max(w.dvy,math.abs(vy-w.last.vy));w.dvx_drop=math.max(w.dvx_drop,w.last.vx-vx)
+                    end
+                    if not s[1] and not s[2] then w.airborne=w.airborne+1 end
+                    -- The protocol holds full throttle; a step without it is counted (the run is then invalid).
+                    if not self.last_command or self.last_command.throttle~=1 then w.unpowered=w.unpowered+1 end
+                    w.ticks,w.vx_min,w.vx_max=w.ticks+1,math.min(w.vx_min or vx,vx),math.max(w.vx_max or vx,vx)
+                    w.last={vx=vx,vy=vy,s=s}
+                elseif x>w.x1 then w.passed=true end
+            end
             t.ticks=t.ticks+1
             t.max_x,t.max_y,t.min_y=math.max(t.max_x,feel.metres(state.x)),math.max(t.max_y,feel.metres(state.y)),math.min(t.min_y,feel.metres(state.y))
             for _,wheel in ipairs(self.vehicle.wheels) do t.wheel_max_x=math.max(t.wheel_max_x,feel.metres(b2d.body.get_position(wheel).x)) end

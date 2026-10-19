@@ -96,7 +96,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   await button('new');await page.waitForFunction(()=>window.riderEditor.id==='my-level-1');e=await saved();
-  let d=await doc();assert.equal(d.editor_version,3);assert.equal(d.compiler_version,3);
+  let d=await doc();assert.equal(d.editor_version,4);assert.equal(d.compiler_version,4);
   await frame();
   await key('p');e=await ed();assert.equal(e.tool,'prefab');assert.equal(e.prefab_kind,'flat');
   for(const k of ['flat','ramp','step','gap','kicker','platform'])assert.ok(e.visible.includes('kind_'+k),k);
@@ -239,7 +239,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 7. Prefab type, parameters, ids and connections survive a reload and an export -> import round trip.
   e=await saved();const course=await doc();const level={key:e.key,shape:shape(course)};
-  assert.ok(file.editor.objects.filter(o=>o.type==='prefab').length===10&&file.editor.editor_version===3,JSON.stringify(file.editor.objects[0]));
+  assert.ok(file.editor.objects.filter(o=>o.type==='prefab').length===10&&file.editor.editor_version===4,JSON.stringify(file.editor.objects[0]));
   assert.equal(shape(file.editor),level.shape);
   await page.goto(base+'?station=custom');e=await edit();
   assert.equal(e.key,level.key);assert.equal(shape(await doc()),level.shape);assert.equal(e.status,'Saved');
@@ -304,7 +304,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    editor:{editor_version:2,compiler_version:2,revision:3,compiled_revision:3,next_id:3,objects:[{id:'o1',type:'line',points:[[-3,0],[12,0]]},{id:'o2',type:'line',points:[[12,0],[16,1.5]]}],
     connections:[{from:'o1',to:'o2'}],start:{position:[0,1],speed:0}}};
   e=await importText(JSON.stringify(v2),'le4-level.json');assert.equal(e.conflict,false,e.conflict);assert.ok(e.message.startsWith('Imported'),e.message);
-  d=await doc();assert.equal(d.editor_version,3);assert.deepEqual(d.connections,[{from:'o1',to:'o2'}]);assert.equal(d.objects.length,2);
+  d=await doc();assert.equal(d.editor_version,4);assert.deepEqual(d.connections,[{from:'o1',to:'o2'}]);assert.equal(d.objects.length,2);
   await key('e');await played('le4-level');await key('e');e=await edit();
   done('le4_document_opens');
 

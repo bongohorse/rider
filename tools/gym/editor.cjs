@@ -67,8 +67,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(e.mode,'edit');assert.equal(e.view.generation,before.generation,'a game key reloaded the world');
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);assert.equal(await page.evaluate(()=>window.riderFeedback.status),before.feedback);
   assert.equal(await page.evaluate(()=>document.getElementById('custom-import').hidden),true);
-  // P is the editor's Prefab tool key (contract controls), not the game's preset cycle; S returns to Select.
-  assert.equal(e.tool,'prefab');assert.equal(e.objects,before.objects);await key('s');assert.equal((await ed()).tool,'select');
+  // P and C are the editor's Prefab and Curve tool keys (contract controls), not the game's preset cycle and
+  // crash toggle; C came last. S returns to Select.
+  assert.equal(e.tool,'curve');assert.equal(e.objects,before.objects);await key('s');assert.equal((await ed()).tool,'select');
   cases.push('edit_mode_input_gating');
 
   // 3. Drag START: one Undo step; Undo/Redo restore by stable id.

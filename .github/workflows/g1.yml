@@ -194,6 +194,8 @@ jobs:
             cases: 'le4'
           - group: prefab
             cases: 'le5a'
+          - group: curve
+            cases: 'le5b'
           - group: controls
             cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -243,6 +245,9 @@ jobs:
       - name: Verify editor prefabs, parameters, Mirror and prefab budgets
         if: contains(format(' {0} ', matrix.cases), ' le5a ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/prefab --case le5a
+      - name: Verify editor curves, Bump/wave, adaptive sampling and the smooth-hill reference drive
+        if: contains(format(' {0} ', matrix.cases), ' le5b ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/curve --case le5b
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

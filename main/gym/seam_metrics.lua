@@ -40,6 +40,7 @@ local function supported(body)
     end
     return false
 end
+M.supported=supported
 function M.observe(self,state,dt,sample)
     local r=self.seam_result
     -- Tuning changes invalidate even a completed result until Retry.
