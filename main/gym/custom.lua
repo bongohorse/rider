@@ -52,10 +52,20 @@ local function store(slots,parse)
         if not t then return nil end
         local d,err,unsupported=parse(t.text)
         -- time (os.time of the save) orders a draft against the level save; older saves have none.
-        if d then return {seq=t.seq,text=t.text,doc=d,slot=i,time=t.time or 0} end
+        -- key: the My levels entry a draft belongs to (LE4); drafts saved before LE4 have none.
+        if d then return {seq=t.seq,text=t.text,doc=d,slot=i,time=t.time or 0,key=t.key} end
         if unsupported then return {seq=t.seq,text=t.text,slot=i,unsupported=err} end
     end
     S.slot=slot
+    -- True when a slot file exists, readable or not (an unreadable store is never treated as empty):
+    -- sys.load returns an empty table for a missing file and fails or returns other data for anything else.
+    function S.exists()
+        for i=1,2 do
+            local ok,t=pcall(sys.load,sys.get_save_file(APP,slots[i]))
+            if not ok or type(t)~="table" or next(t)~=nil then return true end
+        end
+        return false
+    end
     -- Newest slot, which may be unsupported; callers must not open an unsupported one.
     function S.newest()
         local a,b=slot(1),slot(2)
@@ -79,7 +89,7 @@ local function store(slots,parse)
         end
         return best
     end
-    function S.save(text)
+    function S.save(text,key)
         local current=S.restore()
         local a,b=slot(1),slot(2)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
@@ -89,7 +99,7 @@ local function store(slots,parse)
         held=target==1 and a or b
         if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
         if html5 then html5.run("window.riderCustom.watchSync()") end
-        local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time()})
+        local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time(),key=key})
         if not ok then return nil,tostring(err) end
         local back=slot(target)
         if not back or back.seq~=seq or back.text~=text then return nil,"Saved data could not be read back" end
@@ -104,9 +114,122 @@ local function store(slots,parse)
 end
 M.level=store(SLOTS,function(text) return M.parse(text) end)
 function M.restore() return M.level.restore() end
-function M.save(text) return M.level.save(text) end
+-- key: the My levels entry the level was played from (LE4), nil for an imported file.
+function M.save(text,key) return M.level.save(text,key) end
 -- Editor drafts (LE2) live in their own slot pair; a draft may be unplayable (R9).
 function M.drafts(parse) M.draft=M.draft or store({"custom-draft-a","custom-draft-b"},parse);return M.draft end
+-- My levels (LE4): a small index plus one slot pair per level ("custom-doc-<key>-a/-b"), keyed by a
+-- storage key that is never reused, so level ids need not be unique and an import never overwrites.
+-- The index ({format, next, levels={key, id, name, time}}) is a slot pair too. One editor tab at a
+-- time: the index is read once per page and then kept in memory.
+M.LIBRARY_MAX=64
+local function parse_index(text)
+    local ok,d=pcall(json.decode,text)
+    if not ok or type(d)~="table" then return nil,"The level index is not valid JSON" end
+    if d.format~=1 then return nil,"Unsupported level index format "..tostring(d.format),true end
+    if type(d.next)~="number" or d.next<1 or d.next%1~=0 or type(d.levels)~="table" or #d.levels>M.LIBRARY_MAX then return nil,"Invalid level index" end
+    local seen={}
+    for _,l in ipairs(d.levels) do
+        if type(l)~="table" or type(l.key)~="number" or l.key<1 or l.key%1~=0 or l.key>=d.next or seen[l.key]
+            or type(l.id)~="string" or type(l.name)~="string" or type(l.time)~="number" then return nil,"Invalid level index entry" end
+        seen[l.key]=true
+    end
+    return d
+end
+function M.library(parse)
+    if M.lib then return M.lib end
+    local L={}
+    local index=store({"custom-index-a","custom-index-b"},parse_index)
+    local docs,cached,reserved={},nil,0
+    local function doc_store(key)
+        docs[key]=docs[key] or store({"custom-doc-"..key.."-a","custom-doc-"..key.."-b"},parse)
+        return docs[key]
+    end
+    L.store=doc_store
+    -- The index, or nil and why it cannot be used: index files that exist but cannot be read, or whose
+    -- newest slot is unsupported or invalid (e.g. written by a newer build), are kept unchanged and block
+    -- every library write, so no level drops out of the list and no storage key is handed out twice.
+    function L.index()
+        if cached then return cached end
+        local newest=index.newest()
+        local r=index.restore()
+        if newest and newest.unsupported then return nil,"the My levels index is from a newer version; it is kept unchanged" end
+        if r and not r.skipped then cached=r.doc
+        elseif r or index.exists() then return nil,"the My levels index cannot be read; it is kept unchanged"
+        else cached={format=1,next=1,levels={}} end
+        return cached
+    end
+    function L.has(key)
+        local idx=L.index()
+        for _,l in ipairs(idx and idx.levels or {}) do if l.key==key then return true end end
+        return false
+    end
+    -- Entries newest first.
+    function L.list()
+        local idx=L.index()
+        local list={}
+        for _,l in ipairs(idx and idx.levels or {}) do list[#list+1]={key=l.key,id=l.id,name=l.name,time=l.time} end
+        table.sort(list,function(a,b) if a.time~=b.time then return a.time>b.time end;return a.key>b.key end)
+        return list
+    end
+    -- A key for a level that is saved for the first time, or nil, error while the index is unusable.
+    -- Unique within this page even before saving, never below keep (e.g. a draft's key), and never a key
+    -- whose files exist (a level saved before its index entry was written).
+    function L.new_key(keep)
+        local idx,err=L.index()
+        if not idx then return nil,err end
+        local k=math.max(reserved+1,idx.next,(keep or 0)+1)
+        while doc_store(k).exists() do k=k+1 end
+        reserved=k
+        return k
+    end
+    -- Saves a level document under its key and updates its index entry (created on the first save).
+    function L.save(key,text,id,name)
+        local idx,err=L.index()
+        if not idx then return nil,err end
+        local next={format=1,next=math.max(idx.next,key+1),levels={}}
+        local found
+        for i,l in ipairs(idx.levels) do
+            next.levels[i]={key=l.key,id=l.id,name=l.name,time=l.time}
+            if l.key==key then found=next.levels[i] end
+        end
+        if not found then
+            if #next.levels>=M.LIBRARY_MAX then return nil,"My levels is full ("..M.LIBRARY_MAX.." levels); delete a level first" end
+            found={key=key};next.levels[#next.levels+1]=found
+        end
+        local seq,serr=doc_store(key).save(text)
+        if not seq then return nil,serr end
+        found.id,found.name,found.time=id,name,os.time()
+        local ok,ierr=index.save(json.encode(next))
+        if not ok then return nil,"level index: "..tostring(ierr) end
+        cached=next
+        return seq
+    end
+    -- doc, or nil, error, unsupported (an unsupported newest slot is never opened or overwritten).
+    function L.load(key)
+        local s=doc_store(key)
+        local newest=s.newest()
+        if newest and newest.unsupported then return nil,newest.unsupported,true end
+        local r,err=s.restore()
+        if not r then return nil,err or "no saved data" end
+        return r.doc
+    end
+    -- Removes the index entry first, then the level's files (HTML5 syncs the removal with the next save).
+    function L.remove(key)
+        local idx,err=L.index()
+        if not idx then return nil,err end
+        local next={format=1,next=idx.next,levels={}}
+        for _,l in ipairs(idx.levels) do if l.key~=key then next.levels[#next.levels+1]={key=l.key,id=l.id,name=l.name,time=l.time} end end
+        local ok,ierr=index.save(json.encode(next))
+        if not ok then return nil,"level index: "..tostring(ierr) end
+        cached=next
+        for _,s in ipairs({"a","b"}) do pcall(os.remove,sys.get_save_file(APP,"custom-doc-"..key.."-"..s)) end
+        docs[key]=nil
+        return true
+    end
+    M.lib=L
+    return L
+end
 function M.init()
     if html5 then html5.run(assert(sys.load_resource("/main/gym/custom.js"),"Missing custom level helper")) end
 end
@@ -121,8 +244,9 @@ end
 function M.notify(request,state,message)
     if html5 then html5.run("window.riderCustom.result("..json.encode({request=request,state=state,message=message})..")") end
 end
-function M.open(message)
-    if html5 then html5.run("window.riderCustom.open("..json.encode(message or "")..")") end
+-- editor=true: the level editor's own Import (LE4); the page entry points stay off while editing.
+function M.open(message,editor)
+    if html5 then html5.run("window.riderCustom.open("..json.encode(message or "")..","..tostring(editor==true)..")") end
 end
 -- MEM->IndexedDB sync status from the pinned dmloader; sys.save itself only proves the in-memory write.
 function M.sync_state() return html5 and html5.run("window.riderCustom.syncState()") or "saved" end

@@ -172,7 +172,7 @@ function init(self)
         self.ramp_trial=require "main.gym.ramp_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
-    if self.testcase=="le2" or self.testcase=="le3" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
+    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
     if self.testcase=="le1a" then
         assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")
         self.placement_sweep=require "main.gym.placement_sweep"

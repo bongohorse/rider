@@ -52,15 +52,76 @@ function M.template(d)
     if #name>64 then name=d.name:sub(1,59).." copy" end
     return from_station(d,"my-"..d.id,name)
 end
--- Opening a custom level: its own editor block if supported, otherwise its compiled geometry (R2).
+-- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
+function M.blank(id,name)
+    return {schema=1,units="metres",id=id,name=name,editor={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,
+        revision=0,next_id=1,objects={},connections={},start={position={0,1},speed=0}}}
+end
+-- Opening a custom level (R1, R2, LE4). d is a validated station (custom.parse), so its compiled
+-- geometry is always usable. Returns doc, note, conflict:
+-- * no editor block: the compiled geometry as editable lines (R2);
+-- * a supported block: the source. Compiled data claimed for this source revision (compiled_revision ==
+--   revision) that differs from a recompile is a conflict {summary, lines}: the caller lets the user
+--   choose the source or the compiled geometry as lines. Stale compiled data (an older compiled_revision
+--   or none) is expected after autosaved edits and is not a conflict;
+-- * an unsupported or invalid block: never recompiled; the compiled geometry opens as an editable line
+--   copy with a note. The file and its unknown data stay unchanged.
 function M.open_level(d)
-    if d.editor~=nil then
-        local doc={schema=1,units="metres",id=d.id,name=d.name,editor=copy(d.editor)}
-        local ok,err,unsupported=M.validate(doc)
-        if not ok then return nil,err,unsupported end
-        return doc
+    if d.editor==nil then return from_station(d,d.id,d.name) end
+    local doc={schema=1,units="metres",id=d.id,name=d.name,editor=copy(d.editor)}
+    local ok,err,unsupported=M.validate(doc)
+    if not ok then
+        local why=unsupported and "made by an unsupported editor ("..err..")" or "its editor data is invalid ("..err..")"
+        return from_station(d,d.id,d.name),"This level was "..why.."; its compiled geometry was opened as editable lines. The file is unchanged."
     end
-    return from_station(d,d.id,d.name)
+    local e=doc.editor
+    if e.compiled_revision==e.revision then
+        local summary=M.compare(doc,d)
+        if summary then return doc,nil,{summary=summary,lines=from_station(d,d.id,d.name)} end
+    end
+    return doc
+end
+-- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
+-- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish"}
+local function compiled(d)
+    local t={spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
+    for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
+    -- An absent two_sided list means all one-sided.
+    for i=1,#t.chains do t.two_sided[i]=d.two_sided and d.two_sided[i] or false end
+    if type(d.finish)=="table" then t.finish={position=d.finish.position,line=d.finish.line,direction=d.finish.direction} end
+    return t
+end
+local function describe(v) return type(v)=="table" and "a list" or v==nil and "absent" or tostring(v) end
+local function differ(a,b,path)
+    if type(a)=="number" and type(b)=="number" then
+        if math.abs(a-b)>1e-6 then return path..string.format(" is %.3f in the file, %.3f recompiled",b,a) end
+        return nil
+    end
+    if type(a)~="table" or type(b)~="table" then
+        if a~=b then return path.." is "..describe(b).." in the file, "..describe(a).." recompiled" end
+        return nil
+    end
+    if #a~=#b then return path.." has "..#b.." entries in the file, "..#a.." recompiled" end
+    local keys={}
+    for k in pairs(a) do keys[k]=true end
+    for k in pairs(b) do keys[k]=true end
+    local list={};for k in pairs(keys) do list[#list+1]=k end
+    table.sort(list,function(x,y) return tostring(x)<tostring(y) end)
+    for _,k in ipairs(list) do
+        local r=differ(a[k],b[k],path..(type(k)=="number" and "["..k.."]" or "."..k))
+        if r then return r end
+    end
+end
+function M.compare(doc,d)
+    local level,err=M.compile(doc)
+    if not level then return "the editor source no longer compiles ("..err..")" end
+    local a,b=compiled(level),compiled(d)
+    for _,f in ipairs(COMPILED) do
+        local r=differ(a[f],b[f],f)
+        if r then return r end
+    end
 end
 
 -- R16 source-document validator: structure, versions, finite/bounded input, unique stable ids.
