@@ -98,7 +98,6 @@ local function store(slots,parse)
         if held and held.unsupported then target=current and current.slot or 3-target end
         held=target==1 and a or b
         if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
-        if html5 then html5.run("window.riderCustom.watchSync()") end
         local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time(),key=key})
         if not ok then return nil,tostring(err) end
         local back=slot(target)
