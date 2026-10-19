@@ -12,8 +12,10 @@ local socket=require "socket"
 -- keys: My levels storage key per document instance (LE4); an instance without a key is an unsaved copy
 -- (a template, an opened file) that gets a key at its first completed edit (store). clipboard: copied
 -- authoring objects; it survives opening another level. conflict: a pending R1 choice for the open level.
--- behind: instances whose My levels copy is older than the draft (a failed or pending level save);
--- they are saved again before another document becomes current.
+-- behind: instances whose latest state is not fully saved (a failed draft or My levels write, or a My levels
+-- copy older than the draft); they are saved again before another document becomes current.
+-- unsynced: the last browser-storage (IndexedDB) sync failed, so saves since the last good sync may not
+-- survive a reload; set until a later sync succeeds.
 local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
@@ -53,11 +55,14 @@ local function resolve_selection()
     local o2=v2 and ids[v2.id]
     if not M.vertex or not (o2 and o2.type=="line" and (v2.index==1 or v2.index==#o2.points)) then M.vertex2=nil end
 end
--- Saves the current document now when it has unsaved changes, a lagging My levels copy or no key yet
--- although it belongs in My levels. Called before another document becomes current, so a pending
--- autosave never lands in the new one.
+-- Saves the current document now when it has unsaved changes, a failed or lagging save, a failed
+-- storage sync or no key yet although it belongs in My levels. Called before another document becomes
+-- current, so a pending autosave never lands in the new one. False while anything is not saved: a
+-- failed sync is retried by the save, but its result arrives only later.
 function M.flush()
-    if M.doc and (M.dirty or M.behind[M.opened] or (M.store[M.opened] and not M.key())) then return M.save_draft() end
+    if M.doc and (M.dirty or M.behind[M.opened] or M.unsynced or (M.store[M.opened] and not M.key())) then
+        return M.save_draft() and not M.unsynced
+    end
     return true
 end
 -- Before another document becomes current: the outgoing one must be saved, otherwise the next autosave
@@ -68,7 +73,8 @@ function M.leave()
     local now=socket.gettime()
     if M.refused_at and now-M.refused_at<=10 then M.refused_at=nil;return true end
     M.refused_at=now
-    M.message="Not switched: the open level could not be saved ("..M.status.."). Repeat within 10 s to continue anyway; its edits stay in Undo."
+    local why=M.behind[M.opened] and M.status or "browser storage sync failed; the save was retried"
+    M.message="Not switched: the open level could not be saved ("..why.."). Repeat within 10 s to continue anyway; its edits stay in Undo."
     return false
 end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
@@ -182,7 +188,8 @@ function M.touch() touch() end
 -- An edited document is also saved to My levels under its key (LE4). Both use slot pairs, so a failed
 -- save keeps the previous good copy of the draft and of the level.
 function M.save_draft()
-    M.dirty=false
+    -- Until every write below succeeds the document counts as behind: a switch retries it first.
+    M.dirty=false;M.behind[M.opened]=true
     local text=json.encode(M.doc,{encode_empty_table_as_object=false})
     local stored=M.store[M.opened] or M.key()
     local kerr
@@ -195,12 +202,12 @@ function M.save_draft()
     -- The draft names its level's key; 0 marks an unsaved copy (drafts saved before LE4 have no key).
     local seq,err=drafts().save(text,M.key() or 0)
     if not seq then M.status="Save failed ("..tostring(err)..")";return false end
-    if kerr then M.behind[M.opened]=true;M.status="Save failed (My levels: "..tostring(kerr)..")";return false end
+    if kerr then M.status="Save failed (My levels: "..tostring(kerr)..")";return false end
     if stored then
         local ok,lerr=library().save(M.key(),text,M.doc.id,M.doc.name)
-        M.behind[M.opened]=not ok or nil
         if not ok then M.status="Save failed (My levels: "..tostring(lerr)..")";return false end
     end
+    M.behind[M.opened]=nil
     M.status="Saving...";M.syncing=true
     return true
 end
@@ -209,6 +216,8 @@ function M.sync()
     local state=custom.sync_state()
     if state=="syncing" then return end
     M.syncing=false
+    -- A good sync persists every file written before it, so it also clears an earlier failure.
+    M.unsynced=state=="failed" or nil
     if M.dirty then return end -- a newer action is waiting for its own save
     M.status=state=="saved" and "Saved" or state=="session" and "Saved for this session only" or "Save failed (browser storage sync)"
 end

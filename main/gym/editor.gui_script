@@ -1076,7 +1076,7 @@ local function publish(self)
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=512,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,dropped=o.dropped,spacing=o.spacing or 0},
         visible=visible_buttons(self),key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=editor.library().list(),page=self.page or 0,
-        conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,
+        conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false},{encode_empty_table_as_object=false}))
     -- The document itself only when it changed (it can hold thousands of points).
     local key=e and editor.doc.id..":"..e.revision

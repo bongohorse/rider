@@ -254,6 +254,35 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(e.key,kicker.key);assert.equal(shape(await doc()),moved,'a reload restores the last good save');
   cases.push('failed_saves_keep_backups');
 
+  // 13. A failed draft write or browser-storage sync is pending save state: switching to another level is
+  // refused (the save is retried first) instead of leaving the edit only in Undo.
+  e=await saved();
+  await page.evaluate(()=>{const write=FS.write;window.__riderRestoreWrite=()=>{FS.write=write;};
+   FS.write=function(stream,...rest){if(String(stream?.path||'').includes('custom-draft'))throw new FS.ErrnoError(29);return write.call(this,stream,...rest);};});
+  s=(await doc()).start.position;await drag(s,[s[0],s[1]+0.5]);
+  await page.waitForFunction(()=>/^Save failed \(.*custom-draft/.test(window.riderEditor.status));
+  const edited=shape(await doc());
+  await button('new');e=await ed();assert.ok(e.message.startsWith('Not switched'),e.message);assert.equal(e.key,kicker.key);
+  await page.evaluate(()=>window.__riderRestoreWrite());
+  // The next switch retries the save first; the level's My levels copy then holds the edit.
+  await button('new');await page.waitForFunction(k=>window.riderEditor.key!==k,kicker.key);await saved();
+  await button('lib_'+await row(kicker.key));await page.waitForFunction(k=>window.riderEditor.key===k,kicker.key);
+  assert.equal(shape(await doc()),edited,'the retried save holds the edit');
+  e=await saved();
+  await page.evaluate(()=>{const sync=FS.syncfs;window.__riderRestoreSync=()=>{FS.syncfs=sync;};
+   // Every attempt fails, but dmloader's failure count is held at one: after 3 counted failures it never
+   // syncs again in this page (exercised in le1a), and recovery is what this case checks.
+   FS.syncfs=function(populate,cb){if(!populate){setTimeout(()=>{Module._syncTries=0;cb(new Error('injected sync failure'));},0);return;}return sync.apply(this,arguments);};});
+  s=(await doc()).start.position;await drag(s,[s[0],s[1]+0.5]);
+  await page.waitForFunction(()=>window.riderEditor.status==='Save failed (browser storage sync)'&&window.riderEditor.unsynced);
+  await button('new');e=await ed();assert.ok(e.message.startsWith('Not switched')&&e.message.includes('sync'),e.message);assert.equal(e.key,kicker.key);
+  await page.evaluate(()=>window.__riderRestoreSync());
+  // A later good sync clears the failure: switching then needs no repeat.
+  s=(await doc()).start.position;await drag(s,[s[0],s[1]-0.5]);
+  e=await saved();assert.equal(e.unsynced,false);
+  measurements.pending_save={draft:'refused, retried on the next switch',sync:'refused until a good sync'};
+  cases.push('failed_write_or_sync_blocks_switch');
+
   // 11. Delete asks once more; the open level has no Delete.
   e=await openDialog();const n=e.library.length;const open=e.library.findIndex(l=>l.key===e.key)+1;
   assert.ok(!e.visible.includes('libdel_'+open),'open level offers Delete');
