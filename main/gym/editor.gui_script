@@ -922,7 +922,7 @@ function update(self,dt)
             -- document (template, E on another level) discards it with its gesture state.
             if self.drawing and self.drawing.opened~=editor.opened then
                 self.drawing=nil;cancel(self);self.snapped=nil
-                editor.message="Unfinished piece discarded: another level was opened."
+                editor.message="Unfinished piece discarded: another document is now current."
             end
             if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
             else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end

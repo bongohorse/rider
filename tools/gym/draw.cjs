@@ -234,7 +234,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // too. Undo and Redo between the two instances discard a piece started in the other one.
   const course=await doc(),hasPiece=d=>d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]');
   await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
-  await button('template_straight');await page.waitForFunction(n=>window.riderEditor.id==='my-straight'&&window.riderEditor.objects===1,null);
+  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.id==='my-straight'&&window.riderEditor.objects===1);
   e=await edit();
   await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
   await button('undo');await page.waitForFunction(n=>window.riderEditor.objects===n,course.objects.length);e=await edit();
@@ -246,6 +246,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(e.drawing,0,'Redo to the same-id document kept the piece');assert.ok(!hasPiece(d),'piece landed in the redone same-id document');
   await button('undo');await page.waitForFunction(n=>window.riderEditor.objects===n,course.objects.length);e=await edit();
   d=await doc();assert.equal(JSON.stringify({o:d.objects,c:d.connections}),JSON.stringify({o:course.objects,c:course.connections}));
+  // Within one document Undo/Redo keeps the unfinished piece: change the START speed, start a piece, Undo.
+  await at([0,1.7]);await page.waitForFunction(()=>window.riderEditor.selection==='start');
+  const speed=(await ed()).start.speed;await button('plus');await page.waitForFunction(v=>window.riderEditor.start.speed===v+0.5,speed);
+  await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
+  await button('undo');await page.waitForFunction(v=>window.riderEditor.start.speed===v,speed);await page.waitForTimeout(300);
+  assert.equal((await ed()).drawing,2,'Undo inside the same document discarded the piece');
+  await key('Escape');await page.waitForFunction(()=>window.riderEditor.drawing===0);await key('s');
   cases.push('template_change_discards_drawing');
 
   // 9. The unplayed draft keeps its pieces and connections across a reload.
