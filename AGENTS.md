@@ -11,9 +11,9 @@ These rules apply to every AI agent working in this repository.
 
 ## Workflow
 
-- Work only within approved scope: an approved issue with completed dependencies, one issue per PR, one writing agent per task.
+- Work only within approved scope: an issue with a GO recorded in STATUS.md and completed dependencies, one issue per PR, one writing agent per task.
 - Parallel work: several agents may work at once, one writing agent per task, each in its own worktree and branch ([worktrees](docs/TOOLING.md#worktrees)). Never switch branches or edit files in another agent's checkout. A stop point or blocker in one task does not stop independent tasks.
-- Shared files (registries, CI lists, STATUS.md): add or change only your task's entries and keep everyone else's on rebase; in STATUS.md update only your task's lines. A coordinator, if one is active, assigns tasks, owners and merge order; otherwise whichever PR is green and reviewed first merges, and the others rebase and wait for a new green `required`.
+- Shared files (registries, CI lists, STATUS.md): add or change only your task's entries and keep everyone else's on rebase; in STATUS.md update only your task's lines. If Claudio has appointed a coordinator agent (named in STATUS.md), it assigns tasks, owners and merge order and records the owner and branch in an issue comment; otherwise whichever PR is green and reviewed first merges, and the others rebase and wait for a new green `required`.
 - Stop where PLAN.md says (milestone end, or after each task where stated): give the preview URL, request Claudio's drive test and wait for a new GO.
 - Fix ordinary failures yourself. On a structural blocker, stop the affected work, report evidence and options, and continue independent work.
 - Watch your PR's CI yourself instead of asking the maintainer ([how](docs/TOOLING.md#agent-ci-completion-watch)); on failure, read the logs and fix.
