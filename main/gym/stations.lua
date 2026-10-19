@@ -67,6 +67,14 @@ function M.initial()
     if id=="custom" then return nil,"Loading custom level..." end
     return M.load(id,speed,section)
 end
+-- Load-path check right before the vehicle is placed, independent of the validator (decisions after LE1b).
+M.place_limit=data.START_LIMIT
+function M.placeable(d)
+    if not data.start_allowed(d.spawn,M.place_limit) then
+        return nil,string.format("Start %.3f, %.3f m is outside the %g m start limit",d.spawn[1],d.spawn[2],M.place_limit)
+    end
+    return true
+end
 function M.configure(d)
     local scale=sys.get_config_number("physics.scale",0.01)
     feel.values.spawn_x,feel.values.spawn_y=d.spawn[1]/scale,d.spawn[2]/scale

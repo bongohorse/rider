@@ -87,19 +87,13 @@ function markdown(r){
    const end=Date.now()+ms;
    for(;;){const v=await check();if(v)return v;if(Date.now()>end)throw Error('Timed out waiting for drive-ready or a page error');await new Promise(r=>setTimeout(r,50));}
   }
-  // A validated level can still fail when the vehicle is placed: record the engine error as the outcome
-  // (only the reset-pose guards; any other page error stays fatal) and let the next import prove recovery.
-  const PLACEMENT=/vehicle\.lua:\d+: (Noncanonical reset pose|Reset velocity survived)/;
+  // A validated level can still fail when the vehicle is placed: the world reports it as a safe error state
+  // (LE2) instead of a script error; record it as the outcome and let the next import prove recovery.
   async function load(c,value){
    const mark=errors.length,t=await trigger(value);loads++;
-   const outcome=await until(async()=>errors.length>mark?'error':await page.evaluate(n=>window.__le1b.ready.length>n,t.before)&&'ready',60000);
-   if(outcome==='error'){
-    // Let the broken world settle; every error it raised must be a placement guard.
-    await page.waitForTimeout(3000);
-    const raised=errors.splice(mark),unknown=raised.filter(e=>!PLACEMENT.test(e));
-    if(unknown.length)throw Error(unknown.join('\n'));
-    return {failed:raised[0].match(PLACEMENT)[0],status:await page.evaluate(()=>window.riderCustomStatus),switch_ms:null};
-   }
+   const outcome=await until(async()=>errors.length>mark?'error':await page.evaluate(n=>window.__le1b.ready.length>n?'ready':window.riderStationError?.includes('could not be placed')&&'placement',t.before),60000);
+   if(outcome==='error')throw Error(errors.slice(mark).join('\n'));
+   if(outcome==='placement')return {failed:await page.evaluate(()=>window.riderStationError),status:await page.evaluate(()=>window.riderCustomStatus),switch_ms:null};
    await page.waitForFunction(({id,loads})=>window.riderTelemetry?.station===id&&window.riderTelemetry.world_loads===loads&&window.riderTelemetry.sequence>2&&window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry.session_generation,{id:c.id,loads},{timeout:60000});
    return page.evaluate(({t})=>{
     const p=window.__le1b,ready=p.ready[t.before].at,tm=window.riderTelemetry,lt=window.riderLoad,in_window=p.frames.filter(f=>f.start>=t.at&&f.start<=ready);

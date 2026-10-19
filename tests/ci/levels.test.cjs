@@ -18,6 +18,7 @@ test('accepted levels stay inside the unchanged validator limits', () => {
   for (const {id, level: d} of accepted) {
     const [x0, x1, y0, y1] = d.bounds;
     assert.ok([x0, x1, y0, y1].every(finite) && x0 < d.spawn[0] && d.spawn[0] < x1 && y0 < d.spawn[1] && d.spawn[1] < y1, id);
+    assert.ok(Math.abs(d.spawn[0]) <= 500 && Math.abs(d.spawn[1]) <= 500, id + ': provisional start limit');
     assert.ok(d.chains.length <= 32 && objects(d) <= 800 && Buffer.byteLength(text(d)) <= 256 * 1024, id);
     assert.equal(d.kind, undefined);
     for (const chain of d.chains) {
@@ -61,6 +62,7 @@ test('each rejected case breaks exactly the named limit', () => {
   assert.equal(rejected['reject-hulls-65'].level.hulls.length, 65);
   assert.equal(rejected['reject-hull-9'].level.hulls[0].vertices.length, 9);
   assert.ok(Buffer.byteLength(text(rejected['reject-text-256k'].level)) > 256 * 1024);
+  for (const x of [1000, 1500, 2000, 4000, 98800]) assert.equal(rejected['start-' + x + 'm'].level.spawn[0], x);
   for (const c of Object.values(rejected)) assert.ok(c.reason === null ? c.id === 'reject-text-256k' : c.reason.length > 0);
 });
 

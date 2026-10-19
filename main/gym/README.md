@@ -131,7 +131,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
 | `a15a` | Rider lean/bob bounds and return to rest |
 | `a16`, `a17`, `a18`, `a19` | Ramp, step, seam and gap protocols above |
-| `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure, 64-byte id/name limit, exhausted storage-sync retries |
+| `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure, 64-byte id/name limit, ±500 m start limit (placements with Retry, 6000-start reset sweep, validator and load-path rejection), real placement failure (no save, no vehicle bodies, re-import), all text fields at their byte limits in one telemetry message, exhausted storage-sync retries |
 | `le1b` | Custom level size/performance: generated length, start-distance, segment, chain and hull series; 1 + 5 imports each (switch time), 6 s full-throttle window (frame intervals, callback work, Box2D profile/counters, memory), rejected limit messages. Writes `sizes-result.json` and `sizes-report.md` ([report](../../docs/LE1B_REPORT.md)) |
 
 Release behavior (keyboard, touch, tilt, stations, screenshots) is verified by `tools/preview/*.cjs` in CI.

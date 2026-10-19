@@ -142,10 +142,78 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   const longId='l'+'o'.repeat(63);await importText(named(longId,'é'.repeat(32)));t=await ready(longId,2);
   assert.equal(t.station_name,'Custom: '+'é'.repeat(32));t=await drive(10);assert.equal(t.station,longId);cases.push('id_name_byte_limit');
 
+  // Decision 2 (after LE1b), tightened in LE2: starts are limited to ±500 m in x and y. Full vehicle placement on a flat
+  // chain under the start, first placement and Retry: positive/negative, fractional, several heights and drops, boundaries.
+  const flat=(x,ground,drop=.9,id='start-test',name='Start test')=>JSON.stringify({schema:1,id,name,units:'metres',spawn:[x,ground+drop],start_speed:0,run_in:0,run_out:0,
+   bounds:[x-10,x+30,ground-10,ground+25],chains:[[[x+40,ground],[x-20,ground]]]});
+  const placements=[[500,.8],[-500,.8],[499.99,12.5],[-499.99,-30.25],[123.456,250.75],[-377.777,.8,3],[0.5,-75.125,1.7],[-250.5,498.6],[250.25,-500.9]];
+  measurements.placements=[];let loads=(await state()).world_loads;
+  for(const [x,ground,drop] of placements){
+   await importText(flat(x,ground,drop));t=await ready('start-test',++loads);
+   n=t.reset_count;await uncaptured();await page.locator('canvas').focus();
+   await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,n);await page.keyboard.up('r');
+   t=await state();assert.ok(Math.abs(t.station_distance)<.5,'Retry at x='+x);measurements.placements.push({x,y:ground+(drop??.9),retry_distance_m:t.station_distance});
+  }
+  // A grid is no proof: run the full reset and its pose guards at 6000 dense fractional starts inside the limit in this world.
+  const sweep=async spec=>{await page.evaluate(s=>{window.riderSweep=null;window.riderSweepRequest=s;},spec);await page.waitForFunction(()=>window.riderSweep,null,{timeout:60000});return page.evaluate(()=>window.riderSweep);};
+  const inside=await sweep({from:-500,to:500,y_from:-500,y_to:500,count:6000});
+  assert.equal(inside.failed,0,JSON.stringify(inside.failures));assert.ok(inside.max_error<.01);
+  // Recorded, not asserted: the old ±1 km range fails the same guard (the reason for the tighter limit).
+  const outside=await sweep({from:-1000,to:1000,y_from:-1000,y_to:1000,count:4000});
+  measurements.placement_sweep={inside:{count:inside.count,failed:inside.failed,max_error_units:inside.max_error},old_1km:{count:outside.count,failed:outside.failed,example:outside.failures[0]}};
+  for(const [x,y] of [[500.01,1.7],[-500.01,1.7],[0,500.01],[0,-500.01]]){
+   await importText(flat(x,y-.9));
+   await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('Start is limited to 500 m from the origin in x and y'));
+  }
+  assert.equal((await state()).world_loads,loads);cases.push('start_limit_placements');
+  // The load-path check stands on its own: with only the validator limit lifted, the world refuses to place the vehicle.
+  await page.evaluate(()=>{window.riderDebugLimits={validator:5000};});
+  await importText(flat(500.01,.8));loads++;
+  await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('Start 500.010, 1.700 m is outside the 500 m start limit'));
+  // Decision 1: a real placement failure (reset-pose guard, both limits lifted) leaves a vehicle-less world, no save and a working re-import.
+  await page.evaluate(()=>{window.riderDebugLimits={validator:5000,placement:5000};});
+  const placeErrors=[];const onPlace=m=>{const r=m.text().match(/GYM_PLACE_FAILED (\{.*\})/);if(r)placeErrors.push(JSON.parse(r[1]));};page.on('console',onPlace);
+  await importText(flat(0,999.1,.9,'far-start','Far start'));loads++;
+  await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('the vehicle could not be placed')&&window.riderStationError?.includes('could not be placed'));
+  await page.waitForFunction(g=>window.riderPlacement?.generation>=g,loads);
+  page.off('console',onPlace);await page.evaluate(()=>{window.riderDebugLimits=null;});
+  const failure=await page.evaluate(()=>({placement:window.riderPlacement,status:window.riderCustomStatus,error:window.riderStationError,visible:window.riderCustom.visible}));
+  assert.match(placeErrors[0]?.error||'',/Noncanonical reset pose|Reset velocity survived/);
+  // Only the terrain body is left: no chassis, wheels or joints from the failed placement.
+  assert.equal(failure.placement.bodies,1);assert.equal(failure.placement.joints,0);assert.equal(failure.status,null);assert.equal(failure.visible,true);
+  measurements.placement_failure={error:placeErrors[0].error,...failure};
+  // Neither save slot holds the level that failed placement.
+  const slots=await page.evaluate(()=>['a','b'].map(s=>{try{return new TextDecoder('latin1').decode(FS.readFile('/data/.rider/custom-level-'+s));}catch(e){return '';}}));
+  assert.ok(slots.some(s=>s.includes('start-test'))&&!slots.some(s=>s.includes('far-start')),'placement failure reached a save slot');
+  await page.goto(url);t=await ready('start-test',1,null);cases.push('placement_failure_keeps_save');
+  await importFile('kicker-platform');t=await ready('kicker-platform',2);assert.equal(t.reset_count,0);cases.push('reimport_after_placement_failure');
+  // A save from before the limit (600 m, saved with both limits lifted) no longer validates: a reload restores the
+  // older valid slot and says so instead of hiding the rejected newer one.
+  await page.evaluate(()=>{window.riderDebugLimits={validator:5000,placement:5000};});
+  await importText(flat(600,.8,.9,'old-far','Old far'));t=await ready('old-far',3);
+  await page.goto(url);t=await ready('kicker-platform',1,null);
+  await page.waitForFunction(()=>window.riderCustomStatus?.includes('the newer save is no longer valid (Start is limited to 500 m'));
+  measurements.rejected_newer_save=await page.evaluate(()=>window.riderCustomStatus);cases.push('rejected_newer_save_reported');
+
+  // Decision 3: every text field at its byte limit with umlauts and emoji, plus the URL speed note, in one telemetry message.
+  const texts=JSON.parse(text('kicker-platform'));texts.id='t'+'x'.repeat(63);texts.name='🏁'.repeat(16);
+  texts.labels=Array.from({length:8},(_,i)=>({position:[i*4,3],text:i%2?'ä'.repeat(32):'😀'.repeat(16)}));
+  for(const s of [texts.id,texts.name,...texts.labels.map(l=>l.text)])assert.equal(Buffer.byteLength(s),64);
+  await importText(JSON.stringify(texts));t=await ready(texts.id,2);
+  await page.goto(url+'&speed=99');t=await ready(texts.id,1,null);
+  assert.equal(t.station_name,'Custom: '+texts.name);assert.match(t.station_note,/Invalid speed/);assert.equal(t.decor_labels,8);
+  const bytes=await page.evaluate(()=>window.riderMeasurementBytes);assert.ok(bytes>0&&bytes<2048,'measurement payload '+bytes);
+  measurements.text_limits={measurement_bytes:bytes,headroom_bytes:2048-bytes,name_chars:[...texts.name].length,label_bytes:64};
+  // 64 characters are allowed only while they fit the 64-byte limit: 64 emoji (256 bytes) are rejected.
+  await importText(named('emoji-name','🏁'.repeat(64)));
+  await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent.includes('limited to 64 bytes'));
+  await page.getByRole('button',{name:'Close import',exact:true}).click();
+  t=await drive(10);assert.equal(t.station,texts.id);cases.push('text_fields_fit_message');
+
   // Exhausted dmloader sync retries leave its in-progress flag set for good: the status must end, not stay at Saving.
   assert(await page.evaluate(()=>typeof Module._startSyncFS==='function'&&Module._syncMaxTries>0),'dmloader sync internals changed');
   await page.evaluate(()=>{Module._syncTries=Module._syncMaxTries;});
-  await importFile('rolling-hills');t=await ready('rolling-hills',3,'Browser storage sync failed; the level may not survive a reload');
+  await importFile('rolling-hills');t=await ready('rolling-hills',2,'Browser storage sync failed; the level may not survive a reload');
   assert.equal(await page.evaluate(()=>Module._syncInProgress),true);cases.push('sync_retries_exhausted');
 
   if(errors.length)throw Error(errors.join('\n'));

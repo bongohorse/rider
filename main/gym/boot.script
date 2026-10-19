@@ -1,6 +1,7 @@
 -- Proxy is the only world-switch owner; messages serialize confirmed unload/load.
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
+local station_data=require "main.gym.station_data"
 local socket=require "socket"
 local function switch(self,request)
     self.station,self.speed=request.id,request.speed or ""
@@ -36,15 +37,18 @@ end
 function init(self)
     msg.post(".","acquire_input_focus")
     custom.init()
+    self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
     if id=="custom" then
         self.station,self.speed=id,speed
-        local saved=custom.restore()
-        if saved then self.snapshot=custom.freeze(saved.doc,saved.text)
+        local saved,rejected=custom.restore()
+        if saved then
+            self.snapshot=custom.freeze(saved.doc,saved.text)
+            self.restore_note=saved.skipped and "Restored the previous level; the newer save is no longer valid ("..saved.skipped..")"
         else
-            self.note="No saved custom level. Import a level file [I]."
+            self.note=rejected and "The saved custom level is no longer valid ("..rejected.."). Import a level file [I]." or "No saved custom level. Import a level file [I]."
             custom.open(self.note)
         end
     else
@@ -60,6 +64,14 @@ function update(self,dt)
             self.failed=true
             msg.post("#ui","station_error",{note="Station loading timed out. Reload to retry."})
             msg.post("#world","disable")
+        end
+    end
+    if self.debug_limits then
+        -- Debug fault injection (le1a only): lift the validator and/or load-path start limit to reach a real placement failure.
+        local ok,limits=pcall(json.decode,html5.run("JSON.stringify(window.riderDebugLimits||{})"))
+        if ok and type(limits)=="table" then
+            station_data.START_LIMIT=limits.validator or station_data.START_LIMIT_DEFAULT
+            stations.place_limit=limits.placement or station_data.START_LIMIT_DEFAULT
         end
     end
     local request=custom.take()
@@ -101,14 +113,17 @@ function on_message(self,id,data,sender)
         end
         -- The ready world has read its snapshot; keep only that one.
         custom.retain(loaded and {[loaded]=true} or {})
+        if self.restore_note and data.ok then msg.post("#ui","custom_status",{text=self.restore_note}) end
+        self.restore_note=nil
         if not self.import and self.station=="custom" and not data.ok then
-            custom.open(self.note or "The saved level could not be built. Import another level file.")
+            custom.open(self.note or "The saved level could not be loaded ("..(data.reason or "the level could not be built").."). Import another level file.")
         end
         if self.import then
             local request=self.import;self.import=nil
             if not loaded then
-                custom.notify(request,"error","Import failed: the level could not be built. The previous saved level is kept.")
-                custom.open("The level could not be built. Import another level file.")
+                local reason=data.reason or "the level could not be built"
+                custom.notify(request,"error","Import failed: "..reason..". The previous saved level is kept.")
+                custom.open("Import failed: "..reason..". Import another level file.")
             else
                 local saved,err=custom.save(custom.text(loaded))
                 if saved then
