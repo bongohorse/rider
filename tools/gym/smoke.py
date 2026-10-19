@@ -21,9 +21,9 @@ run_id=str(uuid.uuid4())
 bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
 if not args.bundle:build_bundle(bundle,sha)
 verify_bundle(bundle,sha)
-runner='sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+runner='editor.cjs' if args.case=='le2' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
 process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True)
-try: code=process.wait(timeout=600 if args.case in ('a18','le1b') else 360 if args.case in ('a16','a17','a19','le1a') else 90)
+try: code=process.wait(timeout=600 if args.case in ('a18','le1b') else 360 if args.case in ('a16','a17','a19','le1a','le2') else 90)
 finally: stop(process)
 if code:raise SystemExit(code)
 if args.case=='le1b':
@@ -33,6 +33,10 @@ if args.case=='le1b':
     assert all(r.get('outcome')=='drive_ready' for r in report['results'] if r.get('expect')!='rejected')
     assert sum(r.get('expect')=='rejected' for r in report['results'])==12
     print(json.dumps({'status':report['status'],'elapsed_s':report['elapsed_s'],'switch_ms':{r['id']:r['switch']['median_ms'] for r in report['results'] if 'switch' in r}}));raise SystemExit(0)
+if args.case=='le2':
+    report=json.loads((out/'editor-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==16
+    print(json.dumps(report));raise SystemExit(0)
 if args.case=='le1a':
     report=json.loads((out/'custom-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==20

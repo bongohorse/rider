@@ -33,44 +33,79 @@ function M.read(id)
     return s and copy(s.doc)
 end
 function M.text(id) return snapshots[id] and snapshots[id].text end
+-- Loader-internal read-only access (no copy); worlds always use M.read.
+function M.peek(id) return snapshots[id] and snapshots[id].doc end
 function M.retain(keep)
     for id in pairs(snapshots) do if not keep[id] then snapshots[id]=nil end end
 end
 function M.count() local n=0;for _ in pairs(snapshots) do n=n+1 end;return n end
-local function raw(i)
-    local ok,t=pcall(sys.load,sys.get_save_file(APP,SLOTS[i]))
-    if ok and type(t)=="table" and t.format==1 and type(t.seq)=="number" and type(t.text)=="string" then return t end
-end
-local function slot(i)
-    local t=raw(i)
-    local d=t and M.parse(t.text)
-    return d and {seq=t.seq,text=t.text,doc=d,slot=i}
-end
--- Newest valid slot. A newer slot that no longer validates (e.g. a start beyond today's limit) is
--- reported as skipped (or as the error when nothing valid is left), never silently hidden.
-function M.restore()
-    local a,b=slot(1),slot(2)
-    local best=a and b and (a.seq>b.seq and a or b) or a or b
-    for i=1,2 do
-        local t=raw(i)
-        if t and (not best or t.seq>best.seq) then
-            local _,err=M.parse(t.text)
-            if best then best.skipped=err else return nil,err end
-        end
+-- parse(text) -> doc | nil, error, unsupported. An unsupported slot (unknown editor version) is never
+-- overwritten: its original text stays as it is (contract R1).
+local function store(slots,parse)
+    local S={}
+    local function raw(i)
+        local ok,t=pcall(sys.load,sys.get_save_file(APP,slots[i]))
+        if ok and type(t)=="table" and t.format==1 and type(t.seq)=="number" and type(t.text)=="string" then return t end
     end
-    return best
+    local function slot(i)
+        local t=raw(i)
+        if not t then return nil end
+        local d,err,unsupported=parse(t.text)
+        if d then return {seq=t.seq,text=t.text,doc=d,slot=i} end
+        if unsupported then return {seq=t.seq,text=t.text,slot=i,unsupported=err} end
+    end
+    S.slot=slot
+    -- Newest slot, which may be unsupported; callers must not open an unsupported one.
+    function S.newest()
+        local a,b=slot(1),slot(2)
+        if a and b then return a.seq>b.seq and a or b end
+        return a or b
+    end
+    -- Newest valid slot. A newer slot that no longer validates (e.g. a start beyond today's limit) is
+    -- reported as skipped (or as the error when nothing valid is left), never silently hidden.
+    function S.restore()
+        local a,b=slot(1),slot(2)
+        a,b=a and not a.unsupported and a,b and not b.unsupported and b
+        local best=a and b and (a.seq>b.seq and a or b) or a or b
+        for i=1,2 do
+            local t=raw(i)
+            if t and (not best or t.seq>best.seq) then
+                local _,err,unsupported=parse(t.text)
+                if not unsupported then
+                    if best then best.skipped=err else return nil,err end
+                end
+            end
+        end
+        return best
+    end
+    function S.save(text)
+        local current=S.restore()
+        local a,b=slot(1),slot(2)
+        local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
+        local target=current and 3-current.slot or 1
+        local held=target==1 and a or b
+        if held and held.unsupported then target=current and current.slot or 3-target end
+        held=target==1 and a or b
+        if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
+        if html5 then html5.run("window.riderCustom.watchSync()") end
+        local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text})
+        if not ok then return nil,tostring(err) end
+        local back=slot(target)
+        if not back or back.seq~=seq or back.text~=text then return nil,"Saved data could not be read back" end
+        return seq
+    end
+    -- Debug only: write raw text into a slot, bypassing validation (version-rejection tests).
+    function S.debug_write(i,seq,text)
+        assert(sys.get_engine_info().is_debug,"Raw save writes require debug engine")
+        sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text})
+    end
+    return S
 end
-function M.save(text)
-    local current=M.restore()
-    local target=current and 3-current.slot or 1
-    local seq=(current and current.seq or 0)+1
-    if html5 then html5.run("window.riderCustom.watchSync()") end
-    local ok,err=pcall(sys.save,sys.get_save_file(APP,SLOTS[target]),{format=1,seq=seq,text=text})
-    if not ok then return nil,tostring(err) end
-    local back=slot(target)
-    if not back or back.seq~=seq or back.text~=text then return nil,"Saved level could not be read back" end
-    return seq
-end
+M.level=store(SLOTS,function(text) return M.parse(text) end)
+function M.restore() return M.level.restore() end
+function M.save(text) return M.level.save(text) end
+-- Editor drafts (LE2) live in their own slot pair; a draft may be unplayable (R9).
+function M.drafts(parse) M.draft=M.draft or store({"custom-draft-a","custom-draft-b"},parse);return M.draft end
 function M.init()
     if html5 then html5.run(assert(sys.load_resource("/main/gym/custom.js"),"Missing custom level helper")) end
 end

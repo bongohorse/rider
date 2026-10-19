@@ -3,9 +3,13 @@ local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
 local station_data=require "main.gym.station_data"
 local socket=require "socket"
+local editor=require "main.gym.editor"
+local doc_lib=require "main.gym.editor_doc"
+local EDITOR="main:/editor#gui"
 local function switch(self,request)
     self.station,self.speed=request.id,request.speed or ""
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
+    self.edit,self.play=request.edit,request.play
     -- Loop latency (R15): the world reports trigger -> drive-ready from this loader-side trigger time.
     self.requested,self.parse_ms=request.requested,request.parse_ms
     self.preset=request.preset or self.preset
@@ -17,8 +21,71 @@ local function switch(self,request)
     msg.post("#world","final")
     msg.post("#world","unload")
 end
+-- Edit/Play mode (R11, R15). Both directions reload the world; the editor state stays loader-side.
+local function set_mode(self,mode,note)
+    editor.mode=mode
+    if note then editor.message=note end
+    msg.post(EDITOR,"editor_mode",{mode=mode})
+    msg.post("#ui","editor_mode",{active=mode=="edit"})
+    if html5 then
+        html5.run("window.riderEditing="..tostring(mode=="edit")..";document.getElementById('custom-import')?.toggleAttribute('hidden',window.riderEditing)")
+        -- A reload returns to the custom level or draft, never to the built-in source of a template.
+        html5.run("(()=>{const u=new URL(location.href);if(u.searchParams.get('station')!=='custom'){u.searchParams.set('station','custom');u.searchParams.delete('section');u.searchParams.delete('speed');history.replaceState(null,'',u.href);}})()")
+    end
+end
+local function enter_edit(self,note)
+    set_mode(self,"edit",note)
+    switch(self,{id="custom",edit=true,requested=socket.gettime()})
+end
+-- E opens the editor on the current level: the in-memory document or the draft of this level,
+-- otherwise this level (R2) or a template copy of the built-in station (R3). A replaced document
+-- stays one Undo step away.
+local function open_current(self)
+    local saved=editor.saved_draft()
+    local notice
+    if saved and saved.unsupported then
+        -- R1: only that draft is refused; its slot stays untouched (drafts are saved around it).
+        notice="The newest draft was made by an unsupported editor ("..saved.unsupported.."). It is kept unchanged and was not opened."
+        saved=nil
+    end
+    local level=self.station=="custom" and self.level_id and custom.peek(self.level_snapshot)
+    -- The editor's own document or draft is reused only for a level it produced; an imported file
+    -- with the same id opens as itself (one Undo step away from the previous document).
+    local own=level and self.level_edited
+    if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id)) then editor.message=notice or editor.message;return true end
+    if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc);editor.message=notice or "";return true end
+    if not editor.doc and saved and saved.doc then editor.open(saved.doc) end
+    local doc,err,unsupported
+    if level then doc,err,unsupported=doc_lib.open_level(level)
+    else
+        local d=stations.resource(self.station~="custom" and self.station or "straight")
+        if not d then return nil,"The station cannot be opened as a template" end
+        doc=doc_lib.template(d)
+    end
+    if not doc then return nil,(unsupported and "The level was made by an unsupported editor ("..err.."); it is kept unchanged." or "The level cannot be opened: "..err) end
+    editor.open(doc,editor.doc~=nil)
+    if notice then editor.message=notice end
+    return true
+end
+local function play(self,test)
+    local level,err,run=editor.compile(test)
+    if not level then editor.message="Play blocked: "..err;return end
+    -- Empty lists stay JSON arrays (checkpoints, hulls, labels).
+    local list={encode_empty_table_as_object=false}
+    local text,run_text=json.encode(level,list),run and json.encode(run,list)
+    if #text>custom.limit then editor.message="Play blocked: the level is larger than 256 KiB";return end
+    -- The run may use a temporary test start; only the START level is saved and exported (R10).
+    local snapshot=custom.freeze(run or level,run_text or text)
+    self.play_text,self.test_run=text,run~=nil
+    set_mode(self,"play")
+    switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
+end
 -- Import = read/validate, freeze a snapshot, then reload the world. Save only after it loaded.
 local function import(self,request)
+    if editor.mode=="edit" then
+        custom.notify(request.request,"error","Leave the editor [E] before importing a level.")
+        return
+    end
     local requested=socket.gettime()
     local d,err=custom.parse(request.text)
     if not d then
@@ -38,14 +105,24 @@ function init(self)
     msg.post(".","acquire_input_focus")
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le2"
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
     if id=="custom" then
         self.station,self.speed=id,speed
         local saved,rejected=custom.restore()
-        if saved then
+        local draft=editor.saved_draft()
+        draft=draft and draft.doc
+        -- Unplayed edits of this level (or a draft without any level) reopen the editor after a reload.
+        if draft and (not saved or (saved.doc.id==draft.id and (saved.doc.editor and saved.doc.editor.compiled_revision)~=draft.editor.revision)) then
+            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,true end
+            editor.open(draft)
+            self.edit=true
+            set_mode(self,"edit")
+        elseif saved then
             self.snapshot=custom.freeze(saved.doc,saved.text)
+            self.restored_edited=draft~=nil and saved.doc.id==draft.id
             self.restore_note=saved.skipped and "Restored the previous level; the newer save is no longer valid ("..saved.skipped..")"
         else
             self.note=rejected and "The saved custom level is no longer valid ("..rejected.."). Import a level file [I]." or "No saved custom level. Import a level file [I]."
@@ -76,6 +153,11 @@ function update(self,dt)
     end
     local request=custom.take()
     if request then import(self,request) end
+    if self.debug_editor then
+        -- Debug fault injection (le2 only): write a raw draft slot, e.g. an unsupported editor version.
+        local ok,raw=pcall(json.decode,html5.run("(()=>{const r=window.riderDebugDraft;window.riderDebugDraft=null;return JSON.stringify(r||null)})()"))
+        if ok and type(raw)=="table" then editor.draft_store().debug_write(raw.slot,raw.seq,raw.text) end
+    end
     if self.syncing then
         local state=custom.sync_state()
         if state~="syncing" then
@@ -87,7 +169,14 @@ function update(self,dt)
 end
 function on_message(self,id,data,sender)
     if id==hash("preset_changed") then self.preset=data.key
-    elseif id==hash("select_station") and not self.loading then
+    elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
+        local ok,err=open_current(self)
+        if ok then enter_edit(self) else editor.message=err end
+    elseif (id==hash("editor_enter") or id==hash("editor_play")) and self.loading then
+        editor.message="The level is still loading; press "..(id==hash("editor_play") and "Play" or "E").." again."
+    elseif id==hash("editor_play") and not self.loading and editor.mode=="edit" then play(self,data.test)
+    elseif id==hash("editor_reload") and not self.loading and editor.mode=="edit" then enter_edit(self)
+    elseif id==hash("select_station") and not self.loading and editor.mode=="play" then
         local d,note=stations.load(data.id,data.speed)
         if not d then msg.post("#ui","station_error",{note=note});return end
         switch(self,{id=d.id,speed=data.speed,preset=data.preset,requested=socket.gettime()})
@@ -98,23 +187,52 @@ function on_message(self,id,data,sender)
         msg.post(sender,"init")
         if self.world_loads>1 or self.station=="custom" then
             msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,generation=self.generation,
-                snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms})
+                snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms,edit=self.edit})
         end
         msg.post(sender,"enable")
     elseif id==hash("gym_ready") and data.generation==self.generation then
         self.loading=false
         msg.post(sender,"world_load_count",{count=self.world_loads,generation=self.generation})
         local loaded=self.station=="custom" and data.ok and self.snapshot
+        -- A test run's snapshot carries a temporary start; the editor keeps opening from the saved level.
+        if loaded and not (self.play and self.test_run) then
+            self.level_snapshot,self.level_id=loaded,custom.peek(loaded).id
+            self.level_edited=self.play==true or (self.restored_edited==true and not self.import)
+            self.restored_edited=nil
+        end
         if self.queued then
             local next=self.queued;self.queued=nil
             custom.retain({[next.snapshot]=true})
             switch(self,next)
             return
         end
-        -- The ready world has read its snapshot; keep only that one.
-        custom.retain(loaded and {[loaded]=true} or {})
+        -- The ready world has read its snapshot; keep only that one (and the level the editor opens from).
+        custom.retain({[loaded or ""]=true,[self.level_snapshot or ""]=true})
         if self.restore_note and data.ok then msg.post("#ui","custom_status",{text=self.restore_note}) end
         self.restore_note=nil
+        if self.edit then return end
+        if self.play then
+            self.play=false
+            if not loaded then
+                enter_edit(self,"Play failed: "..(data.reason or "the level could not be built")..". The previous saved level is kept.")
+                return
+            end
+            -- A test start never replaces the save: its START was not the start that was driven.
+            if self.test_run then
+                msg.post("#ui","custom_status",{text="Test run; the saved level is unchanged"})
+                return
+            end
+            -- Play result: only a drive-ready level replaces the save (decisions after LE1b).
+            local saved,err=custom.save(self.play_text)
+            if saved then
+                self.syncing=true
+                msg.post("#ui","custom_status",{text="Saving..."})
+                if self.debug_editor then html5.run("window.riderSavedLevel="..self.play_text) end
+            else
+                msg.post("#ui","custom_status",{text="Save failed; the previous saved level is kept ("..err..")"})
+            end
+            return
+        end
         if not self.import and self.station=="custom" and not data.ok then
             custom.open(self.note or "The saved level could not be loaded ("..(data.reason or "the level could not be built").."). Import another level file.")
         end

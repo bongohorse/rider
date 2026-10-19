@@ -20,6 +20,15 @@ local function load_custom(snapshot,speed)
     d.start_speed,message=data.speed(speed,d.start_speed)
     return d,message or ""
 end
+-- Raw, validated built-in station JSON (template source, R3). The resource itself stays read-only.
+function M.resource(id)
+    local found=false
+    for _,key in ipairs(M.ids) do if id==key then found=true end end
+    if not found then return nil,"Unknown station" end
+    local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/gym/stations/"..id..".json"))) end)
+    if not ok or not data.validate(d) then return nil,"Unreadable station file" end
+    return d
+end
 function M.load(id,speed,section,snapshot)
     if id=="custom" then return load_custom(snapshot,speed) end
     local found=false
@@ -123,6 +132,23 @@ function M.outside(d,s)
     local b=d.bounds;local scale=sys.get_config_number("physics.scale",0.01)
     return s.x*scale<b[1] or s.x*scale>b[2] or s.y*scale<b[3] or s.y*scale>b[4]
 end
+M.TERRAIN_TINT=vmath.vector4(0.45,0.85,0.75,1)
+M.FINISH_TINT=vmath.vector4(1,0.85,0.2,1)
+-- One line sprite from a to b (metres); returns its game object id.
+function M.line(a,b,width,tint,z)
+    local scale=sys.get_config_number("physics.scale",0.01)
+    local dx,dy=(b[1]-a[1])/scale,(b[2]-a[2])/scale
+    local id=factory.create("#line",vmath.vector3((a[1]+b[1])/2/scale,(a[2]+b[2])/2/scale,z or 0),
+        vmath.quat_rotation_z(math.atan2(dy,dx)),nil,vmath.vector3(math.sqrt(dx*dx+dy*dy)/4,width/4,1))
+    go.set(msg.url(nil,id,"sprite"),"tint",tint or M.TERRAIN_TINT)
+    return id
+end
+function M.marker(p,text)
+    local scale=sys.get_config_number("physics.scale",0.01)
+    local id=factory.create("#marker",vmath.vector3(p[1]/scale,p[2]/scale,0))
+    label.set_text(msg.url(nil,id,"label"),text)
+    return id
+end
 -- Normal sprites/labels render in release too; debug draw_line does not.
 -- Returns the sprite and label objects this world created.
 function M.decorate(d)
@@ -130,16 +156,17 @@ function M.decorate(d)
     local sprites,labels=0,0
     local function stroke(a,b,width)
         sprites=sprites+1
-        local dx,dy=(b[1]-a[1])/scale,(b[2]-a[2])/scale
-        local id=factory.create("#line",vmath.vector3((a[1]+b[1])/2/scale,(a[2]+b[2])/2/scale,0),
-            vmath.quat_rotation_z(math.atan2(dy,dx)),nil,vmath.vector3(math.sqrt(dx*dx+dy*dy)/4,width/4,1))
-        go.set(msg.url(nil,id,"sprite"),"tint",vmath.vector4(0.45,0.85,0.75,1))
+        M.line(a,b,width)
     end
     if d.id:match("^straight") and not d.custom then for x=-4096+128,8192-128,256 do factory.create("#checker",vmath.vector3(x,16,-1));sprites=sprites+1 end end
     for _,spec in ipairs(d.labels or {}) do
         labels=labels+1
-        local id=factory.create("#marker",vmath.vector3(spec.position[1]/scale,spec.position[2]/scale,0))
-        label.set_text(msg.url(nil,id,"label"),spec.text)
+        M.marker(spec.position,spec.text)
+    end
+    if d.finish then
+        sprites,labels=sprites+1,labels+1
+        M.line(d.finish.line[1],d.finish.line[2],3,M.FINISH_TINT)
+        M.marker({d.finish.line[2][1],d.finish.line[2][2]+0.3},d.finish.direction[1]<0 and "<- FINISH" or "FINISH ->")
     end
     for _,chain in ipairs(d.chains) do
         for i=2,#chain do stroke(chain[i-1],chain[i],2) end
@@ -221,5 +248,8 @@ function M.enrich(self,sample)
     sample.station_distance=feel.metres(b2d.body.get_position(self.vehicle.chassis).x)-self.station.spawn[1]
     sample.station_brake_distance=self.station_brake_distance or 0
     sample.station_brake_stopped=self.station_brake_stopped or false
+    sample.spawn_x,sample.spawn_y=self.station.spawn[1],self.station.spawn[2]
+    sample.finish=self.station.finish~=nil
+    sample.finish_count,sample.finish_done,sample.finish_time=self.finish_count or 0,self.finish_done or false,self.finish_time or 0
 end
 return M

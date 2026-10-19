@@ -1,0 +1,356 @@
+-- Level editor shell (LE2). Its own game object sits on top of the input stack: in Edit mode every
+-- action is consumed here (Defold only stops propagation between game objects, not between the
+-- components of one), so game keys, the HUD and the world never see editor input (R15).
+local editor=require "main.gym.editor"
+local doc_lib=require "main.gym.editor_doc"
+local stations=require "main.gym.stations"
+local socket=require "socket"
+local LOADER="main:/loader#script"
+local BUTTON=vmath.vector4(0.13,0.24,0.28,1)
+local ACTIVE=vmath.vector4(0.15,0.5,0.45,1)
+local PANEL=vmath.vector4(0.05,0.1,0.13,0.92)
+local function node(self,pos,size,x,y,color)
+    local n=gui.new_box_node(pos,size)
+    gui.set_xanchor(n,x or gui.ANCHOR_NONE);gui.set_yanchor(n,y or gui.ANCHOR_NONE)
+    gui.set_color(n,color or BUTTON)
+    self.nodes[#self.nodes+1]=n
+    return n
+end
+local function text(self,pos,value,x,y,pivot,scale)
+    local n=gui.new_text_node(pos,value)
+    gui.set_font(n,"default");gui.set_xanchor(n,x or gui.ANCHOR_NONE);gui.set_yanchor(n,y or gui.ANCHOR_NONE)
+    gui.set_pivot(n,pivot or gui.PIVOT_CENTER);gui.set_scale(n,vmath.vector3(scale or 0.5,scale or 0.5,1))
+    self.nodes[#self.nodes+1]=n
+    return n
+end
+local function button(self,name,pos,size,label,x,y)
+    local b=node(self,pos,size,x,y)
+    local t=text(self,pos,label,x,y)
+    self.buttons[name]={box=b,label=t}
+    return b
+end
+local TOOLS={{"select","Select [S]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
+function init(self)
+    self.nodes,self.buttons,self.held={},{},{}
+    -- Test state for the le2 runner only (debug engine); release builds never publish it.
+    self.debug=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le2"
+    local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
+    node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
+    self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
+    button(self,"undo",vmath.vector3(620,525,0),vmath.vector3(60,22,0),"Undo",R,T)
+    button(self,"redo",vmath.vector3(686,525,0),vmath.vector3(60,22,0),"Redo",R,T)
+    button(self,"template",vmath.vector3(770,525,0),vmath.vector3(96,22,0),"Template",R,T)
+    button(self,"play",vmath.vector3(892,525,0),vmath.vector3(124,22,0),"Play > [E]",R,T)
+    for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*30,0),vmath.vector3(92,24,0),tool[2],L,T) end
+    node(self,vmath.vector3(860,380,0),vmath.vector3(196,190,0),R,T,PANEL)
+    self.properties=text(self,vmath.vector3(768,468,0),"",R,T,gui.PIVOT_NW,0.42)
+    button(self,"minus",vmath.vector3(800,330,0),vmath.vector3(40,22,0),"-",R,T)
+    button(self,"plus",vmath.vector3(848,330,0),vmath.vector3(40,22,0),"+",R,T)
+    button(self,"direction",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Flip direction",R,T)
+    button(self,"delete",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Delete [Del]",R,T)
+    node(self,vmath.vector3(480,12,0),vmath.vector3(960,24,0),nil,B,PANEL)
+    self.status=text(self,vmath.vector3(8,12,0),"",L,B,gui.PIVOT_W,0.42)
+    self.message=text(self,vmath.vector3(480,492,0),"",nil,T,gui.PIVOT_CENTER,0.5)
+    self.templates={}
+    for i,id in ipairs(stations.ids) do
+        button(self,"template_"..id,vmath.vector3(480,400-(i-1)*28,0),vmath.vector3(220,24,0),id)
+        self.templates[#self.templates+1]="template_"..id
+    end
+    self.edit_nodes=self.nodes;self.nodes={}
+    self.hint=text(self,vmath.vector3(12,40,0),"Edit level [E]",L,B,gui.PIVOT_W,0.42)
+    self.play_message=text(self,vmath.vector3(480,470,0),"",nil,T,gui.PIVOT_CENTER,0.5)
+    gui.set_color(self.play_message,vmath.vector4(1,0.6,0.4,1))
+    msg.post(".","acquire_input_focus")
+    window.set_listener(function(_,event)
+        -- The first press after a focus loss is the click that brings focus back (its gained event may
+        -- arrive after that press), so it is ignored unless focus came back more than 1 s earlier.
+        if event==window.WINDOW_EVENT_FOCUS_LOST then self.focus_lost,self.refocus,self.refocus_until=true,true,nil
+        elseif event==window.WINDOW_EVENT_FOCUS_GAINED then self.refocus_until=socket.gettime()+1 end
+    end)
+end
+-- Held commands, gestures and previews never survive a mode change or focus loss (R15).
+local function cancel(self)
+    self.drag,self.pan,self.held=nil,nil,{}
+    if editor.preview then editor.preview=nil;editor.touch() end
+end
+local function cursor(self,action)
+    local s=editor.screen
+    if not s or not action.screen_x or s.ppm_x==0 or s.ppm_y==0 then return self.cursor end
+    self.cursor={(action.screen_x-s.ox)/s.ppm_x,(action.screen_y-s.oy)/s.ppm_y}
+    return self.cursor
+end
+local function tolerance(px) local s=editor.screen;return px/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
+local function seg_dist(p,a,b)
+    local dx,dy=b[1]-a[1],b[2]-a[2]
+    local t=((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)
+    t=math.max(0,math.min(1,t))
+    local x,y=a[1]+dx*t-p[1],a[2]+dy*t-p[2]
+    return math.sqrt(x*x+y*y)
+end
+-- Picking by stable document id: START, FINISH, labels, then the nearest line or hull edge.
+local function pick(p)
+    local e=editor.doc.editor
+    local v,s=doc_lib.VEHICLE,e.start.position
+    if p[1]>=s[1]+v[1] and p[1]<=s[1]+v[2] and p[2]>=s[2]+v[3] and p[2]<=s[2]+v[4] then return "start" end
+    local tol=tolerance(10)
+    local f=e.finish
+    if f and math.abs(p[1]-f.position[1])<=tol and p[2]>=f.position[2]-doc_lib.FINISH_BELOW and p[2]<=f.position[2]+doc_lib.FINISH_ABOVE then return "finish" end
+    local best,best_d
+    for _,o in ipairs(e.objects) do
+        local d
+        if o.type=="label" then d=math.sqrt((p[1]-o.position[1])^2+(p[2]-o.position[2])^2)/1.5
+        else
+            local list=o.type=="line" and o.points or o.vertices
+            for i=2,#list+(o.type=="hull" and 1 or 0) do
+                local q=seg_dist(p,list[i-1],list[(i-1)%#list+1])
+                d=d and math.min(d,q) or q
+            end
+        end
+        if d and d<=tol and (not best_d or d<best_d) then best,best_d=o.id,d end
+    end
+    return best
+end
+local function selected_object()
+    for _,o in ipairs(editor.doc.editor.objects) do if o.id==editor.selection then return o end end
+end
+local function delete(self)
+    local s=editor.selection
+    if s=="start" then editor.message="START cannot be deleted; move it instead.";return end
+    if s=="finish" then editor.commit(function(e) e.finish=nil end);return end
+    if s and selected_object() then
+        editor.commit(function(e)
+            for i,o in ipairs(e.objects) do if o.id==s then table.remove(e.objects,i);break end end
+        end,true)
+    end
+end
+local function place(target,p)
+    editor.commit(function(e)
+        if target=="start" then e.start.position={p[1],p[2]}
+        elseif e.finish then e.finish.position={p[1],p[2]}
+        else e.finish={position={p[1],p[2]},direction=1} end
+    end)
+    editor.select(target)
+end
+local function play(self,test)
+    if editor.dirty then editor.save_draft() end
+    cancel(self)
+    msg.post(LOADER,"editor_play",{test=test})
+end
+local function test_start(self)
+    local p=self.cursor
+    if not p then return end
+    local mode=self.held.shift and "drop" or "surface"
+    local pos,err=doc_lib.test_start(editor.doc,p,mode)
+    if not pos then editor.message="Test start refused: "..err..".";return end
+    play(self,{position=pos,speed=editor.test_speed,mode=mode})
+end
+local function zoom(self,factor)
+    local c,p=editor.camera,self.cursor
+    local z=math.max(0.05,math.min(4,c.zoom*factor))
+    if p then c.x,c.y=p[1]-(p[1]-c.x)*c.zoom/z,p[2]-(p[2]-c.y)*c.zoom/z end
+    c.zoom=z
+end
+local function open_template(self,id)
+    local d=stations.resource(id)
+    if not d then editor.message="Template unavailable: "..id;return end
+    editor.open(doc_lib.template(d),true)
+    self.templates_open=false
+end
+local function on_button(self,name)
+    if name=="undo" or name=="redo" then
+        if not editor.undo(name=="undo") then editor.message="Nothing to "..name.."." end
+    elseif name=="template" then self.templates_open=not self.templates_open
+    elseif name=="play" then play(self)
+    elseif name:match("^tool_") then editor.tool=name:sub(6);editor.touch()
+    elseif name:match("^template_") then open_template(self,name:sub(10))
+    elseif name=="minus" or name=="plus" then
+        local step=(name=="plus" and 1 or -1)*(self.held.shift and 5 or 0.5)
+        if editor.selection=="start" then
+            local speed=math.max(-30,math.min(30,editor.doc.editor.start.speed+step))
+            editor.commit(function(e) e.start.speed=speed end)
+        else editor.test_speed=math.max(-30,math.min(30,editor.test_speed+step));editor.touch() end
+    elseif name=="direction" and editor.doc.editor.finish then
+        editor.commit(function(e) e.finish.direction=-e.finish.direction end)
+    elseif name=="delete" then delete(self) end
+end
+local function visible_buttons(self)
+    local list={"undo","redo","template","play","minus","plus","tool_select","tool_start","tool_finish","tool_pan"}
+    if editor.selection=="finish" then list[#list+1]="direction"
+    elseif editor.selection and editor.selection~="start" then list[#list+1]="delete" end
+    if self.templates_open then for _,name in ipairs(self.templates) do list[#list+1]=name end end
+    return list
+end
+local function hit(self,action)
+    for _,name in ipairs(visible_buttons(self)) do
+        if gui.pick_node(self.buttons[name].box,action.x,action.y) then return name end
+    end
+end
+local function canvas_press(self,action)
+    local p=cursor(self,action)
+    if not p then return end
+    if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
+    if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
+    local id=pick(p)
+    editor.select(id)
+    if id=="start" or id=="finish" then
+        local origin=id=="start" and editor.doc.editor.start.position or editor.doc.editor.finish.position
+        self.drag={target=id,offset={p[1]-origin[1],p[2]-origin[2]},origin={origin[1],origin[2]},moved=false}
+        editor.preview={target=id,position={origin[1],origin[2]}}
+    end
+end
+local function canvas_move(self,action)
+    local p=cursor(self,action)
+    local s=editor.screen
+    if self.pan and action.screen_x and s then
+        editor.camera.x=editor.camera.x-(action.screen_x-self.pan[1])/s.ppm_x
+        editor.camera.y=editor.camera.y-(action.screen_y-self.pan[2])/s.ppm_y
+        self.pan={action.screen_x,action.screen_y}
+    elseif self.drag and p then
+        local q={p[1]-self.drag.offset[1],p[2]-self.drag.offset[2]}
+        -- A click without movement selects only; it is not an edit.
+        if q[1]~=self.drag.origin[1] or q[2]~=self.drag.origin[2] then
+            editor.preview={target=self.drag.target,position=q}
+            self.drag.moved=true
+            editor.touch()
+        end
+    end
+end
+local function canvas_release(self)
+    self.pan=nil
+    local drag=self.drag
+    self.drag=nil
+    if drag and drag.moved and editor.preview then
+        local p=editor.preview.position
+        editor.preview=nil
+        -- A whole drag is one completed action (R12, R17).
+        place(drag.target,p)
+    elseif editor.preview then editor.preview=nil;editor.touch() end
+end
+function on_input(self,action_id,action)
+    if editor.mode~="edit" then
+        -- An open report or import panel keeps its input; E does not leave it behind.
+        local panel=html5 and html5.run("!!(window.riderFeedback?.visible||window.riderCustom?.visible)")=="true"
+        if action_id==hash("editor_toggle") and action.pressed and not panel then
+            editor.message=""
+            msg.post(LOADER,"editor_enter")
+            return true
+        end
+        return false
+    end
+    if self.focus_lost then self.focus_lost=false;cancel(self) end
+    for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"}}) do
+        if action_id==hash(m[1]) then
+            if action.pressed then self.held[m[2]]=true elseif action.released then self.held[m[2]]=nil end
+            return true
+        end
+    end
+    if action_id==nil then canvas_move(self,action);return true end
+    if action_id==hash("ui_pointer") then
+        if action.pressed then
+            -- The click that returns focus to the canvas never edits the level.
+            if self.refocus then
+                self.refocus=false
+                if not self.refocus_until or socket.gettime()<self.refocus_until then return true end
+            end
+            local name=hit(self,action)
+            if name then on_button(self,name)
+            elseif not self.templates_open then canvas_press(self,action)
+            else self.templates_open=false end
+        elseif action.released then canvas_release(self) end
+        canvas_move(self,action)
+        return true
+    end
+    if action_id==hash("editor_pan") then
+        if action.pressed and action.screen_x then self.pan={action.screen_x,action.screen_y} elseif action.released then self.pan=nil end
+        return true
+    end
+    if action_id==hash("editor_zoom_in") and action.pressed then cursor(self,action);zoom(self,1.2);return true end
+    if action_id==hash("editor_zoom_out") and action.pressed then cursor(self,action);zoom(self,1/1.2);return true end
+    if not action.pressed then return true end
+    if self.drag and action_id~=hash("editor_cancel") then return true end
+    if action_id==hash("editor_toggle") or action_id==hash("editor_play") then play(self)
+    elseif action_id==hash("editor_test") then test_start(self)
+    elseif action_id==hash("editor_tool_select") then editor.tool="select";editor.touch()
+    elseif action_id==hash("editor_delete") then delete(self)
+    elseif action_id==hash("editor_z") and self.held.ctrl then
+        if not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
+    elseif action_id==hash("editor_y") and self.held.ctrl then
+        if not editor.undo(false) then editor.message="Nothing to redo." end
+    elseif action_id==hash("editor_cancel") then
+        -- Esc first cancels the current action, then clears the selection.
+        if self.drag or self.pan then cancel(self)
+        elseif self.templates_open then self.templates_open=false
+        else editor.select(nil) end
+    end
+    return true
+end
+local function describe()
+    local e=editor.doc.editor
+    local s=editor.selection
+    local lines={}
+    if s=="start" then
+        local p=editor.preview and editor.preview.target=="start" and editor.preview.position or e.start.position
+        lines={"START",string.format("x %.2f m  y %.2f m",p[1],p[2]),string.format("Start speed %.1f m/s",e.start.speed)}
+        local blocked=doc_lib.blocked(e,p)
+        if blocked then lines[#lines+1]="Overlaps "..blocked.type.." "..blocked.id end
+    elseif s=="finish" and e.finish then
+        local p=e.finish.position
+        lines={"FINISH",string.format("x %.2f m  y %.2f m",p[1],p[2]),"Direction "..(e.finish.direction<0 and "<- (left)" or "-> (right)")}
+    elseif s then
+        for _,o in ipairs(e.objects) do
+            if o.id==s then lines={o.type.." "..o.id,o.type=="label" and o.text or ((o.type=="line" and #o.points or #o.vertices).." points")} end
+        end
+    else
+        lines={editor.doc.name,string.format("Test start speed %.1f m/s",editor.test_speed),"F: test start on surface","Shift+F: drop here","Shift+click -/+: 5 m/s steps",
+            "Ctrl+Z / Ctrl+Y: undo / redo"}
+    end
+    return table.concat(lines,"\n")
+end
+local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
+local function publish(self)
+    local e=editor.doc and editor.doc.editor
+    local buttons={}
+    for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
+    html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
+        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,camera=editor.camera,screen=editor.screen,
+        id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
+        start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,
+        redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,templates_open=self.templates_open or false}))
+end
+function update(self,dt)
+    if not self.focused then
+        -- After every init has run: the loader acquired focus too, and this GO must sit above it.
+        self.focused=true
+        msg.post(".","acquire_input_focus")
+    end
+    local edit=editor.mode=="edit" and editor.doc~=nil
+    for _,n in ipairs(self.edit_nodes) do gui.set_enabled(n,edit) end
+    gui.set_enabled(self.hint,not edit);gui.set_enabled(self.play_message,not edit)
+    gui.set_text(self.play_message,not edit and editor.message or "")
+    if self.focus_lost and edit then self.focus_lost=false;cancel(self) end
+    editor.sync()
+    if edit then
+        if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
+        local e=editor.doc.editor
+        gui.set_text(self.title,string.format("Editor: %s | %s",editor.doc.name,editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"))
+        gui.set_text(self.properties,describe())
+        gui.set_text(self.message,editor.message or "")
+        local p=self.cursor
+        gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
+            editor.camera.zoom,editor.tool,#e.objects,editor.problem and "Play blocked: "..editor.problem or "Ready to play"))
+        local shown={}
+        for _,name in ipairs(visible_buttons(self)) do shown[name]=true end
+        for name,b in pairs(self.buttons) do
+            gui.set_enabled(b.box,shown[name] or false);gui.set_enabled(b.label,shown[name] or false)
+            gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON)
+        end
+    end
+    if self.debug then publish(self) end
+end
+function on_message(self,id,data)
+    if id==hash("editor_mode") then
+        cancel(self);self.templates_open=false
+        -- Back on top of the input stack for this mode.
+        msg.post(".","acquire_input_focus")
+    end
+end
