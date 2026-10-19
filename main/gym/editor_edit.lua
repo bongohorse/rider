@@ -146,6 +146,7 @@ function M.connect(e,a,b)
     return true
 end
 function M.disconnect(e,id,index)
+    if not M.joint(e,id,index) then return nil,"The point is not a connection" end
     id=M.owner(e,id,index)
     for i,c in ipairs(e.connections) do
         if c.from==id then table.remove(e.connections,i);return c.to end

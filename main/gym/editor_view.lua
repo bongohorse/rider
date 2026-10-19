@@ -6,6 +6,7 @@
 local editor=require "main.gym.editor"
 local doc_lib=require "main.gym.editor_doc"
 local stations=require "main.gym.stations"
+local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.95,0.35,1)
 local HOVER=vmath.vector4(0.55,0.8,1,1)
@@ -138,8 +139,10 @@ function M.update(self)
     -- loader once; moves keep the world and only update transforms.
     if editor.geometry_version~=v.geometry then
         if signature(e)~=v.signature then
-            if not v.reload_requested then
-                v.reload_requested=true
+            -- The loader ignores a reload while it is still loading this world: ask again after 0.5 s.
+            local now=socket.gettime()
+            if not v.reload_requested or now-v.reload_requested>0.5 then
+                v.reload_requested=now
                 msg.post("main:/loader#script","editor_reload")
             end
             return

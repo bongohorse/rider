@@ -249,14 +249,23 @@ local function finish_drawing(self)
     local d=self.drawing
     self.drawing=nil
     if not d or #d.points<2 then return end
+    -- Connections are resolved when the piece is finished: a free end exactly at its first or last
+    -- point (snapped there, shown as a connect preview). Undo/Redo while drawing cannot leave stale ends.
+    local function free_end(p)
+        for _,c in ipairs(edit.ends(editor.doc.editor)) do if c.free and c.p[1]==p[1] and c.p[2]==p[2] then return {id=c.id,index=c.index} end end
+    end
+    -- Only a point placed with the anchor snap (the visible connect preview) connects; Ctrl never does.
+    local first=d.anchored[1] and free_end(d.points[1])
+    local last=d.anchored[#d.points] and free_end(d.points[#d.points])
+    if first and last and first.id==last.id and first.index==last.index then last=nil end
     local id,note
-    editor.commit(function(e)
+    local ok=editor.commit(function(e)
         local err
-        id,err=edit.add_line(e,d.points,d.first,d.last)
+        id,err=edit.add_line(e,d.points,first,last)
         if not id then return nil,err end
         note=err
     end,true)
-    if id then editor.select(id);if note then editor.message=note end end
+    if ok and id then editor.select(id);if note then editor.message=note end end
 end
 local function connect_target(v)
     -- The nearest free end of another run within the snap radius of the selected free end.
@@ -424,12 +433,12 @@ local function canvas_press(self,action)
         local last=d and d.points[#d.points]
         local q,kind,anchor=snap(self,p,nil,last,d and {unpack(d.points,1,#d.points-1)} or nil)
         if not d then
-            self.drawing={points={q},first=kind=="anchor" and anchor.end_free or nil}
+            self.drawing={points={q},anchored={kind=="anchor"}}
         elseif double or dist(q,last)<0.01 then finish_drawing(self)
         else
-            d.points[#d.points+1]=q
+            d.points[#d.points+1]=q;d.anchored[#d.points]=kind=="anchor"
             -- Ending on another free end connects there and completes the piece (R5).
-            if kind=="anchor" and anchor.end_free then d.last=anchor.end_free;finish_drawing(self) end
+            if kind=="anchor" and anchor.end_free then finish_drawing(self) end
         end
         editor.touch()
         return
@@ -446,13 +455,14 @@ local function canvas_press(self,action)
         -- With grid snap the point gets a grid x (y for a vertical segment), still on the segment.
         local step=not self.held.ctrl and (self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID)
         local axis=math.abs(b[1]-a[1])>1e-9 and 1 or 2
+        local exact
         if step then
             local v=snap_lib.round(a[axis]+(b[axis]-a[axis])*t,step)
             local u=(v-a[axis])/(b[axis]-a[axis])
-            if u>0 and u<1 then t=u end
+            if u>0 and u<1 then t,exact=u,v end
         end
         local q={a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t}
-        q[axis]=a[axis]+(b[axis]-a[axis])*t
+        if exact then q[axis]=exact end
         local index
         if editor.commit(function(e) local i,err=edit.insert_point(e,c.id,c.segment,q);index=i;if not i then return nil,err end end,true) then
             editor.select(c.id,{id=c.id,index=index})
@@ -569,6 +579,7 @@ local function canvas_release(self)
     if not drag.moved then return end
     if drag.kind=="vertex" then
         local q=drag.to
+        if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
         editor.commit(function(e) edit.move_vertex(e,drag.id,drag.index,q) end,true)
     else
         local d=drag.delta
@@ -589,7 +600,8 @@ function on_input(self,action_id,action)
     if self.focus_lost then self.focus_lost=false;cancel(self) end
     for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"},{"editor_alt","alt"}}) do
         if action_id==hash(m[1]) then
-            if action.pressed then self.held[m[2]]=true elseif action.released then self.held[m[2]]=nil end
+            -- Held keys report every frame, so a modifier cleared by cancel() comes back while still down.
+            self.held[m[2]]=not action.released or nil
             return true
         end
     end
@@ -638,8 +650,12 @@ function on_input(self,action_id,action)
             editor.touch()
         else delete(self) end
     elseif action_id==hash("editor_z") and self.held.ctrl then
-        if self.drawing then self.drawing=nil;editor.touch() end
-        if not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
+        if self.drawing and not self.held.shift then
+            -- While drawing, Ctrl+Z removes the last placed point (like Backspace).
+            table.remove(self.drawing.points)
+            if #self.drawing.points==0 then self.drawing=nil end
+            editor.touch()
+        elseif not editor.undo(not self.held.shift) then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
     elseif action_id==hash("editor_y") and self.held.ctrl then
         if not editor.undo(false) then editor.message="Nothing to redo." end
     elseif action_id==hash("editor_cancel") then
@@ -744,7 +760,9 @@ local function draw_overlay(self)
     local function visible(q) return q[1]>=-20 and q[1]<=w+20 and q[2]>=-20 and q[2]<=h+20 end
     local function handle(p,color,size,diamond) local q=to_px(p,s);if visible(q) then overlay.handle(o,q,color,size or HANDLE_PX,diamond) end end
     local hover=editor.hover
-    if editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id) then handle(editor.shape(find(hover.id))[hover.index],C.hover,HANDLE_PX+5) end
+    local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
+    local hover_point=hovered and editor.shape(hovered)[hover.index]
+    if hover_point then handle(hover_point,C.hover,HANDLE_PX+5) end
     local v=editor.vertex
     if v and find(v.id) then
         local pts=editor.shape(find(v.id))
@@ -851,6 +869,13 @@ function update(self,dt)
             gui.set_enabled(b.box,shown[name] or false);gui.set_enabled(b.label,shown[name] or false)
             if name~="warnings" then gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON) end
         end
+        -- After any document change (edit, Undo/Redo, another document) hover is picked again at the cursor.
+        local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
+        if key~=self.seen then
+            self.seen=key
+            if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
+            else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
+        end
         draw_overlay(self)
         self.overlay_shown=true
     elseif self.overlay_shown then
@@ -861,7 +886,12 @@ function update(self,dt)
 end
 function on_message(self,id,data)
     if id==hash("editor_mode") then
-        cancel(self);self.templates_open,self.warnings_open,self.drawing=false,false,nil
+        -- A structural edit reloads the edit world through the same path; only a real mode change
+        -- cancels gestures and an unfinished piece.
+        if data.mode~=self.mode then
+            self.mode=data.mode
+            cancel(self);self.templates_open,self.warnings_open,self.drawing=false,false,nil
+        end
         -- Back on top of the input stack for this mode.
         msg.post(".","acquire_input_focus")
     end

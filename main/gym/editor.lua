@@ -81,6 +81,8 @@ function M.undo(back)
     -- Revisions and ids stay monotonic: an undone state is a new revision, ids are never reused.
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
+    -- A point index may now name another point (e.g. an undone Connect reversed a run): keep the line only.
+    M.vertex=nil
     resolve_selection();check();touch(geometry)
     return true
 end

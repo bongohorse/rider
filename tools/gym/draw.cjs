@@ -162,19 +162,30 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.ok(near(ang/15,Math.round(ang/15),1e-6)&&near(len/0.5,Math.round(len/0.5),1e-6),'ray '+len+' '+ang);
   assert.ok(!onGrid(free[2][0],0.1)&&near(free[2][0],10.37,0.05),'Ctrl point '+free[2]);
   assert.ok(!onGrid(free[3][0],0.1)&&near(free[3][0],12.33,0.05),'grid off point '+free[3]);
-  await key('Escape');await key('s');await at([6,6.61]);await page.waitForFunction(()=>window.riderEditor.selection==='o6');await key('Delete');e=await revision(r0+15);
+  // Deleting the hovered end point shortens the line; the stale hover must not break the overlay.
+  await key('Escape');await key('s');await at([6,6.61]);await page.waitForFunction(()=>window.riderEditor.selection==='o6');
+  await at(free[3]);await page.waitForFunction(()=>window.riderEditor.vertex&&window.riderEditor.vertex.index===4);
+  await key('Delete');e=await revision(r0+15);d=await doc();assert.equal(line(d,'o6').points.length,3);
+  await page.waitForTimeout(200);assert.equal((await ed()).revision,r0+15,'editor keeps publishing');
+  await at([6,6.61]);await page.waitForFunction(()=>window.riderEditor.selection==='o6');await key('Delete');e=await revision(r0+16);
+  // A modifier held across a structural edit (edit-world reload) stays active: Alt still gives the 0.1 m grid.
+  await key('d');await page.keyboard.down('Alt');await page.waitForTimeout(60);
+  await at([5.21,4.41]);await at([9.03,4.38]);await key('Enter');e=await revision(r0+17);
+  await edit();const alt=await world([6.31,3.12]);await page.mouse.move(alt.x,alt.y);
+  await page.waitForFunction(()=>JSON.stringify(window.riderEditor.snap.p)==='[6.3,3.1]');await page.keyboard.up('Alt');
+  await key('z',['Control']);e=await revision(r0+18);await key('s');
   cases.push('snapping_alt_shift_ctrl_g');
 
   // 8. Unsupported shapes are refused with useful errors (R16) and block Play; Undo removes them.
-  await key('d');await at([15,5]);await at([19,6]);await at([17,7]);await key('Enter');e=await revision(r0+16);
+  await key('d');await at([15,5]);await at([19,6]);await at([17,7]);await key('Enter');e=await revision(r0+19);
   assert.ok(e.errors.some(m=>m.includes('turns back in x')),JSON.stringify(e.errors));
   await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked')&&window.riderEditor.message.includes('turns back'));
   measurements.errors={overhang:(await ed()).errors[0]};
-  await key('z',['Control']);e=await revision(r0+17);
-  await key('d');await at([24,4]);await at([24,7]);await key('Enter');e=await revision(r0+18);
+  await key('z',['Control']);e=await revision(r0+20);
+  await key('d');await at([24,4]);await at([24,7]);await key('Enter');e=await revision(r0+21);
   assert.ok(e.errors.some(m=>m.includes('vertical only')),JSON.stringify(e.errors));measurements.errors.vertical=e.errors[0];
   await button('warnings');await page.waitForFunction(()=>window.riderEditor.warnings_open);
-  await key('z',['Control']);e=await revision(r0+19);assert.deepEqual(e.errors,[]);await key('Escape');
+  await key('z',['Control']);e=await revision(r0+22);assert.deepEqual(e.errors,[]);await key('Escape');
   cases.push('unsupported_shapes_refused');
 
   // 9. The unplayed draft keeps its pieces and connections across a reload.
