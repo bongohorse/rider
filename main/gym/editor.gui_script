@@ -168,6 +168,7 @@ end
 local function tolerance(px) local s=map();return px*ui/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
 local function to_px(p,s) return {s.ox+p[1]*s.ppm_x,s.oy+p[2]*s.ppm_y} end
 local function dist(a,b) return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2) end
+local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
 local function seg_t(p,a,b)
     local dx,dy=b[1]-a[1],b[2]-a[2]
     return math.max(0,math.min(1,((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)))
@@ -641,7 +642,14 @@ local function smooth_state()
     local function n(x) return x.type=="line" and #x.points or x.type=="curve" and #x.anchors or #path(x) end
     if i==1 and prev[id] then id=prev[id];o=find(id);i=n(o) end
     if (i==1 or i==n(o)) and not (i==n(o) and next[id]) then return nil end
-    return {id=id,i=i,corner=o.type~="curve" or o.anchors[i].mode=="corner",prefab=o.type=="prefab" or (i==n(o) and find(next[id]).type=="prefab")}
+    local corner=o.type~="curve" or o.anchors[i].mode=="corner"
+    local b=i==n(o) and find(next[id])
+    if b and not corner then
+        -- A joint is smooth only when both sides have tangents on one line (else Make smooth aligns them).
+        local t,u=o.anchors[i]["in"],b.type=="curve" and b.anchors[1].mode~="corner" and b.anchors[1].out
+        corner=not (u and length(t)>0 and length(u)>0 and (t[1]*u[1]+t[2]*u[2])/(length(t)*length(u))<-0.9999)
+    end
+    return {id=id,i=i,corner=corner,prefab=o.type=="prefab" or (b and b.type=="prefab")}
 end
 local function smooth_point(self)
     local st=smooth_state()
@@ -657,7 +665,7 @@ local function convert_prefab(self)
     local o=editor.selection and find(editor.selection)
     if not (o and o.type=="prefab") then return end
     if self.confirm_convert~=o.id then
-        self.confirm_convert=o.id
+        self.confirm_convert,self.confirm_revision=o.id,editor.doc.editor.revision
         editor.message="Converting removes the "..prefab.name(o.kind).."'s parameter fields and handles; its shape and connections stay. Click Sure? to convert."
         return
     end
@@ -915,7 +923,15 @@ local function start_handle(self,id,name,p)
         local pid=(kind=="i" and i==#o.anchors and next[id]) or (kind=="o" and i==1 and prev[id])
         local po=pid and find(pid)
         if po and po.type=="curve" then
-            self.drag.partner={id=pid,i=kind=="i" and 1 or #po.anchors,key=kind=="i" and "out" or "in",p0=doc_lib.copy(po.anchors)}
+            local pi,pkey=kind=="i" and 1 or #po.anchors,kind=="i" and "out" or "in"
+            local b,t=po.anchors[pi],o.anchors[i][kind=="i" and "in" or "out"]
+            local bt=b[pkey]
+            -- Only a smoothed joint couples: the other side is no corner and its tangent already points
+            -- the opposite way (a joint left with a kink stays independent).
+            local lt,lb=length(t),length(bt)
+            if b.mode~="corner" and lt>0 and lb>0 and (t[1]*bt[1]+t[2]*bt[2])/(lt*lb)<-0.9999 then
+                self.drag.partner={id=pid,i=pi,key=pkey,p0=doc_lib.copy(po.anchors)}
+            end
         end
         editor.anchor={id=id,i=i};editor.touch()
     end
@@ -925,7 +941,6 @@ local function anchor_key(anchors)
     for _,a in ipairs(anchors) do t[#t+1]=string.format("%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%s",a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2],a.mode) end
     return table.concat(t,";")
 end
-local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
 -- A curve handle drag: an anchor moves (snapped; its tangents move with it), a tangent changes and its
 -- partner follows the anchor's mode (smooth: on one line, symmetric: mirrored, free: unchanged).
 local function curve_drag(self,drag,p)
@@ -967,12 +982,17 @@ local function curve_nearest(o,p)
         local a,b=o.anchors[i],o.anchors[i+1]
         local p0,p3=a.p,b.p
         local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
-        for k=1,63 do
+        if a.mode=="corner" and b.mode=="corner" then
+            -- A straight chord (LE5c): the click projected onto it (insert_anchor places corners linearly).
+            local t=seg_t(p,p0,p3)
+            local dd=dist(p,{p0[1]+(p3[1]-p0[1])*t,p0[2]+(p3[2]-p0[2])*t})
+            if t>0 and t<1 and (not best or dd<best) then best,bi,bt=dd,i,t end
+        else for k=1,63 do
             local t=k/64;local u=1-t
             local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
             local dd=dist(p,q)
             if not best or dd<best then best,bi,bt=dd,i,t end
-        end
+        end end
     end
     return bi,bt
 end
@@ -982,6 +1002,7 @@ end
 local function canvas_press(self,action)
     local p=cursor(self,action)
     if not p then return end
+    self.confirm_convert=nil
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
@@ -1132,7 +1153,11 @@ local function canvas_move(self,action)
             -- as a conflict before the release applies it.
             local e=doc_lib.copy(editor.doc.editor)
             local moved=(o.type=="curve" and edit.set_anchors or edit.set_params)(e,drag.id,params) or {}
-            if drag.partner_anchors and edit.set_anchors(e,drag.partner.id,doc_lib.copy(drag.partner_anchors)) then moved[#moved+1]=drag.partner.id end
+            if drag.partner_anchors and edit.set_anchors(e,drag.partner.id,doc_lib.copy(drag.partner_anchors)) then
+                local listed=false
+                for _,id in ipairs(moved) do listed=listed or id==drag.partner.id end
+                if not listed then moved[#moved+1]=drag.partner.id end
+            end
             local preview={}
             for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
             drag.downstream=math.max(0,#moved-1)
@@ -1787,6 +1812,8 @@ function update(self,dt)
                 gui.set_color(b.box,l and self.confirm_delete==l.key and DANGER or BUTTON)
             elseif name~="warnings" then gui.set_color(b.box,(name=="tool_"..editor.tool or name=="kind_"..editor.prefab_kind) and ACTIVE or BUTTON) end
         end
+        -- "Sure? Convert" belongs to one prefab and one document state: any edit, Undo or other selection drops it.
+        if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
         local st=smooth_state()
         gui.set_text(self.buttons.smooth.label,st and not st.corner and "Make corner" or "Make smooth")
         gui.set_text(self.buttons.convert.label,self.confirm_convert and self.confirm_convert==editor.selection and "Sure? Convert" or "Convert to editable path")

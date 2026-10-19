@@ -146,12 +146,21 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   assert.deepEqual(o.anchors.map(a=>a.mode),Array(5).fill('corner'));assert.deepEqual((await paths()).o1,hill);
   assert.equal(chainOf(JSON.parse(await exportFile())),chainOf(straightFile));
   await key('z',['Control']);await revision(r+6);assert.equal(shape(await doc()),shape(rounded));
+  // A double-click on a straight chord between two corners inserts a corner where it was clicked (within the
+  // 1.5 px the mouse position is quantised to; evaluating the chord as a cubic would put it about 0.33 m off).
+  await key('Escape');await at([2.5,0]);await page.waitForFunction(()=>window.riderEditor.selection==='o1');
+  await hover([2.5,0]);for(let i=0;i<3;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}
+  await dblclick([1.2,0]);e=await revision(r+7);o=obj(await doc(),'o1');
+  assert.equal(o.anchors.length,6);assert.equal(o.anchors[1].mode,'corner');
+  assert.ok(o.anchors[1].p[1]===0&&near(o.anchors[1].p[0],1.2,1.5/e.screen.ppm_x),JSON.stringify([o.anchors[1],e.screen.ppm_x]));
+  await hover([2.5,0]);for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
+  await key('z',['Control']);await revision(r+8);assert.equal(shape(await doc()),shape(rounded));
   done('triangle_hill_smooth_and_corner');
 
   // 2. A joint between two drawn lines: Smooth gives the upstream line the in tangent and the downstream line
   // the out tangent (both curves, same ids, connection kept). Dragging one tangent turns the other with it;
   // Corner restores both straight lines exactly.
-  await key('Escape');await key('d');r=(await ed()).revision;
+  await key('Escape');await key('Escape');await key('d');r=(await ed()).revision;
   await at([20,6]);await at([25,9]);await at([25,9]);await revision(r+1);
   await at([25,9]);await at([30,6]);await at([30,6]);await revision(r+2);
   d=await doc();assert.deepEqual(d.connections,[{from:'o2',to:'o3'}]);

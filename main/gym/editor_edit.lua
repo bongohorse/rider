@@ -528,6 +528,8 @@ function M.convert_prefab(e,id)
     local o,pos=find(e,id)
     if not o or o.type~="prefab" then return nil,"Select a prefab first" end
     if not doc_lib.terrain(o) then return nil,"A Platform is an obstacle, not a terrain path" end
+    -- An over-budget Bump/wave is only drawn coarsely: converting would turn that sketch into terrain.
+    if prefab.sample_error(o) then return nil,"Not converted: "..prefab.name(o.kind).." "..id.." "..prefab.sample_error(o) end
     local parts=doc_lib.parts(o)
     local function points(list) local t={};for i,q in ipairs(list) do t[i]={q[1],q[2]} end;return t end
     o.type,o.kind,o.at,o.params,o.points="line",nil,nil,nil,points(parts[1])

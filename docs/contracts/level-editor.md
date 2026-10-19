@@ -327,13 +327,14 @@ Requested by Claudio on 2026-10-20 ([#186](https://github.com/bongohorse/rider/i
   - A line becomes a curve with the same id: its connections stay, and every other point becomes a corner, so the untouched segments compile to exactly the same points.
   - The point keeps its position. It gets smooth tangents along the direction from the previous to the next point, each a third of the distance to that neighbour, so the corner is rounded by a curve through the point. Its pink tangent handles shape the rounding; the curve tangent modes (LE5b) apply.
   - **Make corner** removes the tangents: the straight segments come back exactly (tested: the same compiled chain as before smoothing).
-  - **At a joint** the upstream piece holds the in tangent and the downstream piece the out tangent; both pieces stay separate objects (and one chain). Dragging either tangent turns the other with it in the same Undo step.
+  - **At a joint** the upstream piece holds the in tangent and the downstream piece the out tangent; both pieces stay separate objects (and one chain). Dragging either tangent turns the other with it in the same Undo step, but only at a smoothed joint (the other side no corner, both tangents on one line when the drag starts); a joint left with a kink keeps its tangents independent. The button reads **Make corner** only when both sides are on one line; otherwise **Make smooth** aligns them. The tangent mode row stays limited to inner anchors (a smoothed joint is smooth).
   - Corner/Smooth at a joint with a prefab is refused until that prefab is converted (`Flat o7 is a prefab: convert it to an editable path first to round this joint`).
-  - Each switch is one Undo step. A double-click between two corners inserts a corner on the chord.
+  - Each switch is one Undo step. A double-click between two corners inserts a corner on the chord where it was clicked.
+  - A curve counts three source points per anchor towards the 8192-point document limit (a line one per point), so smoothing a point of a very large drawn line can be refused with `Too many points in the document`; the line stays unchanged.
   - Curved segments use the LE5b sampling (5 mm / 0.5 m) and validation. Measured in `le5c`: a rounded triangle peak gives 39 points, largest deviation 3.5 mm, longest chord 0.49 m.
 - **Convert to editable path:** shown for a selected terrain prefab. The first click explains what happens (`Converting removes the Ramp's parameter fields and handles; its shape and connections stay. Click Sure? to convert.`); **Sure? Convert** then replaces the prefab by a line with its current points and the same id, so its connections stay.
   - A Kicker + landing becomes two lines: the landing takes a new id and the downstream connection, and the jump gap stays open (two chains).
-  - A Bump/wave becomes a line through its compiled samples (the same shape).
+  - A Bump/wave becomes a line through its compiled samples (the same shape); one over the sampling budget is not converted (its drawing is only a sketch), the reason is shown.
   - A Platform is an obstacle, not a path, and is not converted.
   - Conversion is one Undo step back to the prefab.
 - **Persistence:** corner and smooth points and their tangents survive autosave/reload, export → import, copy/paste and Mirror (mirrored anchors keep their modes in reverse order); `le5c`.
