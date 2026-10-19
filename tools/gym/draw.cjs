@@ -230,6 +230,22 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForTimeout(300);e=await ed();d=await doc();assert.equal(e.drawing,0,'the piece from my-ramps survived the undo');
   assert.ok(!d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]'),'piece from my-ramps landed in my-straight');
   await key('s');
+  // The same with two documents that share their level id: a second Straight template copy is my-straight
+  // too. Undo and Redo between the two instances discard a piece started in the other one.
+  const course=await doc(),hasPiece=d=>d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]');
+  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('template_straight');await page.waitForFunction(n=>window.riderEditor.id==='my-straight'&&window.riderEditor.objects===1,null);
+  e=await edit();
+  await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
+  await button('undo');await page.waitForFunction(n=>window.riderEditor.objects===n,course.objects.length);e=await edit();
+  await button('tool_select');await page.waitForTimeout(300);e=await ed();d=await doc();
+  assert.equal(e.drawing,0,'Undo to the same-id document kept the piece');assert.ok(!hasPiece(d),'piece landed in the restored same-id document');
+  await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
+  await button('redo');await page.waitForFunction(()=>window.riderEditor.objects===1);e=await edit();
+  await button('tool_select');await page.waitForTimeout(300);e=await ed();d=await doc();
+  assert.equal(e.drawing,0,'Redo to the same-id document kept the piece');assert.ok(!hasPiece(d),'piece landed in the redone same-id document');
+  await button('undo');await page.waitForFunction(n=>window.riderEditor.objects===n,course.objects.length);e=await edit();
+  d=await doc();assert.equal(JSON.stringify({o:d.objects,c:d.connections}),JSON.stringify({o:course.objects,c:course.connections}));
   cases.push('template_change_discards_drawing');
 
   // 9. The unplayed draft keeps its pieces and connections across a reload.
