@@ -49,7 +49,8 @@ function cases(){
   ['length',level('len-10km','LE1b length 10 km',{length:10000,segments:100})],
   ['length',level('len-99km','LE1b length 99 km',{length:LONG,segments:100})],
   // Start distance from the origin on the 99 km course: float32 positions against the 0.01-unit reset-pose guard.
-  ...[1000,1500,2000,4000,98800].map(x=>['start',level('start-'+x+'m','LE1b 99 km, start at '+x/1000+' km',{length:LONG,segments:100,spawnX:x})]),
+  // Starts from 1.5 km failed placement in LE1b; LE2 rejects every start beyond the provisional ±500 m limit.
+  ['start',level('start-500m','LE1b 99 km, start at 0.5 km',{length:LONG,segments:100,spawnX:500})],
   ['segments',level('seg-100','LE1b 400 m, 100 segments',{length:400,segments:100})],
   ['segments',level('seg-200','LE1b 400 m, 200 segments',{length:400,segments:200})],
   ['segments',level('seg-400','LE1b 400 m, 400 segments',{length:400,segments:400})],
@@ -76,6 +77,7 @@ function cases(){
   ['hulls',hull65,'Invalid hulls'],
   ['hulls',hull9,'Invalid hull vertices'],
   ['text',big,null],
+  ...[1000,1500,2000,4000,98800].map(x=>['start',level('start-'+x+'m','LE1b 99 km, start at '+x/1000+' km',{length:LONG,segments:100,spawnX:x}),'Start is limited to 500 m from the origin in x and y']),
  ].map(([dimension,d,reason])=>({dimension,id:d.id,expect:'rejected',level:d,reason,objects:objects(d)}));
  return [...accepted,...rejected];
 }

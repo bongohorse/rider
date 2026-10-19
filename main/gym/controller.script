@@ -66,6 +66,18 @@ local function show_preset(self)
     msg.post("main:/loader#script","preset_changed",{key=self.preset})
     msg.post("main:/loader#ui","tuning",feel.snapshot())
 end
+-- A level that cannot take the vehicle leaves a vehicle-less error world; the loader keeps the previous save.
+local function fail_placement(self,err)
+    print("GYM_PLACE_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
+    if self.vehicle then vehicle.remove(self.vehicle) end
+    msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station")..": the vehicle could not be placed ("..tostring(err).."). Import another level [I]."})
+    self.station,self.segments,self.chain,self.vehicle=nil,nil,nil,nil
+    self.target=hash("/focus")
+    -- go.delete completes at the end of the frame; the debug report reads the world afterwards.
+    if html5 and sys.get_engine_info().is_debug then self.placement_report=2 end
+    self.ready=true
+    msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation,reason="the vehicle could not be placed ("..tostring(err)..")"})
+end
 local function setup(self)
     self.terrain = b2d.get_body("/terrain#body")
     assert(b2d.body.is_valid(self.terrain), "Terrain body unavailable")
@@ -91,12 +103,18 @@ local function setup(self)
         msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station").." could not be built. Import another level [I]."})
         self.station,self.segments,self.chain=nil,nil,nil
         self.ready=true
-        msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation})
+        msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation,reason="the level could not be built"})
         return
     end
-    if self.testcase ~= "a1" then self.vehicle = vehicle.spawn() end
+    local placeable,place_err=stations.placeable(self.station)
+    if not placeable then
+        fail_placement(self,place_err)
+        return
+    end
     self.ready = true
-    msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
+    -- The loader treats a level as loaded (and saves it) only once the vehicle is drive-ready.
+    if self.testcase ~= "a1" then self.vehicle = vehicle.spawn()
+    else msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation}) end
     emit(self, "ready", {chain_segments = #self.segments, tiles = 48, floor_y = 80})
     if self.scenario then self.scenario.setup(self) end
 end
@@ -117,6 +135,10 @@ function init(self)
         self.ramp_trial=require "main.gym.ramp_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
+    if self.testcase=="le1a" then
+        assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")
+        self.placement_sweep=require "main.gym.placement_sweep"
+    end
     if self.testcase=="a18" or self.testcase=="a18powered" then
         assert(sys.get_engine_info().is_debug,"Seam trial requires debug engine")
         self.seam_trial=require "main.gym.seam_trial"
@@ -147,6 +169,14 @@ function init(self)
 end
 function update(self, dt)
     if not self.ready then setup(self); return end
+    if self.placement_report then
+        self.placement_report=self.placement_report-1
+        if self.placement_report==0 then
+            self.placement_report=nil
+            local c=b2d.world.get_counters(b2d.body.get_world(self.terrain))
+            html5.run("window.riderPlacement="..json.encode({generation=self.session_generation,bodies=c.body_count,joints=c.joint_count}))
+        end
+    end
     if not self.station then return end
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
@@ -156,11 +186,15 @@ function update(self, dt)
     if self.mobile.station then msg.post("main:/loader#script","select_station",{id=self.mobile.station,preset=self.preset}) end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
-        vehicle.attach(self.vehicle)
-        -- Factories can receive an engine step before attach. Use Retry's
-        -- canonical pose before the very first authored speed start too.
-        vehicle.reset(self.vehicle)
-        stations.restart(self)
+        local placed,err=pcall(function()
+            vehicle.attach(self.vehicle)
+            -- Factories can receive an engine step before attach. Use Retry's
+            -- canonical pose before the very first authored speed start too.
+            vehicle.reset(self.vehicle)
+            stations.restart(self)
+        end)
+        if not placed then fail_placement(self,err);return end
+        msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
         -- Load timings use socket.gettime (1 ms steps on HTML5); switch is absent without a trigger (page load).
@@ -169,6 +203,15 @@ function update(self, dt)
             build_ms=self.load.build_ms,decorate_ms=self.load.decorate_ms})
         emit(self,"vehicle_ready",{bodies=3,joints=2})
         show_preset(self)
+    end
+    if self.placement_sweep and self.vehicle and self.vehicle.ready and html5 then
+        local ok,spec=pcall(json.decode,html5.run("JSON.stringify(window.riderSweepRequest||null)"))
+        if ok and type(spec)=="table" then
+            html5.run("window.riderSweepRequest=null")
+            local result=self.placement_sweep.run(self.vehicle,spec)
+            stations.restart(self)
+            html5.run("window.riderSweep="..json.encode(result))
+        end
     end
     local target = go.get_position(self.target)
     if self.vehicle and self.vehicle.ready then
@@ -198,6 +241,8 @@ function update(self, dt)
             sample.preset,sample.modified=self.preset,self.modified or false
             sample.head_contact,sample.crash_enabled=self.head_contact,self.crash_enabled
             msg.post("main:/loader#ui","measurements",sample)
+            -- LE1a only: sys.serialize and msg.post share dmScript::CheckTable, so this is the exact payload size (2048-byte cap).
+            if self.testcase=="le1a" and html5 then html5.run("window.riderMeasurementBytes="..#sys.serialize(sample)) end
             -- LE1b only: Box2D counters/profile parts and the Lua heap go straight to the page (msg.post caps payloads at 2 KiB).
             if self.testcase=="le1b" and html5 then
                 local world=b2d.body.get_world(self.terrain)

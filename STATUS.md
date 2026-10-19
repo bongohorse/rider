@@ -1,12 +1,12 @@
 # Rider status
 
-Updated 2026-10-18. The only source for current progress, open acceptance and blockers. Evidence details (SHAs, CI runs, screenshots) live in the linked PRs and issues; the earlier detailed log is in the [git history of this file](https://github.com/bongohorse/rider/blob/764cc01dc94d56448921191405c7f5c601ba42b6/STATUS.md).
+Updated 2026-10-19. The only source for current progress, open acceptance and blockers. Evidence details (SHAs, CI runs, screenshots) live in the linked PRs and issues; the earlier detailed log is in the [git history of this file](https://github.com/bongohorse/rider/blob/764cc01dc94d56448921191405c7f5c601ba42b6/STATUS.md).
 
 **Contents:** [Now](#now) · [Open acceptance](#open-acceptance) · [Milestones](#milestones) · [Measured limits](#measured-limits) · [Open limits and blockers](#open-limits-and-blockers)
 
 ## Now
 
-- **Next:** Level Editor LE2 [#124](https://github.com/bongohorse/rider/issues/124). **No task is active; LE2 starts only with Claudio's new GO** after his LE1b phone measurement and drive test. LE1b merged in [PR #139](https://github.com/bongohorse/rider/pull/139) (GO 2026-10-18); report: [LE1b report](docs/LE1B_REPORT.md). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
+- **Active:** Level Editor LE2 [#124](https://github.com/bongohorse/rider/issues/124) (GO 2026-10-19). First the LE1b decisions 1–3 (drive-ready save, start limit, text fields), then the editor shell. LE1b merged in [PR #139](https://github.com/bongohorse/rider/pull/139); report: [LE1b report](docs/LE1B_REPORT.md). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points), [contract](docs/contracts/level-editor.md)).
 - Remaining M4 issues (A19b–d, A20, A21) are paused until after the Level Editor (Claudio, 2026-10-18).
 - **Preview:** https://bongohorse.github.io/rider/ — [build.json](https://bongohorse.github.io/rider/build.json) names the deployed SHA and run.
 
@@ -55,9 +55,8 @@ Preset A under the declared automated protocols; not player limits or tuning tar
 - **Phone performance:** unmeasured (Chrome version, refresh modes, frame times, DPI cost). Keep the 60 FPS target and no physics budget; run the [phone trial](docs/MOBILE_TRIAL.md) before Phase B.
 - **Android:** APK build, signature and manifest are CI-checked; no device installation yet.
 - **Review enforcement:** `required` is the only protected check; zero approving reviews are required, so independent review is a workflow rule, not technically enforced.
-- **Custom level start distance (LE1b finding, decision for LE2/LE3):**
-  - A validated start 1.5 km or more from x = 0 fails vehicle placement (`Noncanonical reset pose`).
-  - The broken level is still saved (recorded); that a reload restores it is inferred, not tested.
-  - Text fields: the station validator limits id and name (and section id/name) to 64 bytes ([PR #140](https://github.com/bongohorse/rider/pull/140)); further editor text fields stay an LE2 test.
-  - Decided 2026-10-18 for LE2: save only drive-ready levels, a provisional start limit of ±1 km with placement tests, byte-based text field tests ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±1 km is not a proven safe zone.
+- **Custom level start distance (LE2):**
+  - Imports are saved only after the vehicle is drive-ready; a placement failure leaves a safe error state and the previous save (tested in `le1a`).
+  - The provisional start limit was **tightened from ±1 km to ±500 m in x and y**: a dense reset sweep failed for 2084 of 4000 starts within ±1 km (from 724 m in x, at 1000 m in y) and for none of 6000 within ±500 m ([decisions after LE1b](docs/contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18)). ±500 m passes the placement guard; driving far from the origin is unmeasured.
+  - Text fields: all at their 64-byte limits plus the speed note give a 1348-byte measurements message (2048-byte cap).
 - **Follow-ups:** npm audit/upgrade [#101](https://github.com/bongohorse/rider/issues/101); CI nightly/timing [#95](https://github.com/bongohorse/rider/issues/95).

@@ -172,6 +172,7 @@ Touch mode hides the page tools; its toolbar has its own **Import level** button
      - (c) Make the guard's tolerance scale with coordinate size. This is a vehicle/physics contract change.
      - Independent of a–c: save an import only after the vehicle is drive-ready.
    - **Not measured:** driving more than about 50 m away from the start, so precision effects far from the origin are unknown.
+   - **Resolved in LE2 ([#124](https://github.com/bongohorse/rider/issues/124)):** imports are saved only after the vehicle is drive-ready, a placement failure leaves a safe error state, and starts are limited to ±500 m in x and y (option a, tightened after a dense placement sweep failed from 724 m). Details: [decisions after LE1b](contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18).
 2. **Switch-frame spike at full budget:** 21–26 ms at 612–800 objects on desktop. It matters for LE3/LE5 re-checks with editor overlays, and for phone values.
 3. **Validator wording (R16):** coordinates at or beyond 100 km report `Non-finite bounds` although the values are finite but out of range. The source validator should name the range.
 4. **Text fields were unbounded:** the level `name` reaches the measurements message as `station_name`, and `msg.post` caps payloads at 2048 bytes. Since [PR #140](https://github.com/bongohorse/rider/pull/140) the station validator limits id and name (and section id/name) to 64 bytes; the `le1a` case loads a 64-byte id with a 64-byte multi-byte name and gets telemetry. Text fields that LE2 adds still need their own byte tests.
@@ -185,7 +186,7 @@ python tools/gym/smoke.py --output artifacts/le1b --case le1b      # builds a de
 node tools/gym/levels.cjs artifacts/le1b-levels                      # writes every case as JSON plus index.json
 ```
 
-The run writes `sizes-result.json` (all raw statistics) and `sizes-report.md` (the tables above). CI runs the case in the G1 HTML5 job (`artifacts/g1/sizes`). `LE1B_REPEATS` and `LE1B_SAMPLE_MS` change repeats and window for local experiments; reported values use the defaults.
+The run writes `sizes-result.json` (all raw statistics) and `sizes-report.md` (the tables above). Since LE2 the start series accepts only `start-500m`; the starts from 1 km are rejected by the start limit, so a rerun no longer reproduces the placement failures above. CI runs the case in the G1 HTML5 job (`artifacts/g1/sizes`). `LE1B_REPEATS` and `LE1B_SAMPLE_MS` change repeats and window for local experiments; reported values use the defaults.
 
 ## Engine sources
 

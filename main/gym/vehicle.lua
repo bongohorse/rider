@@ -14,6 +14,11 @@ function M.spawn()
     end
     return v
 end
+-- Removes a vehicle that could not be placed; its bodies and joints go with the game objects.
+function M.remove(v)
+    go.delete(v.ids.chassis,true)
+    for i=1,2 do go.delete(v.ids[i]) end
+end
 local function body(id) return b2d.get_body(msg.url(nil,id,"body")) end
 local function joints(v)
     for i,x in ipairs(M.config.wheel_x) do
@@ -65,7 +70,9 @@ function M.reset(v)
         b2d.body.set_angular_velocity(b,0)
         b2d.body.set_awake(b,true)
         local p,vel = b2d.body.get_position(b),b2d.body.get_linear_velocity(b)
-        assert(math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001, "Noncanonical reset pose")
+        if not (math.abs(p.x-x)<0.01 and math.abs(p.y-y)<0.01 and math.abs(b2d.body.get_angle(b))<0.001) then
+            error(string.format("Noncanonical reset pose (body %d at %.4f, %.4f, expected %.4f, %.4f, angle %.5f)",i,p.x,p.y,x,y,b2d.body.get_angle(b)))
+        end
         assert(vmath.length(vel)<0.001 and math.abs(b2d.body.get_angular_velocity(b))<0.001, "Reset velocity survived")
     end
     for _,b in ipairs(bodies) do b2d.body.set_active(b,true);b2d.body.set_awake(b,true) end
