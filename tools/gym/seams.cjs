@@ -1,10 +1,11 @@
 const {configure}=require('./launch.cjs');
-const {SPEEDS,qualify,peaks}=require('./seam_analysis.cjs');
+const {qualify,peaks}=require('./seam_analysis.cjs');
+const {plan,comparisonOf,verdict}=require('./seam_report.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
  const [root,sha,runId,testcase,bundle]=process.argv.slice(2),out=path.resolve(root);let browser,page;
- const results=[],retries=[],poweredControls=[],errors=[];
+ const results=[],retries=[],poweredControls=[],errors=[],part=process.env.GYM_PART||null,scope=plan(part);let rejected=null;
  function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
  const web=path.dirname(find(path.resolve(bundle)));
  const server=http.createServer((req,res)=>{const f=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!f.startsWith(web+path.sep)||!fs.existsSync(f)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(f).pipe(res);});
@@ -29,7 +30,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    }
    return r;
   }
-  for(const speed of SPEEDS)for(const station of ['seams-chain','seams-hull']){
+  for(const speed of scope.speeds)for(const station of ['seams-chain','seams-hull']){
    await page.goto(url+`?station=${station}&speed=${speed}`);
    await page.waitForFunction(({sha,runId,station})=>window.riderReady?.source_sha===sha&&window.riderReady.run_id===runId&&window.riderStationReport?.station===station,{sha,runId,station});
    await page.waitForFunction(()=>window.riderTelemetry?.station_distance>=40);
@@ -54,26 +55,21 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   // Preset A's motor (theoretical no-slip 7.04 m/s) cannot hold 9 m/s.
   // Keep physical off-target controls; never count them as comparison evidence.
-  await page.unroute('**/index.html*');await configure(page,runId,'a18powered');
-  for(const speed of [5,9])for(const station of ['seams-chain','seams-hull']){
+  if(scope.powered){await page.unroute('**/index.html*');await configure(page,runId,'a18powered');}
+  if(scope.powered)for(const speed of [5,9])for(const station of ['seams-chain','seams-hull']){
    await page.goto(url+`?station=${station}&speed=${speed}`);const r=await completed();
    if(speed===5){assert.equal(r.comparable,true,'powered 5 m/s must qualify');assert.equal(r.vertical_bumps,0,'powered 5 m/s vertical baseline');}
    else {assert.equal(r.comparable,false);assert(r.reasons.some(x=>/speed outside \+\/-5% window/.test(x)),r.reasons.join());}
    poweredControls.push(r);
   }
-  await page.unroute('**/index.html*');await configure(page,runId,testcase);
-  const condition=r=>({station:r.station,status:r.status,entry:r.entry_mps,min:r.speed_min_mps,max:r.speed_max_mps,drift:r.drift_mps,bumps:r.comparable?r.ghost_bumps:null,vertical:r.comparable?r.vertical_bumps:null,longitudinal:r.comparable?r.longitudinal_hits:null,spin_peak:r.wheel_spin_peak_rps,reasons:r.reasons});
-  const pairOf=(list,mode,speed)=>{const pair=list.filter(r=>r.nominal_mps===speed);return {mode,nominal_mps:speed,status:pair.length===2&&pair.every(r=>r.comparable)?'COMPARABLE':'NOT COMPARABLE',conditions:pair.map(condition)};};
-  const comparison=[...SPEEDS.map(s=>pairOf(results,'free roll',s)),...[5,9].map(s=>pairOf(poweredControls,'powered control',s))];
-  assert(results.find(r=>r.station==='seams-chain'&&r.nominal_mps===5).comparable,'5 m/s chain free-roll baseline');
+  if(scope.powered){await page.unroute('**/index.html*');await configure(page,runId,testcase);}
+  const comparison=comparisonOf(results,poweredControls,scope.speeds,scope.powered);
+  if(scope.speeds.includes(5))assert(results.find(r=>r.station==='seams-chain'&&r.nominal_mps===5).comparable,'5 m/s chain free-roll baseline');
   // Invalid nominal speeds must never qualify, even if the strip is crossed.
-  await page.goto(url+'?station=seams-chain&speed=10');const rejected=await completed();assert.equal(rejected.comparable,false);assert(rejected.reasons.includes('unsupported nominal speed'));
+  if(scope.rejected){await page.goto(url+'?station=seams-chain&speed=10');rejected=await completed();assert.equal(rejected.comparable,false);assert(rejected.reasons.includes('unsupported nominal speed'));}
   if(errors.length)throw Error(errors.join('\n'));
-  // D8 verdict follows only from qualified free-roll pairs; never asserted.
-  const freeRoll=comparison.filter(r=>r.mode==='free roll'),complete=freeRoll.every(r=>r.status==='COMPARABLE');
-  const bumps=(c,id)=>c.conditions.find(x=>x.station===id).bumps;
-  const d8=!complete?'PROVISIONAL: retain chain; missing qualified free-roll pairs':freeRoll.every(c=>bumps(c,'seams-chain')<=bumps(c,'seams-hull'))?'CONFIRMED: chain terrain has no more ghost bumps than hull at every qualified speed':'REVISE: hull has fewer ghost bumps than chain at a qualified speed';
-  const report={status:'PASS',protocol:3,acceptance:complete?'PASS':'BLOCKED',d8,source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
+  // A part has no verdict of its own; the merge computes it over all parts.
+  const report={status:'PASS',protocol:3,...(part?{part}:verdict(comparison)),source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'seams-result.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status,comparison}));
  }catch(e){if(page){await page.screenshot({path:path.join(out,'seams-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'seams-failed-state.json'),JSON.stringify({results,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}

@@ -2,6 +2,7 @@
 // Uses the unchanged LE1a import path (pasted text) and never bypasses validation limits.
 const {configure}=require('./launch.cjs');
 const {cases,text}=require('./levels.cjs');
+const {markdown,select}=require('./sizes_report.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const REPEATS=Number(process.env.LE1B_REPEATS||5),WARMUP_MS=1000,SAMPLE_MS=Number(process.env.LE1B_SAMPLE_MS||6000);
@@ -32,32 +33,6 @@ function step(values){
  const u=[...new Set(values.filter(v=>v>0))].sort((a,b)=>a-b);let d=Infinity;
  for(let i=1;i<u.length;i++)d=Math.min(d,u[i]-u[i-1]);
  return {smallest_nonzero:u[0]??null,smallest_difference:Number.isFinite(d)?d:null,zero:values.filter(v=>v===0).length};
-}
-// Report tables for docs; every value is copied from the result JSON, sub-resolution values are marked.
-function markdown(r){
- const f=(v,d=1)=>v===null||v===undefined?'unknown':v.toFixed(d),res=r.identity.performance_now_step_ms;
- const below=(v,step,d)=>v===null||v===undefined?'unknown':v<step?'<'+step:v.toFixed(d);
- const ms=v=>v===null||v===undefined?'n/a':v<1?'<1':Math.round(v);
- const median=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)/2)]:null;
- const row=c=>'| '+c.join(' | ')+' |';
- const ok=r.results.filter(x=>x.outcome==='drive_ready'),failed=r.results.filter(x=>x.outcome==='placement_failed'),rejected=r.results.filter(x=>x.expect==='rejected');
- const out=['Source `'+r.source_sha+'`, run `'+r.run_id+'`, Chromium '+r.browser+' headless, '+r.identity.gl_renderer+', viewport '+r.identity.viewport.width+'x'+r.identity.viewport.height+' DPR '+r.identity.dpr+
-  ', preset '+r.preset.toUpperCase()+'. Repeats '+r.protocol.repeats+'; '+r.protocol.warmup_ms/1000+' s warm-up, then '+r.protocol.sample_ms/1000+' s full throttle. performance.now() step '+f(res,3)+' ms (cross-origin isolated: '+r.identity.cross_origin_isolated+').','',
-  '### Levels and sizes','',row(['Level','Dimension','Length m','Start m','Segments','Chains','Hulls','Render objects','Text KiB','Save KiB','Terrain shapes','Decoration sprites']),row(Array(12).fill('---'))];
- for(const x of [...ok,...failed])out.push(row([x.id,x.dimension,x.length_m,x.start_m,x.segments,x.chains,x.hulls,x.render_objects,f(x.text_bytes/1024),x.save_bytes?f(x.save_bytes/1024):'n/a',x.counts?.terrain_shapes??'n/a',x.counts?.decor_sprites??'n/a']));
- out.push('','### World switch (Import text click to drive-ready)','',row(['Level','Median ms','Worst ms','First import ms','Longest frame in switch ms','Lua parse ms','Lua terrain ms','Lua decoration ms','Lua switch ms']),row(Array(9).fill('---')));
- for(const x of ok){const l=x.switch.lua;out.push(row([x.id,f(x.switch.median_ms),f(x.switch.worst_ms),f(x.switch.first_ms),f(x.switch.longest_frame_ms),
-  ms(median(l.map(v=>v.parse_ms))),ms(median(l.map(v=>v.build_ms))),ms(median(l.map(v=>v.decorate_ms))),ms(median(l.map(v=>v.switch_ms)))]));}
- for(const x of failed)out.push(row([x.id,'placement failed: `'+x.error+'`','','','','','','','']));
- out.push('','### Frames and physics during the drive window','',row(['Level','Interval p50/p95/p99/max ms','Over 25 ms','Engine callback work p50/p95/max ms','Physics step p50/p95/max ms','Zero step samples','Contacts max','Static tree height','Distance m','Resets']),row(Array(10).fill('---')));
- for(const x of ok){const i=x.frame.interval_ms,w=x.frame.work_ms,p=x.physics.step_ms,step=Math.round((x.physics.resolution.smallest_difference??res)*1000)/1000;
-  out.push(row([x.id,[i.p50,i.p95,i.p99,i.max].map(v=>f(v)).join(' / '),x.frame.over_25ms+' of '+i.n,[w.p50,w.p95,w.max].map(v=>below(v,res,1)).join(' / '),
-   [p.p50,p.p95,p.max].map(v=>below(v,step,1)).join(' / '),x.physics.resolution.zero+' of '+p.n,x.physics.contacts?.max??'unknown',x.physics.static_tree_height??'unknown',f(x.drive.distance_m),x.drive.resets]));}
- out.push('','### Memory observations (end of drive window)','',row(['Level','Box2D world KiB','Lua heap KiB','WASM linear memory MiB','JS heap']),row(Array(5).fill('---')));
- for(const x of ok)out.push(row([x.id,f(x.memory.box2d_bytes/1024),f(x.memory.lua_kib),x.memory.wasm_bytes?f(x.memory.wasm_bytes/1048576,0):'unknown',x.memory.js_heap]));
- out.push('','### Rejected limit cases','',row(['Case','Dimension','Render objects','Text KiB','Message','Physics cost']),row(Array(6).fill('---')));
- for(const x of rejected)out.push(row([x.id,x.dimension,x.render_objects,f(x.text_bytes/1024),'`'+x.message+'`',x.physics]));
- return out.join('\n')+'\n';
 }
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;
@@ -108,11 +83,11 @@ function markdown(r){
    return {user_agent:navigator.userAgent,viewport:window.riderViewport,dpr:devicePixelRatio,cross_origin_isolated:window.crossOriginIsolated,
     performance_now_step_ms:b-a,gl_renderer:info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):null,gl_vendor:info?gl.getParameter(info.UNMASKED_VENDOR_WEBGL):null};
   });
-  const all=cases();
+  const part=process.env.GYM_PART||null,all=select(cases(),part);
   for(const c of all.filter(c=>c.expect==='accepted')){
    const body=text(c.level),first=await load(c,body),repeats=[];
    if(first.failed){
-    results.push({id:c.id,dimension:c.dimension,length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,
+    (c.warmup?[]:results).push({id:c.id,dimension:c.dimension,length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,
      text_bytes:Buffer.byteLength(body),outcome:'placement_failed',error:first.failed,save_status_after:first.status});
     console.log(c.id+': vehicle placement failed ('+first.failed+'); save status '+first.status);
     continue;
@@ -145,7 +120,7 @@ function markdown(r){
    const newest=Object.values(memory.slots).filter(Boolean).sort((a,b)=>b.mtime-a.mtime)[0];
    const w=window_.world,last=w.at(-1)||{},physics=window_.physics,tm=window_.telemetry;
    const switches=repeats.map(r=>r.switch_ms);
-   results.push({id:c.id,dimension:c.dimension,outcome:'drive_ready',length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,text_bytes:Buffer.byteLength(body),
+   (c.warmup?[]:results).push({id:c.id,dimension:c.dimension,outcome:'drive_ready',length_m:c.length_m,start_m:c.level.spawn[0],segments:c.segments,chains:c.chains,hulls:c.hulls,render_objects:c.objects,text_bytes:Buffer.byteLength(body),
     save_bytes:newest?.bytes??null,counts,
     switch:{first_ms:first.switch_ms,repeats_ms:switches,median_ms:stats(switches).p50,worst_ms:stats(switches).max,longest_frame_ms:Math.max(...repeats.map(r=>r.longest_frame_ms)),
      lua:repeats.map(r=>r.lua)},
@@ -154,7 +129,7 @@ function markdown(r){
      contacts:stats(w.map(x=>x.contacts)),shapes:last.shapes??null,static_tree_height:last.static_tree_height??null},
     memory:{box2d_bytes:last.bytes??null,lua_kib:last.lua_kib??null,wasm_bytes:memory.wasm_bytes,js_heap:'unknown'},
     drive:{distance_m:tm.station_distance,top_speed_mps:tm.station_top_speed,resets:tm.reset_count,preset:tm.preset}});
-   console.log(c.id+': switch median '+stats(switches).p50.toFixed(1)+' ms, worst '+stats(switches).max.toFixed(1)+' ms; frame p95 '+stats(window_.intervals)?.p95?.toFixed(2)+' ms; physics p95 '+stats(physics)?.p95?.toFixed(3)+' ms');
+   console.log((c.warmup?'(previous level, not reported) ':'')+c.id+': switch median '+stats(switches).p50.toFixed(1)+' ms, worst '+stats(switches).max.toFixed(1)+' ms; frame p95 '+stats(window_.intervals)?.p95?.toFixed(2)+' ms; physics p95 '+stats(physics)?.p95?.toFixed(3)+' ms');
   }
   // Rejected limit cases: the running level, its world and its save stay unchanged.
   const before=await state();
@@ -169,7 +144,7 @@ function markdown(r){
    results.push({id:c.id,dimension:c.dimension,expect:'rejected',render_objects:c.objects,text_bytes:Buffer.byteLength(text(c.level)),message,physics:'unknown (rejected before build)'});
   }
   const lua=results.flatMap(r=>r.switch?.lua||[]).flatMap(x=>[x.switch_ms,x.parse_ms,x.build_ms,x.decorate_ms]).filter(v=>v!==null);
-  const report={source_sha:sha,run_id:runId,status:'PASS',browser:browser.version(),identity,preset:results[0].drive.preset,
+  const report={source_sha:sha,run_id:runId,...(part?{part}:{}),status:'PASS',browser:browser.version(),identity,preset:results[0].drive.preset,
    protocol:{repeats:REPEATS,warmup_ms:WARMUP_MS,sample_ms:SAMPLE_MS,trigger:'Import text click (pasted JSON), LE1a path',drive_ready:'riderReady write in the vehicle attach frame',
     input:'ArrowUp held from the end of the last repeat',lua_clock_values_whole_ms:lua.every(v=>Math.abs(v-Math.round(v))<1e-3)},
    elapsed_s:(Date.now()-started)/1000,results};
