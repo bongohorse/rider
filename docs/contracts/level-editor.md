@@ -194,6 +194,7 @@ Each item separates what LE1b **tested**, what is only **assumed**, and what is 
 5. **Sprite budget is checked early in LE3,** before the grid and handles are complete.
    - **Tested:** a full level uses 804 of the 1024 sprites.
    - **Assumed until shown otherwise:** hidden sprites still count against the budget.
+   - **Done in LE3:** grid, handles and previews are GUI nodes, so they take no sprites; the edit world of the 800-segment sample uses the same 804 sprites as before ([draw tool](#draw-tool-and-connections-le3)).
 6. **Touch import entry:** done in [PR #142](https://github.com/bongohorse/rider/pull/142). Covered by touch emulation; phone: NOT RUN.
 
 ### Editor shell (LE2)
@@ -210,6 +211,42 @@ Implemented in `main/gym/editor_doc.lua` (pure document rules), `editor.lua` (lo
 - **Templates (R3):** id `my-<station>`, name `<name> copy`; only chains, hulls, labels and the start are copied, so `kind`, `sections`, `markers`, seam/run-in data and any other field are dropped by construction. The built-in resource is only read.
 - **Undo (R17):** bounded snapshots (100) of the authoring document; selection is resolved by id. Replacing the document (template, another level) is one Undo step.
 - **Drafts (R9, R12):** `custom-draft-a`/`-b`, same slot-pair format as levels, autosaved 0.4 s after a completed action; status Unsaved / Saving... / Saved / Save failed. A slot with an unsupported version is never overwritten; when it is the newest draft, E refuses only that draft (with a notice) and opens the level or template, saving around it. Play from START saves the compiled level (with editor block) only after the vehicle is drive-ready. The in-memory document or draft is reused only for a level the editor produced; an imported file opens as itself, one Undo step away from the previous document.
+
+### Draw tool and connections (LE3)
+
+Implemented in `main/gym/editor_edit.lua` (pure edit operations), `editor_snap.lua` (R6), `editor_doc.lua` (connections, runs, terrain domain), `editor_overlay.lua` (GUI overlays) and `editor.gui_script`. Debug case `le3` ([gym notes](../../main/gym/README.md#level-editor)).
+
+- **Document version 2 (R1, R4):** `editor_version` and `compiler_version` 2 add `connections`, a list of `{from, to}`: the last point of line `from` is connected to the first point of line `to`. The source validator requires existing lines, each end used at most once, equal end points and no loop. Version 1 documents open upgraded with no connections; their lines compile unchanged. Unknown versions are refused as in LE2.
+- **Logical order:** lines are stored left to right where their ends allow it (templates are reversed when opened, Connect reorients a run). "Downstream" therefore means towards the right end of a run. The compiler still writes chains right to left (solid side below).
+- **Runs and compile (R4, D8):** a connected run compiles into one chain with each joint once. Limits: 32 runs per level, 2048 points per run.
+- **Supported v1 terrain domain (R16), checked on every compile:**
+  - A run keeps one x direction. Turning back in x (an overhang) is an error: `Line o7 turns back in x at (19.00, 6.00) m … Use a hull for overhangs.`
+  - Vertical steps are allowed. Consecutive vertical segments must not fold back onto each other, and a run cannot be vertical only (`… is vertical only; use a hull for walls.`).
+  - With these rules a run cannot intersect itself or close a loop. Connections cannot form loops either: Connect refuses `Connecting these ends would close a loop`.
+  - Points of a run are at least 1 cm apart. A level without lines or hulls reports `No terrain yet: draw a line [D].`
+  - One-sided collision: with chains written right to left, every non-vertical segment is solid below and every step wall faces the lower side. Separate runs may cross; this is not checked.
+- **Edit rules (R4, R17):**
+  - **Moves:** dragging a line moves its whole connected run. Dragging a point changes only its piece. Dragging a piece's last point, or a joint (which belongs to its upstream piece), moves the whole downstream run by the same displacement. Upstream pieces never move.
+  - **Multi-select:** Shift+click adds or removes an object; dragging on empty space selects what the box touches. Dragging the selection moves each connected run once.
+  - **Points:** a double-click on a selected line inserts a point on the segment (x on the active grid, shape unchanged).
+  - **Split [K]** at an inner point makes two connected pieces (no seam).
+  - **Disconnect / Connect [J]:** Connect needs a free end touching (within the snap radius) a free end of another run; it moves the selected end's run onto it.
+  - **Delete** on an inner point joins its neighbours (orange preview line). On a free end it shortens the line; on a joint it is refused (`disconnect it first`).
+  - Every completed action is one Undo step. A refused edit (rule or source validator) changes nothing and shows the reason.
+- **Draw [D] (R5):** each click places a snapped point; the readout shows the length and angle of the next segment. A click on the last point, a double-click or Enter finishes the piece; Backspace removes the last point; Esc discards the unfinished piece; Play or E finishes it first. Starting or finishing on a free end shows a connect preview (green ring, readout `connects`); that deliberate placement connects the new piece. Ctrl places without snapping and therefore without connecting.
+- **Snapping (R6):**
+  - Default: 0.5 m grid plus anchors (line points and hull vertices within 12 px). Alt: 0.1 m grid. Shift: 15° rays with the grid along the ray, from the previous point (draw), the fixed neighbour (point drag) or the grabbed point (move). Ctrl: off. G toggles the grid.
+  - Precedence: anchor > angle > grid. The status bar shows the mode and the active snap; the snap point is a diamond (green anchor, blue angle, grey grid, red off).
+  - START and FINISH stay unsnapped (START clearance, LE2). A drag starts after 4 px, so a click never moves an off-grid object onto the grid.
+  - The page prevents the browser default of Alt while editing. Alt on Windows browsers and Alt+drag on Linux window managers are not verified (CI runs headless Chromium on Linux): drive test.
+- **Screen-space behaviour:** pick tolerance 10 px, anchor radius 12 px, handles 9 px, double-click within 0.4 s and 4 px; all independent of zoom. Pixels are those of a 1280 × 720 CSS canvas and scale with the editor GUI, so a HiDPI screen or a larger window keeps them in proportion to the panels.
+  - Pick order: line points (every point of a selected line, the ends of every line, a joint once), START, FINISH, labels, then lines and hulls by distance.
+  - Hover highlights what a click picks (`point 3 of o4 (1/4, Tab)`); Tab cycles overlapping candidates.
+- **Live validation:** a top-bar button shows the error and warning count and opens the list. Errors block Play. Warnings: unconnected ends that touch (a seam the wheels bump on, A18) and START without terrain below.
+- **Rendering and budget (R7):**
+  - Level geometry stays line sprites and labels. Moves, drags and Undo of moves update sprites in place; adding or removing objects or points reloads the edit world.
+  - Grid (≤ 96 lines, ≥ 24 px apart, 1-2-5 steps), handles (≤ 192), previews (≤ 64), the snap marker and the readout are GUI nodes created once: 419 of the editor GUI's 512 `max_nodes`, panels included.
+  - Measured at the 800-segment sample (`le3`): the edit world uses 804 sprites (Play's 800 line sprites plus the 4-sprite START box) and 1 label. With its line selected, zoom 0.2 draws 97 handles; at zoom 0.067 the 192-handle pool is full and 51 handles are not drawn. Dropped handles are counted and the status bar asks to zoom in; geometry is never reduced.
 
 ## Additional implementation and acceptance checks
 

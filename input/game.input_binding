@@ -32,6 +32,13 @@ key_trigger { input: KEY_ENTER action: "editor_play" }
 key_trigger { input: KEY_KP_ENTER action: "editor_play" }
 key_trigger { input: KEY_F action: "editor_test" }
 key_trigger { input: KEY_S action: "editor_tool_select" }
+key_trigger { input: KEY_D action: "editor_tool_draw" }
+key_trigger { input: KEY_G action: "editor_grid" }
+key_trigger { input: KEY_TAB action: "editor_cycle" }
+key_trigger { input: KEY_J action: "editor_connect" }
+key_trigger { input: KEY_K action: "editor_split" }
+key_trigger { input: KEY_LALT action: "editor_alt" }
+key_trigger { input: KEY_RALT action: "editor_alt" }
 key_trigger { input: KEY_DEL action: "editor_delete" }
 key_trigger { input: KEY_BACKSPACE action: "editor_delete" }
 key_trigger { input: KEY_ESC action: "editor_cancel" }

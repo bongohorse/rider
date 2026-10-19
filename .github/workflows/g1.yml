@@ -188,6 +188,8 @@ jobs:
             cases: 'a19'
           - group: editor
             cases: 'a15 le1a le2'
+          - group: draw
+            cases: 'le3'
           - group: controls
             cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -228,6 +230,9 @@ jobs:
       - name: Verify the level editor shell and Edit/Play loop
         if: contains(format(' {0} ', matrix.cases), ' le2 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/editor --case le2
+      - name: Verify editor drawing, connections, snapping and budget
+        if: contains(format(' {0} ', matrix.cases), ' le3 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/draw --case le3
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
