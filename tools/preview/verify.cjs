@@ -3,8 +3,10 @@ const {chromium}=require('playwright');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
+const {verificationPlan}=require('./verification-plan.cjs');
 async function main(){
-  const [target,sha,buildId,out]=process.argv.slice(2);
+  const [target,sha,buildId,out,mode='full']=process.argv.slice(2);
+  const plan=verificationPlan(mode);
   if(!/^[0-9]+-[0-9]+$/.test(buildId))throw Error('Expected build ID');
   if(!/^[a-f0-9]{40}$/.test(sha))throw Error('Expected full SHA');
   fs.mkdirSync(out,{recursive:true});
@@ -27,6 +29,7 @@ async function main(){
     const results=[];
     for(const spec of [{name:'desktop',viewport:{width:1280,height:720},deviceScaleFactor:2},
                        {name:'phone-emulation',viewport:{width:1080,height:486},isMobile:true,hasTouch:true}]){
+      if(!plan.includes(spec.name))continue;
       const {name,...contextOptions}=spec;
       const context=await browser.newContext(contextOptions);
       const page=await context.newPage(),errors=[],logs=[];
@@ -48,6 +51,16 @@ async function main(){
       await page.waitForFunction(()=>window.riderTelemetry?.sequence>=2,null,{timeout:10000});
       const sequence=await page.evaluate(()=>window.riderTelemetry.sequence);
       await page.waitForFunction(previous=>window.riderTelemetry?.sequence>previous+1,sequence,{timeout:10000});
+      // The exact release files already passed all assertions before deploy.
+      // Check the public loader, identity and live controller in both viewports.
+      if(mode==='deployment'){
+        await page.screenshot({path:path.join(out,name+'.png')});
+        fs.writeFileSync(path.join(out,name+'.log'),logs.join('\n'));
+        if(errors.length)throw Error(errors.join('\n'));
+        results.push({name,status:'PASS',url:page.url(),viewport:spec.viewport});
+        await context.close();
+        continue;
+      }
       // A12b: no page chrome/bars; DPR-sized buffer, resize without new world,
       // real engine slider acknowledgement at both endpoints after each layout.
       const responsive=[];
@@ -149,13 +162,11 @@ async function main(){
       results.at(-1).qualityComparison=quality;
       await context.close();
     }
-    results.push(await require('./mobile.cjs')(browser,url,sha,out));
-    results.push(await require('./tilt.cjs')(browser,url,sha,out));
-    results.push(await require('./ramps.cjs')(browser,url,sha,out));
-    results.push(await require('./steps.cjs')(browser,url,sha,out));
-    results.push(await require('./seams.cjs')(browser,url,sha,out));
-    results.push(await require('./gaps.cjs')(browser,url,sha,out));
-    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
+    for(const name of ['mobile','tilt','ramps','steps','seams','gaps']){
+      if(plan.includes(name))results.push(await require('./'+name+'.cjs')(browser,url,sha,out));
+    }
+    if(results.length!==plan.length)throw Error('Incomplete verification group');
+    fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,mode,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
     console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));
   }catch(error){
     if(browser)for(const context of browser.contexts())for(const page of context.pages()){

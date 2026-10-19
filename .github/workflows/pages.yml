@@ -35,12 +35,17 @@ jobs:
           node-version: '24.21.0'
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Cache pinned Playwright Chromium
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-v1-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
       - name: Verify public deployment source and runtime
         env:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
-        run: node tools/preview/verify.cjs https://bongohorse.github.io/rider/ "$SOURCE_SHA" "$BUILD_ID" artifacts/deployed
+        run: node tools/preview/verify.cjs https://bongohorse.github.io/rider/ "$SOURCE_SHA" "$BUILD_ID" artifacts/deployed deployment
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
