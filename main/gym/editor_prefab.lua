@@ -1,12 +1,14 @@
--- Level editor prefabs (LE5a; contract "Prefab library v1"). Pure: kinds, defaults, ranges, geometry,
--- handles and mirroring of the six static prefab types. Metres and degrees throughout.
+-- Level editor prefabs (LE5a, LE5b; contract "Prefab library v1"). Pure: kinds, defaults, ranges,
+-- geometry, handles and mirroring of the seven static prefab types. Metres and degrees throughout.
 -- A prefab object is {id, type="prefab", kind, at={x,y}, params={...}}. The parameters are the source
 -- (R1); the geometry is derived from them. `at` is the entry (the left end; a Platform's bottom-left
 -- corner). Terrain prefabs are pieces of a run like lines; a Platform is a separate hull obstacle.
+local sample=require "main.gym.editor_sample"
 local M={}
-M.ORDER={"flat","ramp","step","gap","kicker","platform"}
+M.ORDER={"flat","ramp","step","gap","kicker","platform","wave"}
 -- Fields in panel order. A number field has a unit and an inclusive range (magnitude: the smallest
--- allowed absolute value); a choice field cycles through its choices. `when` leaves a field out of the
+-- allowed absolute value; zero: 0 is allowed below the range; integer: whole numbers only); a choice
+-- field cycles through its choices. `when` leaves a field out of the
 -- parameters (the ramp stores only the value of its input mode); `show` only hides it in the panel.
 local function angle_mode(p) return p.mode=="angle" end
 local function height_mode(p) return p.mode=="height" end
@@ -16,7 +18,10 @@ M.KINDS={
     ramp={name="Ramp",fields={{key="mode",label="Input",choices={"angle","height"}},{key="length",label="Length",unit="m",min=0.5,max=100},
         {key="angle",label="Angle",unit="deg",min=-60,max=60,when=angle_mode},{key="height",label="Height",unit="m",min=-50,max=50,when=height_mode}},
         defaults={mode="angle",length=4,angle=15}},
-    step={name="Step",fields={{key="height",label="Height",unit="m",min=-20,max=20,magnitude=0.05}},defaults={height=0.5}},
+    -- A riser and a tread (LE5b, Claudio's LE5a drive test: a bare riser looked like a plain line). The
+    -- riser stands at the start or the end of the tread; tread 0 is a bare riser (LE5a steps).
+    step={name="Step",fields={{key="riser",label="Riser at",choices={"start","end"}},{key="height",label="Height",unit="m",min=-20,max=20,magnitude=0.05},
+        {key="length",label="Tread",unit="m",min=0.5,max=50,zero=true}},defaults={riser="start",height=0.5,length=4}},
     gap={name="Gap with pit",fields={{key="width",label="Width",unit="m",min=0.5,max=20},{key="depth",label="Pit depth",unit="m",min=0.2,max=20}},
         defaults={width=2,depth=3}},
     kicker={name="Kicker + landing",fields={{key="facing",label="Jumps",choices={"right","left"}},{key="angle",label="Kicker angle",unit="deg",min=5,max=60},
@@ -26,6 +31,9 @@ M.KINDS={
         defaults={facing="right",angle=15,lip=1,gap=2,landing="flat",landing_length=6,landing_angle=15}},
     platform={name="Platform",fields={{key="width",label="Width",unit="m",min=0.5,max=50},{key="height",label="Height",unit="m",min=0.2,max=20}},
         defaults={width=6,height=1}},
+    -- LE5b: smooth cosine bumps (negative height: dips), sampled per R8 (editor_sample).
+    wave={name="Bump/wave",fields={{key="height",label="Height",unit="m",min=-10,max=10,magnitude=0.05},{key="wavelength",label="Wavelength",unit="m",min=1,max=100},
+        {key="count",label="Count",unit="",min=1,max=50,integer=true}},defaults={height=1,wavelength=8,count=1}},
 }
 -- A ramp steeper than this is a Step (contract: vertical drops use Step).
 M.MAX_RAMP=60
@@ -75,8 +83,11 @@ function M.check(kind,p)
         local v=p[f.key]
         if not f.choices then
             if type(v)~="number" or v~=v or math.abs(v)==math.huge then return nil,f.label.." needs a number in "..f.unit end
-            if v<f.min-1e-9 or v>f.max+1e-9 then return nil,string.format("%s must be from %s to %s %s (got %s).",f.label,fmt(f.min),fmt(f.max),f.unit,fmt(v)) end
+            if not (f.zero and v==0) and (v<f.min-1e-9 or v>f.max+1e-9) then
+                return nil,string.format("%s must be %sfrom %s to %s %s (got %s).",f.label,f.zero and "0 or " or "",fmt(f.min),fmt(f.max),f.unit,fmt(v))
+            end
             if f.magnitude and math.abs(v)<f.magnitude-1e-9 then return nil,string.format("%s must be at least %s %s up or down (got %s).",f.label,fmt(f.magnitude),f.unit,fmt(v)) end
+            if f.integer and v%1~=0 then return nil,string.format("%s must be a whole number (got %s).",f.label,fmt(v)) end
         end
         seen[f.key]=true
     end
@@ -92,7 +103,11 @@ end
 local function canonical(kind,p)
     if kind=="flat" then return {{{0,0},{p.length,0}}}
     elseif kind=="ramp" then return {{{0,0},{p.length,M.rise(p)}}}
-    elseif kind=="step" then return {{{0,0},{0,p.height}}}
+    elseif kind=="step" then
+        if p.length==0 then return {{{0,0},{0,p.height}}} end
+        if p.riser=="end" then return {{{0,0},{p.length,0},{p.length,p.height}}} end
+        return {{{0,0},{0,p.height},{p.length,p.height}}}
+    elseif kind=="wave" then return {M.wave_points(p)}
     elseif kind=="gap" then return {{{0,0},{0,-p.depth},{p.width,-p.depth},{p.width,0}}}
     end
     local kx=M.kicker_length(p)
@@ -118,6 +133,31 @@ local function to_world(p,at,left,X,Y)
     if left then return {at[1]+(X-p[1]),at[2]+(p[2]-Y)} end
     return {at[1]+p[1],at[2]+p[2]}
 end
+-- Bump/wave samples in local coordinates (R8), cached by parameters. Over the sampling budget the shape
+-- is drawn coarsely (8 points per wavelength) and M.sample_error names the problem; Play stays blocked.
+local waves,wave_order={},{}
+local function wave_samples(p)
+    local key=p.height.."|"..p.wavelength.."|"..p.count
+    local hit=waves[key]
+    if hit then return hit end
+    local pts=sample.wave(p.height,p.wavelength,p.count)
+    local entry={points=pts}
+    if not pts then
+        entry.points={}
+        for i=0,8*p.count do local x=i*p.wavelength/8;entry.points[#entry.points+1]={x,p.height/2*(1-math.cos(2*math.pi*x/p.wavelength))} end
+        entry.points[#entry.points][2]=0
+        entry.error=true
+    end
+    waves[key]=entry;wave_order[#wave_order+1]=key
+    if #wave_order>64 then waves[table.remove(wave_order,1)]=nil end
+    return entry
+end
+function M.wave_points(p) return wave_samples(p).points end
+function M.sample_error(o)
+    if o.kind=="wave" and wave_samples(o.params).error then
+        return string.format("needs more than %d points at %s mm / %s m sampling: reduce its count or wavelength",sample.MAX_POINTS,fmt(sample.TOLERANCE*1000),fmt(sample.MAX_SEGMENT))
+    end
+end
 -- World geometry: {parts} for a terrain prefab, {outline} (closed, CCW) for a Platform.
 function M.geometry(o)
     local p,a=o.params,o.at
@@ -139,8 +179,9 @@ function M.path(o)
     for _,part in ipairs(g.parts) do for _,q in ipairs(part) do list[#list+1]=q end end
     return list
 end
-local COUNT={flat=2,ramp=2,step=2,gap=4,kicker=5,platform=4}
-function M.count(o) return COUNT[o.kind] end
+local COUNT={flat=2,ramp=2,gap=4,kicker=5,platform=4}
+-- Source points (validator limits): a wave counts its samples.
+function M.count(o) return COUNT[o.kind] or #M.path(o) end
 -- Object validation for the source validator: known kind, finite position, valid parameters and a
 -- geometry inside the editor's coordinate limit.
 function M.validate(o,finite)
@@ -157,7 +198,9 @@ end
 local function canonical_handles(kind,p)
     if kind=="flat" then return {{name="end",p={p.length,0},label="length"}}
     elseif kind=="ramp" then return {{name="end",p={p.length,M.rise(p)},label=p.mode=="angle" and "length, angle" or "length, height"}}
-    elseif kind=="step" then return {{name="end",p={0,p.height},label="height"}}
+    elseif kind=="step" then return {{name="end",p={p.length,p.height},label=p.length>0 and "tread, height" or "height"}}
+    elseif kind=="wave" then
+        return {{name="end",p={p.wavelength*p.count,0},label="wavelength"},{name="crest",p={p.wavelength/2,p.height},label="height"}}
     elseif kind=="gap" then return {{name="end",p={p.width,0},label="width"},{name="floor",p={p.width/2,-p.depth},label="pit depth"}}
     elseif kind=="platform" then return {{name="corner",p={p.width,p.height},label="width, height"}}
     end
@@ -216,7 +259,13 @@ function M.drag(o,name,p0,d,steps)
             local limit=p.length*tan(M.MAX_RAMP)
             p.height=math.max(-limit,math.min(limit,clamp(kind,"height",L(y))))
         end
-    elseif kind=="step" then p.height=clamp(kind,"height",L(y))
+    elseif kind=="step" then
+        p.height=clamp(kind,"height",L(y))
+        -- A tread shorter than its minimum is no tread: the step becomes a bare riser.
+        local l=L(x)
+        p.length=l<0.25 and 0 or clamp(kind,"length",l)
+    elseif kind=="wave" then
+        if name=="end" then p.wavelength=clamp(kind,"wavelength",L(x/p.count)) else p.height=clamp(kind,"height",L(y)) end
     elseif kind=="gap" then
         if name=="end" then p.width=clamp(kind,"width",L(x)) else p.depth=clamp(kind,"depth",L(-y)) end
     elseif kind=="platform" then p.width,p.height=clamp(kind,"width",L(x)),clamp(kind,"height",L(y))
@@ -263,7 +312,8 @@ function M.cycle(kind,p0,key)
     return p
 end
 -- Horizontal mirror about x = c2/2: the reflected exit becomes the entry; a ramp or step changes
--- direction, a Kicker + landing jumps the other way, the other shapes are symmetric.
+-- direction (a step's riser moves to the other end), a Kicker + landing jumps the other way, the other
+-- shapes (Flat, Gap with pit, Platform, Bump/wave) are symmetric.
 function M.mirror(o,c2)
     local n={id=o.id,type="prefab",kind=o.kind,params=copy(o.params)}
     if o.kind=="platform" then n.at={c2-o.at[1]-o.params.width,o.at[2]};return n end
@@ -272,7 +322,7 @@ function M.mirror(o,c2)
     n.at={c2-e[1],e[2]}
     local p=n.params
     if o.kind=="ramp" then if p.mode=="angle" then p.angle=-p.angle else p.height=-p.height end
-    elseif o.kind=="step" then p.height=-p.height
+    elseif o.kind=="step" then p.height=-p.height;p.riser=p.riser=="end" and "start" or "end"
     elseif o.kind=="kicker" then p.facing=p.facing=="left" and "right" or "left" end
     return n
 end
@@ -280,6 +330,8 @@ end
 function M.value(f,p)
     local v=p[f.key]
     if f.choices then return tostring(v) end
+    if f.integer then return string.format("%d",v) end
+    if f.zero and v==0 then return "0 (riser only)" end
     return f.unit=="deg" and string.format("%.1f deg",v) or string.format("%.2f m",v)
 end
 function M.derived(o)
@@ -290,7 +342,11 @@ function M.derived(o)
             string.format("Slope length %.2f m",math.sqrt(p.length^2+rise^2))}
         lines[#lines+1]=rise>0 and "Climbs to the right" or rise<0 and "Descends to the right" or "Level"
         return lines
-    elseif o.kind=="step" then return {p.height>0 and "Step up" or "Step down"}
+    elseif o.kind=="step" then return {(p.height>0 and "Step up" or "Step down")..(p.length>0 and (p.riser=="end" and ", tread first" or ", then tread") or " (riser only)")}
+    elseif o.kind=="wave" then
+        local pts=M.wave_points(p)
+        return {string.format("Length %.2f m, %d samples",p.wavelength*p.count,#pts),p.height>0 and "Bumps (smooth ends)" or "Dips (smooth ends)",
+            string.format("Sampled: %s mm, %s m segments",fmt(sample.TOLERANCE*1000),fmt(sample.MAX_SEGMENT))}
     elseif o.kind=="gap" then return {"Pit floor spans the gap"}
     elseif o.kind=="kicker" then
         local kx=M.kicker_length(p)

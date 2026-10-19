@@ -1,4 +1,4 @@
--- Level editor (LE2 shell, LE3 drawing, LE4 documents, LE5a prefabs). Its own game object sits on top of the input stack: in Edit
+-- Level editor (LE2 shell, LE3 drawing, LE4 documents, LE5a prefabs, LE5b curves). Its own game object sits on top of the input stack: in Edit
 -- mode every action is consumed here (Defold only stops propagation between game objects, not between
 -- the components of one), so game keys, the HUD and the world never see editor input (R15).
 local editor=require "main.gym.editor"
@@ -43,7 +43,7 @@ local function button(self,name,pos,size,label,x,y)
     self.buttons[name]={box=b,label=t}
     return b
 end
-local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"prefab","Prefab [P]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
+local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"curve","Curve [C]"},{"prefab","Prefab [P]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
 -- Right panel rows (LE5a): a selected prefab's fields, one row each (the Kicker + landing has the most).
 local PARAMS=7
 -- editor.gui max_nodes (raised from the default 512 for the LE5a panel rows).
@@ -61,7 +61,7 @@ function init(self)
     self.nodes,self.buttons,self.held={},{},{}
     -- Test state for the le2/le3/le4 runners only (debug engine); release builds never publish it.
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b")
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -72,10 +72,11 @@ function init(self)
     button(self,"import",vmath.vector3(744,525,0),vmath.vector3(62,22,0),"Import",R,T)
     button(self,"export",vmath.vector3(810,525,0),vmath.vector3(62,22,0),"Export",R,T)
     button(self,"play",vmath.vector3(900,525,0),vmath.vector3(110,22,0),"Play > [E]",R,T)
-    for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*30,0),vmath.vector3(92,24,0),tool[2],L,T) end
-    -- Prefab types (shown with the Prefab tool; keys 1-6 pick them too).
+    -- Seven tools (LE5b) end above where LE4's six did.
+    for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*27,0),vmath.vector3(92,22,0),tool[2],L,T) end
+    -- Prefab types (shown with the Prefab tool; keys 1-7 pick them too).
     for i,kind in ipairs(prefab.ORDER) do
-        button(self,"kind_"..kind,vmath.vector3(52,280-(i-1)*26,0),vmath.vector3(92,22,0),i.." "..(kind=="kicker" and "Kicker" or prefab.name(kind)),L,T)
+        button(self,"kind_"..kind,vmath.vector3(52,250-(i-1)*26,0),vmath.vector3(92,22,0),i.." "..(kind=="kicker" and "Kicker" or prefab.name(kind)),L,T)
         gui.set_scale(self.buttons["kind_"..kind].label,vmath.vector3(0.42,0.42,1))
     end
     -- The right panel is laid out every frame from the rows it shows (layout()).
@@ -184,6 +185,32 @@ local function prefab_handles(o)
     end
     return list
 end
+-- Handles of a selected curve (LE5b): every anchor ("a<i>") and its tangents ("i<i>", "o<i>"; the open
+-- ends have none). The first anchor of a connected start belongs to the upstream piece and is left out
+-- (R4); an end anchor also selects that end (Connect/Disconnect).
+local function curve_handles(o)
+    local _,prev=doc_lib.links(editor.doc.editor)
+    local n,last=#o.anchors,#path(o)
+    local list={}
+    for i,a in ipairs(o.anchors) do
+        if not (i==1 and prev[o.id]) then list[#list+1]={name="a"..i,p=a.p,label="anchor "..i,anchor=i,index=i==1 and 1 or i==n and last or nil} end
+        if i>1 then list[#list+1]={name="i"..i,p={a.p[1]+a["in"][1],a.p[2]+a["in"][2]},label="tangent in, anchor "..i,anchor=i,tangent=true} end
+        if i<n then list[#list+1]={name="o"..i,p={a.p[1]+a.out[1],a.p[2]+a.out[2]},label="tangent out, anchor "..i,anchor=i,tangent=true} end
+    end
+    return list
+end
+local function object_handles(o)
+    if o.type=="curve" then return curve_handles(o) end
+    if o.type=="prefab" then return prefab_handles(o) end
+    return {}
+end
+local function drawing_tool() return editor.tool=="draw" or editor.tool=="curve" end
+-- The point of a selected vertex in pts (a drag preview may hold another sample count): a line's point by
+-- index, a curve's or prefab's first or last point.
+local function end_point(pts,o,index)
+    if o.type=="line" then return pts[index] end
+    return index==1 and pts[1] or pts[#pts]
+end
 -- Pick candidates under the cursor, best first (hover shows the first; Tab cycles; click picks the
 -- shown one): handles of a selected prefab, line points (every point of a selected line, the ends of
 -- every line and terrain prefab; a joint once, as its upstream piece's last point), START, FINISH,
@@ -195,10 +222,10 @@ local function candidates(p)
     local list,seen={},{}
     local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
-        if o.type=="prefab" and editor.selected[o.id] then
-            for _,h in ipairs(prefab_handles(o)) do
+        if (o.type=="prefab" or o.type=="curve") and editor.selected[o.id] then
+            for _,h in ipairs(object_handles(o)) do
                 local d=dist(p,h.p)
-                if d<=tol then add({kind="handle",id=o.id,handle=h.name,label=h.label,index=h.index,d=d,rank=0,key="h:"..o.id..":"..h.name}) end
+                if d<=tol then add({kind="handle",id=o.id,handle=h.name,label=h.label,index=h.index,anchor=h.anchor,d=d,rank=0,key="h:"..o.id..":"..h.name}) end
             end
         end
     end
@@ -246,7 +273,7 @@ local function describe_candidate(c)
     if c.kind=="handle" then return "handle ("..c.label..") of "..doc_lib.label(find(c.id)) end
     if c.kind=="vertex" then
         local o=find(c.id)
-        if o and o.type=="prefab" then return (c.index==1 and "entry" or "exit").." of "..doc_lib.label(o) end
+        if o and o.type~="line" then return (c.index==1 and "entry" or "exit").." of "..doc_lib.label(o) end
         return "point "..c.index.." of "..c.id
     end
     if c.kind=="object" then local o=find(c.id);return o and doc_lib.label(o):lower() or c.type.." "..c.id end
@@ -309,7 +336,13 @@ end
 local function delete(self)
     local s=editor.selection
     local v=editor.vertex
-    -- A prefab end (picked with its exit handle) stands for the whole prefab.
+    -- A curve anchor (or a curve end) deletes that anchor; a prefab end stands for the whole prefab.
+    local a=editor.anchor
+    if not a and v and find(v.id) and find(v.id).type=="curve" then a={id=v.id,i=v.index==1 and 1 or #find(v.id).anchors} end
+    if a and find(a.id) then
+        if editor.commit(function(e) return edit.delete_anchor(e,a.id,a.i) end,true) then editor.select(a.id) end
+        return
+    end
     if v and find(v.id) and find(v.id).type=="prefab" then v=nil end
     if v then
         if editor.commit(function(e) return edit.delete_point(e,v.id,v.index) end,true) then editor.select(v.id) end
@@ -347,7 +380,7 @@ local function finish_drawing(self)
     local id,note
     local ok=editor.commit(function(e)
         local err
-        id,err=edit.add_line(e,d.points,first,last)
+        id,err=(d.kind=="curve" and edit.add_curve or edit.add_line)(e,d.points,first,last)
         if not id then return nil,err end
         note=err
     end,true)
@@ -407,8 +440,13 @@ local function connect(self)
     end
 end
 local function split(self)
+    local a=editor.anchor
+    if a and find(a.id) then
+        if editor.commit(function(e) local id,err=edit.split_curve(e,a.id,a.i);if not id then return nil,err end end,true) then editor.select(a.id) end
+        return
+    end
     local v=editor.vertex
-    if not v then editor.message="Select a point inside a line first.";return end
+    if not v then editor.message="Select a point inside a line (or an anchor inside a curve) first.";return end
     if editor.commit(function(e) local id,err=edit.split(e,v.id,v.index);if not id then return nil,err end end,true) then
         editor.select(v.id,{id=v.id,index=#find(v.id).points})
     end
@@ -527,7 +565,9 @@ end
 local function apply_params(id,params)
     local known={}
     for _,m in ipairs(editor.errors) do known[m]=true end
-    if editor.commit(function(e) local moved,err=edit.set_params(e,id,params);if not moved then return nil,err end end,true) then
+    -- params: prefab parameters, or the new anchors of a curve (LE5b, same R4 rule).
+    local change=find(id).type=="curve" and edit.set_anchors or edit.set_params
+    if editor.commit(function(e) local moved,err=change(e,id,params);if not moved then return nil,err end end,true) then
         for _,m in ipairs(editor.errors) do
             if not known[m] then editor.message="Changed, with a conflict: "..m..(m:match("%.$") and "" or ".").." Undo [Ctrl+Z] restores the previous shape.";return true end
         end
@@ -574,9 +614,31 @@ local function place_prefab(self,p)
 end
 -- Number fields edit the same parameters as the handles; a choice field steps to its next value.
 local function number_text(v) return (string.format("%.4f",v):gsub("0+$",""):gsub("%.$","")) end
-local function param_rows(o) return prefab.fields(o.kind,o.params,true) end
+local function param_rows(o)
+    if o.type=="curve" then return editor.anchor and editor.anchor.id==o.id and {{key="mode",label="Tangents",choices={"free","smooth","symmetric"}}} or {} end
+    return prefab.fields(o.kind,o.params,true)
+end
+-- A curve anchor's tangent mode (LE5b): free tangents move independently; smooth keeps them on one line
+-- (each keeps its length); symmetric mirrors them. Switching applies the mode to the in tangent.
+local MODES={free="smooth",smooth="symmetric",symmetric="free"}
+local function anchor_mode(id,i)
+    local o=find(id)
+    local anchors=doc_lib.copy(o.anchors)
+    local a=anchors[i]
+    a.mode=MODES[a.mode]
+    local len=math.sqrt(a.out[1]^2+a.out[2]^2)
+    if i>1 and i<#anchors and len>0 then
+        if a.mode=="symmetric" then a["in"]={-a.out[1],-a.out[2]}
+        elseif a.mode=="smooth" then
+            local l=math.sqrt(a["in"][1]^2+a["in"][2]^2)
+            a["in"]={-a.out[1]/len*l,-a.out[2]/len*l}
+        end
+    end
+    apply_params(id,anchors)
+end
 local function param_click(self,i)
     local o=find(editor.selection)
+    if o and o.type=="curve" then if editor.anchor then anchor_mode(o.id,editor.anchor.i) end;return end
     local f=o and o.type=="prefab" and param_rows(o)[i]
     if not f then return end
     if f.choices then
@@ -634,7 +696,7 @@ local function confirm_name(self,closing)
     if name~=editor.doc.name then editor.commit(function(_,doc) doc.name=name end) end
 end
 local function set_tool(self,tool)
-    if self.drawing and tool~="draw" then finish_drawing(self) end
+    if self.drawing and tool~=self.drawing.kind:gsub("line","draw") then finish_drawing(self) end
     editor.tool=tool;self.place=nil;editor.touch()
 end
 local function on_button(self,name)
@@ -699,7 +761,7 @@ end
 local function visible_buttons(self)
     -- The R1 choice is modal: nothing else is offered until it is made.
     if editor.conflict then return {"conflict_source","conflict_lines"} end
-    local list={"undo","redo","new","open","import","export","play","minus","plus","tool_select","tool_draw","tool_prefab","tool_start","tool_finish","tool_pan","warnings"}
+    local list={"undo","redo","new","open","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_pan","warnings"}
     if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
     if editor.selection=="finish" then list[#list+1]="direction"
@@ -710,7 +772,10 @@ local function visible_buttons(self)
         list[#list+1]=vs.joint and "disconnect" or (not vs.inner and "connect") or nil
     end
     local o=editor.selection and find(editor.selection)
-    if o and o.type=="prefab" and #editor.selected_ids()==1 then
+    -- A curve's inner anchor splits there (LE5b).
+    local a=editor.anchor
+    if o and o.type=="curve" and a and a.id==o.id and a.i>1 and a.i<#o.anchors and not (vs and vs.inner) then list[#list+1]="split" end
+    if o and (o.type=="prefab" or o.type=="curve") and #editor.selected_ids()==1 then
         for i=1,#param_rows(o) do list[#list+1]="param_"..i end
     end
     if next(editor.selected) then list[#list+1]="mirror_left";list[#list+1]="mirror_right" end
@@ -768,7 +833,65 @@ end
 -- the drag delta is converted by prefab.drag with the active snapping.
 local function start_handle(self,id,name,p)
     local o=find(id)
-    self.drag={kind="handle",id=id,handle=name,p0=doc_lib.copy(o.params),press={p[1],p[2]},press_px=self.cursor_px,moved=false}
+    self.drag={kind="handle",id=id,handle=name,p0=doc_lib.copy(o.params or o.anchors),press={p[1],p[2]},press_px=self.cursor_px,moved=false}
+    if o.type=="curve" then
+        -- An anchor drag snaps (never to its own curve, nor to a downstream run it carries along); Shift
+        -- keeps 15 degree directions from the neighbouring anchor.
+        local i=tonumber(name:sub(2))
+        local skip={[id]=true}
+        if i==#o.anchors then for _,d in ipairs(edit.downstream(editor.doc.editor,id)) do skip[d]=true end end
+        local from=o.anchors[i>1 and i-1 or 2].p
+        self.drag.skip,self.drag.from=skip,{from[1],from[2]}
+        editor.anchor={id=id,i=i};editor.touch()
+    end
+end
+local function anchor_key(anchors)
+    local t={}
+    for _,a in ipairs(anchors) do t[#t+1]=a.p[1]..","..a.p[2]..","..a["in"][1]..","..a["in"][2]..","..a.out[1]..","..a.out[2]..a.mode end
+    return table.concat(t,";")
+end
+local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
+-- A curve handle drag: an anchor moves (snapped; its tangents move with it), a tangent changes and its
+-- partner follows the anchor's mode (smooth: on one line, symmetric: mirrored, free: unchanged).
+local function curve_drag(self,drag,p)
+    local anchors=doc_lib.copy(drag.p0)
+    local kind,i=drag.handle:sub(1,1),tonumber(drag.handle:sub(2))
+    local a=anchors[i]
+    local d={p[1]-drag.press[1],p[2]-drag.press[2]}
+    if kind=="a" then
+        a.p=snap(self,{a.p[1]+d[1],a.p[2]+d[2]},drag.skip,drag.from)
+        return anchors
+    end
+    local key,other=kind=="i" and "in" or "out",kind=="i" and "out" or "in"
+    local t={a[key][1]+d[1],a[key][2]+d[2]}
+    if self.held.shift and not self.held.ctrl then
+        local l,step=length(t),math.rad(snap_lib.ANGLE)
+        local angle=math.floor(math.atan2(t[2],t[1])/step+0.5)*step
+        t={l*math.cos(angle),l*math.sin(angle)}
+    end
+    a[key]=t
+    local lt=length(t)
+    if ((other=="in" and i>1) or (other=="out" and i<#anchors)) and lt>0 then
+        if a.mode=="symmetric" then a[other]={-t[1],-t[2]}
+        elseif a.mode=="smooth" then local l=length(a[other]);a[other]={-t[1]/lt*l,-t[2]/lt*l} end
+    end
+    return anchors
+end
+-- The Bezier segment and parameter nearest to p (for inserting an anchor on a selected curve).
+local function curve_nearest(o,p)
+    local best,bi,bt
+    for i=1,#o.anchors-1 do
+        local a,b=o.anchors[i],o.anchors[i+1]
+        local p0,p3=a.p,b.p
+        local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+        for k=1,63 do
+            local t=k/64;local u=1-t
+            local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
+            local dd=dist(p,q)
+            if not best or dd<best then best,bi,bt=dd,i,t end
+        end
+    end
+    return bi,bt
 end
 local function prefab_end_handle(o,index)
     for _,h in ipairs(prefab_handles(o)) do if h.index==index then return h.name end end
@@ -784,13 +907,14 @@ local function canvas_press(self,action)
     local double=self.last_press and now-self.last_press.t<=DOUBLE_S and dist(px,self.last_press.px)<=DOUBLE_PX*ui
     -- A Shift+click only changes the selection; it never starts a double-click.
     self.last_press=not self.held.shift and {t=now,px={px[1],px[2]}} or nil
-    if editor.tool=="draw" then
+    if drawing_tool() then
         if self.drawing and self.drawing.opened~=editor.opened then self.drawing=nil end
         local d=self.drawing
         local last=d and d.points[#d.points]
         local q,kind,anchor=snap(self,p,nil,last,d and {unpack(d.points,1,#d.points-1)} or nil)
         if not d then
-            self.drawing={points={q},anchored={kind=="anchor"},opened=editor.opened}
+            -- Curve [C] places anchors like Draw places points; their tangents are set automatically.
+            self.drawing={kind=editor.tool=="curve" and "curve" or "line",points={q},anchored={kind=="anchor"},opened=editor.opened}
         elseif double or dist(q,last)<0.01 then finish_drawing(self)
         else
             d.points[#d.points+1]=q;d.anchored[#d.points]=kind=="anchor"
@@ -804,6 +928,16 @@ local function canvas_press(self,action)
     local list=candidates(p)
     set_hover(self,list)
     local c=list[self.hover_index]
+    if double and c and c.kind=="object" and c.type=="curve" and editor.selected[c.id] then
+        -- Double-click on a selected curve inserts an anchor on it (de Casteljau; shape unchanged).
+        local i,t=curve_nearest(find(c.id),p)
+        local index
+        if editor.commit(function(e) local k,err=edit.insert_anchor(e,c.id,i,t);index=k;if not k then return nil,err end end,true) then
+            editor.select(c.id);editor.anchor={id=c.id,i=index}
+        end
+        self.last_press=nil
+        return
+    end
     if double and c and c.kind=="object" and c.type=="line" and editor.selected[c.id] then
         -- Double-click on a selected line inserts a point exactly on the segment (shape unchanged).
         local o=find(c.id)
@@ -843,7 +977,7 @@ local function canvas_press(self,action)
         return
     end
     if c.kind=="handle" then
-        editor.selection,editor.vertex,editor.vertex2=c.id,c.index and {id=c.id,index=c.index} or nil,nil;editor.touch()
+        editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,c.index and {id=c.id,index=c.index} or nil,nil,nil;editor.touch()
         start_handle(self,c.id,c.handle,p)
     elseif c.kind=="vertex" then
         if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
@@ -853,6 +987,7 @@ local function canvas_press(self,action)
             -- A prefab end: its exit handle changes parameters; otherwise the whole run moves.
             local name=prefab_end_handle(o,c.index)
             if name then start_handle(self,c.id,name,p) else start_move(self,c,p) end
+        elseif o.type=="curve" then start_handle(self,c.id,"a"..(c.index==1 and 1 or #o.anchors),p)
         else start_vertex(self,c,p) end
     elseif c.kind=="start" or c.kind=="finish" then
         editor.select(c.id)
@@ -899,13 +1034,21 @@ local function canvas_move(self,action)
         end
     elseif drag and drag.kind=="handle" then
         local o=find(drag.id)
-        local params=prefab.drag(o,drag.handle,drag.p0,{p[1]-drag.press[1],p[2]-drag.press[2]},steps(self))
-        if not same_params(params,drag.params or drag.p0) then
+        local params,changed
+        if o.type=="curve" then
+            params=curve_drag(self,drag,p)
+            local key=anchor_key(params)
+            changed=key~=(drag.key or anchor_key(drag.p0));drag.key=key
+        else
+            params=prefab.drag(o,drag.handle,drag.p0,{p[1]-drag.press[1],p[2]-drag.press[2]},steps(self))
+            changed=not same_params(params,drag.params or drag.p0)
+        end
+        if changed then
             drag.moved,drag.params=true,params
-            -- Preview: the reshaped prefab and the moved downstream run; a new Play-blocking error is shown
+            -- Preview: the reshaped piece and the moved downstream run; a new Play-blocking error is shown
             -- as a conflict before the release applies it.
             local e=doc_lib.copy(editor.doc.editor)
-            local moved=edit.set_params(e,drag.id,params) or {}
+            local moved=(o.type=="curve" and edit.set_anchors or edit.set_params)(e,drag.id,params) or {}
             local preview={}
             for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
             drag.downstream=math.max(0,#moved-1)
@@ -934,7 +1077,7 @@ local function canvas_move(self,action)
             editor.set_preview(preview)
         end
     elseif self.box then self.box.to={p[1],p[2]}
-    elseif editor.tool=="draw" then
+    elseif drawing_tool() then
         local d=self.drawing
         snap(self,p,nil,d and d.points[#d.points],d and {unpack(d.points,1,#d.points-1)} or nil)
     elseif editor.tool=="prefab" then self.place=placement(self,p)
@@ -986,7 +1129,9 @@ local function canvas_release(self)
     editor.set_preview(nil)
     if not drag.moved then return end
     if drag.kind=="handle" then
-        if drag.params and not same_params(drag.params,drag.p0) then apply_params(drag.id,drag.params) end
+        local o=find(drag.id)
+        local differs=drag.params and (o.type=="curve" and anchor_key(drag.params)~=anchor_key(drag.p0) or o.type~="curve" and not same_params(drag.params,drag.p0))
+        if differs then apply_params(drag.id,drag.params) end
     elseif drag.kind=="vertex" then
         local q=drag.to
         if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
@@ -1092,6 +1237,7 @@ function on_input(self,action_id,action)
     elseif action_id==hash("editor_y") and self.held.ctrl then
         if editor.undo(false)==false then editor.message="Nothing to redo." end
     elseif action_id==hash("editor_c") and self.held.ctrl then copy_selection()
+    elseif action_id==hash("editor_c") then set_tool(self,"curve")
     elseif action_id==hash("editor_v") and self.held.ctrl then
         if self.drawing then finish_drawing(self) end
         paste_at(self,self.cursor or {editor.camera.x,editor.camera.y})
@@ -1133,8 +1279,8 @@ local function describe(self)
     elseif v and find(v.id) then
         local o=find(v.id)
         local pts=editor.shape(o)
-        local p=pts[v.index]
-        if o.type=="prefab" then lines={(v.index==1 and "Entry" or "Exit").." of "..doc_lib.label(o),string.format("x %.2f m  y %.2f m",p[1],p[2])}
+        local p=end_point(pts,o,v.index)
+        if o.type~="line" then lines={(v.index==1 and "Entry" or "Exit").." of "..doc_lib.label(o),string.format("x %.2f m  y %.2f m",p[1],p[2])}
         else
             lines={"Point "..v.index.." of "..#pts.." in line "..v.id,string.format("x %.2f m  y %.2f m",p[1],p[2])}
             if v.index>1 then lines[#lines+1]="Before: "..seg_text(pts[v.index-1],p) end
@@ -1142,7 +1288,7 @@ local function describe(self)
         end
         local joint=edit.joint(e,v.id,v.index)
         if joint then lines[#lines+1]="Joint "..v.id.." -> "..joint..": dragging moves the downstream run"
-        elseif v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
+        elseif o.type=="line" and v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
         else
             local v2=editor.vertex2
             local q=v2 and find(v2.id) and path(find(v2.id))[v2.index]
@@ -1166,6 +1312,32 @@ local function describe(self)
                 one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
         elseif o.type=="hull" then lines={"Hull "..o.id,#o.vertices.." vertices"}
+        elseif o.type=="curve" then
+            local pts=editor.shape(o)
+            local l=0
+            for i=2,#pts do l=l+dist(pts[i-1],pts[i]) end
+            local run=edit.run_of(e,o.id)
+            lines={"Curve "..o.id,string.format("%d anchors, %.2f m, %d samples",#o.anchors,l,#pts),#run>1 and "Run of "..#run.." pieces" or "Not connected"}
+            -- The direction change at each joint (0 deg: a smooth join).
+            local next,prev=doc_lib.links(e)
+            local function kink(a,b)
+                local la,lb=length(a),length(b)
+                if la==0 or lb==0 then return 0 end
+                return math.deg(math.acos(math.max(-1,math.min(1,(a[1]*b[1]+a[2]*b[2])/(la*lb)))))
+            end
+            if prev[o.id] then
+                local u=editor.shape(find(prev[o.id]))
+                lines[#lines+1]=string.format("Join from %s: kink %.1f deg",prev[o.id],kink({u[#u][1]-u[#u-1][1],u[#u][2]-u[#u-1][2]},{pts[2][1]-pts[1][1],pts[2][2]-pts[1][2]}))
+            end
+            if next[o.id] then
+                local w=editor.shape(find(next[o.id]))
+                local n=#pts
+                lines[#lines+1]=string.format("Join to %s: kink %.1f deg",next[o.id],kink({pts[n][1]-pts[n-1][1],pts[n][2]-pts[n-1][2]},{w[2][1]-w[1][1],w[2][2]-w[1][2]}))
+            end
+            local a=editor.anchor and editor.anchor.id==o.id and o.anchors[editor.anchor.i]
+            if a then lines[#lines+1]=string.format("Anchor %d: x %.2f  y %.2f m",editor.anchor.i,a.p[1],a.p[2]) end
+            lines[#lines+1]="Drag anchors and tangents (pink);"
+            lines[#lines+1]="double-click adds an anchor."
         elseif o.type=="prefab" then
             local pts=editor.shape(o)
             lines={doc_lib.label(o).." (prefab)",string.format("At x %.2f  y %.2f m",o.at[1],o.at[2])}
@@ -1179,22 +1351,25 @@ local function describe(self)
         else lines={"Label "..o.id,o.text} end
     elseif editor.tool=="prefab" then
         lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-6 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
+    elseif editor.tool=="curve" then
+        lines={"Curve [C]","Click to place anchors; tangents","follow them automatically. Click","the last anchor, double-click or","Enter to finish; Backspace undoes","an anchor. Select the curve to drag","anchors and tangents (pink).","Start or end on a free end to","connect (green ring)."}
     elseif editor.tool=="draw" then
         lines={"Draw [D]","Click to place points","Click the last point, double-click","or Enter to finish; Backspace undoes","a point; Esc discards the piece.","Start or end on a free end to","connect (green ring).","","Snap: 0.5 m grid [G], Alt 0.1 m,","Shift 15 deg, Ctrl off."}
     else
         lines={shorten(editor.doc.name,30),string.format("Test start speed %.1f m/s",editor.test_speed),"-/+: speed (Shift+click: 5 m/s)","F test start, Shift+F drop here",
-            "Ctrl+Z / Ctrl+Y: undo / redo","Ctrl+C / Ctrl+V: copy / paste","Tab: next item under the cursor","Shift+click: add to selection","Drag on empty space: box select"}
+            "Ctrl+Z / Ctrl+Y: undo / redo","Ctrl+C / Ctrl+V: copy / paste","Tab: next item under the cursor","Shift+click: add to selection","Drag on empty space: box select",
+            string.format("Curves sampled: %s mm / %s m",doc_lib.SAMPLING.tolerance*1000,doc_lib.SAMPLING.max_segment)}
     end
     return table.concat(lines,"\n")
 end
 local function readout(self)
     local d,drag=self.drawing,self.drag
-    if d and self.snapped and editor.tool=="draw" then
+    if d and self.snapped and drawing_tool() then
         local last=d.points[#d.points]
         local note=self.snapped.kind=="anchor" and self.snapped.anchor.end_free and "  connects to "..self.snapped.anchor.id or ""
         return seg_text(last,self.snapped.p)..note
     end
-    if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then return "starts at "..self.snapped.anchor.id.." end (connects)" end
+    if drawing_tool() and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then return "starts at "..self.snapped.anchor.id.." end (connects)" end
     if drag and drag.kind=="vertex" and drag.to then
         local o=find(drag.id)
         local pts=editor.shape(o)
@@ -1204,6 +1379,18 @@ local function readout(self)
         return table.concat(t," | ")
     end
     if drag and drag.kind=="move" and drag.moved then return string.format("dx %.2f m  dy %.2f m",drag.delta[1],drag.delta[2]) end
+    if drag and drag.kind=="handle" and drag.params and find(drag.id).type=="curve" then
+        local kind,i=drag.handle:sub(1,1),tonumber(drag.handle:sub(2))
+        local a=drag.params[i]
+        local text
+        if kind=="a" then text=string.format("anchor %d: x %.2f  y %.2f m",i,a.p[1],a.p[2])
+        else
+            local t=a[kind=="i" and "in" or "out"]
+            text=string.format("tangent %.2f m  %.1f deg (%s)",length(t),math.deg(math.atan2(t[2],t[1])),a.mode)
+        end
+        text=text..(drag.downstream and drag.downstream>0 and " | moves "..drag.downstream.." downstream" or "")
+        return drag.conflict and text.." | conflict: "..drag.conflict or text
+    end
     if drag and drag.kind=="handle" and drag.params then
         local o=find(drag.id)
         local t={}
@@ -1243,30 +1430,52 @@ local function draw_overlay(self)
     local v=editor.vertex
     if v and find(v.id) then
         local pts=editor.shape(find(v.id))
-        handle(pts[v.index],C.selected,HANDLE_PX+3)
+        handle(end_point(pts,find(v.id),v.index),C.selected,HANDLE_PX+3)
         local vs=vertex_state()
         -- Delete preview: an inner point's neighbours are joined.
         if vs and vs.inner and not self.drag then overlay.line(o,to_px(pts[v.index-1],s),to_px(pts[v.index+1],s),C.join,2) end
         local v2=editor.vertex2 and find(editor.vertex2.id)
         if v2 and not self.drag then
             -- Second end for Connect: a bridge preview, or a ring when the ends touch.
-            local q=editor.shape(v2)[editor.vertex2.index] or pts[v.index]
+            local vp=end_point(pts,find(v.id),v.index)
+            local q=end_point(editor.shape(v2),v2,editor.vertex2.index) or vp
             handle(q,C.selected,HANDLE_PX+3)
-            if dist(q,pts[v.index])>=0.01 then overlay.line(o,to_px(pts[v.index],s),to_px(q,s),C.connect,3) else handle(q,C.connect,HANDLE_PX+12) end
+            if dist(q,vp)>=0.01 then overlay.line(o,to_px(vp,s),to_px(q,s),C.connect,3) else handle(q,C.connect,HANDLE_PX+12) end
         else
             local target=not self.drag and connect_target(v)
             if target then handle(target.p,C.connect,HANDLE_PX+12) end
         end
     end
-    if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
+    if drawing_tool() and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
     local next,prev=doc_lib.links(e)
-    -- A selected prefab's handles (its parameters), the hovered one larger.
+    -- A selected prefab's or curve's handles, the hovered one larger. Curve tangents are drawn as lines to
+    -- diamond handles; at a joint the neighbour's direction (green) and the curve's (pink) show the kink.
     local hovered_handle=editor.tool=="select" and hover and hover.kind=="handle" and not self.drag and hover.key
     for _,obj in ipairs(e.objects) do
-        if obj.type=="prefab" and editor.selected[obj.id] then
+        if (obj.type=="prefab" or obj.type=="curve") and editor.selected[obj.id] then
             local shown=editor.preview_objects and editor.preview_objects[obj.id] or obj
-            for _,h in ipairs(prefab.handles(shown)) do
-                handle(h.p,C.param,HANDLE_PX+(hovered_handle=="h:"..obj.id..":"..h.name and 6 or 1))
+            for _,h in ipairs(object_handles(shown)) do
+                if h.tangent then overlay.line(o,to_px(shown.anchors[h.anchor].p,s),to_px(h.p,s),C.param,1) end
+                local picked=editor.anchor and editor.anchor.id==obj.id and editor.anchor.i==h.anchor and not h.tangent
+                handle(h.p,picked and C.selected or C.param,HANDLE_PX+(hovered_handle=="h:"..obj.id..":"..h.name and 6 or 1),h.tangent)
+            end
+            if obj.type=="curve" then
+                local pts=editor.shape(shown)
+                local function ray(p,d,color)
+                    local l=length(d)
+                    if l==0 then return end
+                    local k=40*ui/math.abs(s.ppm_x)/l
+                    overlay.line(o,to_px(p,s),to_px({p[1]+d[1]*k,p[2]+d[2]*k},s),color,2)
+                end
+                if prev[obj.id] then
+                    local u=editor.shape(find(prev[obj.id]))
+                    ray(pts[1],{u[#u][1]-u[#u-1][1],u[#u][2]-u[#u-1][2]},C.joint);ray(pts[1],{pts[2][1]-pts[1][1],pts[2][2]-pts[1][2]},C.param)
+                end
+                if next[obj.id] then
+                    local w=editor.shape(find(next[obj.id]))
+                    local n=#pts
+                    ray(pts[n],{w[2][1]-w[1][1],w[2][2]-w[1][2]},C.joint);ray(pts[n],{pts[n][1]-pts[n-1][1],pts[n][2]-pts[n-1][2]},C.param)
+                end
             end
         end
     end
@@ -1293,7 +1502,25 @@ local function draw_overlay(self)
         if pl.target then handle(pl.p,C.connect,HANDLE_PX+12) end
     end
     local d=self.drawing
-    if d then
+    if d and d.kind=="curve" then
+        -- The curve as it would be placed (automatic tangents), 8 lines per segment, up to the pool size.
+        local pts={unpack(d.points)}
+        if self.snapped and dist(self.snapped.p,pts[#pts])>=0.01 then pts[#pts+1]=self.snapped.p end
+        local anchors=edit.auto_anchors(pts)
+        local steps=math.max(1,math.min(8,math.floor(56/math.max(1,#anchors-1))))
+        for i=1,#anchors-1 do
+            local a,b=anchors[i],anchors[i+1]
+            local p0,p3=a.p,b.p
+            local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+            local last=p0
+            for k=1,steps do
+                local t=k/steps;local u=1-t
+                local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
+                overlay.line(o,to_px(last,s),to_px(q,s),i<#d.points and C.draw or C.rubber,i<#d.points and 3 or 2);last=q
+            end
+        end
+        for _,q in ipairs(d.points) do handle(q,C.draw,HANDLE_PX-2) end
+    elseif d then
         for i=2,#d.points do overlay.line(o,to_px(d.points[i-1],s),to_px(d.points[i],s),C.draw,3) end
         for _,q in ipairs(d.points) do handle(q,C.draw,HANDLE_PX-2) end
         if self.snapped then overlay.line(o,to_px(d.points[#d.points],s),to_px(self.snapped.p,s),C.rubber,2) end
@@ -1304,7 +1531,7 @@ local function draw_overlay(self)
         overlay.line(o,{p0[1],p0[2]},{p1[1],p0[2]},C.box,1);overlay.line(o,{p1[1],p0[2]},{p1[1],p1[2]},C.box,1)
         overlay.line(o,{p1[1],p1[2]},{p0[1],p1[2]},C.box,1);overlay.line(o,{p0[1],p1[2]},{p0[1],p0[2]},C.box,1)
     end
-    local snapping=self.snapped and (editor.tool=="draw" or editor.tool=="prefab" or (self.drag and self.drag.kind~="marker" and self.drag.kind~="handle"))
+    local snapping=self.snapped and (drawing_tool() or editor.tool=="prefab" or (self.drag and self.drag.kind~="marker" and (self.drag.kind~="handle" or self.drag.skip)))
     overlay.snap(o,snapping and to_px(self.snapped.p,s) or nil,snapping and (C[self.snapped.kind] or C.free_snap) or nil)
     local text=readout(self)
     overlay.readout(o,self.cursor_px,text)
@@ -1347,14 +1574,14 @@ local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
 -- Test state (debug only): the selected prefab's handles and its panel rows as shown.
 local function published_handles()
     local o=editor.selection and editor.doc and find(editor.selection)
-    if not (o and o.type=="prefab") then return {} end
+    if not (o and (o.type=="prefab" or o.type=="curve")) then return {} end
     local list={}
-    for _,h in ipairs(prefab_handles(o)) do list[#list+1]={name=h.name,p=h.p,index=h.index or false} end
+    for _,h in ipairs(object_handles(o)) do list[#list+1]={name=h.name,p=h.p,index=h.index or false} end
     return list
 end
 local function published_rows(self)
     local o=editor.selection and editor.doc and find(editor.selection)
-    if not (o and o.type=="prefab" and #editor.selected_ids()==1) then return {} end
+    if not (o and (o.type=="prefab" or o.type=="curve") and #editor.selected_ids()==1) then return {} end
     local list={}
     for i=1,#param_rows(o) do list[i]=gui.get_text(self.buttons["param_"..i].label) end
     return list
@@ -1421,7 +1648,7 @@ function update(self,dt)
         self.description_lines=select(2,description:gsub("\n",""))+1
         gui.set_text(self.message,editor.message or "")
         local p=self.cursor
-        local snapped=self.snapped and self.snapped.kind~="free" and (editor.tool=="draw" or self.drag) and " -> "..self.snapped.kind or ""
+        local snapped=self.snapped and self.snapped.kind~="free" and (drawing_tool() or self.drag) and " -> "..self.snapped.kind or ""
         gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
             editor.camera.zoom,editor.tool,snap_mode(self),snapped,#e.objects,editor.problem and "Play blocked" or "Ready to play")
             ..((self.overlay.dropped or 0)>0 and " | zoom in to see every point" or ""))
@@ -1478,7 +1705,10 @@ function update(self,dt)
         end
         -- A selected prefab's fields: label and value, the focused one as an edit field.
         local sel=editor.selection and find(editor.selection)
-        if sel and sel.type=="prefab" then
+        if sel and sel.type=="curve" and editor.anchor and editor.anchor.id==sel.id and sel.anchors[editor.anchor.i] then
+            gui.set_text(self.buttons.param_1.label,"Anchor "..editor.anchor.i.." tangents: "..sel.anchors[editor.anchor.i].mode.."  (click)")
+            gui.set_color(self.buttons.param_1.box,BUTTON)
+        elseif sel and sel.type=="prefab" then
             local f=self.field
             for i,fd in ipairs(param_rows(sel)) do
                 local b=self.buttons["param_"..i]

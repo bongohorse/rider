@@ -123,8 +123,22 @@ local function changed(a,b)
     if #a~=#b then return true end
     for i,p in ipairs(a) do if p[1]~=b[i][1] or p[2]~=b[i][2] then return true end end
 end
+-- Places the sprites of one part over a list whose point count differs from the drawn one (a curve or
+-- Bump/wave preview during a drag): the sprites are shared out over the new segments like a simplified
+-- display; spare sprites shrink to nothing. The committed change reloads the world (signature).
+local function respread(ids,list,scale)
+    local n=#list-1
+    local k=#ids
+    for j,id in ipairs(ids) do
+        if j>n then go.set(id,"scale.x",0)
+        else
+            local i0,i1=math.floor((j-1)*n/math.min(k,n))+1,math.floor(j*n/math.min(k,n))+1
+            place_line(id,list[i0],list[i1],scale)
+        end
+    end
+end
 -- Redraw moved shapes (drag previews, committed moves, Undo of moves, prefab parameter changes)
--- without a world reload: a prefab type keeps its point count.
+-- without a world reload while the point counts stay; otherwise see respread.
 local function refresh(v,e)
     local scale=sys.get_config_number("physics.scale",0.01)
     for _,o in ipairs(e.objects) do
@@ -136,9 +150,12 @@ local function refresh(v,e)
                 local closed=editor.outline(o)
                 local lists=closed and {closed} or editor.parts(o)
                 local ranges=v.ranges[o.id]
-                for i,id in ipairs(v.objects[o.id]) do
-                    local r=ranges[i];local list=lists[r[3]]
-                    place_line(id,list[r[1]],list[r[2]] or list[1],scale)
+                if not closed and #lists==1 and #lists[1]~=v.counts[o.id] then respread(v.objects[o.id],lists[1],scale)
+                else
+                    for i,id in ipairs(v.objects[o.id]) do
+                        local r=ranges[i];local list=lists[r[3]]
+                        place_line(id,list[r[1]],list[r[2]] or list[1],scale)
+                    end
                 end
             end
             v.shapes[o.id]=points(pts)
@@ -152,22 +169,23 @@ local function tint(ids,colour)
     end
 end
 -- Structure of the drawn document: object ids, types and point counts (label texts, prefab types; a
--- Kicker + landing's direction swaps its parts, so a flip reloads).
+-- Kicker + landing's direction swaps its parts, so a flip reloads; a curve or Bump/wave whose sample
+-- count changed reloads too).
 local function signature(e)
     local t={}
     for _,o in ipairs(e.objects) do
-        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or o.type=="prefab" and o.kind..(o.params.facing or "") or #(o.points or o.vertices))
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or (o.type=="prefab" or o.type=="curve") and (o.kind or "curve")..(o.params and o.params.facing or "")..#doc_lib.path(o) or #(o.points or o.vertices))
     end
     return table.concat(t,"|")
 end
 function M.build(self)
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},labels_by={},shapes={},tints={},geometry=editor.geometry_version}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},shapes={},tints={},geometry=editor.geometry_version}
     local e=editor.doc.editor
     local k,simplified=allocation(e)
     editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; Play needs 800 or fewer.",
         simplified.segments,simplified.sprites) or nil
     for _,o in ipairs(e.objects) do
-        if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id])
+        if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id]);v.counts[o.id]=#doc_lib.path(o)
         else
             local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={};v.labels_by[o.id]=id
         end

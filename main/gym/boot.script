@@ -157,7 +157,7 @@ function init(self)
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a")
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b")
     self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0

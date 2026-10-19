@@ -10,12 +10,27 @@ local function shift(p,d) p[1],p[2]=p[1]+d[1],p[2]+d[2] end
 local function translate_object(o,d)
     if o.type=="label" then shift(o.position,d)
     elseif o.type=="prefab" then shift(o.at,d)
+    elseif o.type=="curve" then for _,a in ipairs(o.anchors) do shift(a.p,d) end
     else for _,p in ipairs(o.type=="line" and o.points or o.vertices) do shift(p,d) end end
 end
 M.translate_object=translate_object
 local path=doc_lib.path
 -- Places a piece's entry exactly on p (keeps a joint exactly equal after a translation).
-local function set_entry(o,p) if o.type=="line" then o.points[1]={p[1],p[2]} else o.at={p[1],p[2]} end end
+local function set_entry(o,p)
+    if o.type=="line" then o.points[1]={p[1],p[2]} elseif o.type=="curve" then o.anchors[1].p={p[1],p[2]} else o.at={p[1],p[2]} end
+end
+-- A piece's end (index 1 or its last path point) placed exactly on p.
+local function set_end(o,first,p)
+    if o.type=="line" then o.points[first and 1 or #o.points]={p[1],p[2]}
+    elseif o.type=="curve" then o.anchors[first and 1 or #o.anchors].p={p[1],p[2]}
+    elseif first then o.at={p[1],p[2]} end
+end
+-- A curve run backwards: anchors reversed, each anchor's tangents swapped (same shape).
+local function reverse_curve(o)
+    local r={}
+    for i=#o.anchors,1,-1 do local a=o.anchors[i];r[#r+1]={p=a.p,["in"]=a.out,out=a["in"],mode=a.mode} end
+    o.anchors=r
+end
 -- A run containing a prefab keeps its direction: prefabs always run left to right.
 local function fixed(e,run)
     for _,id in ipairs(run) do if find(e,id).type=="prefab" then return true end end
@@ -118,8 +133,8 @@ local function reverse_run(e,run)
     for _,id in ipairs(run) do
         set[id]=true
         local o=find(e,id)
-        local r={};for i=#o.points,1,-1 do r[#r+1]=o.points[i] end
-        o.points=r
+        if o.type=="curve" then reverse_curve(o)
+        else local r={};for i=#o.points,1,-1 do r[#r+1]=o.points[i] end;o.points=r end
     end
     for _,c in ipairs(e.connections) do if set[c.from] then c.from,c.to=c.to,c.from end end
     return true
@@ -164,9 +179,9 @@ function M.connect(e,a,b)
     M.translate(e,{a.id},{pb[1]-pa[1],pb[2]-pa[2]})
     -- The joint is exact: a line end takes the other end's position (a prefab's derived exit differs
     -- from it at most by rounding).
-    if oa.type=="line" then oa.points[a.index]=pb
+    if oa.type~="prefab" then set_end(oa,a_first,pb)
     elseif a_first then oa.at=pb
-    elseif ob.type=="line" then local q=path(oa)[a.index];ob.points[b.index]={q[1],q[2]} end
+    elseif ob.type~="prefab" then set_end(ob,b_first,path(oa)[a.index]) end
     if a_first==b_first then
         if reverse_run(e,run) then a_first=not a_first else reverse_run(e,M.run_of(e,b.id));b_first=not b_first end
     end
@@ -229,6 +244,7 @@ function M.add_line(e,pts,first,last)
     if last then
         -- The first connection may have reversed the new piece: find the drawn last point again.
         local index=o.points[1]==finish and 1 or #o.points
+        if o.type=="curve" then index=o.anchors[1].p==finish and 1 or #path(o) end
         local ok,err=M.connect(e,{id=o.id,index=index},last)
         if not ok then note="End not connected: "..err end
     end
@@ -325,6 +341,7 @@ function M.mirror(e,ids,side)
         if o.type=="line" then n.points=reflect(o.points)
         elseif o.type=="hull" then n.vertices=reflect(o.vertices) -- reversed order keeps it counter-clockwise
         elseif o.type=="label" then n.position={c2-o.position[1],o.position[2]}
+        elseif o.type=="curve" then n=M.mirror_curve(o,c2)
         else n=prefab.mirror(o,c2) end
         objects[i]=n
     end
@@ -333,5 +350,112 @@ function M.mirror(e,ids,side)
     -- The mirrored copy spans c2-b[2]..c2-b[1]; it moves until it is at least 1 m clear of the original.
     local shift=side>0 and math.ceil((b[2]+1-(c2-b[2]))*2)/2 or -math.ceil(((c2-b[1])-(b[1]-1))*2)/2
     return M.paste(e,mirrored,{shift,0})
+end
+-- Curves (LE5b). A shape change follows R4 like a prefab change: the exit displacement moves the whole
+-- downstream run; the entry may only move while it is free (a joint belongs to the upstream piece).
+-- anchors: the new anchor list. Returns the ids of every changed object.
+function M.set_anchors(e,id,anchors)
+    local o=find(e,id)
+    if not o or o.type~="curve" then return nil,"Select a curve first" end
+    local _,prev=doc_lib.links(e)
+    local entry=o.anchors[1].p
+    if prev[id] and not doc_lib.same(anchors[1].p,entry,0) then return nil,"The curve's start is a connection; disconnect it first [J]" end
+    local before=doc_lib.exit(o)
+    o.anchors=anchors
+    local after=doc_lib.exit(o)
+    local d={after[1]-before[1],after[2]-before[2]}
+    local moved={id}
+    local down=M.downstream(e,id)
+    for _,m in ipairs(down) do translate_object(find(e,m),d);moved[#moved+1]=m end
+    if down[1] then set_entry(find(e,down[1]),after) end
+    return moved
+end
+-- Automatic tangents for clicked anchors (Catmull-Rom, a third of the neighbour distance), mode smooth;
+-- the ends point at their neighbour.
+function M.auto_anchors(pts)
+    local list={}
+    for i,p in ipairs(pts) do
+        local a,b=pts[i-1] or p,pts[i+1] or p
+        local tx,ty=(b[1]-a[1])/6,(b[2]-a[2])/6
+        if i==1 or i==#pts then tx,ty=tx*2,ty*2 end
+        list[i]={p={p[1],p[2]},["in"]={-tx,-ty},out={tx,ty},mode="smooth"}
+    end
+    list[1]["in"]={0,0};list[#list].out={0,0}
+    return list
+end
+-- A drawn curve (Curve tool): one new piece, connected where it starts or ends on a free end (R5).
+function M.add_curve(e,pts,first,last)
+    local clean={}
+    for _,p in ipairs(pts) do
+        local q=clean[#clean]
+        if not q or (p[1]-q[1])^2+(p[2]-q[2])^2>=0.0001 then clean[#clean+1]={p[1],p[2]} end
+    end
+    if #clean<2 then return nil,"A curve needs two anchors at least 1 cm apart" end
+    local o={id=new_id(e),type="curve",anchors=M.auto_anchors(clean)}
+    e.objects[#e.objects+1]=o
+    local finish,note=clean[#clean]
+    if first then
+        local ok,err=M.connect(e,{id=o.id,index=1},first)
+        if not ok then return nil,err end
+    end
+    if last then
+        local p=o.anchors[1].p
+        local index=(p[1]==finish[1] and p[2]==finish[2]) and 1 or #path(o)
+        local ok,err=M.connect(e,{id=o.id,index=index},last)
+        if not ok then note="End not connected: "..err end
+    end
+    M.orient(e,o.id)
+    return o.id,note
+end
+-- de Casteljau split of segment i at t: an anchor inserted on the curve, the shape unchanged.
+function M.insert_anchor(e,id,i,t)
+    local o=find(e,id)
+    if not o or o.type~="curve" or i<1 or i>=#o.anchors then return nil,"No curve segment to insert into" end
+    local a,b=o.anchors[i],o.anchors[i+1]
+    local p0,p3=a.p,b.p
+    local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+    local function lerp(u,v) return {u[1]+(v[1]-u[1])*t,u[2]+(v[2]-u[2])*t} end
+    local q0,q1,q2=lerp(p0,p1),lerp(p1,p2),lerp(p2,p3)
+    local r0,r1=lerp(q0,q1),lerp(q1,q2)
+    local m=lerp(r0,r1)
+    a.out={q0[1]-p0[1],q0[2]-p0[2]}
+    b["in"]={q2[1]-p3[1],q2[2]-p3[2]}
+    table.insert(o.anchors,i+1,{p=m,["in"]={r0[1]-m[1],r0[2]-m[2]},out={r1[1]-m[1],r1[2]-m[2]},mode="smooth"})
+    return i+1
+end
+-- Deleting an anchor: an inner one joins its neighbours (their tangents stay); an end shortens the curve.
+function M.delete_anchor(e,id,i)
+    local o=find(e,id)
+    if not o or o.type~="curve" then return nil,"Select a curve anchor first" end
+    local next,prev=doc_lib.links(e)
+    if (i==1 and prev[id]) or (i==#o.anchors and next[id]) then return nil,"The anchor is a connection; disconnect it first [J]" end
+    if #o.anchors<=2 then return nil,"A curve needs two anchors; select the curve and delete it instead" end
+    table.remove(o.anchors,i)
+    if i==1 then o.anchors[1]["in"]={0,0} end
+    if i>#o.anchors then o.anchors[#o.anchors].out={0,0} end
+    return true
+end
+-- Split a curve at an inner anchor: two connected curves (no seam).
+function M.split_curve(e,id,i)
+    local o,pos=find(e,id)
+    if not o or o.type~="curve" or i<=1 or i>=#o.anchors then return nil,"Split needs an anchor inside a curve" end
+    local b={id=new_id(e),type="curve",anchors={}}
+    for k=i,#o.anchors do b.anchors[#b.anchors+1]=doc_lib.copy(o.anchors[k]) end
+    b.anchors[1]["in"]={0,0}
+    for k=#o.anchors,i+1,-1 do o.anchors[k]=nil end
+    o.anchors[i].out={0,0}
+    for _,c in ipairs(e.connections) do if c.from==id then c.from=b.id end end
+    e.connections[#e.connections+1]={from=id,to=b.id}
+    table.insert(e.objects,pos+1,b)
+    return b.id
+end
+-- A curve's mirror image: anchors reflected and reversed, tangents swapped with their x negated.
+function M.mirror_curve(o,c2)
+    local n={id=o.id,type="curve",anchors={}}
+    for i=#o.anchors,1,-1 do
+        local a=o.anchors[i]
+        n.anchors[#n.anchors+1]={p={c2-a.p[1],a.p[2]},["in"]={-a.out[1],a.out[2]},out={-a["in"][1],a["in"][2]},mode=a.mode}
+    end
+    return n
 end
 return M
