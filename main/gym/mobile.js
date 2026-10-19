@@ -114,6 +114,10 @@
     pending.station=ids[(index+1)%ids.length];
   });
   api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
+  // A20: the same pause and slow-motion requests as Space and X; the loader owns the time step.
+  const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
+  const speedButton=button('Speed 1x',toolbar,()=>{pending.time_step=true;});
+  api.setTime=(paused,step)=>{pauseButton.textContent=paused?'Resume':'Pause';speedButton.textContent='Speed '+step+'x';};
   // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
   button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
   button('Layout A · mirror',toolbar,b=>{

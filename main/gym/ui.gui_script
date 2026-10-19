@@ -1,3 +1,4 @@
+local socket=require "socket"
 local stations=require "main.gym.stations"
 local mobile=require "main.gym.mobile"
 local layout=require "main.gym.layout"
@@ -40,12 +41,25 @@ function init(self)
     gui.set_color(self.section_next,vmath.vector4(0.12,0.3,0.3,1))
     self.section_label=layout.text(vmath.vector3(374,390,0),"Section [V]","left_top")
     gui.set_font(self.section_label,"default");gui.set_scale(self.section_label,vmath.vector3(0.5,0.5,1))
+    -- A20 pause and slow motion: two overlay buttons and a centred state line (desktop; touch uses the toolbar).
+    self.time_buttons={}
+    for _,spec in ipairs({{"pause",482,"Pause [Space]",92},{"step",584,"Speed 1x [X]",100}}) do
+        local box=layout.box(vmath.vector3(spec[2],390,0),vmath.vector3(spec[4],24,0),"left_top")
+        gui.set_color(box,vmath.vector4(0.12,0.3,0.3,1))
+        local label=layout.text(vmath.vector3(spec[2],390,0),spec[3],"left_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.5,0.5,1))
+        self.time_buttons[spec[1]]={box=box,label=label}
+    end
+    self.time_line=layout.text(vmath.vector3(480,460,0),"")
+    gui.set_font(self.time_line,"default");gui.set_scale(self.time_line,vmath.vector3(0.7,0.7,1));gui.set_color(self.time_line,vmath.vector4(1,0.85,0.35,1))
+    self.time={paused=false,step=1}
+    self.debug_clock=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a20"
     self.station=layout.text(vmath.vector3(240,434,0),"Straight | start 0 m/s [1-9]","left_top")
     gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
     self.station_result=layout.text(vmath.vector3(240,414,0),"","left_top")
     gui.set_font(self.station_result,"default");gui.set_pivot(self.station_result,gui.PIVOT_W);gui.set_scale(self.station_result,vmath.vector3(0.48,0.48,1))
     self.tuning_open=false
-    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy")
+    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy\nSpace: pause   X: slow motion 1x / 0.5x / 0.25x")
     gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
     gui.set_scale(self.help,vmath.vector3(0.5,0.5,1));gui.set_visible(self.help,false)
     self.tuning_button=layout.box(vmath.vector3(922,514,0),vmath.vector3(52,28,0),"right_top")
@@ -208,6 +222,16 @@ function on_message(self,id,data,sender)
         -- The level editor draws its own panels; the driving HUD stays hidden while editing.
         for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
         cancel_drag(self)
+    elseif id==hash("time_state") then
+        self.time={paused=data.paused,step=data.step}
+        local step=data.step==1 and "1x" or tostring(data.step).."x"
+        gui.set_text(self.time_buttons.pause.label,data.paused and "Resume [Space]" or "Pause [Space]")
+        gui.set_text(self.time_buttons.step.label,"Speed "..step.." [X]")
+        gui.set_text(self.time_line,data.paused and "PAUSED [Space]" or data.step~=1 and "Slow motion "..step.." - values not comparable" or "")
+        if html5 then
+            html5.run("window.riderTimeState="..json.encode({paused=data.paused,step=data.step}))
+            html5.run("window.riderMobile?.setTime?.("..tostring(data.paused)..","..data.step..")")
+        end
     elseif id==hash("finish_reached") then
         self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
         gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time))
@@ -235,7 +259,13 @@ function update(self,dt)
     local enabled=mobile.enabled()
     gui.set_visible(self.section_next,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
     gui.set_visible(self.section_label,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
-    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label}) do gui.set_visible(node,not enabled) end
+    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label,self.time_line}) do gui.set_visible(node,not enabled) end
+    for _,b in pairs(self.time_buttons) do gui.set_visible(b.box,not enabled);gui.set_visible(b.label,not enabled) end
+    if self.debug_clock then
+        -- A20 only: unscaled engine time (this collection is not time-scaled) next to the wall clock.
+        self.engine_time,self.engine_frames=(self.engine_time or 0)+dt,(self.engine_frames or 0)+1
+        html5.run("window.riderClock="..json.encode({engine=self.engine_time,frames=self.engine_frames,wall=socket.gettime()}))
+    end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)
     gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
@@ -272,7 +302,8 @@ function update(self,dt)
         end
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
-        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)}}))
+        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)},
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box)}))
     end
     if html5 then
         local status,visible=feedback.state()
@@ -305,6 +336,13 @@ function on_input(self,id,action)
         return true
     end
     if self.feedback_open or self.feedback_modal then return true end
+    if id==hash("pause_toggle") and action.pressed then msg.post("main:/loader#script","time_control",{action="pause"});return true end
+    if id==hash("time_step") and action.pressed then msg.post("main:/loader#script","time_control",{action="step"});return true end
+    if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
+        for name,b in pairs(self.time_buttons) do
+            if gui.pick_node(b.box,action.x,action.y) then msg.post("main:/loader#script","time_control",{action=name});return true end
+        end
+    end
     if id==hash("tuning_toggle") and action.pressed then toggle_tuning(self);return true end
     if id==hash("help_toggle") and action.pressed then toggle_help(self);return true end
     if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then

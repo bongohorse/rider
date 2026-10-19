@@ -6,6 +6,8 @@ local socket=require "socket"
 local editor=require "main.gym.editor"
 local doc_lib=require "main.gym.editor_doc"
 local EDITOR="main:/editor#gui"
+local time_scale=require "main.gym.time_scale"
+local OWNER="gym:/owner#script"
 local function switch(self,request)
     self.station,self.speed=request.id,request.speed or ""
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
@@ -15,6 +17,9 @@ local function switch(self,request)
     self.preset=request.preset or self.preset
     self.generation=self.generation+1
     self.loading,self.deadline=true,0
+    -- A20: every new world (station, Edit/Play, import) starts running at 1.0, so measurements start comparable.
+    self.time=time_scale.new()
+    msg.post("#ui","time_state",time_scale.state(self.time))
     msg.post("#ui","station_loading",{generation=self.generation})
     msg.post("#ui","cancel_drag")
     msg.post("#world","disable")
@@ -160,6 +165,7 @@ function init(self)
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c")
     self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
+    self.time=time_scale.new()
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
     if id=="custom" then
@@ -235,6 +241,16 @@ function update(self,dt)
 end
 function on_message(self,id,data,sender)
     if id==hash("preset_changed") then self.preset=data.key
+    -- A20 pause/slow motion: play worlds only. Pausing stops ticks at once; any running factor is set only after
+    -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.
+    elseif id==hash("time_control") and not self.loading and editor.mode=="play" then
+        if time_scale.control(self.time,data.action) then
+            if self.time.paused then time_scale.apply(self.time,"#world") end
+            msg.post(OWNER,"time_state",time_scale.state(self.time,self.generation))
+            msg.post("#ui","time_state",time_scale.state(self.time))
+        end
+    elseif id==hash("time_ready") and data.generation==self.generation and not self.loading and editor.mode=="play" then
+        time_scale.apply(self.time,"#world")
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)
         if ok then enter_edit(self) else editor.message=err end
@@ -251,6 +267,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("proxy_loaded") then
         self.world_loads=self.world_loads+1
         msg.post(sender,"init")
+        time_scale.apply(self.time,sender,editor.mode=="edit")
         if self.world_loads>1 or self.station=="custom" then
             msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,generation=self.generation,
                 snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms,edit=self.edit})
@@ -259,6 +276,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("gym_ready") and data.generation==self.generation then
         self.loading=false
         msg.post(sender,"world_load_count",{count=self.world_loads,generation=self.generation})
+        if not data.edit then msg.post(sender,"time_state",time_scale.state(self.time,self.generation)) end
         local loaded=self.station=="custom" and data.ok and self.snapshot
         -- A test run's snapshot carries a temporary start; the editor keeps opening from the saved level.
         if loaded and not (self.play and self.test_run) then

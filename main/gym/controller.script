@@ -12,6 +12,13 @@ local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
 local editor_view = require "main.gym.editor_view"
+-- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
+local LOADER="main:/loader#script"
+local GAMEPLAY={}
+for _,id in ipairs({"throttle_up","throttle_w","brake_down","brake_s","lean_left","lean_right","retry","section_cycle","preset_cycle","crash_toggle"}) do GAMEPLAY[hash(id)]=true end
+local function clear_time_input(self)
+    self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
+end
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
 local function request_reset(self,reason)
     if self.vehicle and self.vehicle.ready and not self.pending_reset then
@@ -208,6 +215,13 @@ function init(self)
     self.max_angle = 0
     self.target = hash("/focus")
     self.tick = 0
+    self.paused,self.time_factor,self.world_time,self.fixed_ticks,self.time_scaled_ticks,self.time_dropped=false,1,0,0,0,0
+    -- Automated measurement cases must tick at factor 1.0 (asserted every fixed step); a20 changes it on purpose.
+    self.measure_case=sys.get_engine_info().is_debug and self.testcase~="" and self.testcase~="a20"
+    if self.testcase=="a20" then
+        assert(sys.get_engine_info().is_debug,"Time probe requires debug engine")
+        self.time_probe=require "main.gym.time_probe"
+    end
     msg.post(".", "acquire_input_focus")
 end
 function update(self, dt)
@@ -226,7 +240,17 @@ function update(self, dt)
         wheel_max_x=self.track.wheel_max_x,ticks=self.track.ticks,x=self.track.x,y=self.track.y,vx=self.track.vx,
         window=self.track.window and {ticks=self.track.window.ticks,airborne=self.track.window.airborne,unpowered=self.track.window.unpowered,losses=self.track.window.losses,dvy=self.track.window.dvy,
             dvx_drop=self.track.window.dvx_drop,vx_min=self.track.window.vx_min or false,vx_max=self.track.window.vx_max or false,passed=self.track.window.passed or false} or false})) end
-    self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
+    -- Engine (unscaled) frame time for FPS and phone-trial readings; 0 while paused.
+    local frame_dt=self.time_factor>0 and dt/self.time_factor or 0
+    self.mobile=mobile.poll(frame_dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
+    if self.mobile.pause then msg.post(LOADER,"time_control",{action="pause"}) end
+    if self.mobile.time_step then msg.post(LOADER,"time_control",{action="step"}) end
+    if self.paused then
+        -- Paused: touch drive, Retry and section requests are dropped; a station switch leaves the pause.
+        local m=self.mobile
+        if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right then self.time_dropped=self.time_dropped+1 end
+        self.mobile={station=m.station,clear=m.clear,started=m.started}
+    end
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
     if self.mobile.retry then request_reset(self,"manual") end
@@ -275,11 +299,16 @@ function update(self, dt)
         audio.update(self)
         rider.animate(self.vehicle,dt)
         rider.paint(self.vehicle,self.head_contact)
-        local sample = telemetry.frame(self.metrics,self.vehicle,dt)
+        local sample = telemetry.frame(self.metrics,self.vehicle,frame_dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
             sample.sequence=self.telemetry_seq
             stations.enrich(self,sample)
+            -- A20: every measurement records its time factor; any tick at another factor makes this world's
+            -- values not comparable with the 1.0 protocols.
+            sample.time_factor,sample.time_scaled_ticks=self.paused and 0 or self.time_factor,self.time_scaled_ticks
+            if html5 then html5.run("window.riderStationReport&&Object.assign(window.riderStationReport,"..json.encode({time_factor=sample.time_factor,
+                time_scaled_ticks=self.time_scaled_ticks,comparable=self.time_scaled_ticks==0})..")") end
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count
@@ -313,6 +342,7 @@ function update(self, dt)
         end
     end
     if self.scenario then self.scenario.update_after(self) end
+    if self.time_probe then self.time_probe.update(self) end
 end
 local function command(self)
     if self.ui_captured then return {throttle=0,brake_reverse=0,lean=0,allow_reverse=false} end
@@ -334,6 +364,11 @@ function on_input(self, action_id, action)
             return
         end
     end
+    if self.paused then
+        -- Paused: drive, Retry, section, preset and crash keys are dropped (counted for the a20 probe).
+        if action.pressed and GAMEPLAY[action_id] then self.time_dropped=self.time_dropped+1 end
+        return
+    end
     if action_id==hash("section_cycle") then if action.pressed then self.pending_section=true end;return end
     if action_id==hash("preset_cycle") then
         if action.pressed then self.pending_preset=({a="b",b="c",c="a"})[self.preset] end
@@ -353,6 +388,9 @@ function on_input(self, action_id, action)
     if self.scenario then self.scenario.input(self,action_id,action) end
 end
 function fixed_update(self, dt)
+    if self.measure_case then assert(math.abs(dt*60-1)<1e-4,"Measurement case ticked at time factor "..dt*60) end
+    self.world_time,self.fixed_ticks=self.world_time+dt,self.fixed_ticks+1
+    if math.abs(dt*60-1)>1e-4 then self.time_scaled_ticks=self.time_scaled_ticks+1 end
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
@@ -429,6 +467,7 @@ function fixed_update(self, dt)
         history.push(self.history,sample,dt)
     end
     if self.scenario then self.scenario.fixed(self,dt) end
+    if self.time_probe then self.time_probe.fixed(self,dt) end
 end
 function final(self)
     mobile.final()
@@ -449,6 +488,12 @@ function on_message(self,id,data,sender)
         self.load={requested=data.requested,parse_ms=data.parse_ms}
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
+    elseif id==hash("time_state") and data.generation==self.session_generation then
+        if data.paused~=self.paused then clear_time_input(self);audio.pause(self,data.paused) end
+        if self.paused and not data.paused then self.since_resume={ticks=0,driven=0} end
+        self.paused,self.time_factor=data.paused,data.factor
+        msg.post(sender,"time_ready",{generation=data.generation})
+    elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("next_section") then self.pending_section=true
     elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)
