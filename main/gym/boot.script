@@ -76,7 +76,7 @@ local function play(self,test)
     if #text>custom.limit then editor.message="Play blocked: the level is larger than 256 KiB";return end
     -- The run may use a temporary test start; only the START level is saved and exported (R10).
     local snapshot=custom.freeze(run or level,run_text or text)
-    self.play_text,self.test_run=text,run~=nil
+    self.play_text,self.test_run,self.play_revision=text,run~=nil,editor.doc.editor.revision
     set_mode(self,"play")
     switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
 end
@@ -114,9 +114,10 @@ function init(self)
         local saved,rejected=custom.restore()
         local draft=editor.saved_draft()
         draft=draft and draft.doc
-        -- Unplayed edits of this level (or a draft without any level) reopen the editor after a reload.
-        if draft and (not saved or (saved.doc.id==draft.id and (saved.doc.editor and saved.doc.editor.compiled_revision)~=draft.editor.revision)) then
-            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,true end
+        -- A draft with unplayed edits reopens the editor after a reload, whichever level is saved: the
+        -- draft records the revision its last successful Play compiled (compiled_revision).
+        if draft and draft.editor.compiled_revision~=draft.editor.revision then
+            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,saved.doc.id==draft.id end
             editor.open(draft)
             self.edit=true
             set_mode(self,"edit")
@@ -227,6 +228,9 @@ function on_message(self,id,data,sender)
             if saved then
                 self.syncing=true
                 msg.post("#ui","custom_status",{text="Saving..."})
+                -- The draft now matches a played level: a reload drives instead of reopening the editor.
+                local e=editor.doc and editor.doc.editor
+                if e and e.revision==self.play_revision then e.compiled_revision=e.revision;editor.save_draft() end
                 if self.debug_editor then html5.run("window.riderSavedLevel="..self.play_text) end
             else
                 msg.post("#ui","custom_status",{text="Save failed; the previous saved level is kept ("..err..")"})

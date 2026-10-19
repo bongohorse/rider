@@ -142,7 +142,8 @@ end
 local function bounds(e)
     local b={math.huge,-math.huge,math.huge,-math.huge}
     local function add(x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
-    each_segment(e,function(a) add(a[1],a[2]) end)
+    -- Both ends of every edge: an open line's last point is no edge's start.
+    each_segment(e,function(a,b) add(a[1],a[2]);add(b[1],b[2]) end)
     for _,o in ipairs(e.objects) do if o.type=="label" then add(o.position[1],o.position[2]) end end
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
