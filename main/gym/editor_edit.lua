@@ -1,6 +1,7 @@
 -- Level editor edit operations (LE3; contract R4, R5, R16, R17). Pure: they change the editor block
 -- of a document copy in place; the caller validates and commits the result as one Undo step.
 local doc_lib=require "main.gym.editor_doc"
+local prefab=require "main.gym.editor_prefab"
 local M={}
 local function find(e,id) for i,o in ipairs(e.objects) do if o.id==id then return o,i end end end
 M.find=find
@@ -8,7 +9,16 @@ local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id
 local function shift(p,d) p[1],p[2]=p[1]+d[1],p[2]+d[2] end
 local function translate_object(o,d)
     if o.type=="label" then shift(o.position,d)
+    elseif o.type=="prefab" then shift(o.at,d)
     else for _,p in ipairs(o.type=="line" and o.points or o.vertices) do shift(p,d) end end
+end
+M.translate_object=translate_object
+local path=doc_lib.path
+-- Places a piece's entry exactly on p (keeps a joint exactly equal after a translation).
+local function set_entry(o,p) if o.type=="line" then o.points[1]={p[1],p[2]} else o.at={p[1],p[2]} end end
+-- A run containing a prefab keeps its direction: prefabs always run left to right.
+local function fixed(e,run)
+    for _,id in ipairs(run) do if find(e,id).type=="prefab" then return true end end
 end
 -- The run containing a line, head to tail.
 function M.run_of(e,id)
@@ -24,7 +34,7 @@ function M.closure(e,ids)
     local set,list={},{}
     for _,id in ipairs(ids) do
         local o=find(e,id)
-        for _,m in ipairs(o and (o.type=="line" and M.run_of(e,id) or {id}) or {}) do
+        for _,m in ipairs(o and (doc_lib.terrain(o) and M.run_of(e,id) or {id}) or {}) do
             if not set[m] then set[m]=true;list[#list+1]=m end
         end
     end
@@ -44,13 +54,13 @@ end
 -- A joint belongs to its upstream piece: (downstream piece, 1) -> (upstream piece, last).
 function M.owner(e,id,index)
     local _,prev=doc_lib.links(e)
-    if index==1 and prev[id] then local u=find(e,prev[id]);return u.id,#u.points end
+    if index==1 and prev[id] then local u=find(e,prev[id]);return u.id,#path(u) end
     return id,index
 end
 function M.joint(e,id,index)
     local o=find(e,id)
     local next,prev=doc_lib.links(e)
-    return (index==1 and prev[id]) or (index==#o.points and next[id]) or nil
+    return (index==1 and prev[id]) or (index==#path(o) and next[id]) or nil
 end
 -- A point edit changes one piece (R4): its entry stays fixed; when its exit moves, the whole
 -- downstream run is translated by the same displacement. Upstream pieces never move.
@@ -58,6 +68,8 @@ end
 function M.move_vertex(e,id,index,p)
     id,index=M.owner(e,id,index)
     local o=find(e,id)
+    -- A prefab changes through its parameters (set_params), never point by point.
+    if o.type~="line" then return {} end
     local q=o.points[index]
     local d={p[1]-q[1],p[2]-q[2]}
     o.points[index]={p[1],p[2]}
@@ -69,7 +81,7 @@ function M.move_vertex(e,id,index,p)
         end
         -- Keep the joint exactly equal (translation can round differently).
         local n=moved[2] and find(e,moved[2])
-        if n then n.points[1]={p[1],p[2]} end
+        if n then set_entry(n,p) end
     end
     return moved
 end
@@ -82,6 +94,7 @@ end
 -- Deleting an inner point joins its neighbours; deleting a free end shortens the line.
 function M.delete_point(e,id,index)
     local o=find(e,id)
+    if o.type~="line" then return nil,"A prefab keeps its shape: change its values in the panel, or delete the whole prefab" end
     if M.joint(e,id,index) then return nil,"The point is a connection; disconnect it first [J]" end
     if #o.points<=2 then return nil,"A line needs two points; select the line and delete it instead" end
     table.remove(o.points,index)
@@ -100,6 +113,7 @@ function M.split(e,id,index)
     return b.id
 end
 local function reverse_run(e,run)
+    if fixed(e,run) then return nil end
     local set={}
     for _,id in ipairs(run) do
         set[id]=true
@@ -108,39 +122,54 @@ local function reverse_run(e,run)
         o.points=r
     end
     for _,c in ipairs(e.connections) do if set[c.from] then c.from,c.to=c.to,c.from end end
+    return true
 end
 -- Logical order runs left to right where the ends allow it, so "downstream" means to the right.
+-- A run with a prefab keeps its order (prefabs run left to right).
 function M.orient(e,id)
     local run=M.run_of(e,id)
     local head,tail=find(e,run[1]),find(e,run[#run])
-    if head.points[1][1]>tail.points[#tail.points][1] then reverse_run(e,run);return true end
+    if doc_lib.entry(head)[1]>doc_lib.exit(tail)[1] then return reverse_run(e,run) end
 end
--- Free and connected line ends: {id, index, p, free}.
+-- Free and connected ends of lines and terrain prefabs: {id, index, p, free}.
 function M.ends(e)
     local next,prev=doc_lib.links(e)
     local list={}
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then
-            list[#list+1]={id=o.id,index=1,p=o.points[1],free=not prev[o.id]}
-            list[#list+1]={id=o.id,index=#o.points,p=o.points[#o.points],free=not next[o.id]}
+        if doc_lib.terrain(o) then
+            local pts=path(o)
+            list[#list+1]={id=o.id,index=1,p=pts[1],free=not prev[o.id]}
+            list[#list+1]={id=o.id,index=#pts,p=pts[#pts],free=not next[o.id]}
         end
     end
     return list
 end
 -- Connect free end a to free end b (R4, R5). a's whole run moves so both ends meet exactly; runs are
 -- reversed as needed so the connection always links an exit to an entry. Refuses loops.
+-- A prefab's ends connect like line ends; a run with a prefab is never reversed (the other run is, or the
+-- connection is refused when both have one).
 function M.connect(e,a,b)
     local oa,ob=find(e,a.id),find(e,b.id)
-    if not oa or not ob or oa.type~="line" or ob.type~="line" then return nil,"Only line ends can be connected" end
+    if not oa or not ob or not doc_lib.terrain(oa) or not doc_lib.terrain(ob) then return nil,"Only line and prefab ends can be connected" end
     local a_first,b_first=a.index==1,b.index==1
-    if (not a_first and a.index~=#oa.points) or (not b_first and b.index~=#ob.points) then return nil,"Only line ends can be connected" end
+    if (not a_first and a.index~=#path(oa)) or (not b_first and b.index~=#path(ob)) then return nil,"Only line and prefab ends can be connected" end
     if M.joint(e,a.id,a.index) or M.joint(e,b.id,b.index) then return nil,"Only free ends can be connected" end
     local run=M.run_of(e,a.id)
     for _,id in ipairs(run) do if id==b.id then return nil,"Connecting these ends would close a loop" end end
-    local pa,pb=oa.points[a.index],ob.points[b.index]
+    if a_first==b_first and fixed(e,run) and fixed(e,M.run_of(e,b.id)) then
+        return nil,"Both runs contain prefabs, which always run left to right: connect an exit (right end) to an entry (left end)"
+    end
+    local pa,pb=path(oa)[a.index],path(ob)[b.index]
+    pb={pb[1],pb[2]}
     M.translate(e,{a.id},{pb[1]-pa[1],pb[2]-pa[2]})
-    oa.points[a.index]={pb[1],pb[2]}
-    if a_first==b_first then reverse_run(e,run);a_first=not a_first end
+    -- The joint is exact: a line end takes the other end's position (a prefab's derived exit differs
+    -- from it at most by rounding).
+    if oa.type=="line" then oa.points[a.index]=pb
+    elseif a_first then oa.at=pb
+    elseif ob.type=="line" then local q=path(oa)[a.index];ob.points[b.index]={q[1],q[2]} end
+    if a_first==b_first then
+        if reverse_run(e,run) then a_first=not a_first else reverse_run(e,M.run_of(e,b.id));b_first=not b_first end
+    end
     e.connections[#e.connections+1]=a_first and {from=b.id,to=a.id} or {from=a.id,to=b.id}
     M.orient(e,a.id)
     return true
@@ -149,11 +178,11 @@ end
 -- ends; neither end moves. Ends of the same run would close a loop and are refused.
 function M.bridge(e,a,b)
     local oa,ob=find(e,a.id),find(e,b.id)
-    if not oa or not ob or oa.type~="line" or ob.type~="line" then return nil,"Only line ends can be connected" end
-    if (a.index~=1 and a.index~=#oa.points) or (b.index~=1 and b.index~=#ob.points) then return nil,"Only line ends can be connected" end
+    if not oa or not ob or not doc_lib.terrain(oa) or not doc_lib.terrain(ob) then return nil,"Only line and prefab ends can be connected" end
+    if (a.index~=1 and a.index~=#path(oa)) or (b.index~=1 and b.index~=#path(ob)) then return nil,"Only line and prefab ends can be connected" end
     if M.joint(e,a.id,a.index) or M.joint(e,b.id,b.index) then return nil,"Only free ends can be connected" end
     for _,id in ipairs(M.run_of(e,a.id)) do if id==b.id then return nil,"Connecting these ends would close a loop" end end
-    local pa,pb=oa.points[a.index],ob.points[b.index]
+    local pa,pb=path(oa)[a.index],path(ob)[b.index]
     if (pa[1]-pb[1])^2+(pa[2]-pb[2])^2<0.0001 then return nil,"The ends touch; Connect joins them directly" end
     local id,note=M.add_line(e,{{pa[1],pa[2]},{pb[1],pb[2]}},{id=a.id,index=a.index},{id=b.id,index=b.index})
     if not id then return nil,note end
@@ -217,7 +246,7 @@ end
 function M.bbox(objects)
     local b={math.huge,-math.huge,math.huge,-math.huge}
     for _,o in ipairs(objects) do
-        for _,p in ipairs(o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}) do
+        for _,p in ipairs(path(o)) do
             b[1],b[2],b[3],b[4]=math.min(b[1],p[1]),math.max(b[2],p[1]),math.min(b[3],p[2]),math.max(b[4],p[2])
         end
     end
@@ -235,5 +264,66 @@ function M.paste(e,clip,d)
     end
     for _,c in ipairs(clip.connections) do e.connections[#e.connections+1]={from=map[c.from],to=map[c.to]} end
     return ids
+end
+-- A prefab parameter change (R4): the entry stays fixed and the whole downstream run moves by the
+-- displacement of the exit; upstream pieces never move. Invalid parameters are refused unchanged.
+-- Returns the ids of every changed object.
+function M.set_params(e,id,params)
+    local o=find(e,id)
+    if not o or o.type~="prefab" then return nil,"Select a prefab first" end
+    local ok,err=prefab.check(o.kind,params)
+    if not ok then return nil,prefab.name(o.kind).." "..id..": "..err end
+    local before=doc_lib.exit(o)
+    o.params=params
+    local moved={id}
+    if doc_lib.terrain(o) then
+        local after=doc_lib.exit(o)
+        local d={after[1]-before[1],after[2]-before[2]}
+        local down=M.downstream(e,id)
+        for _,m in ipairs(down) do translate_object(find(e,m),d);moved[#moved+1]=m end
+        if down[1] then set_entry(find(e,down[1]),after) end
+    end
+    return moved
+end
+-- Deliberate placement of a prefab (R5): its entry at `at`. first: a free exit at the entry, last: a free
+-- entry at its exit; the editor shows either as a connect preview, and placing confirms it.
+function M.add_prefab(e,kind,params,at,first,last)
+    local ok,err=prefab.check(kind,params)
+    if not ok then return nil,prefab.name(kind)..": "..err end
+    local o={id=new_id(e),type="prefab",kind=kind,at={at[1],at[2]},params=params}
+    e.objects[#e.objects+1]=o
+    if first then
+        local done,cerr=M.connect(e,{id=o.id,index=1},first)
+        if not done then return nil,cerr end
+    end
+    if last then
+        local done,cerr=M.connect(e,{id=o.id,index=#path(o)},last)
+        if not done then return nil,cerr end
+    end
+    return o.id
+end
+-- Mirror (LE5a): a horizontally mirrored copy of the objects beside them (side 1: right, -1: left), at
+-- least 1 m apart, the offset a multiple of 0.5 m. The originals are unchanged. The copy gets new ids
+-- and keeps only the connections between the copied objects; each is reversed, because the mirrored
+-- run again runs left to right (lines reversed, prefabs mirrored by their parameters).
+function M.mirror(e,ids,side)
+    local clip=M.copy(e,ids)
+    local b=M.bbox(clip.objects)
+    local c2=b[1]+b[2]
+    local function reflect(list)
+        local r={};for i=#list,1,-1 do r[#r+1]={c2-list[i][1],list[i][2]} end;return r
+    end
+    local objects={}
+    for i,o in ipairs(clip.objects) do
+        local n=doc_lib.copy(o)
+        if o.type=="line" then n.points=reflect(o.points)
+        elseif o.type=="hull" then n.vertices=reflect(o.vertices) -- reversed order keeps it counter-clockwise
+        elseif o.type=="label" then n.position={c2-o.position[1],o.position[2]}
+        else n=prefab.mirror(o,c2) end
+        objects[i]=n
+    end
+    local mirrored={objects=objects,connections={}}
+    for _,c in ipairs(clip.connections) do mirrored.connections[#mirrored.connections+1]={from=c.to,to=c.from} end
+    return M.paste(e,mirrored,{side*math.ceil((b[2]-b[1]+1)*2)/2,0})
 end
 return M

@@ -172,7 +172,7 @@ function init(self)
         self.ramp_trial=require "main.gym.ramp_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
-    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
+    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" then assert(sys.get_engine_info().is_debug,"Editor probes require debug engine") end
     if self.testcase=="le1a" then
         assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")
         self.placement_sweep=require "main.gym.placement_sweep"
@@ -352,9 +352,9 @@ function fixed_update(self, dt)
         if self.scenario then self.scenario.check_pose(self,state) end
         self.attempt_time=(self.attempt_time or 0)+dt
         check_finish(self,state)
-        if self.testcase=="le3" then
-            -- LE3b only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
-            -- curl holds the vehicle; a 0.25 s telemetry sample could miss a pass-through.
+        if self.testcase=="le3" or self.testcase=="le5a" then
+            -- LE3b and LE5a only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
+            -- curl holds the vehicle and that a jump gap is open; a 0.25 s telemetry sample could miss a pass-through.
             local t=self.track or {max_x=-math.huge,max_y=-math.huge,min_y=math.huge,wheel_max_x=-math.huge,ticks=0}
             self.track=t
             t.ticks=t.ticks+1

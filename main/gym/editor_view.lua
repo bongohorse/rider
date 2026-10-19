@@ -36,32 +36,55 @@ end
 -- 4 objects of world.collection, START (4 sprites + label), FINISH (sprite + label), labels and spare.
 -- The reserve also covers a FINISH flip, which creates its 2 new objects before the deleted ones are
 -- freed at the end of the frame.
+-- A prefab is drawn part by part (never across a Kicker + landing gap); each further part may need one
+-- sprite more than its share, which the limit reserves.
 local RESERVE,WORLD_OBJECTS=12,4
+local function segments(o)
+    local closed=doc_lib.outline(o)
+    if closed then return #closed,1 end
+    local c,parts=0,doc_lib.parts(o)
+    for _,part in ipairs(parts) do c=c+#part-1 end
+    return c,#parts
+end
 local function allocation(e)
-    local counts,total,n,labels={},0,0,0
+    local counts,total,n,labels,extra={},0,0,0,0
     for _,o in ipairs(e.objects) do
         if o.type~="label" then
-            local c=o.type=="line" and #o.points-1 or #o.vertices
-            counts[o.id]=c;total,n=total+c,n+1
+            local c,parts=segments(o)
+            counts[o.id]=c;total,n,extra=total+c,n+1,extra+parts-1
         else labels=labels+1 end
     end
     local limit=math.min(sys.get_config_int("sprite.max_count",1024)-RESERVE,
-        sys.get_config_int("collection.max_instances",1024)-WORLD_OBJECTS-labels-RESERVE)
+        sys.get_config_int("collection.max_instances",1024)-WORLD_OBJECTS-labels-RESERVE)-extra
     if total<=limit then return counts end
     local k={}
     for id,c in pairs(counts) do k[id]=1+math.floor((c-1)*(limit-n)/(total-n)) end
     return k,{segments=total,sprites=limit}
 end
--- Sprites for an outline; sprite j spans points ranges[j] (a closed outline wraps to its first point).
-local function outline(v,list,closed,k)
+-- Sprites for an outline; sprite j spans points ranges[j] = {i0, i1, part} (a closed outline wraps to
+-- its first point). ids and ranges are appended to the given lists.
+local function outline(v,list,closed,k,part,ids,ranges)
     local n=#list-1+(closed and 1 or 0)
     k=math.min(k or n,n)
-    local ids,ranges={},{}
+    ids,ranges=ids or {},ranges or {}
+    local new={}
     for j=1,k do
         local i0,i1=math.floor((j-1)*n/k)+1,math.floor(j*n/k)+1
-        ids[j]=stations.line(list[i0],list[i1] or list[1],2);ranges[j]={i0,i1}
+        new[j]=stations.line(list[i0],list[i1] or list[1],2);ids[#ids+1]=new[j];ranges[#ranges+1]={i0,i1,part or 1}
     end
-    count(v,ids)
+    count(v,new)
+    return ids,ranges
+end
+-- Sprites for an object: a closed outline (hull, Platform) or each open part (line, terrain prefab),
+-- k sprites shared out by segments, at least one per part.
+local function draw(v,o,k)
+    local closed=doc_lib.outline(o)
+    if closed then return outline(v,closed,true,k) end
+    local parts=doc_lib.parts(o)
+    if #parts==1 then return outline(v,parts[1],false,k) end
+    local total=segments(o)
+    local ids,ranges={},{}
+    for i,part in ipairs(parts) do outline(v,part,false,math.max(1,math.floor((k or total)*(#part-1)/total)),i,ids,ranges) end
     return ids,ranges
 end
 -- START: the upright vehicle box at the start position (same box as the clearance check).
@@ -100,7 +123,8 @@ local function changed(a,b)
     if #a~=#b then return true end
     for i,p in ipairs(a) do if p[1]~=b[i][1] or p[2]~=b[i][2] then return true end end
 end
--- Redraw moved shapes (drag previews, committed moves, Undo of moves) without a world reload.
+-- Redraw moved shapes (drag previews, committed moves, Undo of moves, prefab parameter changes)
+-- without a world reload: a prefab type keeps its point count.
 local function refresh(v,e)
     local scale=sys.get_config_number("physics.scale",0.01)
     for _,o in ipairs(e.objects) do
@@ -109,8 +133,13 @@ local function refresh(v,e)
             if o.type=="label" then
                 go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
             else
+                local closed=editor.outline(o)
+                local lists=closed and {closed} or editor.parts(o)
                 local ranges=v.ranges[o.id]
-                for i,id in ipairs(v.objects[o.id]) do place_line(id,pts[ranges[i][1]],pts[ranges[i][2]] or pts[1],scale) end
+                for i,id in ipairs(v.objects[o.id]) do
+                    local r=ranges[i];local list=lists[r[3]]
+                    place_line(id,list[r[1]],list[r[2]] or list[1],scale)
+                end
             end
             v.shapes[o.id]=points(pts)
         end
@@ -122,11 +151,11 @@ local function tint(ids,colour)
         if go.exists(id) then pcall(go.set,url,"tint",colour) end
     end
 end
--- Structure of the drawn document: object ids, types and point counts (and label texts).
+-- Structure of the drawn document: object ids, types and point counts (label texts, prefab types).
 local function signature(e)
     local t={}
     for _,o in ipairs(e.objects) do
-        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or #(o.points or o.vertices))
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or o.type=="prefab" and o.kind or #(o.points or o.vertices))
     end
     return table.concat(t,"|")
 end
@@ -137,8 +166,7 @@ function M.build(self)
     editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; Play needs 800 or fewer.",
         simplified.segments,simplified.sprites) or nil
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then v.objects[o.id],v.ranges[o.id]=outline(v,o.points,false,k[o.id])
-        elseif o.type=="hull" then v.objects[o.id],v.ranges[o.id]=outline(v,o.vertices,true,k[o.id])
+        if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id])
         else
             local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={};v.labels_by[o.id]=id
         end

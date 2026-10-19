@@ -59,14 +59,17 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.template={id:e.id,objects:e.objects,view:e.view};cases.push('template_copy_opens_editor');
 
   // 2. Edit mode intercepts every game key and the page shortcuts (R15).
-  const before=await page.evaluate(()=>({feedback:window.riderFeedback.status,generation:window.riderEditor.view.generation}));
+  const before=await page.evaluate(()=>({feedback:window.riderFeedback.status,generation:window.riderEditor.view.generation,objects:window.riderEditor.objects}));
   for(const k of ['1','2','p','c','r','t','m','v'])await key(k);
   await page.evaluate(()=>{for(const code of ['KeyF','KeyI'])document.dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));});
   await page.waitForTimeout(300);
   e=await ed();
   assert.equal(e.mode,'edit');assert.equal(e.view.generation,before.generation,'a game key reloaded the world');
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);assert.equal(await page.evaluate(()=>window.riderFeedback.status),before.feedback);
-  assert.equal(await page.evaluate(()=>document.getElementById('custom-import').hidden),true);cases.push('edit_mode_input_gating');
+  assert.equal(await page.evaluate(()=>document.getElementById('custom-import').hidden),true);
+  // P is the editor's Prefab tool key (contract controls), not the game's preset cycle; S returns to Select.
+  assert.equal(e.tool,'prefab');assert.equal(e.objects,before.objects);await key('s');assert.equal((await ed()).tool,'select');
+  cases.push('edit_mode_input_gating');
 
   // 3. Drag START: one Undo step; Undo/Redo restore by stable id.
   const start0=e.start.position;

@@ -5,7 +5,8 @@ local doc_lib=require "main.gym.editor_doc"
 local custom=require "main.gym.custom"
 local socket=require "socket"
 -- selection: primary id (or "start"/"finish"); selected: set of selected object ids (multi-select, LE3);
--- vertex: {id,index} of the selected line point; preview_points: shapes during a drag (not committed).
+-- vertex: {id,index} of the selected line point or prefab end; preview_objects: moved or reshaped copies
+-- of objects during a drag (not committed). prefab_kind: the type the Prefab tool places (LE5a).
 -- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened is the instance token of
 -- the current document (a new one per open, restored with Undo/Redo entries) so tools can drop state
 -- that belonged to another document, even one with the same level id.
@@ -16,7 +17,7 @@ local socket=require "socket"
 -- copy older than the draft); they are saved again before another document becomes current.
 -- unsynced: the last browser-storage (IndexedDB) sync failed, so saves since the last good sync may not
 -- survive a reload; set until a later sync succeeds.
-local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
+local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
@@ -50,10 +51,10 @@ local function resolve_selection()
     local s=M.selection
     if s~="start" and not (s=="finish" and e.finish) and not ids[s] then M.selection=next(M.selected) end
     local v=M.vertex
-    if v and not (ids[v.id] and ids[v.id].type=="line" and v.index<=#ids[v.id].points and M.selection==v.id) then M.vertex=nil end
+    if v and not (ids[v.id] and doc_lib.terrain(ids[v.id]) and v.index<=#doc_lib.path(ids[v.id]) and M.selection==v.id) then M.vertex=nil end
     local v2=M.vertex2
     local o2=v2 and ids[v2.id]
-    if not M.vertex or not (o2 and o2.type=="line" and (v2.index==1 or v2.index==#o2.points)) then M.vertex2=nil end
+    if not M.vertex or not (o2 and doc_lib.terrain(o2) and (v2.index==1 or v2.index==#doc_lib.path(o2))) then M.vertex2=nil end
 end
 -- Saves the current document now when it has unsaved changes, a failed or lagging save, a failed
 -- storage sync or no key yet although it belongs in My levels. Called before another document becomes
@@ -167,12 +168,13 @@ function M.selected_ids()
     for _,o in ipairs(M.doc.editor.objects) do if M.selected[o.id] then list[#list+1]=o.id end end
     return list
 end
--- Shapes during a drag: drawn by the edit world, never committed until the drag ends.
-function M.set_preview(points) M.preview_points=points;M.shape_version=M.shape_version+1;touch() end
-function M.shape(o)
-    local p=M.preview_points and M.preview_points[o.id]
-    return p or o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}
-end
+-- Shapes during a drag: changed copies of objects by id, drawn by the edit world, never committed until
+-- the drag ends. shape: every point (entry to exit); parts: the open polylines; outline: a closed one.
+function M.set_preview(objects) M.preview_objects=objects;M.shape_version=M.shape_version+1;touch() end
+local function current(o) return M.preview_objects and M.preview_objects[o.id] or o end
+function M.shape(o) return doc_lib.path(current(o)) end
+function M.parts(o) return doc_lib.parts(current(o)) end
+function M.outline(o) return doc_lib.outline(current(o)) end
 -- Screen mapping for the GUI, extrapolated to the current camera: the edit world measures it once per
 -- frame, the GUI may run first in a frame, and the camera centre stays at the same pixel.
 function M.map()
