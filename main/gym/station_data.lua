@@ -36,6 +36,17 @@ function M.validate(d)
             if i>1 then local q=chain[i-1];if (p[1]-q[1])^2+(p[2]-q[2])^2<0.0001 then return nil,"Chain points too close" end end
         end
     end
+    -- Two-sided chains (LE3b): an optional list parallel to chains; a true entry is also built
+    -- reversed, so it collides on both sides. It is drawn once and counts twice towards 32 chains.
+    if d.two_sided~=nil then
+        if type(d.two_sided)~="table" or #d.two_sided~=#d.chains then return nil,"Invalid two_sided list" end
+        local count=#d.chains
+        for i=1,#d.chains do
+            if type(d.two_sided[i])~="boolean" then return nil,"Invalid two_sided list" end
+            if d.two_sided[i] then count=count+1 end
+        end
+        if count>32 then return nil,"Missing/too many chains" end
+    end
     if d.hulls~=nil then
         if type(d.hulls)~="table" or #d.hulls>64 then return nil,"Invalid hulls" end
         for _,h in ipairs(d.hulls) do

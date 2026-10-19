@@ -26,6 +26,7 @@ local function reset(self)
     mobile.clear()
     self.head_contact,self.sensor_skip=false,2
     self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
+    self.track=nil
     self.history=history.new(self.history.generation+1)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
@@ -216,6 +217,8 @@ function update(self, dt)
         end
     end
     if not self.station then return end
+    if self.track and html5 then html5.run("window.riderTrack="..json.encode({generation=self.session_generation,resets=self.reset_count or 0,max_x=self.track.max_x,max_y=self.track.max_y,min_y=self.track.min_y,
+        wheel_max_x=self.track.wheel_max_x,ticks=self.track.ticks,x=self.track.x,y=self.track.y,vx=self.track.vx})) end
     self.mobile=mobile.poll(dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
@@ -349,6 +352,16 @@ function fixed_update(self, dt)
         if self.scenario then self.scenario.check_pose(self,state) end
         self.attempt_time=(self.attempt_time or 0)+dt
         check_finish(self,state)
+        if self.testcase=="le3" then
+            -- LE3b only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
+            -- curl holds the vehicle; a 0.25 s telemetry sample could miss a pass-through.
+            local t=self.track or {max_x=-math.huge,max_y=-math.huge,min_y=math.huge,wheel_max_x=-math.huge,ticks=0}
+            self.track=t
+            t.ticks=t.ticks+1
+            t.max_x,t.max_y,t.min_y=math.max(t.max_x,feel.metres(state.x)),math.max(t.max_y,feel.metres(state.y)),math.min(t.min_y,feel.metres(state.y))
+            for _,wheel in ipairs(self.vehicle.wheels) do t.wheel_max_x=math.max(t.wheel_max_x,feel.metres(b2d.body.get_position(wheel).x)) end
+            t.x,t.y,t.vx=feel.metres(state.x),feel.metres(state.y),feel.metres(state.vx)
+        end
         if stations.outside(self.station,state) then request_reset(self,"bounds") end
         if self.sensor_skip>0 then self.sensor_skip=self.sensor_skip-1; self.head_contact=false
         else self.head_contact=rider.contact(self.vehicle) end

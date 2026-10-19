@@ -153,15 +153,84 @@ function M.run_points(e,run,lines)
     return pts,owner
 end
 
--- Supported v1 terrain domain (R16), checked on every compile:
--- * A run keeps one x direction: no overhangs or turning back; vertical steps are allowed.
--- * Consecutive vertical segments must not fold back onto each other; a run cannot be vertical only.
---   With these two rules a run cannot intersect itself or close a loop.
--- * Points of a run are at least 1 cm apart (station rule), joints are merged first.
--- * One chain per run (no seams, A18/D8): at most 32 runs and 2048 points per run.
--- Orientation is the compiler's job: chains run right to left, so the solid side is below every
--- non-vertical segment and step walls face the lower side. Logical entry/exit order stays as drawn.
+-- Supported terrain domain (R16, LE3b), checked on every compile:
+-- * Points of a run are at least 1 cm apart (station rule); joints are merged first.
+-- * A run never doubles back onto its previous segment (a zero-width spike) and never crosses or
+--   touches itself (this also rules out closed loops).
+-- * A run that keeps one x direction compiles as before: one chain written right to left, solid
+--   below every non-vertical segment, step walls facing the lower side.
+-- * A run that turns back in x (overhang, curl) or has no x extent (a wall) is two-sided: its chain
+--   is built a second time in reverse at the same place, because Box2D chains collide only on the
+--   right of each segment. Both sides then drive, the inside of a curl included (decision 2026-10-19).
+-- * One chain per run (no seams, A18/D8): at most 2048 points per run and 32 chains, a two-sided run
+--   counting twice.
+-- Logical entry/exit order stays as drawn and does not decide collision.
 local function at(p) return string.format("(%.2f, %.2f) m",p[1],p[2]) end
+-- True when the run keeps one x direction (vertical steps allowed) and has some x extent.
+function M.one_sided(pts)
+    local sign
+    for i=2,#pts do
+        local dx=pts[i][1]-pts[i-1][1]
+        if math.abs(dx)>1e-9 then
+            local s=dx>0 and 1 or -1
+            if sign and s~=sign then return false end
+            sign=s
+        end
+    end
+    return sign~=nil
+end
+-- Segments a-b and c-d intersect or touch (orientation test with a small tolerance in metres).
+local function cross(a,b,c,d)
+    local function o(p,q,r) return (q[1]-p[1])*(r[2]-p[2])-(q[2]-p[2])*(r[1]-p[1]) end
+    local function on(p,q,r) return math.min(p[1],q[1])-1e-9<=r[1] and r[1]<=math.max(p[1],q[1])+1e-9 and math.min(p[2],q[2])-1e-9<=r[2] and r[2]<=math.max(p[2],q[2])+1e-9 end
+    local eps=1e-9
+    local d1,d2,d3,d4=o(c,d,a),o(c,d,b),o(a,b,c),o(a,b,d)
+    if ((d1>eps and d2<-eps) or (d1<-eps and d2>eps)) and ((d3>eps and d4<-eps) or (d3<-eps and d4>eps)) then return true end
+    return (math.abs(d1)<=eps and on(c,d,a)) or (math.abs(d2)<=eps and on(c,d,b)) or (math.abs(d3)<=eps and on(a,b,c)) or (math.abs(d4)<=eps and on(a,b,d))
+end
+-- Grid cells a segment passes through, column by column (a conservative superset: boundaries and a
+-- 1e-9 m margin count on both sides), so two segments that meet always share a cell.
+local function cells(a,b,x0,y0,size,fn)
+    local eps=1e-9
+    local lo,hi=math.min(a[1],b[1]),math.max(a[1],b[1])
+    for i=math.floor((lo-eps-x0)/size),math.floor((hi+eps-x0)/size) do
+        local ya,yb=a[2],b[2]
+        if hi-lo>eps then
+            local xa,xb=math.max(lo,x0+i*size),math.min(hi,x0+(i+1)*size)
+            ya=a[2]+(b[2]-a[2])*(xa-a[1])/(b[1]-a[1])
+            yb=a[2]+(b[2]-a[2])*(xb-a[1])/(b[1]-a[1])
+        end
+        for j=math.floor((math.min(ya,yb)-eps-y0)/size),math.floor((math.max(ya,yb)+eps-y0)/size) do fn(i,j) end
+    end
+end
+-- First pair of non-adjacent segments of a run that cross or touch, via a uniform grid (cells sized
+-- from the run's extent). Returns the later segment's start index.
+local function self_cross(pts)
+    local n=#pts-1
+    if n<3 then return nil end
+    local x0,x1,y0,y1=math.huge,-math.huge,math.huge,-math.huge
+    for _,p in ipairs(pts) do x0,x1,y0,y1=math.min(x0,p[1]),math.max(x1,p[1]),math.min(y0,p[2]),math.max(y1,p[2]) end
+    local size=math.max(0.5,(x1-x0+y1-y0)/math.sqrt(n)/2)
+    local grid={}
+    for s=1,n do
+        local a,b=pts[s],pts[s+1]
+        local checked,found={},false
+        cells(a,b,x0,y0,size,function(i,j)
+            if found then return end
+            local key=i*1048576+j
+            local cell=grid[key]
+            if not cell then cell={};grid[key]=cell end
+            for _,t in ipairs(cell) do
+                if not checked[t] and t<s-1 then
+                    checked[t]=true
+                    if cross(pts[t],pts[t+1],a,b) then found=true;return end
+                end
+            end
+            cell[#cell+1]=s
+        end)
+        if found then return s end
+    end
+end
 function M.problems(e)
     local errors,warnings={},{}
     local lines=M.lines(e)
@@ -169,29 +238,33 @@ function M.problems(e)
     local hulls=false
     for _,o in ipairs(e.objects) do hulls=hulls or o.type=="hull" end
     if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D]." end
-    if #runs>32 then errors[#errors+1]=#runs.." separate terrain runs; the limit is 32. Connect pieces into runs [J]." end
+    local chains=0
     for _,run in ipairs(runs) do
         local pts,owner=M.run_points(e,run,lines)
         local name=#run>1 and "Run "..run[1].."-"..run[#run] or "Line "..run[1]
         if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run." end
-        local sign,dy0
+        local bad
         for i=2,#pts do
             local a,b=pts[i-1],pts[i]
             local dx,dy=b[1]-a[1],b[2]-a[2]
-            if dx*dx+dy*dy<0.0001 then errors[#errors+1]="Line "..owner[i].." has points closer than 1 cm at "..at(b)..".";break end
-            if math.abs(dx)>1e-9 then
-                local s=dx>0 and 1 or -1
-                if sign and s~=sign then
-                    errors[#errors+1]="Line "..owner[i].." turns back in x at "..at(a)..": terrain must keep one direction (vertical steps are fine). Use a hull for overhangs.";break
+            if dx*dx+dy*dy<0.0001 then errors[#errors+1]="Line "..owner[i].." has points closer than 1 cm at "..at(b)..".";bad=true;break end
+            local c=pts[i+1]
+            if c then
+                local ex,ey=c[1]-b[1],c[2]-b[2]
+                local l=math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey))
+                if dx*ex+dy*ey<0 and math.abs(dx*ey-dy*ex)<=1e-6*l then
+                    errors[#errors+1]="Line "..owner[i].." doubles back on itself at "..at(b)..".";bad=true;break
                 end
-                sign,dy0=s,nil
-            else
-                if dy0 and (dy>0)~=(dy0>0) then errors[#errors+1]="Line "..owner[i].." folds back on itself at "..at(a)..".";break end
-                dy0=dy
             end
         end
-        if not sign and #pts>=2 then errors[#errors+1]=name.." is vertical only; use a hull for walls." end
+        local one=M.one_sided(pts)
+        if not bad and not one and #pts<=2048 then
+            local s=self_cross(pts)
+            if s then errors[#errors+1]=name.." crosses itself near "..at(pts[s])..": a run must not cross or close on itself." end
+        end
+        chains=chains+(one and 1 or 2)
     end
+    if chains>32 then errors[#errors+1]=chains.." terrain chains (a run that turns back counts twice); the limit is 32. Connect pieces into runs [J]." end
     -- Ends that touch without a connection compile into two chains: a seam the wheels can bump on (A18).
     local next,prev=M.links(e)
     local ends={}
@@ -239,6 +312,7 @@ local function segment_box(a,b,box)
     end
     return true
 end
+M.segment_box=segment_box
 local function inside_hull(v,p)
     for i,a in ipairs(v) do
         local b=v[i%#v+1]
@@ -281,14 +355,17 @@ end
 M.bounds=bounds
 -- Compiler (R1): writes every field the station validator requires from the editor sources.
 -- A test start replaces only the run's spawn and speed; bounds always come from the sources.
-function M.compile(doc,test)
+-- errors: the result of M.problems when the caller already has it (saves a second domain check).
+function M.compile(doc,test,errors)
     local e=doc.editor
     local d={schema=1,units="metres",id=doc.id,name=doc.name,spawn={e.start.position[1],e.start.position[2]},start_speed=e.start.speed,
         run_in=0,run_out=0,bounds=bounds(e),chains={},hulls={},labels={},checkpoints={}}
-    local errors=M.problems(e)
+    errors=errors or M.problems(e)
     if errors[1] then return nil,errors[1] end
     local lines=M.lines(e)
-    -- A connected run compiles into one chain (R4, D8): no seams between its pieces.
+    -- A connected run compiles into one chain (R4, D8): no seams between its pieces. A run that
+    -- turns back is marked two-sided; the station builder adds its reversed chain.
+    local sides,two={},false
     for _,run in ipairs(M.runs(e)) do
         local chain=points((M.run_points(e,run,lines)))
         -- Solid side below the drawn line: the built-in stations run right to left.
@@ -296,7 +373,10 @@ function M.compile(doc,test)
             local r={};for i=#chain,1,-1 do r[#r+1]=chain[i] end;chain=r
         end
         d.chains[#d.chains+1]=chain
+        sides[#sides+1]=not M.one_sided(chain)
+        two=two or sides[#sides]
     end
+    if two then d.two_sided=sides end
     for _,o in ipairs(e.objects) do
         if o.type=="hull" then d.hulls[#d.hulls+1]={vertices=points(o.vertices)}
         elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end

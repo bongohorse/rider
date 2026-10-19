@@ -109,6 +109,7 @@ function init(self)
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3")
+    self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
@@ -163,7 +164,9 @@ function update(self,dt)
     if self.debug_editor then
         -- Debug fault injection (le2 only): write a raw draft slot, e.g. an unsupported editor version.
         local ok,raw=pcall(json.decode,html5.run("(()=>{const r=window.riderDebugDraft;window.riderDebugDraft=null;return JSON.stringify(r||null)})()"))
-        if ok and type(raw)=="table" then editor.draft_store().debug_write(raw.slot,raw.seq,raw.text) end
+        if ok and type(raw)=="table" then editor.draft_store().debug_write(raw.slot,raw.seq,raw.text,raw.now and os.time() or nil) end
+        -- Debug control (le3 only): build two-sided runs one-sided, to show what the reversed chain holds.
+        if self.debug_le3 then stations.debug_one_sided=html5.run("String(!!window.riderDebugOneSided)")=="true" end
     end
     if self.syncing then
         local state=custom.sync_state()

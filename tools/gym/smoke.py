@@ -61,7 +61,7 @@ if args.case=='le2':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le3':
     report=json.loads((out/'draw-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==10
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==15
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le1a':
     report=json.loads((out/'custom-result.json').read_text())

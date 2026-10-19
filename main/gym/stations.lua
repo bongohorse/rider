@@ -94,15 +94,24 @@ function M.build(body,d)
     local function p(v) return vmath.vector3(v[1]/scale-origin.x,v[2]/scale-origin.y,0) end
     b2d.body.destroy_shape(body,1) -- remove the known resource seed before creating shapes
     local chains,segments={},{}
-    for _,line in ipairs(d.chains) do
-        local vertices={}
-        for _,v in ipairs(line) do vertices[#vertices+1]=p(v) end
+    local function chain_of(vertices)
         local first,last=vertices[1],vertices[#vertices]
         local chain,shapes=b2d.body.create_chain(body,{vertices=vertices,
             prev_vertex=first+(first-vertices[2]),next_vertex=last+(last-vertices[#vertices-1]),
             friction=0.8,restitution=0,enable_sensor_events=true,filter={category_bits=1,mask_bits=1,group_index=0}})
         chains[#chains+1]=chain
         for _,s in ipairs(shapes) do segments[#segments+1]=s end
+    end
+    for i,line in ipairs(d.chains) do
+        local vertices={}
+        for _,v in ipairs(line) do vertices[#vertices+1]=p(v) end
+        chain_of(vertices)
+        -- Box2D chains collide only on the right of each segment: a two-sided run gets the same
+        -- chain reversed as well (LE3b), so overhangs and curls hold from both sides.
+        if d.two_sided and d.two_sided[i] and not M.debug_one_sided then
+            local reversed={};for k=#vertices,1,-1 do reversed[#reversed+1]=vertices[k] end
+            chain_of(reversed)
+        end
     end
     for _,h in ipairs(d.hulls or {}) do
         local vertices={};for _,v in ipairs(h.vertices) do vertices[#vertices+1]=p(v) end
