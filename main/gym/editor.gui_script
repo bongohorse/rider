@@ -1,9 +1,10 @@
--- Level editor (LE2 shell, LE3 drawing, LE4 documents). Its own game object sits on top of the input stack: in Edit
+-- Level editor (LE2 shell, LE3 drawing, LE4 documents, LE5a prefabs). Its own game object sits on top of the input stack: in Edit
 -- mode every action is consumed here (Defold only stops propagation between game objects, not between
 -- the components of one), so game keys, the HUD and the world never see editor input (R15).
 local editor=require "main.gym.editor"
 local doc_lib=require "main.gym.editor_doc"
 local edit=require "main.gym.editor_edit"
+local prefab=require "main.gym.editor_prefab"
 local snap_lib=require "main.gym.editor_snap"
 local overlay=require "main.gym.editor_overlay"
 local stations=require "main.gym.stations"
@@ -18,7 +19,7 @@ local PANEL=vmath.vector4(0.05,0.1,0.13,0.92)
 -- Pixel values are reference pixels (1280 x 720 CSS canvas), scaled like the GUI (HiDPI, window size).
 local PICK_PX,SNAP_PX,HANDLE_PX,DOUBLE_S,DOUBLE_PX=10,12,9,0.4,4
 local ui=1
-local C={vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=vmath.vector4(0.35,0.95,0.45,1),
+local C={param=vmath.vector4(1,0.45,0.85,1),vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=vmath.vector4(0.35,0.95,0.45,1),
     selected=vmath.vector4(1,0.6,0.15,1),hover=vmath.vector4(1,0.95,0.35,1),connect=vmath.vector4(0.35,1,0.45,0.55),
     draw=vmath.vector4(0.55,0.8,1,1),rubber=vmath.vector4(0.55,0.8,1,0.6),join=vmath.vector4(1,0.6,0.15,0.5),box=vmath.vector4(1,0.95,0.35,0.7),
     anchor=vmath.vector4(0.35,1,0.45,1),angle=vmath.vector4(0.4,0.7,1,1),grid=vmath.vector4(0.85,0.85,0.85,1),off=vmath.vector4(1,0.35,0.3,1),free_snap=vmath.vector4(0.85,0.85,0.85,0.6)}
@@ -42,7 +43,13 @@ local function button(self,name,pos,size,label,x,y)
     self.buttons[name]={box=b,label=t}
     return b
 end
-local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
+local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"prefab","Prefab [P]"},{"start","START"},{"finish","FINISH"},{"pan","Pan"}}
+-- Right panel rows (LE5a): a selected prefab's fields, one row each (the Kicker + landing has the most).
+local PARAMS=7
+-- editor.gui max_nodes (raised from the default 512 for the LE5a panel rows).
+local MAX_NODES=640
+local KIND_KEYS={}
+for i,kind in ipairs(prefab.ORDER) do KIND_KEYS[hash("station_"..i)]=kind end
 -- Open dialog (LE4): My levels rows per page.
 local ROWS=10
 local DANGER=vmath.vector4(0.5,0.15,0.12,1)
@@ -54,7 +61,7 @@ function init(self)
     self.nodes,self.buttons,self.held={},{},{}
     -- Test state for the le2/le3/le4 runners only (debug engine); release builds never publish it.
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a")
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -66,7 +73,13 @@ function init(self)
     button(self,"export",vmath.vector3(810,525,0),vmath.vector3(62,22,0),"Export",R,T)
     button(self,"play",vmath.vector3(900,525,0),vmath.vector3(110,22,0),"Play > [E]",R,T)
     for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*30,0),vmath.vector3(92,24,0),tool[2],L,T) end
-    node(self,vmath.vector3(860,329,0),vmath.vector3(196,292,0),R,T,PANEL)
+    -- Prefab types (shown with the Prefab tool; keys 1-6 pick them too).
+    for i,kind in ipairs(prefab.ORDER) do
+        button(self,"kind_"..kind,vmath.vector3(52,280-(i-1)*26,0),vmath.vector3(92,22,0),i.." "..(kind=="kicker" and "Kicker" or prefab.name(kind)),L,T)
+        gui.set_scale(self.buttons["kind_"..kind].label,vmath.vector3(0.42,0.42,1))
+    end
+    -- The right panel is laid out every frame from the rows it shows (layout()).
+    self.panel=node(self,vmath.vector3(860,329,0),vmath.vector3(196,292,0),R,T,PANEL)
     self.properties=text(self,vmath.vector3(768,468,0),"",R,T,gui.PIVOT_NW,0.42)
     button(self,"minus",vmath.vector3(800,330,0),vmath.vector3(40,22,0),"-",R,T)
     button(self,"plus",vmath.vector3(848,330,0),vmath.vector3(40,22,0),"+",R,T)
@@ -76,7 +89,14 @@ function init(self)
     button(self,"connect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Connect [J]",R,T)
     button(self,"disconnect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Disconnect [J]",R,T)
     button(self,"rename",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Rename level",R,T)
-    button(self,"duplicate",vmath.vector3(860,218,0),vmath.vector3(180,22,0),"Duplicate (to the right)",R,T)
+    for i=1,PARAMS do
+        button(self,"param_"..i,vmath.vector3(860,190,0),vmath.vector3(180,22,0),"",R,T)
+        gui.set_scale(self.buttons["param_"..i].label,vmath.vector3(0.42,0.42,1))
+    end
+    -- Mirror (LE5a, replaces Duplicate): a mirrored copy to the left or right of the selection.
+    self.mirror_label=text(self,vmath.vector3(772,218,0),"Mirror",R,T,gui.PIVOT_W,0.45)
+    button(self,"mirror_left",vmath.vector3(868,218,0),vmath.vector3(52,22,0),"<",R,T)
+    button(self,"mirror_right",vmath.vector3(926,218,0),vmath.vector3(52,22,0),">",R,T)
     button(self,"paste",vmath.vector3(860,190,0),vmath.vector3(180,22,0),"Paste [Ctrl+V]",R,T)
     node(self,vmath.vector3(480,12,0),vmath.vector3(960,24,0),nil,B,PANEL)
     self.status=text(self,vmath.vector3(8,12,0),"",L,B,gui.PIVOT_W,0.42)
@@ -131,7 +151,7 @@ end
 local function cancel(self)
     self.drag,self.pan,self.box,self.held=nil,nil,nil,{}
     if editor.preview then editor.preview=nil;editor.touch() end
-    if editor.preview_points then editor.set_preview(nil) end
+    if editor.preview_objects then editor.set_preview(nil) end
 end
 local function map() return editor.map() end
 local function cursor(self,action)
@@ -153,9 +173,21 @@ local function seg_dist(p,a,b)
     return dist(p,{a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t})
 end
 local function find(id) return edit.find(editor.doc.editor,id) end
+local path=doc_lib.path
+-- Handles of a selected prefab (LE5a). A handle on the exit also selects that end (Connect/Disconnect).
+local function prefab_handles(o)
+    local list=prefab.handles(o)
+    if doc_lib.terrain(o) then
+        local pts=path(o)
+        local e=pts[#pts]
+        for _,h in ipairs(list) do if dist(h.p,e)<1e-9 then h.index=#pts end end
+    end
+    return list
+end
 -- Pick candidates under the cursor, best first (hover shows the first; Tab cycles; click picks the
--- shown one): line points (every point of a selected line, the ends of every line; a joint once, as
--- its upstream piece's last point), START, FINISH, labels, then lines and hulls by edge distance.
+-- shown one): handles of a selected prefab, line points (every point of a selected line, the ends of
+-- every line and terrain prefab; a joint once, as its upstream piece's last point), START, FINISH,
+-- labels, then lines, prefabs and hulls by edge distance.
 local function candidates(p)
     local e=editor.doc.editor
     local tol=tolerance(PICK_PX)
@@ -163,14 +195,23 @@ local function candidates(p)
     local list,seen={},{}
     local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then
-            local selected=editor.selected[o.id]
-            for i,q in ipairs(o.points) do
-                if (selected or i==1 or i==#o.points) and math.abs(q[1]-p[1])<=tol and math.abs(q[2]-p[2])<=tol then
+        if o.type=="prefab" and editor.selected[o.id] then
+            for _,h in ipairs(prefab_handles(o)) do
+                local d=dist(p,h.p)
+                if d<=tol then add({kind="handle",id=o.id,handle=h.name,label=h.label,index=h.index,d=d,rank=0,key="h:"..o.id..":"..h.name}) end
+            end
+        end
+    end
+    for _,o in ipairs(e.objects) do
+        if doc_lib.terrain(o) then
+            local selected=editor.selected[o.id] and o.type=="line"
+            local pts=path(o)
+            for i,q in ipairs(pts) do
+                if (selected or i==1 or i==#pts) and math.abs(q[1]-p[1])<=tol and math.abs(q[2]-p[2])<=tol then
                     local d=dist(p,q)
                     if d<=tol then
                         local id,index=o.id,i
-                        if i==1 and prev[o.id] then id=prev[o.id];index=#find(id).points end
+                        if i==1 and prev[o.id] then id=prev[o.id];index=#path(find(id)) end
                         add({kind="vertex",id=id,index=index,d=d,rank=1,key="v:"..id..":"..index})
                     end
                 end
@@ -187,10 +228,12 @@ local function candidates(p)
         local d,segment
         if o.type=="label" then d=dist(p,o.position)/1.5
         else
-            local pts=o.type=="line" and o.points or o.vertices
-            for i=2,#pts+(o.type=="hull" and 1 or 0) do
-                local q=seg_dist(p,pts[i-1],pts[(i-1)%#pts+1])
-                if not d or q<d then d,segment=q,i-1 end
+            local closed=doc_lib.outline(o)
+            for _,pts in ipairs(closed and {closed} or doc_lib.parts(o)) do
+                for i=2,#pts+(closed and 1 or 0) do
+                    local q=seg_dist(p,pts[i-1],pts[(i-1)%#pts+1])
+                    if not d or q<d then d,segment=q,i-1 end
+                end
             end
         end
         if d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
@@ -200,8 +243,13 @@ local function candidates(p)
 end
 local function describe_candidate(c)
     if not c then return "" end
-    if c.kind=="vertex" then return "point "..c.index.." of "..c.id end
-    if c.kind=="object" then return c.type.." "..c.id end
+    if c.kind=="handle" then return "handle ("..c.label..") of "..doc_lib.label(find(c.id)) end
+    if c.kind=="vertex" then
+        local o=find(c.id)
+        if o and o.type=="prefab" then return (c.index==1 and "entry" or "exit").." of "..doc_lib.label(o) end
+        return "point "..c.index.." of "..c.id
+    end
+    if c.kind=="object" then local o=find(c.id);return o and doc_lib.label(o):lower() or c.type.." "..c.id end
     return c.kind=="start" and "START" or "FINISH"
 end
 -- Hover (R6 editing basics): the candidate a click would pick is highlighted before clicking.
@@ -227,13 +275,14 @@ local function anchors(skip,extra)
     local list={}
     for _,o in ipairs(e.objects) do
         if not (skip and skip[o.id]) then
-            if o.type=="line" then
-                for i,q in ipairs(o.points) do
-                    local free=(i==1 and not prev[o.id]) or (i==#o.points and not next[o.id])
+            if doc_lib.terrain(o) then
+                local pts=path(o)
+                for i,q in ipairs(pts) do
+                    local free=(i==1 and not prev[o.id]) or (i==#pts and not next[o.id])
                     local skip_point=skip and skip.vertex and skip.vertex[o.id..":"..i]
                     if not skip_point then list[#list+1]={p=q,id=o.id,index=i,end_free=free and {id=o.id,index=i} or nil} end
                 end
-            elseif o.type=="hull" then for _,q in ipairs(o.vertices) do list[#list+1]={p=q,id=o.id} end end
+            elseif doc_lib.outline(o) then for _,q in ipairs(doc_lib.outline(o)) do list[#list+1]={p=q,id=o.id} end end
         end
     end
     for _,q in ipairs(extra or {}) do list[#list+1]={p=q} end
@@ -260,6 +309,8 @@ end
 local function delete(self)
     local s=editor.selection
     local v=editor.vertex
+    -- A prefab end (picked with its exit handle) stands for the whole prefab.
+    if v and find(v.id) and find(v.id).type=="prefab" then v=nil end
     if v then
         if editor.commit(function(e) return edit.delete_point(e,v.id,v.index) end,true) then editor.select(v.id) end
         return
@@ -307,9 +358,9 @@ local function connect_target(v)
     local e=editor.doc.editor
     if not v or edit.joint(e,v.id,v.index) then return nil end
     local o=find(v.id)
-    if not o or (v.index~=1 and v.index~=#o.points) then return nil end
+    if not o or (v.index~=1 and v.index~=#path(o)) then return nil end
     local run={};for _,id in ipairs(edit.run_of(e,v.id)) do run[id]=true end
-    local p=o.points[v.index]
+    local p=path(o)[v.index]
     local best,bd
     for _,c in ipairs(edit.ends(e)) do
         if c.free and not run[c.id] then
@@ -325,13 +376,18 @@ local function connect(self)
     local e=editor.doc.editor
     if edit.joint(e,v.id,v.index) then
         local id,index=edit.owner(e,v.id,v.index)
+        local q=path(find(id))[index]
+        q={q[1],q[2]}
         if editor.commit(function(doc_e) local to,err=edit.disconnect(doc_e,id,index);if not to then return nil,err end end,true) then
-            editor.select(id,{id=id,index=index})
+            -- Disconnect may re-orient a remaining line run: select the same end by position.
+            local pts=path(find(id))
+            editor.select(id,{id=id,index=dist(pts[1],q)<1e-6 and 1 or #pts})
         end
         return
     end
     local v2=editor.vertex2
-    if v2 and find(v2.id) and find(v2.id).points[v2.index] and dist(find(v2.id).points[v2.index],find(v.id).points[v.index])>=0.01 then
+    local function point(x) local o=x and find(x.id);return o and path(o)[x.index] end
+    if point(v2) and dist(point(v2),point(v))>=0.01 then
         -- Two separated free ends: a new piece bridges them; neither end moves (LE3b).
         local id
         if editor.commit(function(doc_e) local new,err=edit.bridge(doc_e,{id=v.id,index=v.index},{id=v2.id,index=v2.index});id=new;if not new then return nil,err end end,true) then
@@ -339,15 +395,13 @@ local function connect(self)
         end
         return
     end
-    local o2=v2 and find(v2.id)
-    local target=o2 and o2.points[v2.index] and {id=v2.id,index=v2.index,p=o2.points[v2.index]} or connect_target(v)
+    local target=point(v2) and {id=v2.id,index=v2.index,p=point(v2)} or connect_target(v)
     if not target then editor.message="Connect needs a second free end: Shift+click it, or drag this end onto it.";return end
-    local p=find(v.id).points[v.index]
     local id=v.id
     if editor.commit(function(doc_e) return edit.connect(doc_e,{id=v.id,index=v.index},{id=target.id,index=target.index}) end,true) then
         -- The connected end is the joint at the target position; select it again by position.
-        local o=find(id)
-        local index=dist(o.points[1],target.p)<1e-6 and 1 or #o.points
+        local pts=path(find(id))
+        local index=dist(pts[1],target.p)<1e-6 and 1 or #pts
         local oid,oindex=edit.owner(editor.doc.editor,id,index)
         editor.select(oid,{id=oid,index=oindex})
     end
@@ -383,7 +437,7 @@ end
 -- After another document became current: dialogs close, and an unfinished piece (which belongs to the
 -- previous document) is discarded with its gesture state.
 local function opened(self)
-    self.open_dialog,self.field,self.confirm_delete=false,nil,nil
+    self.open_dialog,self.field,self.confirm_delete,self.place=false,nil,nil,nil
     if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
     cancel(self);self.snapped=nil
 end
@@ -455,11 +509,99 @@ local function paste_at(self,p)
     if step then d={snap_lib.round(d[1],step),snap_lib.round(d[2],step)} end
     paste_by(d)
 end
--- Duplicate: a copy placed to the right of the selection, at least 1 m apart, on the 0.5 m grid.
-local function duplicate(self)
-    if not copy_selection() then return end
-    local b=edit.bbox(editor.clipboard.objects)
-    paste_by({math.ceil((b[2]-b[1]+1)/snap_lib.GRID)*snap_lib.GRID,0})
+-- Mirror (LE5a): a horizontally mirrored copy to the left or right of the selection, at least 1 m apart,
+-- offset by a multiple of 0.5 m. The original and the clipboard stay unchanged; one Undo step.
+local function mirror(self,side)
+    local ids=editor.selected_ids()
+    if #ids==0 then editor.message="Select objects to mirror first.";return end
+    local new
+    if editor.commit(function(e) new=edit.mirror(e,ids,side) end,true) then
+        editor.select(nil)
+        for _,id in ipairs(new) do editor.selected[id]=true end
+        editor.selection=new[1];editor.touch()
+        editor.message="Mirrored copy of "..#new.." object"..(#new==1 and "" or "s").." to the "..(side>0 and "right" or "left")..". The original is unchanged."
+    end
+end
+-- Prefabs (LE5a). A parameter change keeps the entry and moves the downstream run (edit.set_params);
+-- one Undo step. A change that adds a Play-blocking error is applied and named as a conflict.
+local function apply_params(id,params)
+    local known={}
+    for _,m in ipairs(editor.errors) do known[m]=true end
+    if editor.commit(function(e) local moved,err=edit.set_params(e,id,params);if not moved then return nil,err end end,true) then
+        for _,m in ipairs(editor.errors) do
+            if not known[m] then editor.message="Changed, with a conflict: "..m..(m:match("%.$") and "" or ".").." Undo [Ctrl+Z] restores the previous shape.";return true end
+        end
+        return true
+    end
+end
+local function same_params(a,b)
+    for k,v in pairs(a) do if b[k]~=v then return false end end
+    for k in pairs(b) do if a[k]==nil then return false end end
+    return true
+end
+-- Snapping steps for handle drags: lengths on the active grid, angles in 1 deg steps (Alt 0.1, Shift 15
+-- deg); Ctrl turns both off (R6).
+local function steps(self)
+    if self.held.ctrl then return {} end
+    return {length=self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID or nil,angle=self.held.shift and 15 or self.held.alt and 0.1 or 1}
+end
+-- Where a click with the Prefab tool places the current type: its entry at the snapped cursor. On a free
+-- exit the prefab continues that run; on a free entry its exit ends there (a visible connect preview,
+-- R5). A Platform is a separate obstacle and never connects.
+local function placement(self,p)
+    local kind=editor.prefab_kind
+    local params=prefab.defaults(kind)
+    local q,how,anchor=snap(self,p)
+    local place={kind=kind,params=params,at={q[1],q[2]},p=q}
+    if kind~="platform" and how=="anchor" and anchor.end_free then
+        local o=find(anchor.id)
+        if anchor.index==#path(o) and anchor.index>1 then place.first={id=anchor.id,index=anchor.index}
+        else
+            local x=doc_lib.exit({type="prefab",kind=kind,at={0,0},params=params})
+            place.at={q[1]-x[1],q[2]-x[2]};place.last={id=anchor.id,index=1}
+        end
+        place.target=anchor.id
+    end
+    return place
+end
+local function place_prefab(self,p)
+    local place=placement(self,p)
+    local id
+    if editor.commit(function(e) local new,err=edit.add_prefab(e,place.kind,place.params,place.at,place.first,place.last);id=new;if not new then return nil,err end end,true) then
+        editor.select(id)
+        editor.message="Placed "..prefab.name(place.kind).." "..id..(place.target and ", connected to "..place.target or "")..". Change its values on the right."
+    end
+end
+-- Number fields edit the same parameters as the handles; a choice field steps to its next value.
+local function number_text(v) return (string.format("%.4f",v):gsub("0+$",""):gsub("%.$","")) end
+local function param_rows(o) return prefab.fields(o.kind,o.params,true) end
+local function param_click(self,i)
+    local o=find(editor.selection)
+    local f=o and o.type=="prefab" and param_rows(o)[i]
+    if not f then return end
+    if f.choices then
+        local params,err=prefab.cycle(o.kind,o.params,f.key)
+        if params then apply_params(o.id,params) else editor.message=err end
+    else
+        local t=number_text(o.params[f.key])
+        self.field={text=t,initial=t,all=true,param=f.key,id=o.id,label=f.label,unit=f.unit}
+        editor.message=string.format("Type %s (%s, %s to %s); Enter applies, Esc cancels.",f.label:lower(),f.unit,number_text(f.min),number_text(f.max))
+    end
+end
+-- Applies a number field. Invalid input leaves the shape unchanged and keeps the field open with the
+-- reason (close: a click elsewhere drops it with the same message).
+local function confirm_param(self,closing)
+    local f=self.field
+    local o=find(f.id)
+    if not o or f.text==f.initial then self.field=nil;editor.message="";return end
+    local params,err=prefab.set(o.kind,o.params,f.param,f.text)
+    if not params then
+        editor.message=(closing and "Not applied: " or "")..err.." The previous value is kept."
+        if closing then self.field=nil end
+        return
+    end
+    self.field=nil;editor.message=""
+    apply_params(o.id,params)
 end
 -- Export (R9, R12): only a playable level, compiled like Play; the file is the station JSON with its
 -- editor block. Import opens a file as a copy in My levels (the HTML helper reads it; boot validates it).
@@ -484,7 +626,8 @@ local function drop_char(t)
     while i>0 and t:byte(i)>=128 and t:byte(i)<192 do i=i-1 end
     return t:sub(1,math.max(0,i-1))
 end
-local function confirm_name(self)
+local function confirm_name(self,closing)
+    if self.field.param then confirm_param(self,closing);return end
     local name=self.field.text:match("^%s*(.-)%s*$")
     if name=="" then editor.message="A level name cannot be empty.";return end
     self.field=nil
@@ -492,7 +635,7 @@ local function confirm_name(self)
 end
 local function set_tool(self,tool)
     if self.drawing and tool~="draw" then finish_drawing(self) end
-    editor.tool=tool;editor.touch()
+    editor.tool=tool;self.place=nil;editor.touch()
 end
 local function on_button(self,name)
     if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
@@ -507,7 +650,9 @@ local function on_button(self,name)
     elseif name=="rename" then
         -- The whole name starts selected: typing replaces it, Backspace clears it.
         self.field={text=editor.doc.name,all=true};editor.message="Type the level name; Enter confirms, Esc cancels."
-    elseif name=="duplicate" then duplicate(self)
+    elseif name=="mirror_left" or name=="mirror_right" then mirror(self,name=="mirror_left" and -1 or 1)
+    elseif name:match("^param_%d$") then param_click(self,tonumber(name:sub(7)))
+    elseif name:match("^kind_") then editor.prefab_kind=name:sub(6);set_tool(self,"prefab")
     elseif name=="paste" then paste_at(self,{editor.camera.x,editor.camera.y})
     elseif name=="dialog_close" then self.open_dialog=false
     elseif name=="lib_newer" then self.page=math.max(0,self.page-1)
@@ -549,12 +694,13 @@ local function vertex_state()
     if not v then return nil end
     local o=find(v.id)
     if not o then return nil end
-    return {inner=v.index>1 and v.index<#o.points,joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
+    return {inner=v.index>1 and v.index<#path(o),joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
 end
 local function visible_buttons(self)
     -- The R1 choice is modal: nothing else is offered until it is made.
     if editor.conflict then return {"conflict_source","conflict_lines"} end
-    local list={"undo","redo","new","open","import","export","play","minus","plus","tool_select","tool_draw","tool_start","tool_finish","tool_pan","warnings"}
+    local list={"undo","redo","new","open","import","export","play","minus","plus","tool_select","tool_draw","tool_prefab","tool_start","tool_finish","tool_pan","warnings"}
+    if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
     if editor.selection=="finish" then list[#list+1]="direction"
     elseif editor.selection and editor.selection~="start" then list[#list+1]="delete"
@@ -563,7 +709,11 @@ local function visible_buttons(self)
         if vs.inner then list[#list+1]="split" end
         list[#list+1]=vs.joint and "disconnect" or (not vs.inner and "connect") or nil
     end
-    if next(editor.selected) then list[#list+1]="duplicate" end
+    local o=editor.selection and find(editor.selection)
+    if o and o.type=="prefab" and #editor.selected_ids()==1 then
+        for i=1,#param_rows(o) do list[#list+1]="param_"..i end
+    end
+    if next(editor.selected) then list[#list+1]="mirror_left";list[#list+1]="mirror_right" end
     if editor.clipboard then list[#list+1]="paste" end
     if self.open_dialog then
         for _,name in ipairs(self.templates) do list[#list+1]=name end
@@ -597,12 +747,9 @@ local function start_move(self,c,p)
     local list,set=edit.closure(e,ids)
     local o=find(c.id)
     local ref
-    if o.type=="label" then ref=o.position
-    else
-        for _,q in ipairs(o.type=="line" and o.points or o.vertices) do if not ref or dist(p,q)<dist(p,ref) then ref=q end end
-    end
+    for _,q in ipairs(path(o)) do if not ref or dist(p,q)<dist(p,ref) then ref=q end end
     local base={}
-    for _,id in ipairs(list) do local x=find(id);base[id]=doc_lib.copy(editor.shape(x)) end
+    for _,id in ipairs(list) do base[id]=doc_lib.copy(find(id)) end
     self.drag={kind="move",ids=ids,list=list,skip=set,ref={ref[1],ref[2]},press={p[1],p[2]},press_px=self.cursor_px,base=base,delta={0,0},moved=false}
 end
 local function start_vertex(self,c,p)
@@ -617,11 +764,21 @@ local function start_vertex(self,c,p)
     self.drag={kind="vertex",id=c.id,index=c.index,skip=skip,from={from[1],from[2]},origin={o.points[c.index][1],o.points[c.index][2]},
         offset={p[1]-o.points[c.index][1],p[2]-o.points[c.index][2]},press_px=self.cursor_px,moved=false}
 end
+-- Dragging a prefab handle changes its parameters (R4: the entry stays fixed, the downstream run moves);
+-- the drag delta is converted by prefab.drag with the active snapping.
+local function start_handle(self,id,name,p)
+    local o=find(id)
+    self.drag={kind="handle",id=id,handle=name,p0=doc_lib.copy(o.params),press={p[1],p[2]},press_px=self.cursor_px,moved=false}
+end
+local function prefab_end_handle(o,index)
+    for _,h in ipairs(prefab_handles(o)) do if h.index==index then return h.name end end
+end
 local function canvas_press(self,action)
     local p=cursor(self,action)
     if not p then return end
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
+    if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
     local now=socket.gettime()
     local px=self.cursor_px
     local double=self.last_press and now-self.last_press.t<=DOUBLE_S and dist(px,self.last_press.px)<=DOUBLE_PX*ui
@@ -680,15 +837,23 @@ local function canvas_press(self,action)
         -- Shift+click a second free end: the pair Connect [J] joins or bridges.
         local e=editor.doc.editor
         local v=editor.vertex
-        local function free(x) local o=find(x.id);return o and (x.index==1 or x.index==#o.points) and not edit.joint(e,x.id,x.index) end
+        local function free(x) local o=find(x.id);return o and x.index and (x.index==1 or x.index==#path(o)) and not edit.joint(e,x.id,x.index) end
         if v and free(v) and free(c) and not (c.id==v.id and c.index==v.index) then editor.vertex2={id=c.id,index=c.index};editor.touch()
         else editor.message="Shift+click picks a second free end after selecting a free end." end
         return
     end
-    if c.kind=="vertex" then
+    if c.kind=="handle" then
+        editor.selection,editor.vertex,editor.vertex2=c.id,c.index and {id=c.id,index=c.index} or nil,nil;editor.touch()
+        start_handle(self,c.id,c.handle,p)
+    elseif c.kind=="vertex" then
         if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
         else editor.selection,editor.vertex,editor.vertex2=c.id,{id=c.id,index=c.index},nil;editor.touch() end
-        start_vertex(self,c,p)
+        local o=find(c.id)
+        if o.type=="prefab" then
+            -- A prefab end: its exit handle changes parameters; otherwise the whole run moves.
+            local name=prefab_end_handle(o,c.index)
+            if name then start_handle(self,c.id,name,p) else start_move(self,c,p) end
+        else start_vertex(self,c,p) end
     elseif c.kind=="start" or c.kind=="finish" then
         editor.select(c.id)
         local origin=c.id=="start" and editor.doc.editor.start.position or editor.doc.editor.finish.position
@@ -729,7 +894,30 @@ local function canvas_move(self,action)
             drag.moved,drag.to=true,q
             local e=doc_lib.copy(editor.doc.editor)
             local preview={}
-            for _,id in ipairs(edit.move_vertex(e,drag.id,drag.index,q)) do preview[id]=edit.find(e,id).points end
+            for _,id in ipairs(edit.move_vertex(e,drag.id,drag.index,q)) do preview[id]=edit.find(e,id) end
+            editor.set_preview(preview)
+        end
+    elseif drag and drag.kind=="handle" then
+        local o=find(drag.id)
+        local params=prefab.drag(o,drag.handle,drag.p0,{p[1]-drag.press[1],p[2]-drag.press[2]},steps(self))
+        if not same_params(params,drag.params or drag.p0) then
+            drag.moved,drag.params=true,params
+            -- Preview: the reshaped prefab and the moved downstream run; a new Play-blocking error is shown
+            -- as a conflict before the release applies it.
+            local e=doc_lib.copy(editor.doc.editor)
+            local moved=edit.set_params(e,drag.id,params) or {}
+            local preview={}
+            for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
+            drag.downstream=math.max(0,#moved-1)
+            -- The same checks as live validation: the domain rules and the compile (START overlap).
+            local known={}
+            for _,m in ipairs(editor.errors) do known[m]=true end
+            local copy={schema=1,units="metres",id=editor.doc.id,name=editor.doc.name,editor=e}
+            local errors=doc_lib.problems(e)
+            local _,cerr=doc_lib.compile(copy,nil,errors)
+            if cerr and errors[1]~=cerr then errors[#errors+1]=cerr end
+            drag.conflict=nil
+            for _,m in ipairs(errors) do if not known[m] then drag.conflict=m;break end end
             editor.set_preview(preview)
         end
     elseif drag and drag.kind=="move" then
@@ -739,8 +927,8 @@ local function canvas_move(self,action)
         if drag.moved or d[1]~=0 or d[2]~=0 then
             drag.moved,drag.delta=true,d
             local preview={}
-            for id,pts in pairs(drag.base) do
-                local t={};for i,q2 in ipairs(pts) do t[i]={q2[1]+d[1],q2[2]+d[2]} end
+            for id,o in pairs(drag.base) do
+                local t=doc_lib.copy(o);edit.translate_object(t,d)
                 preview[id]=t
             end
             editor.set_preview(preview)
@@ -749,6 +937,7 @@ local function canvas_move(self,action)
     elseif editor.tool=="draw" then
         local d=self.drawing
         snap(self,p,nil,d and d.points[#d.points],d and {unpack(d.points,1,#d.points-1)} or nil)
+    elseif editor.tool=="prefab" then self.place=placement(self,p)
     elseif editor.tool=="select" then set_hover(self,candidates(p)) end
 end
 local function box_select(self,b)
@@ -758,12 +947,15 @@ local function box_select(self,b)
     -- An object is picked when the box contains one of its points or one of its edges crosses the box.
     local box={x0,x1,y0,y1}
     for _,o in ipairs(editor.doc.editor.objects) do
-        local pts=o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}
+        local closed=doc_lib.outline(o)
         local hit=false
-        for i,q in ipairs(pts) do
-            if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then hit=true;break end
-            local r=pts[i+1] or (o.type=="hull" and pts[1])
-            if r and doc_lib.segment_box(q,r,box) then hit=true;break end
+        for _,pts in ipairs(closed and {closed} or o.type=="label" and {{o.position}} or doc_lib.parts(o)) do
+            for i,q in ipairs(pts) do
+                if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then hit=true;break end
+                local r=pts[i+1] or (closed and pts[1])
+                if r and doc_lib.segment_box(q,r,box) then hit=true;break end
+            end
+            if hit then break end
         end
         if hit then editor.selected[o.id]=true end
     end
@@ -793,7 +985,9 @@ local function canvas_release(self)
     end
     editor.set_preview(nil)
     if not drag.moved then return end
-    if drag.kind=="vertex" then
+    if drag.kind=="handle" then
+        if drag.params and not same_params(drag.params,drag.p0) then apply_params(drag.id,drag.params) end
+    elseif drag.kind=="vertex" then
         local q=drag.to
         if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
         editor.commit(function(e) edit.move_vertex(e,drag.id,drag.index,q) end,true)
@@ -832,12 +1026,13 @@ function on_input(self,action_id,action)
         if action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            if #f.text+#t>64 then editor.message="A level name is limited to 64 bytes." else f.text=f.text..t end
+            local limit=f.param and 16 or 64
+            if #f.text+#t>limit then editor.message=f.param and "A value is limited to 16 characters." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_play") and action.pressed then confirm_name(self)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
-        elseif action_id==hash("ui_pointer") and action.pressed then confirm_name(self)
+        elseif action_id==hash("ui_pointer") and action.pressed then confirm_name(self,true)
         elseif action_id==nil then cursor(self,action) end
         return true
     end
@@ -874,6 +1069,7 @@ function on_input(self,action_id,action)
     elseif action_id==hash("editor_test") then test_start(self)
     elseif action_id==hash("editor_tool_select") then set_tool(self,"select")
     elseif action_id==hash("editor_tool_draw") then set_tool(self,"draw")
+    elseif action_id==hash("editor_tool_prefab") then set_tool(self,"prefab")
     elseif action_id==hash("editor_grid") then editor.grid=not editor.grid;editor.touch()
     elseif action_id==hash("editor_cycle") then
         -- Tab cycles through overlapping candidates under the cursor.
@@ -899,6 +1095,9 @@ function on_input(self,action_id,action)
     elseif action_id==hash("editor_v") and self.held.ctrl then
         if self.drawing then finish_drawing(self) end
         paste_at(self,self.cursor or {editor.camera.x,editor.camera.y})
+    elseif editor.tool=="prefab" and KIND_KEYS[action_id] then
+        -- 1-6 pick the prefab type (the game's station keys are editor input while editing).
+        editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
     elseif action_id==hash("editor_cancel") then
         -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
         if self.drag or self.pan or self.box then cancel(self)
@@ -907,6 +1106,10 @@ function on_input(self,action_id,action)
         elseif self.warnings_open then self.warnings_open=false
         else editor.select(nil) end
     end
+    return true
+end
+local function one_sided(e,run)
+    for _,c in ipairs(doc_lib.run_chains(e,run)) do if not doc_lib.one_sided(c.points) then return false end end
     return true
 end
 local function seg_text(a,b)
@@ -931,20 +1134,23 @@ local function describe(self)
         local o=find(v.id)
         local pts=editor.shape(o)
         local p=pts[v.index]
-        lines={"Point "..v.index.." of "..#pts.." in line "..v.id,string.format("x %.2f m  y %.2f m",p[1],p[2])}
-        if v.index>1 then lines[#lines+1]="Before: "..seg_text(pts[v.index-1],p) end
-        if v.index<#pts then lines[#lines+1]="After: "..seg_text(p,pts[v.index+1]) end
+        if o.type=="prefab" then lines={(v.index==1 and "Entry" or "Exit").." of "..doc_lib.label(o),string.format("x %.2f m  y %.2f m",p[1],p[2])}
+        else
+            lines={"Point "..v.index.." of "..#pts.." in line "..v.id,string.format("x %.2f m  y %.2f m",p[1],p[2])}
+            if v.index>1 then lines[#lines+1]="Before: "..seg_text(pts[v.index-1],p) end
+            if v.index<#pts then lines[#lines+1]="After: "..seg_text(p,pts[v.index+1]) end
+        end
         local joint=edit.joint(e,v.id,v.index)
         if joint then lines[#lines+1]="Joint "..v.id.." -> "..joint..": dragging moves the downstream run"
         elseif v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
         else
             local v2=editor.vertex2
-            local q=v2 and find(v2.id) and find(v2.id).points[v2.index]
+            local q=v2 and find(v2.id) and path(find(v2.id))[v2.index]
             local target=connect_target(v)
             if q and dist(q,p)>=0.01 then lines[#lines+1]=string.format("Connect [J] bridges to %s (%.2f m)",v2.id,dist(q,p))
             elseif q or target then lines[#lines+1]="Touches "..(q and v2.id or target.id).." end: Connect [J]"
             else lines[#lines+1]="Free end; Shift+click another free end to connect" end
-            lines[#lines+1]=#pts>2 and "Delete shortens the line" or "Delete: not possible (2 points)"
+            if o.type=="line" then lines[#lines+1]=#pts>2 and "Delete shortens the line" or "Delete: not possible (2 points)" end
         end
     elseif #ids>1 then
         local list=edit.closure(e,ids)
@@ -957,10 +1163,22 @@ local function describe(self)
             local run=edit.run_of(e,o.id)
             lines={"Line "..o.id,#o.points.." points, "..string.format("%.2f m",length),
                 #run>1 and "Run of "..#run.." pieces: "..table.concat(run," > ",1,math.min(#run,4))..(#run>4 and " ..." or "") or "Not connected",
-                doc_lib.one_sided((doc_lib.run_points(e,run))) and "Solid below (one-sided)" or "Turns back: two-sided collision",
+                one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
         elseif o.type=="hull" then lines={"Hull "..o.id,#o.vertices.." vertices"}
+        elseif o.type=="prefab" then
+            local pts=editor.shape(o)
+            lines={doc_lib.label(o).." (prefab)",string.format("At x %.2f  y %.2f m",o.at[1],o.at[2])}
+            if doc_lib.terrain(o) then
+                local q=pts[#pts]
+                lines[#lines+1]=string.format("Exit x %.2f  y %.2f m",q[1],q[2])
+                local run=edit.run_of(e,o.id)
+                lines[#lines+1]=#run>1 and "Run of "..#run.." pieces" or "Not connected"
+            end
+            for _,t in ipairs(prefab.derived(o)) do lines[#lines+1]=t end
         else lines={"Label "..o.id,o.text} end
+    elseif editor.tool=="prefab" then
+        lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-6 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
     elseif editor.tool=="draw" then
         lines={"Draw [D]","Click to place points","Click the last point, double-click","or Enter to finish; Backspace undoes","a point; Esc discards the piece.","Start or end on a free end to","connect (green ring).","","Snap: 0.5 m grid [G], Alt 0.1 m,","Shift 15 deg, Ctrl off."}
     else
@@ -986,6 +1204,19 @@ local function readout(self)
         return table.concat(t," | ")
     end
     if drag and drag.kind=="move" and drag.moved then return string.format("dx %.2f m  dy %.2f m",drag.delta[1],drag.delta[2]) end
+    if drag and drag.kind=="handle" and drag.params then
+        local o=find(drag.id)
+        local t={}
+        for _,f in ipairs(prefab.fields(o.kind,drag.params,true)) do
+            if not f.choices and drag.params[f.key]~=drag.p0[f.key] then t[#t+1]=f.label:lower().." "..prefab.value(f,drag.params) end
+        end
+        local text=table.concat(t,", ")..(drag.downstream and drag.downstream>0 and " | moves "..drag.downstream.." downstream" or "")
+        return drag.conflict and text.." | conflict: "..drag.conflict or text
+    end
+    if editor.tool=="prefab" and self.place then
+        local pl=self.place
+        return prefab.name(pl.kind)..string.format(" at %.2f, %.2f",pl.at[1],pl.at[2])..(pl.target and "  connects to "..pl.target or "")
+    end
     if editor.tool=="select" and editor.hover then
         local n=self.candidates and #self.candidates or 0
         return describe_candidate(editor.hover)..(n>1 and string.format("  (%d/%d, Tab)",self.hover_index,n) or "")
@@ -1029,17 +1260,37 @@ local function draw_overlay(self)
     end
     if editor.tool=="draw" and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
     local next,prev=doc_lib.links(e)
+    -- A selected prefab's handles (its parameters), the hovered one larger.
+    local hovered_handle=editor.tool=="select" and hover and hover.kind=="handle" and not self.drag and hover.key
+    for _,obj in ipairs(e.objects) do
+        if obj.type=="prefab" and editor.selected[obj.id] then
+            local shown=editor.preview_objects and editor.preview_objects[obj.id] or obj
+            for _,h in ipairs(prefab.handles(shown)) do
+                handle(h.p,C.param,HANDLE_PX+(hovered_handle=="h:"..obj.id..":"..h.name and 6 or 1))
+            end
+        end
+    end
     for _,obj in ipairs(e.objects) do
         if obj.type=="line" and editor.selected[obj.id] then
             for _,q in ipairs(editor.shape(obj)) do handle(q,C.vertex,HANDLE_PX-2) end
         end
     end
     for _,obj in ipairs(e.objects) do
-        if obj.type=="line" then
+        if doc_lib.terrain(obj) then
             local pts=editor.shape(obj)
             handle(pts[1],prev[obj.id] and C.joint or C.free,HANDLE_PX-1,true)
             if not next[obj.id] then handle(pts[#pts],C.free,HANDLE_PX-1,true) end
         end
+    end
+    -- Prefab placement preview (R5): the shape a click places, and a ring on the end it connects to.
+    local pl=editor.tool=="prefab" and self.place
+    if pl and not self.drag then
+        local ghost={type="prefab",kind=pl.kind,at=pl.at,params=pl.params}
+        local closed=doc_lib.outline(ghost)
+        for _,pts in ipairs(closed and {closed} or doc_lib.parts(ghost)) do
+            for i=2,#pts+(closed and 1 or 0) do overlay.line(o,to_px(pts[i-1],s),to_px(pts[(i-1)%#pts+1],s),C.draw,3) end
+        end
+        if pl.target then handle(pl.p,C.connect,HANDLE_PX+12) end
     end
     local d=self.drawing
     if d then
@@ -1053,14 +1304,61 @@ local function draw_overlay(self)
         overlay.line(o,{p0[1],p0[2]},{p1[1],p0[2]},C.box,1);overlay.line(o,{p1[1],p0[2]},{p1[1],p1[2]},C.box,1)
         overlay.line(o,{p1[1],p1[2]},{p0[1],p1[2]},C.box,1);overlay.line(o,{p0[1],p1[2]},{p0[1],p0[2]},C.box,1)
     end
-    local snapping=self.snapped and (editor.tool=="draw" or (self.drag and self.drag.kind~="marker"))
+    local snapping=self.snapped and (editor.tool=="draw" or editor.tool=="prefab" or (self.drag and self.drag.kind~="marker" and self.drag.kind~="handle"))
     overlay.snap(o,snapping and to_px(self.snapped.p,s) or nil,snapping and (C[self.snapped.kind] or C.free_snap) or nil)
     local text=readout(self)
     overlay.readout(o,self.cursor_px,text)
     self.readout_text=text
     overlay.finish(o)
 end
+-- Right panel (LE5a): the description, then the rows it shows, top to bottom; the panel grows to fit
+-- them (never smaller than in LE4). LINE: one description line of the builtin 14 px font at scale 0.42,
+-- with a margin (a line count, so no text metrics API is needed).
+local ROW,LINE=26,7.5
+local function layout(self,shown)
+    local y=468-self.description_lines*LINE-6-ROW/2
+    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"}}
+    for i=1,PARAMS do rows[#rows+1]={"param_"..i} end
+    rows[#rows+1]={"mirror_left","mirror_right"}
+    rows[#rows+1]={"paste"}
+    local function put(name,x)
+        local b=self.buttons[name]
+        local p=vmath.vector3(x,y,0)
+        gui.set_position(b.box,p);gui.set_position(b.label,p)
+    end
+    local mirror=false
+    for _,row in ipairs(rows) do
+        local any=false
+        for _,name in ipairs(row) do any=any or shown[name] end
+        if any then
+            if row[1]=="minus" then put("minus",800);put("plus",848)
+            elseif row[1]=="mirror_left" then
+                put("mirror_left",868);put("mirror_right",926)
+                gui.set_position(self.mirror_label,vmath.vector3(772,y,0));mirror=true
+            else for _,name in ipairs(row) do if shown[name] then put(name,860) end end end
+            y=y-ROW
+        end
+    end
+    gui.set_enabled(self.mirror_label,mirror)
+    local bottom=math.min(183,y+ROW/2-4)
+    gui.set_position(self.panel,vmath.vector3(860,(475+bottom)/2,0));gui.set_size(self.panel,vmath.vector3(196,475-bottom,0))
+end
 local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
+-- Test state (debug only): the selected prefab's handles and its panel rows as shown.
+local function published_handles()
+    local o=editor.selection and editor.doc and find(editor.selection)
+    if not (o and o.type=="prefab") then return {} end
+    local list={}
+    for _,h in ipairs(prefab_handles(o)) do list[#list+1]={name=h.name,p=h.p,index=h.index or false} end
+    return list
+end
+local function published_rows(self)
+    local o=editor.selection and editor.doc and find(editor.selection)
+    if not (o and o.type=="prefab" and #editor.selected_ids()==1) then return {} end
+    local list={}
+    for i=1,#param_rows(o) do list[i]=gui.get_text(self.buttons["param_"..i].label) end
+    return list
+end
 local function publish(self)
     local e=editor.doc and editor.doc.editor
     local buttons={}
@@ -1074,15 +1372,22 @@ local function publish(self)
         selected=editor.doc and editor.selected_ids() or {},vertex=editor.vertex or false,hover=editor.hover and editor.hover.key or "",hover_count=self.candidates and #self.candidates or 0,
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
-        overlay={nodes=self.gui_nodes,max_nodes=512,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,dropped=o.dropped,spacing=o.spacing or 0},
+        overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,dropped=o.dropped,spacing=o.spacing or 0},
         visible=visible_buttons(self),key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=editor.library().list(),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
-        clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false},{encode_empty_table_as_object=false}))
+        clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
+        prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,
+        handles=published_handles(),field_param=self.field and self.field.param or false,
+        rows=published_rows(self)},{encode_empty_table_as_object=false}))
     -- The document itself only when it changed (it can hold thousands of points).
     local key=e and editor.doc.id..":"..e.revision
     if key and key~=self.published then
         self.published=key
         html5.run("window.riderEditorDoc="..json.encode(e,{encode_empty_table_as_object=false}))
+        -- Derived geometry (prefab paths), so tests can check what the document compiles from.
+        local paths={}
+        for _,o in ipairs(e.objects) do paths[o.id]=path(o) end
+        html5.run("window.riderEditorPaths="..json.encode(paths))
     end
 end
 function update(self,dt)
@@ -1104,14 +1409,16 @@ function update(self,dt)
         -- Save status (R12): Unsaved / Saving... / Saved / Save failed; a copy that was never edited is not in My levels.
         local status=editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"
         if not editor.key() and not editor.store[editor.opened] then status=status.." (copy)" end
-        if self.field then
+        if self.field and not self.field.param then
             gui.set_text(self.title,self.field.all and "Name: ["..self.field.text.."]  (type to replace)" or "Name: "..self.field.text.."_")
             gui.set_color(self.title,C.hover)
         else
             gui.set_text(self.title,string.format("%s | %s",shorten(editor.doc.name,24),shorten(status,36)))
             gui.set_color(self.title,vmath.vector4(1,1,1,1))
         end
-        gui.set_text(self.properties,describe(self))
+        local description=describe(self)
+        gui.set_text(self.properties,description)
+        self.description_lines=select(2,description:gsub("\n",""))+1
         gui.set_text(self.message,editor.message or "")
         local p=self.cursor
         local snapped=self.snapped and self.snapped.kind~="free" and (editor.tool=="draw" or self.drag) and " -> "..self.snapped.kind or ""
@@ -1167,8 +1474,21 @@ function update(self,dt)
             if name:match("^libdel_") then
                 local l=self.library and self.library[(self.page or 0)*ROWS+tonumber(name:sub(8))]
                 gui.set_color(b.box,l and self.confirm_delete==l.key and DANGER or BUTTON)
-            elseif name~="warnings" then gui.set_color(b.box,name=="tool_"..editor.tool and ACTIVE or BUTTON) end
+            elseif name~="warnings" then gui.set_color(b.box,(name=="tool_"..editor.tool or name=="kind_"..editor.prefab_kind) and ACTIVE or BUTTON) end
         end
+        -- A selected prefab's fields: label and value, the focused one as an edit field.
+        local sel=editor.selection and find(editor.selection)
+        if sel and sel.type=="prefab" then
+            local f=self.field
+            for i,fd in ipairs(param_rows(sel)) do
+                local b=self.buttons["param_"..i]
+                local focused=f and f.param==fd.key and f.id==sel.id
+                gui.set_text(b.label,focused and (f.all and fd.label..": ["..f.text.."] "..fd.unit or fd.label..": "..f.text.."_ "..fd.unit)
+                    or fd.label..": "..prefab.value(fd,sel.params)..(fd.choices and "  (click)" or ""))
+                gui.set_color(b.box,focused and ACTIVE or BUTTON)
+            end
+        end
+        layout(self,shown)
         -- After any document change (edit, Undo/Redo, another document) hover is picked again at the cursor.
         local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
         if key~=self.seen then
@@ -1181,6 +1501,7 @@ function update(self,dt)
             end
             if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
             else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
+            self.place=editor.tool=="prefab" and self.cursor and placement(self,self.cursor) or nil
         end
         draw_overlay(self)
         self.overlay_shown=true

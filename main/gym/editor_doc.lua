@@ -1,9 +1,11 @@
 -- Level editor source documents (level-editor contract R1-R4, R9, R10, R13, R16). Pure: no engine
 -- calls besides json, metres throughout. The editor block is authoritative; Play recompiles from it.
 local data=require "main.gym.station_data"
+local prefab=require "main.gym.editor_prefab"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
--- Version 1 documents have no connections and open upgraded; their single lines compile unchanged.
-local M={EDITOR_VERSION=2,COMPILER_VERSION=2}
+-- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
+-- Version 1 and 2 documents open upgraded; their lines and connections compile unchanged.
+local M={EDITOR_VERSION=3,COMPILER_VERSION=3}
 -- Explicit document limits (R16): drafts may be incomplete, never unbounded.
 M.MAX_OBJECTS,M.MAX_POINTS,M.MAX_TOTAL_POINTS=256,2048,8192
 -- Upright vehicle box around the spawn (chassis 1.08 x 0.28 m, wheels r 0.22 at +-0.46/-0.30, head top 0.68).
@@ -23,10 +25,38 @@ end
 M.copy=copy
 local function points(list) local out={};for i,p in ipairs(list) do out[i]={p[1],p[2]} end;return out end
 local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
--- Connected ends coincide (R4); the editor makes them exactly equal, JSON keeps them equal.
+-- Connected ends coincide (R4); the editor makes them exactly equal, JSON keeps them equal (a prefab's
+-- derived exit within this tolerance).
 M.JOINT=1e-6
 local function same(a,b,eps) return math.abs(a[1]-b[1])<=(eps or M.JOINT) and math.abs(a[2]-b[2])<=(eps or M.JOINT) end
 M.same=same
+M.finite=finite
+
+-- Object geometry (LE5a). Terrain pieces are lines and terrain prefabs: each has an entry (first
+-- point) and an exit (last point) and belongs to a run. parts: the open polylines a piece adds to
+-- collision chains (a Kicker + landing has two, with its jump gap between them). path: every point of
+-- an object, entry to exit (hull and Platform: the closed outline; label: its position).
+function M.terrain(o) return o.type=="line" or (o.type=="prefab" and prefab.terrain(o.kind)) end
+function M.parts(o)
+    if o.type=="line" then return {o.points} end
+    if o.type=="prefab" and o.kind~="platform" then return prefab.geometry(o).parts end
+    return {}
+end
+function M.path(o)
+    if o.type=="line" then return o.points end
+    if o.type=="hull" then return o.vertices end
+    if o.type=="prefab" then return prefab.path(o) end
+    return {o.position}
+end
+-- Closed outline of a hull or Platform (a separate obstacle), else nil.
+function M.outline(o)
+    if o.type=="hull" then return o.vertices end
+    if o.type=="prefab" and o.kind=="platform" then return prefab.path(o) end
+end
+function M.entry(o) return o.type=="line" and o.points[1] or o.at end
+function M.exit(o) local p=M.path(o);return p[#p] end
+-- Display name for messages: "Line o3", "Ramp o5".
+function M.label(o) return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
 
 -- Station JSON (built-in or custom, without editor block) -> editable lines/hulls/labels (R2).
 local function from_station(d,id,name)
@@ -132,7 +162,7 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if (e.editor_version~=1 and e.editor_version~=2) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -147,6 +177,11 @@ function M.validate(doc)
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
         if o.type=="label" then
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
+        elseif o.type=="prefab" then
+            if e.editor_version<3 then return nil,"Prefab "..o.id.." needs editor version 3" end
+            local ok,err=prefab.validate(o,finite)
+            if not ok then return nil,"Invalid prefab "..o.id..": "..err end
+            total=total+prefab.count(o)
         elseif type(list)=="table" then
             if #list<(o.type=="line" and 2 or 3) or #list>(o.type=="line" and M.MAX_POINTS or 8) then return nil,"Invalid point count in "..o.id end
             for _,p in ipairs(list) do if not point(p) then return nil,"Invalid point in "..o.id end end
@@ -164,26 +199,26 @@ function M.validate(doc)
     if e.editor_version==1 then
         if conns~=nil and (type(conns)~="table" or #conns>0) then return nil,"Connections need editor version 2" end
     elseif type(conns)~="table" or #conns>M.MAX_OBJECTS then return nil,"Missing or too many connections" end
-    local lines,from,to={}, {}, {}
-    for _,o in ipairs(e.objects) do if o.type=="line" then lines[o.id]=o end end
+    local pieces,from,to={}, {}, {}
+    for _,o in ipairs(e.objects) do if M.terrain(o) then pieces[o.id]=o end end
     for _,c in ipairs(conns or {}) do
-        local a,b=type(c)=="table" and lines[c.from],type(c)=="table" and lines[c.to]
+        local a,b=type(c)=="table" and pieces[c.from],type(c)=="table" and pieces[c.to]
         if not a or not b or a==b then return nil,"Invalid connection" end
         if from[c.from] or to[c.to] then return nil,"Connection end used twice: "..c.from.." -> "..c.to end
-        if not same(a.points[#a.points],b.points[1]) then return nil,"Connected ends do not meet: "..c.from.." -> "..c.to end
+        if not same(M.exit(a),M.entry(b)) then return nil,"Connected ends do not meet: "..c.from.." -> "..c.to end
         from[c.from],to[c.to]=c.to,c.from
     end
     for id in pairs(from) do
         local n,seen=id,0
         while from[n] do n=from[n];seen=seen+1;if n==id or seen>M.MAX_OBJECTS then return nil,"Connections form a loop at "..id end end
     end
-    -- Upgrade a supported version 1 document in place: same geometry, no connections.
-    if e.editor_version==1 then e.editor_version,e.compiler_version,e.connections=2,2,{} end
+    -- Upgrade a supported version 1 or 2 document in place: same geometry and connections (none in 1).
+    if e.editor_version<3 then e.editor_version,e.compiler_version,e.connections=3,3,e.connections or {} end
     return doc
 end
 
--- Connected runs (R4): lines linked exit -> entry, ordered from head to tail. Unconnected lines are
--- runs of one piece. Every line is in exactly one run (the validator rules out loops).
+-- Connected runs (R4): terrain pieces (lines, terrain prefabs) linked exit -> entry, ordered from head
+-- to tail. Unconnected pieces are runs of one. Every piece is in exactly one run (no loops).
 function M.links(e)
     local next,prev={},{}
     for _,c in ipairs(e.connections or {}) do next[c.from],prev[c.to]=c.to,c.from end
@@ -193,7 +228,7 @@ function M.runs(e)
     local next,prev=M.links(e)
     local list={}
     for _,o in ipairs(e.objects) do
-        if o.type=="line" and not prev[o.id] then
+        if M.terrain(o) and not prev[o.id] then
             local run,id={},o.id
             while id do run[#run+1]=id;id=next[id] end
             list[#list+1]=run
@@ -201,17 +236,23 @@ function M.runs(e)
     end
     return list
 end
-function M.lines(e) local t={};for _,o in ipairs(e.objects) do if o.type=="line" then t[o.id]=o end end;return t end
--- Merged run points (each joint once) and the line that owns each point.
-function M.run_points(e,run,lines)
-    lines=lines or M.lines(e)
-    local pts,owner={}, {}
-    for k,id in ipairs(run) do
-        for i,p in ipairs(lines[id].points) do
-            if k==1 or i>1 then pts[#pts+1]=p;owner[#pts]=id end
+function M.pieces(e) local t={};for _,o in ipairs(e.objects) do if M.terrain(o) then t[o.id]=o end end;return t end
+-- The collision chains of a run (R4, D8): its pieces merged with each joint once, so a connected run is
+-- one chain. Only the open jump gap of a Kicker + landing ends a chain; its landing starts the next one.
+-- Each chain is {points, owner} with the piece that owns each point.
+function M.run_chains(e,run,pieces)
+    pieces=pieces or M.pieces(e)
+    local chains,pts,owner={},{},{}
+    for _,id in ipairs(run) do
+        for k,part in ipairs(M.parts(pieces[id])) do
+            if k>1 then chains[#chains+1]={points=pts,owner=owner};pts,owner={},{} end
+            for i,p in ipairs(part) do
+                if #pts==0 or i>1 then pts[#pts+1]=p;owner[#pts]=id end
+            end
         end
     end
-    return pts,owner
+    chains[#chains+1]={points=pts,owner=owner}
+    return chains
 end
 
 -- Supported terrain domain (R16, LE3b), checked on every compile:
@@ -294,45 +335,47 @@ local function self_cross(pts)
 end
 function M.problems(e)
     local errors,warnings={},{}
-    local lines=M.lines(e)
+    local pieces=M.pieces(e)
     local runs=M.runs(e)
     local hulls=false
-    for _,o in ipairs(e.objects) do hulls=hulls or o.type=="hull" end
-    if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D]." end
+    for _,o in ipairs(e.objects) do hulls=hulls or M.outline(o)~=nil end
+    if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D] or place a prefab [P]." end
     local chains=0
     for _,run in ipairs(runs) do
-        local pts,owner=M.run_points(e,run,lines)
-        local name=#run>1 and "Run "..run[1].."-"..run[#run] or "Line "..run[1]
-        if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run." end
-        local bad
-        for i=2,#pts do
-            local a,b=pts[i-1],pts[i]
-            local dx,dy=b[1]-a[1],b[2]-a[2]
-            if dx*dx+dy*dy<0.0001 then errors[#errors+1]="Line "..owner[i].." has points closer than 1 cm at "..at(b)..".";bad=true;break end
-            local c=pts[i+1]
-            if c then
-                local ex,ey=c[1]-b[1],c[2]-b[2]
-                local l=math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey))
-                if dx*ex+dy*ey<0 and math.abs(dx*ey-dy*ex)<=1e-6*l then
-                    errors[#errors+1]="Line "..owner[i].." doubles back on itself at "..at(b)..".";bad=true;break
+        local name=#run>1 and "Run "..run[1].."-"..run[#run] or M.label(pieces[run[1]])
+        for _,chain in ipairs(M.run_chains(e,run,pieces)) do
+            local pts,owner=chain.points,chain.owner
+            if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run." end
+            local bad
+            for i=2,#pts do
+                local a,b=pts[i-1],pts[i]
+                local dx,dy=b[1]-a[1],b[2]-a[2]
+                if dx*dx+dy*dy<0.0001 then errors[#errors+1]=M.label(pieces[owner[i]]).." has points closer than 1 cm at "..at(b)..".";bad=true;break end
+                local c=pts[i+1]
+                if c then
+                    local ex,ey=c[1]-b[1],c[2]-b[2]
+                    local l=math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey))
+                    if dx*ex+dy*ey<0 and math.abs(dx*ey-dy*ex)<=1e-6*l then
+                        errors[#errors+1]=M.label(pieces[owner[i]]).." doubles back on itself at "..at(b)..".";bad=true;break
+                    end
                 end
             end
+            local one=M.one_sided(pts)
+            if not bad and not one and #pts<=2048 then
+                local s=self_cross(pts)
+                if s then errors[#errors+1]=name.." crosses itself near "..at(pts[s])..": a run must not cross or close on itself." end
+            end
+            chains=chains+(one and 1 or 2)
         end
-        local one=M.one_sided(pts)
-        if not bad and not one and #pts<=2048 then
-            local s=self_cross(pts)
-            if s then errors[#errors+1]=name.." crosses itself near "..at(pts[s])..": a run must not cross or close on itself." end
-        end
-        chains=chains+(one and 1 or 2)
     end
     if chains>32 then errors[#errors+1]=chains.." terrain chains (a run that turns back counts twice); the limit is 32. Connect pieces into runs [J]." end
     -- Ends that touch without a connection compile into two chains: a seam the wheels can bump on (A18).
     local next,prev=M.links(e)
     local ends={}
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then
-            if not prev[o.id] then ends[#ends+1]={o.id,"start",o.points[1]} end
-            if not next[o.id] then ends[#ends+1]={o.id,"end",o.points[#o.points]} end
+        if M.terrain(o) then
+            if not prev[o.id] then ends[#ends+1]={o.id,"start",M.entry(o)} end
+            if not next[o.id] then ends[#ends+1]={o.id,"end",M.exit(o)} end
         end
     end
     -- Sorted by x, only ends within 1 cm in x are compared.
@@ -351,13 +394,17 @@ function M.problems(e)
     return errors,warnings
 end
 
--- Geometry helpers (metres).
+-- Geometry helpers (metres): every terrain segment (not across a jump gap) and every obstacle edge.
 local function each_segment(e,fn)
     for _,o in ipairs(e.objects) do
-        if o.type=="line" then for i=2,#o.points do fn(o.points[i-1],o.points[i],o) end
-        elseif o.type=="hull" then for i,p in ipairs(o.vertices) do fn(p,o.vertices[i%#o.vertices+1],o) end end
+        local outline=M.outline(o)
+        if outline then for i,p in ipairs(outline) do fn(p,outline[i%#outline+1],o) end
+        else
+            for _,part in ipairs(M.parts(o)) do for i=2,#part do fn(part[i-1],part[i],o) end end
+        end
     end
 end
+M.each_segment=each_segment
 local function segment_box(a,b,box)
     -- Liang-Barsky clip of segment a-b against the box.
     local t0,t1=0,1
@@ -387,7 +434,7 @@ function M.blocked(e,p)
     local hit
     each_segment(e,function(a,b,o) if not hit and segment_box(a,b,box) then hit=o end end)
     if hit then return hit end
-    for _,o in ipairs(e.objects) do if o.type=="hull" and inside_hull(o.vertices,p) then return o end end
+    for _,o in ipairs(e.objects) do local v=M.outline(o);if v and inside_hull(v,p) then return o end end
 end
 -- Highest terrain/hull edge directly below p (R10 "start on surface").
 function M.surface(e,p)
@@ -423,23 +470,27 @@ function M.compile(doc,test,errors)
         run_in=0,run_out=0,bounds=bounds(e),chains={},hulls={},labels={},checkpoints={}}
     errors=errors or M.problems(e)
     if errors[1] then return nil,errors[1] end
-    local lines=M.lines(e)
-    -- A connected run compiles into one chain (R4, D8): no seams between its pieces. A run that
-    -- turns back is marked two-sided; the station builder adds its reversed chain.
+    local pieces=M.pieces(e)
+    -- A connected run compiles into one chain (R4, D8): no seams between its pieces; only the open gap
+    -- of a Kicker + landing splits it. A run that turns back is marked two-sided; the station builder
+    -- adds its reversed chain.
     local sides,two={},false
     for _,run in ipairs(M.runs(e)) do
-        local chain=points((M.run_points(e,run,lines)))
-        -- Solid side below the drawn line: the built-in stations run right to left.
-        if chain[1][1]<chain[#chain][1] then
-            local r={};for i=#chain,1,-1 do r[#r+1]=chain[i] end;chain=r
+        for _,c in ipairs(M.run_chains(e,run,pieces)) do
+            local chain=points(c.points)
+            -- Solid side below the drawn line: the built-in stations run right to left.
+            if chain[1][1]<chain[#chain][1] then
+                local r={};for i=#chain,1,-1 do r[#r+1]=chain[i] end;chain=r
+            end
+            d.chains[#d.chains+1]=chain
+            sides[#sides+1]=not M.one_sided(chain)
+            two=two or sides[#sides]
         end
-        d.chains[#d.chains+1]=chain
-        sides[#sides+1]=not M.one_sided(chain)
-        two=two or sides[#sides]
     end
     if two then d.two_sided=sides end
     for _,o in ipairs(e.objects) do
-        if o.type=="hull" then d.hulls[#d.hulls+1]={vertices=points(o.vertices)}
+        local outline=M.outline(o)
+        if outline then d.hulls[#d.hulls+1]={vertices=points(outline)}
         elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
     end
     if e.finish then
@@ -450,7 +501,7 @@ function M.compile(doc,test,errors)
     local valid,err=data.validate(d)
     if not valid then return nil,err end
     local blocked=M.blocked(e,e.start.position)
-    if blocked then return nil,"START overlaps "..blocked.type.." "..blocked.id end
+    if blocked then return nil,"START overlaps "..M.label(blocked):lower() end
     if test then
         local run=copy(d)
         run.spawn={test.position[1],test.position[2]};run.start_speed=test.speed
@@ -472,7 +523,7 @@ function M.test_start(doc,p,mode)
     if pos[1]<=b[1] or pos[1]>=b[2] or pos[2]<=b[3] or pos[2]>=b[4] then return nil,"outside the level bounds" end
     if not data.start_allowed(pos) then return nil,"outside the "..data.START_LIMIT.." m start limit" end
     local blocked=M.blocked(e,pos)
-    if blocked then return nil,"the vehicle would overlap "..blocked.type.." "..blocked.id end
+    if blocked then return nil,"the vehicle would overlap "..M.label(blocked):lower() end
     return pos
 end
 -- Snapshot undo (R17): bounded copies of authoring data only; one entry per completed action.

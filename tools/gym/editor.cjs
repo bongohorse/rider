@@ -59,14 +59,17 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.template={id:e.id,objects:e.objects,view:e.view};cases.push('template_copy_opens_editor');
 
   // 2. Edit mode intercepts every game key and the page shortcuts (R15).
-  const before=await page.evaluate(()=>({feedback:window.riderFeedback.status,generation:window.riderEditor.view.generation}));
+  const before=await page.evaluate(()=>({feedback:window.riderFeedback.status,generation:window.riderEditor.view.generation,objects:window.riderEditor.objects}));
   for(const k of ['1','2','p','c','r','t','m','v'])await key(k);
   await page.evaluate(()=>{for(const code of ['KeyF','KeyI'])document.dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true}));});
   await page.waitForTimeout(300);
   e=await ed();
   assert.equal(e.mode,'edit');assert.equal(e.view.generation,before.generation,'a game key reloaded the world');
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);assert.equal(await page.evaluate(()=>window.riderFeedback.status),before.feedback);
-  assert.equal(await page.evaluate(()=>document.getElementById('custom-import').hidden),true);cases.push('edit_mode_input_gating');
+  assert.equal(await page.evaluate(()=>document.getElementById('custom-import').hidden),true);
+  // P is the editor's Prefab tool key (contract controls), not the game's preset cycle; S returns to Select.
+  assert.equal(e.tool,'prefab');assert.equal(e.objects,before.objects);await key('s');assert.equal((await ed()).tool,'select');
+  cases.push('edit_mode_input_gating');
 
   // 3. Drag START: one Undo step; Undo/Redo restore by stable id.
   const start0=e.start.position;
@@ -256,6 +259,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const unknown=JSON.stringify({schema:1,units:'metres',id:'future',name:'Future',editor:{editor_version:99,compiler_version:1,revision:0,next_id:1,objects:[],start:{position:[0,1.7],speed:0}}});
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:999,text};},unknown);
   await page.waitForFunction(()=>window.riderDebugDraft===null);
+  // sys.save only writes the in-memory file system: reload after the IndexedDB sync, or the draft is lost.
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  assert.equal(await page.evaluate(()=>window.riderCustom.syncState()),'saved','injected draft sync');
   await page.goto(base+'?station=custom');t=await played('flat-ltr');
   await page.locator('canvas').focus();await key('e');
   e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,'flat-ltr');

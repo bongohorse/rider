@@ -128,9 +128,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.deepEqual(d.start,course.start);assert.deepEqual(d.finish,course.finish);
   await key('z',['Control']);e=await revision(r0+2);assert.equal(e.objects,3);
   await key('y',['Control']);e=await revision(r0+3);assert.equal(e.objects,5);
-  // Duplicate places a copy of the selection to the right (one Undo step).
+  // Mirror [>] places a mirrored copy of the selection to the right (one Undo step); a level line is its own mirror image.
   await key('Escape');await at([5,0]);await page.waitForFunction(()=>window.riderEditor.selection==='o1');
-  await button('duplicate');e=await revision(r0+4);d=await doc();
+  await button('mirror_right');e=await revision(r0+4);d=await doc();
   assert.deepEqual(line(d,'o6').points,[[13,0],[28,0]]);assert.equal(d.connections.length,3);
   await key('z',['Control']);e=await revision(r0+5);assert.equal(e.objects,5);
   measurements.paste={offset:off,clipboard:{objects:2,connections:1}};
@@ -216,7 +216,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // An unsupported My levels slot is refused and stays unchanged.
   const unknown=JSON.parse(text);unknown.editor.editor_version=99;unknown.editor.compiler_version=99;
   e=await importText(JSON.stringify(unknown),'unknown.json');assert.ok(e.message.includes('unsupported editor'),e.message);
-  d=await doc();assert.equal(d.editor_version,2);assert.equal(d.connections.length,0);assert.equal(d.objects.length,2);
+  d=await doc();assert.equal(d.editor_version,3);assert.equal(d.connections.length,0);assert.equal(d.objects.length,2);
   e=await saved();
   const raw=JSON.stringify({schema:1,units:'metres',id:'my-ramps',name:'Ramps short copy 2',editor:{editor_version:99,compiler_version:99,revision:1,next_id:1,objects:[],start:{position:[0,1],speed:0}}});
   await page.evaluate(([key,text])=>{window.riderDebugDraft={key,slot:1,seq:999,text,now:true};},[ramps.key,raw]);
