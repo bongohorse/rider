@@ -186,7 +186,7 @@ python tools/gym/smoke.py --output artifacts/le1b --case le1b      # builds a de
 node tools/gym/levels.cjs artifacts/le1b-levels                      # writes every case as JSON plus index.json
 ```
 
-The run writes `sizes-result.json` (all raw statistics) and `sizes-report.md` (the tables above). Since LE2 the start series accepts only `start-500m`; the starts from 1 km are rejected by the start limit, so a rerun no longer reproduces the placement failures above. CI runs the case in the G1 HTML5 job (`artifacts/g1/sizes`). `LE1B_REPEATS` and `LE1B_SAMPLE_MS` change repeats and window for local experiments; reported values use the defaults.
+The run writes `sizes-result.json` (all raw statistics) and `sizes-report.md` (the tables above). Since LE2 the start series accepts only `start-500m`; the starts from 1 km are rejected by the start limit, so a rerun no longer reproduces the placement failures above. CI measures the accepted levels in two contiguous halves on separate runners of the same image (each level whole on one runner; the rejected limit cases in the second part). The second part first measures the last level of the first half without reporting it, so every first import switches from the same previous level as in a single run. `g1-gym-reports` holds the merged files: both run IDs, the coarsest `performance.now()` step, and `elapsed_s` as the wall-clock of the slower part (`parts_elapsed_s` per part). `LE1B_REPEATS` and `LE1B_SAMPLE_MS` change repeats and window for local experiments; reported values use the defaults.
 
 ## Engine sources
 

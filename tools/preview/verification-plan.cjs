@@ -1,7 +1,8 @@
 // Full remains the default for local callers. CI partitions the same assertions.
 const groups = {
   desktop: ['desktop'],
-  phone: ['phone-emulation', 'mobile', 'tilt'],
+  phone: ['phone-emulation'],
+  touch: ['mobile', 'tilt'],
   stations: ['ramps', 'steps', 'seams', 'gaps'],
 };
 function verificationPlan(mode = 'full') {

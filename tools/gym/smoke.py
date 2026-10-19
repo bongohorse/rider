@@ -1,6 +1,7 @@
 """Small HTML5 gym runtime smoke, independent of the retained G1 fixture."""
 import argparse
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -14,24 +15,45 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--output',required=True)
 parser.add_argument('--case',default='a1')
 parser.add_argument('--bundle', help='Reuse a verified shared debug Gym build')
+# CI runs the two longest protocols in parts on separate runners, then merges them into the full report.
+PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2']}
+parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18 or le1b')
+parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18 or le1b')
 args=parser.parse_args()
+if (args.part is not None or args.merge) and args.case not in PARTS: parser.error('--part and --merge apply only to '+', '.join(PARTS))
+if args.part and args.merge: parser.error('--part and --merge are exclusive')
+if args.part is not None and args.part not in PARTS.get(args.case,[]): parser.error('unknown part '+repr(args.part))
+if args.merge and args.bundle: parser.error('--merge reads part reports and takes no --bundle')
 out=Path(args.output).resolve();out.mkdir(parents=True,exist_ok=True)
 sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
 run_id=str(uuid.uuid4())
-bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
-if not args.bundle:build_bundle(bundle,sha)
-verify_bundle(bundle,sha)
-runner='editor.cjs' if args.case=='le2' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
-process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True)
-try: code=process.wait(timeout=600 if args.case in ('a18','le1b') else 360 if args.case in ('a16','a17','a19','le1a','le2') else 90)
-finally: stop(process)
+def identity(report):
+    assert report['status']=='PASS' and report['source_sha']==sha
+    if args.merge: assert report['parts']==PARTS[args.case] and len(set(report['run_ids']))==len(PARTS[args.case])
+    else: assert report['run_id']==run_id and report.get('part')==args.part
+if args.merge:
+    subprocess.run(['node',str(ROOT/'tools/gym/merge.cjs'),args.case,str(out),*[str(Path(d).resolve()) for d in args.merge]],cwd=ROOT,check=True,timeout=60)
+    code=0
+else:
+    bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
+    if not args.bundle:build_bundle(bundle,sha)
+    verify_bundle(bundle,sha)
+    runner='editor.cjs' if args.case=='le2' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
+    env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
+    process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True,env=env)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b') else 360 if args.case in ('a16','a17','a19','le1a','le2') else 90)
+    finally: stop(process)
 if code:raise SystemExit(code)
 if args.case=='le1b':
     report=json.loads((out/'sizes-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==27
+    # Part 1 measures the first 8 of the 15 accepted levels; part 2 the other 7 plus all 12 rejected limit cases.
+    accepted,rejected={'1/2':(8,0),'2/2':(7,12)}.get(args.part,(15,12))
+    identity(report);assert len(report['results'])==accepted+rejected
     # Starts beyond ±500 m are rejected (LE2); every accepted level, including the 500 m start, must become drive-ready.
+    assert sum(r.get('outcome')=='drive_ready' for r in report['results'])==accepted
     assert all(r.get('outcome')=='drive_ready' for r in report['results'] if r.get('expect')!='rejected')
-    assert sum(r.get('expect')=='rejected' for r in report['results'])==12
+    assert sum(r.get('expect')=='rejected' for r in report['results'])==rejected
     print(json.dumps({'status':report['status'],'elapsed_s':report['elapsed_s'],'switch_ms':{r['id']:r['switch']['median_ms'] for r in report['results'] if 'switch' in r}}));raise SystemExit(0)
 if args.case=='le2':
     report=json.loads((out/'editor-result.json').read_text())
@@ -47,8 +69,10 @@ if args.case=='a19':
     print(json.dumps({k:report[k] for k in ('status','widest_cleared_m')}));raise SystemExit(0)
 if args.case=='a18':
     report=json.loads((out/'seams-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==6
-    print(json.dumps({'status':report['status'],'acceptance':report['acceptance'],'d8':report['d8'],'comparison':report['comparison']}));raise SystemExit(0)
+    # Part 1 holds the 5 and 7 m/s pairs and the unsupported speed; part 2 the 9 m/s pair and the powered controls.
+    identity(report);assert len(report['results'])=={'1/2':4,'2/2':2}.get(args.part,6)
+    assert len(report['poweredControls'])==(0 if args.part=='1/2' else 4) and (report['rejected'] is None)==(args.part=='2/2')
+    print(json.dumps({'status':report['status'],'acceptance':report.get('acceptance'),'d8':report.get('d8'),'comparison':report['comparison']}));raise SystemExit(0)
 if args.case=='a17':
     report=json.loads((out/'steps-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['results'])==16
