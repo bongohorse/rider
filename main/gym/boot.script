@@ -52,21 +52,35 @@ local function open_current(self)
     -- The editor's own document or draft is reused only for a level it produced; an imported file
     -- with the same id opens as itself (one Undo step away from the previous document).
     local own=level and self.level_edited
+    local key=level and self.level_key
+    if editor.doc and key and editor.key()==key then editor.message=notice or editor.message;return true end
     -- An unplayed document stays current (also after a test run of it) unless a level was imported after its last edit.
     local unplayed=editor.doc and editor.doc.editor.compiled_revision~=editor.doc.editor.revision and (editor.changed_at or 0)>(self.level_loaded_at or 0)
     if editor.doc and self.station=="custom" and (not level or (own and editor.doc.id==level.id) or unplayed) then editor.message=notice or editor.message;return true end
-    if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc);editor.message=notice or "";return true end
-    if not editor.doc and saved and saved.doc then editor.open(saved.doc) end
-    local doc,err,unsupported
-    if level then doc,err,unsupported=doc_lib.open_level(level)
+    -- The draft's My levels key (0: an unsaved copy); its level copy may lag after a failed save.
+    local function opts(d)
+        local k=d.key~=0 and d.key or nil
+        return {key=k,store=d.key==nil,behind=k and editor.library_behind(k,d.text),saved=true}
+    end
+    if saved and saved.doc and own and saved.doc.id==level.id then editor.open(saved.doc,false,opts(saved));editor.message=notice or "";return true end
+    if not editor.doc and saved and saved.doc then editor.open(saved.doc,false,opts(saved)) end
+    -- A level played from My levels opens its latest saved source (LE4), not an older compiled copy.
+    local stored=key and editor.library().load(key)
+    if stored then
+        editor.open(stored,editor.doc~=nil,{key=key})
+        editor.message=notice or ""
+        return true
+    end
+    local doc,note,conflict
+    if level then doc,note,conflict=doc_lib.open_level(level)
     else
         local d=stations.resource(self.station~="custom" and self.station or "straight")
         if not d then return nil,"The station cannot be opened as a template" end
         doc=doc_lib.template(d)
     end
-    if not doc then return nil,(unsupported and "The level was made by an unsupported editor ("..err.."); it is kept unchanged." or "The level cannot be opened: "..err) end
     editor.open(doc,editor.doc~=nil)
-    if notice then editor.message=notice end
+    editor.conflict=conflict
+    if notice or note then editor.message=notice or note end
     return true
 end
 local function play(self,test)
@@ -82,12 +96,24 @@ local function play(self,test)
     set_mode(self,"play")
     switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
 end
--- Import = read/validate, freeze a snapshot, then reload the world. Save only after it loaded.
-local function import(self,request)
-    if editor.mode=="edit" then
-        custom.notify(request.request,"error","Leave the editor [E] before importing a level.")
+-- Import inside the editor (LE4, R12): validated like any import, then opened as a copy that is saved to
+-- My levels; nothing is played or overwritten. The editor's Import button is the only entry point while
+-- editing (the page shortcut and button stay off, R15).
+local function import_into_editor(self,request)
+    local d,err=custom.parse(request.text)
+    if not d then
+        custom.notify(request.request,"error","Import failed: "..err..". The open level and My levels are unchanged.")
         return
     end
+    local doc,note,conflict=doc_lib.open_level(d)
+    editor.open(doc,true,{store=true})
+    editor.conflict=conflict
+    editor.message=note or "Imported "..d.name.." as a copy (My levels)."
+    custom.notify(request.request,"loaded","Imported.")
+end
+-- Import = read/validate, freeze a snapshot, then reload the world. Save only after it loaded.
+local function import(self,request)
+    if editor.mode=="edit" then import_into_editor(self,request);return end
     local requested=socket.gettime()
     local d,err=custom.parse(request.text)
     if not d then
@@ -108,7 +134,7 @@ function init(self)
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3")
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4")
     self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
     self.loading,self.deadline=true,0
@@ -117,20 +143,23 @@ function init(self)
         self.station,self.speed=id,speed
         local saved,rejected=custom.restore()
         local draft=editor.saved_draft()
-        local draft_time=draft and draft.time
+        local draft_time,draft_key,draft_text=draft and draft.time,draft and draft.key,draft and draft.text
         draft=draft and draft.doc
         -- A draft with unplayed edits reopens the editor after a reload, whichever level is saved: the
         -- draft records the revision its last successful Play compiled (compiled_revision).
         -- A level saved after the draft (e.g. an import) wins; without any level the draft always opens.
         local newer=draft and saved and (saved.time or 0)>(draft_time or 0)
         if draft and (not saved or (draft.editor.compiled_revision~=draft.editor.revision and not newer)) then
-            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited=saved.doc.id,saved.doc.id==draft.id end
-            editor.open(draft)
+            if saved then self.level_snapshot=custom.freeze(saved.doc,saved.text);self.level_id,self.level_edited,self.level_key=saved.doc.id,saved.doc.id==draft.id,saved.key end
+            -- A draft from before LE4 has no key: it is saved to My levels as a new entry (store).
+            local key=draft_key~=0 and draft_key or nil
+            editor.open(draft,false,{key=key,store=draft_key==nil,behind=key and editor.library_behind(key,draft_text),saved=true})
             self.edit=true
             set_mode(self,"edit")
         elseif saved then
             self.snapshot=custom.freeze(saved.doc,saved.text)
             self.restored_edited=draft~=nil and saved.doc.id==draft.id
+            self.restored_key=saved.key
             self.restore_note=saved.skipped and "Restored the previous level; the newer save is no longer valid ("..saved.skipped..")"
         else
             self.note=rejected and "The saved custom level is no longer valid ("..rejected.."). Import a level file [I]." or "No saved custom level. Import a level file [I]."
@@ -164,7 +193,11 @@ function update(self,dt)
     if self.debug_editor then
         -- Debug fault injection (le2 only): write a raw draft slot, e.g. an unsupported editor version.
         local ok,raw=pcall(json.decode,html5.run("(()=>{const r=window.riderDebugDraft;window.riderDebugDraft=null;return JSON.stringify(r||null)})()"))
-        if ok and type(raw)=="table" then editor.draft_store().debug_write(raw.slot,raw.seq,raw.text,raw.now and os.time() or nil) end
+        if ok and type(raw)=="table" then
+            -- raw.key writes a My levels slot instead (le4: an unsupported saved level).
+            local target=raw.key and editor.library().store(raw.key) or editor.draft_store()
+            target.debug_write(raw.slot,raw.seq,raw.text,raw.now and os.time() or nil)
+        end
         -- Debug control (le3 only): build two-sided runs one-sided, to show what the reversed chain holds.
         if self.debug_le3 then stations.debug_one_sided=html5.run("String(!!window.riderDebugOneSided)")=="true" end
     end
@@ -208,7 +241,9 @@ function on_message(self,id,data,sender)
         if loaded and not (self.play and self.test_run) then
             self.level_snapshot,self.level_id=loaded,custom.peek(loaded).id
             self.level_edited=self.play==true or (self.restored_edited==true and not self.import)
-            self.restored_edited=nil
+            -- The My levels entry this level was played from (LE4); an imported file has none.
+            self.level_key=self.play and editor.key() or (not self.import and self.restored_key) or nil
+            self.restored_edited,self.restored_key=nil,nil
         end
         if self.queued then
             local next=self.queued;self.queued=nil
@@ -233,7 +268,7 @@ function on_message(self,id,data,sender)
                 return
             end
             -- Play result: only a drive-ready level replaces the save (decisions after LE1b).
-            local saved,err=custom.save(self.play_text)
+            local saved,err=custom.save(self.play_text,editor.key())
             if saved then
                 self.syncing=true
                 msg.post("#ui","custom_status",{text="Saving..."})

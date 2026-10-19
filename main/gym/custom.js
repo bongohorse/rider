@@ -26,9 +26,11 @@
     catch (error) {if (request === api.request) reject('The level file could not be read.');return;}
     submit(text, request);
   };
-  api.open = message => {
-    // Import replaces the level; it is not offered while the level editor is open (R15 input gating).
-    if (window.riderEditing) return;
+  api.open = (message, editor) => {
+    // A page import replaces the level; it is not offered while the level editor is open (R15 input
+    // gating). The editor's own Import button opens the panel with editor=true (LE4: opens as a copy).
+    if (window.riderEditing && !editor) return;
+    closeExport();
     if (!panel) {
       panel = document.createElement('section');panel.id = 'rider-custom-panel';
       panel.setAttribute('aria-label', 'Import custom level');
@@ -58,6 +60,37 @@
     panel.querySelector('#rider-custom-note').textContent = message || 'Choose a level file (.json) or paste its JSON. The last valid level is saved in this browser.';
     api.visible = true;panel.querySelector('#rider-custom-file').focus();
   };
+  // Export (LE4): download the compiled level file; the panel also shows its text as a copy fallback.
+  let exported;
+  function closeExport() {
+    if (!exported) return;
+    exported.remove();exported = null;api.visible = false;
+    document.querySelector('canvas')?.focus();
+  }
+  api.exportLevel = ({name, text}) => {
+    closeExport();
+    const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+    const link = document.createElement('a');link.href = url;link.download = name;
+    document.body.append(link);link.click();link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    api.lastExport = {name, bytes:new TextEncoder().encode(text).length};
+    exported = document.createElement('section');exported.id = 'rider-export-panel';
+    exported.setAttribute('aria-label', 'Export level');
+    exported.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;box-sizing:border-box;width:min(520px,calc(100vw - 32px));padding:14px;background:#18313b;color:#dceee6;border:1px solid #68cdbc;border-radius:6px;font:14px system-ui';
+    const heading = document.createElement('h2');heading.textContent = 'Export level';heading.style.cssText = 'margin:0 0 8px;font-size:16px';
+    const note = document.createElement('p');note.style.margin = '0 0 8px';
+    note.textContent = `Downloaded ${name}. If no file appeared, copy the text below and save it as a .json file.`;
+    const field = document.createElement('textarea');field.id = 'rider-export-text';field.readOnly = true;field.value = text;
+    field.setAttribute('aria-label', 'Level JSON');
+    field.style.cssText = 'display:block;box-sizing:border-box;width:100%;height:160px;margin:8px 0;font:12px monospace';
+    const close = document.createElement('button');close.type = 'button';close.textContent = 'Close export';close.onclick = closeExport;
+    exported.append(heading, note, field, close);
+    exported.addEventListener('keydown', event => {if (event.key === 'Escape') closeExport();});
+    document.body.append(exported);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    api.visible = true;field.focus();field.select();
+  };
+  api.closeExport = closeExport;
   api.close = () => {
     api.visible = false;
     if (panel) panel.remove();panel = null;

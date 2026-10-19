@@ -194,7 +194,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('e');e=await edit();const own=e.id,ids=await page.evaluate(()=>Object.keys(window.riderEditor.buttons).filter(n=>n.startsWith('template_')).map(n=>n.slice(9)));
   assert.equal(ids.length,9);const templates={};
   for(const id of ids){
-   await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+   await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
    await button('template_'+id);await page.waitForFunction(id=>window.riderEditor.id==='my-'+id,id);
    e=await ed();assert.equal(e.problem,'',id+': '+e.problem);templates[id]=e.objects;
   }
@@ -214,7 +214,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 16. An unplayed draft of another level reopens after a reload, whatever level is saved; once played, a reload drives it.
   await key('e');e=await edit();assert.equal(e.id,own);
-  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
   await button('template_steps');await page.waitForFunction(()=>window.riderEditor.id==='my-steps');
   e=await edit();await button('tool_finish');await click(await world([e.start.position[0]+12,1.2]));e=await revision(e.revision+1);
   await page.waitForFunction(()=>window.riderEditor.status==='Saved');

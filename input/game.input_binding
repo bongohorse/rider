@@ -44,6 +44,9 @@ key_trigger { input: KEY_BACKSPACE action: "editor_delete" }
 key_trigger { input: KEY_ESC action: "editor_cancel" }
 key_trigger { input: KEY_Z action: "editor_z" }
 key_trigger { input: KEY_Y action: "editor_y" }
+key_trigger { input: KEY_C action: "editor_c" }
+key_trigger { input: KEY_V action: "editor_v" }
+text_trigger { input: TEXT action: "editor_text" }
 mouse_trigger { input: MOUSE_BUTTON_MIDDLE action: "editor_pan" }
 mouse_trigger { input: MOUSE_WHEEL_UP action: "editor_zoom_in" }
 mouse_trigger { input: MOUSE_WHEEL_DOWN action: "editor_zoom_out" }

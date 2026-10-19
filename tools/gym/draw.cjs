@@ -219,7 +219,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // 8d. Opening another template while drawing discards the unfinished piece (LE3b); it never lands in the
   // new document. Undo brings the course back.
   await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
-  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
   await button('template_ramps');await page.waitForFunction(()=>window.riderEditor.id==='my-ramps');
   e=await edit();await button('tool_select');await page.waitForTimeout(200);e=await ed();
   assert.equal(e.drawing,0);assert.equal(e.objects,12);assert.ok(e.message.includes('discarded'),e.message);
@@ -233,7 +233,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // The same with two documents that share their level id: a second Straight template copy is my-straight
   // too. Undo and Redo between the two instances discard a piece started in the other one.
   const course=await doc(),hasPiece=d=>d.objects.some(o=>o.type==='line'&&JSON.stringify(o.points)==='[[5,4],[8,5]]');
-  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
   await button('template_straight');await page.waitForFunction(()=>window.riderEditor.id==='my-straight'&&window.riderEditor.objects===1);
   e=await edit();
   await key('d');await at([5,4]);await at([8,5]);await page.waitForFunction(()=>window.riderEditor.drawing===2);
@@ -265,8 +265,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // reversed) and drives: the wheels never pass through the wall and the chassis climbs past the point where
   // the run turns back. Per-tick extremes come from the le3 track probe.
   await key('e');e=await edit();
-  await button('template');await page.waitForFunction(()=>window.riderEditor.templates_open);
-  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.objects===1&&window.riderEditor.templates_open===false);
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
+  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.objects===1&&window.riderEditor.open_dialog===false);
   e=await edit();await at([10,0.8]);await page.waitForFunction(()=>window.riderEditor.selection!=='');await key('Delete');
   await page.waitForFunction(()=>window.riderEditor.objects===0);
   // The curl ends left of where the run starts: the old one-sided rule (orientation from the run's end

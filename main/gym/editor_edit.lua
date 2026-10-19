@@ -201,4 +201,39 @@ function M.add_line(e,pts,first,last)
     M.orient(e,o.id)
     return o.id,note
 end
+-- Copy/paste (R17, LE4). The clipboard holds authoring data only: the copied objects and the
+-- connections between them. Paste allocates new ids, keeps those internal connections and drops every
+-- connection to an object outside the copy. START and FINISH are singletons and never copied.
+function M.copy(e,ids)
+    local set={};for _,id in ipairs(ids) do set[id]=true end
+    local clip={objects={},connections={}}
+    for _,o in ipairs(e.objects) do if set[o.id] then clip.objects[#clip.objects+1]=doc_lib.copy(o) end end
+    for _,c in ipairs(e.connections) do
+        if set[c.from] and set[c.to] then clip.connections[#clip.connections+1]={from=c.from,to=c.to} end
+    end
+    return clip
+end
+-- Bounding box {x0,x1,y0,y1} of a list of objects.
+function M.bbox(objects)
+    local b={math.huge,-math.huge,math.huge,-math.huge}
+    for _,o in ipairs(objects) do
+        for _,p in ipairs(o.type=="line" and o.points or o.type=="hull" and o.vertices or {o.position}) do
+            b[1],b[2],b[3],b[4]=math.min(b[1],p[1]),math.max(b[2],p[1]),math.min(b[3],p[2]),math.max(b[4],p[2])
+        end
+    end
+    return b
+end
+-- Pastes the clipboard moved by d; returns the new ids in clipboard order. Connected ends get the same
+-- displacement, so they stay exactly equal.
+function M.paste(e,clip,d)
+    local map,ids={},{}
+    for _,o in ipairs(clip.objects) do
+        local n=doc_lib.copy(o)
+        n.id=new_id(e);map[o.id]=n.id
+        translate_object(n,d)
+        e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
+    end
+    for _,c in ipairs(clip.connections) do e.connections[#e.connections+1]={from=map[c.from],to=map[c.to]} end
+    return ids
+end
 return M

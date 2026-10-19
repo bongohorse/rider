@@ -9,7 +9,12 @@ local socket=require "socket"
 -- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened is the instance token of
 -- the current document (a new one per open, restored with Undo/Redo entries) so tools can drop state
 -- that belonged to another document, even one with the same level id.
-local M={mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
+-- keys: My levels storage key per document instance (LE4); an instance without a key is an unsaved copy
+-- (a template, an opened file) that gets a key at its first completed edit (store). clipboard: copied
+-- authoring objects; it survives opening another level. conflict: a pending R1 choice for the open level.
+-- behind: instances whose My levels copy is older than the draft (a failed or pending level save);
+-- they are saved again before another document becomes current.
+local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
@@ -17,6 +22,9 @@ local function parse_draft(text)
     return doc_lib.validate(d)
 end
 local function drafts() return custom.drafts(parse_draft) end
+local function library() return custom.library(parse_draft) end
+M.library=library
+function M.key() return M.keys[M.opened] end
 local function touch(geometry)
     M.view_version=M.view_version+1
     if geometry then M.geometry_version,M.shape_version=M.geometry_version+1,M.shape_version+1 end
@@ -46,7 +54,12 @@ local function resolve_selection()
     if not M.vertex or not (o2 and o2.type=="line" and (v2.index==1 or v2.index==#o2.points)) then M.vertex2=nil end
 end
 -- Open a document as the current one. keep=true records the previous document as an Undo step.
-function M.open(doc,keep)
+-- opts.key: its My levels key; opts.store: save it to My levels from the first autosave (New, Import);
+-- opts.saved: it was read from storage unchanged (a reload), so the status starts as Saved.
+function M.open(doc,keep,opts)
+    opts=opts or {}
+    -- The outgoing document is saved first: its pending autosave must not land in the new one.
+    if M.doc and (M.dirty or M.behind[M.opened] or (M.store[M.opened] and not M.key())) then M.save_draft() end
     if keep and M.doc then
         doc_lib.record(M.history,M.doc,M.opened)
         local e=doc.editor
@@ -58,11 +71,14 @@ function M.open(doc,keep)
     M.doc=doc;M.selection,M.selected,M.vertex,M.vertex2=nil,{},nil,nil
     -- Every opened document is a new instance; tokens are never reused (Undo may restore an older one).
     M.instances=M.instances+1;M.opened=M.instances
+    M.keys[M.opened],M.store[M.opened],M.behind[M.opened]=opts.key,opts.store or nil,opts.behind or nil
+    M.conflict=nil
     M.changed_at=socket.gettime()
     local s=doc.editor.start.position
     -- A new document starts with START near the left of an overview (about 60 m wide at 1280 px).
     M.camera={x=s[1]+20,y=s[2]+4,zoom=0.2}
-    if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at end
+    if keep then M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
+    else M.status=opts.saved and "Saved" or "" end
     check();touch(true)
 end
 -- One completed action = one history entry and one revision (R12, R17). fn may refuse with nil, err;
@@ -76,6 +92,7 @@ function M.commit(fn,geometry)
     end
     if err then M.doc=before;M.message=err;touch();return nil,err end
     M.message=""
+    M.store[M.opened]=true
     doc_lib.record(M.history,before,M.opened)
     M.doc.editor.revision=before.editor.revision+1
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
@@ -139,10 +156,21 @@ function M.map()
 end
 function M.touch() touch() end
 -- Drafts: autosaved after completed actions; the status reflects the last save and the HTML5 sync.
+-- An edited document is also saved to My levels under its key (LE4). Both use slot pairs, so a failed
+-- save keeps the previous good copy of the draft and of the level.
 function M.save_draft()
     M.dirty=false
-    local seq,err=drafts().save(json.encode(M.doc,{encode_empty_table_as_object=false}))
+    local text=json.encode(M.doc,{encode_empty_table_as_object=false})
+    local stored=M.store[M.opened] or M.key()
+    if stored and not M.key() then M.keys[M.opened]=library().new_key() end
+    -- The draft names its level's key; 0 marks an unsaved copy (drafts saved before LE4 have no key).
+    local seq,err=drafts().save(text,M.key() or 0)
     if not seq then M.status="Save failed ("..tostring(err)..")";return false end
+    if stored then
+        local ok,lerr=library().save(M.key(),text,M.doc.id,M.doc.name)
+        M.behind[M.opened]=not ok or nil
+        if not ok then M.status="Save failed (My levels: "..tostring(lerr)..")";return false end
+    end
     M.status="Saving...";M.syncing=true
     return true
 end
@@ -159,9 +187,14 @@ function M.saved_draft()
     local d=drafts().newest()
     if not d then return nil end
     if d.unsupported then return {unsupported=d.unsupported,text=d.text,slot=d.slot} end
-    return {doc=d.doc,slot=d.slot,seq=d.seq,time=d.time}
+    return {doc=d.doc,text=d.text,slot=d.slot,seq=d.seq,time=d.time,key=d.key}
 end
 function M.draft_store() return drafts() end
+-- True when the My levels copy of key differs from the draft text (its last level save failed).
+function M.library_behind(key,text)
+    local s=library().store(key).restore()
+    return not s or s.text~=text
+end
 -- Compile for Play: the level (START) and, for a test start, the temporary run.
 function M.compile(test)
     return doc_lib.compile(M.doc,test)
