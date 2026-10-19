@@ -6,6 +6,8 @@ Updated 2026-10-19. The only source for current progress, open acceptance and bl
 
 ## Now
 
+- **CI acceleration (GO 2026-10-19):** parallel debug/release browser groups and a focused public-deployment check, follow-up to [#95](https://github.com/bongohorse/rider/issues/95). Local workflow lint, bootstrap and CI tests pass; full CI and measured after-timing pending. All regression assertions remain required before merge; no new Level Editor task started.
+
 - **Next:** Level Editor LE3 [#125](https://github.com/bongohorse/rider/issues/125). **No task is active; LE3 starts only with Claudio's new GO** after his LE2 drive test. LE2 merged (GO 2026-10-19): LE1b decisions 1–3 in [PR #144](https://github.com/bongohorse/rider/pull/144), editor shell in [PR #145](https://github.com/bongohorse/rider/pull/145) ([contract](docs/contracts/level-editor.md#editor-shell-le2), debug case `le2`). The editor tasks run strictly in order and each stops for a drive test and a new GO ([plan](docs/PLAN.md#stop-points)).
 - Remaining M4 issues (A19b–d, A20, A21) are paused until after the Level Editor (Claudio, 2026-10-18).
 - **Preview:** https://bongohorse.github.io/rider/ — [build.json](https://bongohorse.github.io/rider/build.json) names the deployed SHA and run.
