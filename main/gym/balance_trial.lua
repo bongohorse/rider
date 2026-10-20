@@ -2,6 +2,7 @@
 -- Modes (window.riderBalanceTrial, read once per attempt generation): "idle" (no input), "full" (throttle
 -- held), "skill" (slow closed-loop driving with key-like binary throttle/brake, recorded) and "replay"
 -- (plays a recorded trace open-loop). Commands keep the keyboard shape: allow_reverse = not throttle.
+-- With watch_plank=true in the same spec, the attempt also publishes the plank state every tick (#228).
 local feel=require "main.gym.feel"
 local seesaw=require "main.gym.seesaw"
 local M={}
@@ -15,7 +16,7 @@ local function fresh(self)
     spec=ok and type(spec)=="table" and spec or {}
     local mode=({idle=true,full=true,skill=true,replay=true})[spec.mode] and spec.mode or "idle"
     return {generation=self.generation,section=self.station.section_index,mode=mode,replay=type(spec.trace)=="table" and spec.trace or {},
-        trace={},tick=0,at=1,used=0,throttle=0,brake=0,held=M.skill.hold}
+        trace={},tick=0,at=1,used=0,throttle=0,brake=0,held=M.skill.hold,watch=spec.watch_plank==true}
 end
 local function record(t,c)
     local last=t.trace[#t.trace]
@@ -51,13 +52,15 @@ function M.command(self)
         else c=key(0,0) end
     else c=key(0,0) end
     record(t,c)
-    -- Per-tick plank state for the runner (#228): a seesaw swing can be shorter than the 0.25 s report interval.
-    if html5 and self.seesaw and self.balance then
-        -- Debug a19d only: this module is loaded only for that case (controller.script), asserted again here.
-        assert(sys.get_engine_info().is_debug and self.testcase=="a19d","Per-tick plank state is debug a19d only")
+    -- Per-tick plank state for the runner (#228), only for an attempt the probe watches (watch_plank): a seesaw
+    -- swing can be shorter than the 0.25 s report interval, and several ticks can run per frame, so the first
+    -- tick after the tip with |omega| > 0.2 is latched. This module is loaded for debug a19d only.
+    if t.watch and html5 and self.seesaw and self.balance then
         local st,q=seesaw.state(self.seesaw),self.balance.record.seesaw
-        html5.run(string.format("window.riderPlank={generation:%d,tick:%d,angle:%.9g,omega:%.9g,tipped:%s}",
-            self.generation,t.tick,st.angle,st.omega,q and q.tip_at and "true" or "false"))
+        local tipped=q and q.tip_at~=nil
+        if tipped and not t.swing and math.abs(st.omega)>0.2 then t.swing={tick=t.tick,omega=st.omega} end
+        html5.run(string.format("window.riderPlank={generation:%d,tick:%d,angle:%.9g,omega:%.9g,tipped:%s,swing_tick:%s,swing_omega:%s}",
+            self.generation,t.tick,st.angle,st.omega,tipped and "true" or "false",t.swing and t.swing.tick or "null",t.swing and string.format("%.9g",t.swing.omega) or "null"))
     end
     return c
 end
