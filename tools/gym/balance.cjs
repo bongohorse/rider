@@ -174,9 +174,17 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    // |omega| > 0.025 rad/s); a report may show the swing just before it ends, so up to 3 tries.
    let mid=null;const midOmegas=[];
    for(let i=0;i<3&&!mid;i++){
-    await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
+    await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill',watch_plank:true};});
     const g=(await report()).generation;await retry();
-    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&Math.abs(r.seesaw.omega)>.2;},g,{timeout:20000});
+    // Per-tick plank state (#228): under preset F the swing lasts about 0.13 s, shorter than one 0.25 s report.
+    // The game latches the first tick after the tip with |omega| > 0.2 (several ticks can run per frame); the
+    // predicate returns the state it matched. It also ends once the plank is calm after the verdict without one.
+    const seen=await (await page.waitForFunction(g=>{const p=window.riderPlank,r=window.riderStationReport;
+     if(p&&p.generation>g&&p.swing_tick!==null)return {swing:true,tick:p.swing_tick,omega:p.swing_omega};
+     if(r.generation>g&&r.record.done&&(r.record.seesaw.final_at!==undefined||r.record.elapsed>r.record.time_s+8))return {swing:false};
+     return false;},g,{timeout:45000,polling:'raf'})).jsonValue();
+    if(!seen.swing){const q=(await report()).record.seesaw;
+     throw Error(`mid_tip: the plank never swung faster than 0.2 rad/s after the tip (per-tick max ${q.max_abs_omega_after_tip}, tip ${q.tip_at} s)`);}
     const h=await idleRetry();midOmegas.push(h.before.before_omega);
     if(Math.abs(h.before.before_omega)>.025)mid=h;
    }
