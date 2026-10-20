@@ -71,6 +71,16 @@ def write_report(output,suite,tests,expected,source_sha,duration_ms=None):
     return 0 if status=='PASS' else 2 if status=='BLOCKED' else 1
 
 
+# Engine each HTML5 G1 mode must have loaded (#215); mirrors tools/g1/browser.cjs.
+ENGINE_LOADS={'isolated':{'mode':'isolated','wasm':['RiderG1_pthread.wasm'],'cross_origin_isolated':True,'pthread_supported':True,'heap_shared':True},
+              'players':{'mode':'players','wasm':['RiderG1.wasm'],'cross_origin_isolated':False,'pthread_supported':False,'heap_shared':False}}
+
+
+def check_engine_load(config,load,mode):
+    wrong={k:load.get(k) for k,v in ENGINE_LOADS[mode].items() if load.get(k)!=v}
+    if wrong:raise RuntimeError(f'{config}: {mode} run did not load the expected engine: {wrong}')
+
+
 def platform_for(target):
     return {'html5':'wasm-web','android':'arm64-android','desktop':'x86_64-win32' if os.name=='nt' else 'x86_64-linux'}[target]
 
@@ -150,8 +160,14 @@ def main(argv=None):
                 report_path=output/'physics'/config/'result.json'
                 report=json.loads(report_path.read_text())
                 if report['status']!='PASS' or report['source_sha']!=sha or set(report['cases'])!=set(IDS):raise RuntimeError('Invalid physics inventory/identity')
-                if config in players and (report.get('engine_load',{}).get('wasm')!=['RiderG1.wasm'] or report['engine_load'].get('cross_origin_isolated') is not False):
-                    raise RuntimeError(f'Players run {config} did not load the wasm-web engine')
+                if args.target=='html5':
+                    if config in players:
+                        check_engine_load(config,report.get('engine_load',{}),'players')
+                        isolated=json.loads(((output/'physics'/config).parent/'result.json').read_text())
+                        if (report['run_id'],report['config_hash'])!=(isolated['run_id'],isolated['config_hash']):
+                            raise RuntimeError(f'{config}: players run is not the isolated run\'s bundle')
+                    else:
+                        check_engine_load(config,json.loads((output/'physics'/config/'engine-load.json').read_text()),'isolated')
                 for key in IDS:
                     if not isinstance(report['cases'][key],dict) or not report['cases'][key]:raise RuntimeError('Invalid physics measurements')
                     tests.append({'id':f'{config.replace("/",".")}.{key}','status':'PASS','duration_ms':None,'assertions':1,

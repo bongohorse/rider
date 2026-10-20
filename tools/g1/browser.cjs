@@ -78,14 +78,20 @@ async function main() {
     let timer;
     try {await Promise.race([done,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Missing browser completion')),60000);})]);}
     finally {clearTimeout(timer);}
-    const load=await page.evaluate(()=>({
-      cross_origin_isolated: window.crossOriginIsolated,
-      shared_array_buffer: typeof SharedArrayBuffer!=='undefined',
-      pthread_supported: Module.isWASMPthreadSupported===true,
-      heap_shared: typeof SharedArrayBuffer!=='undefined'&&!!Module.HEAP8&&Module.HEAP8.buffer instanceof SharedArrayBuffer,
-    }));
-    const record={mode:modeName,wasm,...load};
-    fs.writeFileSync(path.join(out,'engine-load.json'),JSON.stringify(record,null,2)+'\n');
+    let load;
+    try {
+      load=await page.evaluate(()=>({
+        cross_origin_isolated: window.crossOriginIsolated,
+        shared_array_buffer: typeof SharedArrayBuffer!=='undefined',
+        pthread_supported: Module.isWASMPthreadSupported===true,
+        heap_shared: typeof SharedArrayBuffer!=='undefined'&&!!Module.HEAP8&&Module.HEAP8.buffer instanceof SharedArrayBuffer,
+      }));
+    } catch(e) {
+      // A crashed page cannot be inspected; its own error stays the primary one.
+      if(errors.length)throw Error(errors.join('\n'));
+      throw e;
+    }
+    fs.writeFileSync(path.join(out,'engine-load.json'),JSON.stringify({mode:modeName,wasm,...load},null,2)+'\n');
     await page.screenshot({path:path.join(out,'browser.png')});
     fs.writeFileSync(path.join(out,'browser-version.txt'),browser.version()+'\n');
     if(errors.length)throw Error(errors.join('\n'));

@@ -49,7 +49,7 @@ class CliTests(unittest.TestCase):
                 try:os.kill(pid,signal.SIGKILL)
                 except ProcessLookupError:pass
 
-    def physics_report(self,target,players_load=None,players=True):
+    def physics_report(self,target,players_load=None,players=True,isolated_load=None,players_identity=None):
         """Run the physics verify report over a fake runner output."""
         from unittest import mock
         IDS=cli.IDS
@@ -61,9 +61,14 @@ class CliTests(unittest.TestCase):
                 (physics/'comparison.json').write_text(json.dumps({'status':'PASS','source_sha':sha}))
                 configs=['scale-0.01-fps-60','scale-0.02-fps-30']
                 for config in configs+([f'{c}/wasm-web' for c in configs] if players else []):
-                    report={'status':'PASS','source_sha':sha,'cases':{k:{'value':1} for k in IDS}}
-                    if config.endswith('wasm-web'):report['engine_load']=players_load or {'wasm':['RiderG1.wasm'],'cross_origin_isolated':False}
-                    (physics/config).mkdir(parents=True,exist_ok=True);(physics/config/'result.json').write_text(json.dumps(report))
+                    report={'status':'PASS','source_sha':sha,'run_id':'run-'+config[:17],'config_hash':'hash-'+config[:17],'cases':{k:{'value':1} for k in IDS}}
+                    (physics/config).mkdir(parents=True,exist_ok=True)
+                    if config.endswith('wasm-web'):
+                        report['engine_load']={**cli.ENGINE_LOADS['players'],**(players_load or {})}
+                        report.update(players_identity or {})
+                    elif target=='html5':
+                        (physics/config/'engine-load.json').write_text(json.dumps({**cli.ENGINE_LOADS['isolated'],**(isolated_load or {})}))
+                    (physics/config/'result.json').write_text(json.dumps(report))
                 return {'id':test_id,'status':'PASS','duration_ms':1,'assertions':1,'detail':'','artifacts':[]}
             with mock.patch.object(cli,'execute',side_effect=fake):
                 code=cli.main(['verify','--suite','physics','--target',target,'--output',str(out)])
@@ -81,8 +86,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual(html5['tests'][:len(isolated)],native['tests'])
 
     def test_html5_players_run_must_exist_and_load_wasm_web(self):
-        for kwargs in [{'players':False},{'players_load':{'wasm':['RiderG1_pthread.wasm'],'cross_origin_isolated':False}},
-                       {'players_load':{'wasm':['RiderG1.wasm'],'cross_origin_isolated':True}}]:
+        for kwargs in [{'players':False},{'players_load':{'wasm':['RiderG1_pthread.wasm']}},{'players_load':{'cross_origin_isolated':True}},
+                       {'players_load':{'mode':'isolated'}},{'players_load':{'pthread_supported':True}},{'players_load':{'heap_shared':True}},
+                       {'isolated_load':{'wasm':['RiderG1.wasm']}},{'isolated_load':{'cross_origin_isolated':False}},
+                       {'isolated_load':{'heap_shared':False}},{'isolated_load':{'mode':'players'}},
+                       {'players_identity':{'run_id':'other-run'}},{'players_identity':{'config_hash':'other-hash'}}]:
             with self.subTest(**{k:str(v) for k,v in kwargs.items()}):
                 code,report=self.physics_report('html5',**kwargs)
                 self.assertEqual(code,1)
