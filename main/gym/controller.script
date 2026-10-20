@@ -249,6 +249,13 @@ function init(self)
         assert(sys.get_engine_info().is_debug,"Replay probe requires debug engine")
         self.replay_debug=true
     end
+    -- A22 regression traces: replays stored traces through the A21 player (and its debug report).
+    if self.testcase=="a22" then
+        assert(sys.get_engine_info().is_debug,"Regression traces require debug engine")
+        self.regress=require "main.gym.regress"
+        self.regress_state=self.regress.new()
+        self.replay_debug=true
+    end
     if self.testcase=="a20" then
         assert(sys.get_engine_info().is_debug,"Time probe requires debug engine")
         self.time_probe=require "main.gym.time_probe"
@@ -525,13 +532,14 @@ function fixed_update(self, dt)
                 show_preset(self)
             end
         end
-        self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or command(self)
+        self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
         replay.after_command(self,self.last_command,dt)
         vehicle.apply(self.vehicle,self.last_command,dt)
         rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
         stations.observe(self,vehicle.state(self.vehicle),dt,sample)
         history.push(self.history,sample,dt)
+        if self.regress then self.regress.fixed(self) end
     end
     if self.scenario then self.scenario.fixed(self,dt) end
     if self.time_probe then self.time_probe.fixed(self,dt) end
