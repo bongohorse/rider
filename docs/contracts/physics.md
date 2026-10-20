@@ -22,6 +22,8 @@ Binding rules for all physics and gameplay-simulation work on pinned Defold 1.14
 | Body torque / angular impulse | Not scaled (raw N m) |
 | Wheel joint max motor torque | Scaled by the binding; differs from body torque |
 | Motor speed, angular velocity | rad/s, no scaling |
+
+- Air pitch damping (#211): torque −k·ω on the chassis with ω from `b2d.body.get_angular_velocity` (rad/s) and `b2d.body.apply_torque` (raw N m), so k is N m s with no scale factor; the single conversion point is `feel.body_torque`. Applied in `vehicle.apply` inside the owner's `fixed_update` (no extra loop): only with no wheel contact, lean exactly 0, k > 0 and not on the reset tick (reset drops cached contacts). Pause runs no fixed step, so nothing is applied while paused.
 | Joint translation getter | Prismatic only; measure wheel/chassis positions instead |
 
 - Validate gravity/fall distance and joint distance with a deliberate scale change to catch double conversion. Define tolerances before running.

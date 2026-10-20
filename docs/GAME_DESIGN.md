@@ -16,7 +16,7 @@ Keyboard first; mobile has four simultaneous actions: throttle, brake/reverse, l
 
 **Tilt lean (A14)** passed Claudio's phone test and stays opt-in, default off; whether it remains in the finished game is decided later. Keep touch available; permission denial or unsupported sensors must have a visible fallback and cannot count as a successful tilt test.
 
-Presets (A baseline, B/C, candidates D/E) and adjustable assists exist for comparison by driving. No winning preset, assist strength or final crash-fairness verdict is required before implementation. Centralize driving/camera values with explicit units. Camera look-ahead/zoom should make obstacles and landings readable, including reverse and 20:9 layouts. No realistic tire model or ragdoll is needed for the gym.
+Presets (A baseline, B/C, candidates D/E/F) and adjustable assists exist for comparison by driving. No winning preset, assist strength or final crash-fairness verdict is required before implementation. Centralize driving/camera values with explicit units. Camera look-ahead/zoom should make obstacles and landings readable, including reverse and 20:9 layouts. No realistic tire model or ragdoll is needed for the gym.
 
 ## Crash, recovery and checkpoints
 
