@@ -55,6 +55,8 @@ function M.reset(s)
     assert(b2d.body.is_valid(s.body),"Seesaw body invalid before reset")
     local old=s.joint
     assert(b2d.joint.is_valid(old),"Seesaw joint invalid before reset")
+    -- Pose and motion this reset replaced (report only).
+    local before_angle,before_omega=b2d.body.get_angle(s.body),b2d.body.get_angular_velocity(s.body)
     b2d.joint.destroy(old)
     local stale=b2d.joint.is_valid(old)
     assert(not stale,"Replaced seesaw joint still valid")
@@ -87,7 +89,7 @@ function M.reset(s)
         error(err)
     end
     joint(s)
-    s.last_reset={old_joint_valid=stale,joint_valid=b2d.joint.is_valid(s.joint),joints=#b2d.body.get_joints(s.body),
+    s.last_reset={before_angle=before_angle,before_omega=before_omega,old_joint_valid=stale,joint_valid=b2d.joint.is_valid(s.joint),joints=#b2d.body.get_joints(s.body),
         generation=s.generation,angle=b2d.body.get_angle(s.body),omega=b2d.body.get_angular_velocity(s.body),
         x=at.x*scale(),y=at.y*scale(),speed=vmath.length(b2d.body.get_linear_velocity(s.body))*scale()}
     return s.last_reset

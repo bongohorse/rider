@@ -9,7 +9,11 @@ M.protocol={stop_speed=0.05,stop_pitch=0.6,stop_hold_s=1.0,fall_drop=0.35,flip_p
     seesaw_rest_s=0.5,seesaw_settle_omega=0.05,seesaw_settle_s=0.25}
 function M.restart(self)
     local s=self.station.sections[self.station.section_index]
-    self.balance={tuning_changed=false,tuning={},record={id=s.id,type=s.type,status="RUNNING",elapsed=0,target_x0=s.target_x0,target_x1=s.target_x1,
+    -- The replaced attempt's plank extremes up to this reset (report only): a runner that sees the next
+    -- generation first still learns whether the limit was reached after its last report.
+    local old=self.balance and self.balance.record.seesaw
+    local previous=old and {generation=old.generation,limit_reached=old.limit_reached,max_abs_angle=old.max_abs_angle} or nil
+    self.balance={previous=previous,tuning_changed=false,tuning={},record={id=s.id,type=s.type,status="RUNNING",elapsed=0,target_x0=s.target_x0,target_x1=s.target_x1,
         target_y=s.target_y,start_speed=self.station.start_speed,max_speed_mps=0,throttle_s=0,brake_s=0,lean_max=0,input_changes=0,
         pitch_min=0,pitch_max=0,held_s=0}}
     for _,key in ipairs(feel.preset_keys) do self.balance.tuning[key]=feel.values[key] end
@@ -101,7 +105,7 @@ function M.report(self)
     local report={kind="balance",station=self.station.id,section=self.station.sections[self.station.section_index].id,
         source_sha=sys.get_config_string("rider.source_sha","development"),preset=self.preset,modified=self.modified or false,
         automated=self.testcase=="a19d",tuning=feel.snapshot(),start_speed=self.station.start_speed,comparable=not self.balance.tuning_changed,
-        record=self.balance.record,protocol=M.protocol,generation=self.generation,bodies=world.body_count,joints=world.joint_count,
+        record=self.balance.record,previous=self.balance.previous,reset_reason=self.last_reset_reason,protocol=M.protocol,generation=self.generation,bodies=world.body_count,joints=world.joint_count,
         conditions="Independent starts from rest on a raised deck 0.8 m above the floor. Completed = both wheel centres over the target platform with loaded support (touching or impulsive manifold point), |vx| < 0.05 m/s and |pitch| < 0.6 rad held for 1 s. Missed = a wheel centre 0.35 m below the target top (fell), |pitch| > 1.6 rad (flipped) or 30 s. Seesaw: tip = plank angle crosses level; settled = |omega| < 0.05 rad/s for 0.25 s after the tip; the joint limit is a safety stop."}
     if self.seesaw then
         local st=seesaw.state(self.seesaw)
