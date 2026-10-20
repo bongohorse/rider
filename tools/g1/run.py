@@ -101,9 +101,18 @@ def native(directory, collector, run_id):
         raise RuntimeError(f'Runtime exit {code}: ' + '\n'.join(lines[-20:]))
 
 
-def browser(directory, collector):
-    collector_file = directory / 'browser-lines.json'
-    process = subprocess.Popen(['node', str(ROOT / 'tools/g1/browser.cjs'), str(directory), str(collector_file)], start_new_session=os.name != 'nt')
+# HTML5 players run (#215): the same bundle once more without COOP/COEP, so the
+# browser loads the wasm-web engine that GitHub Pages serves to players.
+PLAYERS_MODE = 'players'
+PLAYERS_DIR = 'wasm-web'
+
+
+def browser(directory, collector, mode=None, out=None):
+    collector_file = (out or directory) / 'browser-lines.json'
+    command = ['node', str(ROOT / 'tools/g1/browser.cjs'), str(directory), str(collector_file)]
+    if mode:
+        command += [mode, str(out or directory)]
+    process = subprocess.Popen(command, start_new_session=os.name != 'nt')
     try:
         code = process.wait(timeout=100)
     finally:
@@ -112,6 +121,23 @@ def browser(directory, collector):
         raise RuntimeError('Browser runner failed; see browser log')
     for line in json.loads(collector_file.read_text()):
         collector.feed(line)
+
+
+def players(directory, run_id, source_sha, config_hash, variant, fps, scale):
+    """Run the already built bundle as players load it; same assertions."""
+    out = directory / PLAYERS_DIR
+    out.mkdir(parents=True, exist_ok=True)
+    collector = Collector(run_id, source_sha, config_hash)
+    collector.feed(PREFIX + json.dumps({'event': 'suite_end', 'run_id': 'stale-' + run_id, 'status': 'PASS'}))
+    browser(directory, collector, PLAYERS_MODE, out)
+    report = collector.finish()
+    load = json.loads((out / 'engine-load.json').read_text())
+    if load.get('mode') != PLAYERS_MODE or load.get('wasm') != ['RiderG1.wasm'] or load.get('cross_origin_isolated') is not False:
+        raise RuntimeError(f'Players run did not load the wasm-web engine: {load}')
+    report.update(platform='wasm-web', variant=variant or 'debug', render_target=fps, scale=scale, engine_load=load)
+    (out / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
+    print(json.dumps(report), flush=True)
+    return report
 
 
 def run(platform, output, variant=None):
@@ -139,6 +165,8 @@ def run(platform, output, variant=None):
         (directory / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps(report), flush=True)
         reports.append(report)
+        if platform == 'wasm-web':
+            players(directory, run_id, source_sha, config_hash, variant, fps, scale)
     a, b = (x['cases'] for x in reports)
     if abs(a['units']['fall_30'] - b['units']['fall_30']) > 0.5:
         raise RuntimeError('Changed-scale probe mismatch > 0.5 engine units')

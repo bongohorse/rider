@@ -139,17 +139,22 @@ def main(argv=None):
                            '--output',str(output/'physics'),'--variant',args.configuration or ('debug' if args.target=='html5' else 'headless')],output,2100)
     tests=[]
     expected=[f'{config}.{key}' for config in ['scale-0.01-fps-60','scale-0.02-fps-30'] for key in IDS]
+    # HTML5 players runs (#215) are additive: same cases on the wasm-web engine Pages serves.
+    players=[f'{config}/wasm-web' for config in ['scale-0.01-fps-60','scale-0.02-fps-30']] if args.target=='html5' else []
+    expected+=[f'{config.replace("/",".")}.{key}' for config in players for key in IDS]
     if test['status']=='PASS':
         try:
             comparison=json.loads((output/'physics/comparison.json').read_text())
             if comparison['status']!='PASS' or comparison['source_sha']!=sha:raise RuntimeError('Invalid comparison')
-            for config in ['scale-0.01-fps-60','scale-0.02-fps-30']:
+            for config in ['scale-0.01-fps-60','scale-0.02-fps-30']+players:
                 report_path=output/'physics'/config/'result.json'
                 report=json.loads(report_path.read_text())
                 if report['status']!='PASS' or report['source_sha']!=sha or set(report['cases'])!=set(IDS):raise RuntimeError('Invalid physics inventory/identity')
+                if config in players and (report.get('engine_load',{}).get('wasm')!=['RiderG1.wasm'] or report['engine_load'].get('cross_origin_isolated') is not False):
+                    raise RuntimeError(f'Players run {config} did not load the wasm-web engine')
                 for key in IDS:
                     if not isinstance(report['cases'][key],dict) or not report['cases'][key]:raise RuntimeError('Invalid physics measurements')
-                    tests.append({'id':f'{config}.{key}','status':'PASS','duration_ms':None,'assertions':1,
+                    tests.append({'id':f'{config.replace("/",".")}.{key}','status':'PASS','duration_ms':None,'assertions':1,
                                   'measurements':report['cases'][key],'artifacts':[str(report_path.relative_to(output))]})
         except (OSError,ValueError,KeyError,RuntimeError) as exc:
             test.update(status='FAIL',detail=str(exc))
