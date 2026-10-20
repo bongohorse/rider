@@ -55,11 +55,13 @@ const args=process.argv.slice(2).filter(a=>a!=='--record');
   const s=await run(def,{spec:{mode:'check',...(options.tune?{tune:options.tune}:{})},trace,half:options.half});
   assert.equal(s.result.phase,'replayed',label+': '+s.result.error);
   assert.equal(s.replay.factor,1);
+  // #211: preset A has no air pitch damping; the vehicle's own counter proves it was never applied.
+  assert.equal(s.result.preset,'a',label+': preset');assert.equal(s.result.damped_ticks,0,label+': air pitch damping applied on preset A');
   const measured=S.outcomes(def,s.result),play=s.replay.play;
   const failures=S.check(def,expected.outcomes,measured,play);
   const r={label,trace:def.name,verdict:play.verdict,max_position_m:play.max_position_m,max_angle_rad:play.max_angle_rad,
    applied:play.applied,mismatches:play.mismatches,scaled_ticks:play.scaled_ticks,frames_per_tick:s.frames_per_tick,measured,
-   expected:expected.outcomes,failures,tune:s.result.tune,preset:s.result.preset,modified:s.result.modified,pass:failures.length===0};
+   expected:expected.outcomes,failures,tune:s.result.tune,preset:s.result.preset,modified:s.result.modified,damped_ticks:s.result.damped_ticks,pass:failures.length===0};
   results[label]=r;
   console.log(label+': '+(r.pass?'PASS':'FAIL '+failures.map(f=>f.check).join(','))+' '+JSON.stringify({verdict:r.verdict,max_position_m:r.max_position_m,measured}));
   return r;

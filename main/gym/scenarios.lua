@@ -328,6 +328,7 @@ function M.preset_tick(self,dt)
             assert(math.abs(b2d.joint.get_spring_hertz(self.vehicle.joints[1])-vehicle.config.spring_hz)<0.001,"Preset did not replace spring")
             assert(not self.invalid_preset and not self.preset_refused,"Registered preset refused")
             assert(feel.values.air_pitch_damping>0 or self.vehicle.damped_ticks==0,"Air damping applied without the preset key")
+            assert(self.preset~="a" or self.vehicle.damped_ticks==0,"Air damping applied on preset A")
             self.preset_index=self.preset_index+1
             if self.preset_index<=#self.preset_order then
                 self.preset_phase="select"

@@ -101,12 +101,15 @@ function traceText(def,rec,meta){
 }
 
 // Preset A identity as the game builds it (replay.lua identity(): key=tostring(value) in feel.preset_keys order;
-// an optional key absent from the preset file is at its default and left out, #211).
+// an optional key (feel.optional, #211) at its default, absent or explicit, is left out like in the game).
 function presetA(){
  const keys=JSON.parse('['+/M\.preset_keys=\{([^}]*)\}/.exec(fs.readFileSync(path.join(ROOT,'main/gym/feel.lua'),'utf8'))[1]+']');
  const values=JSON.parse(fs.readFileSync(path.join(ROOT,'main/gym/presets/a.json'),'utf8')).values;
- const present=keys.filter(k=>k in values);
- return {keys:present,values,identity:present.map(k=>k+'='+String(values[k])).join(';')};
+ const lua=fs.readFileSync(path.join(ROOT,'main/gym/feel.lua'),'utf8');
+ const optional=Object.fromEntries([.../^M\.optional=\{([^}]*)\}/m.exec(lua)[1].matchAll(/(\w+)=(-?[\d.]+)/g)].map(m=>[m[1],Number(m[2])]));
+ const present=keys.filter(k=>!(k in optional)||(values[k]??optional[k])!==optional[k]);
+ const kept=Object.fromEntries(present.map(k=>[k,values[k]]));
+ return {keys:present,values:kept,identity:present.map(k=>k+'='+String(values[k])).join(';')};
 }
 
 module.exports={ROOT,DIR,EXPECTED,TOLERANCE,TRACES,PERTURB,file,sha256,readTrace,readExpected,outcomes,tolerances,check,traceText,presetA};
