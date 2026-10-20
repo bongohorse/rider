@@ -44,7 +44,7 @@ local function start_camera(self)
         self.camera_ground_key,self.camera_ground=key,ground and ground/scale
     end
     local pos
-    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed<0 and -1 or 1,1/camera.get_projection("/camera#camera").m11)
+    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,1/camera.get_projection("/camera#camera").m11)
     go.set_position(pos,"/camera")
 end
 local function reset(self)
@@ -349,10 +349,11 @@ function update(self, dt)
     end
     local target = go.get_position(self.target)
     if self.vehicle and self.vehicle.ready then
-        -- Half the view height from the last projection (orthographic: m11 = 2 / height); it includes the zoom.
-        local half=1/camera.get_projection("/camera#camera").m11
+        -- Half the view height and width from the last projection (orthographic: m11 = 2 / height, m00 = 2 /
+        -- width); they include the zoom.
+        local projection=camera.get_projection("/camera#camera")
         local pos,zoom=feel.camera(self.camera_follow,target,b2d.body.get_linear_velocity(self.vehicle.chassis),vehicle.touching(self.vehicle),
-            go.get_position("/camera"),self.camera_zoom,half,dt)
+            go.get_position("/camera"),self.camera_zoom,1/projection.m11,dt,1/projection.m00)
         go.set_position(pos,"/camera")
         self.camera_zoom=zoom
         go.set("/camera#camera","orthographic_zoom",zoom)
