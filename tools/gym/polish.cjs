@@ -67,7 +67,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    assert.equal(e.revision,before.revision,what+' changed the revision');assert.equal(e.dirty,before.dirty,what+' dirtied the document');
    assert.equal(e.undo,before.undo,what+' added an Undo step');assert.equal(e.redo,before.redo,what+' changed Redo');
   }
-  async function snapshot(){const e=await ed();return {doc:JSON.stringify(await doc()),revision:e.revision,dirty:e.dirty,undo:e.undo,redo:e.redo};}
+  // The baseline is taken once the last action is saved: a pending autosave (0.4 s after an edit, Undo or
+  // document switch) would otherwise clear dirty during the view action and look like a change.
+  async function snapshot(){
+   await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status!=='Unsaved',null,{timeout:10000})
+    .catch(async()=>{const e=await ed();throw new Error('view-only baseline: the document was not saved within 10 s (dirty '+e.dirty+', status '+e.status+')');});
+   const e=await ed();assert.equal(e.dirty,false);return {doc:JSON.stringify(await doc()),revision:e.revision,dirty:e.dirty,undo:e.undo,redo:e.redo};
+  }
   async function settle(){await page.waitForTimeout(200);return ed();}
 
   // A version 5 source with one problem of each located kind: an over-budget Bump/wave (o4, a source
