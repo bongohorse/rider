@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "key": "e",
+  "values": {
+    "spring_hz": 4.5,
+    "damping": 1.0,
+    "motor_speed": -32,
+    "drive_torque": 1800,
+    "brake_torque": 3000,
+    "reverse_speed": 8,
+    "reverse_threshold": 8,
+    "reverse_delay": 0.25,
+    "lean_torque": 44,
+    "lean_rate_max": 7,
+    "camera_height": 250,
+    "camera_lift": 70,
+    "camera_response": 5,
+    "camera_look_seconds": 0.22,
+    "camera_look_max": 130,
+    "camera_zoom": 1,
+    "camera_zoom_min": 0.82,
+    "camera_zoom_speed": 650,
+    "ground_lean_torque": 140,
+    "ground_rate_max": 2.5,
+    "coast_torque": 900,
+    "rolling_resistance": 0.15
+  }
+}

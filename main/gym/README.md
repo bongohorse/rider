@@ -66,7 +66,8 @@ Car Feel 3 ([#201](https://github.com/bongohorse/rider/issues/201)): `juice.lua`
 
 - `feel.lua` owns all drive/spring/camera values and slider bounds; geometry and bounds are not tuning. Eleven sliders: spring Hz, damping, wheel target, motor cap, air lean, air rate, ground lean, camera response, look-ahead, coast torque, rolling resistance. The owner validates and applies changes live (spring changes wake bodies once).
 - During a slider drag gameplay commands are zeroed; held input clears on capture and release.
-- `presets/a.json`, `b.json`, `c.json` (schema 1) hold complete value sets; A is the baseline, B/C progressively stronger. P cycles; chips select; selection performs a canonical retry. `?preset=b` opens B; invalid values fall back visibly to A. Live edits show Modified.
+- `presets/<key>.json` (schema 1) hold complete value sets; `feel.order` (A, B, C, D, E) is the registry for the P cycle, chips, `riderHud.presets` and `a9`. A is the measurement baseline, B/C progressively stronger (motor targets above Box2D's ~47 rad/s rotation cap, #114), D ("snappy") and E ("planted") are candidates (#199). P cycles; chips select; selection performs a canonical retry. `?preset=d` opens D; an unknown key falls back visibly to A.
+- Validation (#199): `feel.validate` checks schema, key = file name, exactly the 22 `feel.preset_keys`, finite numbers, each value inside its slider range and sign (explicit `feel.ranges` for keys without a slider) and `camera_zoom_min <= camera_zoom`. A refused file falls back to A with a note on the HUD and in the copied report. `tests/bootstrap/test_presets.py` applies the same rules to every file, keeps candidate motor targets under the rotation cap and pins A/B/C byte for byte. Live edits show Modified.
 
 ## Audio
 
@@ -173,7 +174,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `a6` | Reverse, airborne lean, camera direction/zoom |
 | `a7` | Head contact off/on via C and overlay click |
 | `a8` | Live spring change without reset, neutral release |
-| `a9`, `a9invalid` | Preset by URL and chips; invalid fallback |
+| `a9`, `a9invalid` | Preset by URL and chips; every registered preset drivable; refusal rules; invalid URL and refused-file fallback |
 | `a10` | Silent before input, one voice, wheel-dependent speed |
 | `a11` | Clipboard readback and denial fallback |
 | `a12` | Graph spike with disclosed test wheel limits, expiry |

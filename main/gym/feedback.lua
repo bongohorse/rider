@@ -6,7 +6,7 @@ function M.report(data,preset,modified,tuning,load)
     if not data then return nil end
     return table.concat({"## Rider gym feedback",
         "- Commit: "..sys.get_config_string("rider.source_sha","development"),
-        "- Preset: "..string.upper(preset or "a")..(modified and " (modified)" or ""),
+        "- Preset: "..string.upper(preset or "a")..(modified and " (modified)" or "")..(data.preset_refused and " (preset "..data.preset_refused..")" or ""),
         "- Station: "..(data.station or "straight"),
         "- Station result: "..(data.station_result or "straight speed/braking"),
         string.format("- Start speed: %.2f m/s; distance %.2f m; top %.2f m/s; brake distance %.2f m",data.start_speed or 0,data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0),

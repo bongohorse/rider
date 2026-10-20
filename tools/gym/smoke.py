@@ -168,8 +168,9 @@ elif args.case=='a8':
     assert set(cases)=={'live_spring','no_restart','input_isolated','release_cleared','invalid_rejected'}
     assert all(value is True for value in cases.values())
 elif args.case in ('a9','a9invalid'):
-    assert set(cases)=={'url_selected','invalid_fallback','three_drivable','full_replacement','no_reload'}
-    assert all(cases[k] is True for k in ['url_selected','three_drivable','full_replacement','no_reload'])
+    # all_drivable (#199) replaces three_drivable: every preset in feel.order, plus a visible refused-file fallback.
+    assert set(cases)=={'url_selected','invalid_fallback','all_drivable','full_replacement','no_reload','refused_visible'}
+    assert all(cases[k] is True for k in ['url_selected','all_drivable','full_replacement','no_reload','refused_visible'])
     assert cases['invalid_fallback']==(args.case=='a9invalid')
 elif args.case=='a11':
     assert set(cases)=={'report_requested','visible_failure','clipboard_roundtrip','denied_fallback'}

@@ -116,7 +116,7 @@ async function main(){
       await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
       await page.screenshot({path:path.join(out,name+'-compact-hud.png')});
       const before=await page.evaluate(()=>({preset:window.riderTelemetry.preset,resets:window.riderTelemetry.reset_count,seq:window.riderTelemetry.sequence}));
-      for(const key of ['b','c','a']){
+      for(const key of ['b','c','d','e','a']){
         await page.keyboard.down('p');await page.waitForFunction(k=>window.riderTelemetry.preset===k,key);await page.keyboard.up('p');
         const seq=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);
       }

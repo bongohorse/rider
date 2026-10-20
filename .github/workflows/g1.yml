@@ -332,7 +332,7 @@ jobs:
       - name: Verify expanded feel controls and grounded keyboard lean
         if: contains(format(' {0} ', matrix.cases), ' m2feedback ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/feedback-feel --case m2feedback
-      - name: Verify URL presets and all three drivable candidates
+      - name: Verify URL presets and every registered preset drivable
         if: contains(format(' {0} ', matrix.cases), ' a9 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/presets --case a9
       - name: Verify invalid URL fallback

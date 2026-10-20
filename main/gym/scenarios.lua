@@ -264,13 +264,31 @@ function M.slider_tick(self,dt)
         self.testcase="done"
     end
 end
+-- Runtime refusal rules on copies of A (#199): range, sign, missing/extra key, non-finite.
+local function preset_rules(feel)
+    local base=assert(feel.load("a"),"Preset A must validate")
+    local function variant(name,value)
+        local values={}
+        for k,v in pairs(base.values) do values[k]=v end
+        values[name]=value
+        return {schema=1,key="a",values=values}
+    end
+    assert(feel.validate(variant("spring_hz",base.values.spring_hz),"a")==nil,"Unchanged A copy refused")
+    for _,case in ipairs({{"spring_hz",13},{"motor_speed",32},{"coast_torque",nil},{"unknown_key",1},{"damping",0/0},{"brake_torque",7000}}) do
+        assert(feel.validate(variant(case[1],case[2]),"a"),"Invalid preset accepted: "..case[1])
+    end
+    assert(feel.validate(variant("spring_hz",5),"b"),"Preset key/file mismatch accepted")
+end
 function M.preset_tick(self,dt)
+    local feel=require "main.gym.feel"
     self.preset_ticks=(self.preset_ticks or 0)+1
     if self.preset_ticks==60 then
         local expected=self.testcase=="a9invalid" and "a" or "b"
         assert(self.preset==expected and self.measurements_shown.preset==expected,"URL preset not applied/displayed")
         assert(self.invalid_preset==(self.testcase=="a9invalid"),"Invalid preset fallback not labelled")
-        self.preset_order,self.preset_index={"a","b","c"},1
+        preset_rules(feel)
+        -- Every registered preset, in registry order (#199; was a fixed A/B/C list).
+        self.preset_order,self.preset_index=feel.order,1
         self.preset_phase="select"
         emit(self,"phase",{name="select_preset",key="a"})
     elseif self.preset_phase=="select" and self.preset==self.preset_order[self.preset_index] and self.last_reset_reason=="preset" then
@@ -283,15 +301,36 @@ function M.preset_tick(self,dt)
             local state=vehicle.state(self.vehicle)
             assert(state.x-self.preset_x>100 and math.abs(state.angle)<0.6,"Preset is not drivable")
             assert(math.abs(b2d.joint.get_spring_hertz(self.vehicle.joints[1])-vehicle.config.spring_hz)<0.001,"Preset did not replace spring")
+            assert(not self.invalid_preset and not self.preset_refused,"Registered preset refused")
             self.preset_index=self.preset_index+1
-            if self.preset_index<=3 then
+            if self.preset_index<=#self.preset_order then
                 self.preset_phase="select"
                 emit(self,"phase",{name="select_preset",key=self.preset_order[self.preset_index]})
             else
-                assert(self.reset_count==3 and self.world_loads==1,"Preset switch reloaded/leaked resets")
-                emit(self,"suite_end",{status="PASS",cases={url_selected=true,invalid_fallback=self.testcase=="a9invalid",three_drivable=true,full_replacement=true,no_reload=true}})
-                self.testcase="done"
+                assert(self.reset_count==#self.preset_order and self.world_loads==1,"Preset switch reloaded/leaked resets")
+                -- A refused file falls back to A visibly: stub D's file for one selection only (debug probe).
+                assert(sys.get_engine_info().is_debug,"Refusal probe requires debug engine")
+                self.preset_load=feel.load
+                feel.load=function(key) if key=="d" then return nil,"probe" end return self.preset_load(key) end
+                self.preset_phase,self.preset_drive_ticks="refuse",0
+                emit(self,"phase",{name="select_refused",key="d"})
             end
+        end
+    elseif self.preset_phase=="refuse" and self.preset_refused and self.last_reset_reason=="preset" then
+        feel.load,self.preset_load=self.preset_load,nil
+        assert(self.preset=="a" and self.invalid_preset and self.preset_refused=="D refused: probe" and feel.values.motor_speed==-32,"Refused preset did not fall back to A")
+        self.preset_phase,self.preset_drive_ticks="refused",0
+    elseif self.preset_phase=="refused" then
+        self.preset_drive_ticks=self.preset_drive_ticks+1
+        local m=self.measurements_shown
+        if self.preset_drive_ticks==30 then
+            -- HUD note and the copied report both name the refusal.
+            assert(m.preset=="a" and string.find(m.preset_note or "","D refused",1,true) and string.find(m.report_preset or "","D refused",1,true),
+                "Refusal not shown: "..tostring(m.preset_note).." | "..tostring(m.report_preset))
+            emit(self,"phase",{name="screenshot",file="preset-refused.png"})
+        elseif self.preset_drive_ticks==90 then
+            emit(self,"suite_end",{status="PASS",cases={url_selected=true,invalid_fallback=self.testcase=="a9invalid",all_drivable=true,full_replacement=true,no_reload=true,refused_visible=true}})
+            self.testcase="done"
         end
     end
 end
