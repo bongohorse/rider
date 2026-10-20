@@ -179,9 +179,17 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
   cases.push('slow_motion_not_comparable');
 
   // 9. Overlay buttons (mouse): Replay, then Retry (R) ends it and removes the ghost; the recording stays.
+  // The overlay acts on the pointer's pressed edge: a click counts only if the engine saw the previous release
+  // (engine pitfall 5). After mouse.up wait until two more frames have rendered, so the next mouse.down cannot land
+  // in the same engine frame as this release (#224).
   async function click(name,until,arg){
    const p=await page.evaluate(name=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),q=window.riderHud[name];return {x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height};},name);
-   await page.mouse.move(p.x,p.y);await page.mouse.down();await wait(until,arg);await page.mouse.up();
+   await page.mouse.move(p.x,p.y);await page.mouse.down();
+   try{await wait(until,arg);}
+   catch(e){const r=await R();throw Error(`click ${name}: expected state not reached; play ${JSON.stringify(r.play&&{active:r.play.active,index:r.play.index,ticks:r.play.ticks,ended:r.play.ended})}, resets ${r.resets}`);}
+   await page.mouse.up();
+   const f=(await R()).frames;
+   await wait(f=>window.riderReplay.frames>=f+2,f,{timeout:5000}).catch(()=>{throw Error(`click ${name}: no two engine frames rendered within 5 s after the release`);});
   }
   s=await R();
   await click('replay',r=>window.riderReplay.play?.active&&window.riderReplay.resets===r+1,s.resets);
@@ -189,8 +197,14 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
   await press('r',()=>window.riderReplay.play.ended==='manual');
   s=await R();assert.equal(s.ghost.count,0);assert.equal(s.recording.ticks,ticks);
   await click('replay',r=>window.riderReplay.play?.active&&window.riderReplay.resets===r+1,s.resets);
+  // The stop click must hit a running replay well before its end, so it cannot race the replay's last tick.
+  s=await R();
+  assert(s.play.active&&s.play.index<=s.play.ticks-60,`stop precondition: replay active and at least 60 ticks before its end (index ${s.play.index}/${s.play.ticks})`);
   await click('replay',()=>window.riderReplay.play.ended==='stopped');
-  s=await R();assert.equal(s.ghost.count,0);
+  s=await R();
+  assert.equal(s.play.ended,'stopped');assert(s.play.index<s.play.ticks,`the click stopped an active replay (index ${s.play.index}/${s.play.ticks})`);
+  assert.equal(s.ghost.count,0);
+  measurements.stop_click={index:s.play.index,ticks:s.play.ticks};
   cases.push('overlay_buttons_and_retry_end_replay');
 
   // 10. Recording cap (debug-reduced to 120 ticks): stops with "full".
