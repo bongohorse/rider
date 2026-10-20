@@ -4,6 +4,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {verificationPlan}=require('./verification-plan.cjs');
+// Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
+const PRESETS=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/feel.lua'),'utf8'))[1].match(/\w+/g);
 async function main(){
   const [target,sha,buildId,out,mode='full']=process.argv.slice(2);
   const plan=verificationPlan(mode);
@@ -104,8 +106,8 @@ async function main(){
             await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
           }
         }
-        // The last chip (F, #211) and A, on every layout including phone emulation.
-        for(const key of ['f','a']){
+        // The last registered chip (feel.order) and A, on every layout including phone emulation.
+        for(const key of [PRESETS.at(-1),'a']){
           const p=await page.evaluate(k=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=window.riderHud.presets[k];return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};},key);
           await page.mouse.move(p.x,p.y);await page.mouse.down();
           await page.waitForFunction(k=>window.riderTelemetry.preset===k&&!window.riderTelemetry.modified,key);await page.mouse.up();
@@ -119,7 +121,7 @@ async function main(){
       await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
       await page.screenshot({path:path.join(out,name+'-compact-hud.png')});
       const before=await page.evaluate(()=>({preset:window.riderTelemetry.preset,resets:window.riderTelemetry.reset_count,seq:window.riderTelemetry.sequence}));
-      for(const key of ['b','c','d','e','f','a']){
+      for(const key of [...PRESETS.slice(1),'a']){
         await page.keyboard.down('p');await page.waitForFunction(k=>window.riderTelemetry.preset===k,key);await page.keyboard.up('p');
         const seq=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(n=>window.riderTelemetry.sequence>n+1,seq);
       }
