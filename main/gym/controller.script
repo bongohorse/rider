@@ -200,7 +200,7 @@ function init(self)
         self.balance_trial=require "main.gym.balance_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
-    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5c" or self.testcase=="le5d" then
+    if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5c" or self.testcase=="le5d" or self.testcase=="le6" then
         assert(sys.get_engine_info().is_debug,"Editor probes require debug engine")
         if self.testcase=="le5b" or self.testcase=="le5d" then seam_metrics=require "main.gym.seam_metrics" end
     end

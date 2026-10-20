@@ -197,8 +197,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // 14. Every built-in station opens as a template copy (R3) that compiles without Play errors; Undo brings back the replaced document.
   await key('e');e=await edit();const own=e.id,ids=await page.evaluate(()=>Object.keys(window.riderEditor.buttons).filter(n=>n.startsWith('template_')).map(n=>n.slice(9)));
   assert.equal(ids.length,12);const templates={};
+  // The template list is paged (LE6): every template is reached through the pages, and no shown template
+  // button overlaps the paging row or Close (one button height apart at least, canvas pixels).
+  const unit=await page.evaluate(()=>{const c=document.querySelector('canvas');return Math.min(c.width/960,c.height/540);});
   for(const id of ids){
    await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
+   for(let i=0;i<5&&!(await ed()).visible.includes('template_'+id);i++){const page0=(await ed()).tpl_page;await button('tpl_next');await page.waitForFunction(p=>window.riderEditor.tpl_page===p+1,page0);}
+   const shown=await ed();assert.ok(shown.visible.includes('template_'+id),id+' not reachable through the template pages');
+   const below=['dialog_close','tpl_prev','tpl_next'].filter(n=>shown.visible.includes(n)).map(n=>shown.buttons[n].y);
+   for(const n of shown.visible.filter(n=>n.startsWith('template_')))for(const y of below)assert.ok(shown.buttons[n].y-y>=24*unit,n+' overlaps the dialog controls');
    await button('template_'+id);await page.waitForFunction(id=>window.riderEditor.id==='my-'+id,id);
    e=await ed();assert.equal(e.problem,'',id+': '+e.problem);templates[id]=e.objects;
   }

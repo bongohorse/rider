@@ -1,0 +1,264 @@
+// LE6a: warnings that jump to their source, navigation (Fit level, centre selection, START, last test start),
+// the R13 bounds display and the paged template list in the debug HTML5 gym (level-editor contract R13, R17, LE6).
+// Every navigation and display action is view only: the source document, its dirty state and the Undo
+// history stay unchanged.
+const {configure}=require('./launch.cjs');
+const {chromium}=require('playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+(async()=>{
+ const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;
+ function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
+ const web=path.dirname(find(path.resolve(process.argv[6]))),errors=[],logs=[],cases=[],measurements={};
+ const server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(file).pipe(res);});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{
+  browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1280,height:720}});
+  await configure(page,runId,process.argv[5]);
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{const t=m.text();logs.push(t);if(logs.length>60)logs.shift();if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(t))errors.push(t);});
+  const base='http://127.0.0.1:'+server.address().port+'/index.html';
+  const ed=()=>page.evaluate(()=>window.riderEditor);
+  const doc=()=>page.evaluate(()=>window.riderEditorDoc);
+  async function key(name,mods=[]){
+   for(const m of mods)await page.keyboard.down(m);
+   if(mods.length)await page.waitForTimeout(60);
+   await page.keyboard.down(name);await page.waitForTimeout(90);await page.keyboard.up(name);
+   for(const m of [...mods].reverse())await page.keyboard.up(m);
+   await page.waitForTimeout(120);
+  }
+  const canvas=(x,y)=>page.evaluate(([x,y])=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+x/c.width*r.width,y:r.y+(1-y/c.height)*r.height};},[x,y]);
+  async function world(p){const s=(await ed()).screen;return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);}
+  async function hover(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(150);}
+  async function click(at,mods=[]){
+   for(const m of mods)await page.keyboard.down(m);
+   if(mods.length)await page.waitForTimeout(60);
+   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(120);
+   for(const m of mods)await page.keyboard.up(m);
+  }
+  const at=async(p,mods)=>click(await world(p),mods);
+  async function button(name){
+   const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
+   const b=e.buttons[name];await click(await canvas(b.x,b.y));
+  }
+  async function edit(){await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.view&&window.riderEditor.screen,null,{timeout:20000});await page.waitForTimeout(150);return ed();}
+  async function played(id){
+   const after=(await ed())?.view?.generation??0;
+   await page.waitForFunction(({id,after})=>window.riderEditor?.mode==='play'&&window.riderTelemetry?.station===id&&window.riderTelemetry.sequence>2&&window.riderTelemetry.session_generation>after,{id,after},{timeout:20000});
+   return page.evaluate(()=>window.riderTelemetry);
+  }
+  async function revision(n){await page.waitForFunction(n=>window.riderEditor.revision===n&&window.riderEditorDoc?.revision===n,n);return ed();}
+  const refocused=()=>page.waitForTimeout(1100);
+  async function importText(text,name){
+   await button('import');await page.waitForFunction(()=>window.riderCustom.visible&&document.getElementById('rider-custom-file'));
+   await page.locator('#rider-custom-file').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(text)});
+   await page.waitForFunction(()=>!window.riderCustom.visible);await refocused();
+   return ed();
+  }
+  const near=(a,b,eps)=>Math.abs(a-b)<=eps;
+  const px=(e,p)=>[e.screen.ox+p[0]*e.screen.ppm_x,e.screen.oy+p[1]*e.screen.ppm_y];
+  const middle=e=>[(e.usable.x0+e.usable.x1)/2,(e.usable.y0+e.usable.y1)/2];
+  // p is drawn at the middle of the usable canvas area (not covered by the panels), within 2 px.
+  function centred(e,p,what){const q=px(e,p),m=middle(e);assert.ok(near(q[0],m[0],2)&&near(q[1],m[1],2),what+': '+JSON.stringify({q,m}));}
+  function inside(e,p,what){const q=px(e,p),u=e.usable;assert.ok(q[0]>=u.x0-1&&q[0]<=u.x1+1&&q[1]>=u.y0-1&&q[1]<=u.y1+1,what+' outside the usable area: '+JSON.stringify({q,u}));}
+  // View only: same source, revision, dirty state and Undo/Redo depth.
+  async function unchanged(before,what){
+   const e=await ed(),d=await doc();
+   assert.equal(JSON.stringify(d),before.doc,what+' changed the document');
+   assert.equal(e.revision,before.revision,what+' changed the revision');assert.equal(e.dirty,before.dirty,what+' dirtied the document');
+   assert.equal(e.undo,before.undo,what+' added an Undo step');assert.equal(e.redo,before.redo,what+' changed Redo');
+  }
+  async function snapshot(){const e=await ed();return {doc:JSON.stringify(await doc()),revision:e.revision,dirty:e.dirty,undo:e.undo,redo:e.redo};}
+  async function settle(){await page.waitForTimeout(200);return ed();}
+
+  // A version 5 source with one problem of each located kind: an over-budget Bump/wave (o4, a source
+  // object without a location), a line that doubles back (o3 at 50, 0) and two lines that touch without a
+  // connection (seam warning, o1/o2 at 20, 0). The compiled fields are a valid older compile (stale: no
+  // compiled_revision), so the file imports and opens its source.
+  const file={schema:1,units:'metres',id:'le6-nav',name:'LE6 navigation',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,130,-20,30],
+   chains:[[[20,0],[0,0]]],hulls:[],labels:[],checkpoints:[],
+   editor:{editor_version:5,compiler_version:5,revision:4,next_id:5,sampling:{tolerance:0.005,max_segment:0.5},connections:[],start:{position:[2,1],speed:0},
+    objects:[{id:'o1',type:'line',points:[[0,0],[20,0]]},{id:'o2',type:'line',points:[[20,0],[30,0]]},{id:'o3',type:'line',points:[[40,0],[50,0],[44,0]]},
+     {id:'o4',type:'prefab',kind:'wave',at:[60,0],params:{height:10,wavelength:1,count:50}}]}};
+
+  // 1. Located warnings and errors jump to their source by stable id; unlocated ones only show their text.
+  await page.goto(base+'?station=straight');
+  await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
+  await page.locator('canvas').focus();await key('e');let e=await edit();
+  e=await importText(JSON.stringify(file),'le6-nav.json');
+  assert.equal(e.id,'le6-nav');e=await settle();
+  await button('warnings');e=await settle();
+  assert.equal(e.warnings_open,true);
+  const texts=e.problems.map(p=>p.text);
+  assert.equal(e.problems.length,3,JSON.stringify(texts));
+  // The existing message strings are unchanged; each now carries its source.
+  assert.ok(texts[0].startsWith('Bump/wave o4 needs more than 2048 points'),texts[0]);
+  assert.equal(texts[1],'Line o3 doubles back on itself at (50.00, 0.00) m.');
+  assert.equal(texts[2],'o1 end and o2 start touch but are not connected (seam bump). Select the end and press Connect [J].');
+  assert.deepEqual(e.problems.map(p=>[p.error,p.ids,p.at,p.located]),[[true,['o4'],false,true],[true,['o3'],[50,0],true],[false,['o1','o2'],[20,0],true]]);
+  let before=await snapshot();
+  await button('warn_2');e=await settle();
+  assert.deepEqual(e.selected,['o3']);centred(e,[50,0],'doubles-back error');assert.deepEqual(e.flash,[50,0]);
+  assert.equal(e.message,'Error: Line o3 doubles back on itself at (50.00, 0.00) m.');
+  await button('warn_1');e=await settle();
+  assert.deepEqual(e.selected,['o4']);
+  // An object without a location: its whole shape (60-110 m) is in view.
+  inside(e,[60,0],'wave entry');inside(e,[110,0],'wave exit');
+  await button('warn_3');e=await settle();
+  assert.deepEqual(e.selected.sort(),['o1','o2']);centred(e,[20,0],'seam warning');
+  await unchanged(before,'jump to problem');
+  measurements.jump={zoom:e.camera.zoom,problems:texts.length};
+  // An edit removes the target: the seam warning goes, START loses its ground (a START target), and Undo
+  // brings the seam back with the restored ids.
+  await key('Delete');e=await revision(before.revision+1);e=await settle();
+  assert.ok(!e.problems.some(p=>p.ids.includes('o1')||p.ids.includes('o2')),'a deleted source is still listed');
+  const startRow=e.problems.findIndex(p=>p.text==='START has no terrain below it.');
+  assert.ok(startRow>=0&&e.problems[startRow].start&&e.problems[startRow].located,JSON.stringify(e.problems));
+  await button('warn_'+(startRow+1));e=await settle();
+  assert.equal(e.selection,'start');centred(e,e.start.position,'START warning');
+  await key('z',['Control']);e=await revision(before.revision+2);e=await settle();
+  const seam=e.problems.findIndex(p=>p.ids.includes('o2'));assert.ok(seam>=0,'Undo did not restore the seam warning');
+  before=await snapshot();
+  await button('warn_'+(seam+1));e=await settle();
+  assert.deepEqual(e.selected.sort(),['o1','o2']);centred(e,[20,0],'seam warning after Undo');
+  await unchanged(before,'jump after Undo');
+  cases.push('problems_jump_to_source_after_edit_and_undo');
+
+  // 2. Fit level, centre selection (several objects), go to START and to the last launched test start.
+  // Esc first closes the warning list, then clears the selection.
+  await key('Escape');e=await settle();assert.equal(e.warnings_open,false);await key('Escape');e=await settle();assert.equal(e.selection,'');
+  before=await snapshot();
+  const cam0=JSON.stringify(e.camera);
+  await button('view_centre');e=await settle();
+  assert.ok(e.message.startsWith('Centre selection: nothing is selected'),e.message);assert.equal(JSON.stringify(e.camera),cam0,'centring without a selection moved the camera');
+  await key('Home');e=await settle();
+  const x=e.extent;
+  for(const c of [[x[0],x[2]],[x[1],x[2]],[x[0],x[3]],[x[1],x[3]]])inside(e,c,'Fit level corner');
+  centred(e,[(x[0]+x[1])/2,(x[2]+x[3])/2],'Fit level centre');
+  // The level fills 80 % of the usable width or height (10 % padding on each side).
+  assert.equal(e.message,'');
+  const fillX=(x[1]-x[0])*e.screen.ppm_x/(e.usable.x1-e.usable.x0),fillY=(x[3]-x[2])*e.screen.ppm_y/(e.usable.y1-e.usable.y0);
+  assert.ok(near(Math.max(fillX,fillY),0.8,0.005),JSON.stringify({fillX,fillY}));
+  const fitted=e.camera;
+  for(let i=0;i<4;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}
+  e=await settle();assert.ok(e.camera.zoom>fitted.zoom*1.5,'zoomed in');
+  await button('view_fit');e=await settle();
+  // Repeatable within the float32 screen mapping (sub-millimetre).
+  assert.ok(near(e.camera.zoom/fitted.zoom,1,1e-6)&&near(e.camera.x,fitted.x,1e-3)&&near(e.camera.y,fitted.y,1e-3),'Fit level is not repeatable: '+JSON.stringify([e.camera,fitted]));
+  measurements.fit={extent:x,zoom:e.camera.zoom};
+  // Two objects selected: the box of both is centred and the zoom is kept when it fits.
+  await at([10,0]);await at([47,0],['Shift']);e=await settle();assert.deepEqual(e.selected.sort(),['o1','o3']);
+  for(let i=0;i<2;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
+  e=await settle();const zoom=e.camera.zoom;
+  await key('.');e=await settle();
+  centred(e,[25,0],'two selected objects');assert.ok(near(e.camera.zoom,zoom,1e-9),'centring zoomed although the selection fits');
+  await button('view_start');e=await settle();
+  centred(e,[e.start.position[0],e.start.position[1]+0.08],'START');
+  // No test start yet: Last test explains and stays put; a refused test start does not count.
+  assert.equal(e.last_test,false);
+  const cam1=JSON.stringify(e.camera);
+  await button('view_test');e=await settle();
+  assert.ok(e.message.startsWith('Last test start: none yet'),e.message);assert.equal(JSON.stringify(e.camera),cam1);
+  await unchanged(before,'navigation');
+  await hover([-5,3]);await key('f');e=await settle();
+  assert.ok(e.message.startsWith('Test start refused'),e.message);assert.equal(e.last_test,false);
+  // The errors (o3, o4) block every run: remove them, then start a test run at x 12.
+  await key('Escape');await key('Home');await at([47,0]);await at([80,5],['Shift']);e=await settle();assert.deepEqual(e.selected.sort(),['o3','o4']);
+  await key('Delete');e=await revision(before.revision+1);e=await settle();
+  assert.equal(e.problem,'');
+  await hover([12,3]);await key('f');await played('le6-nav');
+  await key('e');e=await edit();
+  assert.ok(e.last_test&&near(e.last_test[0],12,0.05)&&near(e.last_test[1],0.9,0.01),JSON.stringify(e.last_test));
+  const launched=e.last_test;
+  await key('Home');e=await settle();
+  await button('view_test');e=await settle();
+  centred(e,[launched[0],launched[1]+0.08],'last test start');
+  // Another document has no last test start; Undo back to this one finds its own again.
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
+  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.id==='my-straight');e=await settle();
+  assert.equal(e.last_test,false,'the last test start of another document was kept');
+  await button('view_test');e=await settle();assert.ok(e.message.startsWith('Last test start: none yet'),e.message);
+  await key('z',['Control']);await page.waitForFunction(()=>window.riderEditor.id==='le6-nav');e=await settle();
+  assert.deepEqual(e.last_test,launched);
+  cases.push('fit_centre_start_last_test_view_only');
+
+  // 3. The R13 bounds as Play uses them: shown on demand, refreshed by a START move, and equal to the bounds
+  // of the compiled level (Play from START).
+  before=await snapshot();
+  await button('view_bounds');e=await settle();
+  assert.equal(e.show_bounds,true);assert.ok([-10,40,-10,21.68].every((v,i)=>near(e.bounds[i],v,1e-9)),JSON.stringify(e.bounds));
+  for(let i=0;i<8;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(60);}
+  e=await settle();assert.equal(e.overlay.bounds,4,'the whole bounds rectangle is drawn when it is in view');
+  await button('view_bounds');e=await settle();assert.equal(e.show_bounds,false);assert.equal(e.overlay.bounds,0);
+  await unchanged(before,'bounds display');
+  await button('view_bounds');await key('Home');e=await settle();
+  // Without o3 and o4 (removed above). Left: o1 at 0; right: o2 ends at 30; floor 0; top: the START box (1 + 0.68 m), 20 m headroom.
+  const b1=e.bounds;assert.ok(near(b1[0],-10,1e-9)&&near(b1[1],40,1e-9)&&near(b1[2],-10,1e-9)&&near(b1[3],21.68,1e-9),JSON.stringify(b1));
+  await button('tool_start');await at([10,5]);e=await revision(before.revision+1);e=await settle();
+  assert.ok(e.start.position[1]>4&&near(e.bounds[3],e.start.position[1]+0.68+20,1e-9)&&near(e.bounds[1],40,1e-9),'bounds not refreshed after a START move: '+JSON.stringify(e.bounds));
+  const shown=e.bounds;
+  await button('tool_select');
+  await key('e');await played('le6-nav');
+  await page.waitForFunction(()=>window.riderSavedLevel?.id==='le6-nav');
+  const level=await page.evaluate(()=>window.riderSavedLevel);
+  assert.deepEqual(level.bounds,shown,'the shown bounds differ from the compiled level');
+  await key('e');e=await edit();
+  measurements.bounds={shown,compiled:level.bounds};
+  cases.push('bounds_display_matches_compile');
+
+  // 4. The template list pages (the 12th template no longer sits on Close); the wheel pages it too. The View
+  // row stays clear of the page's own buttons at desktop and phone sizes; GUI node budget.
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);e=await settle();
+  const templates=Object.keys(e.buttons).filter(n=>n.startsWith('template_'));
+  assert.equal(e.tpl_page,0);assert.equal(e.visible.filter(n=>n.startsWith('template_')).length,Math.min(10,templates.length));
+  assert.ok(e.visible.includes('tpl_next')&&!e.visible.includes('tpl_prev'));
+  const right=await canvas(e.buttons.template_ramps.x,e.buttons.template_ramps.y);
+  await page.mouse.move(right.x,right.y);await page.waitForTimeout(80);await page.mouse.wheel(0,120);e=await settle();
+  assert.equal(e.tpl_page,1);assert.equal(e.visible.filter(n=>n.startsWith('template_')).length,templates.length-10);
+  assert.ok(e.visible.includes('tpl_prev'));
+  await page.mouse.wheel(0,-120);e=await settle();assert.equal(e.tpl_page,0);
+  await key('Escape');e=await settle();assert.equal(e.open_dialog,false);
+  assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));
+  measurements.gui={nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes,templates:templates.length};
+  measurements.view_row={};
+  for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
+   await page.setViewportSize(size);await page.waitForTimeout(400);e=await settle();
+   const r=await page.evaluate(rects=>{const c=document.querySelector('canvas'),cr=c.getBoundingClientRect(),t=document.getElementById('page-tools').getBoundingClientRect();
+    const css=q=>({x0:cr.x+q.x0/c.width*cr.width,x1:cr.x+q.x1/c.width*cr.width,y0:cr.y+(1-q.y1/c.height)*cr.height,y1:cr.y+(1-q.y0/c.height)*cr.height});
+    return {tools:{x0:t.left,x1:t.right,y0:t.top,y1:t.bottom},view:rects.map(css)};},e.view_rects);
+   for(const v of r.view){
+    assert.ok(v.x1<=r.tools.x0||v.y1<=r.tools.y0,'View row overlaps the page buttons at '+JSON.stringify(size)+': '+JSON.stringify({v,tools:r.tools}));
+    assert.ok(v.x0>=0&&v.y1<=size.height+0.5,'View row off screen at '+JSON.stringify(size));
+   }
+   measurements.view_row[size.width+'x'+size.height]={last:r.view[r.view.length-1].x1,tools:r.tools.x0};
+  }
+  await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(300);
+  await page.screenshot({path:path.join(out,'polish-view.png')});
+  cases.push('template_pages_view_row_budget');
+
+  // 5. An unlocated message (an empty level) is listed and shown without moving the camera or selecting.
+  await button('new');await page.waitForFunction(()=>window.riderEditor.id.startsWith('my-level-'));e=await settle();
+  if(!e.warnings_open){await button('warnings');e=await settle();}
+  const empty=e.problems.findIndex(p=>p.text.startsWith('No terrain yet'));
+  assert.ok(empty>=0&&!e.problems[empty].located,JSON.stringify(e.problems));
+  before=await snapshot();const cam2=JSON.stringify(e.camera);
+  await button('warn_'+(empty+1));e=await settle();
+  assert.equal(JSON.stringify(e.camera),cam2,'an unlocated message moved the camera');assert.equal(e.selection,'');
+  assert.ok(e.message.startsWith('Error: No terrain yet'),e.message);
+  await unchanged(before,'unlocated message');
+  await page.screenshot({path:path.join(out,'polish-warnings.png')});
+  cases.push('unlocated_message_shown_only');
+
+  assert.deepEqual(errors,[]);
+  fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
+  console.log(JSON.stringify({status:'PASS',cases,measurements}));
+ }catch(e){
+  if(errors.length)console.error('Page errors:\n'+errors.join('\n'));
+  console.error('Last console lines:\n'+logs.join('\n'));
+  if(browser)for(const context of browser.contexts())for(const page of context.pages()){
+   console.error('State: '+JSON.stringify(await page.evaluate(()=>({editor:window.riderEditor&&{...window.riderEditor,buttons:undefined,library:undefined},doc:window.riderEditorDoc&&{objects:window.riderEditorDoc.objects?.slice(0,12)}})).catch(()=>null)));
+   await page.screenshot({path:path.join(out,'polish-failed.png')}).catch(()=>{});
+  }
+  throw e;
+ }
+ finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+})().catch(e=>{console.error(e);process.exitCode=1;});
