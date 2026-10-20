@@ -79,13 +79,13 @@ A start speed is an explicit option. Invalid positions (inside geometry, no surf
 
 ## Screen layout (desktop, Defold GUI)
 - **Top bar:** level name · save status · New · Open (my levels / templates) · Export · Import · Undo · Redo · **Play ▶**
-- **Left tool palette:** Select (S) · Draw (D) · Curve (C) · Prefab (P) · START · FINISH · Label · Pan
+- **Left tool palette:** Select (S) · Draw (D) · Curve (C) · Prefab (P) · START · FINISH · Label (L, LE6b) · Pan
 - **Right panel:** properties of the selection (numeric fields: x, y, angle, length, height…), or level properties (name, start speed) when nothing is selected
-- **Bottom status:** View row (Fit, Centre, START, Last test, Bounds; LE6a) · cursor x/y in metres · active snaps · zoom; the warning count (click to list) sits in the top bar
+- **Bottom status:** View row (Fit, Centre, START, Last test, Bounds; LE6a; Ghost, Help; LE6b) · cursor x/y in metres · active snaps · zoom; the warning count (click to list) sits in the top bar
 
 ## Controls (Edit mode only; game keys keep working in Play)
 - **Mouse:** left click selects/places. Left drag moves a selection or handle. Middle drag or Space+left drag pans. The wheel zooms around the cursor.
-- **Keys:** E = Play from the editor / back to the editor while driving (R11) · Enter Play · F test start at mouse · S/D/C/P tools · Delete · Ctrl+Z / Ctrl+Y · G grid snap toggle · Home Fit level · . centre the selection (LE6a) · Shift/Alt/Ctrl as in R6.
+- **Keys:** E = Play from the editor / back to the editor while driving (R11) · Enter Play · F test start at mouse · S/D/C/P tools · Delete · Ctrl+Z / Ctrl+Y · G grid snap toggle · Home Fit level · . centre the selection (LE6a) · L Label · H help (LE6b) · Shift/Alt/Ctrl as in R6.
 - **Esc:** first cancels the current action (drag, polyline), then clears the selection.
 - **Text/number input focus:** Defold GUI has no built-in text fields and the project has no text input trigger yet, so name and numeric fields are an **explicit implementation item** (engine behaviour checked against the pinned version). While a field is focused, E, F, Delete, Enter and tool keys act on the field only, never as editor/game actions.
 - **All game actions are intercepted centrally while editing** (not a list of individual clashing keys; today the game binds e.g. W/S/A/D, arrows, R, C, F, P, T, H, M, V). Only editor actions are processed in Edit mode; R is disabled. Browser shortcuts (Ctrl+S, Ctrl+W) are not used.
@@ -377,7 +377,7 @@ Requested by Claudio on 2026-10-20 after his LE5c drive test ([#192](https://git
 
 ### Diagnostics and navigation (LE6a)
 
-Part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)), split into LE6a (this section) and LE6b (labels, help, vehicle silhouette, readouts). Implemented in `editor_doc.lua` (problem targets, `extent`), `editor.lua` (targets, last test start), `editor_overlay.lua` (bounds lines), `boot.script` (last test start) and `editor.gui_script`. Debug case `le6` ([gym notes](../../main/gym/README.md#level-editor)).
+Part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)), split into LE6a (this section) and [LE6b](#labels-help-and-readability-le6b) (labels, help, vehicle silhouette, readouts). Implemented in `editor_doc.lua` (problem targets, `extent`), `editor.lua` (targets, last test start), `editor_overlay.lua` (bounds lines), `boot.script` (last test start) and `editor.gui_script`. Debug case `le6` ([gym notes](../../main/gym/README.md#level-editor)).
 
 - **Warnings jump to their source:** the warning list has one row per message, 8 per page (`<` `>`), errors first. Every message keeps its exact text. Where it has a source it also gets a target: the source object ids (pieces, prefabs and curves by stable id, never sampled segments), a location in metres, or START.
   - Targets per message: a sampling error names its object. A run over 2048 points names its pieces. Points closer than 1 cm, a run that doubles back, and a run that crosses itself name the owning piece and the location. Touching unconnected ends name both pieces and the joint. START without ground, START overlapping an object and the start limit name START (and the object).
@@ -396,6 +396,28 @@ Part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)), split into
 - **Keys:** Home (`editor_fit`) and . or numpad . (`editor_centre`), new bindings ([`input_ddf.proto` L36, L121, L137](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/input/proto/input/input_ddf.proto#L36)). A focused field takes them like every other key.
 - **Warning list and dialogs:** opening the Open dialog closes the warning list and the list opening closes the dialog, so the list's rows never take the dialog's clicks.
 - **Budget (R7), measured in `le6`:** the editor GUI uses 573 of 640 `max_nodes` with 12 templates (535 before LE6a): 10 for the View row, 20 for the warning rows and their paging, 4 for template paging and 4 for the bounds lines. Each further station adds 2. No sprites or labels are added. The View row ends at 443 px against the page buttons at 1092 px (1280 × 720), 287 against 656 (844 × 390) and 135 against 202 (390 × 844).
+
+### Labels, help and readability (LE6b)
+
+Second part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)). Implemented in `editor.gui_script` (Label tool, text field, help overlay, silhouettes, readouts) and `editor.lua`. Debug case `le6` (cases 6–9).
+
+- **Labels:** **Label [L]** (new binding `editor_label`, [`input_ddf.proto` L66](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/input/proto/input/input_ddf.proto#L66)) places a label `Label` at the snapped cursor (one Undo step) and focuses its text at once. The whole text is selected, so typing replaces it. Enter applies a changed text as a second Undo step; Esc keeps the text.
+  - Later edits: a double-click on the label or the right panel's **Text** row.
+  - The field takes every key (editor and game keys only type). Text keeps the station rule (at most 64 bytes, `A label is limited to 64 bytes.`) and is never empty (`A label cannot be empty.`).
+  - Move, copy/paste, Mirror, Delete, Undo/Redo, autosave/reload and export/import use the existing paths. A label compiles into the station's `labels`, and an imported file is an independent copy (`le6`).
+  - A label is picked anywhere on its drawn text (the edit world's text box at the current zoom, by UTF-8 character count), not only at its anchor.
+  - The editor never creates or saves an empty text. Saved data and files with an empty label (the source and station validators accept it) still open as before and edit normally; the empty label stays (`le6`).
+- **Help [H]** (the game's help key; also **Help [H]** in the View row) opens a modal overlay listing the shipped controls: tools, mouse, drawing and curves, snapping, edit keys, prefabs, Mirror [<] [>], copy/paste, labels, test starts, the View row and focused fields.
+  - While it is open every key and click is consumed (nothing edits, plays or navigates behind it); a piece being drawn stays as it is. H, Esc, Close or a click outside closes it.
+  - Like the whole editor (desktop mouse and keyboard, D-E2) it is laid out for desktop windows; it scales with the editor GUI and has no separate phone layout (at 390 px portrait width its text is too small to read).
+  - The text is one Lua table. `tests/ci/test_editor_help.py` checks that every editor key binding (and H, 1–7) is described by a phrase that names its key (e.g. `[C] Curve`, `Ctrl+[C] copy`), and that the help names no unbound key.
+- **Vehicle silhouette (R10):**
+  - **Ghost:** with the Select tool over empty canvas inside the free area, a faint upright vehicle (chassis, two wheels, rider: 6 GUI boxes) shows where **F** would start a test run (Shift: **Shift+F** drop here). It uses `editor_doc.test_start`, the same rule as F, so F starts exactly at the ghost (`le6`).
+  - A refused position shows the ghost in red at the cursor with the reason in the readout (`F: refused (no surface below the cursor)`).
+  - The ghost is hidden over objects, while dragging, with a field, the Open dialog, the warning list or help open, and when **Ghost** in the View row is off (default on; view only).
+  - The last launched test start (LE6a) is shown as a fainter silhouette.
+- **Readouts:** every position reads `x … m  y … m` (curve anchors, prefab entry/exit, placement preview, labels). A hull shows its extent. Dragging START or FINISH shows the position; for START it also shows the clearance check Play uses (`| overlaps line o1 (Play blocked)`) before release.
+- **Budget (R7), measured in `le6`:** 596 of 640 `max_nodes` with 12 templates (+23 over LE6a: 2 silhouettes of 6 boxes, the help overlay with 5, the Ghost and Help buttons and the Label tool). The View row now ends at 600 px against the page buttons at 1092 px (1280 × 720), 391 against 656 (844 × 390) and 183 against 202 (390 × 844).
 
 ## Additional implementation and acceptance checks
 

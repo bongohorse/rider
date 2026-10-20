@@ -54,6 +54,7 @@ key_trigger { input: KEY_V action: "editor_v" }
 key_trigger { input: KEY_HOME action: "editor_fit" }
 key_trigger { input: KEY_PERIOD action: "editor_centre" }
 key_trigger { input: KEY_KP_DECIMAL action: "editor_centre" }
+key_trigger { input: KEY_L action: "editor_label" }
 text_trigger { input: TEXT action: "editor_text" }
 mouse_trigger { input: MOUSE_BUTTON_MIDDLE action: "editor_pan" }
 mouse_trigger { input: MOUSE_WHEEL_UP action: "editor_zoom_in" }
