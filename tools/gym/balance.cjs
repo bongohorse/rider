@@ -1,0 +1,128 @@
+// A19d Balance station: slow skill driver with recorded/replayed trace, full throttle, seesaw tip/settle
+// repeats, retries (R, V, mid-tip R) and an A -> B -> A world reload. Protocol: main/gym/README.md "Balance".
+const {configure}=require('./launch.cjs');
+const {chromium}=require('playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+// Repeat tolerances declared before runs (A19d).
+const TOL={stop_x_m:.05,time_s:.1,tip_s:.05,angle_rad:.01};
+const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw'];
+(async()=>{
+ const [root,sha,runId]=process.argv.slice(2),out=path.resolve(root);let browser,page;
+ const errors=[],cases=[],skill={},replay={},full={},seesaw={};
+ function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
+ const web=path.dirname(find(path.resolve(process.argv[6])));
+ const server=http.createServer((req,res)=>{const f=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!f.startsWith(web+path.sep)||!fs.existsSync(f)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(f).pipe(res);});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+server.address().port+'/index.html';
+ const report=()=>page.evaluate(()=>window.riderStationReport);
+ async function open(section,extra=''){
+  await page.goto(url+`?station=balance&section=${section}`+extra);
+  await page.waitForFunction(({sha,runId,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station==='balance'&&window.riderStationReport.section===section&&window.riderTelemetry?.sequence>2,{sha,runId,section});
+ }
+ // Edge-triggered R: hold until the game acknowledges the reset, then release (engine pitfall #5).
+ async function retry(){
+  const n=await page.evaluate(()=>window.riderTelemetry.reset_count);
+  await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,n);await page.keyboard.up('r');
+ }
+ // One attempt from an in-world reset with the given driver; waits for the verdict (and the plank).
+ async function attempt(mode,trace){
+  await page.evaluate(spec=>{window.riderBalanceTrial=spec;},{mode,trace});
+  const before=(await report()).generation;await retry();
+  await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.trial?.generation===r.generation&&r.trial.mode!=='idle'&&r.record.done;},before,{timeout:45000});
+  let r=await report();
+  if(r.record.type==='seesaw'&&r.record.seesaw.tip_at!==undefined){
+   // The plank pose after the verdict counts too: wait until it is calm (or 8 s pass).
+   await page.waitForFunction(()=>{const r=window.riderStationReport.record;return r.seesaw.final_at!==undefined||r.elapsed>r.time_s+8;},null,{timeout:20000});
+   r=await report();
+  }
+  assert.equal(r.trial.mode,mode);assert.equal(r.comparable,true);assert.equal(r.start_speed,0);
+  return r;
+ }
+ function summary(r){const x=r.record;return {status:x.status,reason:x.reason,time_s:x.time_s,chassis_x:x.chassis_x,margin_rear_m:x.margin_rear_m,margin_front_m:x.margin_front_m,
+  max_speed_mps:x.max_speed_mps,throttle_s:x.throttle_s,brake_s:x.brake_s,input_changes:x.input_changes,pitch_min:x.pitch_min,pitch_max:x.pitch_max,seesaw:x.seesaw};}
+ try{
+  browser=await chromium.launch();page=await browser.newPage({viewport:{width:1280,height:720}});
+  await configure(page,runId,process.argv[5]);
+  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
+  // 1. ?station=balance opens directly at its first section from rest; the plank rests on the start deck.
+  await page.goto(url+'?station=balance');
+  await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderStationReport.record.elapsed>1.5);
+  let r=await report();const t=await page.evaluate(()=>window.riderTelemetry);
+  assert.equal(r.section,'beam-2');assert.equal(t.start_speed,0);assert(Math.abs(t.first_tick_speed)<.05,'start from rest');assert.equal(t.section_count,SECTIONS.length);
+  assert.equal(r.seesaw.joint_valid,true);assert.equal(r.seesaw.plank_joints,1);assert(Math.abs(r.seesaw.mass-20)<.01);
+  assert(Math.abs(r.record.seesaw.rest_angle-r.record.seesaw.rest_target)<.02,'plank rests on the start deck: '+r.record.seesaw.rest_angle);
+  assert.equal(r.record.seesaw.limit_reached,false);
+  const counts={bodies:r.bodies,joints:r.joints,world_loads:t.world_loads,terrain_shapes:t.terrain_shapes};
+  // Vehicle 3 bodies + terrain + plank (+ rider visuals have no body); 2 wheel joints + 1 seesaw joint.
+  assert.equal(r.joints,3);
+  await page.screenshot({path:path.join(out,'balance-start.png')});
+  cases.push('direct_url_rest_start_plank_on_deck');
+  // 2. Skill driver per section, then its recorded trace replayed open-loop with the same outcome.
+  for(const section of SECTIONS){
+   await open(section);
+   const a=await attempt('skill');skill[section]={...summary(a),trace:a.trial.trace,ticks:a.trial.ticks};
+   assert.equal(a.record.status,'COMPLETED',section+' skill: '+a.record.reason);
+   assert.equal(a.record.throttle_s+a.record.brake_s>0,true);assert.equal(a.record.lean_max,0);
+   if(section==='seesaw')await page.screenshot({path:path.join(out,'balance-seesaw-skill.png')});
+   const b=await attempt('replay',a.trial.trace);replay[section]=summary(b);
+   assert.equal(b.record.status,a.record.status,section+' replay status');
+   assert(Math.abs(b.record.chassis_x-a.record.chassis_x)<=TOL.stop_x_m,section+' replay stop x');
+   assert(Math.abs(b.record.time_s-a.record.time_s)<=TOL.time_s,section+' replay time');
+  }
+  cases.push('skill_completes_every_section','recorded_trace_replays_same_outcome');
+  // 3. Full throttle from rest: at least one section must be missed.
+  for(const section of SECTIONS){await open(section);full[section]=summary(await attempt('full'));}
+  assert(Object.values(full).some(r=>r.status==='MISSED'),'full throttle must fail at least one section');
+  cases.push('full_throttle_misses');
+  // 4. Seesaw: tip and settle repeat on further in-world retries; the safety limit is never reached.
+  await open('seesaw');
+  const runs=[skill.seesaw.seesaw];
+  for(let i=0;i<2;i++){const a=await attempt('skill');assert.equal(a.record.status,'COMPLETED');runs.push(a.record.seesaw);}
+  function same(q,p,label){
+   for(const key of ['tip_at','settled_at'])assert(Number.isFinite(q[key])&&Math.abs(q[key]-p[key])<=TOL.tip_s,label+' '+key);
+   for(const key of ['settled_angle','final_angle','rest_angle'])assert(Number.isFinite(q[key])&&Math.abs(q[key]-p[key])<=TOL.angle_rad,label+' '+key);
+  }
+  for(const q of runs){same(q,runs[0],'seesaw repeat');assert.equal(q.limit_reached,false);assert(q.settled_angle<0,'plank tipped to the exit deck');}
+  for(const r of [...Object.values(skill),...Object.values(replay),...Object.values(full)])if(r.seesaw)assert.equal(r.seesaw.limit_reached,false,'joint limit reached');
+  seesaw.repeats=runs;cases.push('seesaw_tips_and_settles_reproducibly','joint_limit_never_reached');
+  // 5. R while the plank is still swinging: canonical pose and velocity, a fresh joint, no stale handle.
+  await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
+  let g=(await report()).generation;await retry();
+  await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&Math.abs(r.seesaw.omega)>.2;},g,{timeout:20000});
+  const swinging=(await report()).seesaw;
+  g=(await report()).generation;await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});await retry();
+  await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
+  r=await report();const reset=r.seesaw.reset;
+  assert.equal(reset.old_joint_valid,false);assert.equal(reset.joint_valid,true);assert.equal(reset.joints,1);assert.equal(reset.generation,swinging.generation+1);
+  assert(Math.abs(reset.angle-r.record.seesaw.rest_target)<.005&&reset.omega===0&&reset.speed===0,'canonical plank after R');
+  assert.equal(r.joints,3);assert.equal(r.bodies,counts.bodies);
+  const after=await attempt('skill');same(after.record.seesaw,runs[0],'after mid-tip R');assert.equal(after.record.status,'COMPLETED');
+  seesaw.mid_tip_retry={swinging,reset,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
+  // 6. V (section switch) keeps the world and terrain; the plank joint is recreated on the same terrain body.
+  await open('down');let before=await page.evaluate(()=>window.riderTelemetry);const gen=(await report()).seesaw.generation;
+  await page.keyboard.down('v');await page.waitForFunction(n=>window.riderStationReport.section==='seesaw'&&window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('v');
+  r=await report();const now=await page.evaluate(()=>window.riderTelemetry);
+  assert.equal(now.world_loads,before.world_loads);assert.equal(now.terrain_shapes,before.terrain_shapes);
+  assert.equal(r.seesaw.generation,gen+1);assert.equal(r.seesaw.joint_valid,true);assert.equal(r.joints,3);
+  cases.push('section_switch_keeps_terrain_recreates_joint');
+  // 7. A -> B -> A world reload: the new session owns a new plank and joint; counts return to the same values.
+  await page.goto(url+'?station=balance&touch=1');await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderTelemetry?.sequence>2);
+  const first=await page.evaluate(()=>({loads:window.riderTelemetry.world_loads}));
+  await page.keyboard.down('9');await page.waitForFunction(()=>window.riderTelemetry?.station==='gaps-landing');await page.keyboard.up('9');
+  for(let i=0;i<6;i++){
+   if(await page.evaluate(()=>window.riderTelemetry?.station==='balance'))break;
+   const s=await page.evaluate(()=>window.riderTelemetry.station);
+   await page.getByRole('button',{name:'Next station',exact:true}).click();await page.waitForFunction(s=>window.riderTelemetry?.station!==s&&window.riderTelemetry.sequence>2,s);
+  }
+  await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderStationReport.record.elapsed>1.5);
+  r=await report();const loads=await page.evaluate(()=>window.riderTelemetry.world_loads);
+  assert(loads>=first.loads+2,'two world reloads');assert.equal(r.bodies,counts.bodies);assert.equal(r.joints,3);
+  assert.equal(r.seesaw.generation,2);assert.equal(r.seesaw.plank_joints,1);assert(Math.abs(r.record.seesaw.rest_angle-r.record.seesaw.rest_target)<.02);
+  seesaw.world_reload={loads_before:first.loads,loads_after:loads,bodies:r.bodies,joints:r.joints};cases.push('a_b_a_world_reload_counts');
+  if(errors.length)throw Error(errors.join('\n'));
+  const result={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,cases,counts,skill,replay,full,seesaw,real_device:'NOT RUN'};
+  fs.writeFileSync(path.join(out,'balance-result.json'),JSON.stringify(result,null,2));
+  console.log(JSON.stringify({status:result.status,cases,sections:Object.fromEntries(SECTIONS.map(s=>[s,{skill:skill[s].status,stop_x:+skill[s].chassis_x.toFixed(3),margins:[+skill[s].margin_rear_m.toFixed(3),+skill[s].margin_front_m.toFixed(3)],time_s:+skill[s].time_s.toFixed(2),full:full[s].status+' ('+full[s].reason+')'}])),
+   seesaw:{tip_at:runs[0].tip_at,settled_at:runs[0].settled_at,settled_angle:runs[0].settled_angle,final_angle:runs[0].final_angle,rest_angle:runs[0].rest_angle,max_abs_angle:Math.max(...runs.map(q=>q.max_abs_angle))}}));
+ }catch(e){if(page){await page.screenshot({path:path.join(out,'balance-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'balance-failed-state.json'),JSON.stringify({skill,replay,full,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}
+ finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+})().catch(e=>{console.error(e);process.exitCode=1;});

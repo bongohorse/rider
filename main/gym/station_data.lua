@@ -7,6 +7,9 @@ local TEXT_LIMIT=64
 -- and at 1000 m in y. Applies to both coordinates of the station start and every section start.
 M.START_LIMIT_DEFAULT=500
 M.START_LIMIT=M.START_LIMIT_DEFAULT
+-- A19d: balance section types and the plank built by main/gym/seesaw.collisionobject (metres, kg).
+M.BALANCE_TYPES={beam=true,up=true,down=true,seesaw=true}
+M.SEESAW_PLANK={length=4,thickness=0.08,taper=0.3,mass=20}
 local function finite(x) return type(x)=="number" and x==x and math.abs(x)<100000 end
 local function point(p) return type(p)=="table" and #p==2 and finite(p[1]) and finite(p[2]) end
 function M.start_allowed(p,limit)
@@ -90,9 +93,9 @@ function M.validate(d)
     end
     -- Reserved for later tasks; v1 levels carry an empty list.
     if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
-    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps") and not d.sections then return nil,"Missing station sections" end
+    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance") and not d.sections then return nil,"Missing station sections" end
     if d.sections then
-        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
+        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps" and d.kind~="balance") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
         local ids={}
         for _,section in ipairs(d.sections) do
             if type(section)~="table" or not text(section.id) or ids[section.id] or not text(section.name) or not point(section.spawn) then return nil,"Invalid section identity/start" end
@@ -110,11 +113,30 @@ function M.validate(d)
                 if section.landing~="flat" and section.landing~="down" and section.landing~="up" then return nil,"Invalid gap landing" end
                 if section.gap<=0 or section.gap>12 or math.abs(section.land_x-section.lip_x-section.gap)>.001 or section.spawn[1]>=section.ramp_start
                     or section.ramp_start>=section.lip_x or section.end_x<=section.land_x+2 then return nil,"Invalid gap limits" end
+            elseif d.kind=="balance" then
+                -- A19d: a target platform ahead of the start; both wheel centres (0.92 m apart) must fit on it.
+                for _,key in ipairs({"target_x0","target_x1","target_y","end_x"}) do if not finite(section[key]) then return nil,"Invalid balance measurement" end end
+                if not M.BALANCE_TYPES[section.type] or section.target_x1-section.target_x0<0.95 or section.spawn[1]>=section.target_x0
+                    or section.end_x<section.target_x1 or section.end_x>=b[2] or section.start_speed~=0 then return nil,"Invalid balance limits" end
             else
                 for _,key in ipairs({"step_x","top_y","end_x","height"}) do if not finite(section[key]) then return nil,"Invalid step measurement" end end
                 if section.height<=0 or section.height>.5 or section.spawn[1]>=section.step_x-1 or section.end_x<=section.step_x+1 then return nil,"Invalid step limits" end
             end
         end
+    end
+    -- A19d seesaw: only a built-in balance station carries one (custom levels have no kind). The plank
+    -- is station geometry, built by the fixed seesaw resource, so the data must state exactly its values.
+    if d.seesaw~=nil then
+        local s,p=d.seesaw,M.SEESAW_PLANK
+        if d.kind~="balance" or type(s)~="table" or not point(s.pivot) then return nil,"Invalid seesaw" end
+        for _,key in ipairs({"length","thickness","taper","mass"}) do if s[key]~=p[key] then return nil,"Seesaw plank differs from its resource" end end
+        if not finite(s.rest_angle) or not finite(s.limit) or s.rest_angle<=0 or s.limit<=s.rest_angle or s.limit>0.8 then return nil,"Invalid seesaw angles" end
+        local found
+        for _,section in ipairs(d.sections) do if section.id==s.section and section.type=="seesaw" then found=section end end
+        if not found or s.pivot[1]<=found.spawn[1] or s.pivot[1]>=found.target_x0 or s.pivot[1]<=b[1] or s.pivot[1]>=b[2] or s.pivot[2]<=b[3] or s.pivot[2]>=b[4] then return nil,"Invalid seesaw position" end
+        objects=objects+1
+    elseif d.kind=="balance" then
+        for _,section in ipairs(d.sections) do if section.type=="seesaw" then return nil,"Missing seesaw" end end
     end
     if d.markers then
         if type(d.markers)~="table" then return nil,"Invalid markers" end

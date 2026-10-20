@@ -7,6 +7,8 @@ local audio=require "main.gym.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.gym.vehicle"
+-- A19d seesaw: per-session dynamic obstacle owned here (see seesaw.lua for its lifecycle).
+local seesaw = require "main.gym.seesaw"
 local socket = require "socket"
 local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
@@ -41,6 +43,7 @@ local function reset(self)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
     vehicle.reset(self.vehicle)
+    if self.seesaw then seesaw.reset(self.seesaw) end
     stations.restart(self)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
@@ -108,6 +111,7 @@ end
 local function fail_placement(self,err)
     print("GYM_PLACE_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
     if self.vehicle then vehicle.remove(self.vehicle) end
+    if self.seesaw then seesaw.remove(self.seesaw);self.seesaw=nil end
     msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station")..": the vehicle could not be placed ("..tostring(err).."). Import another level [I]."})
     self.station,self.segments,self.chain,self.vehicle=nil,nil,nil,nil
     self.target=hash("/focus")
@@ -159,7 +163,10 @@ local function setup(self)
     self.ready = true
     -- The loader treats a level as loaded (and saves it) only once the vehicle is drive-ready.
     if self.testcase ~= "a1" then
-        local spawned,spawn_err=pcall(function() self.vehicle = vehicle.spawn() end)
+        local spawned,spawn_err=pcall(function()
+            self.vehicle = vehicle.spawn()
+            if self.station.seesaw then self.seesaw=seesaw.spawn(self.station.seesaw) end
+        end)
         if not spawned then fail_placement(self,spawn_err);return end
     else msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation}) end
     emit(self, "ready", {chain_segments = #self.segments, tiles = 48, floor_y = 80})
@@ -180,6 +187,10 @@ function init(self)
     if self.testcase=="a16" or self.testcase=="a17" or self.testcase=="a19" then
         assert(sys.get_engine_info().is_debug,"Ramp trial requires debug engine")
         self.ramp_trial=require "main.gym.ramp_trial"
+    end
+    if self.testcase=="a19d" then
+        assert(sys.get_engine_info().is_debug,"Balance trial requires debug engine")
+        self.balance_trial=require "main.gym.balance_trial"
     end
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
     if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5c" or self.testcase=="le5d" then
@@ -264,9 +275,11 @@ function update(self, dt)
     if self.vehicle and not self.vehicle.ready then
         local placed,err=pcall(function()
             vehicle.attach(self.vehicle)
+            if self.seesaw then seesaw.attach(self.seesaw,self.terrain) end
             -- Factories can receive an engine step before attach. Use Retry's
             -- canonical pose before the very first authored speed start too.
             vehicle.reset(self.vehicle)
+            if self.seesaw then seesaw.reset(self.seesaw) end
             stations.restart(self)
         end)
         if not placed then fail_placement(self,err);return end
@@ -468,7 +481,7 @@ function fixed_update(self, dt)
                 show_preset(self)
             end
         end
-        self.last_command = self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or command(self)
+        self.last_command = self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or command(self)
         vehicle.apply(self.vehicle,self.last_command,dt)
         rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
@@ -484,6 +497,7 @@ function final(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
+    self.seesaw = nil
 end
 function on_message(self,id,data,sender)
     if id==hash("configure_station") and not self.ready and data.edit then

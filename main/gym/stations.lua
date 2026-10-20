@@ -4,8 +4,9 @@ local ramps=require "main.gym.ramp_metrics"
 local gaps=require "main.gym.gap_metrics"
 local seams=require "main.gym.seam_metrics"
 local steps=require "main.gym.step_metrics"
+local balance=require "main.gym.balance_metrics"
 local custom=require "main.gym.custom"
-local M={ids={"straight","ramps","ramps-long","steps","steps-down","seams-chain","seams-hull","gaps","gaps-landing"}}
+local M={ids={"straight","ramps","ramps-long","steps","steps-down","seams-chain","seams-hull","gaps","gaps-landing","balance"}}
 if sys.get_config_string("rider.gym_test","")=="a15" and sys.get_engine_info().is_debug then
     M.ids={"straight","straight-test","invalid-test"}
 end
@@ -201,7 +202,8 @@ function M.restart(self)
     if self.station.kind=="ramps" then ramps.restart(self)
     elseif self.station.kind=="steps" then steps.restart(self)
     elseif self.station.kind=="seams" then seams.restart(self)
-    elseif self.station.kind=="gaps" then gaps.restart(self) end
+    elseif self.station.kind=="gaps" then gaps.restart(self)
+    elseif self.station.kind=="balance" then balance.restart(self) end
     M.start(self.vehicle,self.station)
     self.start_probe=2
     self.station_top_speed,self.station_brake_distance=0,0
@@ -211,7 +213,8 @@ function M.observe(self,state,dt,sample)
     if self.station.kind=="ramps" then ramps.observe(self,state,dt,sample)
     elseif self.station.kind=="steps" then steps.observe(self,state,dt,sample)
     elseif self.station.kind=="seams" then seams.observe(self,state,dt,sample)
-    elseif self.station.kind=="gaps" then gaps.observe(self,state,dt,sample) end
+    elseif self.station.kind=="gaps" then gaps.observe(self,state,dt,sample)
+    elseif self.station.kind=="balance" then balance.observe(self,state,dt,sample) end
     if self.start_probe then
         self.start_probe=self.start_probe-1
         if self.start_probe==0 then
@@ -239,6 +242,7 @@ function M.enrich(self,sample)
     elseif self.station.kind=="steps" then steps.enrich(self,sample)
     elseif self.station.kind=="seams" then seams.enrich(self,sample)
     elseif self.station.kind=="gaps" then gaps.enrich(self,sample)
+    elseif self.station.kind=="balance" then balance.enrich(self,sample)
     elseif html5 then html5.run("window.riderStationReport=null") end
     sample.station=self.station.id
     sample.custom=self.station.custom or false

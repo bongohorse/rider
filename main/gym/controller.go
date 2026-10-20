@@ -7,3 +7,4 @@ components { id: "rider" component: "/main/gym/rider.factory" }
 components { id: "marker" component: "/main/gym/marker.factory" }
 components { id: "engine" component: "/main/gym/engine.sound" }
 components { id: "line" component: "/main/gym/line.factory" }
+components { id: "seesaw" component: "/main/gym/seesaw.factory" }
