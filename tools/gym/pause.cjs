@@ -1,6 +1,7 @@
 // A20 pause and slow motion: world time (sum of fixed-step dt) against the unscaled engine clock and the wall clock,
 // input state across pause/resume, overlay controls and every built-in station. Debug gym case `a20`.
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const STEP=1/60;
@@ -126,10 +127,9 @@ const STEP=1/60;
   cases.push('throttle_from_rest_compared_at_three_factors');
 
   // 6. Desktop overlay buttons (mouse): Pause/Resume and Speed, same path as the keys.
-  async function click(name,until,arg){
-   const p=await page.evaluate(name=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),q=window.riderHud[name];return {x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height};},name);
-   await page.mouse.move(p.x,p.y);await page.mouse.down();await page.waitForFunction(until,arg);await page.mouse.up();
-  }
+  // Frame-based press/release (tools/gym/pointer.cjs, #227): after the release wait for two engine frames
+  // (riderClock.frames, a20's unscaled engine frame counter) so the next click is a new press edge (pitfall 5).
+  const click=async(name,until,arg)=>pointer.click(page,await pointer.hudPoint(page,name),{until,arg,counter:'window.riderClock.frames',label:'click '+name});
   await click('pause',()=>window.riderTime.paused&&window.riderTimeState.paused);
   checkPaused(await measure(400),'overlay pause');
   await click('pause',()=>!window.riderTime.paused&&!window.riderTimeState.paused);

@@ -2,6 +2,7 @@
 // with a sprite-only ghost; tick policy, tolerances, pause/slow motion, render rate, resets and the input surfaces.
 // Debug gym case `a21`. Tolerances are declared in main/gym/replay.lua (M.TOLERANCE) before any run.
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const TOL={position_m:0.05,angle_rad:0.05};
@@ -180,17 +181,11 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
 
   // 9. Overlay buttons (mouse): Replay, then Retry (R) ends it and removes the ghost; the recording stays.
   // The overlay acts on the pointer's pressed edge: a click counts only if the engine saw the previous release
-  // (engine pitfall 5). After mouse.up wait for two more controller updates while the vehicle is ready
-  // (riderReplay.frames), so the next mouse.down cannot land in the same engine frame as this release (#224).
-  async function click(name,until,arg){
-   const p=await page.evaluate(name=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),q=window.riderHud[name];return {x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height};},name);
-   await page.mouse.move(p.x,p.y);await page.mouse.down();
-   try{await wait(until,arg);}
-   catch(e){const r=await R().catch(()=>null);throw Error(`click ${name}: expected state not reached (${e.message.split('\n')[0]}); play ${JSON.stringify(r?.play&&{active:r.play.active,index:r.play.index,ticks:r.play.ticks,ended:r.play.ended})}, resets ${r?.resets}`);}
-   await page.mouse.up();
-   const f=(await R()).frames;
-   await wait(f=>window.riderReplay.frames>=f+2,f,{timeout:5000}).catch(e=>{throw Error(`click ${name}: no two controller updates within 5 s after the release (${e.message.split('\n')[0]})`);});
-  }
+  // (engine pitfall 5). The shared helper (tools/gym/pointer.cjs) waits after mouse.up for two more controller
+  // updates while the vehicle is ready (riderReplay.frames), so the next mouse.down cannot land in the same engine
+  // frame as this release (#224, #227).
+  const click=async(name,until,arg)=>pointer.click(page,await pointer.hudPoint(page,name),{until,arg,counter:'window.riderReplay.frames',label:'click '+name,
+   state:async()=>{const r=await R().catch(()=>null);return `play ${JSON.stringify(r?.play&&{active:r.play.active,index:r.play.index,ticks:r.play.ticks,ended:r.play.ended})}, resets ${r?.resets}`;}});
   s=await R();
   await click('replay',r=>window.riderReplay.play?.active&&window.riderReplay.resets===r+1,s.resets);
   await wait(()=>window.riderReplay.play.index>30);
