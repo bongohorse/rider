@@ -14,7 +14,7 @@ class ParallelInventory(unittest.TestCase):
     def test_every_debug_case_runs_once_or_once_per_part(self):
         workflow = yaml.load((ROOT / '.github/workflows/g1.yml').read_text(), Loader=yaml.BaseLoader)
         job = workflow['jobs']['gym']
-        expected = set('a15 le1a le1b le2 le3 le4 le5a le5b le5c le5d a16 a17 a18 a19 a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12 a20'.split())
+        expected = set('a15 le1a le1b le2 le3 le4 le5a le5b le5c le5d a16 a17 a18 a19 a19d a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12 a20'.split())
         groups = job['strategy']['matrix']['include']
         selected = Counter(case for group in groups for case in group['cases'].split())
         # A split case runs once per part, alone in its group, and every part exactly once.

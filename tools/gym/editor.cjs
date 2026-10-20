@@ -196,7 +196,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 14. Every built-in station opens as a template copy (R3) that compiles without Play errors; Undo brings back the replaced document.
   await key('e');e=await edit();const own=e.id,ids=await page.evaluate(()=>Object.keys(window.riderEditor.buttons).filter(n=>n.startsWith('template_')).map(n=>n.slice(9)));
-  assert.equal(ids.length,9);const templates={};
+  assert.equal(ids.length,10);const templates={};
   for(const id of ids){
    await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
    await button('template_'+id);await page.waitForFunction(id=>window.riderEditor.id==='my-'+id,id);

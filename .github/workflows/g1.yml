@@ -186,6 +186,8 @@ jobs:
             cases: 'a17'
           - group: gaps
             cases: 'a19'
+          - group: balance
+            cases: 'a19d'
           - group: editor
             cases: 'a15 le1a le2'
           - group: draw
@@ -277,6 +279,9 @@ jobs:
       - name: Measure gap ladder, landing variants and jump repeatability
         if: contains(format(' {0} ', matrix.cases), ' a19 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gaps --case a19
+      - name: Drive the balance station (skill trace and replay, full throttle, seesaw tip/settle and retries)
+        if: contains(format(' {0} ', matrix.cases), ' a19d ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/balance --case a19d
       - name: Build and run current Gym smoke
         if: contains(format(' {0} ', matrix.cases), ' a3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gym --case a3
