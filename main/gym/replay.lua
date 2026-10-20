@@ -2,7 +2,7 @@
 -- State lives on the controller session instance (self.replay); this module holds no session state.
 -- The controller stays the sole tick owner: a replay is one more command source ahead of live input, exactly one
 -- recorded command per fixed tick through vehicle.apply. No second loop, no manual stepping.
--- Recording format version 1 (A22 builds on it; documented in main/gym/README.md "Record and replay"):
+-- Recording format version 1 (A22 stores regression traces in it, see M.install; documented in main/gym/README.md "Record and replay"):
 -- station/section/start speed, preset key + modified flag + every preset value, source SHA, then per tick i
 -- (1-based, tick 1 = the station start tick) throttle[i], brake[i] (0/1), reverse[i] (allow_reverse as 0/1),
 -- lean[i] (-1..1) and pose[9(i-1)+1..9i] = chassis x, y, angle, rear wheel x, y, angle, front wheel x, y, angle
@@ -254,6 +254,41 @@ function M.after_command(self,command,dt)
     if slow(dt) then rec.scaled_ticks=rec.scaled_ticks+1 end
     if rec.ticks>=rec.cap then finish_record(self,"full");note(self,string.format("Recording full (%.0f s)",rec.cap/60)) end
 end
+-- A22: install a stored format-version-1 recording (regression trace, debug case a22) as the recording to replay.
+-- The whole trace is validated before it replaces anything: one command per tick for exactly `ticks` ticks, poses
+-- for every tick plus the trailing pose, finite values in range, recorded at 1.0. Returns true, or nil and a reason.
+local function finite(v) return type(v)=="number" and v==v and v>-math.huge and v<math.huge end
+function M.install(self,d)
+    if type(d)~="table" then return nil,"no trace" end
+    if d.version~=M.VERSION then return nil,"unsupported version" end
+    local n=d.ticks
+    if not finite(n) or n~=math.floor(n) or n<1 or n>M.CAP then return nil,"bad tick count" end
+    for _,key in ipairs({"throttle","brake","reverse","lean"}) do
+        if type(d[key])~="table" or #d[key]~=n then return nil,key.." length is not one entry per tick" end
+    end
+    if d.trailing~=true or type(d.pose)~="table" or #d.pose~=M.POSE*(n+1) then return nil,"pose length is not one pose per tick plus the trailing pose" end
+    if d.scaled_ticks~=0 or d.error or d.tuning_changed then return nil,"trace is not comparable" end
+    if type(d.station)~="string" or not finite(d.start_speed) or not (d.section==false or type(d.section)=="string") then return nil,"bad start" end
+    if type(d.preset)~="string" or type(d.identity)~="string" or type(d.tuning)~="table" then return nil,"bad preset identity" end
+    for k=1,n do
+        local t,b,r,l=d.throttle[k],d.brake[k],d.reverse[k],d.lean[k]
+        if not ((t==0 or t==1) and (b==0 or b==1) and (r==0 or r==1) and finite(l) and l>=-1 and l<=1) then return nil,"bad command at tick "..k end
+    end
+    for i=1,#d.pose do if not finite(d.pose[i]) then return nil,"bad pose value" end end
+    local r=self.replay
+    if (r.rec and r.rec.active) or (r.play and not r.play.ended) then return nil,"a recording or replay is running" end
+    r.rec={version=d.version,station=d.station,section=d.section,start_speed=d.start_speed,preset=d.preset,modified=d.modified==true,
+        tuning=d.tuning,identity=d.identity,source_sha=tostring(d.source_sha),first=0,ticks=n,throttle=d.throttle,brake=d.brake,
+        reverse=d.reverse,lean=d.lean,pose=d.pose,trailing=true,scaled_ticks=0,active=false,ended="installed",cap=M.CAP}
+    return true
+end
+-- A22: the stored fields of a finished recording (format version 1), for the debug trace export.
+function M.export(rec)
+    return {version=rec.version,station=rec.station,section=rec.section,start_speed=rec.start_speed,preset=rec.preset,modified=rec.modified,
+        tuning=rec.tuning,identity=rec.identity,source_sha=rec.source_sha,ticks=rec.ticks,throttle=rec.throttle,brake=rec.brake,
+        reverse=rec.reverse,lean=rec.lean,pose=rec.pose,trailing=rec.trailing or false,scaled_ticks=rec.scaled_ticks,ended=rec.ended or false,
+        error=rec.error or false,tuning_changed=rec.tuning_changed or false}
+end
 -- Live tuning during a recording or replay makes it not comparable.
 function M.tuned(self)
     local r=self.replay
@@ -288,7 +323,7 @@ function M.status(self,dt)
     return text
 end
 
--- Debug report (a21 only): summaries, never the full trace.
+-- Debug report (a21, a22): summaries, never the full trace.
 function M.report(self,extra)
     local r=self.replay
     local rec,p=r.rec,r.play
