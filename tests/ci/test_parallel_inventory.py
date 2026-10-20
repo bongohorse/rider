@@ -7,14 +7,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 # Must match PARTS in tools/gym/smoke.py, seam_report.cjs and sizes_report.cjs.
-SPLIT = {'a18': ['1/2', '2/2'], 'le1b': ['1/2', '2/2']}
+SPLIT = {'a18': ['1/2', '2/2'], 'le1b': ['1/2', '2/2'], 'a19b': ['1/2', '2/2']}
 
 
 class ParallelInventory(unittest.TestCase):
     def test_every_debug_case_runs_once_or_once_per_part(self):
         workflow = yaml.load((ROOT / '.github/workflows/g1.yml').read_text(), Loader=yaml.BaseLoader)
         job = workflow['jobs']['gym']
-        expected = set('a15 le1a le1b le2 le3 le4 le5a le5b le5c le5d a16 a17 a18 a19 a19d a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12 a20'.split())
+        expected = set('a15 le1a le1b le2 le3 le4 le5a le5b le5c le5d a16 a17 a18 a19 a19b a19d a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12 a20'.split())
         groups = job['strategy']['matrix']['include']
         selected = Counter(case for group in groups for case in group['cases'].split())
         # A split case runs once per part, alone in its group, and every part exactly once.
@@ -56,7 +56,7 @@ class ParallelInventory(unittest.TestCase):
                 self.assertEqual(set(re.findall(r'-\$RUN/(\w+)"', match.group(2))), {outputs[match.group(1)]})
         download = next(s for s in job['steps'] if s.get('uses', '').startswith('actions/download-artifact@'))
         self.assertEqual(download['with']['pattern'], 'g1-gym-*-[12]-${{ github.run_id }}-${{ github.run_attempt }}')
-        self.assertIn("PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2']}", (ROOT / 'tools/gym/smoke.py').read_text())
+        self.assertIn("PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2']}", (ROOT / 'tools/gym/smoke.py').read_text())
         groups = {g['group'] for g in workflow['jobs']['gym']['strategy']['matrix']['include']}
         for dirs in merges.values():
             self.assertEqual(len({name for name, _ in dirs}), 1)
