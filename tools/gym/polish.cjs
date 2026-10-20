@@ -3,6 +3,7 @@
 // Every navigation and display action is view only: the source document, its dirty state and the Undo
 // history stay unchanged.
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -32,7 +33,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(120);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
@@ -293,12 +294,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Pick and drag the label by its text (right of its anchor), snapped to the grid: one step.
   await key('s');e=await settle();
   const grab=[6.8,3];
-  await (async()=>{const a=await world(grab),b=await world([grab[0]+4,4]);await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
-   for(let i=1;i<=6;i++){await page.mouse.move(a.x+(b.x-a.x)*i/6,a.y+(b.y-a.y)*i/6);await page.waitForTimeout(40);}await page.mouse.up();await page.waitForTimeout(80);})();
+  await (async()=>{const a=await world(grab),b=await world([grab[0]+4,4]);await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
+   for(let i=1;i<=6;i++){await page.mouse.move(a.x+(b.x-a.x)*i/6,a.y+(b.y-a.y)*i/6);await page.waitForTimeout(40);}await pointer.frames(page);await page.mouse.up();await pointer.frames(page);})();
   e=await revision(rev+7);assert.deepEqual(label(await doc(),lid).position,[10,4]);
   // Double-click opens the field; Esc keeps the text and adds nothing.
-  const lp=await world([10,4]);await page.mouse.move(lp.x,lp.y);await page.waitForTimeout(80);
-  for(let i=0;i<2;i++){await page.mouse.down();await page.waitForTimeout(50);await page.mouse.up();await page.waitForTimeout(50);}
+  const lp=await world([10,4]);await pointer.dblclick(page,lp);
   await page.waitForFunction(id=>window.riderEditor.field_label===id,lid);
   await page.keyboard.type('xyz',{delay:30});await key('Escape');e=await settle();
   assert.equal(e.field,false);assert.equal(e.revision,rev+7);assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');
@@ -401,7 +401,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // 9. Readouts: dragging START shows its position and a blocking overlap before release; units match.
   const s0=e.start.position;
   const a0=await world([s0[0],s0[1]]),a1=await world([s0[0]+3,s0[1]+1]),a2=await world([s0[0]+3,0.1]);
-  await page.mouse.move(a0.x,a0.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  await page.mouse.move(a0.x,a0.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
   await page.mouse.move(a1.x,a1.y,{steps:4});await page.waitForTimeout(150);e=await ed();
   assert.match(e.readout,/^START x -?\d+\.\d\d m  y -?\d+\.\d\d m$/);
   await page.mouse.move(a2.x,a2.y,{steps:4});await page.waitForTimeout(150);e=await ed();

@@ -72,4 +72,25 @@ async function tap(page, point, {counter = null, n, timeout, label = 'tap'} = {}
   await frames(page, {counter, n, timeout, label: label + ' release'});
 }
 
-module.exports = {frames, hudPoint, click, tap, DEFAULT_TIMEOUT};
+// Double-click at `point` for an editor that times double-clicks by wall clock (editor.gui_script DOUBLE_S = 0.4 s
+// between presses). Frames after the move, then press/release/press/release with two animation frames between the
+// transitions (engine iterations run once per animation frame, so each transition is seen); the measured gap between
+// the two presses must stay inside the window, else a slow renderer fails clearly instead of a missed double-click.
+const DOUBLE_S = 0.4;
+async function dblclick(page, point, {counter = null, timeout, label = 'double-click', window: windowS = DOUBLE_S} = {}) {
+  await page.mouse.move(point.x, point.y);
+  await frames(page, {counter, n: counter ? undefined : 3, timeout, label: label + ' move'});
+  const presses = [];
+  for (let i = 0; i < 2; i++) {
+    presses.push(performance.now());
+    await page.mouse.down();
+    await frames(page, {counter, n: 2, timeout, label: label + ' press'});
+    await page.mouse.up();
+    await frames(page, {counter, n: 2, timeout, label: label + ' release'});
+  }
+  const gap = (presses[1] - presses[0]) / 1000;
+  if (gap >= windowS) throw Error(`${label}: press gap ${gap.toFixed(3)} s is not inside the editor's ${windowS} s double-click window (slow renderer)`);
+  return gap;
+}
+
+module.exports = {frames, hudPoint, click, tap, dblclick, DEFAULT_TIMEOUT, DOUBLE_S};

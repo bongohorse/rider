@@ -58,3 +58,12 @@ test('a frozen page (evaluate never returns) fails within the timeout instead of
   await assert.rejects(pointer.frames(frozen,{timeout:50,label:'frozen'}),/^Error: frozen: the engine ran no 3 frames within 50 ms \(the animation-frame wait did not return within 1050 ms \(page frozen\?\)\)$/);
   await assert.rejects(pointer.frames(frozen,{counter:'window.c',timeout:50,label:'frozen'}),/^Error: frozen: the engine ran no 2 frames within 50 ms \(reading window\.c did not return within 50 ms \(page frozen\?\)\)$/);
 });
+
+test('dblclick: frames after the move and between all four transitions; the press gap must be inside 0.4 s',async()=>{
+  const page=fakePage();
+  const gap=await pointer.dblclick(page,{x:1,y:2},{counter:'window.c'});
+  assert.deepEqual(page.calls.map(c=>c[0]).filter(c=>c!=='counter'),['move','wait','down','wait','up','wait','down','wait','up','wait']);
+  assert.ok(gap>=0&&gap<0.4);
+  const slow=fakePage();slow.waitForFunction=async()=>new Promise(r=>setTimeout(r,250));
+  await assert.rejects(pointer.dblclick(slow,{x:1,y:2},{counter:'window.c',label:'dbl'}),/^Error: dbl: press gap 0\.\d+ s is not inside the editor's 0\.4 s double-click window \(slow renderer\)$/);
+});
