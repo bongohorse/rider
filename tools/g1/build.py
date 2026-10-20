@@ -10,7 +10,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import time
 import urllib.request
 import zipfile
 
@@ -49,6 +48,9 @@ STOCK_ENGINE = re.compile(r'(lib)?dmengine(_[a-z]+)?(\.exe|\.so|\.wasm|\.js)?')
 ANDROID_ABIS = {'arm64-v8a': 'arm64-android', 'armeabi-v7a': 'armv7-android', 'x86_64': 'x86_64-android'}
 EXTENDER_LINE = 'Using extender binary for WASM'
 FRESHNESS_SLACK_S = 2
+START_MARKER = '.engine-guard-start'
+MODIFIED_HINT = ('If Bob now modifies the engine while bundling (for example a [windows] app_icon or '
+                 'Android executable stripping), the guard needs an explicit rule; see engine pitfall 8.')
 
 
 def sha256_stream(stream):
@@ -71,20 +73,36 @@ def project_title(root):
     raise RuntimeError('ENGINE GUARD: game.project has no [project] title')
 
 
-def bundled_engines(platform, output, title):
-    """[(arch, label, sha256)] for every engine binary inside the bundle."""
-    output = Path(output)
+def build_started(root):
+    """Filesystem time of the build start: a marker in build/, so it shares the
+    clock of the extender results even when that differs from time.time()."""
+    marker = Path(root) / 'build' / START_MARKER
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(f'{os.getpid()}\n')
+    return marker.stat().st_mtime
+
+
+def bundled_engines(platform, bundle, title):
+    """[(arch, label, sha256, extender name or None)] for every engine binary in
+    this build's bundle directory (output/<title>)."""
+    bundle = Path(bundle)
+    if not bundle.is_dir():
+        raise RuntimeError(f'ENGINE GUARD: {platform}: bundle directory {bundle} is missing')
     engines = []
     if platform == 'wasm-web':
-        indexes = list(output.rglob('index.html'))
-        if len(indexes) != 1:
-            raise RuntimeError(f'ENGINE GUARD: wasm-web: expected one HTML5 index, got {len(indexes)}')
-        for path in sorted(indexes[0].parent.iterdir()):
+        if not (bundle / 'index.html').is_file():
+            raise RuntimeError(f'ENGINE GUARD: wasm-web: no index.html in {bundle}')
+        for path in sorted(bundle.iterdir()):
             match = re.fullmatch(re.escape(title) + r'(_pthread)?(\.wasm|_wasm\.js)', path.name)
             if path.is_file() and match:
-                engines.append(('wasm_pthread-web' if match.group(1) else 'wasm-web', path.name, sha256_file(path)))
+                arch = 'wasm_pthread-web' if match.group(1) else 'wasm-web'
+                engines.append((arch, path.name, sha256_file(path), 'dmengine.wasm' if match.group(2) == '.wasm' else 'dmengine.js'))
+        for arch in sorted({e[0] for e in engines}):
+            parts = sorted(e[3] for e in engines if e[0] == arch)
+            if parts != ['dmengine.js', 'dmengine.wasm']:
+                raise RuntimeError(f'ENGINE GUARD: {arch}: the bundle must contain both the .wasm and the _wasm.js engine, got {parts}')
     elif platform.endswith('-android'):
-        packages = list(output.rglob('*.apk'))
+        packages = list(bundle.glob('*.apk'))
         if len(packages) != 1:
             raise RuntimeError(f'ENGINE GUARD: {platform}: expected one APK, got {len(packages)}')
         with zipfile.ZipFile(packages[0]) as package:
@@ -94,13 +112,13 @@ def bundled_engines(platform, output, title):
                     if match.group(1) not in ANDROID_ABIS:
                         raise RuntimeError(f'ENGINE GUARD: {platform}: unknown Android ABI in {name}')
                     with package.open(name) as entry:
-                        engines.append((ANDROID_ABIS[match.group(1)], f'{packages[0].name}!{name}', sha256_stream(entry)))
+                        engines.append((ANDROID_ABIS[match.group(1)], f'{packages[0].name}!{name}', sha256_stream(entry), None))
     else:
         name = title + {'x86_64-win32': '.exe', 'x86_64-linux': '.x86_64'}.get(platform, '')
-        binaries = [p for p in output.rglob(name) if p.is_file()]
-        if len(binaries) != 1:
-            raise RuntimeError(f'ENGINE GUARD: {platform}: expected one {name}, got {len(binaries)}')
-        engines.append((platform, binaries[0].name, sha256_file(binaries[0])))
+        binary = bundle / name
+        if not binary.is_file():
+            raise RuntimeError(f'ENGINE GUARD: {platform}: no {name} in {bundle}')
+        engines.append((platform, name, sha256_file(binary), None))
     return engines
 
 
@@ -121,8 +139,9 @@ def stock_engine_hashes(bob, arch):
 def verify_engines(platform, output, root, started, bob):
     """Fail closed unless every bundled engine is this build's extender result."""
     output, root = Path(output), Path(root)
-    engines = bundled_engines(platform, output, project_title(root))
-    archs = sorted({arch for arch, _, _ in engines})
+    title = project_title(root)
+    engines = bundled_engines(platform, output / title, title)
+    archs = sorted({e[0] for e in engines})
     if platform not in archs:
         raise RuntimeError(f'ENGINE GUARD: {platform}: no {platform} engine in the bundle')
     report = {'platform': platform, 'architectures': {}}
@@ -143,11 +162,12 @@ def verify_engines(platform, output, root, started, bob):
         expected = {sha256_file(p): name for name, p in results.items()}
         stock = stock_engine_hashes(bob, arch)
         entries = []
-        for _, label, digest in (e for e in engines if e[0] == arch):
+        for _, label, digest, required in (e for e in engines if e[0] == arch):
             if digest in stock:
                 raise RuntimeError(f'ENGINE GUARD: {arch}: bundled {label} is the stock Defold engine (sha256 {digest})')
-            if digest not in expected:
-                raise RuntimeError(f'ENGINE GUARD: {arch}: bundled {label} (sha256 {digest}) is not the extender engine in {directory}')
+            if digest not in expected or (required and expected[digest] != required):
+                wanted = f'extender {required}' if required else 'extender engine'
+                raise RuntimeError(f'ENGINE GUARD: {arch}: bundled {label} (sha256 {digest}) is not the {wanted} in {directory}. {MODIFIED_HINT}')
             entries.append({'bundled': label, 'extender': expected[digest], 'sha256': digest})
         report['architectures'][arch] = entries
     if platform == 'wasm-web':
@@ -176,7 +196,11 @@ def build(platform, output, settings=None, variant=None):
     command += ['resolve', 'build', 'bundle']
     (output / 'toolchain.json').write_text(json.dumps({'java': version.stdout + version.stderr,
         'bob_sha256': BOB_SHA256, 'platform': platform, 'variant': variant or ('debug' if platform == 'wasm-web' else 'headless')}, indent=2))
-    started = time.time()
+    # This build's bundle and copied logs only; a reused output never mixes builds.
+    for stale in [output / project_title(ROOT), output / 'extender']:
+        if stale.exists():
+            shutil.rmtree(stale)
+    started = build_started(ROOT)
     with (output / 'build.log').open('w') as log:
         process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt')
         try:

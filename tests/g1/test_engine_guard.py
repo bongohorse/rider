@@ -6,10 +6,11 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/g1'))
-from build import EXTENDER_LINE, verify_engines
+from build import EXTENDER_LINE, START_MARKER, build_started, verify_engines
 
 STOCK_WASM = b'stock wasm-web engine'
 
@@ -26,7 +27,7 @@ class EngineGuardTest(unittest.TestCase):
             jar.writestr('libexec/wasm-web/dmengine.wasm', STOCK_WASM)
             jar.writestr('libexec/wasm-web/dmengine_release.wasm', b'stock release engine')
             jar.writestr('libexec/x86_64-linux/dmengine', b'stock linux engine')
-        self.started = time.time()
+        self.started = build_started(self.root)
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -74,7 +75,7 @@ class EngineGuardTest(unittest.TestCase):
     def test_substituted_engine_fails(self):
         web = self.html5()
         (web / 'RiderG1_pthread.wasm').write_bytes(b'stock pthread engine downloaded by Bob')
-        with self.assertRaisesRegex(RuntimeError, r'wasm_pthread-web: bundled RiderG1_pthread.wasm .* is not the extender engine'):
+        with self.assertRaisesRegex(RuntimeError, r'wasm_pthread-web: bundled RiderG1_pthread.wasm .* is not the extender dmengine.wasm'):
             self.verify()
 
     def test_stock_engine_fails_even_when_build_directory_holds_it(self):
@@ -118,9 +119,41 @@ class EngineGuardTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, r'wasm-web: no wasm-web engine in the bundle'):
             self.verify()
 
+    def test_each_wasm_variant_needs_both_engine_files(self):
+        web = self.html5()
+        (web / 'RiderG1_pthread_wasm.js').unlink()
+        with self.assertRaisesRegex(RuntimeError, r'wasm_pthread-web: the bundle must contain both'):
+            self.verify()
+
+    def test_wasm_must_match_the_extender_wasm_specifically(self):
+        web = self.html5()
+        (web / 'RiderG1.wasm').write_bytes(b'v3 js')
+        with self.assertRaisesRegex(RuntimeError, r'wasm-web: bundled RiderG1.wasm .* is not the extender dmengine.wasm .*engine pitfall 8'):
+            self.verify()
+
+    def test_only_this_builds_bundle_directory_is_inspected(self):
+        self.html5()
+        other = self.output / 'old/RiderG1'
+        other.mkdir(parents=True)
+        (other / 'index.html').write_text('stale')
+        (other / 'RiderG1.wasm').write_bytes(b'stale stock engine')
+        self.assertEqual(sorted(self.verify()['architectures']), ['wasm-web', 'wasm_pthread-web'])
+        (self.output / 'RiderG1/index.html').unlink()
+        with self.assertRaisesRegex(RuntimeError, r'wasm-web: no index.html in'):
+            self.verify()
+
+    def test_start_time_comes_from_the_filesystem_not_the_process_clock(self):
+        marker = self.root / 'build' / START_MARKER
+        self.assertEqual(self.started, marker.stat().st_mtime)
+        with mock.patch('time.time', return_value=time.time() + 3600):
+            self.started = build_started(self.root)
+            self.html5()
+            self.assertIn('wasm-web', self.verify()['architectures'])
+        self.assertEqual(self.started, marker.stat().st_mtime)
+
     def apk(self, libraries):
-        self.output.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(self.output / 'RiderG1.apk', 'w') as apk:
+        (self.output / 'RiderG1').mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(self.output / 'RiderG1/RiderG1.apk', 'w') as apk:
             for name, data in libraries.items():
                 apk.writestr(name, data)
 
