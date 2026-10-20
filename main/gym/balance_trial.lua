@@ -3,6 +3,7 @@
 -- held), "skill" (slow closed-loop driving with key-like binary throttle/brake, recorded) and "replay"
 -- (plays a recorded trace open-loop). Commands keep the keyboard shape: allow_reverse = not throttle.
 local feel=require "main.gym.feel"
+local seesaw=require "main.gym.seesaw"
 local M={}
 -- Skill controller, declared before evidence runs: speed reference sqrt(2 a d) capped at VMAX towards the
 -- target centre; throttle below the reference band, brake above it, nothing inside it; every key state is
@@ -50,6 +51,14 @@ function M.command(self)
         else c=key(0,0) end
     else c=key(0,0) end
     record(t,c)
+    -- Per-tick plank state for the runner (#228): a seesaw swing can be shorter than the 0.25 s report interval.
+    if html5 and self.seesaw and self.balance then
+        -- Debug a19d only: this module is loaded only for that case (controller.script), asserted again here.
+        assert(sys.get_engine_info().is_debug and self.testcase=="a19d","Per-tick plank state is debug a19d only")
+        local st,q=seesaw.state(self.seesaw),self.balance.record.seesaw
+        html5.run(string.format("window.riderPlank={generation:%d,tick:%d,angle:%.9g,omega:%.9g,tipped:%s}",
+            self.generation,t.tick,st.angle,st.omega,q and q.tip_at and "true" or "false"))
+    end
     return c
 end
 function M.report(self)

@@ -176,7 +176,13 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    for(let i=0;i<3&&!mid;i++){
     await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
     const g=(await report()).generation;await retry();
-    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&Math.abs(r.seesaw.omega)>.2;},g,{timeout:20000});
+    // Per-tick plank state (#228): under preset F the swing lasts about 0.13 s, shorter than one 0.25 s report.
+    // Ends on a tick with |omega| > 0.2 after the tip, or once the plank is calm after the verdict without one.
+    await page.waitForFunction(g=>{const p=window.riderPlank,r=window.riderStationReport;
+     return p&&p.generation>g&&p.tipped&&Math.abs(p.omega)>.2||r.generation>g&&r.record.done&&(r.record.seesaw.final_at!==undefined||r.record.elapsed>r.record.time_s+8);},g,{timeout:45000,polling:'raf'});
+    const p=await page.evaluate(()=>window.riderPlank);
+    if(!(p.generation>g&&p.tipped&&Math.abs(p.omega)>.2)){const q=(await report()).record.seesaw;
+     throw Error(`mid_tip: the plank never swung faster than 0.2 rad/s after the tip (per-tick max ${q.max_abs_omega_after_tip}, tip ${q.tip_at} s)`);}
     const h=await idleRetry();midOmegas.push(h.before.before_omega);
     if(Math.abs(h.before.before_omega)>.025)mid=h;
    }

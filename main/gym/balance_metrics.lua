@@ -38,6 +38,8 @@ local function seesaw_observe(self,r)
     if math.abs(st.joint_angle)>=q.limit-0.005 then q.limit_reached=true end
     if not q.rest_angle and r.elapsed>=p.seesaw_rest_s then q.rest_angle=st.angle end
     if not q.tip_at and st.angle<0 then q.tip_at=r.elapsed end
+    -- Per-tick (not per-report) fastest swing after the tip (#228).
+    if q.tip_at then q.max_abs_omega_after_tip=math.max(q.max_abs_omega_after_tip or 0,math.abs(st.omega)) end
     if q.tip_at and not q.settled_at then
         q.calm=math.abs(st.omega)<p.seesaw_settle_omega and (q.calm or 0)+self.balance.dt or 0
         if q.calm>=p.seesaw_settle_s then q.settled_at=r.elapsed-q.calm;q.settled_angle=st.angle end
