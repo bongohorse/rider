@@ -192,9 +192,21 @@ function M.feel_tick(self,dt)
             assert(state.angle>0.1,"Air lean did not rotate chassis")
             self.drive_cases.air_angle=state.angle
             local c=require "main.gym.feel"
-            local right,zr=c.camera(vmath.vector3(0,170,0),350,vmath.vector3(0,250,500),1,1)
-            local left,zl=c.camera(vmath.vector3(0,170,0),-350,vmath.vector3(0,250,500),1,1)
+            local v3,f=vmath.vector3,c.follow
+            local s=c.camera_start(0,90,0,1)
+            local right,zr=c.camera(s,v3(0,46,0),v3(350,0,0),true,v3(0,250,500),1,270,1)
+            -- Dual forward focus: rolling back 0.2 m keeps the look-ahead side, more than 1 m switches it.
+            c.camera(s,v3(0,46,0),v3(-100,0,0),true,v3(0,250,500),1,270,0.2)
+            assert(s.dir==1,"Camera look-ahead switched on a short roll back")
+            local left,zl=c.camera(s,v3(0,46,0),v3(-350,0,0),true,v3(0,250,500),1,270,1)
             assert(right.x>0 and left.x<0 and zr<1 and math.abs(zr-zl)<0.001,"Camera direction/zoom failed")
+            -- A deep fall stays inside the safe view; landing 20 m lower realigns to the start framing.
+            local fall=c.camera_start(0,90,0,1)
+            local pos=c.camera(fall,v3(0,-2000,0),v3(0,-1500,0),false,v3(0,250,500),1,270,1/60)
+            assert(pos.y-(-2000)<=270-f.margin_bottom+1e-3,"Camera lost a falling chassis")
+            for _=1,600 do pos=c.camera(fall,v3(0,-1954,0),v3(0,0,0),true,pos,1,270,1/60) end
+            assert(not fall.snapping and math.abs(pos.y-(-1954+c.values.camera_height-f.rest))<f.snap_done,"Camera did not realign after landing")
+            self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
             self.drive_cases.camera_direction_zoom=true
             emit(self,"suite_end",{status="PASS",cases=self.drive_cases})

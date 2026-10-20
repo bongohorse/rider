@@ -102,7 +102,7 @@ if args.case=='le5a':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le5b':
     report=json.loads((out/'curve-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==10
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==11
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le5c':
     report=json.loads((out/'path-result.json').read_text())
@@ -173,8 +173,8 @@ elif args.case in ('a2','a3','a6','a10'):
         assert 0<=cases['reset_ms_min']<=cases['reset_ms_p50']<=cases['reset_ms_max']
         assert cases['request_ready_ms_max']>=cases['reset_ms_max']
     if args.case=='a6':
-        expected.update({'reverse_speed','reverse_dx','air_angle','camera_direction_zoom'})
-        assert cases['reverse_speed'] < -50 and cases['reverse_dx'] < -50 and cases['air_angle']>0.1 and cases['camera_direction_zoom'] is True
+        expected.update({'reverse_speed','reverse_dx','air_angle','camera_direction_zoom','camera_follow_window'})
+        assert cases['reverse_speed'] < -50 and cases['reverse_dx'] < -50 and cases['air_angle']>0.1 and cases['camera_direction_zoom'] is True and cases['camera_follow_window'] is True
     if args.case=='a10':
         expected.update({'audio_once','audio_pitch','no_autoplay','audio_context_running'})
         assert cases['audio_once'] and cases['no_autoplay'] and cases['audio_context_running'] and cases['audio_pitch']>0.85

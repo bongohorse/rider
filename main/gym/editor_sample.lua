@@ -13,7 +13,6 @@ local function dist_segment(p,a,b)
 end
 M.dist_segment=dist_segment
 local function length(a,b) return math.sqrt((b[1]-a[1])^2+(b[2]-a[2])^2) end
-local function mid(a,b) return {(a[1]+b[1])/2,(a[2]+b[2])/2} end
 -- A collector that refuses more than MAX_POINTS points (an over-budget shape is an error, R16).
 local function collector(first)
     local out={{first[1],first[2]}}
@@ -24,15 +23,102 @@ local function collector(first)
 end
 -- Straight: control points on the chord (the redundant source points of R8).
 local function straight(p0,p1,p2,p3) return dist_segment(p1,p0,p3)<=1e-9 and dist_segment(p2,p0,p3)<=1e-9 end
--- One cubic Bezier segment p0..p3 (p0 already collected). The curve lies in the convex hull of its
--- control points, so the larger distance of p1 and p2 from the chord bounds the deviation.
-local function bezier(p0,p1,p2,p3,add,depth)
-    if math.max(dist_segment(p1,p0,p3),dist_segment(p2,p0,p3))<=M.TOLERANCE and length(p0,p3)<=M.MAX_SEGMENT then return add(p3) end
-    if depth>=30 then return false end
-    local a,b,c=mid(p0,p1),mid(p1,p2),mid(p2,p3)
-    local d,f=mid(a,b),mid(b,c)
-    local m=mid(d,f)
-    return bezier(p0,a,d,m,add,depth+1) and bezier(m,f,c,p3,add,depth+1)
+-- A cubic Bezier q in power form per axis {c0, c1, c2, c3} (c(t) = c0 + c1 t + c2 t^2 + c3 t^3), so the parts
+-- tested below cost a few multiplications and no tables (HTML5 runs plain Lua; a drag resamples every frame).
+local function cubic(q)
+    local c={}
+    for k=1,2 do
+        local p0,p1,p2,p3=q[1][k],q[2][k],q[3][k],q[4][k]
+        c[k]={p0,3*(p1-p0),3*(p0-2*p1+p2),p3-p0+3*(p1-p2)}
+    end
+    return c
+end
+local function point(c,t)
+    local x,y=c[1],c[2]
+    return {x[1]+t*(x[2]+t*(x[3]+t*x[4])),y[1]+t*(y[2]+t*(y[3]+t*y[4]))}
+end
+-- One axis of the control points of the part [t0, t0 + h] (Taylor terms at t0 in Bezier form).
+local function axis(a,t0,h)
+    local p=a[1]+t0*(a[2]+t0*(a[3]+t0*a[4]))
+    local d1=(a[2]+t0*(2*a[3]+3*t0*a[4]))*h
+    local d2=(a[3]+3*t0*a[4])*h*h
+    return p,p+d1/3,p+(2*d1+d2)/3,p+d1+d2+a[4]*h*h*h
+end
+-- Distance of (px, py) from the segment (ax, ay)-(bx, by).
+local function dist(px,py,ax,ay,bx,by)
+    local dx,dy=bx-ax,by-ay
+    local l=dx*dx+dy*dy
+    local t=l>0 and math.max(0,math.min(1,((px-ax)*dx+(py-ay)*dy)/l)) or 0
+    local x,y=ax+dx*t-px,ay+dy*t-py
+    return math.sqrt(x*x+y*y)
+end
+-- The part [t0, t1] fits when its control points lie within TOLERANCE of its chord (the curve lies in their
+-- convex hull, so this bounds the deviation) and the chord is at most MAX_SEGMENT long.
+local function fits(c,t0,t1)
+    local h=t1-t0
+    local x0,x1,x2,x3=axis(c[1],t0,h)
+    local y0,y1,y2,y3=axis(c[2],t0,h)
+    if (x3-x0)^2+(y3-y0)^2>M.MAX_SEGMENT^2 then return false end
+    return dist(x1,y1,x0,y0,x3,y3)<=M.TOLERANCE and dist(x2,y2,x0,y0,x3,y3)<=M.TOLERANCE
+end
+-- Shortest chord the two ends may leave between them before they share the rest instead (no sliver).
+local MIN_CHORD=0.05
+-- The longest part from one end of [a, b] that fits: forwards from a (dir 1) or backwards from b (dir -1).
+-- The search starts at the previous chord's span g, gallops by 1.25 and ends with 6 halvings (within
+-- 0.4 % of the longest). Returns its parameter span, or nil when no part fits.
+local function reach(c,a,b,dir,g)
+    local span=b-a
+    local function ok(d) if dir>0 then return fits(c,a,a+d) end return fits(c,b-d,b) end
+    local lo,hi=math.min(g,span),nil
+    if ok(lo) then
+        while true do
+            local n=math.min(lo*1.25,span)
+            if n<=lo or not ok(n) then hi=n;break end
+            lo=n
+        end
+    else
+        hi=lo
+        while true do
+            lo=hi/1.25
+            if lo<span*1e-9 then return nil end
+            if ok(lo) then break end
+            hi=lo
+        end
+    end
+    for _=1,6 do local m=(lo+hi)/2;if ok(m) then lo=m else hi=m end end
+    return lo
+end
+-- Adds the points of the cubic c strictly between the parameters a and b (compiler 6). Chords are taken
+-- from both ends towards the middle, each as long as a part that fits allows (gf, gr: the previous spans
+-- at each end). When the two ends meet, or would leave a sliver, the rest is split at its middle and each
+-- half is walked the same way, so a mirrored curve samples to exactly the mirrored points. Halving whole
+-- segments (compilers 4-5) cut chords to power-of-two fractions and drew far more segments than needed.
+local function walk(c,a,b,add,gf,gr)
+    local back={}
+    while not fits(c,a,b) do
+        local df,dr=reach(c,a,b,1,gf),reach(c,a,b,-1,gr)
+        if not df or not dr then return false end
+        local front,rear=a+df,b-dr
+        gf,gr=df,dr
+        if front<=a or rear>=b then return false end
+        if front>=rear or length(point(c,front),point(c,rear))<MIN_CHORD then
+            local m=(front+rear)/2
+            if not (walk(c,a,m,add,gf,gf) and add(point(c,m)) and walk(c,m,b,add,gr,gr)) then return false end
+            break
+        end
+        if not add(point(c,front)) then return false end
+        back[#back+1]=point(c,rear)
+        a,b=front,rear
+    end
+    for i=#back,1,-1 do if not add(back[i]) then return false end end
+    return true
+end
+-- One cubic Bezier segment q (q[1] already collected); its end is the exact anchor. The first search
+-- starts at the span of one MAX_SEGMENT along the control polygon.
+local function bezier(q,add)
+    local l=length(q[1],q[2])+length(q[2],q[3])+length(q[3],q[4])
+    local g=math.min(1,M.MAX_SEGMENT/math.max(l,1e-9))
+    return walk(cubic(q),0,1,add,g,g) and add(q[4])
 end
 -- A straight piece in equal chords of at most MAX_SEGMENT.
 local function chords(a,b,add)
@@ -70,7 +156,7 @@ function M.curve(anchors)
             if not chords(p0,p3,add) then return nil end
             i=j
         else
-            if not bezier(p0,p1,p2,p3,add,0) then return nil end
+            if not bezier({p0,p1,p2,p3},add) then return nil end
             i=i+1
         end
     end

@@ -285,6 +285,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Typing replaces the selected text; E (Play), S, D, F, H, L and Delete-free letters only type.
   await page.keyboard.type('Sehr hoher Flug 1',{delay:40});await page.waitForFunction(()=>window.riderEditor.field==='Sehr hoher Flug 1');
   e=await ed();assert.equal(e.mode,'edit');assert.equal(e.tool,'label');assert.equal(e.revision,rev+1);assert.equal(e.help_open,false);
+  // The canvas label shows the typed text at once, before Enter commits it.
+  await page.waitForFunction(id=>window.riderEditor.labels_drawn[id]==='Sehr hoher Flug 1',lid);
   await key('Enter');e=await revision(rev+2);
   assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');assert.equal(e.field,false);
   await key('z',['Control']);e=await revision(rev+3);assert.equal(label(await doc(),lid).text,'Label');
@@ -300,8 +302,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Double-click opens the field; Esc keeps the text and adds nothing.
   const lp=await world([10,4]);await pointer.dblclick(page,lp);
   await page.waitForFunction(id=>window.riderEditor.field_label===id,lid);
-  await page.keyboard.type('xyz',{delay:30});await key('Escape');e=await settle();
+  await page.keyboard.type('xyz',{delay:30});await page.waitForFunction(id=>window.riderEditor.labels_drawn[id]==='xyz',lid);
+  await key('Escape');e=await settle();
   assert.equal(e.field,false);assert.equal(e.revision,rev+7);assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');
+  await page.waitForFunction(id=>window.riderEditor.labels_drawn[id]==='Sehr hoher Flug 1',lid);
   // The panel's Text row: the 64-byte limit and no empty text.
   await button('param_1');await page.waitForFunction(()=>window.riderEditor.field_all);
   await page.keyboard.type('x'.repeat(70),{delay:5});e=await settle();

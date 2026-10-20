@@ -117,7 +117,7 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   await button('new');await page.waitForFunction(()=>window.riderEditor.id==='my-level-1');e=await saved();
-  let d=await doc();assert.equal(d.editor_version,5);assert.deepEqual(d.sampling,{tolerance:TOL,max_segment:SEG});
+  let d=await doc();assert.equal(d.editor_version,6);assert.deepEqual(d.sampling,{tolerance:TOL,max_segment:SEG});
   await frame();
   await key('p');await key('1');await place([0,0]);
   await key('c');e=await ed();assert.equal(e.tool,'curve');
@@ -265,11 +265,33 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
    editor:{editor_version:3,compiler_version:3,revision:2,compiled_revision:2,next_id:3,objects:[{id:'o1',type:'prefab',kind:'flat',at:[0,0],params:{length:10}},{id:'o2',type:'prefab',kind:'step',at:[10,0],params:{height:0.5}}],
     connections:[{from:'o1',to:'o2'}],start:{position:[0,1],speed:0}}};
   e=await importText(JSON.stringify(v3),'le5a-step.json');assert.equal(e.conflict,false,e.conflict);d=await doc();
-  assert.deepEqual(obj(d,'o2').params,{height:0.5,length:0,riser:'start'});assert.equal(d.editor_version,5);
+  assert.deepEqual(obj(d,'o2').params,{height:0.5,length:0,riser:'start'});assert.equal(d.editor_version,6);
   // The riser's exit end selects the step (its ends take precedence over its 0.5 m edge).
   await frame();await key('s');await at([10,0.4]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');
   await button('mirror_right');d=await doc();assert.deepEqual(d.objects.at(-1).params,{height:-0.5,length:0,riser:'end'});
   done('step_tread_and_le5a_steps');
+
+  // 8b. Compiler 6 (drive test: a longer six-anchor curve hit the render budget): every chord of a curved segment
+  // is the longest that fits 5 mm / 0.5 m, where compilers 4-5 halved segments into power-of-two parts (152
+  // chords for this curve). A version 5 file whose compiled data claims its revision opens upgraded without an
+  // R1 conflict; its compiled data is out of date and Play compiles it again.
+  const auto=pts=>pts.map((p,i)=>{const a=pts[i-1]||p,b=pts[i+1]||p,k=(i===0||i===pts.length-1)?2:1;const t=[(b[0]-a[0])/6*k,(b[1]-a[1])/6*k];
+   return {p,in:i===0?[0,0]:[-t[0],-t[1]],out:i===pts.length-1?[0,0]:t,mode:'smooth'};});
+  const long={id:'o1',type:'curve',anchors:auto([[0,0],[6,4],[12,-2],[18,5],[24,0],[30,3]])};
+  // A nearly flat curve whose two ends meet with a sliver between them (they share the rest), and its mirror
+  // image about x = 55 (anchors reversed, tangents swapped with x negated): the samples must mirror exactly.
+  const flat={id:'o2',type:'curve',anchors:auto([[40,0],[44,0.1],[50,0]])};
+  const mirrored={id:'o3',type:'curve',anchors:flat.anchors.slice().reverse().map(a=>({p:[110-a.p[0],a.p[1]],in:[-a.out[0],a.out[1]],out:[-a.in[0],a.in[1]],mode:a.mode}))};
+  const v5={schema:1,units:'metres',id:'le5b-long-curve',name:'Long curve',spawn:[2,6],start_speed:0,run_in:0,run_out:0,bounds:[-10.68,80,-12,25.68],
+   chains:[[[30,3],[0,0]]],hulls:[],labels:[],checkpoints:[],
+   editor:{editor_version:5,compiler_version:5,sampling:{tolerance:TOL,max_segment:SEG},revision:3,compiled_revision:3,next_id:4,objects:[long,flat,mirrored],connections:[],start:{position:[2,6],speed:0}}};
+  e=await importText(JSON.stringify(v5),'le5b-long-curve.json');assert.equal(e.conflict,false,e.conflict);d=await doc();
+  assert.equal(d.editor_version,6);assert.equal(d.compiler_version,6);assert.equal(d.compiled_revision,undefined);
+  const lp=(await paths()).o1;measurements.long_curve=checkSampling(lp,curveDense(long));
+  assert.ok(lp.length-1<=110,'longest-chord sampling: '+(lp.length-1)+' chords');
+  const fp=(await paths()).o2,mp=(await paths()).o3;checkSampling(fp,curveDense(flat));
+  assert.equal(fp.length,mp.length);fp.forEach((p,i)=>{const q=mp[mp.length-1-i];assert.ok(nearPoint(p,[110-q[0],q[1]],1e-9),JSON.stringify([p,q]));});
+  done('compiler6_longest_chords_v5_upgrade');
 
   // 9. Reference course (protocol): Flat 20 m, Bump/wave 0.4 m x 10 m x 2, curve valley (anchors 40/0, 48/-1.2,
   // 56/0, horizontal tangents 8/3 m, smooth), Flat 24 m, FINISH at x 74; preset A, START 6 m/s, full throttle

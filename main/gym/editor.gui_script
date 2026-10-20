@@ -623,7 +623,13 @@ end
 local function open_template(self,id)
     local d=stations.resource(id)
     if not d then editor.message="Template unavailable: "..id;return end
-    if editor.open(doc_lib.template(d),true) then opened(self) end
+    local doc,note=doc_lib.template(d)
+    -- A note of the previous template must not stay on another one.
+    editor.message=""
+    if editor.open(doc,true) then
+        opened(self)
+        if note then editor.message=editor.message~="" and editor.message.." "..note or note end
+    end
 end
 -- My levels (LE4): open, delete (asks once more), new.
 local function refresh_library(self)
@@ -2439,7 +2445,8 @@ local function publish(self)
         show_bounds=editor.show_bounds,bounds=e and doc_lib.bounds(e) or false,extent=e and doc_lib.extent(e) or false,
         last_test=editor.doc and editor.last_test_start() or false,view_rects=view_rects(self),usable=self.overlay.k and usable(self) or false,flash=self.flash and self.flash.p or false,
         ghost=self.ghost_now and {pos=self.ghost_now.pos or false,err=self.ghost_now.err or false,mode=self.ghost_now.mode} or false,show_ghost=editor.show_ghost,
-        help_open=self.help_open or false,help=self.help_open and {left=HELP_LEFT,right=HELP_RIGHT} or false,field_label=self.field and self.field.label or false},{encode_empty_table_as_object=false}))
+        help_open=self.help_open or false,help=self.help_open and {left=HELP_LEFT,right=HELP_RIGHT} or false,field_label=self.field and self.field.label or false,
+        labels_drawn=editor.drawn_labels or {}},{encode_empty_table_as_object=false}))
     -- The document itself only when it changed (it can hold thousands of points).
     local key=e and editor.doc.id..":"..e.revision
     if key and key~=self.published then
@@ -2477,6 +2484,9 @@ function update(self,dt)
             gui.set_text(self.title,string.format("%s | %s",shorten(editor.doc.name,24),shorten(status,36)))
             gui.set_color(self.title,vmath.vector4(1,1,1,1))
         end
+        -- A label's text field shows on the canvas while typing (the edit world draws it); Enter commits it.
+        local f=self.field
+        editor.label_preview=f and f.label and not f.param and {id=f.label,text=f.text} or nil
         local description=describe(self)
         gui.set_text(self.properties,description)
         self.description_lines=select(2,description:gsub("\n",""))+1

@@ -7,9 +7,12 @@ local sample=require "main.gym.editor_sample"
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
 -- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
 -- Step tread. Version 5 (LE5c) adds corner anchors: a segment between two corners compiles as one straight
--- chord, so a line turned into an editable path keeps its untouched segments exactly.
--- Version 1-4 documents open upgraded; their lines, connections, prefabs and curves compile unchanged.
-local M={EDITOR_VERSION=5,COMPILER_VERSION=5}
+-- chord, so a line turned into an editable path keeps its untouched segments exactly. Version 6 (compiler 6)
+-- samples curved segments with the longest chords that fit the same bounds (editor_sample), so their compiled
+-- points differ; nothing else in the format changes.
+-- Version 1-5 documents open upgraded; their lines, connections and prefabs compile unchanged, curves with
+-- fewer points (their compiled data from an older compiler is then out of date, not a conflict).
+local M={EDITOR_VERSION=6,COMPILER_VERSION=6}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -102,6 +105,14 @@ function M.outline(o)
     if o.type=="hull" then return o.vertices end
     if o.type=="prefab" and o.kind=="platform" then return prefab.path(o) end
 end
+-- Line sprites an object draws in a compiled level (render budget, R7): one per segment or outline edge.
+function M.drawn(o)
+    local outline=M.outline(o)
+    if outline then return #outline end
+    local n=0
+    for _,part in ipairs(M.parts(o)) do n=n+#part-1 end
+    return n
+end
 function M.entry(o) return o.type=="line" and o.points[1] or o.type=="curve" and o.anchors[1].p or o.at end
 function M.exit(o) local p=M.path(o);return p[#p] end
 -- Display name for messages: "Line o3", "Ramp o5".
@@ -125,11 +136,13 @@ local function from_station(d,id,name)
     return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
--- kind, sections, markers and every other measurement field are dropped by construction.
+-- kind, sections, markers and every other measurement field are dropped by construction. The second
+-- result names a dropped gameplay object (the balance seesaw, which the editor has no object for).
 function M.template(d)
     local name=d.name.." copy"
     if #name>64 then name=d.name:sub(1,59).." copy" end
-    return from_station(d,"my-"..d.id,name)
+    local note=d.seesaw and "Template copy without the seesaw: it is a dynamic station object that the editor cannot hold yet. Drive it in the station itself."
+    return from_station(d,"my-"..d.id,name),note
 end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
 function M.blank(id,name)
@@ -211,7 +224,7 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -286,7 +299,12 @@ function M.validate(doc)
     -- Upgrade a supported version 1-3 document in place: same geometry and connections (none in 1); the
     -- sampling settings are recorded.
     if e.editor_version<4 then e.sampling={tolerance=M.SAMPLING.tolerance,max_segment=M.SAMPLING.max_segment} end
-    if e.editor_version<5 then e.editor_version,e.compiler_version,e.connections=5,5,e.connections or {} end
+    if e.editor_version<6 then
+        -- Compiled data of a curve from compiler 4-5 no longer matches a recompile: out of date, as after an
+        -- autosaved edit, so the level opens without an R1 conflict and Play compiles it again.
+        for _,o in ipairs(e.objects) do if o.type=="curve" then e.compiled_revision=nil end end
+        e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
+    end
     return doc
 end
 

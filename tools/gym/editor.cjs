@@ -215,6 +215,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const n of shown.visible.filter(n=>n.startsWith('template_')))for(const y of below)assert.ok(shown.buttons[n].y-y>=24*unit,n+' overlaps the dialog controls');
    await button('template_'+id);await page.waitForFunction(id=>window.riderEditor.id==='my-'+id,id);
    e=await ed();assert.equal(e.problem,'',id+': '+e.problem);templates[id]=e.objects;
+   // Only the balance station has a seesaw; its copy says that the seesaw stays behind (R3).
+   assert.equal(e.message.startsWith('Template copy without the seesaw'),id==='balance',id+': '+e.message);
   }
   for(let i=0;i<ids.length;i++)await key('z',['Control']);
   e=await page.waitForFunction(own=>window.riderEditor.id===own,own);
