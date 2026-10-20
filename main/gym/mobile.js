@@ -118,6 +118,9 @@
   const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
   const speedButton=button('Speed 1x',toolbar,()=>{pending.time_step=true;});
   api.setTime=(paused,step)=>{pauseButton.textContent=paused?'Resume':'Pause';speedButton.textContent='Speed '+step+'x';};
+  // A21: the same record and replay requests as B and G; the Lua tick owner records and replays.
+  button('Record run',toolbar,()=>{pending.record=true;});
+  button('Replay run',toolbar,()=>{pending.replay=true;});
   // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
   button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
   button('Layout A · mirror',toolbar,b=>{
@@ -136,7 +139,9 @@
   hud=document.createElement('div');hud.textContent='Waiting for vehicle';
   status=document.createElement('div');status.textContent='';
   tiltHud=document.createElement('div');tiltHud.textContent='Tilt OFF — touch controls available';
-  readout.append(hud,status,tiltHud);root.append(readout);
+  const replayHud=document.createElement('div');replayHud.dataset.replay='';
+  api.setReplay=text=>{replayHud.textContent=text;};
+  readout.append(hud,status,tiltHud,replayHud);root.append(readout);
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;

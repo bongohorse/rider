@@ -16,10 +16,12 @@ local telemetry = require "main.gym.telemetry"
 local editor_view = require "main.gym.editor_view"
 -- Car Feel 3 struts: render-only visuals on the chassis; never touches bodies or the fixed tick.
 local juice = require "main.gym.juice"
+-- A21 record and replay: one more command source in this tick owner; the recording lives on self.replay.
+local replay=require "main.gym.replay"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
 local LOADER="main:/loader#script"
 local GAMEPLAY={}
-for _,id in ipairs({"throttle_up","throttle_w","brake_down","brake_s","lean_left","lean_right","retry","section_cycle","preset_cycle","crash_toggle"}) do GAMEPLAY[hash(id)]=true end
+for _,id in ipairs({"throttle_up","throttle_w","brake_down","brake_s","lean_left","lean_right","retry","section_cycle","preset_cycle","crash_toggle","replay_record","replay_play"}) do GAMEPLAY[hash(id)]=true end
 local function clear_time_input(self)
     -- Opt-in tilt keeps its calibration: it is a continuous device angle, not a stale press.
     self.held={};self.mobile={};mobile.clear(true);msg.post("main:/loader#ui","cancel_drag")
@@ -44,9 +46,12 @@ local function reset(self)
     self.history=history.new(self.history.generation+1)
     local before = vehicle.state(self.vehicle)
     local started = socket.gettime()
+    replay.before_reset(self)
     vehicle.reset(self.vehicle)
     if self.seesaw then seesaw.reset(self.seesaw) end
     stations.restart(self)
+    -- This tick becomes tick 1 of a new recording/replay ("record"/"replay"); any other reset ends them.
+    replay.on_reset(self,request.reason)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
     assert(#shapes==#self.segments+#(self.station.hulls or {}), "Retry changed station topology")
@@ -236,7 +241,14 @@ function init(self)
     self.tick = 0
     self.paused,self.time_factor,self.world_time,self.fixed_ticks,self.time_scaled_ticks,self.time_dropped=false,1,0,0,0,0
     -- Automated measurement cases must tick at factor 1.0 (asserted every fixed step); a20 changes it on purpose.
-    self.measure_case=sys.get_engine_info().is_debug and self.testcase~="" and self.testcase~="a20"
+    -- a21 also changes it on purpose; its comparable replay windows assert scaled_ticks=0 themselves.
+    self.measure_case=sys.get_engine_info().is_debug and self.testcase~="" and self.testcase~="a20" and self.testcase~="a21"
+    self.replay=replay.new()
+    replay.bind(request_reset)
+    if self.testcase=="a21" then
+        assert(sys.get_engine_info().is_debug,"Replay probe requires debug engine")
+        self.replay_debug=true
+    end
     if self.testcase=="a20" then
         assert(sys.get_engine_info().is_debug,"Time probe requires debug engine")
         self.time_probe=require "main.gym.time_probe"
@@ -270,13 +282,15 @@ function update(self, dt)
     if self.paused then
         -- Paused: touch drive, Retry and section requests are dropped; a station switch leaves the pause.
         local m=self.mobile
-        if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right then self.time_dropped=self.time_dropped+1 end
+        if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right or m.record or m.replay then self.time_dropped=self.time_dropped+1 end
         self.mobile={station=m.station,clear=m.clear,started=m.started}
     end
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
     if self.mobile.retry then request_reset(self,"manual") end
     if self.mobile.next_section then self.pending_section=true end
+    if self.mobile.record then replay.toggle_record(self) end
+    if self.mobile.replay then replay.toggle_play(self) end
     if self.mobile.station then msg.post("main:/loader#script","select_station",{id=self.mobile.station,preset=self.preset}) end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
@@ -373,6 +387,20 @@ function update(self, dt)
             end
         end
     end
+    if self.vehicle and self.vehicle.ready then
+        local text=replay.status(self,dt)
+        if text~=self.replay_text then self.replay_text=text;msg.post("main:/loader#ui","replay_state",{text=text}) end
+        if self.replay_debug and html5 then
+            self.replay_frames=(self.replay_frames or 0)+1
+            local c=b2d.world.get_counters(b2d.body.get_world(self.terrain))
+            local p=b2d.body.get_position(self.vehicle.chassis)
+            local held=0;for _ in pairs(self.held) do held=held+1 end
+            html5.run("window.riderReplay="..json.encode(replay.report(self,{frames=self.replay_frames,bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count,
+                paused=self.paused,factor=self.time_factor,resets=self.reset_count,dropped=self.time_dropped,held=held,command=self.last_command or false,
+                preset=self.preset,modified=self.modified or false,x=feel.metres(p.x),y=feel.metres(p.y),station=self.station.id,
+                section=self.station.sections and self.station.sections[self.station.section_index].id or false})))
+        end
+    end
     if self.scenario then self.scenario.update_after(self) end
     if self.time_probe then self.time_probe.update(self) end
 end
@@ -414,7 +442,11 @@ function on_input(self, action_id, action)
         if action.pressed then request_reset(self,"manual") end
         return
     end
+    if action_id==hash("replay_record") then if action.pressed then replay.toggle_record(self) end;return end
+    if action_id==hash("replay_play") then if action.pressed then replay.toggle_play(self) end;return end
     if self.resetting then return end
+    -- A replay drives with recorded commands only: live drive input is ignored (held keys were cleared at its start).
+    if replay.replaying(self) then return end
     if action.pressed then self.held[action_id] = true end
     if action.released then self.held[action_id] = nil end
     if self.scenario then self.scenario.input(self,action_id,action) end
@@ -488,10 +520,12 @@ function fixed_update(self, dt)
             if feel.set(t.key,t.value) then
                 self.last_tune=t
                 self.modified=true
+                replay.tuned(self)
                 show_preset(self)
             end
         end
-        self.last_command = self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or command(self)
+        self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or command(self)
+        replay.after_command(self,self.last_command,dt)
         vehicle.apply(self.vehicle,self.last_command,dt)
         rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
@@ -530,6 +564,9 @@ function on_message(self,id,data,sender)
         self.paused,self.time_factor=data.paused,data.factor
         msg.post(sender,"time_ready",{generation=data.generation,seq=data.seq})
     elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
+    elseif id==hash("replay_control") and self.paused then self.time_dropped=self.time_dropped+1
+    elseif id==hash("replay_control") and not self.ui_captured and self.vehicle and self.vehicle.ready then
+        if data.action=="record" then replay.toggle_record(self) else replay.toggle_play(self) end
     elseif id==hash("next_section") then self.pending_section=true
     elseif id==hash("select_preset") then self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)
