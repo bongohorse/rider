@@ -1048,6 +1048,19 @@ local function go_last_test(self)
     view_box(self,b,false)
     editor.message=string.format("Last test start: x %.2f m  y %.2f m.",p[1],p[2])
 end
+-- The R13 bounds of the current revision (cached; LE6 bounds display and panel).
+local function current_bounds(self)
+    local e=editor.doc.editor
+    local key=tostring(editor.doc)..":"..e.revision
+    if self.bounds_key~=key then self.bounds_key,self.bounds=key,doc_lib.bounds(e) end
+    return self.bounds
+end
+-- Whether Centre has something to centre (cheap: no shapes; selection_box computes the box on use).
+local function has_selection()
+    local s=editor.selection
+    if s=="start" or (s=="finish" and editor.doc.editor.finish) then return true end
+    return editor.point_count()>=2 or next(editor.selected)~=nil
+end
 -- Warning list (LE6): every error, the display note and every warning, each with its target if any.
 local function problem_rows()
     local rows={}
@@ -1093,7 +1106,8 @@ local function on_button(self,name)
         if editor.undo(name=="undo")==false then editor.message="Nothing to "..name.."." end
     elseif name=="open" then
         self.open_dialog=not self.open_dialog
-        if self.open_dialog then self.page,self.tpl_page=0,0;refresh_library(self) end
+        -- The warning list closes under a dialog (its rows would take the dialog's clicks).
+        if self.open_dialog then self.page,self.tpl_page,self.warnings_open=0,0,false;refresh_library(self) end
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
@@ -1140,7 +1154,7 @@ local function on_button(self,name)
     elseif name=="delete" then delete(self)
     elseif name=="split" then split(self)
     elseif name=="connect" or name=="disconnect" then connect(self)
-    elseif name=="warnings" then self.warnings_open=not self.warnings_open;self.warn_page=0
+    elseif name=="warnings" then self.warnings_open,self.open_dialog=not self.warnings_open,false;self.warn_page=0
     elseif name:match("^warn_%d$") then
         local row=(self.problem_rows or {})[(self.warn_page or 0)*WARN_ROWS+tonumber(name:sub(6))]
         if row then show_problem(self,row) end
@@ -1169,7 +1183,7 @@ local function visible_buttons(self)
     if editor.conflict then return {"conflict_source","conflict_lines"} end
     local list={}
     -- The open warning list lies over other controls: its rows are hit first (LE6).
-    if self.warnings_open then
+    if self.warnings_open and not self.open_dialog then
         local rows=self.problem_rows or {}
         local page=self.warn_page or 0
         for i=1,WARN_ROWS do if rows[page*WARN_ROWS+i] then list[#list+1]="warn_"..i end end
@@ -1223,7 +1237,7 @@ local function hit(self,action)
     for _,name in ipairs(visible_buttons(self)) do
         if gui.pick_node(self.buttons[name].box,action.x,action.y) then return name end
     end
-    if self.warnings_open and gui.pick_node(self.warning_panel,action.x,action.y) then return "warning_panel" end
+    if self.warnings_open and not self.open_dialog and gui.pick_node(self.warning_panel,action.x,action.y) then return "warning_panel" end
     if self.open_dialog and gui.pick_node(self.dialog_nodes[1],action.x,action.y) then return "dialog_panel" end
     if editor.conflict then return "conflict_panel" end
 end
@@ -1918,7 +1932,7 @@ local function describe(self)
     end
     if editor.show_bounds and not s and editor.tool=="select" then
         -- The shown R13 bounds (LE6): what Play, Export and test starts use.
-        local b=doc_lib.bounds(e)
+        local b=current_bounds(self)
         lines[#lines+1]=string.format("Bounds x %.1f to %.1f m",b[1],b[2])
         lines[#lines+1]=string.format("       y %.1f to %.1f m",b[3],b[4])
     end
@@ -2112,9 +2126,7 @@ local function draw_overlay(self)
     end
     -- R13 bounds (LE6, view only): the same calculation as Play, Export and test starts, per revision.
     if editor.show_bounds then
-        local key=tostring(editor.doc)..":"..e.revision
-        if self.bounds_key~=key then self.bounds_key,self.bounds=key,doc_lib.bounds(e) end
-        local bb=self.bounds
+        local bb=current_bounds(self)
         overlay.rect(o,to_px({bb[1],bb[3]},s),to_px({bb[2],bb[4]},s),w,h,C.bounds,2)
     end
     -- The last launched test start of this document (LE6), and the spot a problem row jumped to.
@@ -2358,7 +2370,7 @@ function update(self,dt)
             local r=rows[wp*WARN_ROWS+i]
             gui.set_color(self.buttons["warn_"..i].box,r and r.error and vmath.vector4(0.35,0.12,0.1,1) or vmath.vector4(0.3,0.25,0.08,1))
         end
-        local idle={view_centre=selection_box()==nil,view_test=editor.last_test_start()==nil}
+        local idle={view_centre=not has_selection(),view_test=editor.last_test_start()==nil}
         for _,v in ipairs(VIEW) do
             local b=self.buttons[v[1]]
             gui.set_color(b.box,v[1]=="view_bounds" and editor.show_bounds and ACTIVE or idle[v[1]] and DIM or BUTTON)
@@ -2386,7 +2398,16 @@ function update(self,dt)
         self.overlay_shown=false
         overlay.hide(self.overlay)
     end
-    if self.debug then publish(self) end
+    -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
+    -- change or every 0.25 s, so the published state costs the driven world little.
+    if self.debug then
+        local now=socket.gettime()
+        local key=editor.mode..":"..tostring(editor.message)..":"..tostring(editor.status)..":"..tostring(editor.dirty)
+        if editor.mode=="edit" or key~=self.publish_key or now-(self.publish_at or 0)>=0.25 then
+            self.publish_key,self.publish_at=key,now
+            publish(self)
+        end
+    end
 end
 function on_message(self,id,data)
     if id==hash("editor_mode") then

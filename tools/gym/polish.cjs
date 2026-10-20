@@ -233,6 +233,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(300);
   await page.screenshot({path:path.join(out,'polish-view.png')});
+  // The warning list closes when the Open dialog opens, so its rows never take the dialog's clicks: a
+  // template opens with the list shown before (review finding).
+  if(!(await ed()).warnings_open)await button('warnings');
+  e=await settle();assert.equal(e.warnings_open,true);assert.ok(e.problems.length>0);
+  await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);e=await settle();
+  assert.equal(e.warnings_open,false);assert.ok(!e.visible.some(n=>n.startsWith('warn_')),e.visible.join(','));
+  await button('template_ramps');await page.waitForFunction(()=>window.riderEditor.id==='my-ramps');
+  await button('warnings');await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
+  await button('template_straight');await page.waitForFunction(()=>window.riderEditor.id==='my-straight');
   cases.push('template_pages_view_row_budget');
 
   // 5. An unlocated message (an empty level) is listed and shown without moving the camera or selecting.
