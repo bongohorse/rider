@@ -30,10 +30,11 @@ function M.validate(d)
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
-    local objects=0
+    -- Render budget: every drawn sprite or label (one line sprite per chain segment and hull edge).
+    local objects,segments,edges,labels,seesaws=0,0,0,0,0
     for _,chain in ipairs(d.chains) do
         if type(chain)~="table" or #chain<2 or #chain>2048 then return nil,"Invalid chain length" end
-        objects=objects+#chain-1
+        objects,segments=objects+#chain-1,segments+#chain-1
         for i,p in ipairs(chain) do
             if not point(p) then return nil,"Invalid chain point" end
             if i>1 then local q=chain[i-1];if (p[1]-q[1])^2+(p[2]-q[2])^2<0.0001 then return nil,"Chain points too close" end end
@@ -55,7 +56,7 @@ function M.validate(d)
         for _,h in ipairs(d.hulls) do
             if type(h)~="table" or type(h.vertices)~="table" or #h.vertices<3 or #h.vertices>8 then return nil,"Invalid hull vertices" end
             for _,p in ipairs(h.vertices) do if not point(p) then return nil,"Invalid hull point" end end
-            objects=objects+#h.vertices
+            objects,edges=objects+#h.vertices,edges+#h.vertices
             -- Strict convex CCW hull; reject degenerate/self-intersecting input.
             for i,p in ipairs(h.vertices) do
                 local q=h.vertices[i%#h.vertices+1]
@@ -77,7 +78,7 @@ function M.validate(d)
         if type(d.labels)~="table" then return nil,"Invalid labels" end
         for _,label in ipairs(d.labels) do
             if type(label)~="table" or not point(label.position) or type(label.text)~="string" or #label.text>64 then return nil,"Invalid label" end
-            objects=objects+1
+            objects,labels=objects+1,labels+1
         end
     end
     -- FINISH (LE2): position, a finish segment and the unit direction it must be crossed in.
@@ -91,6 +92,7 @@ function M.validate(d)
         for _,q in ipairs(f.line) do if q[1]<=b[1] or q[1]>=b[2] or q[2]<=b[3] or q[2]>=b[4] then return nil,"Finish outside bounds" end end
         objects=objects+2
     end
+    local finish=objects-segments-edges-labels
     -- Reserved for later tasks; v1 levels carry an empty list.
     if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
     if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance" or d.kind=="bumps" or d.kind=="air") and not d.sections then return nil,"Missing station sections" end
@@ -152,7 +154,7 @@ function M.validate(d)
         local found
         for _,section in ipairs(d.sections) do if section.id==s.section and section.type=="seesaw" then found=section end end
         if not found or s.pivot[1]<=found.spawn[1] or s.pivot[1]>=found.target_x0 or s.pivot[1]<=b[1] or s.pivot[1]>=b[2] or s.pivot[2]<=b[3] or s.pivot[2]>=b[4] then return nil,"Invalid seesaw position" end
-        objects=objects+1
+        objects,seesaws=objects+1,1
     elseif d.kind=="balance" then
         for _,section in ipairs(d.sections) do if section.type=="seesaw" then return nil,"Missing seesaw" end end
     end
@@ -161,8 +163,17 @@ function M.validate(d)
         local m=d.markers
         if not finite(m.from_m) or not finite(m.to_m) or m.to_m<=m.from_m or not finite(m.minor_m) or m.minor_m<=0 or not finite(m.major_m) or m.major_m<m.minor_m or (m.to_m-m.from_m)/m.minor_m>1000 then return nil,"Invalid markers" end
     end
-    if d.markers then objects=objects+(d.markers.to_m-d.markers.from_m)/d.markers.minor_m+1+(d.markers.to_m-d.markers.from_m)/d.markers.major_m+1 end
-    if objects>800 then return nil,"Station render budget exceeds 800 objects" end
+    local markers=0
+    if d.markers then markers=(d.markers.to_m-d.markers.from_m)/d.markers.minor_m+1+(d.markers.to_m-d.markers.from_m)/d.markers.major_m+1 end
+    objects=objects+markers
+    if objects>800 then
+        -- Name what is counted, so a level can be cut where it costs most.
+        local parts={}
+        for _,p in ipairs({{segments,"terrain segments"},{edges,"obstacle edges"},{labels,"labels"},{finish,"FINISH"},{seesaws,"seesaw"},{markers,"distance markers"}}) do
+            if p[1]>0 then parts[#parts+1]=string.format("%d %s",math.ceil(p[1]),p[2]) end
+        end
+        return nil,string.format("Station render budget exceeds 800 objects: %d drawn (%s)",math.ceil(objects),table.concat(parts,", "))
+    end
     return d
 end
 function M.speed(value,default)

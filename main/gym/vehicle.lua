@@ -158,6 +158,12 @@ function M.apply(v,command,dt)
         end
     end
 end
+-- A wheel or the chassis touches something (follow camera: a buggy on its roof also stands somewhere).
+function M.touching(v)
+    if #b2d.body.get_contact_data(v.chassis)>0 then return true end
+    for _,wheel in ipairs(v.wheels) do if #b2d.body.get_contact_data(wheel)>0 then return true end end
+    return false
+end
 function M.state(v)
     local p = b2d.body.get_position(v.chassis)
     return {x=p.x,y=p.y,vx=b2d.body.get_linear_velocity(v.chassis).x,angle=b2d.body.get_angle(v.chassis)}

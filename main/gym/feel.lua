@@ -94,13 +94,75 @@ function M.motor_torque(binding_units) return binding_units end
 function M.body_torque(newton_metres) return newton_metres end
 function M.metres(engine_units) return engine_units*sys.get_config_number("physics.scale",0.01) end
 function M.clamp(v,lo,hi) return math.max(lo,math.min(hi,v)) end
-function M.camera(target,velocity,position,zoom,dt)
-    local c=M.values
-    local look=M.clamp(velocity*c.camera_look_seconds,-c.camera_look_max,c.camera_look_max)
-    local desired=vmath.vector3(target.x+look,math.max(c.camera_height,target.y+c.camera_lift),500)
+-- Follow camera after Super Mario World as analysed in Keren, "Scroll Back" (GDC 2015, slides 24 and 42):
+-- x is position-locked with a dual forward focus, y uses a camera window with platform snapping, both
+-- lerp-smoothed; the camera never rotates. Engine units. camera_height is the view centre above the ground
+-- the chassis stands on (formerly a fixed floor over y = 0), camera_lift the window top (how far below
+-- the centre a rising chassis may get before the view rises). These shape constants are not preset keys.
+M.follow={
+    rest=46,           -- chassis centre above flat ground at rest (wheel radius 22 + anchor 30 - sag)
+    snap_window=40,    -- grounded height changes within this (springs, small bumps) keep the view still
+    snap_done=3,       -- a realignment ends this close to the new framing
+    focus_switch=100,  -- travel against the look-ahead side before it switches sides (1 m)
+    descent_seconds=0.6, -- a descent or fall leads the view down by this much of its sinking speed
+    descent_max=200,   -- at most this far
+    lead_rate=4,       -- 1/s: a realignment's descent lead eases in and out at this rate
+    fall_ease=100,     -- below the window a fall's lead eases in over this distance
+    sink_rate=8,       -- 1/s: the vertical speed for lead and lag is smoothed at this rate (springs)
+    settle_speed=20,   -- a realignment ends only below this vertical speed (u/s)
+    margin_bottom=60,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
+    margin_top=100     -- nor to its top edge
+}
+-- Follow state for a start at (x, y) above the ground surface ground_y (nil: the 0.9 m start clearance of the
+-- stations); returns the state and the camera position, so a start already shows the view it settles on
+-- (inside the hard edges of a view of half height half, so a high drop start does not jump a frame later).
+function M.camera_start(x,y,ground_y,direction,half)
+    local f=M.follow
+    local s={dir=direction or 1,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,lead=0,vy=0}
+    local cy=s.ground+M.values.camera_height-f.rest
+    if half and half>f.margin_bottom+f.margin_top then cy=M.clamp(cy,y-(half-f.margin_top),y+(half-f.margin_bottom)) end
+    return s,vmath.vector3(x,cy,500)
+end
+-- s: state from camera_start (updated in place); velocity: chassis velocity; grounded: a wheel or the chassis
+-- touches something; half: the view's current half height (nil skips the edge limits).
+function M.camera(s,target,velocity,grounded,position,zoom,half,dt)
+    local c,f=M.values,M.follow
+    -- Dual forward focus: the look-ahead keeps its side until the chassis has travelled focus_switch against
+    -- it, so a short roll back does not swing the view. Speed sets how far it looks.
+    if velocity.x*s.dir<0 then s.against=s.against-velocity.x*s.dir*dt else s.against=0 end
+    if s.against>f.focus_switch then s.dir,s.against=-s.dir,0 end
+    local look=s.dir*math.min(math.max(velocity.x*s.dir,0)*c.camera_look_seconds,c.camera_look_max)
+    -- Platform snapping: a grounded chassis further than snap_window from the snapped height starts a
+    -- realignment that tracks the ground (long climbs and descents, a landing elsewhere) until it settles.
+    if grounded and math.abs(target.y-s.ground)>f.snap_window then s.snapping=true end
+    if grounded and s.snapping then s.ground=target.y end
+    local frame=c.camera_height-f.rest
+    -- Descents and falls lead the view downwards, so the track below stays readable. On the ground only a
+    -- realignment leads (springs and small waves never do); its weight eases in and out.
+    s.vy=s.vy+(velocity.y-s.vy)*(1-math.exp(-f.sink_rate*dt))
+    local lead=math.max(math.min(s.vy,0)*f.descent_seconds,-f.descent_max)
+    s.lead=s.lead+((s.snapping and 1 or 0)-s.lead)*(1-math.exp(-f.lead_rate*dt))
+    -- While the view tracks a steady vertical speed, the smoothing lags by speed / camera_response: tracking
+    -- adds that lag ahead, so the chassis sits where the framing says, not at the edge, in long falls too.
+    local lag=s.vy/c.camera_response
+    local y=s.ground+frame+(lead+lag)*s.lead
+    -- Camera window, also in the air: a rising chassis pushes the view up at camera_lift below the centre;
+    -- one falling more than snap_window below the snapped height pulls it down, the lead easing in.
+    y=math.max(y,target.y+c.camera_lift+math.max(lag,0))
+    local low=target.y+frame+f.snap_window
+    if not grounded and low<y then y=low+(lead+math.min(lag,0))*math.min(1,(y-low)/f.fall_ease) end
+    -- Hard edges (a narrow view, the smoothing lag): the chassis never leaves the safe part of the view.
+    local function inside(v)
+        if not (half and half>f.margin_bottom+f.margin_top) then return v end
+        return M.clamp(v,target.y-(half-f.margin_top),target.y+(half-f.margin_bottom))
+    end
     local alpha=1-math.exp(-c.camera_response*dt)
-    local wanted=c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity)/c.camera_zoom_speed,0,1)
-    return position+(desired-position)*alpha,zoom+(wanted-zoom)*alpha
+    local pos=position+(vmath.vector3(target.x+look,inside(y),500)-position)*alpha
+    pos.y=inside(pos.y)
+    -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
+    if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
+    local wanted=c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1)
+    return pos,zoom+(wanted-zoom)*alpha
 end
 M.sliders={
     {key="spring_hz",label="Spring",min=1,max=12,unit="Hz"},

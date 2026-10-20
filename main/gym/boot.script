@@ -91,7 +91,7 @@ local function open_current(self)
     else
         local d=stations.resource(self.station~="custom" and self.station or "straight")
         if not d then return nil,"The station cannot be opened as a template" end
-        doc=doc_lib.template(d)
+        doc,note=doc_lib.template(d)
     end
     if not editor.open(doc,editor.doc~=nil) then return nil,editor.message end
     editor.conflict=conflict

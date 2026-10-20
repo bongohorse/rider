@@ -140,6 +140,19 @@ function M.start(v,d)
         b2d.body.set_angular_velocity(wheel,-speed/22)
     end
 end
+-- Highest chain or hull edge at x not above y (metres), or nil: the surface a start falls onto (camera only).
+function M.ground(d,x,y)
+    local best
+    local function edge(a,b)
+        local lo,hi=math.min(a[1],b[1]),math.max(a[1],b[1])
+        if hi-lo<1e-9 or x<lo or x>hi then return end
+        local h=a[2]+(b[2]-a[2])*(x-a[1])/(b[1]-a[1])
+        if h<=y and (not best or h>best) then best=h end
+    end
+    for _,chain in ipairs(d.chains) do for i=2,#chain do edge(chain[i-1],chain[i]) end end
+    for _,h in ipairs(d.hulls or {}) do local v=h.vertices;for i=1,#v do edge(v[i],v[i%#v+1]) end end
+    return best
+end
 function M.outside(d,s)
     local b=d.bounds;local scale=sys.get_config_number("physics.scale",0.01)
     return s.x*scale<b[1] or s.x*scale>b[2] or s.y*scale<b[3] or s.y*scale>b[4]

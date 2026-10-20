@@ -71,7 +71,7 @@ function cases(){
  const big=level('reject-text-256k','Rejected: text above 256 KiB',{length:400,segments:100});big.notes='x'.repeat(256*1024);
  const rejected=[
   ['length',long,'Non-finite bounds'],
-  ['segments',tooMany,'Station render budget exceeds 800 objects'],
+  ['segments',tooMany,'Station render budget exceeds 800 objects: 801 drawn (801 terrain segments)'],
   ['segments',chain,'Invalid chain length'],
   ['chains',chains,'Missing/too many chains'],
   ['hulls',hull65,'Invalid hulls'],

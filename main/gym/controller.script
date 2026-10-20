@@ -32,6 +32,21 @@ local function request_reset(self,reason)
         self.pending_reset = {generation=self.generation,reason=reason,requested=socket.gettime()}
     end
 end
+-- Follow camera at the start of an attempt (first start, Retry, section): the view it will settle on,
+-- over the station surface below the start. The look-ahead starts on the start speed's side.
+local function start_camera(self)
+    local d,scale=self.station,sys.get_config_number("physics.scale",0.01)
+    local x,y=vehicle.config.spawn_x,vehicle.config.spawn_y
+    -- The surface below a start is looked up once per start point (a full level has up to 32 x 2048 points).
+    local key=d.id..":"..x..":"..y
+    if self.camera_ground_key~=key then
+        local ground=stations.ground(d,x*scale,y*scale)
+        self.camera_ground_key,self.camera_ground=key,ground and ground/scale
+    end
+    local pos
+    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed<0 and -1 or 1,1/camera.get_projection("/camera#camera").m11)
+    go.set_position(pos,"/camera")
+end
 local function reset(self)
     local request = self.pending_reset
     self.pending_reset = nil
@@ -58,7 +73,7 @@ local function reset(self)
     for _,shape in ipairs(self.segments) do
         assert(b2d.shape.is_valid(shape.shape_id) and b2d.shape.are_sensor_events_enabled(shape.shape_id),"Retry lost chain/sensor handle")
     end
-    go.set_position(vmath.vector3(vehicle.config.spawn_x,feel.values.camera_height,500),"/camera")
+    start_camera(self)
     self.camera_zoom=feel.values.camera_zoom
     go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
     self.generation = self.generation+1
@@ -311,6 +326,7 @@ function update(self, dt)
             stations.restart(self)
         end)
         if not placed then fail_placement(self,err);return end
+        start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
@@ -333,10 +349,17 @@ function update(self, dt)
     end
     local target = go.get_position(self.target)
     if self.vehicle and self.vehicle.ready then
-        local pos,zoom=feel.camera(target,vehicle.state(self.vehicle).vx,go.get_position("/camera"),self.camera_zoom,dt)
+        -- Half the view height from the last projection (orthographic: m11 = 2 / height); it includes the zoom.
+        local half=1/camera.get_projection("/camera#camera").m11
+        local pos,zoom=feel.camera(self.camera_follow,target,b2d.body.get_linear_velocity(self.vehicle.chassis),vehicle.touching(self.vehicle),
+            go.get_position("/camera"),self.camera_zoom,half,dt)
         go.set_position(pos,"/camera")
         self.camera_zoom=zoom
         go.set("/camera#camera","orthographic_zoom",zoom)
+    elseif self.station then
+        -- Until the vehicle is ready the view waits where its start will settle, following the focus in x.
+        start_camera(self)
+        go.set_position(vmath.vector3(target.x,go.get_position("/camera").y,500),"/camera")
     else
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
