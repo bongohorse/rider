@@ -50,16 +50,29 @@ function init(self)
         gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.5,0.5,1))
         self.time_buttons[spec[1]]={box=box,label=label}
     end
+    -- A21 record and replay: two overlay buttons and a status line (desktop; touch uses the toolbar).
+    self.replay_buttons={}
+    for _,spec in ipairs({{"record",694,"Record [B]",84},{"replay",788,"Replay [G]",84}}) do
+        local box=layout.box(vmath.vector3(spec[2],390,0),vmath.vector3(spec[4],24,0),"left_top")
+        gui.set_color(box,vmath.vector4(0.12,0.3,0.3,1))
+        local label=layout.text(vmath.vector3(spec[2],390,0),spec[3],"left_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.5,0.5,1))
+        self.replay_buttons[spec[1]]={box=box,label=label}
+    end
+    self.replay_line=layout.text(vmath.vector3(240,364,0),"","left_top")
+    gui.set_font(self.replay_line,"default");gui.set_pivot(self.replay_line,gui.PIVOT_W);gui.set_scale(self.replay_line,vmath.vector3(0.48,0.48,1))
+    gui.set_color(self.replay_line,vmath.vector4(0.6,0.88,1,1))
     self.time_line=layout.text(vmath.vector3(480,460,0),"")
     gui.set_font(self.time_line,"default");gui.set_scale(self.time_line,vmath.vector3(0.7,0.7,1));gui.set_color(self.time_line,vmath.vector4(1,0.85,0.35,1))
     self.time={paused=false,step=1}
     self.debug_clock=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a20"
+    self.debug_replay=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a21"
     self.station=layout.text(vmath.vector3(240,434,0),"Straight | start 0 m/s [1-9]","left_top")
     gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
     self.station_result=layout.text(vmath.vector3(240,414,0),"","left_top")
     gui.set_font(self.station_result,"default");gui.set_pivot(self.station_result,gui.PIVOT_W);gui.set_scale(self.station_result,vmath.vector3(0.48,0.48,1))
     self.tuning_open=false
-    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy\nSpace: pause   X: slow motion 1x / 0.5x / 0.25x")
+    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy\nSpace: pause   X: slow motion 1x / 0.5x / 0.25x   B: record run   G: replay run (ghost)")
     gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
     gui.set_scale(self.help,vmath.vector3(0.5,0.5,1));gui.set_visible(self.help,false)
     self.tuning_button=layout.box(vmath.vector3(922,514,0),vmath.vector3(52,28,0),"right_top")
@@ -238,13 +251,17 @@ function on_message(self,id,data,sender)
             html5.run("window.riderMobile?.setTime?.("..tostring(data.paused)..","..data.step..")")
         end
     elseif id==hash("struts") then gui.set_text(self.struts_label,"Struts "..(data.enabled and "ON" or "OFF"))
+    elseif id==hash("replay_state") then
+        gui.set_text(self.replay_line,data.text)
+        if html5 then html5.run("window.riderMobile?.setReplay?.("..json.encode(data.text)..")") end
     elseif id==hash("finish_reached") then
         self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
         gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or ""))
         if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
     elseif id==hash("retry_done") then
         self.toast_time=1.5;gui.set_visible(self.reason,not mobile.enabled())
-        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or "Retry: manual")
+        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or data.reason=="record" and "Retry: recording from the start"
+            or data.reason=="replay" and "Retry: replay from the start" or "Retry: manual")
         if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
         msg.post(sender,"retry_labelled",{reason=data.reason})
     end
@@ -265,8 +282,10 @@ function update(self,dt)
     local enabled=mobile.enabled()
     gui.set_visible(self.section_next,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
     gui.set_visible(self.section_label,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
-    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label,self.time_line}) do gui.set_visible(node,not enabled) end
+    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label,self.time_line,self.replay_line}) do gui.set_visible(node,not enabled) end
     for _,b in pairs(self.time_buttons) do gui.set_visible(b.box,not enabled);gui.set_visible(b.label,not enabled) end
+    -- The open tuning panel can cover the Record/Replay buttons on small views: hide them then (B/G still work).
+    for _,b in pairs(self.replay_buttons) do gui.set_visible(b.box,not enabled and not self.panel_open);gui.set_visible(b.label,not enabled and not self.panel_open) end
     if self.debug_clock then
         -- A20 only: unscaled engine time (this collection is not time-scaled) next to the wall clock.
         self.engine_time,self.engine_frames=(self.engine_time or 0)+dt,(self.engine_frames or 0)+1
@@ -277,6 +296,14 @@ function update(self,dt)
         -- Debug burst: several time requests posted in one frame (stale-acknowledgement check).
         local ok,burst=pcall(json.decode,html5.run("(()=>{const b=window.riderDebugTimeBurst;window.riderDebugTimeBurst=null;return JSON.stringify(b||null)})()"))
         if ok and type(burst)=="table" then for _,a in ipairs(burst) do msg.post("main:/loader#script","time_control",{action=a}) end end
+    end
+    if self.debug_replay then
+        -- A21 only: editor mode/grid (shared module state, read only) prove B/G never touch the editor in Play and G
+        -- stays the grid key in Edit mode.
+        local editor=require "main.gym.editor"
+        local e=editor.doc and editor.doc.editor
+        html5.run("window.riderReplayEditor="..json.encode({mode=editor.mode,grid=editor.grid,revision=e and e.revision or -1,
+            undo=editor.history and #editor.history.undo or 0,toast=gui.get_text(self.reason),line=gui.get_text(self.replay_line)}))
     end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)
@@ -315,7 +342,8 @@ function update(self,dt)
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)},
-            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label)}))
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
+            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box)}))
     end
     if html5 then
         local status,visible=feedback.state()
@@ -353,6 +381,9 @@ function on_input(self,id,action)
     if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
         for name,b in pairs(self.time_buttons) do
             if gui.pick_node(b.box,action.x,action.y) then msg.post("main:/loader#script","time_control",{action=name});return true end
+        end
+        for name,b in pairs(self.replay_buttons) do
+            if not self.panel_open and gui.pick_node(b.box,action.x,action.y) and self.owner then msg.post(self.owner,"replay_control",{action=name});return true end
         end
     end
     if id==hash("tuning_toggle") and action.pressed then toggle_tuning(self);return true end

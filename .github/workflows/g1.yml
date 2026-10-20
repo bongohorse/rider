@@ -214,6 +214,8 @@ jobs:
             cases: 'le5d'
           - group: struts
             cases: 'cf3'
+          - group: replay
+            cases: 'a21'
           - group: controls
             cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -278,6 +280,9 @@ jobs:
       - name: Verify visual suspension struts against the bodies, toggle and identical reports
         if: contains(format(' {0} ', matrix.cases), ' cf3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/struts --case cf3
+      - name: Verify record and replay with a ghost on another preset, tick policy and pause/slow motion
+        if: contains(format(' {0} ', matrix.cases), ' a21 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/replay --case a21
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16
