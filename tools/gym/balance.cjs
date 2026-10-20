@@ -22,6 +22,8 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
  async function retry(){
   const n=await page.evaluate(()=>window.riderTelemetry.reset_count);
   await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,n);await page.keyboard.up('r');
+  // Let the engine sample the release before any next press: an up/down pair inside one frame is no new press.
+  const q=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(q=>window.riderTelemetry.sequence>q+1,q);
  }
  // One attempt from an in-world reset with the given driver; waits for the verdict (and the plank).
  async function attempt(mode,trace){
@@ -37,6 +39,8 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   assert.equal(r.trial.mode,mode);assert.equal(r.comparable,true);assert.equal(r.start_speed,0);
   return r;
  }
+ // The first n ticks of a run-length trace [[ticks, throttle, brake], ...].
+ function trim(trace,n){const out=[];let left=n;for(const [k,t,b] of trace){if(left<=0)break;out.push([Math.min(k,left),t,b]);left-=k;}assert.equal(left<=0,true,'trace shorter than the verdict');return out;}
  function summary(r){const x=r.record;return {status:x.status,reason:x.reason,time_s:x.time_s,chassis_x:x.chassis_x,margin_rear_m:x.margin_rear_m,margin_front_m:x.margin_front_m,
   max_speed_mps:x.max_speed_mps,throttle_s:x.throttle_s,brake_s:x.brake_s,input_changes:x.input_changes,pitch_min:x.pitch_min,pitch_max:x.pitch_max,seesaw:x.seesaw};}
  try{
@@ -67,11 +71,10 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    assert.equal(b.record.status,a.record.status,section+' replay status');
    assert(Math.abs(b.record.chassis_x-a.record.chassis_x)<=TOL.stop_x_m,section+' replay stop x');
    assert(Math.abs(b.record.time_s-a.record.time_s)<=TOL.time_s,section+' replay time');
-   // The replay applied the same per-tick commands: every recorded run is identical; only the final
-   // (open-ended) run may be longer because the replay continues with no input after the trace.
-   const sa=a.trial.trace,sb=b.trial.trace;
-   assert(sb.length>=sa.length,section+' replay trace shorter');
-   sa.forEach((e,i)=>{assert.deepEqual(sb[i].slice(1),e.slice(1),section+' replay command '+i);if(i<sa.length-1)assert.equal(sb[i][0],e[0],section+' replay ticks '+i);else assert(sb[i][0]>=e[0]);});
+   // The replay applied the same per-tick commands up to the verdict tick. Traces are captured at different
+   // moments after the verdict, so only that prefix is compared.
+   const ticks=Math.round(a.record.time_s*60);
+   assert(trim(b.trial.trace,ticks).length>0);assert.deepEqual(trim(b.trial.trace,ticks),trim(a.trial.trace,ticks),section+' replay commands');
    if(section==='seesaw')for(const key of ['tip_at','settled_at','settled_angle','rest_angle'])
     assert(Math.abs(b.record.seesaw[key]-a.record.seesaw[key])<=(key.endsWith('_at')?TOL.tip_s:TOL.angle_rad),'seesaw replay '+key);
   }
