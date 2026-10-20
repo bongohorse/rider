@@ -278,6 +278,11 @@ local function preset_rules(feel)
         assert(feel.validate(variant(case[1],case[2]),"a"),"Invalid preset accepted: "..case[1])
     end
     assert(feel.validate(variant("spring_hz",5),"b"),"Preset key/file mismatch accepted")
+    -- #211: the optional air_pitch_damping may be absent (A) or inside 0..20 N m s; anything else is refused.
+    assert(base.values.air_pitch_damping==nil and feel.validate(variant("air_pitch_damping",8),"a")==nil,"Optional air damping not optional")
+    for _,value in ipairs({-1,21,0/0}) do
+        assert(feel.validate(variant("air_pitch_damping",value),"a"),"Invalid air damping accepted: "..tostring(value))
+    end
     -- A file with a very long unknown key: its refusal reason is long; the stubbed D file returns it.
     local long=variant("\1"..string.rep("k",600),1)
     return assert(feel.validate(long,"a"))
@@ -304,6 +309,10 @@ function M.preset_tick(self,dt)
     elseif self.preset_phase=="select" and self.preset==self.preset_order[self.preset_index] and self.last_reset_reason=="preset" then
         self.preset_phase="drive";self.preset_drive_ticks=0
         self.preset_x=vehicle.state(self.vehicle).x
+        -- #211: an absent optional key applies its default (0), also after a preset that set it; the reset
+        -- tick (this one: the preset reset ran before vehicle.apply) never damps.
+        local k=feel.load(self.preset).values.air_pitch_damping or 0
+        assert(feel.values.air_pitch_damping==k and not self.vehicle.damped,"Air damping not replaced by preset "..self.preset)
         emit(self,"phase",{name="preset_drive",key=self.preset})
     elseif self.preset_phase=="drive" then
         if self.last_command.throttle==1 then self.preset_drive_ticks=self.preset_drive_ticks+1 end
@@ -312,6 +321,7 @@ function M.preset_tick(self,dt)
             assert(state.x-self.preset_x>100 and math.abs(state.angle)<0.6,"Preset is not drivable")
             assert(math.abs(b2d.joint.get_spring_hertz(self.vehicle.joints[1])-vehicle.config.spring_hz)<0.001,"Preset did not replace spring")
             assert(not self.invalid_preset and not self.preset_refused,"Registered preset refused")
+            assert(feel.values.air_pitch_damping>0 or self.vehicle.damped_ticks==0,"Air damping applied without the preset key")
             self.preset_index=self.preset_index+1
             if self.preset_index<=#self.preset_order then
                 self.preset_phase="select"

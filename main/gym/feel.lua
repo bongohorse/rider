@@ -2,11 +2,14 @@
 local M = {}
 M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 -- Preset registry (#199): the only list of selectable presets, in P-cycle and chip order.
--- A is the measurement baseline; B and C predate the rotation cap (#114); D and E are candidates.
-M.order={"a","b","c","d","e"}
-M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","coast_torque","rolling_resistance","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed"}
+-- A is the measurement baseline; B and C predate the rotation cap (#114); D, E and F are candidates.
+M.order={"a","b","c","d","e","f"}
+M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","coast_torque","rolling_resistance","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed","air_pitch_damping"}
+-- Optional preset keys and their defaults (#211): a file may omit them, so A/B/C stay byte-identical and
+-- behave as before. Every other key in preset_keys is required.
+M.optional={air_pitch_damping=0}
 -- Explicit ranges for preset keys without a slider; slider keys use their slider range and sign.
--- Units: binding u (joint caps), engine units, engine units/s, s, rad/s, zoom factor.
+-- Units: binding u (joint caps), engine units, engine units/s, s, rad/s, zoom factor, N m s.
 M.ranges={
     brake_torque={min=500,max=6000},
     reverse_speed={min=1,max=20},
@@ -18,7 +21,9 @@ M.ranges={
     camera_look_max={min=0,max=400},
     camera_zoom={min=0.5,max=2},
     camera_zoom_min={min=0.5,max=2},
-    camera_zoom_speed={min=100,max=2000}
+    camera_zoom_speed={min=100,max=2000},
+    -- N m s: airborne chassis torque -k*omega while no lean is held (#211); 0 = off.
+    air_pitch_damping={min=0,max=20}
 }
 function M.range(name)
     for _,spec in ipairs(M.sliders) do if spec.key==name then return spec end end
@@ -40,10 +45,12 @@ function M.validate(data,key)
         if display<spec.min or display>spec.max then return string.format("%s %.4g outside %s%g..%g",name,value,spec.sign and "-" or "",spec.min,spec.max) end
         count=count+1
     end
+    local present=0
     for _,name in ipairs(M.preset_keys) do
-        if data.values[name]==nil then return "missing "..name end
+        if data.values[name]~=nil then present=present+1
+        elseif M.optional[name]==nil then return "missing "..name end
     end
-    if count~=#M.preset_keys then return "unexpected fields" end
+    if count~=present then return "unexpected fields" end
     if data.values.camera_zoom_min>data.values.camera_zoom then return "camera_zoom_min above camera_zoom" end
 end
 -- Module field so the debug a9 probe can stub one refused file; nothing else replaces it.
@@ -70,7 +77,11 @@ function M.preset(requested)
         M.preset("a")
         return "a",false,refused
     end
-    for _,name in ipairs(M.preset_keys) do M.values[name]=data.values[name] end
+    for _,name in ipairs(M.preset_keys) do
+        local value=data.values[name]
+        if value==nil then value=M.optional[name] end
+        M.values[name]=value
+    end
     return key,valid,nil
 end
 -- Visual-only rider reaction (A15a); not a preset key, never touches physics.

@@ -78,6 +78,7 @@ function M.reset(v)
     for _,b in ipairs(bodies) do b2d.body.set_active(b,true);b2d.body.set_awake(b,true) end
     assert(b2d.shape.is_valid(v.head) and #b2d.body.get_shapes(v.chassis)==2,"Retry changed sensor ownership")
     v.reverse_time,v.reversing,v.coasting=0,false,false
+    v.reset_tick,v.damped,v.damped_ticks=true,false,0
     joints(v)
     assert(#b2d.body.get_joints(v.chassis)==2, "Joint leak after reset")
     rider.rest(v)
@@ -123,11 +124,22 @@ function M.apply(v,command,dt)
         for _,wheel in ipairs(v.wheels) do
             local omega=b2d.body.get_angular_velocity(wheel)
             -- Raw body torque (N m), distinct from the scaled joint cap.
-            -- No airborne chassis damping or repeated waking at rest.
+            -- No repeated waking at rest (airborne chassis damping is the separate #211 term below).
             if b2d.body.is_awake(wheel) and math.abs(omega)>0.01 then
                 b2d.body.apply_torque(wheel,-omega*c.rolling_resistance)
             end
         end
+    end
+    -- #211: optional airborne pitch damping, only with no wheel contact and no lean held. omega is rad/s
+    -- and body torque raw N m (neither scaled), so k is N m s; preset key absent = 0 = no torque at all.
+    -- Never on the reset tick: reset drops the cached contacts, so that tick reads as airborne.
+    -- v.damped (this tick) and v.damped_ticks (since the last reset) are read-only diagnostics.
+    v.damped=command.lean==0 and not grounded and c.air_pitch_damping>0 and not v.reset_tick
+    v.reset_tick=nil
+    if v.damped then
+        local omega=b2d.body.get_angular_velocity(v.chassis)
+        b2d.body.apply_torque(v.chassis,feel.body_torque(-c.air_pitch_damping*omega))
+        v.damped_ticks=(v.damped_ticks or 0)+1
     end
     if command.lean~=0 then
         local airborne=true
