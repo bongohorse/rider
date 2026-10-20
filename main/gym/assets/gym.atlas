@@ -4,3 +4,4 @@ images { image: "/main/gym/assets/chassis.png" }
 images { image: "/main/gym/assets/wheel.png" }
 images { image: "/main/gym/assets/rider.png" }
 images { image: "/main/gym/assets/solid.png" }
+images { image: "/main/gym/assets/strut.png" }

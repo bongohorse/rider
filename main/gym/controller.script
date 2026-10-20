@@ -14,6 +14,8 @@ local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
 local telemetry = require "main.gym.telemetry"
 local editor_view = require "main.gym.editor_view"
+-- Car Feel 3 struts: render-only visuals on the chassis; never touches bodies or the fixed tick.
+local juice = require "main.gym.juice"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
 local LOADER="main:/loader#script"
 local GAMEPLAY={}
@@ -321,6 +323,7 @@ function update(self, dt)
         audio.update(self)
         rider.animate(self.vehicle,dt)
         rider.paint(self.vehicle,self.head_contact)
+        juice.update(self)
         local sample = telemetry.frame(self.metrics,self.vehicle,frame_dt)
         if sample then
             self.telemetry_seq=self.telemetry_seq+1
@@ -519,6 +522,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
+    elseif id==hash("struts_toggle") then juice.toggle()
     elseif id==hash("time_state") and data.generation==self.session_generation then
         if data.paused~=self.paused then clear_time_input(self);audio.pause(self,data.paused) end
         if self.paused and not data.paused then self.since_resume={ticks=0,driven=0} end
