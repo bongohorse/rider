@@ -1,5 +1,5 @@
 // Release bumps station (A19b): URL start, keyboard driver, section switch and retained-world Retry; the
-// touch toolbar's Next station reaches it after the last numbered station.
+// touch toolbar's Next station reaches it after the preceding station (`balance`).
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 module.exports=async function bumps(browser,url,sha,out){
  const context=await browser.newContext({viewport:{width:1280,height:720}}),page=await context.newPage(),errors=[],cases=[];
@@ -25,8 +25,8 @@ module.exports=async function bumps(browser,url,sha,out){
  }finally{await context.close();}
  const phone=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true}),mobile=await phone.newPage();
  try{
-  const target=new URL(url);target.search='?station=gaps-landing&speed=0&touch=1';await mobile.goto(target.href);
-  await mobile.waitForFunction(()=>window.riderStationReport?.station==='gaps-landing'&&window.riderTelemetry?.sequence>2);
+  const target=new URL(url);target.search='?station=balance&touch=1';await mobile.goto(target.href);
+  await mobile.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderTelemetry?.sequence>2);
   await mobile.getByRole('button',{name:'Next station',exact:true}).click();
   await mobile.waitForFunction(()=>window.riderStationReport?.station==='bumps'&&window.riderTelemetry?.sequence>2);
   await mobile.getByRole('button',{name:'Next section',exact:true}).click();await mobile.waitForFunction(()=>window.riderStationReport.section==='long-0.1');
