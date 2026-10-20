@@ -146,14 +146,20 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderTelemetry.finish_count===1,null,{timeout:10000});
   await page.waitForTimeout(800);t=await tm();assert.equal(t.finish_count,1);
   assert.equal(finishes.length,fast+1);assert.ok(finishes.at(-1).speed>15,'crossing speed '+finishes.at(-1).speed);
-  await key('r');await page.waitForFunction(()=>window.riderTelemetry.reset_count===1&&window.riderTelemetry.finish_done===false);
+  // R resets and re-arms FINISH. From 4 m at 20 m/s the second crossing follows within about 0.2 s, too
+  // short to poll finish_done===false reliably, so the re-arm is proven by the second pass instead: the
+  // reset count went to 1 and FINISH fired again (it fires once per attempt), finish_done true again.
+  await key('r');await page.waitForFunction(()=>window.riderTelemetry.reset_count===1);
+  await page.waitForFunction(()=>window.riderTelemetry.finish_count===2&&window.riderTelemetry.finish_done===true,null,{timeout:10000});
+  for(let i=0;i<40&&finishes.length<fast+2;i++)await page.waitForTimeout(50);
+  assert.equal(finishes.length,fast+2,'FINISH was not re-armed by R');assert.equal((await tm()).reset_count,1);
   t=await tm();assert.deepEqual([t.spawn_x,t.spawn_y],testSpawn,'R repeats the test start');
   // Test starts are never saved or exported: the saved level keeps START, its bounds and the editor sources.
   // A test run never replaces the save: the status says so and the saved level is the earlier START level.
   await page.waitForFunction(()=>window.riderCustomStatus==='Test run; the saved level is unchanged');
   const afterTest=await page.evaluate(()=>window.riderSavedLevel);
   assert.deepEqual(afterTest.spawn,start);assert.deepEqual(afterTest.bounds,saved.bounds);assert.equal(afterTest.start_speed,8);
-  measurements.high_speed={crossing_speed_mps:finishes.at(-1).speed,time_s:finishes.at(-1).time};cases.push('test_start_high_speed_finish');
+  measurements.high_speed={crossing_speed_mps:finishes[fast].speed,time_s:finishes[fast].time};cases.push('test_start_high_speed_finish');
 
   // 10. Refused test starts: no surface below, outside the bounds, inside geometry.
   await key('e');e=await edit();
