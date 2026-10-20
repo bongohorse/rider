@@ -1,8 +1,13 @@
+# Preset comparison: A vs B vs C vs D vs E (2026-10-20)
+
+> Generated report (tools/gym/presets_compare.cjs on `a594495`, synthetic desktop runs), not an agent rule. Measured values, not tuning targets.
+
+**Contents:** [Failed runs](#failed-runs) · [Tuning](#tuning) · [ramps](#ramps-a16) · [steps](#steps-a17) · [gaps](#gaps-a19) · [seams](#seams-a18) · [bumps](#bumps-a19b) · [air](#air-a19c) · [balance](#balance-a19d) · [Follow-ups](#follow-ups)
+
 > Car Feel 2 ([#200](https://github.com/bongohorse/rider/issues/200), PR [#207](https://github.com/bongohorse/rider/pull/207)): full A vs B/C/D/E comparison on merged main `a594495`. All seven stations ran in two parallel processes on one debug bundle; the tables were then combined (`--tables-only`). Preset F (#211, PR #213) was not merged when the run started and is not included. The A-vs-A repeat check (identical in every row) is in PR #207.
 >
 > **One failed run: C on steps.** A runner assertion that holds only for preset A stopped it, not the preset check. The steps `stop-probe` asserts "diagnostic stop must actually bottom" (compression 0.175–0.20 m). With C's 8 Hz spring the probe stayed STUCK and did not bottom (compression 0.134 m), so C's steps column reads FAIL. Balance under B ran after the #204 fix (#206). Synthetic desktop runs (Playwright Chromium, WSL2), not device evidence.
 
-# Preset comparison: A vs B vs C vs D vs E
 
 Source `a594495b9effe129266ca2066f6f80f088f294be`, 156.0.8078.4, one debug Gym bundle; synthetic desktop runs, not device evidence (real device: NOT RUN). Status: **FAIL**.
 

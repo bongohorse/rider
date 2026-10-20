@@ -80,7 +80,7 @@ Regeln aus diesem Abend:
 | --- | --- | --- | --- |
 | A19b Bumps | #194 | `77c65cf` | Wellenleiter, Kamm/Tal, Abhebetempo |
 | A19c Air | #197 | `ce81963` | Flugzeit, Rotation, Landewinkel |
-| A19d Balance | #195, #206 | `085a8ba` | Balken und Wippe; Runner auch für andere Presets |
+| A19d Balance | #195, #206 | `085a8ba`, `74a387f` | Balken und Wippe; Runner auch für andere Presets |
 | A21 Replay | #202 | `850b2c9` | B aufnehmen, P Preset, G abspielen mit Geist |
 | Presets D/E | #203 | `f00c29a` | Registry, A/B/C per SHA geschützt |
 | Federbeine | #205 | `d9f8e97` | Sichtbare Federung, abschaltbar |
@@ -88,7 +88,7 @@ Regeln aus diesem Abend:
 | Engine-Guard | #210 | `05958a0` | Kein stiller Engine-Tausch mehr möglich |
 | STATUS | #212 | `31e8d6a` | M4 und Nacht dokumentiert |
 
-Kandidaten-Presets (A bleibt unverändert):
+Kandidaten-Presets (A bleibt unverändert; Quelle: Messtabelle in PR #203, synthetische Desktop-Läufe):
 
 | Messung | A | D „snappy“ | E „planted“ |
 | --- | --- | --- | --- |

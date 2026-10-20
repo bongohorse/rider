@@ -23,7 +23,7 @@ M4, M5 und der Level Editor (LE1–LE6) sind technisch fertig, gemergt und deplo
 | Preset F | #213 | `7320c57` | D + Dämpfung nur im neutralen Flug; letzter Kandidat |
 | Wippe | #220, #229 | `ba84538`, `bdc416b` | Reset kanonisch (Box2D-Schlaf-Timer), Test misst pro Tick |
 | Engine-Absicherung | #214, #219 | `1a1eb2b`, `e7c3017` | Cache-Hygiene; Box2D-v3-Prüfung auch für die Engine, die Spieler laden |
-| CI-Stabilität | #222, #223, #226, #231, #232 | `e965f52` … `e49e90b` | Testserver-Reset, le6-Rennen, verlorene Klicks (gemeinsamer Frame-Helfer) |
+| CI-Stabilität | #223, #222, #226, #231, #232 | `5fb3d6a`, `e965f52`, `0aa1544`, `2d3dac6`, `e49e90b` | Testserver-Reset, le6-Rennen, verlorene Klicks (gemeinsamer Frame-Helfer) |
 | STATUS | #234 | `d876efa` | Alles dokumentiert, Claudios Entscheidungen eingetragen |
 
 Außerdem: #95 geschlossen (geplanter Nightly auf neuer Matrix grün), 98 gemergte Remote-Branches gelöscht, zwei alte Worktrees entfernt, Bumps-Abnahme eingetragen.
