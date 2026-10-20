@@ -2,8 +2,10 @@
 -- (controller.script); Defold owns the plank game object, its body and the world.
 -- Units: station data in metres, converted once here (/physics.scale) to engine units; angles in rad.
 -- Lifecycle: spawn (factory, in setup) -> attach (next update: borrow body, create joint) -> reset
--- (retry/section window inside the owner's fixed_update, never in a contact callback) -> remove
--- (placement failure) or proxy unload (Defold deletes object, body and joint; final drops references).
+-- -> remove (placement failure) or proxy unload (Defold deletes object, body and joint; final drops
+-- references). Joint create/destroy windows: the first attach and its canonical reset run in the
+-- owner's update() (world unlocked, same window as vehicle.attach); every later reset (Retry, section,
+-- bounds) runs in the owner's fixed_update reset window. Never in a contact callback.
 -- The revolute joint is recreated on every reset: the old handle is destroyed and must be invalid,
 -- the new one valid, the plank keeps exactly one joint, and the joint generation advances.
 local data=require "main.gym.station_data"
@@ -17,7 +19,9 @@ function M.spawn(spec)
     local s={spec=spec,generation=0}
     local p,angle=pose(s)
     s.id=factory.create("#seesaw",p,vmath.quat_rotation_z(angle))
-    go.set(msg.url(nil,s.id,"sprite"),"tint",vmath.vector4(0.95,0.6,0.3,1))
+    -- A failure after create must not orphan the plank object.
+    local ok,err=pcall(go.set,msg.url(nil,s.id,"sprite"),"tint",vmath.vector4(0.95,0.6,0.3,1))
+    if not ok then go.delete(s.id);error(err) end
     return s
 end
 local function joint(s)
@@ -34,6 +38,8 @@ local function joint(s)
     s.generation=s.generation+1
 end
 function M.attach(s,terrain)
+    -- seesaw.convexshape is authored in engine units for the gym scale (100 units = 1 m).
+    assert(math.abs(scale()-0.01)<1e-6,"Seesaw resource requires physics.scale 0.01") -- float32 config value
     s.terrain=terrain
     s.body=b2d.get_body(msg.url(nil,s.id,"body"))
     assert(b2d.body.is_valid(s.body),"Seesaw body unavailable")
@@ -57,20 +63,29 @@ function M.reset(s)
     -- Pinned Box2D 3.1 builds the rotation with an approximate cos/sin (b2MakeRot), so the read-back
     -- angle differs by about 0.002 rad: the pose check allows 0.005 rad.
     -- Drop cached contacts before teleporting; synchronize the owning GO too (engine pitfall #1).
-    b2d.body.set_active(s.body,false)
-    local visual=go.get_position(s.id)
-    go.set_position(vmath.vector3(p.x,p.y,visual.z),s.id)
-    go.set_rotation(vmath.quat_rotation_z(angle),s.id)
-    b2d.body.set_transform(s.body,p,angle)
-    b2d.body.set_linear_velocity(s.body,vmath.vector3())
-    b2d.body.set_angular_velocity(s.body,0)
-    b2d.body.set_active(s.body,true)
-    b2d.body.set_awake(s.body,true)
-    local at=b2d.body.get_position(s.body)
-    if not (math.abs(at.x-p.x)<0.01 and math.abs(at.y-p.y)<0.01 and math.abs(b2d.body.get_angle(s.body)-angle)<0.005) then
-        error(string.format("Noncanonical seesaw pose (%.4f, %.4f, %.5f)",at.x,at.y,b2d.body.get_angle(s.body)))
+    local at
+    -- Even if a pose check fails, the plank is reactivated and gets its joint back before the error
+    -- propagates, so no session is left with a jointless plank or a dangling handle.
+    local ok,err=pcall(function()
+        b2d.body.set_active(s.body,false)
+        local visual=go.get_position(s.id)
+        go.set_position(vmath.vector3(p.x,p.y,visual.z),s.id)
+        go.set_rotation(vmath.quat_rotation_z(angle),s.id)
+        b2d.body.set_transform(s.body,p,angle)
+        b2d.body.set_linear_velocity(s.body,vmath.vector3())
+        b2d.body.set_angular_velocity(s.body,0)
+        b2d.body.set_active(s.body,true)
+        b2d.body.set_awake(s.body,true)
+        at=b2d.body.get_position(s.body)
+        if not (math.abs(at.x-p.x)<0.01 and math.abs(at.y-p.y)<0.01 and math.abs(b2d.body.get_angle(s.body)-angle)<0.005) then
+            error(string.format("Noncanonical seesaw pose (%.4f, %.4f, %.5f)",at.x,at.y,b2d.body.get_angle(s.body)))
+        end
+        assert(vmath.length(b2d.body.get_linear_velocity(s.body))<0.001 and math.abs(b2d.body.get_angular_velocity(s.body))<0.001,"Seesaw velocity survived reset")
+    end)
+    if not ok then
+        if b2d.body.is_valid(s.body) then b2d.body.set_active(s.body,true);joint(s) end
+        error(err)
     end
-    assert(vmath.length(b2d.body.get_linear_velocity(s.body))<0.001 and math.abs(b2d.body.get_angular_velocity(s.body))<0.001,"Seesaw velocity survived reset")
     joint(s)
     s.last_reset={old_joint_valid=stale,joint_valid=b2d.joint.is_valid(s.joint),joints=#b2d.body.get_joints(s.body),
         generation=s.generation,angle=b2d.body.get_angle(s.body),omega=b2d.body.get_angular_velocity(s.body),

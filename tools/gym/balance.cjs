@@ -63,10 +63,17 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    assert.equal(a.record.status,'COMPLETED',section+' skill: '+a.record.reason);
    assert.equal(a.record.throttle_s+a.record.brake_s>0,true);assert.equal(a.record.lean_max,0);
    if(section==='seesaw')await page.screenshot({path:path.join(out,'balance-seesaw-skill.png')});
-   const b=await attempt('replay',a.trial.trace);replay[section]=summary(b);
+   const b=await attempt('replay',a.trial.trace);replay[section]={...summary(b),trace:b.trial.trace};
    assert.equal(b.record.status,a.record.status,section+' replay status');
    assert(Math.abs(b.record.chassis_x-a.record.chassis_x)<=TOL.stop_x_m,section+' replay stop x');
    assert(Math.abs(b.record.time_s-a.record.time_s)<=TOL.time_s,section+' replay time');
+   // The replay applied the same per-tick commands: every recorded run is identical; only the final
+   // (open-ended) run may be longer because the replay continues with no input after the trace.
+   const sa=a.trial.trace,sb=b.trial.trace;
+   assert(sb.length>=sa.length,section+' replay trace shorter');
+   sa.forEach((e,i)=>{assert.deepEqual(sb[i].slice(1),e.slice(1),section+' replay command '+i);if(i<sa.length-1)assert.equal(sb[i][0],e[0],section+' replay ticks '+i);else assert(sb[i][0]>=e[0]);});
+   if(section==='seesaw')for(const key of ['tip_at','settled_at','settled_angle','rest_angle'])
+    assert(Math.abs(b.record.seesaw[key]-a.record.seesaw[key])<=(key.endsWith('_at')?TOL.tip_s:TOL.angle_rad),'seesaw replay '+key);
   }
   cases.push('skill_completes_every_section','recorded_trace_replays_same_outcome');
   // 3. Full throttle from rest: at least one section must be missed.
@@ -81,7 +88,11 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    for(const key of ['tip_at','settled_at'])assert(Number.isFinite(q[key])&&Math.abs(q[key]-p[key])<=TOL.tip_s,label+' '+key);
    for(const key of ['settled_angle','final_angle','rest_angle'])assert(Number.isFinite(q[key])&&Math.abs(q[key]-p[key])<=TOL.angle_rad,label+' '+key);
   }
-  for(const q of runs){same(q,runs[0],'seesaw repeat');assert.equal(q.limit_reached,false);assert(q.settled_angle<0,'plank tipped to the exit deck');}
+  // Tipped and settled means the right tip rests on the exit deck: the mirror of the geometric rest angle
+  // (station data, derived from the plank geometry), not merely below level.
+  for(const q of runs){same(q,runs[0],'seesaw repeat');assert.equal(q.limit_reached,false);
+   assert(Math.abs(q.settled_angle+q.rest_target)<.02,'plank settled on the exit deck: '+q.settled_angle);
+   assert(Math.abs(q.rest_angle-q.rest_target)<.02,'plank rested on the start deck: '+q.rest_angle);}
   for(const r of [...Object.values(skill),...Object.values(replay),...Object.values(full)])if(r.seesaw)assert.equal(r.seesaw.limit_reached,false,'joint limit reached');
   seesaw.repeats=runs;cases.push('seesaw_tips_and_settles_reproducibly','joint_limit_never_reached');
   // 5. R while the plank is still swinging: canonical pose and velocity, a fresh joint, no stale handle.
