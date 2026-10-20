@@ -145,7 +145,8 @@ const TOL={position_m:0.05,angle_rad:0.05};
   s=await R();assert.equal(s.ghost.count,3);assert.equal(s.play.ended,'done');
   await press('r',r=>window.riderReplay.resets===r+1,s.resets);
   s=await R();assert.equal(s.play,false);assert.equal(s.ghost.count,0);assert(!s.status.includes('COMPARED'),'stale result: '+s.status);
-  await press('p',()=>window.riderReplay.preset==='a');
+  // Back to A through the rest of the registry (#199: P cycles A-B-C-D-E).
+  for(const key of ['d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
   cases.push('finished_replay_cleared_by_retry');
 
   // 7. Deliberately bad trace: one recorded command block perturbed (full lean against the recording, ticks 30-89) must diverge.
@@ -220,7 +221,7 @@ const TOL={position_m:0.05,angle_rad:0.05};
    s=await R();assert.equal(s.recording.error,false);assert(s.recording.ticks>0);assert.equal(s.recording.trailing,true);
    measurements.active_ends[reason]=s.recording.ticks;
   }
-  await press('p',()=>window.riderReplay.preset==='c');await press('p',()=>window.riderReplay.preset==='a');
+  for(const key of ['c','d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
   cases.push('active_recording_ended_by_resets');
 
   // 14. A run recorded into a crash (head contact with crash on: full throttle, lean back) and replayed: the result
@@ -251,7 +252,7 @@ const TOL={position_m:0.05,angle_rad:0.05};
    await press('r',r=>window.riderReplay.resets===r+1,s.resets);
    s=await R();assert.equal(s.play,false);assert.equal(s.ghost.count,0);
   }
-  await press('p',()=>window.riderReplay.preset==='c');await press('p',()=>window.riderReplay.preset==='a');
+  for(const key of ['c','d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
   await press('c',()=>window.riderTelemetry?.crash_enabled===false);
   cases.push('crash_end_keeps_result');
 
