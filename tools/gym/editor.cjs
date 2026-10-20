@@ -146,14 +146,20 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderTelemetry.finish_count===1,null,{timeout:10000});
   await page.waitForTimeout(800);t=await tm();assert.equal(t.finish_count,1);
   assert.equal(finishes.length,fast+1);assert.ok(finishes.at(-1).speed>15,'crossing speed '+finishes.at(-1).speed);
-  await key('r');await page.waitForFunction(()=>window.riderTelemetry.reset_count===1&&window.riderTelemetry.finish_done===false);
+  // R resets and re-arms FINISH. From 4 m at 20 m/s the second crossing follows within about 0.2 s, too
+  // short to poll finish_done===false reliably, so the re-arm is proven by the second pass instead: the
+  // reset count went to 1 and FINISH fired again (it fires once per attempt), finish_done true again.
+  await key('r');await page.waitForFunction(()=>window.riderTelemetry.reset_count===1);
+  await page.waitForFunction(()=>window.riderTelemetry.finish_count===2&&window.riderTelemetry.finish_done===true,null,{timeout:10000});
+  for(let i=0;i<40&&finishes.length<fast+2;i++)await page.waitForTimeout(50);
+  assert.equal(finishes.length,fast+2,'FINISH was not re-armed by R');assert.equal((await tm()).reset_count,1);
   t=await tm();assert.deepEqual([t.spawn_x,t.spawn_y],testSpawn,'R repeats the test start');
   // Test starts are never saved or exported: the saved level keeps START, its bounds and the editor sources.
   // A test run never replaces the save: the status says so and the saved level is the earlier START level.
   await page.waitForFunction(()=>window.riderCustomStatus==='Test run; the saved level is unchanged');
   const afterTest=await page.evaluate(()=>window.riderSavedLevel);
   assert.deepEqual(afterTest.spawn,start);assert.deepEqual(afterTest.bounds,saved.bounds);assert.equal(afterTest.start_speed,8);
-  measurements.high_speed={crossing_speed_mps:finishes.at(-1).speed,time_s:finishes.at(-1).time};cases.push('test_start_high_speed_finish');
+  measurements.high_speed={crossing_speed_mps:finishes[fast].speed,time_s:finishes[fast].time};cases.push('test_start_high_speed_finish');
 
   // 10. Refused test starts: no surface below, outside the bounds, inside geometry.
   await key('e');e=await edit();
@@ -197,8 +203,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // 14. Every built-in station opens as a template copy (R3) that compiles without Play errors; Undo brings back the replaced document.
   await key('e');e=await edit();const own=e.id,ids=await page.evaluate(()=>Object.keys(window.riderEditor.buttons).filter(n=>n.startsWith('template_')).map(n=>n.slice(9)));
   assert.equal(ids.length,12);const templates={};
+  // The template list is paged (LE6): every template is reached through the pages, and no shown template
+  // button overlaps the paging row or Close (one button height apart at least, canvas pixels).
+  const unit=await page.evaluate(()=>{const c=document.querySelector('canvas');return Math.min(c.width/960,c.height/540);});
   for(const id of ids){
    await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
+   for(let i=0;i<5&&!(await ed()).visible.includes('template_'+id);i++){const page0=(await ed()).tpl_page;await button('tpl_next');await page.waitForFunction(p=>window.riderEditor.tpl_page===p+1,page0);}
+   const shown=await ed();assert.ok(shown.visible.includes('template_'+id),id+' not reachable through the template pages');
+   const below=['dialog_close','tpl_prev','tpl_next'].filter(n=>shown.visible.includes(n)).map(n=>shown.buttons[n].y);
+   for(const n of shown.visible.filter(n=>n.startsWith('template_')))for(const y of below)assert.ok(shown.buttons[n].y-y>=24*unit,n+' overlaps the dialog controls');
    await button('template_'+id);await page.waitForFunction(id=>window.riderEditor.id==='my-'+id,id);
    e=await ed();assert.equal(e.problem,'',id+': '+e.problem);templates[id]=e.objects;
   }

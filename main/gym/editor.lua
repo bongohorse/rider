@@ -19,10 +19,13 @@ local socket=require "socket"
 -- authoring objects; it survives opening another level. conflict: a pending R1 choice for the open level.
 -- behind: instances whose latest state is not fully saved (a failed draft or My levels write, or a My levels
 -- copy older than the draft); they are saved again before another document becomes current.
+-- show_bounds: the R13 bounds are drawn (LE6, view only). last_test: {position, instance} of the last test
+-- start that reached a drive-ready run (LE6); it belongs to that document instance only.
 -- unsynced: the last browser-storage (IndexedDB) sync failed, so saves since the last good sync may not
 -- survive a reload; set until a later sync succeeds.
 local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},points={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
-    camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
+    camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={},error_at={},warning_at={},
+    show_bounds=false,last_test=nil}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"Draft is not valid JSON" end
@@ -37,11 +40,21 @@ local function touch(geometry)
     if geometry then M.geometry_version,M.shape_version=M.geometry_version+1,M.shape_version+1 end
 end
 -- Live validation (LE3): every Play-blocking error and the non-blocking warnings, after each action.
+-- Each message may have a target (LE6 jump-to-problem): error_at[i] / warning_at[i] =
+-- {ids, at, start} (editor_doc.problems), resolved by stable id when a row is clicked.
 local function check()
-    local errors,warnings=doc_lib.problems(M.doc.editor)
+    local e=M.doc.editor
+    local errors,warnings,error_at,warning_at=doc_lib.problems(e)
     local level,err=doc_lib.compile(M.doc,nil,errors)
-    if err and errors[1]~=err then errors[#errors+1]=err end
+    if err and errors[1]~=err then
+        errors[#errors+1]=err
+        -- Compile errors about START (its clearance, the start limit) point at START and what it overlaps.
+        local s=e.start.position
+        local blocked=err:match("^START overlaps") and doc_lib.blocked(e,s)
+        if blocked or err:match("^Start is limited") then error_at[#errors]={start=true,ids=blocked and {blocked.id} or nil,at={s[1],s[2]}} end
+    end
     M.problem,M.errors,M.warnings=errors[1],errors,warnings
+    M.error_at,M.warning_at=error_at,warning_at
     -- Physical chains: a two-sided run counts twice (as towards the 32-chain limit).
     M.chains=0
     for i=1,level and #level.chains or 0 do M.chains=M.chains+(level.two_sided and level.two_sided[i] and 2 or 1) end
@@ -177,6 +190,11 @@ function M.undo(back)
     M.vertex,M.vertex2,M.anchor,M.points=nil,nil,nil,{}
     resolve_selection();check();touch(geometry)
     return true
+end
+-- The last launched test start of the current document (LE6 navigation), or nil.
+function M.last_test_start()
+    local t=M.last_test
+    return t and t.instance==M.opened and t.position or nil
 end
 function M.new_id()
     local e=M.doc.editor

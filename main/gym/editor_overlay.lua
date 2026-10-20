@@ -4,7 +4,9 @@
 -- created once in init; nodes a frame does not use are disabled. Positions are canvas pixels; sizes
 -- are reference pixels (a 1280 x 720 CSS canvas) scaled by o.s, so HiDPI or larger windows keep them
 -- in proportion to the editor panels.
-local M={GRID=96,HANDLES=192,LINES=64}
+-- BOUNDS: the R13 bounds rectangle (LE6), its own 4 lines so previews never take them.
+local M={GRID=96,HANDLES=192,LINES=64,BOUNDS=4}
+local POOLS={"grid","handles","lines","bounds"}
 -- The grid is drawn at the snap step or a coarser 1-2-5 step, at least 24 px apart and never more
 -- lines than the pool holds (a 4K canvas gets a coarser grid, not a partial one).
 M.STEPS={0.1,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000}
@@ -18,10 +20,11 @@ local function box(o,color)
 end
 -- Call first in init: GUI nodes draw in creation order, so the panels created later stay on top.
 function M.init()
-    local o={nodes=0,k=4/3,s=1,grid={},handles={},lines={},used={grid=0,handles=0,lines=0},dropped=0}
+    local o={nodes=0,k=4/3,s=1,grid={},handles={},lines={},bounds={},used={grid=0,handles=0,lines=0,bounds=0},dropped=0}
     for i=1,M.GRID do o.grid[i]=box(o,GRID) end
     for i=1,M.LINES do o.lines[i]=box(o) end
     for i=1,M.HANDLES do o.handles[i]=box(o) end
+    for i=1,M.BOUNDS do o.bounds[i]=box(o) end
     o.snap=box(o)
     o.readout=gui.new_text_node(vmath.vector3(0,0,0),"");o.nodes=o.nodes+1
     gui.set_font(o.readout,"default");gui.set_pivot(o.readout,gui.PIVOT_SW);gui.set_scale(o.readout,vmath.vector3(0.42,0.42,1))
@@ -36,7 +39,9 @@ function M.begin(o)
     o.k=math.max(1e-6,(b.x-a.x)/100)
     -- 960 x 540 GUI units fill a 1280 x 720 canvas at scale 1.
     o.s=o.k*0.75
-    o.last,o.used={grid=o.used.grid,handles=o.used.handles,lines=o.used.lines},{grid=0,handles=0,lines=0}
+    local used=o.used
+    o.last,o.used={},{}
+    for _,pool in ipairs(POOLS) do o.last[pool],o.used[pool]=used[pool],0 end
     o.dropped=0
 end
 local function take(o,pool)
@@ -104,6 +109,15 @@ function M.grid(o,map,w,h,step)
     o.spacing=spacing
     return spacing,major
 end
+-- A rectangle between two canvas corners in the bounds pool (LE6). Only the sides inside the canvas
+-- (w x h pixels) are drawn, clipped to it, so a far-away side never becomes a huge node.
+function M.rect(o,a,b,w,h,color,width)
+    local x0,x1,y0,y1=math.min(a[1],b[1]),math.max(a[1],b[1]),math.min(a[2],b[2]),math.max(a[2],b[2])
+    local cx0,cx1,cy0,cy1=math.max(x0,-4),math.min(x1,w+4),math.max(y0,-4),math.min(y1,h+4)
+    if cx0>cx1 or cy0>cy1 then return end
+    for _,y in ipairs({y0,y1}) do if y>=-4 and y<=h+4 then M.line(o,{cx0,y},{cx1,y},color,width,"bounds") end end
+    for _,x in ipairs({x0,x1}) do if x>=-4 and x<=w+4 then M.line(o,{x,cy0},{x,cy1},color,width,"bounds") end end
+end
 -- Disable what this frame did not use.
 function M.finish(o)
     for pool,count in pairs(o.last or {}) do
@@ -111,8 +125,8 @@ function M.finish(o)
     end
 end
 function M.hide(o)
-    for _,pool in ipairs({"grid","handles","lines"}) do for _,n in ipairs(o[pool]) do gui.set_enabled(n,false) end end
-    o.used,o.last={grid=0,handles=0,lines=0},nil
+    for _,pool in ipairs(POOLS) do for _,n in ipairs(o[pool]) do gui.set_enabled(n,false) end end
+    o.used,o.last={grid=0,handles=0,lines=0,bounds=0},nil
     gui.set_enabled(o.snap,false);gui.set_enabled(o.readout,false)
 end
 return M

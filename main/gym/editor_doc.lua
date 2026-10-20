@@ -406,8 +406,12 @@ local function self_cross(pts)
         if found then return s end
     end
 end
+-- Problems (LE3; jump-to-problem LE6): Play-blocking errors and warnings as messages, plus a target per
+-- message where it has one: {ids = source object ids (pieces, prefabs, curves; never sampled segments),
+-- at = a location in metres, start = true for START}. Messages without a target stay unlocated.
 function M.problems(e)
     local errors,warnings={},{}
+    local error_at,warning_at={},{}
     local pieces=M.pieces(e)
     local runs=M.runs(e)
     local hulls=false
@@ -415,32 +419,32 @@ function M.problems(e)
     if #runs==0 and not hulls then errors[#errors+1]="No terrain yet: draw a line [D] or a curve [C], or place a prefab [P]." end
     for _,o in ipairs(e.objects) do
         local err=M.sample_error(o)
-        if err then errors[#errors+1]=M.label(o).." "..err.."." end
+        if err then errors[#errors+1]=M.label(o).." "..err..".";error_at[#errors]={ids={o.id}} end
     end
     local chains=0
     for _,run in ipairs(runs) do
         local name=#run>1 and "Run "..run[1].."-"..run[#run] or M.label(pieces[run[1]])
         for _,chain in ipairs(M.run_chains(e,run,pieces)) do
             local pts,owner=chain.points,chain.owner
-            if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run." end
+            if #pts>2048 then errors[#errors+1]=name.." has "..#pts.." points; the limit is 2048 per connected run.";error_at[#errors]={ids=run} end
             local bad
             for i=2,#pts do
                 local a,b=pts[i-1],pts[i]
                 local dx,dy=b[1]-a[1],b[2]-a[2]
-                if dx*dx+dy*dy<0.0001 then errors[#errors+1]=M.label(pieces[owner[i]]).." has points closer than 1 cm at "..at(b)..".";bad=true;break end
+                if dx*dx+dy*dy<0.0001 then errors[#errors+1]=M.label(pieces[owner[i]]).." has points closer than 1 cm at "..at(b)..".";error_at[#errors]={ids={owner[i]},at={b[1],b[2]}};bad=true;break end
                 local c=pts[i+1]
                 if c then
                     local ex,ey=c[1]-b[1],c[2]-b[2]
                     local l=math.sqrt((dx*dx+dy*dy)*(ex*ex+ey*ey))
                     if dx*ex+dy*ey<0 and math.abs(dx*ey-dy*ex)<=1e-6*l then
-                        errors[#errors+1]=M.label(pieces[owner[i]]).." doubles back on itself at "..at(b)..".";bad=true;break
+                        errors[#errors+1]=M.label(pieces[owner[i]]).." doubles back on itself at "..at(b)..".";error_at[#errors]={ids={owner[i]},at={b[1],b[2]}};bad=true;break
                     end
                 end
             end
             local one=M.one_sided(pts)
             if not bad and not one and #pts<=2048 then
                 local s=self_cross(pts)
-                if s then errors[#errors+1]=name.." crosses itself near "..at(pts[s])..": a run must not cross or close on itself." end
+                if s then errors[#errors+1]=name.." crosses itself near "..at(pts[s])..": a run must not cross or close on itself.";error_at[#errors]={ids={owner[s]},at={pts[s][1],pts[s][2]}} end
             end
             chains=chains+(one and 1 or 2)
         end
@@ -463,12 +467,15 @@ function M.problems(e)
             local a,b=ends[i],ends[j]
             if a[1]~=b[1] and same(a[3],b[3],0.01) then
                 warnings[#warnings+1]=a[1].." "..a[2].." and "..b[1].." "..b[2].." touch but are not connected (seam bump). Select the end and press Connect [J]."
+                warning_at[#warnings]={ids={a[1],b[1]},at={a[3][1],a[3][2]}}
             end
             j=j+1
         end
     end
-    if not M.surface(e,e.start.position) then warnings[#warnings+1]="START has no terrain below it." end
-    return errors,warnings
+    if not M.surface(e,e.start.position) then
+        warnings[#warnings+1]="START has no terrain below it.";warning_at[#warnings]={start=true,at={e.start.position[1],e.start.position[2]}}
+    end
+    return errors,warnings,error_at,warning_at
 end
 
 -- Geometry helpers (metres): every terrain segment (not across a jump gap) and every obstacle edge.
@@ -525,8 +532,9 @@ function M.surface(e,p)
     return best
 end
 
--- R13: bounds from terrain, hulls, labels, START (vehicle box) and FINISH segment plus a margin.
-local function bounds(e)
+-- The authored extent {x0, x1, y0, y1}: both ends of every terrain and hull edge, labels, the START
+-- vehicle box and the FINISH segment (Fit level, LE6; R13 adds the margin to it).
+local function extent(e)
     local b={math.huge,-math.huge,math.huge,-math.huge}
     local function add(x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
     -- Both ends of every edge: an open line's last point is no edge's start.
@@ -535,6 +543,12 @@ local function bounds(e)
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
     if e.finish then local f=e.finish.position;add(f[1],f[2]-M.FINISH_BELOW);add(f[1],f[2]+M.FINISH_ABOVE) end
+    return b
+end
+M.extent=extent
+-- R13: bounds from terrain, hulls, labels, START (vehicle box) and FINISH segment plus a margin.
+local function bounds(e)
+    local b=extent(e)
     return {b[1]-M.MARGIN,b[2]+M.MARGIN,b[3]-M.MARGIN,b[4]+M.HEADROOM}
 end
 M.bounds=bounds

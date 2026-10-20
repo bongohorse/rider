@@ -81,11 +81,11 @@ A start speed is an explicit option. Invalid positions (inside geometry, no surf
 - **Top bar:** level name · save status · New · Open (my levels / templates) · Export · Import · Undo · Redo · **Play ▶**
 - **Left tool palette:** Select (S) · Draw (D) · Curve (C) · Prefab (P) · START · FINISH · Label · Pan
 - **Right panel:** properties of the selection (numeric fields: x, y, angle, length, height…), or level properties (name, start speed) when nothing is selected
-- **Bottom status:** cursor x/y in metres · active snaps · zoom · warning count (click to list)
+- **Bottom status:** View row (Fit, Centre, START, Last test, Bounds; LE6a) · cursor x/y in metres · active snaps · zoom; the warning count (click to list) sits in the top bar
 
 ## Controls (Edit mode only; game keys keep working in Play)
 - **Mouse:** left click selects/places. Left drag moves a selection or handle. Middle drag or Space+left drag pans. The wheel zooms around the cursor.
-- **Keys:** E = Play from the editor / back to the editor while driving (R11) · Enter Play · F test start at mouse · S/D/C/P tools · Delete · Ctrl+Z / Ctrl+Y · G grid snap toggle · Shift/Alt/Ctrl as in R6.
+- **Keys:** E = Play from the editor / back to the editor while driving (R11) · Enter Play · F test start at mouse · S/D/C/P tools · Delete · Ctrl+Z / Ctrl+Y · G grid snap toggle · Home Fit level · . centre the selection (LE6a) · Shift/Alt/Ctrl as in R6.
 - **Esc:** first cancels the current action (drag, polyline), then clears the selection.
 - **Text/number input focus:** Defold GUI has no built-in text fields and the project has no text input trigger yet, so name and numeric fields are an **explicit implementation item** (engine behaviour checked against the pinned version). While a field is focused, E, F, Delete, Enter and tool keys act on the field only, never as editor/game actions.
 - **All game actions are intercepted centrally while editing** (not a list of individual clashing keys; today the game binds e.g. W/S/A/D, arrows, R, C, F, P, T, H, M, V). Only editor actions are processed in Edit mode; R is disabled. Browser shortcuts (Ctrl+S, Ctrl+W) are not used.
@@ -374,6 +374,28 @@ Requested by Claudio on 2026-10-20 after his LE5c drive test ([#192](https://git
   - **Bump/wave curve:** smooth anchors with horizontal tangents of 0.364 × the half wavelength (the ends have one tangent). On each half wave the cubic's height is exactly h(3t² − 2t³) for any tangent length; 0.364 minimises the distance to the raised cosine (a one-off measurement, no fitting at run time).
   - Measured largest distance from the raised cosine: 0.25 mm at 1 m × 8 m, 0.10 mm at 0.4 m × 10 m, 0.62 mm at 3 m × 6 m and 2.5 mm at the 10 m × 100 m range corner: always within 5 mm. The confirmation names the measured distance from the prefab's sampled path.
   - The Bump/wave prefab itself and its compiled output are unchanged (the A19b Bumps station uses the same compiler).
+
+### Diagnostics and navigation (LE6a)
+
+Part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)), split into LE6a (this section) and LE6b (labels, help, vehicle silhouette, readouts). Implemented in `editor_doc.lua` (problem targets, `extent`), `editor.lua` (targets, last test start), `editor_overlay.lua` (bounds lines), `boot.script` (last test start) and `editor.gui_script`. Debug case `le6` ([gym notes](../../main/gym/README.md#level-editor)).
+
+- **Warnings jump to their source:** the warning list has one row per message, 8 per page (`<` `>`), errors first. Every message keeps its exact text. Where it has a source it also gets a target: the source object ids (pieces, prefabs and curves by stable id, never sampled segments), a location in metres, or START.
+  - Targets per message: a sampling error names its object. A run over 2048 points names its pieces. Points closer than 1 cm, a run that doubles back, and a run that crosses itself name the owning piece and the location. Touching unconnected ends name both pieces and the joint. START without ground, START overlapping an object and the start limit name START (and the object).
+  - Clicking a located row selects its objects (or START), centres the location (or the objects' box) in the canvas area not covered by the panels, zooms out only when it does not fit, and flashes a ring there for 2 s. The message line shows the full text.
+  - The list is rebuilt after every completed action and every Undo/Redo, and ids are resolved again at the click, so a deleted object is never navigated to.
+  - A message without a target (no terrain yet, more than 32 chains, a station-validator error such as the render budget, the display-simplified note) only shows its text; the camera and selection stay unchanged.
+- **View row** (bottom bar, left of the page's High DPI / Fullscreen buttons): **Fit [Home]**, **Centre [.]**, **START**, **Last test**, **Bounds**.
+  - Fit level frames the authored extent (both ends of every terrain and hull edge, labels, the START vehicle box and the FINISH segment) at 80 % of the free canvas area; it is repeatable.
+  - Centre frames the selection (several objects, several points, a single point's object, START or FINISH). It keeps the zoom unless the selection does not fit. Without a selection it is dimmed and says why.
+  - START centres the START box.
+  - Last test centres the last test start that actually reached a drive-ready run (`boot.script` records it on the ready world; a refused or failed start never counts). It belongs to the document instance it was launched in: another document has none (dimmed, with an explanation). Undo back to that document finds it again.
+  - The editor zoom now goes down to 0.01 (about 650 m across a 1280 px canvas; it was 0.05, about 130 m), so Fit level shows long courses. At the limit Fit says the level is wider and shows its centre.
+- **Bounds:** the toggle draws the R13 bounds with `editor_doc.bounds`, the same function Play, Export and test starts use, recomputed per document revision. Only the sides in view are drawn, as 4 dedicated GUI lines. The right panel (nothing selected) lists the extents. `le6` checks that the shown bounds equal the compiled level's after a START move and Play.
+- **View only:** Fit, Centre, START, Last test, Bounds and problem rows change only the camera, the selection or the display. They never commit, mark the document unsaved or add an Undo step (`le6` compares the document, revision, dirty state and Undo/Redo depth before and after).
+- **Templates (Claudio's decision 2026-10-20):** the Open dialog pages the templates 10 at a time (`< Previous` / `More >`, or the wheel over that half of the dialog), so a growing station list never covers Close. `le2` reaches every template through the pages and checks that no shown template overlaps the paging row or Close.
+- **Keys:** Home (`editor_fit`) and . or numpad . (`editor_centre`), new bindings ([`input_ddf.proto` L36, L121, L137](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/input/proto/input/input_ddf.proto#L36)). A focused field takes them like every other key.
+- **Warning list and dialogs:** opening the Open dialog closes the warning list and the list opening closes the dialog, so the list's rows never take the dialog's clicks.
+- **Budget (R7), measured in `le6`:** the editor GUI uses 573 of 640 `max_nodes` with 12 templates (535 before LE6a): 10 for the View row, 20 for the warning rows and their paging, 4 for template paging and 4 for the bounds lines. Each further station adds 2. No sprites or labels are added. The View row ends at 443 px against the page buttons at 1092 px (1280 × 720), 287 against 656 (844 × 390) and 135 against 202 (390 × 844).
 
 ## Additional implementation and acceptance checks
 

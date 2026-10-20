@@ -108,6 +108,8 @@ local function play(self,test)
     -- The run may use a temporary test start; only the START level is saved and exported (R10).
     local snapshot=custom.freeze(run or level,run_text or text)
     self.play_text,self.test_run,self.play_revision=text,run~=nil,editor.doc.editor.revision
+    -- Recorded as the last test start (LE6 navigation) only once this run is drive-ready.
+    self.test_start=run and {position={run.spawn[1],run.spawn[2]},instance=editor.opened} or nil
     set_mode(self,"play")
     switch(self,{id="custom",snapshot=snapshot,play=true,requested=socket.gettime()})
 end
@@ -162,7 +164,7 @@ function init(self)
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d")
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
     self.time=time_scale.new()
@@ -307,6 +309,7 @@ function on_message(self,id,data,sender)
             end
             -- A test start never replaces the save: its START was not the start that was driven.
             if self.test_run then
+                editor.last_test=self.test_start
                 msg.post("#ui","custom_status",{text="Test run; the saved level is unchanged"})
                 return
             end
