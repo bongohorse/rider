@@ -94,9 +94,11 @@ function init(self)
     local panel=layout.box(vmath.vector3(788,294,0),vmath.vector3(304,400,0),"right_top")
     gui.set_color(panel,vmath.vector4(0.05,0.1,0.13,0.9))
     self.presets={}
-    for i,key in ipairs({"a","b","c"}) do
-        local x=688+(i-1)*98
-        local box=layout.box(vmath.vector3(x,475,0),vmath.vector3(86,26,0),"right_top")
+    -- One chip per registered preset (feel.order), spread across the same panel row.
+    local step=math.floor(294/#feel.order)
+    for i,key in ipairs(feel.order) do
+        local x=788+math.floor((i-(#feel.order+1)/2)*step)
+        local box=layout.box(vmath.vector3(x,475,0),vmath.vector3(step-8,26,0),"right_top")
         local label=layout.text(vmath.vector3(x,475,0),string.upper(key),"right_top")
         gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.55,0.55,1))
         self.presets[key]=box
@@ -193,7 +195,9 @@ function on_message(self,id,data,sender)
         for key,box in pairs(self.presets) do
             gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
         end
-        gui.set_text(self.preset_note,data.invalid and "Invalid URL: A" or data.modified and "Modified - select A/B/C" or "Presets [P]")
+        -- A refused preset file must never pass silently for A (#199).
+        gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A"..(data.modified and " | Modified" or "")) or data.invalid and "Invalid URL: A"
+            or data.modified and "Modified - select "..string.upper(table.concat(feel.order,"/")) or "Presets [P]")
     elseif id==hash("tuning") then
         self.owner=sender
         self.tuning=data
@@ -235,7 +239,8 @@ function on_message(self,id,data,sender)
             gui.set_color(self.metrics[i],i==4 and fps_color(data.fps) or over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
-            contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2})
+            contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2,
+            preset_note=gui.get_text(self.preset_note),report_preset=self.report_text and string.match(self.report_text,"%- Preset: [^\n]*")})
     elseif id==hash("editor_mode") then
         -- The level editor draws its own panels; the driving HUD stays hidden while editing.
         for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
@@ -341,7 +346,7 @@ function update(self,dt)
         end
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
-        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)},
+        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
             pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
             record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box)}))
     end

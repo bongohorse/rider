@@ -240,7 +240,7 @@ function update(self,dt)
     end
 end
 function on_message(self,id,data,sender)
-    if id==hash("preset_changed") then self.preset=data.key
+    if id==hash("preset_changed") then self.preset,self.preset_refused=data.key,data.refused
     -- A20 pause/slow motion: play worlds only. Pausing stops ticks at once; any running factor is set only after
     -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.
     elseif id==hash("time_control") and not self.loading and editor.mode=="play" then
@@ -271,7 +271,7 @@ function on_message(self,id,data,sender)
         msg.post(sender,"init")
         time_scale.apply(self.time,sender,editor.mode=="edit")
         if self.world_loads>1 or self.station=="custom" then
-            msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,generation=self.generation,
+            msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,preset_refused=self.preset_refused,generation=self.generation,
                 snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms,edit=self.edit})
         end
         msg.post(sender,"enable")

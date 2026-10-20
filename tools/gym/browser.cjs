@@ -95,6 +95,15 @@ async function main() {
             await page.waitForFunction(({key,resets})=>window.riderTelemetry.preset===key&&!window.riderTelemetry.modified&&window.riderTelemetry.reset_count===resets+1,{key:data.key,resets});
             await page.mouse.up();
           }
+          if(data.name==='select_refused'){
+            // The owner stubs this preset's file as refused: the chip press must end on A with a visible note.
+            await page.keyboard.up('ArrowUp');await openTuning();
+            const p=await guiPoint('presets',data.key);
+            const resets=await page.evaluate(()=>window.riderTelemetry.reset_count);
+            await page.mouse.move(p.x,p.y);await page.mouse.down();
+            await page.waitForFunction(({key,resets})=>window.riderTelemetry.preset==='a'&&String(window.riderTelemetry.preset_refused).startsWith(key.toUpperCase()+' refused')&&window.riderTelemetry.reset_count===resets+1,{key:data.key,resets});
+            await page.mouse.up();
+          }
           if(data.name==='preset_drive')await page.keyboard.down('ArrowUp');
           if(data.name==='copy_feedback'){
             await page.keyboard.down('f');
