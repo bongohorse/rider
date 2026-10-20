@@ -79,7 +79,8 @@ const STEP=1/60;
   await page.waitForFunction(()=>window.riderTime.since_resume&&window.riderTime.since_resume.ticks>=60);
   s=await snap();assert.equal(s.t.since_resume.driven,0,'a key held through the pause must not drive');assert.equal(s.t.held,0);
   assert.equal(s.t.command.throttle,0);assert.equal(s.t.resets,resets,'Retry pressed while paused must not run');assert(Math.abs(s.t.dt-STEP)<1e-6);assert.equal(s.t.factor,1);
-  await page.keyboard.up('ArrowUp');await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderTime.command?.throttle===1);await page.keyboard.up('ArrowUp');
+  // The release is not acknowledged (input is already clear): give the engine frames to sample it.
+  await page.keyboard.up('ArrowUp');await sleep(200);await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderTime.command?.throttle===1);await page.keyboard.up('ArrowUp');
   await page.waitForFunction(()=>window.riderTime.command?.throttle===0);
   measurements.resume={neutral_ticks:s.t.since_resume.ticks,driven_ticks:s.t.since_resume.driven,factor:s.t.factor};
   cases.push('resume_without_stale_input_factor_1');
