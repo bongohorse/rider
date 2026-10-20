@@ -10,7 +10,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/g1'))
 import build as builder
-from build import invalidate_after_guard, read_cache_index, remove_inside, validate_cache
+from build import ANDROID_ABIS, invalidate_after_guard, platform_archs, read_cache_index, remove_inside, validate_cache
 
 KEY = 'a' * 64
 
@@ -105,18 +105,62 @@ class BobCacheTest(unittest.TestCase):
         (self.cache / '.buildcache').write_text(f'D\\:\\\\a\\\\rider\\\\.internal\\\\cache\\\\wasm-web\\\\build.zip={KEY}\n')
         self.assertEqual(list(read_cache_index(self.cache / '.buildcache')), ['D:\\a\\rider\\.internal\\cache\\wasm-web\\build.zip'])
 
-    def test_guard_failure_removes_cached_and_unpacked_results_of_the_platform(self):
+    def test_index_rewrite_keeps_foreign_lines_byte_for_byte(self):
+        foreign = f'D\\:\\\\a\\\\rider\\\\.internal\\\\cache\\\\x86_64-win32\\\\build.zip={KEY}'
+        bad = self.result('wasm_pthread-web', raw=b'')
+        self.index(self.result('wasm-web'), bad, extra=foreign + '\n')
+        self.assertEqual([item['path'] for item in validate_cache(self.root)], ['.internal/cache/wasm_pthread-web'])
+        lines = (self.cache / '.buildcache').read_text().splitlines()
+        self.assertIn(foreign, lines)
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(sorted(p.name for p in self.cache.iterdir()), ['.buildcache', 'wasm-web'])
+
+    def test_leftover_index_temporary_is_removed_without_clearing_the_cache(self):
+        good = self.result('wasm-web')
+        self.index(good)
+        (self.cache / '.buildcache.rider-4242.tmp').write_text('partial')
+        self.assertEqual(validate_cache(self.root), [])
+        self.assertTrue(good.is_file())
+        self.assertFalse((self.cache / '.buildcache.rider-4242.tmp').exists())
+
+    def guard_failure_tree(self):
         kept = self.result('x86_64-linux')
         self.index(self.result('wasm-web'), self.result('wasm_pthread-web'), kept)
         for arch in ['wasm-web', 'wasm_pthread-web', 'x86_64-linux']:
             (self.root / 'build' / arch).mkdir(parents=True)
             (self.root / 'build' / arch / 'log.txt').write_text('log')
-        found = invalidate_after_guard(self.root, 'wasm-web', RuntimeError('ENGINE GUARD: wasm_pthread-web: no extender engine'))
+        return kept
+
+    def test_guard_failure_removes_cached_and_unpacked_results_of_the_platform(self):
+        kept = self.guard_failure_tree()
+        found, errors = invalidate_after_guard(self.root, 'wasm-web', RuntimeError('ENGINE GUARD: wasm_pthread-web: no extender engine'))
+        self.assertEqual(errors, [])
         self.assertEqual(sorted(item['path'] for item in found), ['.internal/cache/wasm-web', '.internal/cache/wasm_pthread-web',
                                                                    'build/wasm-web', 'build/wasm_pthread-web'])
         self.assertTrue(all('engine guard failed: ENGINE GUARD: wasm_pthread-web' in item['reason'] for item in found))
         self.assertTrue(kept.is_file() and (self.root / 'build/x86_64-linux/log.txt').is_file())
         self.assertEqual(list(read_cache_index(self.cache / '.buildcache')), [str(kept)])
+
+    def test_android_guard_failure_covers_every_android_abi(self):
+        self.assertEqual(platform_archs('arm64-android'), tuple(sorted(set(ANDROID_ABIS.values()))))
+        for arch in ANDROID_ABIS.values():
+            (self.root / 'build' / arch).mkdir(parents=True)
+        found, errors = invalidate_after_guard(self.root, 'arm64-android', RuntimeError('ENGINE GUARD'))
+        self.assertEqual(sorted(item['path'] for item in found), sorted(f'build/{arch}' for arch in ANDROID_ABIS.values()))
+        self.assertIn('build/x86_64-android', [item['path'] for item in found])
+
+    def test_a_failed_removal_is_recorded_and_the_others_still_run(self):
+        self.guard_failure_tree()
+        real = builder.remove_inside
+        def flaky(path, base, root):
+            if Path(path).name == 'wasm-web' and Path(path).parent.name == 'build':
+                raise PermissionError('file is locked')
+            return real(path, base, root)
+        with mock.patch.object(builder, 'remove_inside', side_effect=flaky):
+            found, errors = invalidate_after_guard(self.root, 'wasm-web', RuntimeError('ENGINE GUARD'))
+        self.assertEqual(errors, ['build/wasm-web: PermissionError: file is locked'])
+        self.assertEqual(sorted(item['path'] for item in found), ['.internal/cache/wasm-web', '.internal/cache/wasm_pthread-web',
+                                                                   'build/wasm_pthread-web'])
 
     def test_deletion_never_leaves_the_repository(self):
         outside = Path(self.temporary.name) / 'outside'
@@ -128,22 +172,33 @@ class BobCacheTest(unittest.TestCase):
             remove_inside(outside, outside, self.root)
         with self.assertRaisesRegex(RuntimeError, 'refusing to delete .* not inside'):
             remove_inside(outside, self.cache, self.root)
-        try:
-            os.symlink(outside, self.cache / 'wasm-web', target_is_directory=True)
-        except OSError:
-            linked = False  # Windows without symlink privilege: the path checks above still ran
-        else:
-            linked = True
-        if linked:
-            with self.assertRaisesRegex(RuntimeError, 'refusing to delete'):
-                remove_inside(self.cache / 'wasm-web', self.cache, self.root)
-            self.assertEqual(validate_cache(self.root)[0]['reason'], 'unknown cache layout at wasm-web')
+        with self.assertRaisesRegex(RuntimeError, 'refusing to delete .* not inside'):
+            remove_inside(self.cache / '../../outside', self.cache, self.root)
         self.assertTrue((outside / 'keep.txt').is_file())
 
-    def test_build_logs_invalidations_and_cleans_up_after_a_guard_failure(self):
-        bad = self.result('wasm_pthread-web', raw=b'')
-        self.index(bad)
-        (self.root / 'build/wasm-web').mkdir(parents=True)
+    def symlink(self, target, link):
+        try:
+            os.symlink(target, link, target_is_directory=True)
+        except OSError:
+            self.skipTest('this OS user cannot create symlinks; the non-symlink path checks run in the other tests')
+
+    def test_symlinks_are_unlinked_never_followed(self):
+        outside = Path(self.temporary.name) / 'outside'
+        outside.mkdir()
+        (outside / 'keep.txt').write_text('keep')
+        inside = self.result('wasm-web').parent
+        self.symlink(outside, self.cache / 'wasm_pthread-web')
+        self.symlink(inside, self.cache / 'x86_64-linux')
+        remove_inside(self.cache / 'wasm_pthread-web', self.cache, self.root)
+        remove_inside(self.cache / 'x86_64-linux', self.cache, self.root)
+        self.assertFalse((self.cache / 'wasm_pthread-web').is_symlink() or (self.cache / 'x86_64-linux').is_symlink())
+        self.assertTrue((outside / 'keep.txt').is_file())
+        self.assertTrue((inside / 'build.zip').is_file())
+        self.symlink(outside, self.cache / 'wasm_pthread-web')
+        self.assertEqual(validate_cache(self.root)[0]['reason'], 'unknown cache layout at wasm_pthread-web')
+        self.assertTrue((outside / 'keep.txt').is_file())
+
+    def failing_build(self, *patches):
         output = Path(self.temporary.name) / 'output'
         process = mock.Mock(pid=os.getpid())
         process.wait.return_value = 0
@@ -151,16 +206,34 @@ class BobCacheTest(unittest.TestCase):
         with mock.patch.object(builder, 'ROOT', self.root), mock.patch.object(builder, 'bob_jar', return_value=Path('bob.jar')), \
                 mock.patch('shutil.which', return_value='java'), mock.patch('subprocess.run', return_value=java), \
                 mock.patch('subprocess.Popen', return_value=process):
-            with self.assertRaisesRegex(RuntimeError, 'ENGINE GUARD: wasm-web: bundle directory'):
-                builder.build('wasm-web', output)
-        log = (output / 'build.log').read_text()
+            for patch in patches:
+                patch.start()
+            try:
+                with self.assertRaisesRegex(RuntimeError, 'ENGINE GUARD: wasm-web: bundle directory'):
+                    builder.build('wasm-web', output)
+            finally:
+                for patch in patches:
+                    patch.stop()
+        return (output / 'build.log').read_text(), json.loads((output / 'engines.json').read_text())
+
+    def test_build_logs_invalidations_and_cleans_up_after_a_guard_failure(self):
+        self.index(self.result('wasm_pthread-web', raw=b''))
+        (self.root / 'build/wasm-web').mkdir(parents=True)
+        log, report = self.failing_build()
         self.assertIn('RIDER CACHE INVALIDATED .internal/cache/wasm_pthread-web: not a readable zip', log)
         self.assertIn('RIDER CACHE INVALIDATED build/wasm-web: engine guard failed', log)
-        report = json.loads((output / 'engines.json').read_text())
         self.assertEqual(report['status'], 'FAIL')
         self.assertEqual([item['path'] for item in report['cache_invalidations']], ['.internal/cache/wasm_pthread-web', 'build/wasm-web'])
+        self.assertEqual(report['cache_cleanup_errors'], [])
         self.assertFalse((self.root / 'build/wasm-web').exists())
 
+    def test_cleanup_failure_never_hides_the_guard_failure(self):
+        (self.root / 'build/wasm-web').mkdir(parents=True)
+        log, report = self.failing_build(mock.patch.object(builder, 'invalidate_after_guard', side_effect=OSError('disk gone')))
+        self.assertIn('RIDER CACHE CLEANUP FAILED OSError: disk gone', log)
+        self.assertEqual(report['status'], 'FAIL')
+        self.assertRegex(report['error'], 'ENGINE GUARD: wasm-web: bundle directory')
+        self.assertEqual(report['cache_cleanup_errors'], ['OSError: disk gone'])
 
 if __name__ == '__main__':
     unittest.main()
