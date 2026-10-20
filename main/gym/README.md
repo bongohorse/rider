@@ -11,9 +11,9 @@ How the Driving Gym works and how each feature is tested. Binding rules: [physic
 - A collision resource must contain a shape. In the safe initial update the owner removes the seed shape (index 1), verifies the body, then creates the chain and asserts the new shape is a chain segment. Shape indices change on creation (pitfall 4).
 - Terrain chains enable `enable_sensor_events`; Box2D excludes shapes without it from sensor overlaps.
 - Camera: orthographic Auto Fit; render-dt exponential following, zoom 1 → 0.82 with speed; it never rotates with the chassis. After Super Mario World ([Keren, "Scroll Back", GDC 2015](https://media.gdcvault.com/gdc2015/presentations/Keren_Itay_ScrollBack.pdf), slides 24 and 42; `feel.camera`):
-  - x: velocity look-ahead (0.22 s, max 130 u) with a dual forward focus: it switches sides only after 1 m of travel against it, so a short roll back keeps the view.
+  - x: velocity look-ahead of twice the preset's look time and maximum (A: 0.44 s, max 260 u) on the smoothed speed, with the smoothing lag led, so at speed the view really is 2.6 m ahead (before Claudio's 2026-10-20 request the lag ate it up: about 0.2 m at 6.6 m/s). Dual forward focus: the side switches only after 0.6 m of travel against it and then eases over (3/s), so a short roll back keeps the view. Hard side edges keep the chassis centre 120 u inside the view.
   - y: a camera window with platform snapping. The view rests `camera_height` above the ground the chassis last snapped to (on y = 0 ground the former fixed 250 u view). Grounded height changes within ±40 u (springs, small waves) keep it still; beyond that it realigns and tracks long climbs and descents until the chassis has settled, leading descents downwards (0.6 s of the sinking speed, at most 2 m, eased in) and feeding the smoothing lag forward. In the air a rising chassis pushes it up at `camera_lift` below the centre, a fall pulls it down ahead of the chassis; after a landing elsewhere it realigns smoothly. Hard edges keep the chassis centre at least 60 u above the bottom and 100 u below the top of the view.
-  - A start (first, Retry, section) puts the camera where it will settle over the surface below the start. `a6` checks the focus threshold, a deep fall and the realignment after a landing.
+  - A start (first, Retry, section) puts the camera where it will settle over the surface below the start. `a6` checks the focus threshold, the full look-ahead at a steady 6 m/s, a deep fall and the realignment after a landing.
 - Checkerboard art is procedural test art.
 
 ## Vehicle and controls
@@ -191,7 +191,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `a1` | Chain support (probe rests at y = 95 ±2 on y = 80), camera follow |
 | `a2` | Real keyboard drive and braking with brake priority |
 | `a3` | 100 resets incl. bounds recovery, joint invalidation, sleep re-drive, timing |
-| `a6` | Reverse, airborne lean, camera direction/zoom, follow window (focus threshold, deep fall, realign after landing) |
+| `a6` | Reverse, airborne lean, camera direction/zoom, follow window (focus threshold, steady look-ahead, deep fall, realign after landing) |
 | `a7` | Head contact off/on via C and overlay click |
 | `a8` | Live spring change without reset, neutral release |
 | `a9`, `a9invalid` | Preset by URL and chips; every registered preset drivable; refusal rules; invalid URL and refused-file fallback |

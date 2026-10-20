@@ -103,7 +103,11 @@ M.follow={
     rest=46,           -- chassis centre above flat ground at rest (wheel radius 22 + anchor 30 - sag)
     snap_window=40,    -- grounded height changes within this (springs, small bumps) keep the view still
     snap_done=3,       -- a realignment ends this close to the new framing
-    focus_switch=100,  -- travel against the look-ahead side before it switches sides (1 m)
+    focus_switch=60,   -- travel against the look-ahead side before it switches sides (0.6 m)
+    look_scale=2,      -- the look-ahead is this times the preset's look time and maximum (0.44 s, 2.6 m on A)
+    look_rate=3,       -- 1/s: a switch of the look-ahead side eases over at this rate
+    speed_rate=8,      -- 1/s: the horizontal speed for look-ahead and lag is smoothed at this rate
+    margin_side=120,   -- the chassis centre never gets closer to the view's left or right edge
     descent_seconds=0.6, -- a descent or fall leads the view down by this much of its sinking speed
     descent_max=200,   -- at most this far
     lead_rate=4,       -- 1/s: a realignment's descent lead eases in and out at this rate
@@ -113,25 +117,37 @@ M.follow={
     margin_bottom=60,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
     margin_top=100     -- nor to its top edge
 }
+-- Look-ahead length (u) for a smoothed horizontal speed vx on side dir.
+local function look_ahead(vx,dir)
+    local c,f=M.values,M.follow
+    return math.min(math.max(vx*dir,0)*c.camera_look_seconds*f.look_scale,c.camera_look_max*f.look_scale)
+end
 -- Follow state for a start at (x, y) above the ground surface ground_y (nil: the 0.9 m start clearance of the
--- stations); returns the state and the camera position, so a start already shows the view it settles on
--- (inside the hard edges of a view of half height half, so a high drop start does not jump a frame later).
-function M.camera_start(x,y,ground_y,direction,half)
+-- stations) with start speed speed (u/s); returns the state and the camera position, so a start already shows
+-- the view it settles on, looking ahead (inside the hard edges of a view of half height half, so a high drop
+-- start does not jump a frame later).
+function M.camera_start(x,y,ground_y,speed,half)
     local f=M.follow
-    local s={dir=direction or 1,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,lead=0,vy=0}
+    local dir=speed<0 and -1 or 1
+    local s={dir=dir,side=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,lead=0,vy=0,vx=speed}
     local cy=s.ground+M.values.camera_height-f.rest
     if half and half>f.margin_bottom+f.margin_top then cy=M.clamp(cy,y-(half-f.margin_top),y+(half-f.margin_bottom)) end
-    return s,vmath.vector3(x,cy,500)
+    return s,vmath.vector3(x+dir*look_ahead(speed,dir),cy,500)
 end
 -- s: state from camera_start (updated in place); velocity: chassis velocity; grounded: a wheel or the chassis
--- touches something; half: the view's current half height (nil skips the edge limits).
-function M.camera(s,target,velocity,grounded,position,zoom,half,dt)
+-- touches something; half, half_x: the view's current half height and width (nil skips the edge limits).
+function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local c,f=M.values,M.follow
     -- Dual forward focus: the look-ahead keeps its side until the chassis has travelled focus_switch against
-    -- it, so a short roll back does not swing the view. Speed sets how far it looks.
+    -- it, so a short roll back does not swing the view. The smoothed speed sets how far it looks; a side
+    -- switch eases over, so turning round pans smoothly.
     if velocity.x*s.dir<0 then s.against=s.against-velocity.x*s.dir*dt else s.against=0 end
     if s.against>f.focus_switch then s.dir,s.against=-s.dir,0 end
-    local look=s.dir*math.min(math.max(velocity.x*s.dir,0)*c.camera_look_seconds,c.camera_look_max)
+    s.vx=s.vx+(velocity.x-s.vx)*(1-math.exp(-f.speed_rate*dt))
+    s.side=s.side+(s.dir-s.side)*(1-math.exp(-f.look_rate*dt))
+    -- The smoothing lags a moving chassis by speed / camera_response; leading by that lag keeps the
+    -- look-ahead in front of the chassis instead of eating it up at speed.
+    local x=target.x+s.side*look_ahead(s.vx,s.dir)+s.vx/c.camera_response
     -- Platform snapping: a grounded chassis further than snap_window from the snapped height starts a
     -- realignment that tracks the ground (long climbs and descents, a landing elsewhere) until it settles.
     if grounded and math.abs(target.y-s.ground)>f.snap_window then s.snapping=true end
@@ -156,9 +172,13 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt)
         if not (half and half>f.margin_bottom+f.margin_top) then return v end
         return M.clamp(v,target.y-(half-f.margin_top),target.y+(half-f.margin_bottom))
     end
+    local function inside_x(v)
+        if not (half_x and half_x>2*f.margin_side) then return v end
+        return M.clamp(v,target.x-(half_x-f.margin_side),target.x+(half_x-f.margin_side))
+    end
     local alpha=1-math.exp(-c.camera_response*dt)
-    local pos=position+(vmath.vector3(target.x+look,inside(y),500)-position)*alpha
-    pos.y=inside(pos.y)
+    local pos=position+(vmath.vector3(inside_x(x),inside(y),500)-position)*alpha
+    pos.x,pos.y=inside_x(pos.x),inside(pos.y)
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
     if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
     local wanted=c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1)
