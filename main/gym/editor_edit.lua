@@ -499,6 +499,11 @@ function M.set_corner(e,id,i,smooth)
     local before=i>1 and at_index(o,i-1)
     local after=i<n and at_index(o,i+1) or at_index(partner,2)
     local p=at_index(o,i)
+    local dx,dy=after[1]-before[1],after[2]-before[2]
+    local l=math.sqrt(dx*dx+dy*dy)
+    -- Refused before anything changes: a bulk action (LE5d) keeps the other points' results, so a refused
+    -- point must leave its line (and its joint partner) untouched.
+    if smooth and l<1e-9 then return nil,"The neighbouring points coincide; move one first" end
     M.to_curve(e,o.id)
     if partner then M.to_curve(e,partner.id) end
     local a=o.anchors[i]
@@ -508,9 +513,6 @@ function M.set_corner(e,id,i,smooth)
         if b then b["in"],b.out,b.mode={0,0},{0,0},"corner" end
         return o.id,i
     end
-    local dx,dy=after[1]-before[1],after[2]-before[2]
-    local l=math.sqrt(dx*dx+dy*dy)
-    if l<1e-9 then return nil,"The neighbouring points coincide; move one first" end
     dx,dy=dx/l,dy/l
     local lin=math.sqrt((p[1]-before[1])^2+(p[2]-before[2])^2)/3
     local lout=math.sqrt((after[1]-p[1])^2+(after[2]-p[2])^2)/3

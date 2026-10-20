@@ -204,6 +204,16 @@ const TOL=0.005,SEG=0.5;
   await at([42,3]);await page.waitForFunction(()=>window.riderEditor.points.length===0&&window.riderEditor.vertex);
   e=await ed();assert.deepEqual(e.vertex,{id:B,index:2});assert.equal(e.revision,r+1);
   await key('z',['Control']);await revision(r+2);assert.equal(shape(await doc()),shape(twoLines),'one Undo restores both lines');
+  // A point that cannot be smoothed (its neighbours coincide) is refused and counted; its line stays
+  // unchanged (still a line) while the other selected line is smoothed in the same Undo step.
+  await key('Escape');await key('d');r=(await ed()).revision;
+  for(const p of [[50,0],[52,2],[50,0]])await at(p);await key('Enter');await revision(r+1);
+  const C=kids(await doc()).at(-1);assert.deepEqual(obj(await doc(),C).points,[[50,0],[52,2],[50,0]]);
+  await key('s');await key('Escape');await at([32,1]);await at([51,1],['Shift']);await page.waitForFunction(()=>window.riderEditor.selected.length===2);
+  await button('smooth_all');e=await revision(r+2);d=await doc();
+  assert.ok(e.message.startsWith('Make smooth: 1 point rounded; skipped: 1 point refused (The neighbouring points coincide'),e.message);
+  assert.equal(obj(d,A).type,'curve');assert.deepEqual(obj(d,C),{id:C,type:'line',points:[[50,0],[52,2],[50,0]]});
+  await key('z',['Control']);await revision(r+3);await key('z',['Control']);await revision(r+4);assert.equal(shape(await doc()),shape(twoLines));
   measurements.multi_drag={points:3,delta:[0,1],downstream_point_moved_once:true};
   done('multi_point_drag_moves_each_point_once');
 
@@ -300,6 +310,7 @@ const TOL=0.005,SEG=0.5;
   for(const run of runs){
    assert.equal(run.unpowered_ticks,0,JSON.stringify(runs));assert.deepEqual(run.support_losses,[0,0],JSON.stringify(runs));
    assert.equal(run.airborne,0,JSON.stringify(runs));assert.ok(run.window_ticks>60,JSON.stringify(runs));
+   assert.ok(run.max_dvy_mps<=0.25,JSON.stringify(runs)); // the LE5b reference-drive bound
   }
   const level=await page.evaluate(()=>window.riderSavedLevel);assert.equal(level.chains.length,1);
   measurements.course={chain_points:level.chains[0].length,runs};

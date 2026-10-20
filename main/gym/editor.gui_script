@@ -668,11 +668,11 @@ local function single_point()
     local v=editor.vertex
     if v and find(v.id) then return point_of({kind="vertex",id=v.id,index=v.index}) end
 end
--- Selects only this point, as the LE5c single selection.
+-- Selects only this point, as the LE5c single selection. The object selection stays as it is: a joint
+-- picked through its selected downstream piece does not add the upstream piece.
 local function set_single(pt)
     local o=find(pt.id)
     editor.points,editor.vertex2={},nil
-    editor.selected[pt.id]=true
     if o.type=="line" then editor.selection,editor.vertex,editor.anchor=pt.id,{id=pt.id,index=pt.i},nil
     else
         local n=#o.anchors
@@ -1574,6 +1574,8 @@ function on_input(self,action_id,action)
     if action_id==hash("editor_zoom_in") and action.pressed then cursor(self,action);zoom(self,1.2);return true end
     if action_id==hash("editor_zoom_out") and action.pressed then cursor(self,action);zoom(self,1/1.2);return true end
     if not action.pressed then return true end
+    -- "Sure? Make smooth" (LE5d) belongs to the click right after it: any key disarms it.
+    self.confirm_bulk=nil
     if editor.conflict then editor.message="Choose how to open this level first.";return true end
     if self.drag and action_id~=hash("editor_cancel") then return true end
     if action_id==hash("editor_toggle") then play(self)

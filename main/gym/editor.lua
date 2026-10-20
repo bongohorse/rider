@@ -68,15 +68,25 @@ local function resolve_selection()
     if a and not (ids[a.id] and ids[a.id].type=="curve" and a.i<=#ids[a.id].anchors and M.selection==a.id) then M.anchor=nil end
     -- Points (LE5d) stay only on selected lines and curves (a joint also when its downstream piece is
     -- selected), by index: a line that became a curve keeps them.
-    local next=doc_lib.links(e)
+    local downstream=doc_lib.links(e)
     local n=0
     for k,p in pairs(M.points) do
         local o=ids[p.id]
         local count=o and (o.type=="line" and #o.points or o.type=="curve" and #o.anchors)
-        local held=M.selected[p.id] or (count and p.i==count and next[p.id] and M.selected[next[p.id]])
+        local held=M.selected[p.id] or (count and p.i==count and downstream[p.id] and M.selected[downstream[p.id]])
         if not (held and count and p.i<=count) then M.points[k]=nil else n=n+1 end
     end
-    if n<2 then M.points={} end
+    if n==1 then
+        -- One point left: it becomes the single (LE5c) selection, as after a Shift+click.
+        local _,p=next(M.points)
+        local o=ids[p.id]
+        M.points,M.selection,M.vertex2={},p.id,nil
+        if o.type=="line" then M.vertex,M.anchor={id=p.id,index=p.i},nil
+        else
+            M.anchor={id=p.id,i=p.i}
+            M.vertex=(p.i==1 or p.i==#o.anchors) and {id=p.id,index=p.i==1 and 1 or #doc_lib.path(o)} or nil
+        end
+    elseif n<2 then M.points={} end
 end
 -- Saves the current document now when it has unsaved changes, a failed or lagging save, a failed
 -- storage sync or no key yet although it belongs in My levels. Called before another document becomes
