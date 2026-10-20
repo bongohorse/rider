@@ -307,8 +307,9 @@ function update(self, dt)
             -- A20: every measurement records its time factor; any tick at another factor makes this world's
             -- values not comparable with the 1.0 protocols.
             sample.time_factor,sample.time_scaled_ticks=self.paused and 0 or self.time_factor,self.time_scaled_ticks
+            -- The station's own `comparable` (tuning, speed window) is only ever turned false here, never true.
             if html5 then html5.run("window.riderStationReport&&Object.assign(window.riderStationReport,"..json.encode({time_factor=sample.time_factor,
-                time_scaled_ticks=self.time_scaled_ticks,comparable=self.time_scaled_ticks==0})..")") end
+                time_scaled_ticks=self.time_scaled_ticks,time_comparable=self.time_scaled_ticks==0})..(self.time_scaled_ticks>0 and ",{comparable:false}" or "")..")") end
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count

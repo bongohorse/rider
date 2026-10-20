@@ -151,7 +151,14 @@ const STEP=1/60;
    await open('?station='+id,id);
    await pause(true);const p=checkPaused(await measure(400),id+' pause');await pause(false);
    const r={pause_ticks:p.ticks,pause_world_s:p.world_s};
-   for(const f of [0.5,0.25]){await setStep(f);r[f]=checkFactor(await measure(700),f,id+' '+f);}
+   const report=await page.evaluate(()=>window.riderStationReport);
+   if(report){assert.equal(report.time_comparable,true,id+': fresh world comparable');assert.equal(report.time_factor,1);}
+   for(const f of [0.5,0.25]){
+    await setStep(f);r[f]=checkFactor(await measure(700),f,id+' '+f);
+    // Station reports record the factor; after ticks at another factor they are never comparable.
+    if(report)await page.waitForFunction(f=>window.riderStationReport.time_factor===f&&window.riderStationReport.time_comparable===false&&window.riderStationReport.comparable===false,f);
+   }
+   r.report=!!report;
    await setStep(1);r.back_to_1x=true;measurements.stations[id]=r;
   }
   cases.push('every_station_pause_and_slow_motion');
