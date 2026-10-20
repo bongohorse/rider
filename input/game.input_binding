@@ -27,6 +27,8 @@ key_trigger { input: KEY_7 action: "station_7" }
 key_trigger { input: KEY_8 action: "station_8" }
 key_trigger { input: KEY_9 action: "station_9" }
 key_trigger { input: KEY_V action: "section_cycle" }
+key_trigger { input: KEY_SPACE action: "pause_toggle" }
+key_trigger { input: KEY_X action: "time_step" }
 key_trigger { input: KEY_E action: "editor_toggle" }
 key_trigger { input: KEY_ENTER action: "editor_play" }
 key_trigger { input: KEY_KP_ENTER action: "editor_play" }

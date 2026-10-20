@@ -5,13 +5,18 @@ function M.start(self)
     if self.audio_started then return end
     self.audio_started=true;self.audio_starts=(self.audio_starts or 0)+1
     self.audio_pitch=M.idle_pitch
-    go.set("#engine","gain",self.audio_muted and 0 or M.gain)
+    go.set("#engine","gain",(self.audio_muted or self.audio_paused) and 0 or M.gain)
     go.set("#engine","speed",self.audio_pitch)
     sound.play("#engine")
 end
 function M.mute(self)
     self.audio_muted=not self.audio_muted
-    go.set("#engine","gain",self.audio_muted and 0 or M.gain)
+    go.set("#engine","gain",(self.audio_muted or self.audio_paused) and 0 or M.gain)
+end
+-- A20: a paused world is silent (gain 0); slow motion keeps the wheel-speed pitch.
+function M.pause(self,paused)
+    self.audio_paused=paused
+    if self.audio_started then go.set("#engine","gain",(self.audio_muted or paused) and 0 or M.gain) end
 end
 function M.update(self)
     if not self.audio_started or not self.vehicle or not self.vehicle.ready then return end

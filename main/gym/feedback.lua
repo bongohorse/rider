@@ -14,6 +14,9 @@ function M.report(data,preset,modified,tuning,load)
         string.format("- Wheel contact: L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
         string.format("- Suspension: L %+.3f / R %+.3f u",data.travel1,data.travel2),
         string.format("- FPS: %.2f; mean frame %.3f ms; physics step %.3f ms",data.fps,data.frame_ms,data.physics_ms),
+        -- A20: values from a world that ticked at another factor are not comparable with the 1.0 protocols.
+        "- Time scale: "..(data.time_factor==0 and "paused" or tostring(data.time_factor or 1).."x")
+            ..((data.time_scaled_ticks or 0)>0 and string.format("; %d ticks not at 1.0x: values not comparable with the protocols",data.time_scaled_ticks) or ""),
         string.format("- Level load: switch %s; parse %s; terrain %s; decoration %s; terrain shapes %d; decoration sprites %d, labels %d",
             ms(load and load.switch_ms),ms(load and load.parse_ms),ms(load and load.build_ms),ms(load and load.decorate_ms),data.terrain_shapes or 0,data.decor_sprites or 0,data.decor_labels or 0),
         "- Crash reset: "..tostring(data.crash_enabled).."; head contact: "..tostring(data.head_contact),

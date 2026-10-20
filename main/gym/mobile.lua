@@ -13,7 +13,8 @@ function M.poll(dt,physics)
     if not html5 then return {} end
     return json.decode(html5.run(string.format('window.riderMobile.poll(%f,%f)',dt,physics)))
 end
-function M.clear() if html5 then html5.run('window.riderMobile.clear()')
+-- preserve_tilt (A20 pause changes) keeps an enabled tilt calibration active.
+function M.clear(preserve_tilt) if html5 then html5.run('window.riderMobile.clear('..tostring(preserve_tilt==true)..')')
         local stations=require "main.gym.stations"
         html5.run('window.riderMobile.stations='..json.encode(stations.ids)) end end
 function M.final()

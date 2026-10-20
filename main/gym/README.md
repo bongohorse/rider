@@ -21,6 +21,7 @@ How the Driving Gym works and how each feature is tested. Binding rules: [physic
 - Wheel targets A/B/C: 32/64/96 rad/s (7.04/14.08/21.12 m/s theoretical); slider range 8–140 rad/s. Actual top rolling speed is capped near 10 m/s by Box2D's rotation limit ([#114](https://github.com/bongohorse/rider/issues/114)).
 - Coasting (A13a): neutral grounded wheels keep zero-speed motors with `coast_torque` (default 400) plus wheel-only `rolling_resistance` (0.15 N m s). Target: 5 m/s to below 0.1 m/s within 6–15 m; a brake tap settles within two seconds.
 - HUD/report speeds are m/s and km/h; history keeps engine units.
+- **Pause and slow motion (A20):** Space or the Pause button pauses and resumes; X or Speed cycles 1x → 0.5x → 0.25x (touch: toolbar Pause / Speed). The loader sets the world proxy's time step after the owner has cleared input; while paused nothing ticks, drive/Retry/section/preset input is dropped, the engine sound is silent and a held key needs a new press after Resume. Slow motion is a time scale with smaller physics steps (1/120, 1/240 s), not a replay; FINISH and attempt times are world time, FPS uses engine time. Station switches, Edit and Play start at 1.0; values captured at another factor are marked not comparable (telemetry `time_factor`/`time_scaled_ticks`, station report `comparable`, feedback copy). Rules: [physics contract](../../docs/contracts/physics.md#pause-slow-motion-and-live-tuning).
 
 ## Retry and recovery
 
@@ -143,6 +144,7 @@ The CI `preview` job builds an HTML5 release (Bridge cleared) into `builds/<sha>
 | `hud` | FPS colour boundaries (55/54/30/29) |
 | `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
 | `a15a` | Rider lean/bob bounds and return to rest |
+| `a20` | Pause and slow motion: world time vs unscaled engine and wall time at 1.0/0.5/0.25 and paused (no ticks, unchanged pose, rendering continues), input dropped while paused and no stale key after Resume, throttle-from-rest at three factors, overlay buttons, switch and Edit/Play back at 1.0, every built-in station, touch toolbar (synthetic). Every other debug case asserts a 1/60 s step on every tick |
 | `a16`, `a17`, `a18`, `a19` | Ramp, step, seam and gap protocols above |
 | `le1a` | Custom import A → invalid → B → A (equal shape/sprite/label counts), held input, queued import, retry/bounds, reload restore, injected save failure, build failure, 64-byte id/name limit, ±500 m start limit (placements with Retry, 6000-start reset sweep, validator and load-path rejection), real placement failure (no save, no vehicle bodies, re-import), all text fields at their byte limits in one telemetry message, exhausted storage-sync retries |
 | `le1b` | Custom level size/performance: generated length, start-distance, segment, chain and hull series; 1 + 5 imports each (switch time), 6 s full-throttle window (frame intervals, callback work, Box2D profile/counters, memory), rejected limit messages. Writes `sizes-result.json` and `sizes-report.md` ([report](../../docs/LE1B_REPORT.md)) |

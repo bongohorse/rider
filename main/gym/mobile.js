@@ -57,7 +57,7 @@
         if(seconds>=30&&trial.frames.length&&trial.physics.length&&trial.engineDt.length){
           api.report={source:window.riderBuild,browser:browserIdentity,
             refreshModeUserSelected:trial.mode,layout:trial.layout,viewport:trial.viewport,
-            durationSeconds:seconds,conditions:trial.conditions,tiltEnd:window.riderTilt?.snapshot(),resetCountEnd:window.riderTelemetry?.reset_count,engineCallbackIntervalMs:summary(trial.frames),
+            durationSeconds:seconds,conditions:trial.conditions,tiltEnd:window.riderTilt?.snapshot(),timeScaleEnd:window.riderTimeState||{paused:false,step:1},resetCountEnd:window.riderTelemetry?.reset_count,engineCallbackIntervalMs:summary(trial.frames),
             engineDtMs:summary(trial.engineDt),physicsStepMs:summary(trial.physics),
             physicsZeroSamples:trial.physics.filter(v=>v===0).length,
             over25ms:trial.frames.filter(v=>v>25).length,
@@ -114,6 +114,10 @@
     pending.station=ids[(index+1)%ids.length];
   });
   api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
+  // A20: the same pause and slow-motion requests as Space and X; the loader owns the time step.
+  const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
+  const speedButton=button('Speed 1x',toolbar,()=>{pending.time_step=true;});
+  api.setTime=(paused,step)=>{pauseButton.textContent=paused?'Resume':'Pause';speedButton.textContent='Speed '+step+'x';};
   // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
   button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
   button('Layout A · mirror',toolbar,b=>{
@@ -149,7 +153,7 @@
     if(!mode.selectedIndex){status.textContent='Select the refresh mode from phone settings first.';return;}
     api.report=null;lastFrame=undefined;api.recording=true;
     trial={started:performance.now(),mode:mode.value,layout:api.mirrored?'B':'A',
-      viewport:{...window.riderViewport},conditions:{tilt:window.riderTilt?.snapshot(),preset:window.riderTelemetry?.preset,resetCountStart:window.riderTelemetry?.reset_count,tuning:window.riderControls?.map(r=>({key:r.key,value:r.value}))},frames:[],engineDt:[],physics:[]};
+      viewport:{...window.riderViewport},conditions:{tilt:window.riderTilt?.snapshot(),timeScale:window.riderTimeState||{paused:false,step:1},preset:window.riderTelemetry?.preset,resetCountStart:window.riderTelemetry?.reset_count,tuning:window.riderControls?.map(r=>({key:r.key,value:r.value}))},frames:[],engineDt:[],physics:[]};
   });
   root.append(measure);
   tiltPanel=document.createElement('div');tiltPanel.className='tilt-panel';
