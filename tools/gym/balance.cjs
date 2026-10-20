@@ -162,21 +162,22 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    await attempt('full');
    histories.after_full=await idleRetry();
    // The trigger of #217: R while the plank is still awake but slow after the previous reset (its Box2D sleep
-   // timer part-used). R follows R after one report, which lands either before the plank sleeps (about 0.5 s)
-   // or just after; repeat until a reset replaced an awake, slow plank.
+   // timer part-used; it sleeps about 0.5 s after a reset). The second R follows the acknowledged first one after
+   // three animation frames (the engine samples input once per frame, so the release is seen), i.e. within about
+   // 0.3 s of the first reset; repeat until a reset replaced an awake, slow plank.
    let trigger=null;
    for(let i=0;i<5&&!trigger;i++){
     await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});
     const n=await page.evaluate(()=>window.riderTelemetry.reset_count),g=(await report()).generation;
     await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,n);await page.keyboard.up('r');
-    const q=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(q=>window.riderTelemetry.sequence>q,q,{polling:'raf'});
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
     await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+2,n);await page.keyboard.up('r');
     await page.waitForFunction(g=>window.riderStationReport.generation===g+2,g);
     const r=await report(),t=await traceOf(g+2);
     if(r.seesaw.reset.before_awake&&Math.abs(r.seesaw.reset.before_omega)>0&&Math.abs(r.seesaw.reset.before_omega)<0.025)trigger={attempt:i+1,before:r.seesaw.reset,trace:t};
     const s=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(s=>window.riderTelemetry.sequence>s+1,s);
    }
-   if(!trigger)throw Error('#217 trigger not reached: no R replaced an awake, slow plank in 5 back-to-back tries');
+   if(!trigger)throw Error('#217 trigger not reached: no R replaced an awake, slow plank in 5 back-to-back tries (last reset replaced '+JSON.stringify((await report()).seesaw.reset)+')');
    histories.back_to_back=trigger.trace;
    seesaw.retry_trigger={attempt:trigger.attempt,before_angle:trigger.before.before_angle,before_omega:trigger.before.before_omega};
    await page.waitForFunction(()=>window.riderStationReport.record.elapsed>2.5);
