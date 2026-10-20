@@ -71,6 +71,16 @@ def write_report(output,suite,tests,expected,source_sha,duration_ms=None):
     return 0 if status=='PASS' else 2 if status=='BLOCKED' else 1
 
 
+# Engine each HTML5 G1 mode must have loaded (#215); mirrors tools/g1/browser.cjs.
+ENGINE_LOADS={'isolated':{'mode':'isolated','wasm':['RiderG1_pthread.wasm'],'cross_origin_isolated':True,'pthread_supported':True,'heap_shared':True},
+              'players':{'mode':'players','wasm':['RiderG1.wasm'],'cross_origin_isolated':False,'pthread_supported':False,'heap_shared':False}}
+
+
+def check_engine_load(config,load,mode):
+    wrong={k:load.get(k) for k,v in ENGINE_LOADS[mode].items() if load.get(k)!=v}
+    if wrong:raise RuntimeError(f'{config}: {mode} run did not load the expected engine: {wrong}')
+
+
 def platform_for(target):
     return {'html5':'wasm-web','android':'arm64-android','desktop':'x86_64-win32' if os.name=='nt' else 'x86_64-linux'}[target]
 
@@ -139,17 +149,28 @@ def main(argv=None):
                            '--output',str(output/'physics'),'--variant',args.configuration or ('debug' if args.target=='html5' else 'headless')],output,2100)
     tests=[]
     expected=[f'{config}.{key}' for config in ['scale-0.01-fps-60','scale-0.02-fps-30'] for key in IDS]
+    # HTML5 players runs (#215) are additive: same cases on the wasm-web engine Pages serves.
+    players=[f'{config}/wasm-web' for config in ['scale-0.01-fps-60','scale-0.02-fps-30']] if args.target=='html5' else []
+    expected+=[f'{config.replace("/",".")}.{key}' for config in players for key in IDS]
     if test['status']=='PASS':
         try:
             comparison=json.loads((output/'physics/comparison.json').read_text())
             if comparison['status']!='PASS' or comparison['source_sha']!=sha:raise RuntimeError('Invalid comparison')
-            for config in ['scale-0.01-fps-60','scale-0.02-fps-30']:
+            for config in ['scale-0.01-fps-60','scale-0.02-fps-30']+players:
                 report_path=output/'physics'/config/'result.json'
                 report=json.loads(report_path.read_text())
                 if report['status']!='PASS' or report['source_sha']!=sha or set(report['cases'])!=set(IDS):raise RuntimeError('Invalid physics inventory/identity')
+                if args.target=='html5':
+                    if config in players:
+                        check_engine_load(config,report.get('engine_load',{}),'players')
+                        isolated=json.loads(((output/'physics'/config).parent/'result.json').read_text())
+                        if (report['run_id'],report['config_hash'])!=(isolated['run_id'],isolated['config_hash']):
+                            raise RuntimeError(f'{config}: players run is not the isolated run\'s bundle')
+                    else:
+                        check_engine_load(config,json.loads((output/'physics'/config/'engine-load.json').read_text()),'isolated')
                 for key in IDS:
                     if not isinstance(report['cases'][key],dict) or not report['cases'][key]:raise RuntimeError('Invalid physics measurements')
-                    tests.append({'id':f'{config}.{key}','status':'PASS','duration_ms':None,'assertions':1,
+                    tests.append({'id':f'{config.replace("/",".")}.{key}','status':'PASS','duration_ms':None,'assertions':1,
                                   'measurements':report['cases'][key],'artifacts':[str(report_path.relative_to(output))]})
         except (OSError,ValueError,KeyError,RuntimeError) as exc:
             test.update(status='FAIL',detail=str(exc))
