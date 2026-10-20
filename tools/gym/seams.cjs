@@ -3,6 +3,7 @@ const {qualify,peaks}=require('./seam_analysis.cjs');
 const {plan,comparisonOf,verdict}=require('./seam_report.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const P=require('./preset.cjs').fromArgv(process.argv);
 (async()=>{
  const [root,sha,runId,testcase,bundle]=process.argv.slice(2),out=path.resolve(root);let browser,page;
  const results=[],retries=[],poweredControls=[],errors=[],part=process.env.GYM_PART||null,scope=plan(part);let rejected=null;
@@ -31,16 +32,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    return r;
   }
   for(const speed of scope.speeds)for(const station of ['seams-chain','seams-hull']){
-   await page.goto(url+`?station=${station}&speed=${speed}`);
+   await page.goto(url+`?station=${station}&speed=${speed}`+P.query);
    await page.waitForFunction(({sha,runId,station})=>window.riderReady?.source_sha===sha&&window.riderReady.run_id===runId&&window.riderStationReport?.station===station,{sha,runId,station});
    await page.waitForFunction(()=>window.riderTelemetry?.station_distance>=40);
    await page.screenshot({path:path.join(out,`${station}-${speed}.png`)});
-   const first=await completed();assert.equal(first.nominal_mps,speed);results.push(first);
+   const first=await completed();await P.check(page);assert.equal(first.nominal_mps,speed);results.push(first);
    fs.writeFileSync(path.join(out,`${station}-${speed}.json`),JSON.stringify(first,null,2));
    const before=await page.evaluate(()=>window.riderTelemetry);
    await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('r');
    await page.waitForFunction(()=>!window.riderStationReport.done);
-   const repeat=await completed();retries.push(repeat);
+   const repeat=await completed();await P.check(page);retries.push(repeat);
    assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),before.world_loads);
    assert.equal(repeat.status,first.status);assert.deepEqual(repeat.reasons,first.reasons);
    if(first.comparable){
@@ -55,6 +56,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   // Preset A's motor (theoretical no-slip 7.04 m/s) cannot hold 9 m/s.
   // Keep physical off-target controls; never count them as comparison evidence.
+  // They check preset A's motor limit, so they stay on preset A under --preset as well (#200).
   if(scope.powered){await page.unroute('**/index.html*');await configure(page,runId,'a18powered');}
   if(scope.powered)for(const speed of [5,9])for(const station of ['seams-chain','seams-hull']){
    await page.goto(url+`?station=${station}&speed=${speed}`);const r=await completed();
@@ -64,12 +66,14 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   if(scope.powered){await page.unroute('**/index.html*');await configure(page,runId,testcase);}
   const comparison=comparisonOf(results,poweredControls,scope.speeds,scope.powered);
+  // Under --preset the powered controls still ran preset A: flag them so they never read as the candidate's.
+  if(P.explicit)for(const c of comparison)if(c.mode==='powered control')c.preset='a';
   if(scope.speeds.includes(5))assert(results.find(r=>r.station==='seams-chain'&&r.nominal_mps===5).comparable,'5 m/s chain free-roll baseline');
   // Invalid nominal speeds must never qualify, even if the strip is crossed.
-  if(scope.rejected){await page.goto(url+'?station=seams-chain&speed=10');rejected=await completed();assert.equal(rejected.comparable,false);assert(rejected.reasons.includes('unsupported nominal speed'));}
+  if(scope.rejected){await page.goto(url+'?station=seams-chain&speed=10'+P.query);rejected=await completed();assert.equal(rejected.comparable,false);assert(rejected.reasons.includes('unsupported nominal speed'));}
   if(errors.length)throw Error(errors.join('\n'));
   // A part has no verdict of its own; the merge computes it over all parts.
-  const report={status:'PASS',protocol:3,...(part?{part}:verdict(comparison)),source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
+  const report={status:'PASS',...P.report(),...(P.explicit&&scope.powered?{powered_controls_preset:'a'}:{}),protocol:3,...(part?{part}:verdict(comparison)),source_sha:sha,run_id:runId,browser:browser.version(),results,retries,poweredControls,comparison,rejected,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'seams-result.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status,comparison}));
  }catch(e){if(page){await page.screenshot({path:path.join(out,'seams-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'seams-failed-state.json'),JSON.stringify({results,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}

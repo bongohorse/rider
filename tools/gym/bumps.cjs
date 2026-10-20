@@ -4,6 +4,7 @@
 const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const P=require('./preset.cjs').fromArgv(process.argv);
 const geometry=require('./bumps_geometry.cjs'),{serve,differing}=require('./bumps_station.cjs'),{plan,cases:planned}=require('./bump_report.cjs');
 // Declared before the evidence runs.
 const TOL={share:.02,compression_m:.005,pitch_rad:.01,apex_mps:.02};
@@ -41,14 +42,14 @@ const SWEEP=[2.5,3,3.5,4,4.5,5,5.5,6,6.5,7],BISECT=3,COMPARE=7;
    vx_min_mps:f.vx_min_mps,vx_max_mps:f.vx_max_mps,apex_speed_mps:f.apex_speed_mps??null,lifted:f.lifted,lift_speed_mps:f.lift_speed_mps??null,lift_x_m:f.lift_x_m??null,
    chassis_contact:f.chassis_contact,bottomed:f.bottomed,underbody_x_m:f.underbody_x_m??null}))});
   async function open(query,section){
-   await page.goto(base+'?station=bumps'+query);
+   await page.goto(base+'?station=bumps'+query+P.query);
    await page.waitForFunction(({sha,runId,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station==='bumps'&&window.riderStationReport.section===section&&window.riderTelemetry?.sequence>1,{sha,runId,section});
   }
   // Holds a key until the game acknowledges it (pitfall 5).
   async function press(key,acknowledged,arg){await page.keyboard.down(key);await page.waitForFunction(acknowledged,arg);await page.keyboard.up(key);}
   async function finished(id,features){
    await page.waitForFunction(({id,features})=>{const r=window.riderStationReport.records.find(x=>x.id===id);return r?.entered&&(features?r.features.filter(f=>features.includes(f.id)).every(f=>f.done):r.done);},{id,features},{timeout:120000});
-   const r=await report();assert.equal(r.comparable,true);motor=r.tuning_at_start.motor_speed;assert.ok(Number.isFinite(motor)&&motor!==0);return record(r,id);
+   const r=await report();await P.check(page);assert.equal(r.comparable,true);motor=r.tuning_at_start.motor_speed;assert.ok(Number.isFinite(motor)&&motor!==0);return record(r,id);
   }
   // The A18 powered control: throttle = start speed / (|preset motor_speed| x wheel radius 0.22 m).
   let motor;
@@ -171,7 +172,7 @@ const SWEEP=[2.5,3,3.5,4,4.5,5,5.5,6,6.5,7],BISECT=3,COMPARE=7;
   assert.deepEqual(cases,planned(scope));
   if(errors.length)throw Error(errors.join('\n'));
   // A part has only its own fields; the merge (bump_report.cjs) combines them.
-  const result={status:'PASS',...(part?{part}:{}),source_sha:sha,run_id:runId,browser:browser.version(),cases,timings,tolerances:TOL,protocol:(await report()).protocol,
+  const result={status:'PASS',...(part?{part}:{}),...P.report(),source_sha:sha,run_id:runId,browser:browser.version(),cases,timings,tolerances:TOL,protocol:(await report()).protocol,
    geometry:shape??null,ladders:Object.fromEntries(Object.entries(ladders).map(([speed,rs])=>[speed,rs.map(brief)])),liftoff,sweep,repeats,retry,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'bumps-result.json'),JSON.stringify(result,null,2));
   const pct=x=>(100*x).toFixed(0)+'%';
