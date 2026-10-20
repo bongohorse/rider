@@ -298,8 +298,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(let i=1;i<=6;i++){await page.mouse.move(a.x+(b.x-a.x)*i/6,a.y+(b.y-a.y)*i/6);await page.waitForTimeout(40);}await pointer.frames(page);await page.mouse.up();await pointer.frames(page);})();
   e=await revision(rev+7);assert.deepEqual(label(await doc(),lid).position,[10,4]);
   // Double-click opens the field; Esc keeps the text and adds nothing.
-  const lp=await world([10,4]);await page.mouse.move(lp.x,lp.y);await page.waitForTimeout(80);
-  for(let i=0;i<2;i++){await page.mouse.down();await pointer.frames(page);await page.mouse.up();await pointer.frames(page);}
+  const lp=await world([10,4]);await pointer.dblclick(page,lp);
   await page.waitForFunction(id=>window.riderEditor.field_label===id,lid);
   await page.keyboard.type('xyz',{delay:30});await key('Escape');e=await settle();
   assert.equal(e.field,false);assert.equal(e.revision,rev+7);assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');

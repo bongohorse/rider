@@ -37,8 +37,7 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
-  async function dblclick(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(50);
-   for(let i=0;i<2;i++){await page.mouse.down();await pointer.frames(page);await page.mouse.up();await pointer.frames(page);}}
+  async function dblclick(p){await pointer.dblclick(page,await world(p));}
   async function drag(from,to,steps=6){
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);

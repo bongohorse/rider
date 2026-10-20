@@ -35,8 +35,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async p=>click(await world(p));
-  async function dblclick(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(50);
-   for(let i=0;i<2;i++){await page.mouse.down();await pointer.frames(page);await page.mouse.up();await pointer.frames(page);}}
+  async function dblclick(p){await pointer.dblclick(page,await world(p));}
   async function drag(from,to,mods=[],steps=5){
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
