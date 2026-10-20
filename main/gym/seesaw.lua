@@ -56,7 +56,7 @@ function M.reset(s)
     local old=s.joint
     assert(b2d.joint.is_valid(old),"Seesaw joint invalid before reset")
     -- Pose and motion this reset replaced (report only).
-    local before_angle,before_omega=b2d.body.get_angle(s.body),b2d.body.get_angular_velocity(s.body)
+    local before_angle,before_omega,before_awake=b2d.body.get_angle(s.body),b2d.body.get_angular_velocity(s.body),b2d.body.is_awake(s.body)
     b2d.joint.destroy(old)
     local stale=b2d.joint.is_valid(old)
     assert(not stale,"Replaced seesaw joint still valid")
@@ -77,7 +77,14 @@ function M.reset(s)
         b2d.body.set_linear_velocity(s.body,vmath.vector3())
         b2d.body.set_angular_velocity(s.body,0)
         b2d.body.set_active(s.body,true)
+        -- Canonical sleep timer (#217): Box2D 3.1 keeps body->sleepTime through Disable/Enable, SetTransform,
+        -- velocity setters and SetAwake(true) on an awake body. A plank that was awake but slow ("sleepy") at R
+        -- kept its part-used timer and fell asleep within 1-2 ticks of its slow push-out. Sleeping the fresh
+        -- single-body island (no joint or contacts yet, so b2TrySleepIsland always succeeds) and waking it
+        -- again resets the timer (b2WakeSolverSet: sleepTime 0, identity velocity).
+        b2d.body.set_awake(s.body,false)
         b2d.body.set_awake(s.body,true)
+        assert(b2d.body.is_awake(s.body),"Seesaw plank not awake after reset")
         at=b2d.body.get_position(s.body)
         if not (math.abs(at.x-p.x)<0.01 and math.abs(at.y-p.y)<0.01 and math.abs(b2d.body.get_angle(s.body)-angle)<0.005) then
             error(string.format("Noncanonical seesaw pose (%.4f, %.4f, %.5f)",at.x,at.y,b2d.body.get_angle(s.body)))
@@ -89,7 +96,7 @@ function M.reset(s)
         error(err)
     end
     joint(s)
-    s.last_reset={before_angle=before_angle,before_omega=before_omega,old_joint_valid=stale,joint_valid=b2d.joint.is_valid(s.joint),joints=#b2d.body.get_joints(s.body),
+    s.last_reset={before_angle=before_angle,before_omega=before_omega,before_awake=before_awake,old_joint_valid=stale,joint_valid=b2d.joint.is_valid(s.joint),joints=#b2d.body.get_joints(s.body),
         generation=s.generation,angle=b2d.body.get_angle(s.body),omega=b2d.body.get_angular_velocity(s.body),
         x=at.x*scale(),y=at.y*scale(),speed=vmath.length(b2d.body.get_linear_velocity(s.body))*scale()}
     return s.last_reset

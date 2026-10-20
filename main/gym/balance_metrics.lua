@@ -6,7 +6,7 @@ local seesaw=require "main.gym.seesaw"
 local M={}
 -- Declared before evidence runs (README "Balance").
 M.protocol={stop_speed=0.05,stop_pitch=0.6,stop_hold_s=1.0,fall_drop=0.35,flip_pitch=1.6,timeout_s=30,
-    seesaw_rest_s=0.5,seesaw_settle_omega=0.05,seesaw_settle_s=0.25}
+    seesaw_rest_s=0.5,seesaw_settle_omega=0.05,seesaw_settle_s=0.25,seesaw_trace_ticks=60}
 function M.restart(self)
     local s=self.station.sections[self.station.section_index]
     -- The replaced attempt's plank extremes up to this reset (report only): a runner that sees the next
@@ -20,7 +20,7 @@ function M.restart(self)
     if self.seesaw then
         local r=self.balance.record
         r.seesaw={reset=self.seesaw.last_reset,generation=self.seesaw.generation,max_abs_angle=0,max_abs_omega=0,limit=self.station.seesaw.limit,
-            rest_target=self.station.seesaw.rest_angle,limit_reached=false}
+            rest_target=self.station.seesaw.rest_angle,limit_reached=false,trace={}}
     end
 end
 local function seesaw_observe(self,r)
@@ -29,6 +29,9 @@ local function seesaw_observe(self,r)
     local st=seesaw.state(self.seesaw)
     local p=M.protocol
     q.angle,q.omega=st.angle,st.omega
+    -- Retry canonicality (#217): plank angle and angular velocity of the first ticks after the reset; two retries
+    -- from different histories must give identical values.
+    if #q.trace<p.seesaw_trace_ticks then q.trace[#q.trace+1]={st.angle,st.omega} end
     q.max_abs_angle=math.max(q.max_abs_angle,math.abs(st.joint_angle))
     q.max_abs_omega=math.max(q.max_abs_omega,math.abs(st.omega))
     -- The ±limit is a safety stop only; the decks should hold the plank before it.
