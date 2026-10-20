@@ -60,7 +60,10 @@ class EditorHelp(unittest.TestCase):
             self.assertTrue(any(key_name in phrase for phrase in phrases), f'{action}: no phrase names its key {key_name}')
 
     def test_every_key_in_the_help_is_bound(self):
-        bound = {name(key).strip('[]') for key, _ in bindings()}
+        # Keys the editor flow uses: editor actions, the help key, the prefab type keys and R (retry while
+        # test driving, R11). A game-only key named in the help fails.
+        editor = {'help_toggle', 'retry'} | {f'station_{i}' for i in range(1, 8)}
+        bound = {name(key).strip('[]') for key, action in bindings() if action.startswith('editor_') or action in editor}
         for token in re.findall(r'\[([^\]]+)\]', help_text()):
             if token not in NOT_KEYS:
                 self.assertIn(token, bound, f'the help names [{token}], which no binding has')

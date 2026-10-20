@@ -118,16 +118,11 @@ local function from_station(d,id,name)
         e.objects[#e.objects+1]={id=new_id(e),type="line",points=list}
     end
     for _,h in ipairs(d.hulls or {}) do e.objects[#e.objects+1]={id=new_id(e),type="hull",vertices=points(h.vertices)} end
-    -- A compiled label without text draws nothing and is not an editor label (LE6b): it is left out and
-    -- counted, so the caller can say so.
-    local dropped=0
-    for _,l in ipairs(d.labels or {}) do
-        if l.text:find("%S") then e.objects[#e.objects+1]={id=new_id(e),type="label",position={l.position[1],l.position[2]},text=l.text} else dropped=dropped+1 end
-    end
+    for _,l in ipairs(d.labels or {}) do e.objects[#e.objects+1]={id=new_id(e),type="label",position={l.position[1],l.position[2]},text=l.text} end
     if type(d.finish)=="table" and point(d.finish.position) and type(d.finish.direction)=="table" then
         e.finish={position={d.finish.position[1],d.finish.position[2]},direction=d.finish.direction[1]<0 and -1 or 1}
     end
-    return {schema=1,units="metres",id=id,name=name,editor=e},dropped>0 and dropped.." empty label"..(dropped==1 and " was" or "s were").." left out (they draw nothing)." or nil
+    return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
 -- kind, sections, markers and every other measurement field are dropped by construction.
@@ -151,18 +146,17 @@ end
 -- * an unsupported or invalid block: never recompiled; the compiled geometry opens as an editable line
 --   copy with a note. The file and its unknown data stay unchanged.
 function M.open_level(d)
-    if d.editor==nil then return from_station(d,d.id,d.name) end -- doc and a note about empty labels
+    if d.editor==nil then return from_station(d,d.id,d.name) end
     local doc={schema=1,units="metres",id=d.id,name=d.name,editor=copy(d.editor)}
     local ok,err,unsupported=M.validate(doc)
     if not ok then
         local why=unsupported and "made by an unsupported editor ("..err..")" or "its editor data is invalid ("..err..")"
-        local lines,dropped=from_station(d,d.id,d.name)
-        return lines,"This level was "..why.."; its compiled geometry was opened as editable lines"..(dropped and " ("..dropped:gsub("%.$","")..")" or "")..". The file is unchanged."
+        return from_station(d,d.id,d.name),"This level was "..why.."; its compiled geometry was opened as editable lines. The file is unchanged."
     end
     local e=doc.editor
     if e.compiled_revision==e.revision then
         local summary=M.compare(doc,d)
-        if summary then return doc,nil,{summary=summary,lines=(from_station(d,d.id,d.name))} end
+        if summary then return doc,nil,{summary=summary,lines=from_station(d,d.id,d.name)} end
     end
     return doc
 end
@@ -238,8 +232,6 @@ function M.validate(doc)
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
         if o.type=="label" then
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
-            -- An empty label is invisible; the editor never makes one (LE6b).
-            if not o.text:find("%S") then return nil,"Label "..o.id.." has no text" end
         elseif o.type=="prefab" then
             if e.editor_version<3 then return nil,"Prefab "..o.id.." needs editor version 3" end
             if (o.kind=="wave" and e.editor_version<4) then return nil,"Bump/wave "..o.id.." needs editor version 4" end

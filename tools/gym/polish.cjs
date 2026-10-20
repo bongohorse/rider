@@ -334,14 +334,22 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.keyboard.type('Copy',{delay:30});await key('Enter');e=await revision(rev+1);
   await key('z',['Control']);await key('z',['Control']);await page.waitForFunction(k=>window.riderEditor.key===k,ownKey);
   assert.equal(label(await doc(),lid).text,'Gap 3 m','the import changed the original');
-  // A source with an empty label is refused by the source validator (the editor never makes one): the
-  // level opens as editable lines from its compiled fields, where the empty label is left out and named.
-  const blank=JSON.parse(JSON.stringify(plain));blank.id='le6-empty';
+  // Saved data with an empty label (main's validators accept it; the editor never makes one) still opens as
+  // its source and edits normally, also after a reload; its geometry and the empty label stay intact.
+  const blank=JSON.parse(JSON.stringify(plain));blank.name='LE6 empty label';
   blank.labels=[{position:[3,3],text:''}];blank.editor.objects.push({id:'o2',type:'label',position:[3,3],text:''});blank.editor.next_id=3;
   e=await importText(JSON.stringify(blank),'le6-empty.json');
-  assert.ok(e.message.includes('Label o2 has no text')&&e.message.includes('1 empty label was left out'),e.message);
-  assert.equal(labels(await doc()).length,0);
-  await key('z',['Control']);await page.waitForFunction(k=>window.riderEditor.key===k,ownKey);
+  assert.equal(e.name,'LE6 empty label');assert.equal(e.conflict,false);assert.ok(!/invalid|has no text/.test(e.message),e.message);
+  d=await doc();assert.deepEqual(label(d,'o2'),{id:'o2',type:'label',position:[3,3],text:''});assert.deepEqual(d.objects[0].points,[[0,0],[40,0]]);
+  e=await settle();rev=e.revision;
+  await key('l');await at([8,6]);e=await revision(rev+1);await key('Enter');await key('s');e=await settle();
+  assert.equal(e.revision,rev+1);
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await page.goto(base+'?station=custom');e=await edit();
+  d=await doc();assert.equal(e.name,'LE6 empty label');
+  assert.deepEqual(label(d,'o2'),{id:'o2',type:'label',position:[3,3],text:''});assert.deepEqual(d.objects[0].points,[[0,0],[40,0]]);
+  assert.deepEqual(labels(d).map(o=>o.text).sort(),['','Label']);
   measurements.labels={text_limit:64,compiled:saved.labels};
   cases.push('labels_place_edit_move_copy_undo_persist');
 
