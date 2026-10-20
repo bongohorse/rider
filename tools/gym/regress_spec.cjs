@@ -9,7 +9,8 @@ const EXPECTED=path.join(DIR,'expected.json');
 const TOLERANCE=Object.freeze({
  // A21 replay.lua M.TOLERANCE: same preset, chassis position and angle on every replayed tick (verdict MATCH).
  pose:Object.freeze({position_m:0.05,angle_rad:0.05}),
- // Speed repeat tolerance of the stations: a19 takeoff, a19b apex, a19c takeoff speed.
+ // Speed repeat tolerance of the stations: a19 takeoff, a19b apex, a19c takeoff speed. Checked on every trace;
+ // top-speed coverage is straight-top (gaps-3 tops at its 7 m/s start speed, air-big-back at its fall speed).
  top_speed_mps:0.02,
  // a19 gaps repeat tolerances (plus same status).
  gaps:Object.freeze({jump_distance_m:0.05,takeoff_speed_mps:0.02,peak_compression_m:0.005}),

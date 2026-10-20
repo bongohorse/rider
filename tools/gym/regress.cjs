@@ -8,6 +8,8 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const S=require('./regress_spec.cjs');
 const RECORD=process.argv.includes('--record');
+// Regeneration is a deliberate local step: CI must only check the stored traces, never re-record and check itself.
+if(RECORD&&process.env.CI){console.error('a22 --record is refused in CI (CI is set): regenerate locally and review the diff');process.exit(2);}
 const args=process.argv.slice(2).filter(a=>a!=='--record');
 (async()=>{
  const [root,sha,runId,testcase,bundle]=args;const out=path.resolve(root);let browser,page;
@@ -88,7 +90,7 @@ const args=process.argv.slice(2).filter(a=>a!=='--record');
   const pt=S.PERTURB.trace,ptDef=S.TRACES.find(d=>d.name===pt.name),bad=stored(ptDef);
   for(let k=pt.throttle_zero[0];k<=pt.throttle_zero[1];k++)bad.throttle[k-1]=0;
   const p1=await replay(ptDef,bad,'perturbed trace '+pt.name);
-  assert(!p1.pass,'perturbed trace passed');
+  assert(!p1.pass,'perturbed trace passed');assert.equal(p1.verdict,'DIVERGED');
   for(const c of pt.must_fail)assert(p1.failures.some(f=>f.check===c),'perturbed trace did not fail '+c);
   cases.push('perturbed_trace_fails');
   // 4. Perturbed preset value (debug only, live-tuning path before the replay). Must FAIL on the outcome.

@@ -14,8 +14,19 @@ test('tolerances stay frozen at their declared sources',()=>{
   });
   assert.match(fs.readFileSync(path.join(S.ROOT,'main/gym/replay.lua'),'utf8'),/M\.TOLERANCE=\{position_m=0\.05,angle_rad=0\.05\}/);
   assert.equal(S.TRACES.length,3);
-  assert.deepEqual(S.PERTURB.trace.must_fail,['verdict','takeoff_speed_mps']);
-  assert.deepEqual(S.PERTURB.preset.must_fail,['top_speed_mps']);
+  assert.deepEqual(JSON.parse(JSON.stringify(S.PERTURB)),{
+    trace:{name:'gaps-3',throttle_zero:[1,45],must_fail:['verdict','takeoff_speed_mps']},
+    preset:{name:'straight-top',tune:{key:'motor_speed',value:-31},must_fail:['top_speed_mps']},
+  });
+});
+
+test('CI only checks the stored traces and never regenerates them',()=>{
+  const dir=path.join(S.ROOT,'.github/workflows');
+  for(const name of fs.readdirSync(dir))assert(!/--record\b/.test(fs.readFileSync(path.join(dir,name),'utf8')),name+' passes --record');
+  const g1=fs.readFileSync(path.join(dir,'g1.yml'),'utf8');
+  assert.match(g1,/run: python tools\/gym\/smoke\.py --bundle artifacts\/g1\/gym-bundle --output artifacts\/g1\/regress --case a22\n/);
+  // The runner itself refuses --record when CI is set.
+  assert.match(fs.readFileSync(path.join(S.ROOT,'tools/gym/regress.cjs'),'utf8'),/if\(RECORD&&process\.env\.CI\)\{[^}]*process\.exit\(2\);\}/);
 });
 
 test('every trace is a valid format-v1 recording of preset A, unmodified, from its station start',()=>{
