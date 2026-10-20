@@ -147,27 +147,43 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   if(presetA)assert(Math.abs(reset.before_omega)>.2,'preset A: no R replaced a swinging plank in 3 tries, omegas '+midTries.join(', '));
   seesaw.mid_tip_retry={preset_a_rule:presetA,tries:midTries,swinging,reset,swinging_at_reset:Math.abs(reset.before_omega)>.2,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
   // 5b. Retry canonicality (#217): the plank's first 60 ticks after R are bit-identical whatever came before it.
-  // Histories: a fresh load (reference), R while the plank swings, R after it rested (asleep) and R after a full
-  // attempt. Before the fix a resting plank kept its Box2D sleep timer through the reset and froze within one tick.
+  // Histories: a fresh load (reference), R after the plank rested (asleep), R while it swings, R after a full
+  // attempt and R while it is awake but slow. Before the fix only the last differed: an awake, slow plank kept its
+  // part-used Box2D sleep timer through the reset and froze once it ran out. An asleep plank was unaffected,
+  // because destroying its joint wakes it, which resets the timer. Each history asserts its precondition.
   {
-   const traceOf=async g=>{await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation===g&&r.record.seesaw.trace.length>=60;},g,{timeout:10000});return (await report()).record.seesaw.trace;};
+   const traceOf=async g=>{
+    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation!==g||r.record.seesaw.trace.length>=60;},g,{timeout:10000});
+    const r=await report();
+    if(r.generation!==g)throw Error(`plank trace of generation ${g}: a stray ${r.reset_reason} reset to generation ${r.generation} before 60 ticks`);
+    return r.record.seesaw.trace;
+   };
    async function idleRetry(){
     await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});
     const g=(await report()).generation;await retry();
     await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
     const r=await report();assert.equal(r.generation,g+1);assert.equal(r.reset_reason,'manual');
-    return traceOf(g+1);
+    return {before:r.seesaw.reset,trace:await traceOf(g+1)};
    }
+   const asleep=(h,label)=>{assert.equal(h.before.before_awake,false,label+': the plank must be asleep before R');return h.trace;};
    await open('seesaw');const histories={load:await traceOf((await report()).generation)};
    // Resting: idle for 2 s more, so the plank has been calm (and asleep) well past Box2D's 0.5 s sleep time.
    await page.waitForFunction(()=>window.riderStationReport.record.elapsed>2.5);
-   histories.after_rest=await idleRetry();
-   await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
-   let g=(await report()).generation;await retry();
-   await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined;},g,{timeout:20000});
-   histories.mid_tip=await idleRetry();
+   histories.after_rest=asleep(await idleRetry(),'after_rest');
+   // Mid-tip: R while the plank moves faster than Box2D's sleep threshold (0.05 m/s at its 2 m extent, i.e.
+   // |omega| > 0.025 rad/s); a report may show the swing just before it ends, so up to 3 tries.
+   let mid=null;const midOmegas=[];
+   for(let i=0;i<3&&!mid;i++){
+    await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
+    const g=(await report()).generation;await retry();
+    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&Math.abs(r.seesaw.omega)>.2;},g,{timeout:20000});
+    const h=await idleRetry();midOmegas.push(h.before.before_omega);
+    if(Math.abs(h.before.before_omega)>.025)mid=h;
+   }
+   if(!mid)throw Error('mid_tip: no R replaced a plank moving above the sleep threshold in 3 tries, omegas '+midOmegas.join(', '));
+   histories.mid_tip=mid.trace;
    await attempt('full');
-   histories.after_full=await idleRetry();
+   histories.after_full=(await idleRetry()).trace;
    // The trigger of #217: R while the plank is still awake but slow after the previous reset (its Box2D sleep
    // timer part-used; it sleeps about 0.5 s after a reset). The second R follows the acknowledged first one after
    // three animation frames (the engine samples input once per frame, so the release is seen), i.e. within about
@@ -186,9 +202,9 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    }
    if(!trigger)throw Error('#217 trigger not reached: no R replaced an awake, slow plank in 5 back-to-back tries (last reset replaced '+JSON.stringify((await report()).seesaw.reset)+')');
    histories.back_to_back=trigger.trace;
-   seesaw.retry_trigger={attempt:trigger.attempt,before_angle:trigger.before.before_angle,before_omega:trigger.before.before_omega};
+   seesaw.retry_trigger={attempt:trigger.attempt,before_angle:trigger.before.before_angle,before_omega:trigger.before.before_omega,mid_tip_omegas:midOmegas};
    await page.waitForFunction(()=>window.riderStationReport.record.elapsed>2.5);
-   histories.after_rest_again=await idleRetry();
+   histories.after_rest_again=asleep(await idleRetry(),'after_rest_again');
    const ref=histories.load,differ=[];
    for(const [name,t] of Object.entries(histories)){
     const i=t.findIndex((v,k)=>v[0]!==ref[k][0]||v[1]!==ref[k][1]);
