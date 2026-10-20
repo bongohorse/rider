@@ -61,7 +61,7 @@ function init(self)
     self.nodes,self.buttons,self.held={},{},{}
     -- Test state for the le2/le3/le4 runners only (debug engine); release builds never publish it.
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d")
     local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
     node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
     self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
@@ -92,6 +92,9 @@ function init(self)
     -- LE5c: a point's Corner/Smooth switch and a prefab's conversion to an editable path.
     button(self,"smooth",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make smooth",R,T)
     button(self,"convert",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Convert to editable path",R,T)
+    -- LE5d: Corner/Smooth for several points or whole objects at once.
+    button(self,"smooth_all",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make smooth",R,T)
+    button(self,"corner_all",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make corner",R,T)
     button(self,"rename",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Rename level",R,T)
     for i=1,PARAMS do
         button(self,"param_"..i,vmath.vector3(860,190,0),vmath.vector3(180,22,0),"",R,T)
@@ -153,7 +156,7 @@ end
 -- Held commands, gestures and previews never survive a mode change or focus loss (R15). A polyline
 -- being drawn keeps its placed points on focus loss; a mode change ends it (see play).
 local function cancel(self)
-    self.drag,self.pan,self.box,self.held=nil,nil,nil,{}
+    self.drag,self.pan,self.box,self.held,self.pending=nil,nil,nil,{},nil
     if editor.preview then editor.preview=nil;editor.touch() end
     if editor.preview_objects then editor.set_preview(nil) end
 end
@@ -339,6 +342,7 @@ local function selected_object()
     for _,o in ipairs(editor.doc.editor.objects) do if o.id==editor.selection then return o end end
 end
 local function delete(self)
+    if editor.point_count()>=2 then editor.message="Delete works on one point at a time: click one of the selected points first.";return end
     local s=editor.selection
     local v=editor.vertex
     -- A curve anchor (or a curve end) deletes that anchor; a prefab end stands for the whole prefab.
@@ -411,6 +415,7 @@ local function connect_target(v)
     return best
 end
 local function connect(self)
+    if editor.point_count()>=2 then editor.message="Connect [J] works on one point at a time: click one of the selected points first.";return end
     local v=editor.vertex
     if not v then editor.message="Select a line end first.";return end
     local e=editor.doc.editor
@@ -447,6 +452,7 @@ local function connect(self)
     end
 end
 local function split(self)
+    if editor.point_count()>=2 then editor.message="Split [K] works on one point at a time: click one of the selected points first.";return end
     local a=editor.anchor
     if a and find(a.id) and a.id==editor.selection and #editor.selected_ids()==1 then
         if editor.commit(function(e) local id,err=edit.split_curve(e,a.id,a.i);if not id then return nil,err end end,true) then editor.select(a.id) end
@@ -624,6 +630,193 @@ local function place_prefab(self,p)
         editor.message="Placed "..prefab.name(place.kind).." "..id..(place.target and ", connected to "..place.target or "")..". Change its values on the right."
     end
 end
+-- Point selection (LE5d). A point is {id, i}: a line point or a curve anchor by index, a joint as its
+-- upstream piece's last point. Points belong to selected lines and curves (a joint also to its selected
+-- downstream piece); prefab points never (convert first). editor.points holds two or more; one point is the
+-- LE5c single selection (vertex/anchor), none means whole objects.
+local function editable(o) return o and (o.type=="line" or o.type=="curve") end
+local function point_total(o) return o.type=="line" and #o.points or #o.anchors end
+local function own_point(id,i)
+    local o=find(id)
+    if not editable(o) then return nil end
+    local next,prev=doc_lib.links(editor.doc.editor)
+    if i==1 and prev[id] then
+        local u=find(prev[id])
+        if not editable(u) or not (editor.selected[id] or editor.selected[u.id]) then return nil end
+        return {id=u.id,i=point_total(u)}
+    end
+    if editor.selected[id] or (i==point_total(o) and next[id] and editor.selected[next[id]]) then return {id=id,i=i} end
+end
+-- The point a pick candidate stands for (a line point or end, a curve's anchor handle), or nil.
+local function point_of(c)
+    if c.kind=="vertex" then
+        local o=find(c.id)
+        if not editable(o) then return nil end
+        return own_point(c.id,o.type=="curve" and (c.index==1 and 1 or #o.anchors) or c.index)
+    end
+    if c.kind=="handle" and c.anchor and c.handle:sub(1,1)=="a" then return own_point(c.id,c.anchor) end
+end
+local function point_pos(pt)
+    local o=editor.preview_objects and editor.preview_objects[pt.id] or find(pt.id)
+    if not o then return nil end
+    return o.type=="line" and o.points[pt.i] or o.anchors[pt.i] and o.anchors[pt.i].p
+end
+-- The LE5c single point (anchor or vertex) as a point, if it is one.
+local function single_point()
+    local a=editor.anchor
+    if a and a.id==editor.selection and find(a.id) then return own_point(a.id,a.i) end
+    local v=editor.vertex
+    if v and find(v.id) then return point_of({kind="vertex",id=v.id,index=v.index}) end
+end
+-- Selects only this point, as the LE5c single selection. The object selection stays as it is: a joint
+-- picked through its selected downstream piece does not add the upstream piece.
+local function set_single(pt)
+    local o=find(pt.id)
+    editor.points,editor.vertex2={},nil
+    if o.type=="line" then editor.selection,editor.vertex,editor.anchor=pt.id,{id=pt.id,index=pt.i},nil
+    else
+        local n=#o.anchors
+        editor.selection,editor.anchor=pt.id,{id=pt.id,i=pt.i}
+        editor.vertex=(pt.i==1 or pt.i==n) and {id=pt.id,index=pt.i==1 and 1 or #path(o)} or nil
+    end
+    editor.touch()
+end
+-- After a change of editor.points: one point becomes the single selection, two or more drop it.
+local function settle_points(primary)
+    local n=editor.point_count()
+    if n==1 then for _,only in pairs(editor.points) do set_single(only) end;return end
+    editor.vertex,editor.vertex2,editor.anchor=nil,nil,nil
+    if n>=2 and primary and editor.selected[primary] then editor.selection=primary end
+    editor.touch()
+end
+-- Shift+click on a point: add or remove it (the current single point joins the set first).
+local function toggle_point(pt)
+    if editor.point_count()==0 then
+        local s1=single_point()
+        if s1 then editor.points[s1.id..":"..s1.i]={id=s1.id,i=s1.i} end
+    end
+    local key=pt.id..":"..pt.i
+    if editor.points[key] then editor.points[key]=nil else editor.points[key]={id=pt.id,i=pt.i} end
+    settle_points(pt.id)
+end
+local function has_paths()
+    for id in pairs(editor.selected) do if editable(find(id)) then return true end end
+    return false
+end
+-- A box on empty space while lines or curves are selected: their points inside it (LE5d box rule).
+local function box_points(b)
+    local x0,x1=math.min(b.from[1],b.to[1]),math.max(b.from[1],b.to[1])
+    local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
+    local found,any={},false
+    for _,o in ipairs(editor.doc.editor.objects) do
+        if editor.selected[o.id] and editable(o) then
+            for i=1,point_total(o) do
+                local q=o.type=="line" and o.points[i] or o.anchors[i].p
+                if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then
+                    local pt=own_point(o.id,i)
+                    if pt then found[pt.id..":"..pt.i]=pt;any=true end
+                end
+            end
+        end
+    end
+    return any and found or nil
+end
+local function plural(n,word) return n.." "..word..(n==1 and "" or "s") end
+local function names_text(list)
+    if #list<=3 then return table.concat(list,", ") end
+    return table.concat(list,", ",1,3).." and "..(#list-3).." more"
+end
+-- What Make smooth / Make corner would do with the current points or whole objects (panel text), cached
+-- per document state and selection.
+local corner_cache={}
+local function corner_summary()
+    local e=editor.doc.editor
+    local multi=editor.point_count()>=2
+    local ids=editor.selected_ids()
+    local list=multi and editor.point_list() or edit.object_points(e,ids)
+    local keys={}
+    for _,pt in ipairs(list) do keys[#keys+1]=pt.id..":"..pt.i end
+    local key=tostring(editor.doc)..":"..e.revision..":"..table.concat(ids,",")..":"..tostring(multi)..":"..table.concat(keys,",")
+    if corner_cache.key==key then return corner_cache.value end
+    local r={points=#list,sharp=0,smooth=0,ends=0,prefab=0,convert=0,multi=multi}
+    local seen={}
+    for _,pt in ipairs(list) do
+        local st=edit.corner_state(e,pt.id,pt.i)
+        if not st then r.ends=r.ends+1
+        elseif not seen[st.id..":"..st.i] then
+            seen[st.id..":"..st.i]=true
+            if st.prefab then r.prefab=r.prefab+1 elseif st.corner then r.sharp=r.sharp+1 else r.smooth=r.smooth+1 end
+        end
+    end
+    if not multi then
+        for _,id in ipairs(ids) do local o=find(id);if o.type=="prefab" and doc_lib.terrain(o) and not prefab.sample_error(o) then r.convert=r.convert+1 end end
+    end
+    corner_cache={key=key,value=r}
+    return r
+end
+-- Whole-object Make smooth / Make corner is offered for selected lines or curves (no single point picked),
+-- or for several objects with a terrain prefab among them; a single prefab keeps its Convert button.
+local function object_corner_mode()
+    if not editor.doc then return false end
+    if editor.point_count()>=2 or editor.vertex or editor.anchor then return false end
+    if has_paths() then return true end
+    local ids=editor.selected_ids()
+    if #ids<2 then return false end
+    for _,id in ipairs(ids) do if doc_lib.terrain(find(id)) then return true end end
+    return false
+end
+-- Bulk Corner / Smooth (LE5d): every selected point, or every eligible point of the selected objects, in
+-- one Undo step. Prefabs among whole objects are converted first, after a confirmation click.
+local function bulk_text(r,smooth,nothing)
+    local head=nothing and "Nothing to "..(smooth and "smooth" or "make sharp") or (smooth and "Make smooth: " or "Make corner: ")..plural(r.changed,"point")..(smooth and " rounded" or " made sharp")
+    local skips={}
+    if r.ends>0 then skips[#skips+1]=plural(r.ends,"open end") end
+    if r.already>0 then skips[#skips+1]=plural(r.already,"point").." already "..(smooth and "smooth" or "sharp") end
+    if r.prefab>0 then skips[#skips+1]=plural(r.prefab,"joint").." to a prefab (convert it first)" end
+    if #r.skipped>0 then skips[#skips+1]=names_text(r.skipped)..(smooth and " (no path)" or " (no smooth points)") end
+    if #r.refused>0 then skips[#skips+1]=plural(#r.refused,"point").." refused ("..r.refused[1]..")" end
+    return head..(#skips>0 and "; skipped: "..table.concat(skips,", ") or "")..(#r.converted>0 and ". Converted "..names_text(r.converted).." to paths" or "").."."
+end
+-- The extra note for converting a Bump/wave: a curve through its crests, at most this far from its shape.
+local function wave_note(objects)
+    local worst
+    for _,o in ipairs(objects) do
+        if o.type=="prefab" and o.kind=="wave" then worst=math.max(worst or 0,edit.convert_deviation(o)) end
+    end
+    return worst and string.format(" (a Bump/wave becomes a curve through its crests and troughs, at most %.1f mm from its shape)",worst*1000) or ""
+end
+local function bulk_corner(self,smooth)
+    local multi=editor.point_count()>=2
+    local points=multi and editor.point_list() or {}
+    local ids=editor.selected_ids()
+    if not multi and #ids==0 then editor.message="Select lines, curves or points first.";return end
+    local e=editor.doc.editor
+    if not multi and smooth then
+        local names,objects={},{}
+        for _,id in ipairs(ids) do
+            local o=find(id)
+            if o.type=="prefab" and doc_lib.terrain(o) and not prefab.sample_error(o) then names[#names+1]=doc_lib.label(o);objects[#objects+1]=o end
+        end
+        local key=table.concat(ids,",")
+        if #names>0 and not (self.confirm_bulk and self.confirm_bulk.key==key and self.confirm_bulk.revision==e.revision) then
+            self.confirm_bulk={key=key,revision=e.revision}
+            editor.message="Make smooth converts "..names_text(names).." to editable paths first: parameter fields and handles go; shapes and connections stay"..wave_note(objects)..". Click Sure? Make smooth."
+            return
+        end
+    end
+    self.confirm_bulk=nil
+    local report
+    if editor.commit(function(doc_e)
+        local r,rep=edit.set_corners(doc_e,points,smooth,not multi and {objects=ids} or nil)
+        report=r
+        if not r then return nil,bulk_text(rep,smooth,true) end
+    end,true) then
+        -- Converted prefabs keep their ids; a Kicker's landing is a new line and joins the selection.
+        for _,id in ipairs(report.objects or {}) do editor.selected[id]=true end
+        editor.touch()
+        editor.message=bulk_text(report,smooth)
+    end
+end
 -- Corner / Smooth (LE5c): the point a click picked (a curve anchor, a line point or a joint, owned by the
 -- upstream piece) and whether it is sharp now. Open ends have no corner; prefab points need a conversion.
 local function smooth_state()
@@ -636,20 +829,8 @@ local function smooth_state()
         id,i=v.id,(o.type=="curve" and v.index>1) and #o.anchors or v.index
     end
     if not id then return nil end
-    local e=editor.doc.editor
-    local next,prev=doc_lib.links(e)
-    local o=find(id)
-    local function n(x) return x.type=="line" and #x.points or x.type=="curve" and #x.anchors or #path(x) end
-    if i==1 and prev[id] then id=prev[id];o=find(id);i=n(o) end
-    if (i==1 or i==n(o)) and not (i==n(o) and next[id]) then return nil end
-    local corner=o.type~="curve" or o.anchors[i].mode=="corner"
-    local b=i==n(o) and find(next[id])
-    if b and not corner then
-        -- A joint is smooth only when both sides have tangents on one line (else Make smooth aligns them).
-        local t,u=o.anchors[i]["in"],b.type=="curve" and b.anchors[1].mode~="corner" and b.anchors[1].out
-        corner=not (u and length(t)>0 and length(u)>0 and (t[1]*u[1]+t[2]*u[2])/(length(t)*length(u))<-0.9999)
-    end
-    return {id=id,i=i,corner=corner,prefab=o.type=="prefab" or (b and b.type=="prefab")}
+    -- The rule lives in edit.corner_state (shared with the bulk action, LE5d).
+    return edit.corner_state(editor.doc.editor,id,i)
 end
 local function smooth_point(self)
     local st=smooth_state()
@@ -666,7 +847,7 @@ local function convert_prefab(self)
     if not (o and o.type=="prefab") then return end
     if self.confirm_convert~=o.id then
         self.confirm_convert,self.confirm_revision=o.id,editor.doc.editor.revision
-        editor.message="Converting removes the "..prefab.name(o.kind).."'s parameter fields and handles; its shape and connections stay. Click Sure? to convert."
+        editor.message="Converting removes the "..prefab.name(o.kind).."'s parameter fields and handles; its shape and connections stay"..wave_note({o})..". Click Sure? to convert."
         return
     end
     self.confirm_convert=nil
@@ -770,6 +951,7 @@ end
 local function on_button(self,name)
     if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
     if name~="convert" then self.confirm_convert=nil end
+    if name~="smooth_all" then self.confirm_bulk=nil end
     if name=="undo" or name=="redo" then
         if editor.undo(name=="undo")==false then editor.message="Nothing to "..name.."." end
     elseif name=="open" then
@@ -784,6 +966,7 @@ local function on_button(self,name)
     elseif name=="mirror_left" or name=="mirror_right" then mirror(self,name=="mirror_left" and -1 or 1)
     elseif name=="smooth" then smooth_point(self)
     elseif name=="convert" then convert_prefab(self)
+    elseif name=="smooth_all" or name=="corner_all" then bulk_corner(self,name=="smooth_all")
     elseif name:match("^param_%d$") then param_click(self,tonumber(name:sub(7)))
     elseif name:match("^kind_") then editor.prefab_kind=name:sub(6);set_tool(self,"prefab")
     elseif name=="paste" then paste_at(self,{editor.camera.x,editor.camera.y})
@@ -847,7 +1030,8 @@ local function visible_buttons(self)
     local a=editor.anchor
     if o and o.type=="curve" and a and a.id==o.id and a.i>1 and a.i<#o.anchors and not (vs and vs.inner) then list[#list+1]="split" end
     local st=smooth_state()
-    if st then list[#list+1]="smooth" end
+    if editor.point_count()>=2 or (not st and object_corner_mode()) then list[#list+1]="smooth_all";list[#list+1]="corner_all"
+    elseif st then list[#list+1]="smooth" end
     if o and o.type=="prefab" and doc_lib.terrain(o) and #editor.selected_ids()==1 then list[#list+1]="convert" end
     if o and (o.type=="prefab" or o.type=="curve") and #editor.selected_ids()==1 then
         for i=1,#param_rows(o) do list[#list+1]="param_"..i end
@@ -996,13 +1180,27 @@ local function curve_nearest(o,p)
     end
     return bi,bt
 end
+-- Dragging one point of a multi-point selection moves all of them (LE5d): the grabbed point snaps
+-- (never to a moving point or a run carried along), each point moves once (edit.move_points).
+local function start_points(self,pt,p)
+    local e=editor.doc.editor
+    local list=editor.point_list()
+    local skip={vertex={}}
+    for _,q in ipairs(list) do
+        local o=find(q.id)
+        if o.type=="line" then skip.vertex[q.id..":"..q.i]=true else skip[q.id]=true end
+        if q.i==point_total(o) then for _,d in ipairs(edit.downstream(e,q.id)) do skip[d]=true end end
+    end
+    local ref=point_pos(pt)
+    self.drag={kind="points",points=list,grab=pt,skip=skip,ref={ref[1],ref[2]},press={p[1],p[2]},press_px=self.cursor_px,delta={0,0},moved=false}
+end
 local function prefab_end_handle(o,index)
     for _,h in ipairs(prefab_handles(o)) do if h.index==index then return h.name end end
 end
 local function canvas_press(self,action)
     local p=cursor(self,action)
     if not p then return end
-    self.confirm_convert=nil
+    self.confirm_convert,self.confirm_bulk,self.pending=nil,nil,nil
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
@@ -1066,20 +1264,35 @@ local function canvas_press(self,action)
         return
     end
     if not c then
-        if not self.held.shift then editor.select(nil) end
-        self.box={from={p[1],p[2]},to={p[1],p[2]},add=self.held.shift}
+        -- With lines or curves selected, the box selects their points (LE5d); it falls back to the LE3b
+        -- object box when it catches none, so the selection is cleared only on release then.
+        local points=has_paths()
+        if not self.held.shift and not points then editor.select(nil) end
+        self.box={from={p[1],p[2]},to={p[1],p[2]},add=self.held.shift,points=points}
         return
     end
     if self.held.shift and c.kind=="object" then editor.toggle(c.id);return end
-    if self.held.shift and c.kind=="vertex" then
-        -- Shift+click a second free end: the pair Connect [J] joins or bridges.
-        local e=editor.doc.editor
-        local v=editor.vertex
-        local function free(x) local o=find(x.id);return o and x.index and (x.index==1 or x.index==#path(o)) and not edit.joint(e,x.id,x.index) end
-        if v and free(v) and free(c) and not (c.id==v.id and c.index==v.index) then editor.vertex2={id=c.id,index=c.index};editor.touch()
-        else editor.message="Shift+click picks a second free end after selecting a free end." end
-        return
+    if self.held.shift and (c.kind=="vertex" or c.kind=="handle") then
+        if c.kind=="vertex" then
+            -- Shift+click a second free end: the pair Connect [J] joins or bridges (LE3b, takes precedence).
+            local e=editor.doc.editor
+            local v=editor.vertex
+            local function free(x) local o=find(x.id);return o and x.index and (x.index==1 or x.index==#path(o)) and not edit.joint(e,x.id,x.index) end
+            if v and free(v) and free(c) and not (c.id==v.id and c.index==v.index) then editor.vertex2={id=c.id,index=c.index};editor.touch();return end
+        end
+        -- Shift+click on a point of a selected line or curve adds or removes it (LE5d). On an anchor handle
+        -- the decision waits for the release: Shift+drag keeps its 15 degree anchor drag (LE5b).
+        local pt=point_of(c)
+        if pt then
+            if c.kind=="handle" then self.pending={c=c,p={p[1],p[2]},px=self.cursor_px,pt=pt} else toggle_point(pt) end
+            return
+        end
+        if c.kind=="vertex" then editor.message="Shift+click picks a second free end after selecting a free end.";return end
     end
+    -- Pressing a point of a multi-point selection drags them all; a click without moving selects only it.
+    local pt=editor.point_count()>=2 and (c.kind=="vertex" or c.kind=="handle") and point_of(c)
+    if pt and editor.points[pt.id..":"..pt.i] then start_points(self,pt,p);return end
+    if c.kind~="start" and c.kind~="finish" then editor.points={} end
     if c.kind=="handle" then
         editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,c.index and {id=c.id,index=c.index} or nil,nil,nil;editor.touch()
         start_handle(self,c.id,c.handle,p)
@@ -1114,6 +1327,16 @@ local function canvas_move(self,action)
         return
     end
     if not p then return end
+    local pend=self.pending
+    if pend and self.cursor_px and dist(self.cursor_px,pend.px)>=DOUBLE_PX*ui then
+        -- A Shift+press on an anchor that moves is the LE5b anchor drag (Shift: 15 degree steps).
+        self.pending=nil
+        local c=pend.c
+        editor.points={}
+        editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,c.index and {id=c.id,index=c.index} or nil,nil,nil;editor.touch()
+        start_handle(self,c.id,c.handle,pend.p)
+        self.drag.press_px=pend.px
+    end
     local drag=self.drag
     if drag and drag.kind=="marker" then
         local q={p[1]-drag.offset[1],p[2]-drag.offset[2]}
@@ -1172,6 +1395,17 @@ local function canvas_move(self,action)
             for _,m in ipairs(errors) do if not known[m] then drag.conflict=m;break end end
             editor.set_preview(preview)
         end
+    elseif drag and drag.kind=="points" then
+        local raw={drag.ref[1]+p[1]-drag.press[1],drag.ref[2]+p[2]-drag.press[2]}
+        local q=snap(self,raw,drag.skip,drag.ref)
+        local d={q[1]-drag.ref[1],q[2]-drag.ref[2]}
+        if drag.moved or d[1]~=0 or d[2]~=0 then
+            drag.moved,drag.delta=true,d
+            local e=doc_lib.copy(editor.doc.editor)
+            local preview={}
+            for _,id in ipairs(edit.move_points(e,drag.points,d) or {}) do preview[id]=edit.find(e,id) end
+            editor.set_preview(preview)
+        end
     elseif drag and drag.kind=="move" then
         local raw={drag.ref[1]+p[1]-drag.press[1],drag.ref[2]+p[2]-drag.press[2]}
         local q=snap(self,raw,drag.skip,drag.ref)
@@ -1211,7 +1445,7 @@ local function box_select(self,b)
         end
         if hit then editor.selected[o.id]=true end
     end
-    editor.selection,editor.vertex,editor.vertex2,editor.anchor=next(editor.selected),nil,nil,nil
+    editor.selection,editor.vertex,editor.vertex2,editor.anchor,editor.points=next(editor.selected),nil,nil,nil,{}
     for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
     editor.touch()
 end
@@ -1219,10 +1453,31 @@ local function canvas_release(self)
     self.pan=nil
     local drag,box=self.drag,self.box
     self.drag,self.box=nil,nil
+    if self.pending then
+        -- A Shift+click on an anchor without moving: add or remove that point (LE5d).
+        local pt=self.pending.pt
+        self.pending=nil
+        toggle_point(pt)
+        return
+    end
     if box then
-        -- A click on empty space only clears the selection; a real drag selects what it touches.
+        -- A click on empty space only clears the selection; a real drag selects what it touches: the points
+        -- of the selected lines and curves inside it (LE5d), or else objects (LE3b).
         local s=map()
-        if s and dist(to_px(box.from,s),to_px(box.to,s))>=DOUBLE_PX*ui then box_select(self,box) end
+        if s and dist(to_px(box.from,s),to_px(box.to,s))>=DOUBLE_PX*ui then
+            local found=box.points and box_points(box)
+            if found then
+                if not box.add then editor.points={} elseif editor.point_count()==0 then
+                    local s1=single_point()
+                    if s1 then editor.points[s1.id..":"..s1.i]=s1 end
+                end
+                for k,pt in pairs(found) do editor.points[k]=pt end
+                settle_points(editor.selection)
+                return
+            end
+            if box.points and not box.add then editor.select(nil) end
+            box_select(self,box)
+        elseif box.points and not box.add then editor.select(nil) end
         return
     end
     if not drag then return end
@@ -1236,6 +1491,7 @@ local function canvas_release(self)
         return
     end
     editor.set_preview(nil)
+    if drag.kind=="points" and not drag.moved then set_single(drag.grab);return end
     if not drag.moved then return end
     if drag.kind=="handle" then
         local o=find(drag.id)
@@ -1245,6 +1501,10 @@ local function canvas_release(self)
         local q=drag.to
         if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
         editor.commit(function(e) edit.move_vertex(e,drag.id,drag.index,q) end,true)
+    elseif drag.kind=="points" then
+        -- The whole multi-point drag is one Undo step; the points stay selected.
+        local d=drag.delta
+        if d[1]~=0 or d[2]~=0 then editor.commit(function(e) local m,err=edit.move_points(e,drag.points,d);if not m then return nil,err end end,true) end
     else
         local d=drag.delta
         if d[1]~=0 or d[2]~=0 then editor.commit(function(e) edit.translate(e,drag.ids,d) end,true) end
@@ -1314,6 +1574,8 @@ function on_input(self,action_id,action)
     if action_id==hash("editor_zoom_in") and action.pressed then cursor(self,action);zoom(self,1.2);return true end
     if action_id==hash("editor_zoom_out") and action.pressed then cursor(self,action);zoom(self,1/1.2);return true end
     if not action.pressed then return true end
+    -- "Sure? Make smooth" (LE5d) belongs to the click right after it: any key disarms it.
+    self.confirm_bulk=nil
     if editor.conflict then editor.message="Choose how to open this level first.";return true end
     if self.drag and action_id~=hash("editor_cancel") then return true end
     if action_id==hash("editor_toggle") then play(self)
@@ -1385,6 +1647,15 @@ local function describe(self)
     elseif s=="finish" and e.finish then
         local p=e.finish.position
         lines={"FINISH",string.format("x %.2f m  y %.2f m",p[1],p[2]),"Direction "..(e.finish.direction<0 and "<- (left)" or "-> (right)")}
+    elseif editor.point_count()>=2 then
+        -- Several points (LE5d): what the bulk buttons do with them.
+        local r=corner_summary()
+        lines={r.points.." points selected","Make smooth rounds "..r.sharp,"Make corner sharpens "..r.smooth}
+        if r.ends>0 then lines[#lines+1]=plural(r.ends,"open end").." (skipped)" end
+        if r.prefab>0 then lines[#lines+1]=plural(r.prefab,"joint").." to a prefab (skipped)" end
+        lines[#lines+1]="Drag one: all move together;"
+        lines[#lines+1]="click one: only that point."
+        lines[#lines+1]="Shift+click adds or removes."
     elseif v and find(v.id) then
         local o=find(v.id)
         local pts=editor.shape(o)
@@ -1469,6 +1740,16 @@ local function describe(self)
             "Ctrl+Z / Ctrl+Y: undo / redo","Ctrl+C / Ctrl+V: copy / paste","Tab: next item under the cursor","Shift+click: add to selection","Drag on empty space: box select",
             string.format("Curves sampled: %s mm / %s m",doc_lib.SAMPLING.tolerance*1000,doc_lib.SAMPLING.max_segment)}
     end
+    if object_corner_mode() then
+        -- Whole objects (LE5d): what Make smooth / Make corner would change, and the box rule.
+        local r=corner_summary()
+        lines[#lines+1]="Make smooth: "..plural(r.sharp,"point")..(r.convert>0 and ", "..r.convert.." conv." or "")
+        lines[#lines+1]="Make corner: "..plural(r.smooth,"point")
+        if has_paths() then
+            lines[#lines+1]="Drag on empty space: points;"
+            lines[#lines+1]="Esc first to box-select objects."
+        end
+    end
     return table.concat(lines,"\n")
 end
 local function readout(self)
@@ -1488,6 +1769,8 @@ local function readout(self)
         return table.concat(t," | ")
     end
     if drag and drag.kind=="move" and drag.moved then return string.format("dx %.2f m  dy %.2f m",drag.delta[1],drag.delta[2]) end
+    if drag and drag.kind=="points" and drag.moved then return string.format("dx %.2f m  dy %.2f m | %d points",drag.delta[1],drag.delta[2],#drag.points) end
+    if self.box then return self.box.points and "Box: points of the selected lines and curves (none inside: objects)" or "Box: objects" end
     if drag and drag.kind=="handle" and drag.params and find(drag.id).type=="curve" then
         local kind,i=drag.handle:sub(1,1),tonumber(drag.handle:sub(2))
         local a=drag.params[i]
@@ -1600,6 +1883,11 @@ local function draw_overlay(self)
             if not next[obj.id] then handle(pts[#pts],C.free,HANDLE_PX-1,true) end
         end
     end
+    -- The multi-point selection (LE5d): filled orange squares over the handles.
+    for _,pt in ipairs(editor.point_list()) do
+        local q=point_pos(pt)
+        if q then handle(q,C.selected,HANDLE_PX+3) end
+    end
     -- Prefab placement preview (R5): the shape a click places, and a ring on the end it connects to.
     local pl=editor.tool=="prefab" and self.place
     if pl and not self.drag then
@@ -1653,7 +1941,7 @@ end
 local ROW,LINE=26,7.5
 local function layout(self,shown)
     local y=468-self.description_lines*LINE-6-ROW/2
-    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"},{"smooth"},{"convert"}}
+    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"},{"smooth"},{"smooth_all"},{"corner_all"},{"convert"}}
     for i=1,PARAMS do rows[#rows+1]={"param_"..i} end
     rows[#rows+1]={"mirror_left","mirror_right"}
     rows[#rows+1]={"paste"}
@@ -1714,6 +2002,7 @@ local function publish(self)
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
         prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,
         handles=published_handles(),field_param=self.field and self.field.param or false,
+        points=editor.doc and editor.point_list() or {},confirm_bulk=self.confirm_bulk and true or false,anchor=editor.anchor or false,
         rows=published_rows(self)},{encode_empty_table_as_object=false}))
     -- The document itself only when it changed (it can hold thousands of points).
     local key=e and editor.doc.id..":"..e.revision
@@ -1814,6 +2103,9 @@ function update(self,dt)
         end
         -- "Sure? Convert" belongs to one prefab and one document state: any edit, Undo or other selection drops it.
         if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
+        if self.confirm_bulk and (self.confirm_bulk.key~=table.concat(editor.selected_ids(),",") or self.confirm_bulk.revision~=e.revision or editor.point_count()>=2) then self.confirm_bulk=nil end
+        gui.set_text(self.buttons.smooth_all.label,self.confirm_bulk and "Sure? Make smooth" or "Make smooth")
+        gui.set_color(self.buttons.smooth_all.box,self.confirm_bulk and DANGER or BUTTON)
         local st=smooth_state()
         gui.set_text(self.buttons.smooth.label,st and not st.corner and "Make corner" or "Make smooth")
         gui.set_text(self.buttons.convert.label,self.confirm_convert and self.confirm_convert==editor.selection and "Sure? Convert" or "Convert to editable path")

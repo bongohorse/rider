@@ -8,6 +8,9 @@ local socket=require "socket"
 -- vertex: {id,index} of the selected line point or prefab end; preview_objects: moved or reshaped copies
 -- of objects during a drag (not committed). prefab_kind: the type the Prefab tool places (LE5a).
 -- anchor: {id, i} of the selected curve anchor (LE5b).
+-- points: the multi-point selection (LE5d), "id:i" -> {id, i}: two or more points of selected lines and
+-- curves (a curve point by its anchor index, a joint as its upstream piece's last point). Empty: whole
+-- objects, or the single point in vertex/anchor (LE5c behaviour unchanged).
 -- vertex2: a second free end picked with Shift+click for Connect (LE3b); opened is the instance token of
 -- the current document (a new one per open, restored with Undo/Redo entries) so tools can drop state
 -- that belonged to another document, even one with the same level id.
@@ -18,7 +21,7 @@ local socket=require "socket"
 -- copy older than the draft); they are saved again before another document becomes current.
 -- unsynced: the last browser-storage (IndexedDB) sync failed, so saves since the last good sync may not
 -- survive a reload; set until a later sync succeeds.
-local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
+local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},points={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={}}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
@@ -63,6 +66,27 @@ local function resolve_selection()
     if not M.vertex or not (o2 and doc_lib.terrain(o2) and (v2.index==1 or v2.index==#doc_lib.path(o2))) then M.vertex2=nil end
     local a=M.anchor
     if a and not (ids[a.id] and ids[a.id].type=="curve" and a.i<=#ids[a.id].anchors and M.selection==a.id) then M.anchor=nil end
+    -- Points (LE5d) stay only on selected lines and curves (a joint also when its downstream piece is
+    -- selected), by index: a line that became a curve keeps them.
+    local downstream=doc_lib.links(e)
+    local n=0
+    for k,p in pairs(M.points) do
+        local o=ids[p.id]
+        local count=o and (o.type=="line" and #o.points or o.type=="curve" and #o.anchors)
+        local held=M.selected[p.id] or (count and p.i==count and downstream[p.id] and M.selected[downstream[p.id]])
+        if not (held and count and p.i<=count) then M.points[k]=nil else n=n+1 end
+    end
+    if n==1 then
+        -- One point left: it becomes the single (LE5c) selection, as after a Shift+click.
+        local _,p=next(M.points)
+        local o=ids[p.id]
+        M.points,M.selection,M.vertex2={},p.id,nil
+        if o.type=="line" then M.vertex,M.anchor={id=p.id,index=p.i},nil
+        else
+            M.anchor={id=p.id,i=p.i}
+            M.vertex=(p.i==1 or p.i==#o.anchors) and {id=p.id,index=p.i==1 and 1 or #doc_lib.path(o)} or nil
+        end
+    elseif n<2 then M.points={} end
 end
 -- Saves the current document now when it has unsaved changes, a failed or lagging save, a failed
 -- storage sync or no key yet although it belongs in My levels. Called before another document becomes
@@ -101,7 +125,7 @@ function M.open(doc,keep,opts)
         -- Opening an already played level unchanged keeps it played.
         if played then e.compiled_revision=e.revision end
     else M.history=doc_lib.history() end
-    M.doc=doc;M.selection,M.selected,M.vertex,M.vertex2,M.anchor=nil,{},nil,nil,nil
+    M.doc=doc;M.selection,M.selected,M.points,M.vertex,M.vertex2,M.anchor=nil,{},{},nil,nil,nil
     -- Every opened document is a new instance; tokens are never reused (Undo may restore an older one).
     M.instances=M.instances+1;M.opened=M.instances
     M.keys[M.opened],M.store[M.opened],M.behind[M.opened]=opts.key,opts.store or nil,opts.behind or nil
@@ -150,7 +174,7 @@ function M.undo(back)
     M.doc.editor.revision=revision+1;M.doc.editor.next_id=math.max(next_id,M.doc.editor.next_id)
     M.dirty,M.dirty_at,M.status=true,socket.gettime(),"Unsaved";M.changed_at=M.dirty_at
     -- A point index may now name another point (e.g. an undone Connect reversed a run): keep the line only.
-    M.vertex,M.vertex2,M.anchor=nil,nil,nil
+    M.vertex,M.vertex2,M.anchor,M.points=nil,nil,nil,{}
     resolve_selection();check();touch(geometry)
     return true
 end
@@ -159,7 +183,7 @@ function M.new_id()
     local id="o"..e.next_id;e.next_id=e.next_id+1;return id
 end
 function M.select(id,vertex)
-    M.selection,M.vertex,M.vertex2,M.selected,M.anchor=id,vertex,nil,{},nil
+    M.selection,M.vertex,M.vertex2,M.selected,M.anchor,M.points=id,vertex,nil,{},nil,{}
     if id and id~="start" and id~="finish" then M.selected[id]=true end
     touch()
 end
@@ -167,10 +191,22 @@ end
 function M.toggle(id)
     if M.selection=="start" or M.selection=="finish" then M.selection=nil end
     M.selected[id]=not M.selected[id] or nil
-    M.vertex,M.vertex2,M.anchor=nil,nil,nil
+    M.vertex,M.vertex2,M.anchor,M.points=nil,nil,nil,{}
     if M.selected[id] then M.selection=id elseif M.selection==id then M.selection=next(M.selected) end
     touch()
 end
+-- The multi-point selection (LE5d) in document order: {id, i} for each point.
+function M.point_list()
+    local list={}
+    for _,o in ipairs(M.doc.editor.objects) do
+        local here={}
+        for _,p in pairs(M.points) do if p.id==o.id then here[#here+1]=p end end
+        table.sort(here,function(a,b) return a.i<b.i end)
+        for _,p in ipairs(here) do list[#list+1]={id=p.id,i=p.i} end
+    end
+    return list
+end
+function M.point_count() local n=0;for _ in pairs(M.points) do n=n+1 end;return n end
 function M.selected_ids()
     local list={}
     for _,o in ipairs(M.doc.editor.objects) do if M.selected[o.id] then list[#list+1]=o.id end end

@@ -1,6 +1,6 @@
 # Level editor contract
 
-Binding rules for the developer level editor ([epic #118](https://github.com/bongohorse/rider/issues/118), milestone **Level Editor**, tasks LE1a–LE6: #122–#129, plus LE5c [#186](https://github.com/bongohorse/rider/issues/186)). The epic holds goal, decisions D-E1…D-E13, user flow, task order, out-of-scope items, later candidates and research. **This file is the single source for the rules below**; change them only by PR. Gameplay objects (#120) and visual authoring (#121) are outside this contract.
+Binding rules for the developer level editor ([epic #118](https://github.com/bongohorse/rider/issues/118), milestone **Level Editor**, tasks LE1a–LE6: #122–#129, plus LE5c [#186](https://github.com/bongohorse/rider/issues/186) and LE5d [#192](https://github.com/bongohorse/rider/issues/192)). The epic holds goal, decisions D-E1…D-E13, user flow, task order, out-of-scope items, later candidates and research. **This file is the single source for the rules below**; change them only by PR. Gameplay objects (#120) and visual authoring (#121) are outside this contract.
 
 Rules apply from the task named in them; a task issue lists the rules it implements. Where engine behaviour is assumed, verify it against the pinned engine ([engine references](../ENGINE_REFERENCES.md)) and record the sources in the PR.
 
@@ -334,10 +334,46 @@ Requested by Claudio on 2026-10-20 ([#186](https://github.com/bongohorse/rider/i
   - Curved segments use the LE5b sampling (5 mm / 0.5 m) and validation. Measured in `le5c`: a rounded triangle peak gives 39 points, largest deviation 3.5 mm, longest chord 0.49 m.
 - **Convert to editable path:** shown for a selected terrain prefab. The first click explains what happens (`Converting removes the Ramp's parameter fields and handles; its shape and connections stay. Click Sure? to convert.`); **Sure? Convert** then replaces the prefab by a line with its current points and the same id, so its connections stay.
   - A Kicker + landing becomes two lines: the landing takes a new id and the downstream connection, and the jump gap stays open (two chains).
-  - A Bump/wave becomes a line through its compiled samples (the same shape); one over the sampling budget is not converted (its drawing is only a sketch), the reason is shown.
+  - A Bump/wave becomes a curve with an anchor at each end, crest and trough (LE5d; until then a line through its compiled samples), within 5 mm of its shape; one over the sampling budget is not converted (its drawing is only a sketch), the reason is shown.
   - A Platform is an obstacle, not a path, and is not converted.
   - Conversion is one Undo step back to the prefab.
 - **Persistence:** corner and smooth points and their tangents survive autosave/reload, export → import, copy/paste and Mirror (mirrored anchors keep their modes in reverse order); `le5c`.
+
+### Several points and whole objects (LE5d)
+
+Requested by Claudio on 2026-10-20 after his LE5c drive test ([#192](https://github.com/bongohorse/rider/issues/192)): select a whole object, a single point or several points (as in Photoshop's path selection) and apply Make smooth / Make corner to all of them at once. Implemented in `editor_edit.lua` (`corner_state`, `object_points`, `set_corners`, `move_points`), `editor_prefab.lua` (`wave_anchors`), `editor.lua` (point set) and `editor.gui_script`. Debug case `le5d` ([gym notes](../../main/gym/README.md#level-editor)). The document format is unchanged (version 5): the selection is not saved, and every result is existing data (curves with corner/smooth anchors, lines).
+
+- **Selection model (R17):** objects stay selected as in LE3b. A point is a line point or curve anchor by index; a joint is its upstream piece's last point (as in LE5c). The point set (`editor.points`) holds two or more points of selected lines and curves (a joint also when only its downstream piece is selected); prefab points never (convert first).
+  - **Point mode:** two or more points. **Single point:** one point (the LE5c selection: a line point, a curve anchor or a joint), unchanged. **Whole objects:** no point.
+  - The point set is resolved by id after every change and is cleared by Undo/Redo, Esc, another document or any other selection. Ids and indices are stable through Make smooth/corner (a line becomes a curve with the same id and indices).
+- **Click and Shift+click:** a click on a point of a selected line or curve selects only that point; a click on the body selects the whole object (points cleared).
+  - Shift+click on such a point adds or removes it; the current single point joins the set first.
+  - On a curve anchor the choice waits for the release: Shift+press and drag keeps the LE5b anchor drag (15° steps).
+  - **Precedence (LE3b):** when exactly one free end is selected, Shift+click on another free end still picks the Connect partner. Shift+click on an object body still adds or removes the object.
+- **Box rule:** with lines or curves selected, a box drawn on empty space selects their points inside it (Shift adds them). A box that catches none of their points is the unchanged LE3b object box, and so is every box with no line or curve selected. To box-select objects, press Esc (or click on empty space) first; the panel says so (`Drag on empty space: points; Esc first to box-select objects`).
+- **Display:** selected points are filled orange squares over the handles. The right panel names the count and what the buttons do (`4 points selected`, `Make smooth rounds 3`, `Make corner sharpens 0`, `1 open end (skipped)`); for whole objects, `Make smooth: 7 points`.
+- **Make smooth / Make corner** (two buttons in point mode and for whole objects; the LE5c toggle stays for a single point):
+  - Eligible points: inner points and joints. Make smooth rounds every eligible point that is sharp now: corners, and joints whose two tangents are not on one line (the LE5c button rule). Points that are smooth already keep their hand-shaped tangents. Make corner sharpens every smooth point.
+  - Skipped and counted in the message: open ends, points already in the requested state, and a joint to an unconverted prefab (point mode). Points never move and each gets the LE5c automatic tangents, so the result does not depend on the order and equals the LE5c action applied point by point (`le5d`). Joints follow the LE5c joint coupling.
+  - **Whole objects:** the inner points of the selected lines and curves, plus the joints whose two pieces are both selected. A joint to an unselected piece is left alone. Platforms, hulls and labels are skipped and named.
+  - **Prefabs among whole objects (Make smooth only):** the first click arms **Sure? Make smooth** and names them (with the largest distance of a converted Bump/wave from its shape). Any other action, Undo or canvas click disarms it. The second click converts them (LE5c conversion; a Kicker's landing joins the selection) and smooths, in **one Undo step**. A Platform or an over-budget Bump/wave is skipped and named. Make corner never converts: a prefab has no smooth points.
+  - Nothing to change: the action is refused with the reason and adds no Undo step.
+- **Multi-point drag (R4):** pressing a point of the set drags all of them by the grabbed point's snapped displacement (it never snaps to a moving point or to a run carried along). Each point moves exactly once: points are moved upstream to downstream to their original position plus the displacement, so a selected exit or joint carries its downstream run (R4) and a selected point on that run is not moved again. Curve anchors keep their tangents. Live validation and conflicts work as for single moves. The whole drag is one Undo step and the points stay selected; a click on one of them without moving selects only that point.
+- **One point at a time:** Delete, Split [K] and Connect [J] with two or more points selected are refused with a message (`Delete works on one point at a time …`), so Delete never removes a whole line by surprise.
+- **Conversion produces the fewest anchors (Claudio, 2026-10-20):** a converted prefab gets the fewest anchors that keep its shape within the 5 mm sampling tolerance (R8): exact corners for straight parts, smooth anchors only where the shape needs them, never one anchor per compiled sample. Per type (`le5d`):
+
+  | Type | Points after conversion |
+  |---|---|
+  | Flat, Ramp | 2 |
+  | Step (tread > 0) | 3 |
+  | Gap with pit | 4 |
+  | Kicker + landing | 3 (kicker) + 2 (landing, a second line; the gap stays open) |
+  | Bump/wave | 2 × count + 1 curve anchors (ends, crests, troughs) |
+  | Platform | not converted |
+
+  - **Bump/wave curve:** smooth anchors with horizontal tangents of 0.364 × the half wavelength (the ends have one tangent). On each half wave the cubic's height is exactly h(3t² − 2t³) for any tangent length; 0.364 minimises the distance to the raised cosine (a one-off measurement, no fitting at run time).
+  - Measured largest distance from the raised cosine: 0.25 mm at 1 m × 8 m, 0.10 mm at 0.4 m × 10 m, 0.62 mm at 3 m × 6 m and 2.5 mm at the 10 m × 100 m range corner: always within 5 mm. The confirmation names the measured distance from the prefab's sampled path.
+  - The Bump/wave prefab itself and its compiled output are unchanged (the A19b Bumps station uses the same compiler).
 
 ## Additional implementation and acceptance checks
 

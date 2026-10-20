@@ -499,6 +499,11 @@ function M.set_corner(e,id,i,smooth)
     local before=i>1 and at_index(o,i-1)
     local after=i<n and at_index(o,i+1) or at_index(partner,2)
     local p=at_index(o,i)
+    local dx,dy=after[1]-before[1],after[2]-before[2]
+    local l=math.sqrt(dx*dx+dy*dy)
+    -- Refused before anything changes: a bulk action (LE5d) keeps the other points' results, so a refused
+    -- point must leave its line (and its joint partner) untouched.
+    if smooth and l<1e-9 then return nil,"The neighbouring points coincide; move one first" end
     M.to_curve(e,o.id)
     if partner then M.to_curve(e,partner.id) end
     local a=o.anchors[i]
@@ -508,9 +513,6 @@ function M.set_corner(e,id,i,smooth)
         if b then b["in"],b.out,b.mode={0,0},{0,0},"corner" end
         return o.id,i
     end
-    local dx,dy=after[1]-before[1],after[2]-before[2]
-    local l=math.sqrt(dx*dx+dy*dy)
-    if l<1e-9 then return nil,"The neighbouring points coincide; move one first" end
     dx,dy=dx/l,dy/l
     local lin=math.sqrt((p[1]-before[1])^2+(p[2]-before[2])^2)/3
     local lout=math.sqrt((after[1]-p[1])^2+(after[2]-p[2])^2)/3
@@ -530,6 +532,11 @@ function M.convert_prefab(e,id)
     if not doc_lib.terrain(o) then return nil,"A Platform is an obstacle, not a terrain path" end
     -- An over-budget Bump/wave is only drawn coarsely: converting would turn that sketch into terrain.
     if prefab.sample_error(o) then return nil,"Not converted: "..prefab.name(o.kind).." "..id.." "..prefab.sample_error(o) end
+    if o.kind=="wave" then
+        -- A Bump/wave becomes a curve through its ends, crests and troughs (LE5d; editor_prefab.wave_anchors).
+        o.type,o.kind,o.at,o.params,o.anchors="curve",nil,nil,nil,prefab.wave_anchors(o)
+        return {id}
+    end
     local parts=doc_lib.parts(o)
     local function points(list) local t={};for i,q in ipairs(list) do t[i]={q[1],q[2]} end;return t end
     o.type,o.kind,o.at,o.params,o.points="line",nil,nil,nil,points(parts[1])
@@ -540,5 +547,151 @@ function M.convert_prefab(e,id)
         table.insert(e.objects,pos+k-1,n);ids[#ids+1]=n.id
     end
     return ids
+end
+-- How far a prefab's editable path would lie from its current sampled shape (LE5d, shown before Convert):
+-- 0 for the polyline prefabs (their points are kept), and for a Bump/wave the largest distance of its curve
+-- anchors' Bezier segments (64 points each) from the wave's sampled path.
+function M.convert_deviation(o)
+    if o.type~="prefab" or o.kind~="wave" then return 0 end
+    local pts=path(o)
+    local anchors=prefab.wave_anchors(o)
+    local function seg(p,a,b)
+        local dx,dy=b[1]-a[1],b[2]-a[2]
+        local l=dx*dx+dy*dy
+        local t=l>0 and math.max(0,math.min(1,((p[1]-a[1])*dx+(p[2]-a[2])*dy)/l)) or 0
+        return math.sqrt((a[1]+dx*t-p[1])^2+(a[2]+dy*t-p[2])^2)
+    end
+    local worst,j=0,1
+    for i=1,#anchors-1 do
+        local a,b=anchors[i],anchors[i+1]
+        local p0,p3=a.p,b.p
+        local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+        for k=0,64 do
+            local t=k/64;local u=1-t
+            local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
+            -- The samples run left to right: the nearest segment is near the one whose x span holds q.
+            while j<#pts-1 and pts[j+1][1]<q[1] do j=j+1 end
+            local d=math.huge
+            for m=math.max(1,j-2),math.min(#pts-1,j+2) do d=math.min(d,seg(q,pts[m],pts[m+1])) end
+            worst=math.max(worst,d)
+        end
+    end
+    return worst
+end
+-- The Corner/Smooth state of point i of a line or curve (LE5c; a joint is the upstream piece's last
+-- point, a downstream entry is resolved to it): {id, i, corner, prefab}, or nil for an open end.
+-- corner: the point is sharp now (Make smooth would round it); a joint counts as smooth only when both
+-- sides have tangents on one line. prefab: a side is an unconverted prefab (convert it first).
+function M.corner_state(e,id,i)
+    local o=find(e,id)
+    if not o or not doc_lib.terrain(o) then return nil end
+    local function n_of(x) return x.type=="prefab" and #path(x) or count(x) end
+    local next,prev=doc_lib.links(e)
+    if i==1 and prev[id] then id=prev[id];o=find(e,id);i=n_of(o) end
+    local n=n_of(o)
+    if (i==1 or i==n) and not (i==n and next[id]) then return nil end
+    local corner=o.type~="curve" or o.anchors[i].mode=="corner"
+    local b=i==n and find(e,next[id])
+    if b and not corner then
+        -- A joint is smooth only when both sides have tangents on one line (else Make smooth aligns them).
+        local t,u=o.anchors[i]["in"],b.type=="curve" and b.anchors[1].mode~="corner" and b.anchors[1].out
+        local lt,lu=math.sqrt(t[1]^2+t[2]^2),u and math.sqrt(u[1]^2+u[2]^2) or 0
+        corner=not (u and lt>0 and lu>0 and (t[1]*u[1]+t[2]*u[2])/(lt*lu)<-0.9999)
+    end
+    return {id=id,i=i,corner=corner,prefab=o.type=="prefab" or (b and b.type=="prefab") or false}
+end
+-- Every Corner/Smooth candidate of whole objects (LE5d): the inner points of each listed line or curve and
+-- the joints whose two pieces are both listed (a joint to a piece outside the list is left alone).
+function M.object_points(e,ids)
+    local set={};for _,id in ipairs(ids) do set[id]=true end
+    local next=doc_lib.links(e)
+    local list={}
+    for _,o in ipairs(e.objects) do
+        if set[o.id] and editable(o) then
+            local n=count(o)
+            for i=2,n-1 do list[#list+1]={id=o.id,i=i} end
+            if next[o.id] and set[next[o.id]] then list[#list+1]={id=o.id,i=n} end
+        end
+    end
+    return list
+end
+-- Bulk Corner/Smooth (LE5d); the caller commits it as one Undo step. Make smooth rounds every listed point
+-- that is sharp now (corners and kinked joints: the LE5c button rule) and keeps the hand-shaped tangents
+-- of points that are smooth already; Make corner sharpens every smooth point. Points never move, so the
+-- result does not depend on the order and equals the LE5c action applied point by point.
+-- opts.objects: whole objects instead of points (their points come from object_points); with Make smooth
+-- their terrain prefabs are converted first (LE5c conversion; Platforms and over-budget waves are skipped).
+-- Returns a report {changed, ends, already, prefab, converted (labels), skipped (labels), refused
+-- (messages), objects (the ids worked on)}, or nil and the report when nothing would change.
+function M.set_corners(e,points,smooth,opts)
+    opts=opts or {}
+    local report={changed=0,ends=0,already=0,prefab=0,converted={},skipped={},refused={}}
+    if opts.objects then
+        local ids={}
+        for _,id in ipairs(opts.objects) do
+            local o=find(e,id)
+            if o and o.type=="prefab" and smooth and doc_lib.terrain(o) and not prefab.sample_error(o) then
+                report.converted[#report.converted+1]=doc_lib.label(o)
+                for _,n in ipairs(M.convert_prefab(e,id)) do ids[#ids+1]=n end
+            elseif o and editable(o) then ids[#ids+1]=id
+            elseif o then report.skipped[#report.skipped+1]=doc_lib.label(o) end
+        end
+        points=M.object_points(e,ids)
+        report.objects=ids
+    end
+    local seen={}
+    for _,p in ipairs(points) do
+        local st=M.corner_state(e,p.id,p.i)
+        local key=st and st.id..":"..st.i
+        if not st then report.ends=report.ends+1
+        elseif not seen[key] then
+            seen[key]=true
+            if st.prefab then report.prefab=report.prefab+1
+            elseif st.corner~=smooth then report.already=report.already+1
+            else
+                local id,err=M.set_corner(e,st.id,st.i,smooth)
+                if id then report.changed=report.changed+1 else report.refused[#report.refused+1]=err end
+            end
+        end
+    end
+    if report.changed==0 and #report.converted==0 then return nil,report end
+    return report
+end
+-- Moves a set of points together by d (LE5d multi-point drag), each point exactly once. Points are {id, i}
+-- (a joint as its upstream piece's last point; a curve point by its anchor index), processed upstream to
+-- downstream towards their original position plus d: a moved exit or joint carries its downstream run
+-- along (R4), and points already carried there then need no further move. A curve anchor keeps its
+-- tangents. Returns the ids of every changed object, or nil and a reason.
+function M.move_points(e,points,d)
+    local order={}
+    for _,p in ipairs(points) do
+        local o=find(e,p.id)
+        if o and editable(o) and p.i>=1 and p.i<=count(o) then
+            local run=M.run_of(e,p.id)
+            local pos=0
+            for k,id in ipairs(run) do if id==p.id then pos=k end end
+            local q=at_index(o,p.i)
+            order[#order+1]={id=p.id,i=p.i,head=run[1],pos=pos,to={q[1]+d[1],q[2]+d[2]}}
+        end
+    end
+    table.sort(order,function(a,b)
+        if a.head~=b.head then return a.head<b.head end
+        if a.pos~=b.pos then return a.pos<b.pos end
+        return a.i<b.i
+    end)
+    local moved,set={},{}
+    local function add(list) for _,id in ipairs(list) do if not set[id] then set[id]=true;moved[#moved+1]=id end end end
+    for _,p in ipairs(order) do
+        local o=find(e,p.id)
+        if o.type=="line" then add(M.move_vertex(e,p.id,p.i,p.to))
+        else
+            local anchors=doc_lib.copy(o.anchors)
+            anchors[p.i].p={p.to[1],p.to[2]}
+            local list,err=M.set_anchors(e,p.id,anchors)
+            if not list then return nil,err end
+            add(list)
+        end
+    end
+    return moved
 end
 return M

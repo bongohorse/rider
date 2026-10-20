@@ -153,6 +153,23 @@ local function wave_samples(p)
     return entry
 end
 function M.wave_points(p) return wave_samples(p).points end
+-- Convert to editable path (LE5c, changed in LE5d): a Bump/wave becomes curve anchors at its ends, crests
+-- and troughs (2 x count + 1), smooth with horizontal tangents of WAVE_TANGENT x the half wavelength (the
+-- ends have one tangent). On each half wave the cubic's height is exactly h(3t^2 - 2t^3) for any tangent
+-- length; 0.364 minimises its distance to the raised cosine (measured: 0.25 mm at 1 m x 8 m, 2.5 mm at the
+-- 10 m x 100 m range corner, scaling with the size). World coordinates; a wave always runs to the right.
+M.WAVE_TANGENT=0.364
+function M.wave_anchors(o)
+    local p,at=o.params,o.at
+    local half=p.wavelength/2
+    local t=M.WAVE_TANGENT*half
+    local list={}
+    for k=0,2*p.count do
+        local y=k%2==1 and p.height or 0
+        list[#list+1]={p={at[1]+k*half,at[2]+y},["in"]={k>0 and -t or 0,0},out={k<2*p.count and t or 0,0},mode="smooth"}
+    end
+    return list
+end
 function M.sample_error(o)
     if o.kind=="wave" and wave_samples(o.params).error then
         return string.format("needs more than %d points at %s mm / %s m sampling: reduce its count or wavelength",sample.MAX_POINTS,fmt(sample.TOLERANCE*1000),fmt(sample.MAX_SEGMENT))

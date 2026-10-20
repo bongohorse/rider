@@ -200,6 +200,8 @@ jobs:
             cases: 'le5c'
           - group: pause
             cases: 'a20'
+          - group: points
+            cases: 'le5d'
           - group: controls
             cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -258,6 +260,9 @@ jobs:
       - name: Verify pause and slow motion against engine and wall time at every station
         if: contains(format(' {0} ', matrix.cases), ' a20 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/pause --case a20
+      - name: Verify editor multi-point selection, bulk corner/smooth and prefab conversion
+        if: contains(format(' {0} ', matrix.cases), ' le5d ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/points --case le5d
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

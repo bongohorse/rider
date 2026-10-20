@@ -220,9 +220,17 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   assert.ok(landing,'landing line');assert.deepEqual(obj(d,kicker).points,k.slice(0,3));
   assert.ok(d.connections.some(c=>c.from===landing.id&&c.to===wave),JSON.stringify(d.connections));assert.equal(e.chains,chains);
   const w=before[wave];await key('Escape');await at(w[Math.floor(w.length/4)]);await page.waitForFunction(id=>window.riderEditor.selection===id,wave);
-  await button('convert');await button('convert');e=await revision(r+5);assert.deepEqual(obj(await doc(),wave).points,w);
+  // LE5d (Claudio, 2026-10-20: "a single smooth hill becomes a polyline with 65 editable anchors ... The desired
+  // result is three curve anchors: start, peak and end"): a Bump/wave converts to a curve with the same id and
+  // an anchor at each end, crest and trough (2 x count + 1), horizontal tangents, within 5 mm of its samples.
+  await button('convert');await button('convert');e=await revision(r+5);d=await doc();
+  const wc=obj(d,wave),w0=w[0],tl=0.364*4;
+  assert.equal(wc.type,'curve');assert.deepEqual(wc.anchors.map(a=>a.p),[w0,[w0[0]+4,w0[1]+1],[w0[0]+8,w0[1]]]);
+  assert.ok(wc.anchors.every((a,i)=>a.mode==='smooth'&&nearPoint(a.in,[i?-tl:0,0])&&nearPoint(a.out,[i<2?tl:0,0])),JSON.stringify(wc.anchors));
+  let wdev=0;for(const q of curveDense(wc))wdev=Math.max(wdev,polyDist(q,w));assert.ok(wdev<=TOL,'wave deviation '+wdev);
+  assert.deepEqual(d.connections.filter(c=>c.from===wave||c.to===wave),prefabs.connections.filter(c=>c.from===wave||c.to===wave).map(c=>c.from===kicker?{from:landing.id,to:wave}:c));
   for(let i=0;i<5;i++)await key('z',['Control']);await revision(r+10);assert.equal(shape(await doc()),shape(prefabs));
-  measurements.convert={kicker_lines:2,chains,wave_points:w.length};
+  measurements.convert={kicker_lines:2,chains,wave_samples:w.length,wave_anchors:3,wave_max_deviation_m:wdev};
   done('convert_prefab_to_path');
 
   await page.screenshot({path:path.join(out,'path-course.png')});
