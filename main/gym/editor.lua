@@ -19,13 +19,13 @@ local socket=require "socket"
 -- authoring objects; it survives opening another level. conflict: a pending R1 choice for the open level.
 -- behind: instances whose latest state is not fully saved (a failed draft or My levels write, or a My levels
 -- copy older than the draft); they are saved again before another document becomes current.
--- show_bounds: the R13 bounds are drawn (LE6, view only). last_test: {position, instance} of the last test
+-- show_bounds: the R13 bounds are drawn (LE6, view only); show_ghost: the test start preview (LE6b, view only). last_test: {position, instance} of the last test
 -- start that reached a drive-ready run (LE6); it belongs to that document instance only.
 -- unsynced: the last browser-storage (IndexedDB) sync failed, so saves since the last good sync may not
 -- survive a reload; set until a later sync succeeds.
 local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},points={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={},error_at={},warning_at={},
-    show_bounds=false,last_test=nil}
+    show_bounds=false,show_ghost=true,last_test=nil}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"Draft is not valid JSON" end

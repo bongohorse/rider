@@ -263,6 +263,134 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.screenshot({path:path.join(out,'polish-warnings.png')});
   cases.push('unlocated_message_shown_only');
 
+  // LE6b. A plain course: one ground line, START at (2, 1).
+  const plain={schema:1,units:'metres',id:'le6-labels',name:'LE6 labels',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,50,-10,30],
+   chains:[[[40,0],[0,0]]],hulls:[],labels:[],checkpoints:[],
+   editor:{editor_version:5,compiler_version:5,revision:1,next_id:2,sampling:{tolerance:0.005,max_segment:0.5},connections:[],start:{position:[2,1],speed:0},
+    objects:[{id:'o1',type:'line',points:[[0,0],[40,0]]}]}};
+  const label=(d,id)=>d.objects.find(o=>o.id===id);
+  const labels=d=>d.objects.filter(o=>o.type==='label');
+
+  // 6. Labels: place (one step) with the text focused at once, type (editor and game keys only type),
+  // Undo/Redo exactly, move, edit by double-click and by the panel row (Esc keeps), the 64-byte limit,
+  // no empty text, copy/paste, delete, reload, and Play -> import as an independent copy.
+  e=await importText(JSON.stringify(plain),'le6-labels.json');assert.equal(e.id,'le6-labels');e=await settle();
+  await key('Home');await key('l');e=await settle();assert.equal(e.tool,'label');
+  let rev=e.revision;
+  await at([6,3]);e=await revision(rev+1);
+  let d=await doc();const lid=labels(d)[0].id;
+  assert.deepEqual(labels(d)[0],{id:lid,type:'label',position:[6,3],text:'Label'});
+  assert.equal(e.field_label,lid);assert.equal(e.field_all,true);assert.deepEqual(e.selected,[lid]);
+  // Typing replaces the selected text; E (Play), S, D, F, H, L and Delete-free letters only type.
+  await page.keyboard.type('Sehr hoher Flug 1',{delay:40});await page.waitForFunction(()=>window.riderEditor.field==='Sehr hoher Flug 1');
+  e=await ed();assert.equal(e.mode,'edit');assert.equal(e.tool,'label');assert.equal(e.revision,rev+1);assert.equal(e.help_open,false);
+  await key('Enter');e=await revision(rev+2);
+  assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');assert.equal(e.field,false);
+  await key('z',['Control']);e=await revision(rev+3);assert.equal(label(await doc(),lid).text,'Label');
+  await key('z',['Control']);e=await revision(rev+4);assert.equal(label(await doc(),lid),undefined);
+  await key('y',['Control']);e=await revision(rev+5);await key('y',['Control']);e=await revision(rev+6);
+  assert.deepEqual(label(await doc(),lid),{id:lid,type:'label',position:[6,3],text:'Sehr hoher Flug 1'});
+  // Pick and drag the label by its text (right of its anchor), snapped to the grid: one step.
+  await key('s');e=await settle();
+  const grab=[6.8,3];
+  await (async()=>{const a=await world(grab),b=await world([grab[0]+4,4]);await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+   for(let i=1;i<=6;i++){await page.mouse.move(a.x+(b.x-a.x)*i/6,a.y+(b.y-a.y)*i/6);await page.waitForTimeout(40);}await page.mouse.up();await page.waitForTimeout(80);})();
+  e=await revision(rev+7);assert.deepEqual(label(await doc(),lid).position,[10,4]);
+  // Double-click opens the field; Esc keeps the text and adds nothing.
+  const lp=await world([10,4]);await page.mouse.move(lp.x,lp.y);await page.waitForTimeout(80);
+  for(let i=0;i<2;i++){await page.mouse.down();await page.waitForTimeout(50);await page.mouse.up();await page.waitForTimeout(50);}
+  await page.waitForFunction(id=>window.riderEditor.field_label===id,lid);
+  await page.keyboard.type('xyz',{delay:30});await key('Escape');e=await settle();
+  assert.equal(e.field,false);assert.equal(e.revision,rev+7);assert.equal(label(await doc(),lid).text,'Sehr hoher Flug 1');
+  // The panel's Text row: the 64-byte limit and no empty text.
+  await button('param_1');await page.waitForFunction(()=>window.riderEditor.field_all);
+  await page.keyboard.type('x'.repeat(70),{delay:5});e=await settle();
+  assert.equal(e.field.length,64);assert.equal(e.message,'A label is limited to 64 bytes.');
+  // Esc drops the typed text; reopened, the whole text is selected and Backspace clears it.
+  await key('Escape');await button('param_1');await page.waitForFunction(()=>window.riderEditor.field_all);
+  await key('Backspace');await page.waitForFunction(()=>window.riderEditor.field==='');
+  await key('Enter');e=await settle();assert.equal(e.message,'A label cannot be empty.');assert.equal(e.field_label,lid);assert.equal(e.revision,rev+7);
+  await page.keyboard.type('Gap 3 m',{delay:30});await key('Enter');e=await revision(rev+8);
+  assert.equal(label(await doc(),lid).text,'Gap 3 m');
+  // Copy/paste: a new id, the same text; Delete removes the copy only.
+  await key('c',['Control']);await hover([24,6]);await key('v',['Control']);e=await revision(rev+9);
+  d=await doc();assert.equal(labels(d).length,2);const copy=labels(d).find(o=>o.id!==lid);
+  assert.equal(copy.text,'Gap 3 m');assert.deepEqual(e.selected,[copy.id]);
+  await key('Delete');e=await revision(rev+10);assert.deepEqual(labels(await doc()).map(o=>o.id),[lid]);
+  // Reload: the unplayed draft reopens with the label.
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await page.goto(base+'?station=custom');e=await edit();
+  assert.equal(e.id,'le6-labels');assert.deepEqual(label(await doc(),lid),{id:lid,type:'label',position:[10,4],text:'Gap 3 m'});
+  // Play compiles the label; the played file imported again is an independent copy.
+  await key('e');await played('le6-labels');await page.waitForFunction(()=>window.riderSavedLevel?.id==='le6-labels');
+  const saved=await page.evaluate(()=>window.riderSavedLevel);
+  assert.deepEqual(saved.labels,[{position:[10,4],text:'Gap 3 m'}]);
+  await key('e');e=await edit();const ownKey=e.key;
+  e=await importText(JSON.stringify(saved),'le6-labels.json');assert.notEqual(e.key,ownKey);
+  assert.deepEqual(labels(await doc()).map(o=>[o.position,o.text]),[[[10,4],'Gap 3 m']]);
+  e=await settle();rev=e.revision;
+  await at([10,4]);await button('param_1');await page.waitForFunction(()=>window.riderEditor.field_all);
+  await page.keyboard.type('Copy',{delay:30});await key('Enter');e=await revision(rev+1);
+  await key('z',['Control']);await key('z',['Control']);await page.waitForFunction(k=>window.riderEditor.key===k,ownKey);
+  assert.equal(label(await doc(),lid).text,'Gap 3 m','the import changed the original');
+  measurements.labels={text_limit:64,compiled:saved.labels};
+  cases.push('labels_place_edit_move_copy_undo_persist');
+
+  // 7. Help: modal (no key or click acts behind it), lists the shipped controls, closes with H, Esc,
+  // Close or a click outside.
+  e=await settle();before=await snapshot();const tool0=e.tool,cam3=JSON.stringify(e.camera);
+  await key('h');e=await settle();assert.equal(e.help_open,true);
+  assert.ok(e.help.left.join('\n').includes('[L] Label')&&e.help.right.join('\n').includes('Mirror [<] [>]'),JSON.stringify(e.help));
+  assert.deepEqual(e.visible,['help_close']);
+  for(const k of ['d','e','f','Delete','Enter','l','g','Home'])await key(k);
+  await key('z',['Control']);
+  const behind=await canvas(e.buttons.help_close.x-300,e.buttons.help_close.y+150);await click(behind);
+  e=await settle();assert.equal(e.help_open,true);assert.equal(e.mode,'edit');assert.equal(e.tool,tool0);assert.equal(JSON.stringify(e.camera),cam3);assert.equal(e.grid,true);
+  await unchanged(before,'keys and clicks behind the help');
+  await key('Escape');e=await settle();assert.equal(e.help_open,false);
+  await button('view_help');e=await settle();assert.equal(e.help_open,true);
+  await button('help_close');e=await settle();assert.equal(e.help_open,false);
+  await key('h');await click(await canvas(10,10));e=await settle();assert.equal(e.help_open,false);
+  await key('h');await key('h');e=await settle();assert.equal(e.help_open,false);
+  await unchanged(before,'help');
+  cases.push('help_modal_lists_controls');
+
+  // 8. Ghost: where F would start (same rules as F), refused in red with the reason, off over objects,
+  // in dialogs and when switched off; F at the ghost starts exactly there.
+  await key('Escape');await key('Home');await hover([20,3]);e=await settle();
+  assert.ok(e.ghost&&e.ghost.mode==='surface'&&near(e.ghost.pos[0],e.cursor[0],1e-9)&&near(e.ghost.pos[1],0.9,1e-9),JSON.stringify(e.ghost));
+  assert.ok(e.readout.startsWith('F: test start here'),e.readout);
+  await page.keyboard.down('Shift');await page.waitForTimeout(150);await hover([20.5,3]);e=await settle();
+  assert.equal(e.ghost.mode,'drop');assert.ok(near(e.ghost.pos[1],e.cursor[1],1e-9),JSON.stringify(e.ghost));
+  await page.keyboard.up('Shift');
+  await hover([-3,3]);e=await settle();
+  assert.equal(e.ghost.pos,false);assert.equal(e.ghost.err,'no surface below the cursor');assert.equal(e.readout,'F: refused (no surface below the cursor)');
+  await hover([30,0]);e=await settle();assert.equal(e.ghost,false,'ghost over an object');
+  await button('view_ghost');await hover([20,3]);e=await settle();assert.equal(e.show_ghost,false);assert.equal(e.ghost,false);
+  await button('view_ghost');await hover([20,3]);e=await settle();assert.ok(e.ghost.pos);
+  await button('open');await hover([20,3]);e=await settle();assert.equal(e.ghost,false,'ghost behind the Open dialog');await key('Escape');
+  await hover([16,3]);e=await settle();const ghostAt=e.ghost.pos;
+  await key('f');await played('le6-labels');await key('e');e=await edit();
+  assert.deepEqual(e.last_test,ghostAt,'F did not start where the ghost was');
+  measurements.ghost={pos:ghostAt};
+  cases.push('ghost_matches_test_start');
+
+  // 9. Readouts: dragging START shows its position and a blocking overlap before release; units match.
+  const s0=e.start.position;
+  const a0=await world([s0[0],s0[1]]),a1=await world([s0[0]+3,s0[1]+1]),a2=await world([s0[0]+3,0.1]);
+  await page.mouse.move(a0.x,a0.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  await page.mouse.move(a1.x,a1.y,{steps:4});await page.waitForTimeout(150);e=await ed();
+  assert.match(e.readout,/^START x -?\d+\.\d\d m  y -?\d+\.\d\d m$/);
+  await page.mouse.move(a2.x,a2.y,{steps:4});await page.waitForTimeout(150);e=await ed();
+  assert.ok(e.readout.endsWith('| overlaps line o1 (Play blocked)'),e.readout);
+  await key('Escape');await page.mouse.up();e=await settle();assert.deepEqual(e.start.position,s0);
+  assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));
+  measurements.gui_le6b={nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
+  await hover([16,3]);await page.screenshot({path:path.join(out,'polish-ghost.png')});
+  await key('h');await page.screenshot({path:path.join(out,'polish-help.png')});await key('h');
+  cases.push('readouts_start_drag_units');
+
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));
