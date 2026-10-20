@@ -9,7 +9,7 @@
     "manifest": "main/physics.appmanifest"
   },
   "bob": {
-    "url": "https://github.com/defold/defold/releases/download/1.14.0/bob.jar",
+    "url": "https://d.defold.com/archive/stable/a81dbb0478e8b73931dc2d671563204f6ac0ef82/bob/bob.jar",
     "sha256": "90da834167c21be956af2be5a2a64b2ee1e16ad980dfa99f35a6b26516958d0f"
   },
   "jdk": {
