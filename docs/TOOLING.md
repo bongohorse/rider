@@ -49,7 +49,7 @@ Development runs in WSL2 Ubuntu (`~/rider`) with Windows VS Code and the **Rider
 2. In WSL: `cd ~/rider && code --new-window --profile Rider .`. The optional `tools/open-rider.ps1` launcher (`-Distro <name>`) lives inside the Linux checkout.
 3. Never commit or print credentials, tokens or API keys.
 
-Native debug builds need the CI-documented OpenAL/Mesa packages; Bob builds need `build.defold.com` reachable (network failures are BLOCKED, not a reason to switch toolchains).
+Native debug builds need the CI-documented OpenAL/Mesa packages; Bob builds need `build.defold.com` reachable, and the first Bob fetch needs `d.defold.com` (network failures are BLOCKED, not a reason to switch toolchains).
 
 ## Worktrees
 

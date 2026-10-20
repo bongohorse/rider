@@ -7,7 +7,7 @@
     "commit": "a81dbb0478e8b73931dc2d671563204f6ac0ef82",
     "license": "Defold License 1.0",
     "release_url": "https://github.com/defold/defold/releases/tag/1.14.0",
-    "release_rebuilt_note": "Upstream re-created release 1.14.0 on 2026-10-19 at d295ed4 (plist-only, defold/defold#13508) and re-uploaded every asset; the release_sha256 values below record the 2026-10-15 assets. The approved Bob is fetched from the per-sha archive URL in toolchain-lock.json with the unchanged hash.",
+    "release_rebuilt_note": "On 2026-10-19 at d295ed4 (plist-only, defold/defold#13508) upstream re-created the release and re-uploaded its assets; the recorded ones now differ. The release_sha256 values below record the 2026-10-15 assets. The approved Bob is fetched from the per-sha archive URL in toolchain-lock.json with the unchanged hash.",
     "assets": [
       {
         "name": "bob.jar",
