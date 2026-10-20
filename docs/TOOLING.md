@@ -37,7 +37,7 @@ python tools/gym/bundle.py --output artifacts/gym-bundle                     # b
 python tools/gym/smoke.py --bundle artifacts/gym-bundle --output artifacts/gym/a15 --case a15
 ```
 
-Cases include `a1`–`a3`, `a6`–`a12`, `a15`–`a20`, `a15a`, `le1a`, `le1b`, `le2`, `le3`, `le4`, `le5a`, `le5b`, `le5c`, `coast`, `hud`, `m2feedback` and `a9invalid`; the full list is in `.github/workflows/g1.yml`. Without `--bundle` a case builds its own bundle. Reuse requires matching source/platform/debug identity and an unchanged SHA-256 inventory. Each case gets a fresh browser and its own `rider.run_id`/`rider.gym_test` via engine startup arguments injected only by the local test server. Release preview tests live in `tools/preview/` (`verify.cjs`, `mobile.cjs`, `tilt.cjs` and per-station runners). Behavior notes per station and feature: [gym notes](../main/gym/README.md).
+Cases include `a1`–`a3`, `a6`–`a12`, `a15`–`a20`, `a15a`, `le1a`, `le1b`, `le2`, `le3`, `le4`, `le5a`, `le5b`, `le5c`, `le5d`, `coast`, `hud`, `m2feedback` and `a9invalid`; the full list is in `.github/workflows/g1.yml`. Without `--bundle` a case builds its own bundle. Reuse requires matching source/platform/debug identity and an unchanged SHA-256 inventory. Each case gets a fresh browser and its own `rider.run_id`/`rider.gym_test` via engine startup arguments injected only by the local test server. Release preview tests live in `tools/preview/` (`verify.cjs`, `mobile.cjs`, `tilt.cjs` and per-station runners). Behavior notes per station and feature: [gym notes](../main/gym/README.md).
 
 Remove `build/` and `.internal/` before a debug bundle if the checkout produced release builds: a stale release engine once replaced the debug gym.
 
