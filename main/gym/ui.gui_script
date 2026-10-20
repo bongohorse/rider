@@ -234,7 +234,7 @@ function on_message(self,id,data,sender)
         end
     elseif id==hash("finish_reached") then
         self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
-        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time))
+        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or ""))
         if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
     elseif id==hash("retry_done") then
         self.toast_time=1.5;gui.set_visible(self.reason,not mobile.enabled())
@@ -264,7 +264,13 @@ function update(self,dt)
     if self.debug_clock then
         -- A20 only: unscaled engine time (this collection is not time-scaled) next to the wall clock.
         self.engine_time,self.engine_frames=(self.engine_time or 0)+dt,(self.engine_frames or 0)+1
-        html5.run("window.riderClock="..json.encode({engine=self.engine_time,frames=self.engine_frames,wall=socket.gettime()}))
+        -- The editor camera (shared module state, read only) shows whether Edit mode received Space+drag.
+        local editor=require "main.gym.editor"
+        html5.run("window.riderClock="..json.encode({engine=self.engine_time,frames=self.engine_frames,wall=socket.gettime(),
+            editor_camera={x=editor.camera.x,y=editor.camera.y}}))
+        -- Debug burst: several time requests posted in one frame (stale-acknowledgement check).
+        local ok,burst=pcall(json.decode,html5.run("(()=>{const b=window.riderDebugTimeBurst;window.riderDebugTimeBurst=null;return JSON.stringify(b||null)})()"))
+        if ok and type(burst)=="table" then for _,a in ipairs(burst) do msg.post("main:/loader#script","time_control",{action=a}) end end
     end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)

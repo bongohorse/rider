@@ -39,8 +39,9 @@ const STEP=1/60;
    assert(Math.abs(m.world_s-f*m.engine_s)<=tol,`${label}: world ${m.world_s} vs ${f} x engine ${m.engine_s}`);
    assert(Math.abs(m.ticks-60*m.engine_s)<=3,`${label}: ${m.ticks} ticks in ${m.engine_s} s engine time`);
    assert(Math.abs(m.b.dt-f*STEP)<1e-6,`${label}: fixed dt ${m.b.dt}`);
-   // Wall clock: the engine clamps a frame at 1/30 s, so world/wall may fall below the factor on a slow runner, never above it.
-   assert(m.world_per_wall<=f*1.03+2*f*STEP/m.wall_s&&m.world_per_wall>=f*0.75,`${label}: world/wall ${m.world_per_wall}`);
+   // Wall clock (reported): the engine clamps a frame at 1/30 s, so world/wall can fall below the factor on a slow
+   // runner (engine/wall shows how much); it can never run ahead of it.
+   assert(m.world_per_wall<=f*1.03+2*f*STEP/m.wall_s,`${label}: world/wall ${m.world_per_wall}`);
    return {factor:f,world_s:+m.world_s.toFixed(4),engine_s:+m.engine_s.toFixed(4),wall_s:+m.wall_s.toFixed(4),ticks:m.ticks,
     world_per_engine:+m.world_per_engine.toFixed(4),world_per_wall:+m.world_per_wall.toFixed(4),engine_per_wall:+m.engine_per_wall.toFixed(4),
     ticks_per_engine_s:+m.ticks_per_engine_s.toFixed(2),fixed_dt_s:m.b.dt};
@@ -84,6 +85,20 @@ const STEP=1/60;
   await page.waitForFunction(()=>window.riderTime.command?.throttle===0);
   measurements.resume={neutral_ticks:s.t.since_resume.ticks,driven_ticks:s.t.since_resume.driven,factor:s.t.factor};
   cases.push('resume_without_stale_input_factor_1');
+
+  // 3b. Several requests in one frame (debug burst): only the newest request's acknowledgement sets a running factor;
+  // pause/step while paused re-apply 0 at once. pause, step, pause, step, step ends running at 1.0.
+  {
+   const n=timeLog.at(-1).seq,from=timeLog.length,g0=(await snap()).t.generation;
+   await page.evaluate(()=>{window.riderDebugTimeBurst=['pause','step','pause','step','step'];});
+   for(let i=0;i<100&&!timeLog.some(e=>e.seq===n+5);i++)await sleep(100);
+   await sleep(300);
+   const applied=timeLog.slice(from);
+   assert.deepEqual(applied.map(e=>[e.seq-n,e.factor]),[[1,0],[2,0],[5,1]],'applies after a burst: '+JSON.stringify(applied));
+   s=await snap();assert.equal(s.t.generation,g0);assert(Math.abs(s.t.dt-STEP)<1e-6);assert.equal(s.s.paused,false);assert.equal(s.s.step,1);
+   measurements.burst={applied:applied.map(e=>({seq:e.seq,factor:e.factor}))};
+  }
+  cases.push('burst_applies_only_latest_ack');
 
   // 4. Slow motion by key: 0.5 and 0.25 scale world time with smaller steps, then back to 1.0.
   measurements.slow={};
@@ -136,7 +151,15 @@ const STEP=1/60;
   for(let i=0;i<100&&!timeLog.some(e=>e.edit===true);i++)await sleep(100);
   assert(timeLog.some(e=>e.edit===true&&e.factor===1),'edit world loaded at 1.0');
   await sleep(300);const editLog=timeLog.length;
-  for(const key of ['Space','x']){await page.keyboard.down(key);await sleep(150);await page.keyboard.up(key);}
+  // Space+drag pans the editor camera: proof that the editor, not the pause path, received Space.
+  const cam0=(await snap()).c.editor_camera,box=await page.locator('canvas').boundingBox();
+  await page.keyboard.down('Space');await sleep(100);
+  await page.mouse.move(box.x+box.width*0.45,box.y+box.height*0.55);await page.mouse.down();
+  for(let i=1;i<=10;i++)await page.mouse.move(box.x+box.width*0.45+20*i,box.y+box.height*0.55+5*i);
+  await page.waitForFunction(c=>{const e=window.riderClock.editor_camera;return Math.hypot(e.x-c.x,e.y-c.y)>0.5;},cam0);
+  await page.mouse.up();await page.keyboard.up('Space');
+  const cam1=(await snap()).c.editor_camera;measurements.edit_space_pan_m={dx:+(cam1.x-cam0.x).toFixed(3),dy:+(cam1.y-cam0.y).toFixed(3)};
+  await page.keyboard.down('x');await sleep(150);await page.keyboard.up('x');
   await sleep(300);
   assert.equal(timeLog.slice(editLog).length,0,'no time change in Edit mode');
   s=await snap();assert.equal(s.s.paused,false);assert.equal(s.s.step,1);

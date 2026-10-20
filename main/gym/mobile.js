@@ -57,7 +57,7 @@
         if(seconds>=30&&trial.frames.length&&trial.physics.length&&trial.engineDt.length){
           api.report={source:window.riderBuild,browser:browserIdentity,
             refreshModeUserSelected:trial.mode,layout:trial.layout,viewport:trial.viewport,
-            durationSeconds:seconds,conditions:trial.conditions,tiltEnd:window.riderTilt?.snapshot(),resetCountEnd:window.riderTelemetry?.reset_count,engineCallbackIntervalMs:summary(trial.frames),
+            durationSeconds:seconds,conditions:trial.conditions,tiltEnd:window.riderTilt?.snapshot(),timeScaleEnd:window.riderTimeState||{paused:false,step:1},resetCountEnd:window.riderTelemetry?.reset_count,engineCallbackIntervalMs:summary(trial.frames),
             engineDtMs:summary(trial.engineDt),physicsStepMs:summary(trial.physics),
             physicsZeroSamples:trial.physics.filter(v=>v===0).length,
             over25ms:trial.frames.filter(v=>v>25).length,
@@ -153,7 +153,7 @@
     if(!mode.selectedIndex){status.textContent='Select the refresh mode from phone settings first.';return;}
     api.report=null;lastFrame=undefined;api.recording=true;
     trial={started:performance.now(),mode:mode.value,layout:api.mirrored?'B':'A',
-      viewport:{...window.riderViewport},conditions:{tilt:window.riderTilt?.snapshot(),preset:window.riderTelemetry?.preset,resetCountStart:window.riderTelemetry?.reset_count,tuning:window.riderControls?.map(r=>({key:r.key,value:r.value}))},frames:[],engineDt:[],physics:[]};
+      viewport:{...window.riderViewport},conditions:{tilt:window.riderTilt?.snapshot(),timeScale:window.riderTimeState||{paused:false,step:1},preset:window.riderTelemetry?.preset,resetCountStart:window.riderTelemetry?.reset_count,tuning:window.riderControls?.map(r=>({key:r.key,value:r.value}))},frames:[],engineDt:[],physics:[]};
   });
   root.append(measure);
   tiltPanel=document.createElement('div');tiltPanel.className='tilt-panel';

@@ -17,7 +17,8 @@ local LOADER="main:/loader#script"
 local GAMEPLAY={}
 for _,id in ipairs({"throttle_up","throttle_w","brake_down","brake_s","lean_left","lean_right","retry","section_cycle","preset_cycle","crash_toggle"}) do GAMEPLAY[hash(id)]=true end
 local function clear_time_input(self)
-    self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
+    -- Opt-in tilt keeps its calibration: it is a continuous device angle, not a stale press.
+    self.held={};self.mobile={};mobile.clear(true);msg.post("main:/loader#ui","cancel_drag")
 end
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
 local function request_reset(self,reason)
@@ -85,7 +86,7 @@ local function check_finish(self,state)
     if u<0 or u>1 then return end
     self.finish_done,self.finish_count,self.finish_time=true,(self.finish_count or 0)+1,self.attempt_time
     print("GYM_FINISH "..json.encode({count=self.finish_count,time=self.attempt_time,speed=feel.metres(state.vx)}))
-    msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time})
+    msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time,time_scaled=self.time_scaled_ticks>0})
 end
 local function emit(self, event, data)
     data = data or {}
@@ -241,7 +242,10 @@ function update(self, dt)
         window=self.track.window and {ticks=self.track.window.ticks,airborne=self.track.window.airborne,unpowered=self.track.window.unpowered,losses=self.track.window.losses,dvy=self.track.window.dvy,
             dvx_drop=self.track.window.dvx_drop,vx_min=self.track.window.vx_min or false,vx_max=self.track.window.vx_max or false,passed=self.track.window.passed or false} or false})) end
     -- Engine (unscaled) frame time for FPS and phone-trial readings; 0 while paused.
-    local frame_dt=self.time_factor>0 and dt/self.time_factor or 0
+    -- The proxy applies a new factor up to a frame after this owner learns it: skip those frames instead of
+    -- dividing by the wrong factor.
+    local frame_dt=self.time_factor>0 and (self.frame_skip or 0)==0 and dt/self.time_factor or 0
+    self.frame_skip=math.max(0,(self.frame_skip or 0)-1)
     self.mobile=mobile.poll(frame_dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
     if self.mobile.pause then msg.post(LOADER,"time_control",{action="pause"}) end
     if self.mobile.time_step then msg.post(LOADER,"time_control",{action="step"}) end
@@ -307,9 +311,13 @@ function update(self, dt)
             -- A20: every measurement records its time factor; any tick at another factor makes this world's
             -- values not comparable with the 1.0 protocols.
             sample.time_factor,sample.time_scaled_ticks=self.paused and 0 or self.time_factor,self.time_scaled_ticks
-            -- The station's own `comparable` (tuning, speed window) is only ever turned false here, never true.
-            if html5 then html5.run("window.riderStationReport&&Object.assign(window.riderStationReport,"..json.encode({time_factor=sample.time_factor,
-                time_scaled_ticks=self.time_scaled_ticks,time_comparable=self.time_scaled_ticks==0})..(self.time_scaled_ticks>0 and ",{comparable:false}" or "")..")") end
+            -- The station's own `comparable` (tuning, speed window) is only ever turned false here, never true; after
+            -- scaled ticks the HUD result and every record status say so too (world-level, conservative).
+            local scaled=self.time_scaled_ticks>0
+            if scaled and sample.station_result then sample.station_result=sample.station_result.." | slow motion: not comparable" end
+            if html5 then html5.run("(r=>{if(!r)return;Object.assign(r,"..json.encode({time_factor=sample.time_factor,time_scaled_ticks=self.time_scaled_ticks,time_comparable=not scaled})..");"
+                ..(scaled and "r.comparable=false;const t=' (slow motion: not comparable)',m=x=>{x.time_comparable=false;if(typeof x.status==='string')x.status+=t;};m(r);(r.records||[]).forEach(m);" or "")
+                .."})(window.riderStationReport)") end
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count
@@ -488,12 +496,14 @@ function on_message(self,id,data,sender)
         self.session_generation=data.generation or 1
         self.load={requested=data.requested,parse_ms=data.parse_ms}
     elseif id==hash("world_load_count") then self.world_loads=data.count
+    elseif id==hash("crash_toggle") and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
     elseif id==hash("time_state") and data.generation==self.session_generation then
         if data.paused~=self.paused then clear_time_input(self);audio.pause(self,data.paused) end
         if self.paused and not data.paused then self.since_resume={ticks=0,driven=0} end
+        if data.factor~=self.time_factor then self.frame_skip=2 end
         self.paused,self.time_factor=data.paused,data.factor
-        msg.post(sender,"time_ready",{generation=data.generation})
+        msg.post(sender,"time_ready",{generation=data.generation,seq=data.seq})
     elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("next_section") then self.pending_section=true
     elseif id==hash("select_preset") then self.pending_preset=data.key

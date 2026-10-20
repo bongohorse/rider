@@ -245,11 +245,13 @@ function on_message(self,id,data,sender)
     -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.
     elseif id==hash("time_control") and not self.loading and editor.mode=="play" then
         if time_scale.control(self.time,data.action) then
+            self.time.seq=self.time.seq+1
             if self.time.paused then time_scale.apply(self.time,"#world") end
             msg.post(OWNER,"time_state",time_scale.state(self.time,self.generation))
             msg.post("#ui","time_state",time_scale.state(self.time))
         end
-    elseif id==hash("time_ready") and data.generation==self.generation and not self.loading and editor.mode=="play" then
+    -- Only the acknowledgement of the newest request applies: an older one may predate a later pause or resume.
+    elseif id==hash("time_ready") and data.generation==self.generation and data.seq==self.time.seq and not self.loading and editor.mode=="play" then
         time_scale.apply(self.time,"#world")
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)

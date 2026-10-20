@@ -4,7 +4,7 @@
 -- the world runs no fixed step (script fixed_update, Box2D step) at a time scale <= 0.001 and otherwise steps
 -- with (1/60)*factor (gameobject.cpp L3187-3206). Slow motion is a time scale with smaller steps, not a replay.
 local M={STEPS={1,0.5,0.25}}
-function M.new() return {paused=false,index=1} end
+function M.new() return {paused=false,index=1,seq=0} end
 function M.step(t) return M.STEPS[t.index] end
 -- Edit worlds always run at 1.0 (R15 stays as it was); a paused play world at 0.
 function M.factor(t,edit)
@@ -12,12 +12,12 @@ function M.factor(t,edit)
     return t.paused and 0 or M.step(t)
 end
 function M.state(t,generation)
-    return {paused=t.paused,step=M.step(t),factor=M.factor(t),generation=generation}
+    return {paused=t.paused,step=M.step(t),factor=M.factor(t),generation=generation,seq=t.seq}
 end
 function M.apply(t,proxy,edit)
     local factor=M.factor(t,edit)
     msg.post(proxy,"set_time_step",{factor=factor,mode=0})
-    print("RIDER_TIME "..json.encode({factor=factor,paused=t.paused,step=M.step(t),edit=edit or false}))
+    print("RIDER_TIME "..json.encode({factor=factor,paused=t.paused,step=M.step(t),edit=edit or false,seq=t.seq}))
 end
 -- One control request: "pause" toggles, "step" cycles 1.0 -> 0.5 -> 0.25 -> 1.0 (pause is kept).
 function M.control(t,action)
