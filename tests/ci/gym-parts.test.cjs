@@ -83,3 +83,33 @@ test('LE1b merge rejects missing parts, repeated cases and differing machines',(
   assert.throws(()=>sizes.merge([one,{...two,browser:'other'}]));
   assert.throws(()=>sizes.merge([one,{...two,identity:{...two.identity,viewport:{width:1,height:1}}}]));
 });
+
+const bumps=require('../../tools/gym/bump_report.cjs');
+function bumpPart(part,{run_id=part,...extra}={}){
+  const scope=bumps.PARTS[part];
+  return {status:'PASS',part,source_sha:SHA,run_id,browser:'b',cases:bumps.cases(scope),tolerances:{},protocol:{version:1},
+    geometry:scope.ladders?{render_objects:748}:null,ladders:scope.ladders?{5:[],7:[]}:{},liftoff:scope.sweep?{'crest-4':{bracketed:true}}:{},
+    sweep:scope.sweep?[{speed:4}]:[],repeats:scope.ladders?[{id:'long-0.3'}]:undefined,retry:scope.ladders?{long:{}}:undefined,...extra};
+}
+test('A19b parts cover the ladders and the lift-off sweep exactly once, in single-run case order',()=>{
+  const plans=Object.keys(bumps.PARTS).map(bumps.plan);
+  assert.deepEqual(plans.map(p=>[p.ladders,p.sweep]),[[true,false],[false,true]]);
+  assert.deepEqual(bumps.cases(bumps.plan(null)),[...bumps.cases(plans[0]).slice(0,3),...bumps.cases(plans[1]),...bumps.cases(plans[0]).slice(3)]);
+  assert.equal(bumps.cases(bumps.plan(null)).length,5);
+  for(const part of ['3/2','1','__proto__'])assert.throws(()=>bumps.plan(part));
+});
+test('A19b merge takes ladders from part 1 and lift-off from part 2; rejects bad parts',()=>{
+  const merged=bumps.merge([bumpPart('2/2'),bumpPart('1/2')]);
+  assert.deepEqual(merged.parts,['1/2','2/2']);assert.deepEqual(merged.run_ids,['1/2','2/2']);
+  assert.deepEqual(merged.cases,bumps.cases(bumps.plan(null)));
+  assert.deepEqual(Object.keys(merged.ladders),['5','7']);assert.equal(merged.liftoff['crest-4'].bracketed,true);
+  assert.equal(merged.geometry.render_objects,748);assert.equal(merged.sweep.length,1);
+  const one=bumpPart('1/2'),two=bumpPart('2/2');
+  assert.throws(()=>bumps.merge([one]));
+  assert.throws(()=>bumps.merge([one,one]));
+  assert.throws(()=>bumps.merge([one,{...two,source_sha:'b'.repeat(40)}]));
+  assert.throws(()=>bumps.merge([one,{...two,run_id:one.run_id}]));
+  assert.throws(()=>bumps.merge([one,{...two,status:'FAIL'}]));
+  assert.throws(()=>bumps.merge([one,{...two,cases:one.cases}]));
+  assert.throws(()=>bumps.merge([one,{...two,protocol:{version:2}}]));
+});

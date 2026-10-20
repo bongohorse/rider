@@ -93,9 +93,9 @@ function M.validate(d)
     end
     -- Reserved for later tasks; v1 levels carry an empty list.
     if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
-    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance") and not d.sections then return nil,"Missing station sections" end
+    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance" or d.kind=="bumps") and not d.sections then return nil,"Missing station sections" end
     if d.sections then
-        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps" and d.kind~="balance") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
+        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps" and d.kind~="balance" and d.kind~="bumps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
         local ids={}
         for _,section in ipairs(d.sections) do
             if type(section)~="table" or not text(section.id) or ids[section.id] or not text(section.name) or not point(section.spawn) then return nil,"Invalid section identity/start" end
@@ -118,6 +118,18 @@ function M.validate(d)
                 for _,key in ipairs({"target_x0","target_x1","target_y","end_x"}) do if not finite(section[key]) then return nil,"Invalid balance measurement" end end
                 if not M.BALANCE_TYPES[section.type] or section.target_x1-section.target_x0<0.95 or section.spawn[1]>=section.target_x0
                     or section.end_x<section.target_x1 or section.end_x>=b[2] or section.start_speed~=0 then return nil,"Invalid balance limits" end
+            elseif d.kind=="bumps" then
+                -- A19b: ordered, non-overlapping cosine features (waves, crest, dip) ahead of the start.
+                if type(section.features)~="table" or #section.features<1 or #section.features>16 or not finite(section.end_x) then return nil,"Invalid bump features" end
+                local last=section.spawn[1]+1
+                for _,f in ipairs(section.features) do
+                    if type(f)~="table" or not text(f.id) or (f.type~="waves" and f.type~="crest" and f.type~="dip") then return nil,"Invalid bump feature" end
+                    for _,key in ipairs({"start_x","end_x","height","wavelength","count"}) do if not finite(f[key]) then return nil,"Invalid bump measurement" end end
+                    if f.start_x<last or f.wavelength<=0 or f.count<1 or f.count%1~=0 or math.abs(f.end_x-f.start_x-f.wavelength*f.count)>.001
+                        or f.height==0 or math.abs(f.height)>1 or (f.type~="waves" and f.count~=1) or (f.type=="dip")~=(f.height<0) then return nil,"Invalid bump limits" end
+                    last=f.end_x
+                end
+                if section.end_x<last or section.end_x>=b[2] then return nil,"Invalid bump limits" end
             else
                 for _,key in ipairs({"step_x","top_y","end_x","height"}) do if not finite(section[key]) then return nil,"Invalid step measurement" end end
                 if section.height<=0 or section.height>.5 or section.spawn[1]>=section.step_x-1 or section.end_x<=section.step_x+1 then return nil,"Invalid step limits" end

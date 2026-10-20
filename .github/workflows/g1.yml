@@ -167,7 +167,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # a18 and le1b run in two parts each; gym-reports merges them into the full reports.
+          # a18, le1b and a19b run in two parts each; gym-reports merges them into the full reports.
           - group: seams-1
             cases: 'a18'
             part: '1/2'
@@ -188,6 +188,12 @@ jobs:
             cases: 'a19'
           - group: balance
             cases: 'a19d'
+          - group: bumps-1
+            cases: 'a19b'
+            part: '1/2'
+          - group: bumps-2
+            cases: 'a19b'
+            part: '2/2'
           - group: editor
             cases: 'a15 le1a le2'
           - group: draw
@@ -282,6 +288,11 @@ jobs:
       - name: Drive the balance station (skill trace and replay, full throttle, seesaw tip/settle and retries)
         if: contains(format(' {0} ', matrix.cases), ' a19d ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/balance --case a19d
+      - name: Measure bump ladder, crest-dip, crest lift-off speed and reproduced station geometry
+        if: contains(format(' {0} ', matrix.cases), ' a19b ')
+        env:
+          PART: ${{ matrix.part }}
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/bumps --case a19b --part "$PART"
       - name: Build and run current Gym smoke
         if: contains(format(' {0} ', matrix.cases), ' a3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gym --case a3
@@ -363,6 +374,10 @@ jobs:
         env:
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         run: python tools/gym/smoke.py --case le1b --output artifacts/g1/sizes --merge "artifacts/parts/g1-gym-sizes-1-$RUN/sizes" "artifacts/parts/g1-gym-sizes-2-$RUN/sizes"
+      - name: Merge bump parts into the full A19b report
+        env:
+          RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: python tools/gym/smoke.py --case a19b --output artifacts/g1/bumps --merge "artifacts/parts/g1-gym-bumps-1-$RUN/bumps" "artifacts/parts/g1-gym-bumps-2-$RUN/bumps"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

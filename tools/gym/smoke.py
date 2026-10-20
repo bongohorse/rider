@@ -15,10 +15,10 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--output',required=True)
 parser.add_argument('--case',default='a1')
 parser.add_argument('--bundle', help='Reuse a verified shared debug Gym build')
-# CI runs the two longest protocols in parts on separate runners, then merges them into the full report.
-PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2']}
-parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18 or le1b')
-parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18 or le1b')
+# CI runs the three longest protocols in parts on separate runners, then merges them into the full report.
+PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2']}
+parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18, le1b or a19b')
+parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18, le1b or a19b')
 args=parser.parse_args()
 if (args.part is not None or args.merge) and args.case not in PARTS: parser.error('--part and --merge apply only to '+', '.join(PARTS))
 if args.part and args.merge: parser.error('--part and --merge are exclusive')
@@ -38,11 +38,11 @@ else:
     bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
     if not args.bundle:build_bundle(bundle,sha)
     verify_bundle(bundle,sha)
-    runner='pause.cjs' if args.case=='a20' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    runner='pause.cjs' if args.case=='a20' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True,env=env)
-    try: code=process.wait(timeout=600 if args.case in ('a18','le1b') else 360 if args.case in ('a16','a17','a19','a19d','a20','le1a','le2','le3','le4','le5a','le5b','le5c','le5d') else 90)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b') else 360 if args.case in ('a16','a17','a19','a19d','a20','le1a','le2','le3','le4','le5a','le5b','le5c','le5d') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
 if args.case=='le1b':
@@ -100,6 +100,14 @@ if args.case=='a19d':
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['skill'])==7 and len(report['cases'])==9
     assert all(r['status']=='COMPLETED' for r in report['skill'].values()) and any(r['status']=='MISSED' for r in report['full'].values())
     print(json.dumps({k:report[k] for k in ('status','cases')}));raise SystemExit(0)
+if args.case=='a19b':
+    report=json.loads((out/'bumps-result.json').read_text())
+    # Part 1 checks geometry, URL/R, both ladders and the repeats; part 2 the lift-off sweep.
+    identity(report);ladders,sweep=args.part!='2/2',args.part!='1/2'
+    assert len(report['cases'])=={'1/2':4,'2/2':1}.get(args.part,5)
+    assert (len(report['ladders'])==2 and all(len(r)==11 for r in report['ladders'].values()))==ladders and bool(report['ladders'])==ladders
+    assert any(v['bracketed'] for v in report['liftoff'].values())==sweep
+    print(json.dumps({k:report[k] for k in ('status','cases','liftoff')}));raise SystemExit(0)
 if args.case=='a18':
     report=json.loads((out/'seams-result.json').read_text())
     # Part 1 holds the 5 and 7 m/s pairs and the unsupported speed; part 2 the 9 m/s pair and the powered controls.
