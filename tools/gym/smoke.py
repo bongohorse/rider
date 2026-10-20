@@ -126,7 +126,7 @@ if args.case=='a19':
     print(json.dumps({k:report[k] for k in ('status','widest_cleared_m')}));raise SystemExit(0)
 if args.case=='a19d':
     report=json.loads((out/'balance-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['skill'])==7 and len(report['cases'])==9
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['skill'])==7 and len(report['cases'])==10
     assert all(r['status']=='COMPLETED' for r in report['skill'].values()) and any(r['status']=='MISSED' for r in report['full'].values())
     print(json.dumps({k:report[k] for k in ('status','cases')}));raise SystemExit(0)
 if args.case=='a19b':

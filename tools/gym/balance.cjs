@@ -119,26 +119,101 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   for(const r of [...Object.values(skill),...Object.values(replay),...Object.values(full)])if(r.seesaw)assert.equal(r.seesaw.limit_reached,false,'joint limit reached');
   seesaw.repeats=runs;cases.push('seesaw_tips_and_settles_reproducibly','joint_limit_never_reached');
   // 5. R while the plank is still swinging: canonical pose and velocity, a fresh joint, no stale handle.
-  await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
-  let g=(await report()).generation;await retry();
   // Reports arrive every 0.25 s, so a short swing (about 0.15 s under preset C) can fall between two samples:
   // press R at the first sample after the tip, swinging or already tipped onto the exit deck. The reset records
   // the pose and angular velocity it replaced (before_angle, before_omega).
   // Preset A keeps main's rule: R only while a report shows the plank swinging (|omega| > 0.2 rad/s), asserted
   // below. Other presets (exemption for #204/#200 comparisons) press R at the first report after the tip.
-  const presetA=(await report()).preset==='a';
-  try{await page.waitForFunction(({g,a})=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&(Math.abs(r.seesaw.omega)>.2||!a);},{g,a:presetA},{timeout:20000});}
-  catch(e){const s=await report();throw Error(`mid-tip R: no ${presetA?'swinging ':''}tipped plank within 20 s (generation ${s.generation}, status ${s.record.status}, angle ${s.seesaw.angle}, omega ${s.seesaw.omega}): ${e.message}`);}
-  const swinging=(await report()).seesaw;
-  g=(await report()).generation;await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});await retry();
-  await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
-  r=await report();const reset=r.seesaw.reset;
-  assert.equal(reset.old_joint_valid,false);assert.equal(reset.joint_valid,true);assert.equal(reset.joints,1);assert.equal(reset.generation,swinging.generation+1);
-  assert(Math.abs(reset.angle-r.record.seesaw.rest_target)<.005&&reset.omega===0&&reset.speed===0,'canonical plank after R');
-  assert.equal(r.joints,3);assert.equal(r.bodies,counts.bodies);
+  // A report can show the swing just before it ends (A swings about 0.22 s), so R may land as the plank
+  // reaches the exit deck: preset A repeats the attempt (at most 3 times) until R replaced a swinging plank.
+  const presetA=(await report()).preset==='a',midTries=[];
+  let g,swinging,reset;
+  for(let i=0;i<3;i++){
+   await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
+   g=(await report()).generation;await retry();
+   try{await page.waitForFunction(({g,a})=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&(Math.abs(r.seesaw.omega)>.2||!a);},{g,a:presetA},{timeout:20000});}
+   catch(e){const s=await report();throw Error(`mid-tip R: no ${presetA?'swinging ':''}tipped plank within 20 s (generation ${s.generation}, status ${s.record.status}, angle ${s.seesaw.angle}, omega ${s.seesaw.omega}): ${e.message}`);}
+   swinging=(await report()).seesaw;
+   g=(await report()).generation;await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});await retry();
+   await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
+   r=await report();reset=r.seesaw.reset;
+   assert.equal(reset.old_joint_valid,false);assert.equal(reset.joint_valid,true);assert.equal(reset.joints,1);assert.equal(reset.generation,swinging.generation+1);
+   assert(Math.abs(reset.angle-r.record.seesaw.rest_target)<.005&&reset.omega===0&&reset.speed===0,'canonical plank after R');
+   assert.equal(r.joints,3);assert.equal(r.bodies,counts.bodies);
+   midTries.push(reset.before_omega);
+   if(!presetA||Math.abs(reset.before_omega)>.2)break;
+  }
   const after=await attempt('skill');same(after.record.seesaw,runs[0],'after mid-tip R');assert.equal(after.record.status,'COMPLETED');
-  if(presetA)assert(Math.abs(reset.before_omega)>.2,'preset A: R must replace a swinging plank, omega '+reset.before_omega);
-  seesaw.mid_tip_retry={preset_a_rule:presetA,swinging,reset,swinging_at_reset:Math.abs(reset.before_omega)>.2,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
+  if(presetA)assert(Math.abs(reset.before_omega)>.2,'preset A: no R replaced a swinging plank in 3 tries, omegas '+midTries.join(', '));
+  seesaw.mid_tip_retry={preset_a_rule:presetA,tries:midTries,swinging,reset,swinging_at_reset:Math.abs(reset.before_omega)>.2,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
+  // 5b. Retry canonicality (#217): the plank's first 60 ticks after R are bit-identical whatever came before it.
+  // Histories: a fresh load (reference), R after the plank rested (asleep), R while it swings, R after a full
+  // attempt and R while it is awake but slow. Before the fix only the last differed: an awake, slow plank kept its
+  // part-used Box2D sleep timer through the reset and froze once it ran out. An asleep plank was unaffected,
+  // because destroying its joint wakes it, which resets the timer. Each history asserts its precondition.
+  {
+   const traceOf=async g=>{
+    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation!==g||r.record.seesaw.trace.length>=60;},g,{timeout:10000});
+    const r=await report();
+    if(r.generation!==g)throw Error(`plank trace of generation ${g}: a stray ${r.reset_reason} reset to generation ${r.generation} before 60 ticks`);
+    return r.record.seesaw.trace;
+   };
+   async function idleRetry(){
+    await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});
+    const g=(await report()).generation;await retry();
+    await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
+    const r=await report();assert.equal(r.generation,g+1);assert.equal(r.reset_reason,'manual');
+    return {before:r.seesaw.reset,trace:await traceOf(g+1)};
+   }
+   const asleep=(h,label)=>{assert.equal(h.before.before_awake,false,label+': the plank must be asleep before R');return h.trace;};
+   await open('seesaw');const histories={load:await traceOf((await report()).generation)};
+   // Resting: idle for 2 s more, so the plank has been calm (and asleep) well past Box2D's 0.5 s sleep time.
+   await page.waitForFunction(()=>window.riderStationReport.record.elapsed>2.5);
+   histories.after_rest=asleep(await idleRetry(),'after_rest');
+   // Mid-tip: R while the plank moves faster than Box2D's sleep threshold (0.05 m/s at its 2 m extent, i.e.
+   // |omega| > 0.025 rad/s); a report may show the swing just before it ends, so up to 3 tries.
+   let mid=null;const midOmegas=[];
+   for(let i=0;i<3&&!mid;i++){
+    await page.evaluate(()=>{window.riderBalanceTrial={mode:'skill'};});
+    const g=(await report()).generation;await retry();
+    await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&Math.abs(r.seesaw.omega)>.2;},g,{timeout:20000});
+    const h=await idleRetry();midOmegas.push(h.before.before_omega);
+    if(Math.abs(h.before.before_omega)>.025)mid=h;
+   }
+   if(!mid)throw Error('mid_tip: no R replaced a plank moving above the sleep threshold in 3 tries, omegas '+midOmegas.join(', '));
+   histories.mid_tip=mid.trace;
+   await attempt('full');
+   histories.after_full=(await idleRetry()).trace;
+   // The trigger of #217: R while the plank is still awake but slow after the previous reset (its Box2D sleep
+   // timer part-used; it sleeps about 0.5 s after a reset). The second R follows the acknowledged first one after
+   // three animation frames (the engine samples input once per frame, so the release is seen), i.e. within about
+   // 0.3 s of the first reset; repeat until a reset replaced an awake, slow plank.
+   let trigger=null;
+   for(let i=0;i<5&&!trigger;i++){
+    await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});
+    const n=await page.evaluate(()=>window.riderTelemetry.reset_count),g=(await report()).generation;
+    await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,n);await page.keyboard.up('r');
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
+    await page.keyboard.down('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+2,n);await page.keyboard.up('r');
+    await page.waitForFunction(g=>window.riderStationReport.generation===g+2,g);
+    const r=await report(),t=await traceOf(g+2);
+    if(r.seesaw.reset.before_awake&&Math.abs(r.seesaw.reset.before_omega)>0&&Math.abs(r.seesaw.reset.before_omega)<0.025)trigger={attempt:i+1,before:r.seesaw.reset,trace:t};
+    const s=await page.evaluate(()=>window.riderTelemetry.sequence);await page.waitForFunction(s=>window.riderTelemetry.sequence>s+1,s);
+   }
+   if(!trigger)throw Error('#217 trigger not reached: no R replaced an awake, slow plank in 5 back-to-back tries (last reset replaced '+JSON.stringify((await report()).seesaw.reset)+')');
+   histories.back_to_back=trigger.trace;
+   seesaw.retry_trigger={attempt:trigger.attempt,before_angle:trigger.before.before_angle,before_omega:trigger.before.before_omega,mid_tip_omegas:midOmegas};
+   await page.waitForFunction(()=>window.riderStationReport.record.elapsed>2.5);
+   histories.after_rest_again=asleep(await idleRetry(),'after_rest_again');
+   const ref=histories.load,differ=[];
+   for(const [name,t] of Object.entries(histories)){
+    const i=t.findIndex((v,k)=>v[0]!==ref[k][0]||v[1]!==ref[k][1]);
+    if(i>=0)differ.push(`${name}: tick ${i+1} angle ${t[i][0]} omega ${t[i][1]} vs ${ref[i][0]} ${ref[i][1]}; tick 60 angle ${t[59][0]} vs ${ref[59][0]}`);
+   }
+   seesaw.retry_histories={ticks:60,reference:'load',final_angles:Object.fromEntries(Object.entries(histories).map(([k,t])=>[k,t[59][0]])),differ};
+   assert.deepEqual(differ,[],'seesaw retry depends on history:\n'+differ.join('\n'));
+   cases.push('seesaw_retry_history_independent');
+  }
   // 6. V (section switch) keeps the world and terrain; the plank joint is recreated on the same terrain body.
   await open('down');let before=await page.evaluate(()=>window.riderTelemetry);const gen=(await report()).seesaw.generation;
   await page.keyboard.down('v');await page.waitForFunction(n=>window.riderStationReport.section==='seesaw'&&window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('v');
