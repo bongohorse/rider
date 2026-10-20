@@ -194,6 +194,8 @@ jobs:
           - group: bumps-2
             cases: 'a19b'
             part: '2/2'
+          - group: air
+            cases: 'a19c'
           - group: editor
             cases: 'a15 le1a le2'
           - group: draw
@@ -293,6 +295,9 @@ jobs:
         env:
           PART: ${{ matrix.part }}
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/bumps --case a19b --part "$PART"
+      - name: Measure air control jumps (airtime, rotation, landing angle), repeats and retry
+        if: contains(format(' {0} ', matrix.cases), ' a19c ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/air --case a19c
       - name: Build and run current Gym smoke
         if: contains(format(' {0} ', matrix.cases), ' a3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/gym --case a3

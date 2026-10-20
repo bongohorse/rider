@@ -162,7 +162,7 @@ async function main(){
       results.at(-1).qualityComparison=quality;
       await context.close();
     }
-    for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps']){
+    for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air']){
       if(plan.includes(name))results.push(await require('./'+name+'.cjs')(browser,url,sha,out));
     }
     if(results.length!==plan.length)throw Error('Incomplete verification group');

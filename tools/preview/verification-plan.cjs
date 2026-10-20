@@ -3,7 +3,7 @@ const groups = {
   desktop: ['desktop'],
   phone: ['phone-emulation'],
   touch: ['mobile', 'tilt'],
-  stations: ['ramps', 'steps', 'seams', 'gaps', 'balance', 'bumps'],
+  stations: ['ramps', 'steps', 'seams', 'gaps', 'balance', 'bumps', 'air'],
 };
 function verificationPlan(mode = 'full') {
   if (mode === 'full') return Object.values(groups).flat();

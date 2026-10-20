@@ -93,9 +93,9 @@ function M.validate(d)
     end
     -- Reserved for later tasks; v1 levels carry an empty list.
     if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
-    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance" or d.kind=="bumps") and not d.sections then return nil,"Missing station sections" end
+    if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance" or d.kind=="bumps" or d.kind=="air") and not d.sections then return nil,"Missing station sections" end
     if d.sections then
-        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps" and d.kind~="balance" and d.kind~="bumps") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
+        if (d.kind~="ramps" and d.kind~="steps" and d.kind~="gaps" and d.kind~="balance" and d.kind~="bumps" and d.kind~="air") or type(d.sections)~="table" or #d.sections<1 or #d.sections>32 then return nil,"Invalid ramp sections" end
         local ids={}
         for _,section in ipairs(d.sections) do
             if type(section)~="table" or not text(section.id) or ids[section.id] or not text(section.name) or not point(section.spawn) then return nil,"Invalid section identity/start" end
@@ -130,6 +130,12 @@ function M.validate(d)
                     last=f.end_x
                 end
                 if section.end_x<last or section.end_x>=b[2] then return nil,"Invalid bump limits" end
+            elseif d.kind=="air" then
+                -- A19c: plateau run-in, kicker to the lip, then a flat or downslope landing area below.
+                for _,key in ipairs({"ramp_start","lip_x","lip_y","height","slope","land_x","land_y","end_x"}) do if not finite(section[key]) then return nil,"Invalid air measurement" end end
+                if (section.landing~="flat" and section.landing~="down") or (section.landing=="flat")~=(section.slope==0) or section.slope<0 or section.slope>60
+                    or section.height<=0 or section.height>30 or section.lip_y<=section.land_y or section.spawn[1]>=section.ramp_start
+                    or section.ramp_start>=section.lip_x or section.land_x<section.lip_x or section.end_x<=section.land_x+5 then return nil,"Invalid air limits" end
             else
                 for _,key in ipairs({"step_x","top_y","end_x","height"}) do if not finite(section[key]) then return nil,"Invalid step measurement" end end
                 if section.height<=0 or section.height>.5 or section.spawn[1]>=section.step_x-1 or section.end_x<=section.step_x+1 then return nil,"Invalid step limits" end
