@@ -1,0 +1,52 @@
+{
+ "schema": 1,
+ "preset": "a",
+ "note": "Measured outcomes of tests/regress/traces/*.json, written by `smoke.py --case a22 --record` only. Tolerances: tools/gym/regress_spec.cjs.",
+ "recorded": {
+  "source_sha": "c2dad9f3b91ebb219f3ba6d99a571eb35c3777d9",
+  "browser": "chromium 156.0.8078.4",
+  "platform": "HTML5 debug (wasm-web), Playwright Chromium, headless",
+  "physics_hz": 60,
+  "render_fps": 60,
+  "time_factor": 1
+ },
+ "traces": {
+  "gaps-3": {
+   "file": "traces/gaps-3.json",
+   "sha256": "2760c9a441a4bd06c9bccee6a6beab8892ba8d86eb6ec25c7c80c6f059cd2e4c",
+   "ticks": 180,
+   "outcomes": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   }
+  },
+  "straight-top": {
+   "file": "traces/straight-top.json",
+   "sha256": "1cf4746797f4b31e782b3182526c3e1b6f64c469036881b2850304abe5167706",
+   "ticks": 600,
+   "outcomes": {
+    "top_speed_mps": 6.9569810456712,
+    "complete": true
+   }
+  },
+  "air-big-back": {
+   "file": "traces/air-big-back.json",
+   "sha256": "dc580e3b25e835b2055ba44655d6810af52539cebb5703c8d9ddfbbe2d16c677",
+   "ticks": 420,
+   "outcomes": {
+    "top_speed_mps": 8.0280454748561,
+    "status": "CRASHED",
+    "takeoff_speed_mps": 5.5927877021996,
+    "airtime_s": 1.7500000912696,
+    "rotation_deg": 422.22519790029,
+    "landing_angle_deg": 116.47180579203,
+    "peak_compression_m": 0.099115941693277,
+    "complete": true
+   }
+  }
+ }
+}
