@@ -19,3 +19,58 @@ test('unknown template or unsafe launch input fails closed', () => {
   assert.throws(() => inject('<script id="engine-start">'.repeat(2), 'run', 'a15'), /marker/);
   assert.throws(() => inject('<script id="engine-start">', '</script>', 'a15'), /identity/);
 });
+
+// #221: the index GET retries only connection resets (one log line each); a failure aborts the route instead of
+// crashing the runner with an unhandled rejection.
+const {handler, FETCH_RETRIES} = require('../../tools/gym/launch.cjs');
+const page = '<script id="engine-start">start();</script>';
+const URL = 'http://127.0.0.1:1/index.html?station=steps&section=0.2&speed=3';
+function fakeRoute(results, method = 'GET') {
+  const calls = {fetch: 0, fulfill: [], abort: []};
+  return {calls, route: {
+    request: () => ({url: () => URL, method: () => method}),
+    fetch: async () => { const r = results[Math.min(calls.fetch++, results.length - 1)]; if (r instanceof Error) throw r; return r; },
+    fulfill: async options => { calls.fulfill.push(options); },
+    abort: async code => { calls.abort.push(code); },
+  }};
+}
+const response = (status, text) => ({ok: () => status === 200, status: () => status, text: async () => text});
+const reset = () => Object.assign(Error('route.fetch: read ECONNRESET\nCall log: ...'), {code: 'ECONNRESET'});
+const run = async (results, method) => {
+  const logged = [], waits = [];
+  const {calls, route} = fakeRoute(results, method);
+  await handler('run-1', 'a17', m => logged.push(m), async ms => { waits.push(ms); })(route);
+  return {calls, logged, waits};
+};
+
+test('a clean index fetch is fulfilled once with the launch identity and no retry', async () => {
+  const {calls, logged} = await run([response(200, page)]);
+  assert.equal(calls.fetch, 1);assert.equal(calls.abort.length, 0);assert.deepEqual(logged, []);
+  assert.equal(calls.fulfill.length, 1);assert.match(calls.fulfill[0].body, /rider\.gym_test=a17/);
+});
+
+test('connection resets are retried up to three times, each logged with the URL and attempt', async () => {
+  assert.equal(FETCH_RETRIES, 3);
+  const {calls, logged, waits} = await run([reset(), reset(), response(200, page)]);
+  assert.equal(calls.fetch, 3);assert.equal(calls.fulfill.length, 1);assert.equal(calls.abort.length, 0);
+  assert.deepEqual(logged, [1, 2].map(n => `Gym index fetch ECONNRESET, retry ${n}/3: ${URL}`));
+  assert.deepEqual(waits, [250, 500]);
+});
+
+test('other errors, a bad status or a reset beyond the retries abort the route instead of throwing', async () => {
+  for (const [results, fetches, message] of [
+    [[reset()], 4, 'route.fetch: read ECONNRESET'],
+    [[Object.assign(Error('route.fetch: connect ECONNREFUSED'), {code: 'ECONNREFUSED'})], 1, 'route.fetch: connect ECONNREFUSED'],
+    [[response(404, '')], 1, 'Gym index request failed: 404'],
+  ]) {
+    const {calls, logged} = await run(results);
+    assert.equal(calls.fetch, fetches);assert.deepEqual(calls.abort, ['failed']);assert.equal(calls.fulfill.length, 0);
+    assert.equal(logged.at(-1), 'Gym index request failed: ' + message);
+  }
+});
+
+test('only a GET is retried', async () => {
+  const {calls, logged} = await run([reset(), response(200, page)], 'POST');
+  assert.equal(calls.fetch, 1);assert.deepEqual(calls.abort, ['failed']);
+  assert.deepEqual(logged, ['Gym index request failed: route.fetch: read ECONNRESET']);
+});
