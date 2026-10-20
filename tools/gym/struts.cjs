@@ -2,6 +2,7 @@
 // Each strut's drawn length equals the mount-to-wheel-centre distance from the bodies (within 1 u) at rest and
 // through a landing; toggled off there are no strut objects, and the station report and world counts are identical.
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -32,8 +33,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Hold the press until the game acknowledges it, then release (engine pitfall 5).
   async function clickStruts(enabled){
    if(!await page.evaluate(()=>window.riderHud?.tuning)){await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud?.tuning);await page.keyboard.up('t');}
-   const p=await guiPoint('struts');await page.mouse.move(p.x,p.y);await page.mouse.down();
-   await page.waitForFunction(on=>window.riderStruts.enabled===on&&window.riderStruts.live===(on?2:0),enabled);await page.mouse.up();
+   // Frame-based press/release (tools/gym/pointer.cjs, #227): three animation frames after the release (no engine
+   // frame counter runs while the struts are off), so the next toggle is a new press edge.
+   await pointer.click(page,await guiPoint('struts'),{until:on=>window.riderStruts.enabled===on&&window.riderStruts.live===(on?2:0),arg:enabled,label:'struts toggle'});
    await page.waitForFunction(label=>window.riderHud.struts_label===label,enabled?'Struts ON':'Struts OFF');
   }
   async function retry(){
