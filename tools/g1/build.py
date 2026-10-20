@@ -136,7 +136,167 @@ def stock_engine_hashes(bob, arch):
     return hashes
 
 
-def verify_engines(platform, output, root, started, bob):
+# Bob extender cache (#209). Bob keeps <root>/.internal/cache/<arch>/build.zip
+# plus a shared .buildcache index (Java properties: zip path=sha256 key). It
+# caches any 200 job result unchecked, so a bad result is reused on a cache
+# hit. Before Bob runs, invalid zips are removed; after an engine-guard
+# failure the platform's cache and build/<arch> results are removed. Any
+# layout this code does not recognise clears the whole cache (costs a rebuild).
+CACHE_INDEX = '.buildcache'
+CACHE_ZIP = 'build.zip'
+CACHE_KEY = re.compile(r'[0-9a-f]{64}')
+INDEX_TEMPORARY = re.compile(re.escape(CACHE_INDEX) + r'\.rider-\d+\.tmp')
+
+
+def platform_archs(platform):
+    """Every architecture whose extender result a build of platform can bundle."""
+    if platform == 'wasm-web':
+        return ('wasm-web', 'wasm_pthread-web')
+    if platform.endswith('-android'):
+        return tuple(sorted(set(ANDROID_ABIS.values())))
+    return (platform,)
+
+
+def remove_inside(path, base, root):
+    """Delete path only when it lies inside base, itself strictly inside root.
+    A symlink is unlinked itself and never followed."""
+    path = Path(path)
+    root, base = Path(root).resolve(), Path(base).resolve()
+    if base == root or not base.is_relative_to(root):
+        raise RuntimeError(f'CACHE: refusing to delete outside the repository: base {base}')
+    location = path.parent.resolve() / path.name
+    if not location.is_relative_to(base):
+        raise RuntimeError(f'CACHE: refusing to delete {location}: not inside {base}')
+    if path.is_symlink():
+        path.unlink()
+        return
+    target = path.resolve()
+    if not target.is_relative_to(base):
+        raise RuntimeError(f'CACHE: refusing to delete {target}: not inside {base}')
+    if target.is_dir():
+        shutil.rmtree(target)
+    elif target.exists():
+        target.unlink()
+
+
+def properties_key(text):
+    return re.sub(r'\\u([0-9a-fA-F]{4})|\\(.)', lambda m: chr(int(m.group(1), 16)) if m.group(1)
+                  else {'t': '\t', 'n': '\n', 'r': '\r', 'f': '\f'}.get(m.group(2), m.group(2)), text)
+
+
+def read_cache_index(path):
+    """{zip path: raw line}; ValueError for anything that is not Bob's format."""
+    entries = {}
+    for line in Path(path).read_bytes().decode('latin-1').splitlines():
+        text = line.strip()
+        if not text or text[0] in '#!':
+            continue
+        match = re.fullmatch(r'((?:[^\\=:]|\\.)+)[=:](.*)', text)
+        if not match or not CACHE_KEY.fullmatch(match.group(2).strip()):
+            raise ValueError(f'unparsable index line {line!r}')
+        entries[properties_key(match.group(1))] = line
+    return entries
+
+
+def cached_zip_problem(path):
+    """Why a cached extender result is unusable, or None."""
+    try:
+        with zipfile.ZipFile(path) as archive:
+            corrupt = archive.testzip()
+            entries = {info.filename: info for info in archive.infolist()}
+    except Exception as exc:  # any read failure makes the cached result unusable
+        return f'not a readable zip ({type(exc).__name__}: {exc})'
+    if corrupt:
+        return f'corrupt zip entry {corrupt}'
+    if not any(EXTENDER_ENGINE.fullmatch(name) for name in entries):
+        return 'no engine binary in the cached result'
+    if 'log.txt' not in entries or entries['log.txt'].file_size == 0:
+        return 'missing or empty log.txt in the cached result'
+    return None
+
+
+def drop_index_entries(cache, removed):
+    """Remove index lines that point at removed cache directories."""
+    index = cache / CACHE_INDEX
+    if not index.is_file():
+        return
+    keep = [line for key, line in read_cache_index(index).items()
+            if not any(Path(key).resolve().is_relative_to(r.resolve()) for r in removed)]
+    temporary = index.with_name(f'{CACHE_INDEX}.rider-{os.getpid()}.tmp')
+    temporary.write_bytes(('\n'.join(keep) + '\n' if keep else '').encode('latin-1'))
+    temporary.replace(index)
+
+
+def clear_cache(root, cache, reason):
+    remove_inside(cache, cache, root)
+    return [{'path': cache.relative_to(root).as_posix(), 'reason': reason}]
+
+
+def validate_cache(root):
+    """Before Bob: remove cached extender results Bob would reuse unchecked."""
+    root = Path(root)
+    cache = root / '.internal' / 'cache'
+    if not cache.is_dir():
+        return []
+    index = cache / CACHE_INDEX
+    try:
+        if index.exists():
+            read_cache_index(index)
+    except (OSError, ValueError) as exc:
+        return clear_cache(root, cache, f'unreadable {CACHE_INDEX}: {exc}')
+    invalid, removed = [], []
+    for item in sorted(cache.iterdir()):
+        if item.name == CACHE_INDEX:
+            continue
+        if INDEX_TEMPORARY.fullmatch(item.name) and item.is_file() and not item.is_symlink():
+            remove_inside(item, cache, root)  # left over by an interrupted index rewrite
+            continue
+        if item.is_symlink() or not item.is_dir() or [p.name for p in item.iterdir()] != [CACHE_ZIP]:
+            return clear_cache(root, cache, f'unknown cache layout at {item.name}')
+        problem = cached_zip_problem(item / CACHE_ZIP)
+        if problem:
+            remove_inside(item, cache, root)
+            removed.append(item)
+            invalid.append({'path': item.relative_to(root).as_posix(), 'reason': problem})
+    if removed:
+        drop_index_entries(cache, removed)
+    return invalid
+
+
+def invalidate_after_guard(root, platform, error):
+    """After an engine-guard failure: drop the platform's cached and unpacked
+    extender results so the next build cannot reuse them. Returns
+    (invalidations, cleanup errors); a failed removal never stops the others."""
+    root = Path(root)
+    cache, build_dir = root / '.internal' / 'cache', root / 'build'
+    invalid, removed, errors = [], [], []
+    for arch in platform_archs(platform):
+        for base, target in [(cache, cache / arch), (build_dir, build_dir / arch)]:
+            if target.exists() or target.is_symlink():
+                try:
+                    remove_inside(target, base, root)
+                except (OSError, RuntimeError) as exc:
+                    errors.append(f'{target.relative_to(root).as_posix()}: {type(exc).__name__}: {exc}')
+                    continue
+                removed.append(target)
+                invalid.append({'path': target.relative_to(root).as_posix(), 'reason': f'engine guard failed: {error}'})
+    if cache.is_dir():
+        try:
+            drop_index_entries(cache, [r for r in removed if r.parent == cache])
+        except (OSError, ValueError) as exc:
+            try:
+                invalid += clear_cache(root, cache, f'unreadable {CACHE_INDEX}: {exc}')
+            except (OSError, RuntimeError) as problem:
+                errors.append(f'{CACHE_INDEX}: {type(problem).__name__}: {problem}')
+    return invalid, errors
+
+
+def log_invalidations(log, invalidations):
+    for item in invalidations:
+        log.write(f'RIDER CACHE INVALIDATED {item["path"]}: {item["reason"]}\n')
+
+
+def verify_engines(platform, output, root, started, bob, invalidations=()):
     """Fail closed unless every bundled engine is this build's extender result."""
     output, root = Path(output), Path(root)
     title = project_title(root)
@@ -144,7 +304,7 @@ def verify_engines(platform, output, root, started, bob):
     archs = sorted({e[0] for e in engines})
     if platform not in archs:
         raise RuntimeError(f'ENGINE GUARD: {platform}: no {platform} engine in the bundle')
-    report = {'platform': platform, 'architectures': {}}
+    report = {'platform': platform, 'status': 'PASS', 'cache_invalidations': list(invalidations), 'architectures': {}}
     for arch in archs:
         directory = root / 'build' / arch
         log = directory / 'log.txt'
@@ -200,8 +360,11 @@ def build(platform, output, settings=None, variant=None):
     for stale in [output / project_title(ROOT), output / 'extender']:
         if stale.exists():
             shutil.rmtree(stale)
+    invalidations = validate_cache(ROOT)
     started = build_started(ROOT)
     with (output / 'build.log').open('w') as log:
+        log_invalidations(log, invalidations)
+        log.flush()
         process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt')
         try:
             code = process.wait(timeout=900)
@@ -222,7 +385,21 @@ def build(platform, output, settings=None, variant=None):
     if code:
         print((output / 'build.log').read_text()[-18000:], file=sys.stderr)
         raise RuntimeError(f'Bob build failed: {platform}; see {output / "build.log"}')
-    verify_engines(platform, output, ROOT, started, bob)
+    try:
+        verify_engines(platform, output, ROOT, started, bob, invalidations)
+    except RuntimeError as exc:
+        # The guard failure is the result; a cleanup problem is only recorded.
+        try:
+            cleaned, cleanup_errors = invalidate_after_guard(ROOT, platform, exc)
+        except Exception as problem:
+            cleaned, cleanup_errors = [], [f'{type(problem).__name__}: {problem}']
+        with (output / 'build.log').open('a') as log:
+            log_invalidations(log, cleaned)
+            for problem in cleanup_errors:
+                log.write(f'RIDER CACHE CLEANUP FAILED {problem}\n')
+        (output / 'engines.json').write_text(json.dumps({'platform': platform, 'status': 'FAIL', 'error': str(exc),
+            'cache_invalidations': invalidations + cleaned, 'cache_cleanup_errors': cleanup_errors}, indent=2) + '\n')
+        raise exc
     print(f'PASS build {platform}: {output}', flush=True)
     return output
 
