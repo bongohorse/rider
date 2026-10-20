@@ -72,7 +72,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function snapshot(){
    await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status!=='Unsaved',null,{timeout:10000})
     .catch(async()=>{const e=await ed();throw new Error('view-only baseline: the document was not saved within 10 s (dirty '+e.dirty+', status '+e.status+')');});
-   const e=await ed();assert.equal(e.dirty,false);return {doc:JSON.stringify(await doc()),revision:e.revision,dirty:e.dirty,undo:e.undo,redo:e.redo};
+   const e=await ed();assert.equal(e.dirty,false,'view-only baseline taken while the document is unsaved');return {doc:JSON.stringify(await doc()),revision:e.revision,dirty:e.dirty,undo:e.undo,redo:e.redo};
   }
   async function settle(){await page.waitForTimeout(200);return ed();}
 
