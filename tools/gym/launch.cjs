@@ -24,7 +24,7 @@ function handler(runId, testcase, log = console.error, wait = ms => new Promise(
           response = await route.fetch();
           break;
         } catch (error) {
-          if (error?.code !== 'ECONNRESET' || attempt >= FETCH_RETRIES) throw error;
+          if (error?.code !== 'ECONNRESET' || route.request().method() !== 'GET' || attempt >= FETCH_RETRIES) throw error;
           log(`Gym index fetch ECONNRESET, retry ${attempt + 1}/${FETCH_RETRIES}: ${route.request().url()}`);
           await wait(250 * 2 ** attempt);
         }
