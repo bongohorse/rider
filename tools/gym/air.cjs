@@ -2,6 +2,7 @@ const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const station=require('./air_station.cjs');
+const P=require('./preset.cjs').fromArgv(process.argv);
 // A19c protocol, declared before evidence runs (main/gym/README.md#air-control).
 // Repeat tolerances: takeoff speed, airtime (two 60 Hz steps), rotation, landing angle, compression.
 const TOL={takeoff_mps:.02,airtime_s:.034,rotation_deg:5,landing_deg:5,compression_m:.005};
@@ -31,11 +32,11 @@ const SECTIONS=station.SECTIONS.map(s=>s.id),LEANS=[0,1,-1],DEFAULT_SPEED=7;
    assert(Math.abs(j.landing_angle_deg)<=180);
   }
   async function trial(section,lean,{speed=DEFAULT_SPEED,shot,query}={}){
-   await page.goto(url+(query??`?station=air&section=${section}&lean=${lean}`+(speed===DEFAULT_SPEED?'':`&speed=${speed}`)));
+   await page.goto(url+(query??`?station=air&section=${section}&lean=${lean}`+(speed===DEFAULT_SPEED?'':`&speed=${speed}`))+P.query);
    await page.waitForFunction(({sha,runId,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station==='air'&&window.riderStationReport.section===section,{sha,runId,section});
    if(shot){await page.waitForFunction(()=>window.riderStationReport.in_flight?.from_lip&&window.riderStationReport.in_flight.airtime_s>.8,null,{timeout:20000});await page.screenshot({path:path.join(out,shot)});}
    await page.waitForFunction(id=>(window.riderStationReport.jumps||[]).find(j=>j.from_lip&&j.section===id&&j.complete),section,{timeout:20000});
-   const report=await page.evaluate(()=>window.riderStationReport),j=main(report,section);
+   const report=await page.evaluate(()=>window.riderStationReport),j=main(report,section);await P.check(page);
    assert.equal(report.start_speed,speed);assert.equal(report.comparable,true);assert.equal(report.automated,true);check(j,lean);
    return {section,lean,speed,...j};
   }
@@ -85,7 +86,7 @@ const SECTIONS=station.SECTIONS.map(s=>s.id),LEANS=[0,1,-1],DEFAULT_SPEED=7;
   // Acceptance (#56): at the default start speed, full lean held in flight gives at least one full rotation.
   assert(pick(SECTIONS[0],1).rotation_deg>=360,'full back lean: at least one rotation at the default speed');
   assert(pick(SECTIONS[0],-1).rotation_deg<=-360,'full front lean: at least one rotation at the default speed');
-  const report={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,default_section:SECTIONS[0],default_speed_mps:DEFAULT_SPEED,
+  const report={status:'PASS',...P.report(),source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,default_section:SECTIONS[0],default_speed_mps:DEFAULT_SPEED,
    full_lean_default:{best_rotation_deg:best,full_rotation:best>=360,back_deg:pick(SECTIONS[0],1).rotation_deg,front_deg:pick(SECTIONS[0],-1).rotation_deg},
    results,plain,repeats,retry,fast,slow,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'air-result.json'),JSON.stringify(report,null,2));

@@ -3,6 +3,7 @@
 const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const P=require('./preset.cjs').fromArgv(process.argv);
 // Repeat tolerances declared before runs (A19d).
 const TOL={stop_x_m:.05,time_s:.1,tip_s:.05,angle_rad:.01};
 const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw'];
@@ -15,7 +16,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+server.address().port+'/index.html';
  const report=()=>page.evaluate(()=>window.riderStationReport);
  async function open(section,extra=''){
-  await page.goto(url+`?station=balance&section=${section}`+extra);
+  await page.goto(url+`?station=balance&section=${section}`+extra+P.query);
   await page.waitForFunction(({sha,runId,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station==='balance'&&window.riderStationReport.section===section&&window.riderTelemetry?.sequence>2,{sha,runId,section});
  }
  // Edge-triggered R: hold until the game acknowledges the reset, then release (engine pitfall #5).
@@ -55,7 +56,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
     else q.limit_unmeasured_after_verdict=true;
    }
   }
-  assert.equal(r.trial.mode,mode);assert.equal(r.comparable,true);assert.equal(r.start_speed,0);
+  await P.check(page);assert.equal(r.trial.mode,mode);assert.equal(r.comparable,true);assert.equal(r.start_speed,0);
   return r;
  }
  // The first n ticks of a run-length trace [[ticks, throttle, brake], ...].
@@ -67,7 +68,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   await configure(page,runId,process.argv[5]);
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   // 1. ?station=balance opens directly at its first section from rest; the plank rests on the start deck.
-  await page.goto(url+'?station=balance');
+  await page.goto(url+'?station=balance'+P.query);
   await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderStationReport.record.elapsed>1.5);
   let r=await report();const t=await page.evaluate(()=>window.riderTelemetry);
   assert.equal(r.section,'beam-2');assert.equal(t.start_speed,0);assert(Math.abs(t.first_tick_speed)<.05,'start from rest');assert.equal(t.section_count,SECTIONS.length);
@@ -146,7 +147,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   assert.equal(r.seesaw.generation,gen+1);assert.equal(r.seesaw.joint_valid,true);assert.equal(r.joints,3);
   cases.push('section_switch_keeps_terrain_recreates_joint');
   // 7. A -> B -> A world reload: the new session owns a new plank and joint; counts return to the same values.
-  await page.goto(url+'?station=balance&touch=1');await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderTelemetry?.sequence>2);
+  await page.goto(url+'?station=balance&touch=1'+P.query);await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderTelemetry?.sequence>2);
   const first=await page.evaluate(()=>({loads:window.riderTelemetry.world_loads}));
   await page.keyboard.down('9');await page.waitForFunction(()=>window.riderTelemetry?.station==='gaps-landing');await page.keyboard.up('9');
   for(let i=0;i<6;i++){
@@ -160,7 +161,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   assert.equal(r.seesaw.generation,2);assert.equal(r.seesaw.plank_joints,1);assert(Math.abs(r.record.seesaw.rest_angle-r.record.seesaw.rest_target)<.02);
   seesaw.world_reload={loads_before:first.loads,loads_after:loads,bodies:r.bodies,joints:r.joints};cases.push('a_b_a_world_reload_counts');
   if(errors.length)throw Error(errors.join('\n'));
-  const result={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,cases,counts,skill,replay,full,seesaw,real_device:'NOT RUN'};
+  const result={status:'PASS',...P.report(),source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,cases,counts,skill,replay,full,seesaw,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'balance-result.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify({status:result.status,cases,sections:Object.fromEntries(SECTIONS.map(s=>[s,{skill:skill[s].status,stop_x:+skill[s].chassis_x.toFixed(3),margins:[+skill[s].margin_rear_m.toFixed(3),+skill[s].margin_front_m.toFixed(3)],time_s:+skill[s].time_s.toFixed(2),full:full[s].status+' ('+full[s].reason+')'}])),
    seesaw:{tip_at:runs[0].tip_at,settled_at:runs[0].settled_at,settled_angle:runs[0].settled_angle,final_angle:runs[0].final_angle,rest_angle:runs[0].rest_angle,max_abs_angle:Math.max(...runs.map(q=>q.max_abs_angle))}}));

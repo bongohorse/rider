@@ -1,6 +1,7 @@
 const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const P=require('./preset.cjs').fromArgv(process.argv);
 // Repeat tolerances declared before runs (A19).
 const TOL={jump_m:.05,takeoff_mps:.02,compression_m:.005};
 const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','down','up'];
@@ -26,11 +27,11 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
    }
   }
   async function trial(station,section,speed,shot){
-   await page.goto(url+`?station=${station}&section=${section}`+(speed===7?'':`&speed=${speed}`));
+   await page.goto(url+`?station=${station}&section=${section}`+(speed===7?'':`&speed=${speed}`)+P.query);
    await page.waitForFunction(({sha,runId,station,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station&&window.riderStationReport.section===section,{sha,runId,station,section});
    if(shot){await page.waitForFunction(id=>Number.isFinite(window.riderStationReport.records.find(r=>r.id===id)?.airborne_at),section,{timeout:15000});await page.screenshot({path:path.join(out,shot)});}
    await page.waitForFunction(id=>window.riderStationReport.records.find(r=>r.id===id)?.done,section,{timeout:15000});
-   const report=await page.evaluate(()=>window.riderStationReport),r=report.records.find(x=>x.id===section);
+   const report=await page.evaluate(()=>window.riderStationReport),r=report.records.find(x=>x.id===section);await P.check(page);
    assert.equal(report.start_speed,speed);assert.equal(report.comparable,true);check(r,speed);
    return {station,section,speed,...r};
   }
@@ -67,7 +68,7 @@ const LADDER=['1','1.5','2','2.5','3','4','5','6','8','10'],LANDINGS=['flat','do
   assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),before.world_loads);
   if(errors.length)throw Error(errors.join('\n'));
   const widestAt=speed=>Math.max(0,...ladders[speed].filter(r=>r.status==='CLEARED').map(r=>r.gap_m));
-  const report={status:'PASS',source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,
+  const report={status:'PASS',...P.report(),source_sha:sha,run_id:runId,browser:browser.version(),tolerances:TOL,
    widest_cleared_m:{default_7_mps:widestAt(7),fast_9_mps:widestAt(9)},results,repeats,retry,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'gaps-result.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify({status:report.status,widest_cleared_m:report.widest_cleared_m,

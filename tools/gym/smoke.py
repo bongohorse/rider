@@ -19,11 +19,16 @@ parser.add_argument('--bundle', help='Reuse a verified shared debug Gym build')
 PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2']}
 parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18, le1b or a19b')
 parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18, le1b or a19b')
+# Car Feel 2 (#200): a measurement station run with another preset; its runner asserts the preset per trial.
+# Without --preset the case is unchanged (preset A, no URL parameter). One entry per station: case -> result file.
+PRESET_CASES={'a16':'ramps-result.json','a17':'steps-result.json','a18':'seams-result.json','a19':'gaps-result.json','a19c':'air-result.json','a19b':'bumps-result.json','a19d':'balance-result.json'}
+parser.add_argument('--preset', help='Run a station case ('+', '.join(PRESET_CASES)+') with this preset key, e.g. b')
 args=parser.parse_args()
 if (args.part is not None or args.merge) and args.case not in PARTS: parser.error('--part and --merge apply only to '+', '.join(PARTS))
 if args.part and args.merge: parser.error('--part and --merge are exclusive')
 if args.part is not None and args.part not in PARTS.get(args.case,[]): parser.error('unknown part '+repr(args.part))
 if args.merge and args.bundle: parser.error('--merge reads part reports and takes no --bundle')
+if args.preset is not None and (args.case not in PRESET_CASES or args.part is not None or args.merge): parser.error('--preset applies only to full runs of '+', '.join(PRESET_CASES))
 out=Path(args.output).resolve();out.mkdir(parents=True,exist_ok=True)
 sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
 run_id=str(uuid.uuid4())
@@ -41,10 +46,13 @@ else:
     runner='replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
-    process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle)],cwd=ROOT,start_new_session=True,env=env)
+    process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else [])],cwd=ROOT,start_new_session=True,env=env)
     try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b') else 360 if args.case in ('a16','a17','a19','a19c','a19d','a20','a21','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','cf3') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
+if args.preset is not None:
+    report=json.loads((out/PRESET_CASES[args.case]).read_text())
+    assert report['preset']==args.preset and report['preset_checks']>0, 'preset run without per-trial preset checks'
 if args.case=='le1b':
     report=json.loads((out/'sizes-result.json').read_text())
     # Part 1 measures the first 8 of the 15 accepted levels; part 2 the other 7 plus all 12 rejected limit cases.
