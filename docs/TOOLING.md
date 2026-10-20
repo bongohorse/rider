@@ -23,6 +23,7 @@ bash tools/build.sh --target android --configuration debug
 python tools/g2/negative_build.py --output artifacts/g2/negative-build
 ```
 
+- Every Bob build ends with an engine guard: each bundled engine (both HTML5 Wasm variants, each Android ABI, native executables) must be byte-identical to this build's fresh extender result in `build/<arch>/`, must not be a stock engine from the verified Bob, and needs a non-empty extender log; HTML5 also needs one `Using extender binary` line per variant. The evidence is `engines.json` next to `build.log`.
 - `build` defaults to the gym; `--fixture physics` selects the G1 boot, `--fixture bridge` the native automation fixture ([bridge](contracts/bridge.md)). A build does not prove runtime, installation or game readiness.
 - `verify --suite physics` runs the G1 runner on two configurations plus the scale/render comparison. `verify --suite bridge` runs the native Bridge suite under Xvfb.
 - Every invocation writes `results.json` (schema 1), `junit.xml` and logs to `artifacts/g2/<uuid>/` by default. Exit 0 PASS, 1 FAIL, 2 BLOCKED (never green).

@@ -10,7 +10,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCK = json.loads((ROOT / 'tools/toolchain-lock.json').read_text())
@@ -38,6 +40,125 @@ def bob_jar():
     return target
 
 
+# Engine guard (#208). Bob silently bundles a stock engine (Box2D v2, no app
+# manifest) for an architecture whose extender result is missing from
+# build/<arch>/. Every bundled engine must therefore be byte-identical to a
+# fresh extender result of its architecture and must not be a stock engine.
+EXTENDER_ENGINE = re.compile(r'(lib)?dmengine(_unstripped)?(\.exe|\.so|\.wasm|\.js)?')
+STOCK_ENGINE = re.compile(r'(lib)?dmengine(_[a-z]+)?(\.exe|\.so|\.wasm|\.js)?')
+ANDROID_ABIS = {'arm64-v8a': 'arm64-android', 'armeabi-v7a': 'armv7-android', 'x86_64': 'x86_64-android'}
+EXTENDER_LINE = 'Using extender binary for WASM'
+FRESHNESS_SLACK_S = 2
+
+
+def sha256_stream(stream):
+    return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def sha256_file(path):
+    with Path(path).open('rb') as source:
+        return sha256_stream(source)
+
+
+def project_title(root):
+    section = None
+    for line in (Path(root) / 'game.project').read_text().splitlines():
+        line = line.strip()
+        if line.startswith('['):
+            section = line
+        elif section == '[project]' and (match := re.fullmatch(r'title\s*=\s*(.+)', line)):
+            return match.group(1).strip()
+    raise RuntimeError('ENGINE GUARD: game.project has no [project] title')
+
+
+def bundled_engines(platform, output, title):
+    """[(arch, label, sha256)] for every engine binary inside the bundle."""
+    output = Path(output)
+    engines = []
+    if platform == 'wasm-web':
+        indexes = list(output.rglob('index.html'))
+        if len(indexes) != 1:
+            raise RuntimeError(f'ENGINE GUARD: wasm-web: expected one HTML5 index, got {len(indexes)}')
+        for path in sorted(indexes[0].parent.iterdir()):
+            match = re.fullmatch(re.escape(title) + r'(_pthread)?(\.wasm|_wasm\.js)', path.name)
+            if path.is_file() and match:
+                engines.append(('wasm_pthread-web' if match.group(1) else 'wasm-web', path.name, sha256_file(path)))
+    elif platform.endswith('-android'):
+        packages = list(output.rglob('*.apk'))
+        if len(packages) != 1:
+            raise RuntimeError(f'ENGINE GUARD: {platform}: expected one APK, got {len(packages)}')
+        with zipfile.ZipFile(packages[0]) as package:
+            for name in sorted(package.namelist()):
+                match = re.fullmatch(r'lib/([^/]+)/lib' + re.escape(title) + r'\.so', name)
+                if match:
+                    if match.group(1) not in ANDROID_ABIS:
+                        raise RuntimeError(f'ENGINE GUARD: {platform}: unknown Android ABI in {name}')
+                    with package.open(name) as entry:
+                        engines.append((ANDROID_ABIS[match.group(1)], f'{packages[0].name}!{name}', sha256_stream(entry)))
+    else:
+        name = title + {'x86_64-win32': '.exe', 'x86_64-linux': '.x86_64'}.get(platform, '')
+        binaries = [p for p in output.rglob(name) if p.is_file()]
+        if len(binaries) != 1:
+            raise RuntimeError(f'ENGINE GUARD: {platform}: expected one {name}, got {len(binaries)}')
+        engines.append((platform, binaries[0].name, sha256_file(binaries[0])))
+    return engines
+
+
+def stock_engine_hashes(bob, arch):
+    """SHA-256 of the stock engines shipped inside the verified Bob for arch.
+    The stock pthread engine is not in Bob (Bob downloads it), so that case is
+    covered by the extender identity check alone."""
+    hashes = set()
+    with zipfile.ZipFile(bob) as jar:
+        for name in jar.namelist():
+            folder, _, base = name.rpartition('/')
+            if folder == f'libexec/{arch}' and STOCK_ENGINE.fullmatch(base):
+                with jar.open(name) as entry:
+                    hashes.add(sha256_stream(entry))
+    return hashes
+
+
+def verify_engines(platform, output, root, started, bob):
+    """Fail closed unless every bundled engine is this build's extender result."""
+    output, root = Path(output), Path(root)
+    engines = bundled_engines(platform, output, project_title(root))
+    archs = sorted({arch for arch, _, _ in engines})
+    if platform not in archs:
+        raise RuntimeError(f'ENGINE GUARD: {platform}: no {platform} engine in the bundle')
+    report = {'platform': platform, 'architectures': {}}
+    for arch in archs:
+        directory = root / 'build' / arch
+        log = directory / 'log.txt'
+        for path, what in [(log, 'extender log'), (output / 'extender' / arch / 'log.txt', 'copied extender log')]:
+            if not path.is_file() or path.stat().st_size == 0:
+                raise RuntimeError(f'ENGINE GUARD: {arch}: {what} {path} is missing or empty')
+        if log.stat().st_mtime < started - FRESHNESS_SLACK_S:
+            raise RuntimeError(f'ENGINE GUARD: {arch}: extender log {log} is older than this build')
+        results = {p.name: p for p in sorted(directory.iterdir()) if p.is_file() and EXTENDER_ENGINE.fullmatch(p.name)}
+        if not results:
+            raise RuntimeError(f'ENGINE GUARD: {arch}: no extender engine in {directory}; Bob bundled a fallback engine')
+        stale = [name for name, p in results.items() if p.stat().st_mtime < started - FRESHNESS_SLACK_S]
+        if stale:
+            raise RuntimeError(f'ENGINE GUARD: {arch}: extender engine {stale} is older than this build')
+        expected = {sha256_file(p): name for name, p in results.items()}
+        stock = stock_engine_hashes(bob, arch)
+        entries = []
+        for _, label, digest in (e for e in engines if e[0] == arch):
+            if digest in stock:
+                raise RuntimeError(f'ENGINE GUARD: {arch}: bundled {label} is the stock Defold engine (sha256 {digest})')
+            if digest not in expected:
+                raise RuntimeError(f'ENGINE GUARD: {arch}: bundled {label} (sha256 {digest}) is not the extender engine in {directory}')
+            entries.append({'bundled': label, 'extender': expected[digest], 'sha256': digest})
+        report['architectures'][arch] = entries
+    if platform == 'wasm-web':
+        count = (output / 'build.log').read_text(errors='replace').count(EXTENDER_LINE)
+        if count != len(archs):
+            raise RuntimeError(f'ENGINE GUARD: wasm-web: Bob logged "{EXTENDER_LINE}" {count} times for {len(archs)} architectures {archs}')
+        report['extender_lines'] = count
+    (output / 'engines.json').write_text(json.dumps(report, indent=2) + '\n')
+    return report
+
+
 def build(platform, output, settings=None, variant=None):
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -47,13 +168,15 @@ def build(platform, output, settings=None, variant=None):
     version = subprocess.run([java, '-version'], capture_output=True, text=True, timeout=15)
     if not approved_java(version.stdout + version.stderr):
         raise RuntimeError(f'BLOCKED: approved JDK is {JDK_BUILD}; selector must resolve to the locked build')
-    command = [java, '-jar', str(bob_jar()), '--platform', platform, '--variant', variant or ('debug' if platform == 'wasm-web' else 'headless'),
+    bob = bob_jar()
+    command = [java, '-jar', str(bob), '--platform', platform, '--variant', variant or ('debug' if platform == 'wasm-web' else 'headless'),
                '--archive', '--bundle-output', str(output)]
     if settings:
         command += ['--settings', str(Path(settings).resolve())]
     command += ['resolve', 'build', 'bundle']
     (output / 'toolchain.json').write_text(json.dumps({'java': version.stdout + version.stderr,
         'bob_sha256': BOB_SHA256, 'platform': platform, 'variant': variant or ('debug' if platform == 'wasm-web' else 'headless')}, indent=2))
+    started = time.time()
     with (output / 'build.log').open('w') as log:
         process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=os.name != 'nt')
         try:
@@ -75,6 +198,7 @@ def build(platform, output, settings=None, variant=None):
     if code:
         print((output / 'build.log').read_text()[-18000:], file=sys.stderr)
         raise RuntimeError(f'Bob build failed: {platform}; see {output / "build.log"}')
+    verify_engines(platform, output, ROOT, started, bob)
     print(f'PASS build {platform}: {output}', flush=True)
     return output
 
