@@ -28,12 +28,16 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
  // One attempt from an in-world reset with the given driver; waits for the verdict (and the plank).
  async function attempt(mode,trace){
   await page.evaluate(spec=>{window.riderBalanceTrial=spec;},{mode,trace});
-  const before=(await report()).generation;await retry();const gen=before+1,label=`${mode} attempt (generation ${gen})`;
+  const before=(await report()).generation;await retry();
+  // The attempt is the first generation after this R; a stray reset in between is a clear error.
+  await page.waitForFunction(b=>window.riderStationReport.generation>b,before);
+  const started=await report(),gen=started.generation,label=`${mode} attempt (generation ${gen})`;
+  if(gen!==before+1||started.reset_reason!=='manual')throw Error(`${label}: expected one manual reset after generation ${before}, got ${started.reset_reason} to generation ${gen}`);
   // Every wait ends on its condition, on a later reset (a bounds or other reset starts a new generation and a new
   // attempt), or on a wall-clock timeout, each with a clear error; it never waits on a record that no longer runs.
   async function until(fn,timeout,what){
    try{await page.waitForFunction(fn,gen,{timeout});}
-   catch(e){const s=await report().catch(()=>null);throw Error(`${label}: ${what} within ${timeout/1000} s (now generation ${s?.generation}, status ${s?.record?.status}, elapsed ${s?.record?.elapsed?.toFixed?.(2)} s)`);}
+   catch(e){const s=await report().catch(()=>null);throw Error(`${label}: ${what} within ${timeout/1000} s (now generation ${s?.generation}, status ${s?.record?.status}, elapsed ${s?.record?.elapsed?.toFixed?.(2)} s): ${e.message}`);}
   }
   await until(g=>{const r=window.riderStationReport;return r.generation>g||(r.generation===g&&r.trial?.generation===g&&r.trial.mode!=='idle'&&r.record.done);},45000,'no verdict');
   let r=await report();
@@ -43,7 +47,13 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    // attempt (e.g. a bounds reset after a fall: then the final plank pose stays unmeasured).
    await until(g=>{const r=window.riderStationReport;return r.generation!==g||r.record.seesaw.final_at!==undefined||r.record.elapsed>r.record.time_s+8;},20000,'plank neither calm nor 8 s past the verdict');
    const later=await report();
-   if(later.generation===gen)r=later;else r.record.seesaw.final_unmeasured=`reset to generation ${later.generation} before the plank was calm`;
+   if(later.generation===gen)r=later;
+   else{
+    const q=r.record.seesaw;q.final_unmeasured=`${later.reset_reason} reset to generation ${later.generation} before the plank was calm`;
+    // Plank extremes up to that reset come from the next generation's report; after two resets they are lost.
+    if(later.previous?.generation===q.generation){q.limit_reached=later.previous.limit_reached;q.max_abs_angle=later.previous.max_abs_angle;}
+    else q.limit_unmeasured_after_verdict=true;
+   }
   }
   assert.equal(r.trial.mode,mode);assert.equal(r.comparable,true);assert.equal(r.start_speed,0);
   return r;
@@ -113,8 +123,11 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   // Reports arrive every 0.25 s, so a short swing (about 0.15 s under preset C) can fall between two samples:
   // press R at the first sample after the tip, swinging or already tipped onto the exit deck. The reset records
   // the pose and angular velocity it replaced (before_angle, before_omega).
-  try{await page.waitForFunction(g=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&(Math.abs(r.seesaw.omega)>.2||r.record.seesaw.settled_at!==undefined||r.seesaw.angle<0);},g,{timeout:20000});}
-  catch(e){const s=await report();throw Error(`mid-tip R: the plank did not tip within 20 s (generation ${s.generation}, status ${s.record.status}, angle ${s.seesaw.angle})`);}
+  // Preset A keeps main's rule: R only while a report shows the plank swinging (|omega| > 0.2 rad/s), asserted
+  // below. Other presets (exemption for #204/#200 comparisons) press R at the first report after the tip.
+  const presetA=(await report()).preset==='a';
+  try{await page.waitForFunction(({g,a})=>{const r=window.riderStationReport;return r.generation>g&&r.record.seesaw.tip_at!==undefined&&(Math.abs(r.seesaw.omega)>.2||!a);},{g,a:presetA},{timeout:20000});}
+  catch(e){const s=await report();throw Error(`mid-tip R: no ${presetA?'swinging ':''}tipped plank within 20 s (generation ${s.generation}, status ${s.record.status}, angle ${s.seesaw.angle}, omega ${s.seesaw.omega}): ${e.message}`);}
   const swinging=(await report()).seesaw;
   g=(await report()).generation;await page.evaluate(()=>{window.riderBalanceTrial={mode:'idle'};});await retry();
   await page.waitForFunction(g=>window.riderStationReport.generation>g,g);
@@ -123,7 +136,8 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   assert(Math.abs(reset.angle-r.record.seesaw.rest_target)<.005&&reset.omega===0&&reset.speed===0,'canonical plank after R');
   assert.equal(r.joints,3);assert.equal(r.bodies,counts.bodies);
   const after=await attempt('skill');same(after.record.seesaw,runs[0],'after mid-tip R');assert.equal(after.record.status,'COMPLETED');
-  seesaw.mid_tip_retry={swinging,reset,swinging_at_reset:Math.abs(reset.before_omega)>.2,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
+  if(presetA)assert(Math.abs(reset.before_omega)>.2,'preset A: R must replace a swinging plank, omega '+reset.before_omega);
+  seesaw.mid_tip_retry={preset_a_rule:presetA,swinging,reset,swinging_at_reset:Math.abs(reset.before_omega)>.2,after:after.record.seesaw};cases.push('mid_tip_retry_restores_plank_and_joint');
   // 6. V (section switch) keeps the world and terrain; the plank joint is recreated on the same terrain body.
   await open('down');let before=await page.evaluate(()=>window.riderTelemetry);const gen=(await report()).seesaw.generation;
   await page.keyboard.down('v');await page.waitForFunction(n=>window.riderStationReport.section==='seesaw'&&window.riderTelemetry.reset_count===n+1,before.reset_count);await page.keyboard.up('v');
