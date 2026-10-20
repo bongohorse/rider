@@ -130,14 +130,18 @@ function M.apply(v,command,dt)
             end
         end
     end
-    -- #211: optional airborne pitch damping, only with no wheel contact and no lean held. omega is rad/s
-    -- and body torque raw N m (neither scaled), so k is N m s; preset key absent = 0 = no torque at all.
+    -- #211: optional pitch damping in flight only: no wheel and no chassis contact (a roof or underbody
+    -- touching the ground is not flight), lean exactly 0, k > 0. omega is rad/s and body torque raw N m
+    -- (neither scaled), so k is N m s; preset key absent = 0 = no torque at all.
     -- Never on the reset tick: reset drops the cached contacts, so that tick reads as airborne.
+    -- The binding's apply_torque wakes the body, so like rolling resistance it skips a sleeping chassis and
+    -- |omega| <= 0.01 rad/s (no torque that would keep a resting vehicle awake).
     -- v.damped (this tick) and v.damped_ticks (since the last reset) are read-only diagnostics.
+    local omega=b2d.body.get_angular_velocity(v.chassis)
     v.damped=command.lean==0 and not grounded and c.air_pitch_damping>0 and not v.reset_tick
+        and #b2d.body.get_contact_data(v.chassis)==0 and b2d.body.is_awake(v.chassis) and math.abs(omega)>0.01
     v.reset_tick=nil
     if v.damped then
-        local omega=b2d.body.get_angular_velocity(v.chassis)
         b2d.body.apply_torque(v.chassis,feel.body_torque(-c.air_pitch_damping*omega))
         v.damped_ticks=(v.damped_ticks or 0)+1
     end

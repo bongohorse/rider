@@ -23,7 +23,7 @@ Binding rules for all physics and gameplay-simulation work on pinned Defold 1.14
 | Wheel joint max motor torque | Scaled by the binding; differs from body torque |
 | Motor speed, angular velocity | rad/s, no scaling |
 
-- Air pitch damping (#211): torque −k·ω on the chassis with ω from `b2d.body.get_angular_velocity` (rad/s) and `b2d.body.apply_torque` (raw N m), so k is N m s with no scale factor; the single conversion point is `feel.body_torque`. Applied in `vehicle.apply` inside the owner's `fixed_update` (no extra loop): only with no wheel contact, lean exactly 0, k > 0 and not on the reset tick (reset drops cached contacts). Pause runs no fixed step, so nothing is applied while paused.
+- Air pitch damping (#211): torque −k·ω on the chassis with ω from `b2d.body.get_angular_velocity` (rad/s) and `b2d.body.apply_torque` (raw N m), so k is N m s with no scale factor; the single conversion point is `feel.body_torque`. Applied in `vehicle.apply` inside the owner's `fixed_update` (no extra loop): only with no wheel and no chassis contact, lean exactly 0, k > 0, an awake chassis with |ω| > 0.01 rad/s (the binding's `apply_torque` wakes the body: [`script_box2d_body_v3.cpp` L450-456](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp#L450-L456)), and never on the reset tick (reset drops cached contacts). Pause runs no fixed step, so nothing is applied while paused.
 | Joint translation getter | Prismatic only; measure wheel/chassis positions instead |
 
 - Validate gravity/fall distance and joint distance with a deliberate scale change to catch double conversion. Define tolerances before running.

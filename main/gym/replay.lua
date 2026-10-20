@@ -36,6 +36,8 @@ local function identity(t)
     for _,key in ipairs(feel.preset_keys) do parts[#parts+1]=key.."="..tostring(t[key]) end
     return table.concat(parts,";")
 end
+-- Read-only: the identity the replay verdict compares (same identity = MATCH rules, else COMPARED).
+function M.identity() return identity(tuning()) end
 local function preset_label(key,modified) return string.upper(key or "?")..(modified and "*" or "") end
 local function pose(self)
     local v=self.vehicle

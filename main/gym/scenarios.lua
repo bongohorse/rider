@@ -313,6 +313,12 @@ function M.preset_tick(self,dt)
         -- tick (this one: the preset reset ran before vehicle.apply) never damps.
         local k=feel.load(self.preset).values.air_pitch_damping or 0
         assert(feel.values.air_pitch_damping==k and not self.vehicle.damped,"Air damping not replaced by preset "..self.preset)
+        -- The replay identity covers the optional key: a D recording replayed on F is COMPARED, never MATCH.
+        self.preset_identity=self.preset_identity or {}
+        self.preset_identity[self.preset]=require("main.gym.replay").identity()
+        if self.preset=="f" then
+            assert(self.preset_identity.d and self.preset_identity.d~=self.preset_identity.f,"D and F share a replay identity")
+        end
         emit(self,"phase",{name="preset_drive",key=self.preset})
     elseif self.preset_phase=="drive" then
         if self.last_command.throttle==1 then self.preset_drive_ticks=self.preset_drive_ticks+1 end
