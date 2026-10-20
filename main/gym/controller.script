@@ -111,7 +111,7 @@ end
 local function show_preset(self)
     msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=self.invalid_preset or false,refused=self.preset_refused})
     -- Imports reload the world from the loader, which must keep the current preset like a station switch.
-    msg.post("main:/loader#script","preset_changed",{key=self.preset})
+    msg.post("main:/loader#script","preset_changed",{key=self.preset,refused=self.preset_refused})
     msg.post("main:/loader#ui","tuning",feel.snapshot())
 end
 -- A level that cannot take the vehicle leaves a vehicle-less error world; the loader keeps the previous save.
@@ -552,6 +552,7 @@ function on_message(self,id,data,sender)
         self.station,self.station_note=stations.load(data.id,data.speed,nil,data.snapshot)
         if not self.station and data.note then self.station_note=data.note end
         self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset
+        if data.preset then self.preset_refused=data.preset_refused end -- a refused file stays visible across reloads (#199)
         self.session_generation=data.generation or 1
         self.load={requested=data.requested,parse_ms=data.parse_ms}
     elseif id==hash("world_load_count") then self.world_loads=data.count

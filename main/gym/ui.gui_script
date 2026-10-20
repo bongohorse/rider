@@ -196,7 +196,7 @@ function on_message(self,id,data,sender)
             gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
         end
         -- A refused preset file must never pass silently for A (#199).
-        gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A") or data.invalid and "Invalid URL: A"
+        gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A"..(data.modified and " | Modified" or "")) or data.invalid and "Invalid URL: A"
             or data.modified and "Modified - select "..string.upper(table.concat(feel.order,"/")) or "Presets [P]")
     elseif id==hash("tuning") then
         self.owner=sender

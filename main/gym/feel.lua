@@ -63,7 +63,8 @@ function M.preset(requested)
     local key=valid and requested or "a"
     local data,reason=M.load(key)
     if not data then
-        local refused=string.upper(key).." refused: "..reason
+        -- The note travels in every measurement sample (2048-byte message cap): printable ASCII, at most 60 bytes.
+        local refused=string.upper(key).." refused: "..string.sub((string.gsub(tostring(reason),"[^%w%p ]","?")),1,60)
         print("Preset "..refused)
         assert(key~="a","Preset "..refused)
         M.preset("a")

@@ -45,7 +45,7 @@ ORDER, KEYS, RANGES = feel_tables()
 
 
 def validate(data, key):
-    """Mirror of feel.validate; returns the refusal reason or None."""
+    """Mirror of feel.validate plus the guard-only rotation-cap rule for candidates; returns the refusal reason or None."""
     if not isinstance(data, dict) or data.get('schema') != 1 or data.get('key') != key or not isinstance(data.get('values'), dict):
         return 'invalid schema'
     values = data['values']

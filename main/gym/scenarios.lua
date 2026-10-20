@@ -278,15 +278,25 @@ local function preset_rules(feel)
         assert(feel.validate(variant(case[1],case[2]),"a"),"Invalid preset accepted: "..case[1])
     end
     assert(feel.validate(variant("spring_hz",5),"b"),"Preset key/file mismatch accepted")
+    -- A file with a very long unknown key: its refusal reason is long; the stubbed D file returns it.
+    local long=variant("\1"..string.rep("k",600),1)
+    return assert(feel.validate(long,"a"))
 end
 function M.preset_tick(self,dt)
     local feel=require "main.gym.feel"
     self.preset_ticks=(self.preset_ticks or 0)+1
-    if self.preset_ticks==60 then
+    if self.preset_ticks==60 and self.world_loads==2 then
+        local m=self.measurements_shown
+        assert(self.preset=="a" and string.find(self.preset_refused or "","^D refused: ") and string.find(m.preset_note or "","D refused",1,true)
+            and string.find(m.report_preset or "","D refused",1,true),"Refusal lost on station switch: "..tostring(m.preset_note))
+        emit(self,"phase",{name="screenshot",file="preset-refused-switch.png"})
+        emit(self,"suite_end",{status="PASS",cases={url_selected=true,invalid_fallback=self.testcase=="a9invalid",all_drivable=true,full_replacement=true,no_reload=true,refused_visible=true}})
+        self.testcase="done"
+    elseif self.preset_ticks==60 then
         local expected=self.testcase=="a9invalid" and "a" or "b"
         assert(self.preset==expected and self.measurements_shown.preset==expected,"URL preset not applied/displayed")
         assert(self.invalid_preset==(self.testcase=="a9invalid"),"Invalid preset fallback not labelled")
-        preset_rules(feel)
+        self.preset_long_reason=preset_rules(feel)
         -- Every registered preset, in registry order (#199; was a fixed A/B/C list).
         self.preset_order,self.preset_index=feel.order,1
         self.preset_phase="select"
@@ -311,14 +321,17 @@ function M.preset_tick(self,dt)
                 -- A refused file falls back to A visibly: stub D's file for one selection only (debug probe).
                 assert(sys.get_engine_info().is_debug,"Refusal probe requires debug engine")
                 self.preset_load=feel.load
-                feel.load=function(key) if key=="d" then return nil,"probe" end return self.preset_load(key) end
+                local reason=self.preset_long_reason
+                feel.load=function(key) if key=="d" then return nil,reason end return self.preset_load(key) end
                 self.preset_phase,self.preset_drive_ticks="refuse",0
                 emit(self,"phase",{name="select_refused",key="d"})
             end
         end
     elseif self.preset_phase=="refuse" and self.preset_refused and self.last_reset_reason=="preset" then
         feel.load,self.preset_load=self.preset_load,nil
-        assert(self.preset=="a" and self.invalid_preset and self.preset_refused=="D refused: probe" and feel.values.motor_speed==-32,"Refused preset did not fall back to A")
+        -- Long reasons are cut to 60 printable bytes: the note rides in every measurement sample (2048-byte cap).
+        assert(#self.preset_long_reason>600 and #self.preset_refused==#"D refused: "+60 and string.find(self.preset_refused,"^D refused: unknown key %?kkk"),"Refusal note not bounded: "..#self.preset_refused)
+        assert(self.preset=="a" and self.invalid_preset and feel.values.motor_speed==feel.load("a").values.motor_speed,"Refused preset did not fall back to A")
         self.preset_phase,self.preset_drive_ticks="refused",0
     elseif self.preset_phase=="refused" then
         self.preset_drive_ticks=self.preset_drive_ticks+1
@@ -329,8 +342,9 @@ function M.preset_tick(self,dt)
                 "Refusal not shown: "..tostring(m.preset_note).." | "..tostring(m.report_preset))
             emit(self,"phase",{name="screenshot",file="preset-refused.png"})
         elseif self.preset_drive_ticks==90 then
-            emit(self,"suite_end",{status="PASS",cases={url_selected=true,invalid_fallback=self.testcase=="a9invalid",all_drivable=true,full_replacement=true,no_reload=true,refused_visible=true}})
-            self.testcase="done"
+            -- The refusal must survive a world reload (station switch); the new world finishes the case.
+            msg.post("main:/loader#script","select_station",{id="straight",preset=self.preset})
+            self.preset_phase="switching"
         end
     end
 end
@@ -389,7 +403,8 @@ function M.feedback_feel_tick(self,dt)
         assert(feel.set("motor_speed",-140) and not feel.set("motor_speed",-141),"Expanded speed range invalid")
         assert(feel.set("lean_torque",200) and feel.set("lean_rate_max",16) and feel.set("ground_lean_torque",400),"New lean controls unavailable")
         feel.preset("a")
-        assert(feel.values.motor_speed==-32 and feel.values.lean_rate_max==8 and feel.values.ground_lean_torque==120,"Preset did not restore expanded tuning")
+        local a=feel.load("a").values
+        assert(feel.values.motor_speed==a.motor_speed and feel.values.lean_rate_max==a.lean_rate_max and feel.values.ground_lean_torque==a.ground_lean_torque,"Preset did not restore expanded tuning")
         assert(feel.set("ground_lean_torque",0),"Cannot disable ground assistance")
         self.ground_phase,self.ground_ticks="disabled",0
         emit(self,"phase",{name="ground_left"})

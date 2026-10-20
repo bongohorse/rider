@@ -104,9 +104,12 @@ async function main(){
             await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
           }
         }
-        const p=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=window.riderHud.presets.a;return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};});
-        await page.mouse.move(p.x,p.y);await page.mouse.down();
-        await page.waitForFunction(()=>window.riderTelemetry.preset==='a'&&!window.riderTelemetry.modified);await page.mouse.up();
+        // The last chip (E, #199) and A, on every layout including phone emulation.
+        for(const key of ['e','a']){
+          const p=await page.evaluate(k=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=window.riderHud.presets[k];return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};},key);
+          await page.mouse.move(p.x,p.y);await page.mouse.down();
+          await page.waitForFunction(k=>window.riderTelemetry.preset===k&&!window.riderTelemetry.modified,key);await page.mouse.up();
+        }
         await page.screenshot({path:path.join(out,`${name}-${viewport.width}x${viewport.height}.png`)});
         console.log(JSON.stringify({layout:name,viewport,sliderPairs:11,status:"PASS"}));
         responsive.push({viewport,status:'PASS',sliders:11});
