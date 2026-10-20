@@ -100,11 +100,13 @@ function traceText(def,rec,meta){
  return '{\n'+lines.join(',\n')+'\n}\n';
 }
 
-// Preset A identity as the game builds it (replay.lua identity(): key=tostring(value) in feel.preset_keys order).
+// Preset A identity as the game builds it (replay.lua identity(): key=tostring(value) in feel.preset_keys order;
+// an optional key absent from the preset file is at its default and left out, #211).
 function presetA(){
  const keys=JSON.parse('['+/M\.preset_keys=\{([^}]*)\}/.exec(fs.readFileSync(path.join(ROOT,'main/gym/feel.lua'),'utf8'))[1]+']');
  const values=JSON.parse(fs.readFileSync(path.join(ROOT,'main/gym/presets/a.json'),'utf8')).values;
- return {keys,values,identity:keys.map(k=>k+'='+String(values[k])).join(';')};
+ const present=keys.filter(k=>k in values);
+ return {keys:present,values,identity:present.map(k=>k+'='+String(values[k])).join(';')};
 }
 
 module.exports={ROOT,DIR,EXPECTED,TOLERANCE,TRACES,PERTURB,file,sha256,readTrace,readExpected,outcomes,tolerances,check,traceText,presetA};
