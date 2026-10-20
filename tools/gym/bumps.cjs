@@ -8,7 +8,6 @@ const geometry=require('./bumps_geometry.cjs'),{serve,differing}=require('./bump
 // Declared before the evidence runs.
 const TOL={share:.02,compression_m:.005,pitch_rad:.01,apex_mps:.02};
 const SWEEP=[2.5,3,3.5,4,4.5,5,5.5,6,6.5,7],BISECT=3,COMPARE=7;
-const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2),out=path.resolve(root);let browser,page;
  const {base,close}=await serve(process.argv[6]);
@@ -36,7 +35,7 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   const report=()=>page.evaluate(()=>window.riderStationReport);
   const record=(r,id)=>r.records.find(x=>x.id===id);
-  const brief=r=>({id:r.id,status:r.status,stall_x_m:r.stall_x_m??null,elapsed_s:r.elapsed,features:r.features.map(f=>({id:f.id,type:f.type,height_m:f.height_m,wavelength_m:f.wavelength_m,steps:f.steps,
+  const brief=r=>({id:r.id,status:r.status,stop_x_m:r.stop_x_m??null,elapsed_s:r.elapsed,features:r.features.map(f=>({id:f.id,type:f.type,height_m:f.height_m,wavelength_m:f.wavelength_m,steps:f.steps,
    loss_share_rear:f.loss_share_rear,loss_share_front:f.loss_share_front,loss_share_any:f.loss_share_any,loss_share_both:f.loss_share_both,
    compression_rear_m:f.compression_rear_m,compression_front_m:f.compression_front_m,compression_max_m:f.compression_max_m,compression_share_max:f.compression_share_max,entry_compression_m:f.entry_compression_m,pitch_min_rad:f.pitch_min_rad,pitch_max_rad:f.pitch_max_rad,
    vx_min_mps:f.vx_min_mps,vx_max_mps:f.vx_max_mps,apex_speed_mps:f.apex_speed_mps??null,lifted:f.lifted,lift_speed_mps:f.lift_speed_mps??null,lift_x_m:f.lift_x_m??null,
@@ -49,20 +48,24 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
   async function press(key,acknowledged,arg){await page.keyboard.down(key);await page.waitForFunction(acknowledged,arg);await page.keyboard.up(key);}
   async function finished(id,features){
    await page.waitForFunction(({id,features})=>{const r=window.riderStationReport.records.find(x=>x.id===id);return r?.entered&&(features?r.features.filter(f=>features.includes(f.id)).every(f=>f.done):r.done);},{id,features},{timeout:120000});
-   const r=await report();assert.equal(r.comparable,true);return record(r,id);
+   const r=await report();assert.equal(r.comparable,true);motor=r.tuning_at_start.motor_speed;assert.ok(Number.isFinite(motor)&&motor!==0);return record(r,id);
   }
+  // The A18 powered control: throttle = start speed / (|preset motor_speed| x wheel radius 0.22 m).
+  let motor;
+  const hold=speed=>Math.min(1,Math.max(0,speed/(Math.abs(motor)*.22)));
+  const longFresh=async()=>{await open('&section=long-0.3','long-0.3');return finished('long-0.3');};
   function check(r,speed,complete=true){
    assert.equal(r.independent,true,r.id);assert.equal(r.start_speed,speed);
    assert.ok(Math.abs(r.throttle_min-hold(speed))<1e-9&&Math.abs(r.throttle_max-hold(speed))<1e-9,'constant hold throttle '+r.id);
    assert.equal(r.brake_max,0);assert.equal(r.lean_max,0);
    // A stall (1 s below 0.1 m/s, e.g. the chassis grounded on a crest) is a measured outcome, not a failure.
    if(complete)assert.ok(['DONE','STALLED'].includes(r.status),r.id+' '+r.status);
-   if(r.status==='STALLED')assert.ok(Number.isFinite(r.stall_x_m));
+   if(r.status==='STALLED')assert.ok(Number.isFinite(r.stop_x_m));
    for(const f of r.features)if(f.steps>0||(r.status==='DONE'&&(complete||f.done))){
     assert.ok(f.steps>0,f.id);
     for(const k of ['loss_share_rear','loss_share_front','loss_share_any','loss_share_both'])assert.ok(f[k]>=0&&f[k]<=1,k);
     assert.ok(Number.isFinite(f.compression_max_m)&&Number.isFinite(f.pitch_min_rad)&&Number.isFinite(f.pitch_max_rad));
-    if(f.type!=='waves'&&f.end_x+1.5<(r.stall_x_m??Infinity))assert.ok(Number.isFinite(f.apex_speed_mps),'apex reached '+f.id);
+    if(f.type!=='waves'&&f.end_x+1.5<(r.stop_x_m??Infinity))assert.ok(Number.isFinite(f.apex_speed_mps),'apex reached '+f.id);
    }
   }
   if(scope.ladders){
@@ -84,7 +87,9 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
    ladders[speed]=[];
    await open(speed===geometry.START_SPEED?'&section='+sections[0]:`&section=${sections[0]}&speed=${speed}`,sections[0]);
    for(let i=0;i<sections.length;i++){
-    if(i>0){const n=await page.evaluate(()=>window.riderTelemetry.reset_count);await press('v',({id,n})=>window.riderStationReport.section===id&&window.riderTelemetry.reset_count===n+1,{id:sections[i],n});}
+    // crest-dip opens fresh, so its repeat below compares two fresh loads (an in-world reset drifts slightly).
+    if(sections[i]==='crest-dip')await open(`&section=crest-dip${speed===geometry.START_SPEED?'':'&speed='+speed}`,'crest-dip');
+    else if(i>0){const n=await page.evaluate(()=>window.riderTelemetry.reset_count);await press('v',({id,n})=>window.riderStationReport.section===id&&window.riderTelemetry.reset_count===n+1,{id:sections[i],n});}
     if(speed===geometry.START_SPEED&&sections[i]==='short-0.3'){await page.waitForFunction(()=>window.riderTelemetry.station_distance>7.5,null,{timeout:30000});await page.screenshot({path:path.join(out,'bumps-short-waves.png')});}
     const r=await finished(sections[i]);check(r,speed);ladders[speed].push(r);
    }
@@ -131,14 +136,16 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
    });
   }
   if(scope.ladders){
-  // Asserted on the highest long waves and crest-dip. A stalled section (chassis grounded on a crest) is
-  // chaotic: its fresh-load repeat is recorded, not held to the tolerances.
+  // Two fresh loads, asserted on the highest long waves and crest-dip (both must complete). A stalled
+  // section (chassis grounded on a crest) is chaotic: its ladder run (reached via V) and a fresh load are
+  // recorded, not held to the tolerances.
   repeats=[];
+  const firsts={'long-0.3':await longFresh(),'crest-dip':ladders[geometry.START_SPEED].find(r=>r.id==='crest-dip')};
   for(const id of ['long-0.3',...ladders[geometry.START_SPEED].filter(r=>r.status==='STALLED').map(r=>r.id),'crest-dip']){
    await open('&section='+id,id);const again=await finished(id);check(again,geometry.START_SPEED);
-   const first=ladders[geometry.START_SPEED].find(r=>r.id===id);
-   if(first.status!=='STALLED')same(first,again);
-   repeats.push({id,asserted:first.status!=='STALLED',first:brief(first),again:brief(again)});
+   const asserted=Object.hasOwn(firsts,id),first=firsts[id]??ladders[geometry.START_SPEED].find(r=>r.id===id);
+   if(asserted){assert.equal(first.status,'DONE',id);check(first,geometry.START_SPEED);same(first,again);}
+   repeats.push({id,asserted,first:brief(first),again:brief(again)});
   }
   // R repeats a section in the same world. Asserted on long-0.3 (as A19 on its widest gap); on the 90 m
   // crest-dip an in-world retry drifts slightly from a fresh load towards its end, so its largest
@@ -157,8 +164,8 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
   for(const k of ['loss_share_any','loss_share_both','compression_max_m','pitch_min_rad','pitch_max_rad','apex_speed_mps'])
    drift[k]=Math.max(...crestDip.features.map((f,i)=>Math.abs(f[k]-crestRetry.features[i][k])));
   assert.deepEqual(crestRetry.features.map(f=>[f.lifted,f.bottomed]),crestDip.features.map(f=>[f.lifted,f.bottomed]),'crest-dip retry keeps lift/bottom status');
-  await open('&section=long-0.3','long-0.3');const longFresh=brief(await finished('long-0.3'));
-  retry={long:await retried('long-0.3'),crest_dip:{retry:crestRetry,largest_difference:drift}};same(longFresh,retry.long);
+  const longFirst=brief(await longFresh());
+  retry={long:await retried('long-0.3'),crest_dip:{retry:crestRetry,largest_difference:drift}};same(longFirst,retry.long);
   done('repeatable_fresh_load_and_retry');
   }
   assert.deepEqual(cases,planned(scope));
@@ -168,7 +175,7 @@ const hold=speed=>Math.min(1,Math.max(0,speed/(32*.22)));
    geometry:shape??null,ladders:Object.fromEntries(Object.entries(ladders).map(([speed,rs])=>[speed,rs.map(brief)])),liftoff,sweep,repeats,retry,real_device:'NOT RUN'};
   fs.writeFileSync(path.join(out,'bumps-result.json'),JSON.stringify(result,null,2));
   const pct=x=>(100*x).toFixed(0)+'%';
-  console.log(JSON.stringify({status:'PASS',part,cases,liftoff,ladder:(result.ladders[geometry.START_SPEED]??[]).flatMap(r=>r.features.map(f=>`${r.id}/${f.id}: loss R ${pct(f.loss_share_rear)} F ${pct(f.loss_share_front)} both ${pct(f.loss_share_both)} comp ${f.compression_rear_m.toFixed(3)}/${f.compression_front_m.toFixed(3)} pitch ${f.pitch_min_rad.toFixed(3)}..${f.pitch_max_rad.toFixed(3)}${f.type==='waves'?'':` apex ${f.apex_speed_mps.toFixed(2)} lift ${f.lifted} bottom ${f.bottomed}`}`))}));
+  console.log(JSON.stringify({status:'PASS',part,cases,liftoff,ladder:(result.ladders[geometry.START_SPEED]??[]).flatMap(r=>r.features.filter(f=>f.steps>0).map(f=>`${r.id}/${f.id}: loss R ${pct(f.loss_share_rear)} F ${pct(f.loss_share_front)} both ${pct(f.loss_share_both)} comp ${f.compression_rear_m.toFixed(3)}/${f.compression_front_m.toFixed(3)} pitch ${f.pitch_min_rad.toFixed(3)}..${f.pitch_max_rad.toFixed(3)}${f.type==='waves'?'':` apex ${f.apex_speed_mps.toFixed(2)} lift ${f.lifted} bottom ${f.bottomed}`}`))}));
  }catch(e){if(page){await page.screenshot({path:path.join(out,'bumps-failed.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'bumps-failed-state.json'),JSON.stringify({ladders,sweep,errors,state:await page.evaluate(()=>({telemetry:window.riderTelemetry,report:window.riderStationReport})).catch(()=>null)},null,2));}throw e;}
  finally{if(browser)await browser.close();await close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

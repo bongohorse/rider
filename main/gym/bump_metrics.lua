@@ -1,5 +1,7 @@
 -- Read-only completed-step observations (A19b); no tuning, limits or reset requests.
 local feel=require "main.gym.feel"
+-- Speculative manifolds alone are not loaded contact (A18/A19 rule).
+local supported=require("main.gym.seam_metrics").supported
 local M={}
 -- Window of a feature, chassis centre in metres: from 0.5 m before its start (the front wheel is
 -- 0.46 m ahead) to 1.5 m after its end (the rear wheel past it plus 1 m).
@@ -14,15 +16,6 @@ M.protocol={version=1,dt_s=1/60,lift_steps=M.LIFT_STEPS,window_before_m=M.BEFORE
     commands="Debug a19b: constant throttle=clamp(start_speed/(abs(preset motor_speed)*0.22),0,1) (A18 powered control: wheel target = start speed, no feedback), brake=0, lean=0. Above about 7.04 m/s (preset A) the throttle saturates at 1",
     support="A wheel is supported in a completed step when one of its manifold points touches (separation<=0) or carries normal impulse (A19 rule); a speculative manifold alone is a loss",
     measures="Per feature window: contact loss = unsupported steps / window steps per wheel, any wheel and both wheels; compression = max positive spring travel along chassis Y from spring rest (static sag included; sag at window entry reported), also as a share of the 0.38 m reference travel to underbody contact on flat ground (no travel stop exists); pitch = chassis angle min/max in rad (positive = nose up); chassis/underbody contact = impulsive chassis manifold point (underbody: chassis-local y <= -13 u). Crest/dip: apex speed = chassis vx when its centre crosses the apex; lifted = one wheel unsupported for at least 2 consecutive steps in the window; bottomed = underbody contact"}
--- Speculative manifolds alone are not loaded contact (A18/A19 rule).
-local function supported(body)
-    for _,c in ipairs(b2d.body.get_contact_data(body)) do
-        for _,p in ipairs(c.points) do
-            if p.separation<=0 or p.normal_impulse>0 or p.total_normal_impulse>0 then return true end
-        end
-    end
-    return false
-end
 -- Impulsive chassis contact; the box underside is -14 u, allow the rounded contact skin (A17 rule).
 local function chassis_contacts(chassis)
     local hit,under=false,false
@@ -116,17 +109,21 @@ function M.observe(self,state,dt,sample)
             r.stalled=math.abs(vx)<.1 and (r.stalled or 0)+dt or 0
             -- Observation only: a stall or the 90 s limit ends the record, never the practice run.
             if x>s.end_x or r.stalled>=1 or r.elapsed>=90 then
-                r.status=x>s.end_x and "DONE" or "STALLED"
-                if r.status=="STALLED" then r.stall_x_m=x end
-                r.done=true;self.bump_archive[r.id]=r
+                r.status=x>s.end_x and "DONE" or r.stalled>=1 and "STALLED" or "TIMEOUT"
+                if r.status~="DONE" then r.stop_x_m=x end
+                r.done=true
+                -- Only an independent start replaces an archived result.
+                if r.independent then self.bump_archive[r.id]=r end
                 for _,f in ipairs(r.features) do f.done=true end
             end
         end
     end
 end
--- Shares and per-wheel names for the report (wheel 1 is the rear wheel, 2 the front).
+-- Shares and per-wheel names for the report (wheel 1 is the rear wheel, 2 the front). A feature that was
+-- never entered has no measurements (absent fields, null in the page report).
 local function summary(r)
-    local n=math.max(r.steps,1)
+    if r.steps==0 then return r end
+    local n=r.steps
     r.loss_share_rear,r.loss_share_front=r.loss_steps[1]/n,r.loss_steps[2]/n
     r.loss_share_any,r.loss_share_both=r.any_loss_steps/n,r.both_loss_steps/n
     r.compression_rear_m,r.compression_front_m=r.compression_m[1],r.compression_m[2]
@@ -156,7 +153,9 @@ function M.enrich(self,sample)
     local r
     for _,x in ipairs(report.records) do if x.id==active then r=x end end
     local f=r.features[1]
-    if #r.features==1 then
+    if #r.features==1 and f.steps==0 then
+        sample.station_result=string.format("%s %s",r.id,r.status)
+    elseif #r.features==1 then
         sample.station_result=string.format("%s %s | loss R %.0f%% F %.0f%% | comp %.2f m | pitch %.2f..%.2f rad",r.id,r.status,
             100*f.loss_share_rear,100*f.loss_share_front,f.compression_max_m,f.pitch_min_rad or 0,f.pitch_max_rad or 0)
     else
