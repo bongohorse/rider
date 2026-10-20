@@ -334,6 +334,14 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.keyboard.type('Copy',{delay:30});await key('Enter');e=await revision(rev+1);
   await key('z',['Control']);await key('z',['Control']);await page.waitForFunction(k=>window.riderEditor.key===k,ownKey);
   assert.equal(label(await doc(),lid).text,'Gap 3 m','the import changed the original');
+  // A source with an empty label is refused by the source validator (the editor never makes one): the
+  // level opens as editable lines from its compiled fields, where the empty label is left out and named.
+  const blank=JSON.parse(JSON.stringify(plain));blank.id='le6-empty';
+  blank.labels=[{position:[3,3],text:''}];blank.editor.objects.push({id:'o2',type:'label',position:[3,3],text:''});blank.editor.next_id=3;
+  e=await importText(JSON.stringify(blank),'le6-empty.json');
+  assert.ok(e.message.includes('Label o2 has no text')&&e.message.includes('1 empty label was left out'),e.message);
+  assert.equal(labels(await doc()).length,0);
+  await key('z',['Control']);await page.waitForFunction(k=>window.riderEditor.key===k,ownKey);
   measurements.labels={text_limit:64,compiled:saved.labels};
   cases.push('labels_place_edit_move_copy_undo_persist');
 
@@ -354,6 +362,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('h');await click(await canvas(10,10));e=await settle();assert.equal(e.help_open,false);
   await key('h');await key('h');e=await settle();assert.equal(e.help_open,false);
   await unchanged(before,'help');
+  // A piece being drawn stays as it is behind the help (not finished, not dropped).
+  await key('d');await at([20,6]);await at([24,7]);e=await settle();assert.equal(e.drawing,2);
+  await key('h');e=await settle();assert.equal(e.help_open,true);assert.equal(e.drawing,2);
+  await key('Escape');e=await settle();assert.equal(e.help_open,false);assert.equal(e.drawing,2,'help changed the piece being drawn');
+  await unchanged(before,'help while drawing');
+  await key('Escape');e=await settle();assert.equal(e.drawing,0);await key('s');
   cases.push('help_modal_lists_controls');
 
   // 8. Ghost: where F would start (same rules as F), refused in red with the reason, off over objects,

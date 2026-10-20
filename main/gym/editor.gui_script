@@ -386,7 +386,8 @@ local function candidates(p)
             -- The drawn text's box (LE6b): editor_view scales labels by max(1, 0.5 / zoom); the builtin
             -- font is about 7.9 x 14 units per character at scale 1 (1 unit = 1 cm).
             local k=math.max(1,0.5/editor.camera.zoom)/100
-            local dx=math.max(0,math.abs(p[1]-o.position[1])-#o.text*3.95*k)
+            local chars=select(2,o.text:gsub("[^\128-\191]",""))
+            local dx=math.max(0,math.abs(p[1]-o.position[1])-chars*3.95*k)
             local dy=math.max(0,math.abs(p[2]-o.position[2])-7*k)
             d=math.sqrt(dx*dx+dy*dy)
         else
@@ -1234,8 +1235,8 @@ local function show_problem(self,row)
     self.flash={p=t.at or {(b[1]+b[2])/2,(b[3]+b[4])/2},until_t=socket.gettime()+2}
     editor.message=kind..row.text
 end
+-- Help is modal and consumes input, so a piece being drawn stays as it is (neither finished nor dropped).
 local function open_help(self)
-    if self.drawing then finish_drawing(self) end
     cancel(self)
     self.help_open,self.warnings_open,self.open_dialog=true,false,false
     editor.message=""
@@ -1967,7 +1968,7 @@ function on_input(self,action_id,action)
         if self.drawing then finish_drawing(self) end
         paste_at(self,self.cursor or {editor.camera.x,editor.camera.y})
     elseif editor.tool=="prefab" and KIND_KEYS[action_id] then
-        -- 1-6 pick the prefab type (the game's station keys are editor input while editing).
+        -- 1-7 pick the prefab type (the game's station keys are editor input while editing).
         editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
     elseif action_id==hash("editor_cancel") then
         -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
@@ -2090,7 +2091,7 @@ local function describe(self)
                 "Click Text or double-click","to edit; drag moves it."}
         end
     elseif editor.tool=="prefab" then
-        lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-6 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
+        lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-7 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
     elseif editor.tool=="label" then
         lines={"Label [L]","Click places a label and","edits its text (up to 64","bytes); Enter applies.","Select it to edit, move,","copy or delete it."}
     elseif editor.tool=="curve" then
@@ -2482,7 +2483,7 @@ function update(self,dt)
         gui.set_text(self.message,editor.message or "")
         local p=self.cursor
         local snapped=self.snapped and self.snapped.kind~="free" and (drawing_tool() or self.drag) and " -> "..self.snapped.kind or ""
-        gui.set_text(self.status,string.format("x %s  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
+        gui.set_text(self.status,string.format("x %s m  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
             editor.camera.zoom,editor.tool,snap_mode(self),snapped,#e.objects,editor.problem and "Play blocked" or "Ready to play")
             ..((self.overlay.dropped or 0)>0 and " | zoom in to see every point" or ""))
         -- The edit world's display note (large drafts, R7) is listed as a warning.

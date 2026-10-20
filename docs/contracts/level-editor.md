@@ -405,10 +405,12 @@ Second part of LE6 ([#129](https://github.com/bongohorse/rider/issues/129)). Imp
   - Later edits: a double-click on the label or the right panel's **Text** row.
   - The field takes every key (editor and game keys only type). Text keeps the station rule (at most 64 bytes, `A label is limited to 64 bytes.`) and is never empty (`A label cannot be empty.`).
   - Move, copy/paste, Mirror, Delete, Undo/Redo, autosave/reload and export/import use the existing paths. A label compiles into the station's `labels`, and an imported file is an independent copy (`le6`).
-  - A label is picked anywhere on its drawn text (the edit world's text box at the current zoom), not only at its anchor.
+  - A label is picked anywhere on its drawn text (the edit world's text box at the current zoom, by UTF-8 character count), not only at its anchor.
+  - The source validator refuses a label without text (`Label o2 has no text`), as the editor never makes one. A file with such a label opens from its compiled fields as editable lines (LE4 rule), and compiled labels without text, which draw nothing, are left out with a note (`1 empty label was left out`). No built-in station, sample or test file has one.
 - **Help [H]** (the game's help key; also **Help [H]** in the View row) opens a modal overlay listing the shipped controls: tools, mouse, drawing and curves, snapping, edit keys, prefabs, Mirror [<] [>], copy/paste, labels, test starts, the View row and focused fields.
-  - While it is open every key and click is consumed (nothing edits, plays or navigates behind it). H, Esc, Close or a click outside closes it.
-  - The text is one Lua table. `tests/ci/test_editor_help.py` checks that every editor key binding (and H, 1–7) appears in it.
+  - While it is open every key and click is consumed (nothing edits, plays or navigates behind it); a piece being drawn stays as it is. H, Esc, Close or a click outside closes it.
+  - Like the whole editor (desktop mouse and keyboard, D-E2) it is laid out for desktop windows; it scales with the editor GUI and has no separate phone layout (at 390 px portrait width its text is too small to read).
+  - The text is one Lua table. `tests/ci/test_editor_help.py` checks that every editor key binding (and H, 1–7) is described by a phrase that names its key (e.g. `[C] Curve`, `Ctrl+[C] copy`), and that the help names no unbound key.
 - **Vehicle silhouette (R10):**
   - **Ghost:** with the Select tool over empty canvas inside the free area, a faint upright vehicle (chassis, two wheels, rider: 6 GUI boxes) shows where **F** would start a test run (Shift: **Shift+F** drop here). It uses `editor_doc.test_start`, the same rule as F, so F starts exactly at the ghost (`le6`).
   - A refused position shows the ghost in red at the cursor with the reason in the readout (`F: refused (no surface below the cursor)`).
