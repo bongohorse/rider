@@ -1,5 +1,6 @@
 // LE4: My levels, export/import, copy/paste and compatibility in the debug HTML5 gym (level-editor contract R1, R3, R12, R14, R17).
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -30,15 +31,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
   async function drag(from,to,steps=5){
    const a=await world(from),b=await world(to);
-   await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+   await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
-   await page.waitForTimeout(60);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
   async function button(name){
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));

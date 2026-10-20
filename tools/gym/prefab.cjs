@@ -1,5 +1,6 @@
 // LE5a: parametric prefabs and Mirror in the debug HTML5 gym (level-editor contract R1, R4-R7, R9, R12, R16, R17).
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -31,15 +32,15 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
   async function drag(from,to,steps=6){
    const a=await world(from),b=await world(to);
-   await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+   await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
-   await page.waitForTimeout(60);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
   async function button(name){
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
@@ -153,11 +154,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // The handle drag readout names the same conflict before release; Esc cancels the drag unchanged.
   await at([12,2*tan(20)]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');
   const end=(await ed()).handles.find(x=>x.name==='end').p,ha=await world(end),hb=await world([end[0],end[1]+1.2]);
-  await page.mouse.move(ha.x,ha.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  await page.mouse.move(ha.x,ha.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
   for(let i=1;i<=5;i++){await page.mouse.move(ha.x,ha.y+(hb.y-ha.y)*i/5);await page.waitForTimeout(40);}
   await page.waitForFunction(()=>window.riderEditor.readout.includes('conflict: START overlaps flat o3'));
   measurements.drag_conflict=(await ed()).readout;
-  await key('Escape');await page.mouse.up();await page.waitForTimeout(100);
+  await key('Escape');await page.mouse.up();await pointer.frames(page);
   e=await ed();assert.equal(e.revision,r0+6);assert.equal(shape(await doc()),shape(calm));
   done('conflict_is_visible');
 

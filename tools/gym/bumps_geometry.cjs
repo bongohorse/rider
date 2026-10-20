@@ -4,6 +4,7 @@
 // labels, bounds and start speed are added here explicitly. `node tools/gym/bumps_station.cjs` writes
 // both files; the a19b case recompiles and compares them.
 const assert=require('node:assert/strict');
+const pointer=require('./pointer.cjs');
 // World metres, ground at y = 0, left to right. Wave ladder: five heights, a long (3 m) and a short
 // (1 m) wavelength; counts keep the station below the 800 render objects of a station.
 const HEIGHTS=[0.05,0.1,0.15,0.2,0.3];
@@ -85,7 +86,7 @@ async function compiled(page,base){
  async function button(name){
   const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
   const b=e.buttons[name],at=await canvas(b.x,b.y);
-  await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+  await pointer.tap(page,at);
  }
  await page.goto(base+'?station=straight');
  await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);

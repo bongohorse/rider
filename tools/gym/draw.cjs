@@ -1,5 +1,6 @@
 // LE3: draw tool, connections, snapping and live validation in the debug HTML5 gym (level-editor contract R4-R7, R16, R17).
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -30,20 +31,20 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async p=>click(await world(p));
   async function dblclick(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(50);
-   for(let i=0;i<2;i++){await page.mouse.down();await page.waitForTimeout(60);await page.mouse.up();await page.waitForTimeout(60);}}
+   for(let i=0;i<2;i++){await page.mouse.down();await pointer.frames(page);await page.mouse.up();await pointer.frames(page);}}
   async function drag(from,to,mods=[],steps=5){
    const a=await world(from),b=await world(to);
-   await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+   await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(const m of mods)await page.keyboard.down(m);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
-   await page.waitForTimeout(60);await page.mouse.up();
+   await pointer.frames(page);await page.mouse.up();
    for(const m of mods)await page.keyboard.up(m);
-   await page.waitForTimeout(60);
+   await pointer.frames(page);
   }
   async function button(name,mods){const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
   async function edit(){await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.view&&window.riderEditor.screen,null,{timeout:20000});await page.waitForTimeout(150);return ed();}

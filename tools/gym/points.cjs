@@ -1,6 +1,7 @@
 // LE5d: multi-point selection, bulk Corner/Smooth on points and whole objects, multi-point drag and prefab
 // conversion to the fewest anchors in the debug HTML5 gym (level-editor contract R4, R17, LE3b, LE5c, LE5d).
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 // Sampling settings of compiler versions 4 and 5 (main/gym/editor_sample.lua).
@@ -33,17 +34,17 @@ const TOL=0.005,SEG=0.5;
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
   async function dblclick(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(50);
-   for(let i=0;i<2;i++){await page.mouse.down();await page.waitForTimeout(60);await page.mouse.up();await page.waitForTimeout(60);}}
+   for(let i=0;i<2;i++){await page.mouse.down();await pointer.frames(page);await page.mouse.up();await pointer.frames(page);}}
   async function drag(from,to,steps=6){
    const a=await world(from),b=await world(to);
-   await page.mouse.move(a.x,a.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+   await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
-   await page.waitForTimeout(60);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
   async function button(name){
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));

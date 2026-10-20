@@ -1,5 +1,6 @@
 // LE2: editor shell and Edit <-> Play loop in the debug HTML5 gym (level-editor contract R3, R9-R13, R15-R17).
 const {configure}=require('./launch.cjs');
+const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -30,7 +31,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
-   await page.mouse.move(at.x,at.y);await page.waitForTimeout(50);await page.mouse.down();await page.waitForTimeout(90);await page.mouse.up();await page.waitForTimeout(60);
+   await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
   async function button(name,mods){const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
@@ -74,9 +75,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 3. Drag START: one Undo step; Undo/Redo restore by stable id.
   const start0=e.start.position;
-  let at=await world([start0[0],start0[1]]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  let at=await world([start0[0],start0[1]]);await page.mouse.move(at.x,at.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
   for(let i=1;i<=5;i++){const p=await world([start0[0]+2*i,start0[1]]);await page.mouse.move(p.x,p.y);await page.waitForTimeout(40);}
-  await page.mouse.up();e=await revision(1);
+  await pointer.frames(page);await page.mouse.up();e=await revision(1);
   assert.ok(near(e.start.position[0],start0[0]+10,0.05)&&near(e.start.position[1],start0[1],0.05),JSON.stringify(e.start));
   assert.equal(e.selection,'start');assert.equal(e.undo,1);
   await key('z',['Control']);e=await revision(2);assert.deepEqual(e.start.position,start0);assert.equal(e.redo,1);
@@ -84,12 +85,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const start=e.start.position;cases.push('start_drag_undo_redo');
 
   // 4. Focus loss cancels a drag; the click that refocuses the canvas never edits.
-  at=await world(start);await page.mouse.move(at.x,at.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
+  at=await world(start);await page.mouse.move(at.x,at.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
   at=await world([start[0]+6,start[1]]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(100);
   await page.evaluate(()=>document.querySelector('canvas').blur());await page.waitForTimeout(150);
   await page.mouse.up();await page.locator('canvas').focus();
   // The click that returns focus is ignored: it neither clears the selection nor edits.
-  at=await world([start[0]+20,start[1]+5]);await page.mouse.move(at.x,at.y);await page.mouse.down();await page.waitForTimeout(40);await page.mouse.up();
+  at=await world([start[0]+20,start[1]+5]);await pointer.tap(page,at);
   await page.waitForTimeout(400);
   e=await ed();assert.equal(e.revision,3);assert.deepEqual(e.start.position,start);assert.equal(e.selection,'start');cases.push('focus_loss_cancels_drag');
 
@@ -191,8 +192,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 13. An unfinished draft survives a reload and can be edited further.
   await key('e');e=await edit();const rev=e.revision;
-  at=await world(start);await page.mouse.move(at.x,at.y);await page.waitForTimeout(60);await page.mouse.down();await page.waitForTimeout(60);
-  at=await world([start[0]+3,start[1]+0.5]);await page.mouse.move(at.x,at.y,{steps:3});await page.mouse.up();
+  at=await world(start);await page.mouse.move(at.x,at.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
+  at=await world([start[0]+3,start[1]+0.5]);await page.mouse.move(at.x,at.y,{steps:3});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   e=await revision(rev+1);const moved=e.start.position;
   await page.waitForFunction(()=>window.riderEditor.status==='Saved');
   await page.goto(base+'?station=custom');e=await edit();
