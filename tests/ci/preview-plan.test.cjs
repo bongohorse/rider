@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const {verificationPlan}=require('../../tools/preview/verification-plan.cjs');
 
 test('release CI partitions the full assertion inventory exactly once',()=>{
-  const expected=['desktop','phone-emulation','mobile','tilt','ramps','steps','seams','gaps','balance','bumps'];
+  const expected=['desktop','phone-emulation','mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air'];
   assert.deepEqual(verificationPlan(),expected);
   const split=['desktop','phone','touch','stations'].flatMap(verificationPlan);
   assert.deepEqual(split,expected);
