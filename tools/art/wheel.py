@@ -51,14 +51,16 @@ def vector(radius):
 def raster(svg):
     """Rasterize this generator's circle/rect SVG subset at subpixel coverage.
 
+    Also used by strut.py for its non-square sprite.
+
     SVG uses pixel-boundary coordinates. Pillow's inclusive final pixel needs -1;
     omitting that is exactly the former half-pixel centring defect.
     BOX reduction preserves coverage without a ringing halo outside the tyre.
     """
     doc = ET.fromstring(svg)
-    size = int(doc.attrib['width'])
+    width, height = int(doc.attrib['width']), int(doc.attrib['height'])
     scale = EXPORT_SCALE * SUPERSAMPLE
-    image = Image.new('RGBA', (size*scale, size*scale))
+    image = Image.new('RGBA', (width*scale, height*scale))
     draw = ImageDraw.Draw(image)
     for element in doc:
         tag = element.tag.rsplit('}', 1)[-1]
@@ -75,7 +77,7 @@ def raster(svg):
             raise ValueError('Unsupported generator primitive: '+tag)
         box = tuple(round(v*scale)-(1 if i>=2 else 0) for i,v in enumerate(box))
         (draw.ellipse if tag=='circle' else draw.rectangle)(box, fill=a['fill'])
-    return image.resize((size*EXPORT_SCALE, size*EXPORT_SCALE), Image.Resampling.BOX)
+    return image.resize((width*EXPORT_SCALE, height*EXPORT_SCALE), Image.Resampling.BOX)
 
 
 def outputs(root=ROOT, name='wheel'):

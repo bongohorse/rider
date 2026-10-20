@@ -90,10 +90,15 @@ function init(self)
     end
     self.preset_note=layout.text(vmath.vector3(788,449,0),"","right_top")
     gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.4,0.4,1))
-    self.crash_button=layout.box(vmath.vector3(788,426,0),vmath.vector3(280,24,0),"right_top")
+    self.crash_button=layout.box(vmath.vector3(716,426,0),vmath.vector3(136,24,0),"right_top")
     gui.set_color(self.crash_button,button_color)
-    self.crash_label=layout.text(vmath.vector3(788,426,0),"Crash OFF [C]","right_top")
+    self.crash_label=layout.text(vmath.vector3(716,426,0),"Crash OFF [C]","right_top")
     gui.set_font(self.crash_label,"default");gui.set_scale(self.crash_label,vmath.vector3(0.5,0.5,1))
+    -- Car Feel 3: visual suspension struts on/off (the owner's juice module holds the setting).
+    self.struts_button=layout.box(vmath.vector3(860,426,0),vmath.vector3(136,24,0),"right_top")
+    gui.set_color(self.struts_button,button_color)
+    self.struts_label=layout.text(vmath.vector3(860,426,0),"Struts","right_top")
+    gui.set_font(self.struts_label,"default");gui.set_scale(self.struts_label,vmath.vector3(0.5,0.5,1))
     self.head=layout.text(vmath.vector3(788,407,0),"","right_top")
     gui.set_font(self.head,"default");gui.set_scale(self.head,vmath.vector3(0.4,0.4,1))
     self.controls=controls.new()
@@ -232,6 +237,7 @@ function on_message(self,id,data,sender)
             html5.run("window.riderTimeState="..json.encode({paused=data.paused,step=data.step}))
             html5.run("window.riderMobile?.setTime?.("..tostring(data.paused)..","..data.step..")")
         end
+    elseif id==hash("struts") then gui.set_text(self.struts_label,"Struts "..(data.enabled and "ON" or "OFF"))
     elseif id==hash("finish_reached") then
         self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
         gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or ""))
@@ -309,7 +315,7 @@ function update(self,dt)
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets={a=point(self.presets.a),b=point(self.presets.b),c=point(self.presets.c)},
-            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box)}))
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label)}))
     end
     if html5 then
         local status,visible=feedback.state()
@@ -366,6 +372,10 @@ function on_input(self,id,action)
     end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.crash_button,action.x,action.y) then
         msg.post("gym:/owner#script","crash_toggle")
+        return true
+    end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.struts_button,action.x,action.y) then
+        msg.post("gym:/owner#script","struts_toggle")
         return true
     end
 end

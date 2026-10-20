@@ -1,0 +1,5 @@
+default_animation: "strut"
+material: "/builtins/materials/sprite.material"
+textures { sampler: "texture_sampler" texture: "/main/gym/assets/gym.atlas" }
+size_mode: SIZE_MODE_MANUAL
+size { x: 8.0 y: 28.0 }

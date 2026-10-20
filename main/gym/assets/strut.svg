@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8" height="28" viewBox="0 0 8 28">
+  <title>Suspension strut; eyes at both ends, stretched along y at runtime</title>
+  <rect x="3.0" y="0" width="2" height="28" fill="#d9e2e6" />
+  <rect x="0" y="5" width="8" height="2" fill="#e0a43a" />
+  <rect x="0" y="9" width="8" height="2" fill="#e0a43a" />
+  <rect x="0" y="13" width="8" height="2" fill="#e0a43a" />
+  <rect x="0" y="17" width="8" height="2" fill="#e0a43a" />
+  <rect x="0" y="21" width="8" height="2" fill="#e0a43a" />
+  <circle cx="4.0" cy="3" r="3" fill="#2b343a" />
+  <circle cx="4.0" cy="3" r="1.5" fill="#e7eef0" />
+  <circle cx="4.0" cy="25" r="3" fill="#2b343a" />
+  <circle cx="4.0" cy="25" r="1.5" fill="#e7eef0" />
+</svg>
