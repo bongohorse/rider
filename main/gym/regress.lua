@@ -38,7 +38,8 @@ local function finish(self,s,phase)
     s.phase=phase
     if s.tune then s.tune.applied=feel.values[s.tune.key]==s.tune.value end
     local result={phase=phase,error=s.error or false,top_speed_mps=s.top_speed_mps or false,top_tick=s.top_tick or false,run_ticks=s.run_ticks,
-        start_tick=s.start_tick or false,preset=self.preset,modified=self.modified or false,station_report=station_report(self),tune=s.tune or false}
+        start_tick=s.start_tick or false,preset=self.preset,modified=self.modified or false,station_report=station_report(self),tune=s.tune or false,
+        damped_ticks=self.vehicle.damped_ticks or 0} -- #211: vehicle ticks with air pitch damping since the last reset
     publish("riderRegressResult",result)
 end
 

@@ -31,13 +31,19 @@ const SECTIONS=station.SECTIONS.map(s=>s.id),LEANS=[0,1,-1],DEFAULT_SPEED=7;
    assert.equal(j.flips,Math.floor(Math.abs(j.rotation_deg)/360));
    assert(Math.abs(j.landing_angle_deg)<=180);
   }
+  // #211: the optional air pitch damping acts only in neutral flight and never without the preset key (k = 0).
+  function damping(report,j,lean){
+   const k=report.tuning_at_start.air_pitch_damping;assert(Number.isFinite(k)&&k>=0,'air_pitch_damping in the tuning');
+   if(k===0||lean!==0)assert.equal(j.damped_ticks,0,'no air damping with k = 0 or lean held');
+   else assert(j.damped_ticks>0,'air damping applied in neutral flight');
+  }
   async function trial(section,lean,{speed=DEFAULT_SPEED,shot,query}={}){
    await page.goto(url+(query??`?station=air&section=${section}&lean=${lean}`+(speed===DEFAULT_SPEED?'':`&speed=${speed}`))+P.query);
    await page.waitForFunction(({sha,runId,section})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station==='air'&&window.riderStationReport.section===section,{sha,runId,section});
    if(shot){await page.waitForFunction(()=>window.riderStationReport.in_flight?.from_lip&&window.riderStationReport.in_flight.airtime_s>.8,null,{timeout:20000});await page.screenshot({path:path.join(out,shot)});}
    await page.waitForFunction(id=>(window.riderStationReport.jumps||[]).find(j=>j.from_lip&&j.section===id&&j.complete),section,{timeout:20000});
    const report=await page.evaluate(()=>window.riderStationReport),j=main(report,section);await P.check(page);
-   assert.equal(report.start_speed,speed);assert.equal(report.comparable,true);assert.equal(report.automated,true);check(j,lean);
+   assert.equal(report.start_speed,speed);assert.equal(report.comparable,true);assert.equal(report.automated,true);check(j,lean);damping(report,j,lean);
    return {section,lean,speed,...j};
   }
   // Every section with neutral, full backward (+1, A) and full forward (-1, D) lean at the default speed.

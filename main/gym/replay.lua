@@ -26,16 +26,25 @@ local function section_id(self)
     local d=self.station
     return d.sections and d.sections[d.section_index].id or false
 end
+-- An optional preset key (#211) at its default is left out of tuning and identity, so recordings made
+-- without it (preset A, the stored A22 traces) keep format v1 unchanged; a set value (F) is included.
 local function tuning()
     local t={}
-    for _,key in ipairs(feel.preset_keys) do t[key]=feel.values[key] end
+    for _,key in ipairs(feel.preset_keys) do
+        local value=feel.values[key]
+        if feel.optional[key]==nil or value~=feel.optional[key] then t[key]=value end
+    end
     return t
 end
 local function identity(t)
     local parts={}
-    for _,key in ipairs(feel.preset_keys) do parts[#parts+1]=key.."="..tostring(t[key]) end
+    for _,key in ipairs(feel.preset_keys) do
+        if t[key]~=nil or feel.optional[key]==nil then parts[#parts+1]=key.."="..tostring(t[key]) end
+    end
     return table.concat(parts,";")
 end
+-- Read-only: the identity the replay verdict compares (same identity = MATCH rules, else COMPARED).
+function M.identity() return identity(tuning()) end
 local function preset_label(key,modified) return string.upper(key or "?")..(modified and "*" or "") end
 local function pose(self)
     local v=self.vehicle

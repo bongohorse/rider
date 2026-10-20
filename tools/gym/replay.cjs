@@ -5,6 +5,9 @@ const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const TOL={position_m:0.05,angle_rad:0.05};
+// The P cycle follows the preset registry (feel.order), so a new preset needs no change here.
+const ORDER=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/feel.lua'),'utf8'))[1].match(/\w+/g);
+const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses from `from` back to A
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;
  function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
@@ -145,8 +148,8 @@ const TOL={position_m:0.05,angle_rad:0.05};
   s=await R();assert.equal(s.ghost.count,3);assert.equal(s.play.ended,'done');
   await press('r',r=>window.riderReplay.resets===r+1,s.resets);
   s=await R();assert.equal(s.play,false);assert.equal(s.ghost.count,0);assert(!s.status.includes('COMPARED'),'stale result: '+s.status);
-  // Back to A through the rest of the registry (#199: P cycles A-B-C-D-E).
-  for(const key of ['d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
+  // Back to A through the rest of the registry (feel.order).
+  for(const key of toA('c'))await press('p',k=>window.riderReplay.preset===k,key);
   cases.push('finished_replay_cleared_by_retry');
 
   // 7. Deliberately bad trace: one recorded command block perturbed (full lean against the recording, ticks 30-89) must diverge.
@@ -221,7 +224,7 @@ const TOL={position_m:0.05,angle_rad:0.05};
    s=await R();assert.equal(s.recording.error,false);assert(s.recording.ticks>0);assert.equal(s.recording.trailing,true);
    measurements.active_ends[reason]=s.recording.ticks;
   }
-  for(const key of ['c','d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
+  for(const key of toA('b'))await press('p',k=>window.riderReplay.preset===k,key);
   cases.push('active_recording_ended_by_resets');
 
   // 14. A run recorded into a crash (head contact with crash on: full throttle, lean back) and replayed: the result
@@ -252,7 +255,7 @@ const TOL={position_m:0.05,angle_rad:0.05};
    await press('r',r=>window.riderReplay.resets===r+1,s.resets);
    s=await R();assert.equal(s.play,false);assert.equal(s.ghost.count,0);
   }
-  for(const key of ['c','d','e','a'])await press('p',k=>window.riderReplay.preset===k,key);
+  for(const key of toA('b'))await press('p',k=>window.riderReplay.preset===k,key);
   await press('c',()=>window.riderTelemetry?.crash_enabled===false);
   cases.push('crash_end_keeps_result');
 

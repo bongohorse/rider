@@ -89,7 +89,7 @@ function M.observe(self,state,dt,sample)
         local from_lip=s~=nil and math.min(wx[1],wx[2])>=s.lip_x-M.WHEEL_RADIUS and x<=s.lip_x+2
         f={start=a.elapsed,lip=s,angle=state.angle,takeoff_angle_rad=state.angle,rotation=0,takeoff_x=x,takeoff_y=y,apex_y=y,
             takeoff_vx_mps=vx,takeoff_vy_mps=vy,takeoff_speed_mps=math.sqrt(vx*vx+vy*vy),section=s and s.id or "",from_lip=from_lip,
-            throttle_max=0,brake_max=0, -- this step's command was issued before the takeoff was seen
+            throttle_max=0,brake_max=0,damped_ticks=0, -- this step's command was issued before the takeoff was seen
             approach_throttle_min=a.approach_throttle_min or 0,approach_lean_max=a.approach_lean_max or 0}
         a.flight=f
         if from_lip then a.lip_taken=true end
@@ -98,9 +98,11 @@ function M.observe(self,state,dt,sample)
             and x<=f.lip.lip_x+2 then
             -- Lip confirmed in flight: input ranges restart here (the trial reacts from the next step).
             f.from_lip,f.lip_confirmed_s,a.lip_taken=true,a.elapsed-f.start,true
-            f.lean_min,f.lean_max,f.throttle_max,f.brake_max=nil,nil,0,0
+            f.lean_min,f.lean_max,f.throttle_max,f.brake_max,f.damped_ticks=nil,nil,0,0,0
         else
             f.lean_min,f.lean_max=math.min(f.lean_min or c.lean,c.lean),math.max(f.lean_max or c.lean,c.lean)
+            -- Steps with the optional air pitch damping applied (#211; always 0 for a preset without it).
+            if v.damped then f.damped_ticks=f.damped_ticks+1 end
             f.throttle_max,f.brake_max=math.max(f.throttle_max,c.throttle),math.max(f.brake_max,c.brake_reverse)
         end
         -- Box2D angles stay within (-pi, pi]; one step turns far less than pi (rate cap 8-12 rad/s).
@@ -130,7 +132,7 @@ function M.observe(self,state,dt,sample)
                 pitch_deg=math.deg(state.angle),landing_angle_deg=math.deg(wrap(state.angle-s)),
                 touchdown_vy_mps=tvy,impact_normal_mps=-(-math.sin(s)*tvx+math.cos(s)*tvy),
                 peak_compression_m=0,touchdown_at=a.elapsed,settled=0,
-                lean_min=f.lean_min,lean_max=f.lean_max,throttle_max=f.throttle_max,brake_max=f.brake_max,
+                lean_min=f.lean_min,lean_max=f.lean_max,throttle_max=f.throttle_max,brake_max=f.brake_max,damped_ticks=f.damped_ticks,
                 approach_throttle_min=f.approach_throttle_min,approach_lean_max=f.approach_lean_max}
             table.insert(a.jumps,r)
             if #a.jumps>M.KEEP then table.remove(a.jumps,1) end
@@ -170,7 +172,7 @@ function M.report(self)
         tuning_at_start=self.air_tuning,jump_count=a.count,jumps=#a.jumps>0 and a.jumps or false, -- an empty Lua table would encode as {}
         best_rotation_deg=best_rotation,longest_airtime_s=longest,
         in_flight=f and {airtime_s=f.airtime or 0,rotation_deg=math.deg(f.rotation),section=f.section,from_lip=f.from_lip} or false,
-        conditions="Jump (after the first loaded support since the start) = both wheels and the chassis without loaded support (touching or impulsive manifold point) for at least 0.25 s. Airtime = takeoff to the first loaded wheel or chassis contact. Rotation = summed chassis angle change in flight (positive = backward relative to travel); flips = whole 360 deg turns. Landing angle = chassis angle minus the slope of the authored chain segment nearest the first loaded wheel (or the chassis), at its closest (contact) point. Impact = last airborne chassis velocity (vertical and along the ground normal) and peak suspension compression within 0.5 s. LANDED = both wheels loaded with |pitch relative to the ground| < 0.8 rad for 0.25 s within 2 s; CRASHED = the chassis touches the ground (loaded contact) first or no LANDED within 2 s. chassis_contact reports chassis ground contact within 0.5 s (bottoming). complete = status final and the 0.5 s impact window closed."}
+        conditions="Jump (after the first loaded support since the start) = both wheels and the chassis without loaded support (touching or impulsive manifold point) for at least 0.25 s. Airtime = takeoff to the first loaded wheel or chassis contact. Rotation = summed chassis angle change in flight (positive = backward relative to travel); flips = whole 360 deg turns. Landing angle = chassis angle minus the slope of the authored chain segment nearest the first loaded wheel (or the chassis), at its closest (contact) point. Impact = last airborne chassis velocity (vertical and along the ground normal) and peak suspension compression within 0.5 s. LANDED = both wheels loaded with |pitch relative to the ground| < 0.8 rad for 0.25 s within 2 s; CRASHED = the chassis touches the ground (loaded contact) first or no LANDED within 2 s. chassis_contact reports chassis ground contact within 0.5 s (bottoming). complete = status final and the 0.5 s impact window closed. damped_ticks = airborne steps, over the same span as the input ranges, with the preset's optional air pitch damping applied (no lean held)."}
 end
 function M.enrich(self,sample)
     local a=self.air

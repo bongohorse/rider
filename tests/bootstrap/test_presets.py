@@ -25,6 +25,8 @@ def feel_tables():
     lua = (ROOT/'main/gym/feel.lua').read_text()
     order = re.findall(r'"(\w+)"', re.search(r'^M\.order=\{([^}]*)\}', lua, re.M).group(1))
     keys = re.findall(r'"(\w+)"', re.search(r'^M\.preset_keys=\{([^}]*)\}', lua, re.M).group(1))
+    # Optional keys (#211) and their defaults: a preset file may omit them.
+    optional = {k: float(v) for k, v in re.findall(r'(\w+)=(-?[\d.]+)', re.search(r'^M\.optional=\{([^}]*)\}', lua, re.M).group(1))}
     num = r'(-?[\d.]+)'
     ranges = {}
     sliders = lua[lua.index('M.sliders={'):]
@@ -38,10 +40,11 @@ def feel_tables():
     for key, lo, hi in re.findall(r'(\w+)=\{min='+num+r',max='+num+r'\}', explicit):
         assert key not in ranges, key
         ranges[key] = (float(lo), float(hi), 1)
-    return order, keys, ranges
+    return order, keys, optional, ranges
 
 
-ORDER, KEYS, RANGES = feel_tables()
+ORDER, KEYS, OPTIONAL, RANGES = feel_tables()
+REQUIRED = [k for k in KEYS if k not in OPTIONAL]
 
 
 def validate(data, key):
@@ -57,10 +60,10 @@ def validate(data, key):
         lo, hi, sign = RANGES[name]
         if not lo <= value*sign <= hi:
             return f'{name} {value} outside range'
-    for name in KEYS:
+    for name in REQUIRED:
         if name not in values:
             return 'missing '+name
-    if len(values) != len(KEYS):
+    if len(values) != len(REQUIRED)+len(OPTIONAL.keys() & values.keys()):
         return 'unexpected fields'
     if values['camera_zoom_min'] > values['camera_zoom']:
         return 'camera_zoom_min above camera_zoom'
@@ -81,8 +84,15 @@ class Presets(unittest.TestCase):
         self.assertEqual(sorted(p.stem for p in PRESETS.glob('*.json')), sorted(ORDER))
 
     def test_every_key_has_one_range(self):
-        self.assertEqual(len(KEYS), 22)
+        # 22 required keys (unchanged since #199) plus the optional ones (#211), each with its default.
+        self.assertEqual(len(REQUIRED), 22)
+        self.assertEqual(OPTIONAL, {'air_pitch_damping': 0})
+        self.assertEqual(len(set(KEYS)), len(KEYS))
+        self.assertLessEqual(set(OPTIONAL), set(KEYS))
         self.assertEqual(set(KEYS), set(RANGES))
+        for key, default in OPTIONAL.items():
+            lo, hi, sign = RANGES[key]
+            self.assertTrue(lo <= default*sign <= hi, key)
         for key, (lo, hi, sign) in RANGES.items():
             self.assertLess(lo, hi, key)
             self.assertIn(sign, (1, -1), key)
@@ -111,6 +121,8 @@ class Presets(unittest.TestCase):
             'above-cap.json': 'rotation cap',
             'zoom-order.json': 'camera_zoom_min',
             'wrong-key.json': 'invalid schema',
+            'air-damping-negative.json': 'air_pitch_damping',
+            'air-damping-above.json': 'air_pitch_damping',
         }
         self.assertEqual(sorted(p.name for p in FIXTURES.glob('*.json') if p.name != 'a-changed.json'), sorted(expected))
         for name, reason in expected.items():
@@ -119,6 +131,21 @@ class Presets(unittest.TestCase):
                 refusal = validate(data, 'd')
                 self.assertIsNotNone(refusal)
                 self.assertIn(reason, refusal)
+
+    def test_optional_key_absent_means_default(self):
+        # A/B/C (pinned) and D/E carry no air_pitch_damping: the game applies the default 0 (no damping torque).
+        for key in ('a', 'b', 'c', 'd', 'e'):
+            data = json.loads((PRESETS/f'{key}.json').read_text())
+            self.assertNotIn('air_pitch_damping', data['values'], key)
+            self.assertIsNone(validate(data, key))
+        self.assertEqual(OPTIONAL['air_pitch_damping'], 0)
+
+    def test_f_is_d_plus_air_damping(self):
+        d = json.loads((PRESETS/'d.json').read_text())['values']
+        f = json.loads((PRESETS/'f.json').read_text())['values']
+        k = f.pop('air_pitch_damping')
+        self.assertEqual(f, d)
+        self.assertGreater(k, 0)
 
     def test_non_finite_values_are_refused(self):
         data = json.loads((PRESETS/'a.json').read_text())
