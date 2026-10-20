@@ -4,25 +4,34 @@
 // for engine frames, not wall-clock time, between pointer transitions.
 const DEFAULT_TIMEOUT = 5000;
 const firstLine = error => String(error?.message ?? error).split('\n')[0];
+// Node-side guard: a frozen page can stall page.evaluate itself, and with it any in-page timer.
+function within(promise, ms, what) {
+  let timer;
+  const expired = new Promise((_, reject) => { timer = setTimeout(() => reject(Error(`${what} did not return within ${ms} ms (page frozen?)`)), ms); });
+  return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
+}
 
 // Wait until the engine has run `n` more frames.
 // counter: a page expression of an engine frame counter the case already publishes (e.g. 'window.riderReplay.frames');
-// n defaults to 2. Without it, in-page requestAnimationFrame callbacks are counted (the HTML5 engine runs its frame
-// from requestAnimationFrame; with update_frequency 60 it can skip at most one callback in a row), n defaults to 3.
-// A hidden or throttled page that renders no frames times out with a clear error; it never passes.
+// n defaults to 2. Without it, in-page requestAnimationFrame callbacks are counted, n defaults to 3: on HTML5 the
+// engine runs one main-loop iteration per requestAnimationFrame callback and does not pace or skip
+// (emscripten_set_main_loop_arg(..., 0, 1), Defold engine_loop.cpp L27-L35 and L95 at a81dbb0, see docs/LE1B_REPORT.md;
+// update_frequency 60 only lengthens the step of a slow callback, engine.cpp L2387-L2412). The engine's callback was
+// registered in the previous frame, so it runs before ours: one of our callbacks already follows an engine iteration;
+// 3 is a margin. A hidden or throttled page that renders no frames times out with a clear error; it never passes.
 async function frames(page, {counter = null, n = counter ? 2 : 3, timeout = DEFAULT_TIMEOUT, label = 'pointer'} = {}) {
   try {
     if (counter) {
-      const start = await page.evaluate(counter);
+      const start = await within(page.evaluate(counter), timeout, 'reading ' + counter);
       if (!Number.isFinite(start)) throw Error(`frame counter ${counter} is not a number (${start})`);
       await page.waitForFunction(`(${counter})>=${start + n}`, null, {polling: 50, timeout});
     } else {
-      await page.evaluate(({n, timeout}) => new Promise((resolve, reject) => {
+      await within(page.evaluate(({n, timeout}) => new Promise((resolve, reject) => {
         let k = 0;
         const timer = setTimeout(() => reject(Error(`only ${k} animation frames in ${timeout} ms (page hidden or throttled?)`)), timeout);
         const tick = () => { if (++k >= n) { clearTimeout(timer); resolve(); } else requestAnimationFrame(tick); };
         requestAnimationFrame(tick);
-      }), {n, timeout});
+      }), {n, timeout}), timeout + 1000, 'the animation-frame wait');
     }
   } catch (error) {
     throw Error(`${label}: the engine ran no ${n} frames within ${timeout} ms (${firstLine(error)})`);

@@ -52,3 +52,9 @@ test('tap: frames after the move, the press and the release',async()=>{
   await pointer.tap(page,{x:1,y:2},{counter:'window.c'});
   assert.deepEqual(page.calls.map(c=>c[0]),['move','counter','wait','down','counter','wait','up','counter','wait']);
 });
+
+test('a frozen page (evaluate never returns) fails within the timeout instead of hanging',async()=>{
+  const frozen={evaluate:()=>new Promise(()=>{})};
+  await assert.rejects(pointer.frames(frozen,{timeout:50,label:'frozen'}),/^Error: frozen: the engine ran no 3 frames within 50 ms \(the animation-frame wait did not return within 1050 ms \(page frozen\?\)\)$/);
+  await assert.rejects(pointer.frames(frozen,{counter:'window.c',timeout:50,label:'frozen'}),/^Error: frozen: the engine ran no 2 frames within 50 ms \(reading window\.c did not return within 50 ms \(page frozen\?\)\)$/);
+});
