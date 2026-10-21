@@ -119,7 +119,7 @@ end
 function M.split(e,id,index)
     local o,pos=find(e,id)
     if not o or o.type~="line" or index<=1 or index>=#o.points then return nil,"Split needs a point inside a line" end
-    local b={id=new_id(e),type="line",points={}}
+    local b={id=new_id(e),type="line",points={},name=o.name,hidden=o.hidden}
     for i=index,#o.points do b.points[#b.points+1]={o.points[i][1],o.points[i][2]} end
     for i=#o.points,index+1,-1 do o.points[i]=nil end
     for _,c in ipairs(e.connections) do if c.from==id then c.from=b.id end end
@@ -278,6 +278,7 @@ function M.paste(e,clip,d)
     local map,ids={},{}
     for _,o in ipairs(clip.objects) do
         local n=doc_lib.copy(o)
+        n.hidden,n.locked=nil,nil
         n.id=new_id(e);map[o.id]=n.id
         translate_object(n,d)
         e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
@@ -342,6 +343,7 @@ function M.mirror(e,ids,side)
         elseif o.type=="label" then n.position={c2-o.position[1],o.position[2]}
         elseif o.type=="curve" then n=M.mirror_curve(o,c2)
         else n=prefab.mirror(o,c2) end
+        n.name=o.name
         objects[i]=n
     end
     local mirrored={objects=objects,connections={}}
@@ -443,7 +445,7 @@ end
 function M.split_curve(e,id,i)
     local o,pos=find(e,id)
     if not o or o.type~="curve" or i<=1 or i>=#o.anchors then return nil,"Split needs an anchor inside a curve" end
-    local b={id=new_id(e),type="curve",anchors={}}
+    local b={id=new_id(e),type="curve",anchors={},name=o.name,hidden=o.hidden}
     for k=i,#o.anchors do b.anchors[#b.anchors+1]=doc_lib.copy(o.anchors[k]) end
     b.anchors[1]["in"]={0,0}
     for k=#o.anchors,i+1,-1 do o.anchors[k]=nil end
@@ -542,7 +544,7 @@ function M.convert_prefab(e,id)
     o.type,o.kind,o.at,o.params,o.points="line",nil,nil,nil,points(parts[1])
     local ids={id}
     for k=2,#parts do
-        local n={id=new_id(e),type="line",points=points(parts[k])}
+        local n={id=new_id(e),type="line",points=points(parts[k]),name=o.name,hidden=o.hidden}
         for _,c in ipairs(e.connections) do if c.from==ids[#ids] then c.from=n.id end end
         table.insert(e.objects,pos+k-1,n);ids[#ids+1]=n.id
     end

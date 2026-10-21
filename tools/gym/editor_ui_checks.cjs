@@ -56,7 +56,7 @@ module.exports=async function uiChecks(h){
  await seekScrollbar('scroll',false);e=await settle();assert.equal(e.ui.scroll,0);
  await unchanged(viewBefore,'scrollbar drag/wheel and resize');
  await page.screenshot({path:path.join(out,'editor-a-scrollbars-1280x480.png')});
- await page.setViewportSize({width:1280,height:720});e=await settle();
+ await page.setViewportSize({width:1280,height:720});await button('collapse_objects');e=await settle();
  assert.ok(e.ui.tools_panel.y+e.ui.tools_panel.h<600,'Tools panel has empty solid background');
  assert.ok(e.ui.properties_panel.y+e.ui.properties_panel.h<600,'Properties panel has empty solid background');
  assert.equal(e.ui.tool_max_scroll,0);assert.equal(e.ui.max_scroll,0);

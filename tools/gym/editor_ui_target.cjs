@@ -2,7 +2,22 @@
 // inject state or relax an assertion: a missing/inapplicable control still fails in the caller.
 const pointer=require('./pointer.cjs');
 async function reveal(page,name){
- if(!/^(param_\d|[di][en]c_|mirror_|convert$|delete$|smooth|corner_all$|paste$|split$|connect$|disconnect$|direction$|rename$|plus$|minus$)/.test(name))return;
+ if(/^(object_(?!name$)|collapse_objects|kind_|collapse_prefabs)/.test(name)){
+  let e=await page.evaluate(()=>window.riderEditor);
+  if(e?.visible.includes(name)||e?.open_dialog||e?.help_open||e?.warnings_open)return;
+  if(e?.ui?.tools_collapsed)return;
+  const r=e.ui.tools_panel;if(!r)return;
+  const p=await page.evaluate(({r,s})=>{const c=document.querySelector('canvas'),b=c.getBoundingClientRect();return {x:b.x+(r.x+80)*s/c.width*b.width,y:b.y+(r.y+70)*s/c.height*b.height};},{r,s:e.ui.scale});
+  await page.mouse.move(p.x,p.y);await pointer.frames(page);
+  for(let i=0;i<Math.ceil(e.ui.tool_max_scroll/64)+2;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
+  for(let i=0;i<Math.ceil(e.ui.tool_max_scroll/64)+2;i++){
+   if((await page.evaluate(()=>window.riderEditor)).visible.includes(name))return;
+   await page.mouse.wheel(0,120);await pointer.frames(page);
+  }
+  return;
+ }
+
+ if(!/^(param_\d|[di][en]c_|mirror_|convert$|delete$|smooth|corner_all$|paste$|split$|connect$|disconnect$|direction$|object_name$|rename$|plus$|minus$)/.test(name))return;
  let e=await page.evaluate(()=>window.riderEditor);
  if(e?.visible.includes(name)||!e?.ui?.max_scroll||e.open_dialog||e.help_open||e.warnings_open)return;
  const r=e.ui.rects.collapse_properties;if(!r)return;

@@ -166,6 +166,7 @@ end
 function M.commit(fn,geometry)
     local before=doc_lib.copy(M.doc)
     local _,err=fn(M.doc.editor,M.doc)
+    if not err then err=doc_lib.lock_conflict(before.editor,M.doc.editor) end
     if not err then
         local valid,verr=doc_lib.validate(M.doc)
         if not valid then err="Edit refused: "..verr end
@@ -241,7 +242,16 @@ function M.selected_ids()
 end
 -- Shapes during a drag: changed copies of objects by id, drawn by the edit world, never committed until
 -- the drag ends. shape: every point (entry to exit); parts: the open polylines; outline: a closed one.
-function M.set_preview(objects) M.preview_objects=objects;M.shape_version=M.shape_version+1;touch() end
+function M.set_preview(objects)
+    if objects then
+        local current=M.doc.editor
+        local e={objects={},connections=current.connections}
+        for i,o in ipairs(current.objects) do e.objects[i]=objects[o.id] or o end
+        local err=doc_lib.lock_conflict(M.doc.editor,e)
+        if err then objects=nil;M.message=err end
+    end
+    M.preview_objects=objects;M.shape_version=M.shape_version+1;touch()
+end
 local function current(o) return M.preview_objects and M.preview_objects[o.id] or o end
 function M.shape(o) return doc_lib.path(current(o)) end
 function M.parts(o) return doc_lib.parts(current(o)) end

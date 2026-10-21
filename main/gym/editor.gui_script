@@ -133,7 +133,7 @@ function init(self)
     self.templates={}
     for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="ea2" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.gui_nodes=self.overlay.nodes+self.extra_nodes+editor_ui.BOXES+editor_ui.TEXTS
     msg.post(".","acquire_input_focus")
     window.set_listener(function(_,event)
@@ -218,7 +218,7 @@ local function candidates(p)
     local list,seen={},{}
     local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
-        if (o.type=="prefab" or o.type=="curve") and editor.selected[o.id] then
+        if not o.hidden and not o.locked and (o.type=="prefab" or o.type=="curve") and editor.selected[o.id] then
             for _,h in ipairs(object_handles(o)) do
                 local d=dist(p,h.p)
                 if d<=tol then add({kind="handle",id=o.id,handle=h.name,label=h.label,index=h.index,anchor=h.anchor,d=d,rank=0,key="h:"..o.id..":"..h.name}) end
@@ -226,7 +226,7 @@ local function candidates(p)
         end
     end
     for _,o in ipairs(e.objects) do
-        if doc_lib.terrain(o) then
+        if not o.hidden and doc_lib.terrain(o) then
             local selected=editor.selected[o.id] and o.type=="line"
             local pts=path(o)
             for i,q in ipairs(pts) do
@@ -234,7 +234,7 @@ local function candidates(p)
                     local d=dist(p,q)
                     if d<=tol then
                         local id,index=o.id,i
-                        if i==1 and prev[o.id] then id=prev[o.id];index=#path(find(id)) end
+                        if i==1 and prev[o.id] and not find(prev[o.id]).hidden then id=prev[o.id];index=#path(find(id)) end
                         add({kind="vertex",id=id,index=index,d=d,rank=1,key="v:"..id..":"..index})
                     end
                 end
@@ -266,7 +266,7 @@ local function candidates(p)
                 end
             end
         end
-        if d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
+        if not o.hidden and d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
     end
     table.sort(list,function(a,b) if a.rank~=b.rank then return a.rank<b.rank end;if a.d~=b.d then return a.d<b.d end;return a.key<b.key end)
     return list
@@ -304,7 +304,7 @@ local function anchors(skip,extra)
     local next,prev=doc_lib.links(e)
     local list={}
     for _,o in ipairs(e.objects) do
-        if not (skip and skip[o.id]) then
+        if not o.hidden and not o.locked and not (skip and skip[o.id]) then
             if doc_lib.terrain(o) then
                 local pts=path(o)
                 for i,q in ipairs(pts) do
@@ -377,7 +377,7 @@ local function finish_drawing(self)
     -- Connections are resolved when the piece is finished: a free end exactly at its first or last
     -- point (snapped there, shown as a connect preview). Undo/Redo while drawing cannot leave stale ends.
     local function free_end(p)
-        for _,c in ipairs(edit.ends(editor.doc.editor)) do if c.free and c.p[1]==p[1] and c.p[2]==p[2] then return {id=c.id,index=c.index} end end
+        for _,c in ipairs(edit.ends(editor.doc.editor)) do if c.free and not find(c.id).hidden and not find(c.id).locked and c.p[1]==p[1] and c.p[2]==p[2] then return {id=c.id,index=c.index} end end
     end
     -- Only a point placed with the anchor snap (the visible connect preview) connects; Ctrl never does.
     local first=d.anchored[1] and free_end(d.points[1])
@@ -402,7 +402,7 @@ local function connect_target(v)
     local p=path(o)[v.index]
     local best,bd
     for _,c in ipairs(edit.ends(e)) do
-        if c.free and not run[c.id] then
+        if c.free and not find(c.id).hidden and not find(c.id).locked and not run[c.id] then
             local d=dist(p,c.p)
             if d<=math.max(0.01,tolerance(SNAP_PX)) and (not bd or d<bd) then best,bd=c,d end
         end
@@ -729,7 +729,7 @@ local function box_points(b)
     local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
     local found,any={},false
     for _,o in ipairs(editor.doc.editor.objects) do
-        if editor.selected[o.id] and editable(o) then
+        if not o.hidden and not o.locked and editor.selected[o.id] and editable(o) then
             for i=1,point_total(o) do
                 local q=o.type=="line" and o.points[i] or o.anchors[i].p
                 if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then
@@ -1002,6 +1002,16 @@ local function drop_char(t)
     return t:sub(1,math.max(0,i-1))
 end
 local function confirm_name(self,closing)
+    if self.field.search then
+        self.ui.object_query=self.field.text;self.ui.object_scroll=0;self.field=nil;editor.message="";return
+    end
+    if self.field.object then
+        local f=self.field;self.field=nil
+        local name=f.text:match("^%s*(.-)%s*$")
+        local o=find(f.object)
+        if o and (o.name or "")~=name then editor.commit(function(e) edit.find(e,f.object).name=name~="" and name or nil end) end
+        return
+    end
     if self.field.speed then
         local f=self.field;local value=tonumber(f.text)
         if not value or value~=value or math.abs(value)>30 then
@@ -1188,6 +1198,20 @@ local function step_focused(self,name)
     return false
 end
 local function on_button(self,name)
+    if name=="collapse_objects" then self.ui.objects_collapsed=not self.ui.objects_collapsed;return
+    elseif name=="object_search" then
+        self.field={search=true,text=self.ui.object_query or "",all=true};return
+    elseif name=="object_name" then
+        local o=find(editor.selection)
+        if o then self.ui.reveal=name;self.field={object=o.id,text=o.name or "",all=true} end
+        return
+    elseif name:match("^object_select_") then
+        cancel(self);editor.select(name:sub(15));return
+    elseif name:match("^object_eye_") or name:match("^object_lock_") then
+        local eye=name:match("^object_eye_");local id=name:sub(eye and 12 or 13)
+        editor.commit(function(e) local o=edit.find(e,id);if o then if eye then o.hidden=not o.hidden else o.locked=not o.locked end end end,true)
+        editor.vertex,editor.vertex2,editor.anchor,editor.points=nil,nil,nil,{};return
+    end
     if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" then
         local key=name:sub(10);self.ui[key]=not self.ui[key];return
     elseif name=="speed" or name=="test_speed" then
@@ -1756,7 +1780,7 @@ local function box_select(self,b)
             end
             if hit then break end
         end
-        if hit then editor.selected[o.id]=true end
+        if hit and not o.hidden then editor.selected[o.id]=true end
     end
     editor.selection,editor.vertex,editor.vertex2,editor.anchor,editor.points=next(editor.selected),nil,nil,nil,{}
     for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
@@ -1874,7 +1898,7 @@ function on_input(self,action_id,action)
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
             local limit=(f.param or f.speed) and 16 or 64
-            if #f.text+#t>limit then editor.message=f.param and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+            if #f.text+#t>limit then editor.message=f.param and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_cycle") and action.pressed then
@@ -1891,7 +1915,7 @@ function on_input(self,action_id,action)
                             if not list[next].choices then param_click(self,next);break end
                         end
                     end
-                elseif speed or not f.label then
+                elseif not f.object and not f.search and (speed or not f.label) then
                     on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
                 end
             end
@@ -1946,6 +1970,7 @@ function on_input(self,action_id,action)
         local area=editor_ui.area(self.ui,action)
         if area then
             if area=="properties" then self.ui.scroll=math.max(0,math.min(self.ui.max_scroll or 0,self.ui.scroll+(up and -64 or 64)))
+            elseif area=="tools" and editor_ui.object_area(self.ui) and not self.ui.objects_collapsed then self.ui.object_scroll=math.max(0,math.min(self.ui.object_max_scroll or 0,(self.ui.object_scroll or 0)+(up and -1 or 1)))
             elseif area=="tools" then self.ui.tool_scroll=math.max(0,math.min(self.ui.tool_max_scroll or 0,self.ui.tool_scroll+(up and -64 or 64))) end
             return true
         end
@@ -2251,7 +2276,7 @@ local function draw_overlay(self)
     local hover_point=hovered and editor.shape(hovered)[hover.index]
     if hover_point then handle(hover_point,C.hover,HANDLE_PX+5) end
     local v=editor.vertex
-    if v and find(v.id) then
+    if v and find(v.id) and not find(v.id).hidden and not find(v.id).locked then
         local pts=editor.shape(find(v.id))
         handle(end_point(pts,find(v.id),v.index),C.selected,HANDLE_PX+3)
         local vs=vertex_state()
@@ -2275,7 +2300,7 @@ local function draw_overlay(self)
     -- diamond handles; at a joint the neighbour's direction (green) and the curve's (pink) show the kink.
     local hovered_handle=editor.tool=="select" and hover and hover.kind=="handle" and not self.drag and hover.key
     for _,obj in ipairs(e.objects) do
-        if (obj.type=="prefab" or obj.type=="curve") and editor.selected[obj.id] then
+        if not obj.hidden and not obj.locked and (obj.type=="prefab" or obj.type=="curve") and editor.selected[obj.id] then
             local shown=editor.preview_objects and editor.preview_objects[obj.id] or obj
             for _,h in ipairs(object_handles(shown)) do
                 if h.tangent then overlay.line(o,to_px(shown.anchors[h.anchor].p,s),to_px(h.p,s),C.param,1) end
@@ -2303,12 +2328,12 @@ local function draw_overlay(self)
         end
     end
     for _,obj in ipairs(e.objects) do
-        if obj.type=="line" and editor.selected[obj.id] then
+        if not obj.hidden and not obj.locked and obj.type=="line" and editor.selected[obj.id] then
             for _,q in ipairs(editor.shape(obj)) do handle(q,C.vertex,HANDLE_PX-2) end
         end
     end
     for _,obj in ipairs(e.objects) do
-        if doc_lib.terrain(obj) then
+        if not obj.hidden and doc_lib.terrain(obj) then
             local pts=editor.shape(obj)
             local a,b=to_px(pts[1],s),to_px(pts[#pts],s)
             if visible(a) then overlay.endpoint(o,a,prev[obj.id]~=nil,C.joint,C.free) end
@@ -2317,7 +2342,7 @@ local function draw_overlay(self)
     end
     -- The multi-point selection (LE5d): filled orange squares over the handles.
     for _,pt in ipairs(editor.point_list()) do
-        local q=point_pos(pt)
+        local q=not find(pt.id).hidden and not find(pt.id).locked and point_pos(pt)
         if q then handle(q,C.selected,HANDLE_PX+3) end
     end
     -- Prefab placement preview (R5): the shape a click places, and a ring on the end it connects to.
@@ -2385,7 +2410,7 @@ local function draw_overlay(self)
         handle(f.p,C.off,HANDLE_PX+10+12*phase,true)
         if phase>.45 then
             for _,id in ipairs(f.ids or {}) do
-                local obj=find(id);local pts=obj and path(obj)
+                local obj=find(id);local pts=obj and not obj.hidden and path(obj)
                 if pts then for i=2,#pts,math.max(1,math.ceil(#pts/64)) do overlay.line(o,to_px(pts[i-1],s),to_px(pts[i],s),C.off,5) end end
             end
             if f.start and editor.doc then handle(editor.doc.editor.start.position,C.off,HANDLE_PX+16) end
@@ -2404,7 +2429,7 @@ local function render_ui(self)
     local e=editor.doc.editor
     if self.ui_error and (self.ui_error.revision~=e.revision or self.ui_error.opened~=editor.opened) then self.ui_error=nil end
     if self.last_opened~=editor.opened then
-        self.last_opened=editor.opened;self.open_dialog,self.field,self.confirm_delete=false,nil,nil
+        self.last_opened=editor.opened;self.open_dialog,self.field,self.confirm_delete=false,nil,nil;self.ui.object_query,self.ui.object_scroll="",0
         self.frame_opened,self.frame_delay=editor.opened,3;self.flash=nil
     end
     if self.frame_opened then
@@ -2508,12 +2533,25 @@ local function render_ui(self)
     local status=editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"
     local hint=editor.message or ""
     if (self.overlay.dropped or 0)>0 then hint=(hint~="" and hint.." | " or "").."Zoom in to see every point." end
-    local d={k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.param and not f.label and not f.speed and f.text or editor.doc.name,
+    local object_rows,icons={},{}
+    local query=(f and f.search and f.text or self.ui.object_query or ""):lower()
+    for _,obj in ipairs(e.objects) do
+        local kind=obj.type=="prefab" and prefab.name(obj.kind) or obj.type
+        local tip=(obj.name and obj.name~="" and obj.name.." — " or "")..kind.." "..obj.id
+        if query=="" or tip:lower():find(query,1,true) then
+            object_rows[#object_rows+1]={id=obj.id,title=obj.name and obj.name~="" and obj.name or kind,subtitle=(obj.name and obj.name~="" and kind.." " or "")..obj.id,tip=tip,hidden=obj.hidden,locked=obj.locked,selected=editor.selected[obj.id]}
+        end
+        icons['object_eye_'..obj.id]=obj.hidden and 'eye_off' or 'eye'
+        icons['object_lock_'..obj.id]=obj.locked and 'lock' or 'unlock'
+    end
+    local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
+        object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and f.text or editor.doc.name,
         status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
         description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
         readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
-        name_error=f and not f.param and not f.label and not f.speed and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
-        field=f and {key=f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        field=f and {key=f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
         modal=editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and "open" or self.warnings_open and "warnings" or nil,
         help={HELP_LEFT,HELP_RIGHT},conflict=editor.conflict and ("The compiled geometry differs from its source:\n"..editor.conflict.summary.."\nRecompile from source, or keep the compiled geometry as editable lines. Connections are not kept in the line copy.") or "",
@@ -2590,7 +2628,7 @@ local function publish(self)
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
-        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
+        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,object_scroll=self.ui.object_scroll or 0,object_max_scroll=self.ui.object_max_scroll or 0,object_query=self.ui.object_query or "",objects_collapsed=self.ui.objects_collapsed or false,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},hidden_objects=editor.hidden_objects or {},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
         prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,

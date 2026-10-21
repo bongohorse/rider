@@ -179,7 +179,7 @@ local function signature(e)
     return table.concat(t,"|")
 end
 function M.build(self)
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},label_text={},live="",shapes={},tints={},geometry=editor.geometry_version}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},label_text={},live="",shapes={},tints={},hidden={},geometry=editor.geometry_version}
     local e=editor.doc.editor
     local k,simplified=allocation(e)
     editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; Play needs 800 or fewer.",
@@ -193,6 +193,7 @@ function M.build(self)
     end
     v.signature=signature(e)
     editor.drawn_labels=v.label_text
+    editor.hidden_objects=v.hidden
     v.start=start_marker(v,e.start.position)
     if e.finish then v.finish=finish_marker(v,e.finish) end
     v.opened=editor.opened
@@ -234,6 +235,17 @@ function M.update(self)
     if v.shape~=editor.shape_version then v.shape=editor.shape_version;refresh(v,e) end
     -- A label being typed shows the field's text (LE6b drive test); otherwise, as after Esc, its own. The
     -- committed text changes the signature, so the reload above draws it from the document.
+    -- Hide only render components of this physics-free Edit world; allocation and compiled geometry
+    -- stay unchanged. Component messages apply after dispatch, including newly created objects.
+    for _,o in ipairs(e.objects) do
+        local hidden=o.hidden or false
+        if v.hidden[o.id]~=hidden then
+            v.hidden[o.id]=hidden
+            local component=o.type=="label" and "label" or "sprite"
+            local ids=o.type=="label" and {v.labels_by[o.id]} or v.objects[o.id]
+            for _,id in ipairs(ids) do msg.post(msg.url(nil,id,component),hidden and "disable" or "enable") end
+        end
+    end
     local p=editor.label_preview
     local live=p and p.id.."\0"..p.text or ""
     if live~=v.live then
