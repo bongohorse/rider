@@ -83,6 +83,101 @@ A start speed is an explicit option. Invalid positions (inside geometry, no surf
 - **Right panel:** properties of the selection (numeric fields: x, y, angle, length, height…), or level properties (name, start speed) when nothing is selected
 - **Bottom status:** View row (Fit, Centre, START, Last test, Bounds; LE6a; Ghost, Help; LE6b) · cursor x/y in metres · active snaps · zoom; the warning count (click to list) sits in the top bar
 
+### Editor A1a layout proposal (#183)
+
+Target specification for [#183](https://github.com/bongohorse/rider/issues/183), part of [epic #167](https://github.com/bongohorse/rider/issues/167). These are static designs for review; the shipped LE6 layout above remains the implementation baseline. [#171](https://github.com/bongohorse/rider/issues/171) starts only after Claudio's recorded layout approval and a new GO. No document-format change, new editing tool or framework migration is specified.
+
+**Preview gallery:** [all four PNGs and editable SVG sources](../editor-a/README.md). Exact canvas dimensions, DPR 1; the mockup label is outside the proposed production content. The vehicle and terrain are schematic vector marks, not new game artwork.
+
+| State | 1280 × 720 | 1920 × 1080 |
+| --- | --- | --- |
+| Build / Prefab → Ramp, nothing selected | [PNG](../editor-a/build-1280x720.png) | [PNG](../editor-a/build-1920x1080.png) |
+| Selected Ramp, angle input, connected at both ends | [PNG](../editor-a/ramp-1280x720.png) | [PNG](../editor-a/ramp-1920x1080.png) |
+
+#### Review of the LE6 baseline
+
+Source inspection at `0953bf048a34948542f53c657f278f685835f1fc` (`editor.gui_script`, `editor_overlay.lua`, `editor_prefab.lua`), not a timed usability study:
+
+- Text defaults to scale 0.5 of the built-in font; descriptions/readouts use 0.42. The right panel description line is budgeted at 7.5 GUI units. Small descriptions and low-opacity grid/ghost marks compete with several similarly coloured button states. The proposal gives body text a 14 px floor and separates those states by shape and label.
+- A parameter is currently a single text button; a numeric click opens a field and a choice cycles through values. Units, ranges and failures rely heavily on the message line. The proposal shows field boundaries, explicit mode choices, units, step buttons and errors next to the value.
+- Eight tools plus seven text-only prefab choices occupy one narrow vertical strip. The proposal uses two columns and a thumbnail per prefab, with independently collapsible sections.
+- Properties grow downward according to the description and visible rows. Kicker has seven parameters. The proposal gives the inspector a fixed column with scrolling, so actions do not fall below the canvas at 720 px height.
+- Navigation, warning targets, labels, help and the F-test ghost already exist in LE6. Preserve them and improve their presentation; do not rebuild their behaviour as new tools.
+
+Claudio's recorded LE6 acceptance is in [#129, Closure (2026-10-21)](https://github.com/bongohorse/rider/issues/129). It contains no additional observations or timings. Relevant preceding feedback already implemented: template paging to avoid covering Close (LE6a); labels update while typing and the curve budget message explains its counts ([#236](https://github.com/bongohorse/rider/issues/236)). No further LE6 practical-test notes were supplied; the findings above are code inspection, not attributed player observations.
+
+#### Layout, type and spacing
+
+All coordinates below are logical canvas pixels at UI scale 1, independent of world zoom and DPR. Anchor chrome to the viewport; larger viewports gain canvas space instead of proportionally enlarging the UI. A later explicit UI-scale control would need a separate decision. Desktop mouse/keyboard only, as R18; no mobile authoring acceptance is claimed.
+
+| Region | Specification |
+| --- | --- |
+| Header | y 0–64; brand, level title and persistence status at left; New, Open, Import, Export at right |
+| Command row | y 76–108; Undo, Redo, Play at left; diagnostic count and Help at right |
+| Tool panel | x 16, y 124; width 184; lower edge h−80; 2 × 4 tool cells, then 2-column prefab cards |
+| Inspector | x w−296, y 124; width 280; lower edge h−80; fixed heading, scrollable content |
+| Uncovered canvas | x 216 to w−312; y 124 to h−80: **752 × 516** at 720p; **1392 × 876** at 1080p |
+| Footer | y h−64 to h; 32 px navigation buttons, second line for cursor/readout and contextual instructions |
+| Browser controls | Reserve the rightmost 220 px of footer row 1 for existing High DPI / Fullscreen controls; GUI hit areas never cover them |
+
+Base spacing unit 4 px; control gaps 8 px, outer margins 16 px, inspector inner padding 16 px, section gaps 24 px. Buttons/fields are 32 px high, tool cells 36 px high, prefab cards 76 × 52 px with a 24 px diagram. Radius 4 px; 1 px borders; 3 px terrain, 4 px selection, 2 px handles. Use a 6 px handle radius (with the existing larger pick tolerance) and retain screen-space picking/snapping per R6. Clamp tooltips and context readouts inside the uncovered canvas.
+
+Type: regular sans serif, body/field values **14 px / 20 px line height**, supporting labels **12 / 16**, title **18 / 24**, section headers **12 / 16**. Numeric values use tabular digits where available. PNGs use local DejaVu Sans as a metric stand-in, with no external font download. #171 must check the pinned built-in font's legibility at these sizes; if a different font is needed, select/license it explicitly in that PR and repeat text-fit checks. Avoid relying on mockup font metrics as Defold evidence. Long titles elide; hover exposes the full title. Warning/error text wraps without elision.
+
+Click the Tools or Properties header chevron to collapse its column to a 40 px rail; click again to restore it. Collapse Prefabs separately inside the tool panel. Store these as view preferences, never in geometry history. Fit/Centre, problem navigation and the ghost use the *current* uncovered canvas. Scroll only the hovered panel; consume its wheel/drag events so they never zoom/pan or edit behind it. For seven-parameter forms, scroll the inspector body while retaining its heading and errors; all actions must remain reachable. At narrower desktop windows, collapse panels before reducing type; the two declared review sizes need no automatic collapse.
+
+#### Colour and state tokens
+
+| Token | Hex | Use and additional state cue |
+| --- | --- | --- |
+| canvas | `#101E26` | Dark petrol workspace |
+| panel | `#192C36` | Opaque panels and header/footer |
+| control | `#223B47` | Field/button background |
+| border | `#35515F` | Control separators; use a brighter edge on hover |
+| text | `#EDF4F6` | Main text |
+| secondary | `#B0C3CC` | Units, labels and hints; never dim an error |
+| active / focus | `#8DE0C5` | Filled active tool; dark canvas-colour text; focus also has a 2 px outline |
+| hover | `#D5F3E9` | Bright edge and tooltip; keep selected/active state visible |
+| selected | `#FFC66D` | Thick solid outline and square parameter handles; inspector names selection |
+| connected | `#72DBE9` | Ring with filled square centre and `Connected` label |
+| free / preview | `#8DE0C5` | Hollow end ring; dashed proposed geometry, `Preview` label |
+| error | `#FF9298` | Error border plus explicit reason and action; refused ghost uses cross/reason |
+| warning | `#FFC66D` | Warning icon and count, distinct from an error icon/count |
+| disabled | `#B0C3CC` at 60% | No action; tooltip explains why; avoid using for body text |
+
+Colour never carries the only meaning. Connected ends, free ends, parameter handles, preview geometry and selected geometry have different shapes/styles. Bounds remain a dashed outline with a `Bounds` label; last-test and proposed-test silhouettes remain faint and separately labelled. Grid minor `#1E333E`, major `#35515F`; adapt density using the existing capped grid pool. Contrast of primary/secondary labels against panel/control backgrounds is checked in the mockup; Defold raster legibility remains #171 verification.
+
+#### Interaction specification
+
+- **Build:** pick Prefab [P], then a thumbnail (keys 1–7 keep their existing meaning). Hover for 500 ms shows its full name, key, diagram and short placement hint. Flat, Ramp, Step, Gap, Kicker, Platform and Wave keep the shipped parameters. A dashed placement preview shows its free/connected end; click places one source object, Esc cancels. After placement, Select shows its properties. No additional placement semantics are introduced.
+- **Selection:** click an object/handle, Shift adds/removes; preserve the current point/object box rules, Tab overlap cycling and curve/joint rules. The heading names the actual type and stable source id; several objects/points show their count and applicable existing actions, without a new object browser (#172).
+- **Numbers:** click a value to select its text. Enter validates and commits; Esc cancels. While focused every key is consumed by the field. Tab/Shift+Tab move between visible fields in display order, after valid commit; an invalid value keeps focus. Clicking elsewhere cancels an invalid pending value and reports `Not applied: … The previous value is kept.` Existing geometry remains unchanged.
+- **Steps and units:** show a persistent unit after the editable value, outside its text. Length/position/height step 0.1 m, angle 1 deg, speed 0.5 m/s, integer count 1; Shift makes 10× except counts, Alt makes 0.1× except counts. Disable a step that would exceed the existing schema range and explain it. Each click is one Undo entry; no hold-repeat in A1b. Step buttons first validate pending input; invalid text blocks the step. These are field-control increments, not changes to handle/grid snapping.
+- **Validation:** validate on Enter/Tab/step, never silently clamp or change shape. Reserve an inline error line under each active field; other content scrolls as needed. Example: Ramp Length `0.2 m` → `Length must be 0.5–100 m. Previous value kept.` Invalid pending text marks its field; errors in the committed document also appear in the existing problem list. Preserve draft saving, source preservation and Play/Export blocking rules. Ranges come from the shipped schema, including cross-field steepness checks, not duplicated UI constants.
+- **Ramp:** use explicit Angle / Height mode buttons. Horizontal length 0.5–100 m, angle −60…60 deg, height −50…50 m subject to the 60 deg slope guard. Show only the editable angle or height, with the other as calculated text. Mode switch preserves the shape. Example shown: 8.00 m × tan(20 deg) = 2.91 m rise. Entry/upstream stays fixed; exit changes carry the connected downstream run once, one Undo step, per R4. Conflicts remain visible. Mirror left/right and Convert retain their existing semantics and confirmation; Delete is visually separated.
+- **Help and diagnostics:** retain H modal capture, problem paging/jump and disabled Last test/Centre reasons. Tooltips work on pointer hover and keyboard focus and never steal canvas input. Open, Help, diagnostics and confirmation use one modal content pool; a modal blocks underlying input. Import/Export keeps the existing HTML file helper and capture rules.
+- **Persistence:** the previews' `Draft saved locally` is an example state only. Keep the real distinctions `Saving…`, completed storage sync, session-only storage and failure; a tooltip explains local storage and Export as a file backup. Do not imply an unlimited recovery history (#173). Panel collapse, scroll and tooltips do not dirty the document or add Undo entries.
+
+#### GUI and sprite budget (R7)
+
+**Recorded measurements, not new runtime measurements:** LE6b reports **596 / 640 GUI nodes** with 12 templates (44 free). `editor_overlay.lua` preallocates 360: 96 grid + 192 handles + 64 preview lines + 4 bounds + snap/readout/2 probes. The two silhouettes add 12. [LE1b](../LE1B_REPORT.md#summary) measured **804 / 1024 sprites** at the 800-render-object limit (220 free), with the then four-sprite vehicle. That historical number must not be presented as current headroom: the current vehicle also has two spring sprites; replay may add its own components. No fresh runtime headroom measurement is claimed here.
+
+A1b **allocation estimate**, counting allocated rather than merely visible nodes, shared across both viewports:
+
+| Allocation | Nodes | Basis |
+| --- | ---: | --- |
+| Existing canvas overlay pools | 360 | Unchanged pools, including probes/readout |
+| Two vehicle silhouettes | 12 | Existing six boxes each |
+| Header, commands, footer, status | 60 | Bounded shared chrome, buttons are box + text |
+| Tool/prefab panel | 42 | 16 tool nodes + 21 card nodes (box + GUI atlas thumbnail + text) + 5 panel/headings |
+| Shared inspector/modal pool | 128 | Reuse for properties, warnings, Open/compatibility/help/confirmation; never allocate per object or template |
+| Tooltip | 4 | Background, diagram, title, wrapped explanation |
+| **Estimated total / limit** | **606 / 640** | **34 spare; no limit increase proposed** |
+
+This estimate requires replacing/reusing the old UI pools, not adding 606 to 596. Inspector worst case: seven numeric rows × nine nodes (label, background, value, unit, two step box/text pairs, inline error) = 63, plus up to 32 headings/actions = 95 of the shared 128. Open: ten library rows × four nodes + ten template rows × two + up to 32 navigation/headings = 92. Other modal content reuses that pool. Hidden nodes still count. Thumbnail textures are GUI atlas images, **zero sprite components**; atlas memory/draw-call cost is not measured by this node estimate. Scroll masking, focus rings and optional extra decorations must fit the 34-node reserve, or be redesigned before implementation.
+
+The proposed UI adds **0 world sprites and 0 label components**. A source-level allowance at current head is 800 level sprites + 6 live vehicle sprites = 806 (218 remaining); reserving another six for replay gives 812 (212 remaining). These are conservative arithmetic estimates for those components, not measured current runtime totals or a promise all combinations fit. The historical measured 220 is shown separately above. #171 must measure Edit, Play, replay, modal and seven-field states at the accepted 800-object fixture, both viewports, 12+ templates and repeated state switches; report all live sprites/labels and allocated GUI nodes against 1024/1024/640, including any other components. Keep current source-preserving simplification/rejection for over-budget drafts; no lowered assertions, raised caps or claimed performance acceptance in A1a.
+
 ## Controls (Edit mode only; game keys keep working in Play)
 - **Mouse:** left click selects/places. Left drag moves a selection or handle. Middle drag or Space+left drag pans. The wheel zooms around the cursor.
 - **Keys:** E = Play from the editor / back to the editor while driving (R11) · Enter Play · F test start at mouse · S/D/C/P tools · Delete · Ctrl+Z / Ctrl+Y · G grid snap toggle · Home Fit level · . centre the selection (LE6a) · L Label · H help (LE6b) · Shift/Alt/Ctrl as in R6.

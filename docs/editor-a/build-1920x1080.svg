@@ -1,0 +1,224 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<title>Rider Editor A — Build / place Ramp</title>
+<desc>Static proposal for issue 183; not a game screenshot.</desc>
+<style>text{font-family:"DejaVu Sans",sans-serif;font-size:14px;fill:#edf4f6} .small{font-size:12px} .title{font-size:18px;font-weight:bold}</style>
+<rect x="0" y="0" width="1920" height="1080" rx="0" fill="#101e26"/>
+<rect x="0" y="0" width="1920" height="64" rx="0" fill="#192c36"/>
+<text x="20" y="29" fill="#8de0c5" style="fill:#8de0c5" class="title" text-anchor="start">RIDER</text>
+<text x="100" y="29" fill="#b0c3cc" style="fill:#b0c3cc" class="" text-anchor="start">/  Level editor</text>
+<text x="20" y="51" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">STATIC LAYOUT PROPOSAL  ·  #183</text>
+<text x="258" y="28" fill="#edf4f6" style="fill:#edf4f6" class="title" text-anchor="start">Hillside practice</text>
+<text x="258" y="50" fill="#8de0c5" style="fill:#8de0c5" class="small" text-anchor="start">Draft saved locally</text>
+<rect x="1600" y="16" width="60" height="32" rx="4" fill="#223b47"/>
+<text x="1630.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">New</text>
+<rect x="1668" y="16" width="68" height="32" rx="4" fill="#223b47"/>
+<text x="1702.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Open</text>
+<rect x="1744" y="16" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="1782.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Import</text>
+<rect x="1828" y="16" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="1866.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Export</text>
+<rect x="16" y="76" width="92" height="32" rx="4" fill="#223b47"/>
+<text x="62.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Undo</text>
+<rect x="116" y="76" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="154.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Redo</text>
+<rect x="200" y="76" width="112" height="32" rx="4" fill="#8de0c5"/>
+<text x="256.0" y="97" fill="#101e26" style="fill:#101e26" class="" text-anchor="middle">Play [E]</text>
+<text x="340" y="97" fill="#8de0c5" style="fill:#8de0c5" class="" text-anchor="start">Edit mode</text>
+<rect x="1636" y="76" width="160" height="32" rx="4" fill="#223b47"/>
+<text x="1716.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">✓  No problems</text>
+<rect x="1804" y="76" width="100" height="32" rx="4" fill="#223b47"/>
+<text x="1854.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Help [H]</text>
+<rect x="16" y="124" width="184" height="876" rx="4" fill="#192c36"/>
+<text x="28" y="150" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">TOOLS</text>
+<text x="182" y="150" fill="#b0c3cc" style="fill:#b0c3cc" class="" text-anchor="start">‹</text>
+<rect x="28" y="164" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="66" y="187" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Select</text>
+<text x="96" y="174" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">S</text>
+<rect x="108" y="164" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="146" y="187" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Draw</text>
+<text x="176" y="174" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">D</text>
+<rect x="28" y="206" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="66" y="229" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Curve</text>
+<text x="96" y="216" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">C</text>
+<rect x="108" y="206" width="76" height="36" rx="4" fill="#8de0c5"/>
+<text x="146" y="229" fill="#101e26" style="fill:#101e26" class="" text-anchor="middle">Prefab</text>
+<text x="176" y="216" fill="#101e26" style="fill:#101e26" class="small" text-anchor="end">P</text>
+<rect x="28" y="248" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="66" y="271" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">START</text>
+<rect x="108" y="248" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="146" y="271" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">FINISH</text>
+<rect x="28" y="290" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="66" y="313" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Label</text>
+<text x="96" y="300" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">L</text>
+<rect x="108" y="290" width="76" height="36" rx="4" fill="#223b47"/>
+<text x="146" y="313" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Pan</text>
+<text x="28" y="356" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">PREFABS</text>
+<text x="182" y="356" fill="#b0c3cc" style="fill:#b0c3cc" class="" text-anchor="start">⌄</text>
+<rect x="28" y="368" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(45 374) scale(.85)">
+<path d="M 0 12 H 42" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="66" y="411" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Flat</text>
+<rect x="108" y="368" width="76" height="52" rx="4" fill="#223b47" stroke="#ffc66d"/>
+<g transform="translate(125 374) scale(.85)">
+<path d="M 0 20 L 42 0" fill="none" stroke="#ffc66d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="146" y="411" fill="#ffc66d" style="fill:#ffc66d" class="small" text-anchor="middle">Ramp</text>
+<rect x="28" y="424" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(45 430) scale(.85)">
+<path d="M 0 20 H 20 V 0 H 42" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="66" y="467" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Step</text>
+<rect x="108" y="424" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(125 430) scale(.85)">
+<path d="M 0 0 H 10 M 30 0 H 42" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="146" y="467" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Gap</text>
+<rect x="28" y="480" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(45 486) scale(.85)">
+<path d="M 0 20 L 16 0 M 28 10 H 42" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="66" y="523" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Kicker</text>
+<rect x="108" y="480" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(125 486) scale(.85)">
+<path d="M 0 20 V 0 H 42 V 20 Z" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="146" y="523" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Platform</text>
+<rect x="28" y="536" width="76" height="52" rx="4" fill="#223b47"/>
+<g transform="translate(45 542) scale(.85)">
+<path d="M 0 12 C 8 -4 13 -4 21 12 S 34 28 42 12" fill="none" stroke="#b0c3cc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="66" y="579" fill="#edf4f6" style="fill:#edf4f6" class="small" text-anchor="middle">Wave</text>
+<defs><clipPath id="canvas"><rect x="216" y="124" width="1392" height="876"/></clipPath></defs><g clip-path="url(#canvas)">
+<path d="M 216 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 248 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 280 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 312 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 344 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 376 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 408 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 440 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 472 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 504 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 536 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 568 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 600 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 632 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 664 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 696 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 728 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 760 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 792 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 824 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 856 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 888 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 920 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 952 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 984 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1016 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1048 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1080 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1112 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1144 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1176 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1208 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1240 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1272 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1304 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1336 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1368 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1400 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1432 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1464 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1496 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1528 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1560 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1592 124 V 1000" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 124 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 156 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 188 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 220 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 252 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 284 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 316 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 348 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 380 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 412 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 444 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 476 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 508 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 540 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 572 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 604 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 636 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 668 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 700 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 732 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 764 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 796 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 828 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 860 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 892 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 924 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 956 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 988 H 1608" fill="none" stroke="#1e333e" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 216 693.4 H 744.0" fill="none" stroke="#b0c3cc" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 744.0 693.4 L 1000.0 600.2236200278521" fill="none" stroke="#8de0c5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6"/>
+<circle cx="744.0" cy="693.4" r="6" fill="#101e26" stroke="#72dbe9" stroke-width="2"/>
+<circle cx="1000.0" cy="600.2236200278521" r="6" fill="#101e26" stroke="#8de0c5" stroke-width="2"/>
+<rect x="772.0" y="534.2236200278521" width="226" height="52" rx="4" fill="#223b47"/>
+<text x="784.0" y="555.2236200278521" fill="#8de0c5" style="fill:#8de0c5" class="" text-anchor="start">Ramp preview</text>
+<text x="784.0" y="575.2236200278521" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Click to place · Esc to cancel</text>
+<path d="M 1008.0 605.2236200278521 l 0 23 6 -7 7 0 Z" fill="none" stroke="#edf4f6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 268 681.4 h 48 l -5 -14 h -24 l -8 14" fill="none" stroke="#8de0c5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="277" cy="686.4" r="7" fill="#101e26" stroke="#8de0c5" stroke-width="2"/>
+<circle cx="310" cy="686.4" r="7" fill="#101e26" stroke="#8de0c5" stroke-width="2"/>
+<text x="292" y="651.4" fill="#8de0c5" style="fill:#8de0c5" class="small" text-anchor="middle">START</text>
+<text x="232" y="151" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">HILLSIDE PRACTICE</text>
+<text x="232" y="175" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="start">Build / Prefab → Ramp</text>
+<path d="M 236 960 h 64 M 236 956 v 8 M 300 956 v 8" fill="none" stroke="#b0c3cc" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="236" y="950" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">2 m</text>
+</g>
+<rect x="1624" y="124" width="280" height="876" rx="4" fill="#192c36"/>
+<text x="1640" y="150" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">PROPERTIES</text>
+<text x="1888" y="150" fill="#b0c3cc" style="fill:#b0c3cc" class="" text-anchor="start">›</text>
+<text x="1640" y="181" fill="#edf4f6" style="fill:#edf4f6" class="title" text-anchor="start">Level</text>
+<text x="1640" y="204" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Nothing selected</text>
+<text x="1640" y="238" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Name</text>
+<rect x="1640" y="246" width="248" height="32" rx="4" fill="#223b47"/>
+<text x="1652" y="267" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="start">Hillside practice</text>
+<text x="1789" y="267" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end"></text>
+<text x="1640" y="304" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">START speed</text>
+<rect x="1640" y="312" width="248" height="32" rx="4" fill="#223b47"/>
+<text x="1652" y="333" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="start">0.0</text>
+<text x="1789" y="333" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">m/s</text>
+<path d="M 1808 312 V 344" fill="none" stroke="#35515f" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1824" y="333" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">−</text>
+<text x="1857" y="333" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">+</text>
+<path d="M 1640 360 H 1888" fill="none" stroke="#35515f" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1640" y="386" fill="#ffc66d" style="fill:#ffc66d" class="" text-anchor="start">Ramp placement</text>
+<text x="1640" y="412" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Click a free end to connect.</text>
+<text x="1640" y="436" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Edit parameters after placement.</text>
+<text x="1640" y="480" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="start">F  Test from cursor</text>
+<text x="1640" y="504" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Shift+F  Drop from cursor</text>
+<text x="1640" y="552" fill="#8de0c5" style="fill:#8de0c5" class="" text-anchor="start">Draft saved locally</text>
+<text x="1640" y="576" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Export for a file backup.</text>
+<rect x="0" y="1016" width="1920" height="64" rx="0" fill="#192c36"/>
+<rect x="16" y="1024" width="92" height="32" rx="4" fill="#223b47"/>
+<text x="62.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Fit [Home]</text>
+<rect x="116" y="1024" width="100" height="32" rx="4" fill="#223b47"/>
+<text x="166.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Centre [.]</text>
+<rect x="224" y="1024" width="68" height="32" rx="4" fill="#223b47"/>
+<text x="258.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">START</text>
+<rect x="300" y="1024" width="92" height="32" rx="4" fill="#223b47"/>
+<text x="346.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Last test</text>
+<rect x="400" y="1024" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="438.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Bounds</text>
+<rect x="484" y="1024" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="522.0" y="1045" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Ghost</text>
+<text x="580" y="1045" fill="#8de0c5" style="fill:#8de0c5" class="small" text-anchor="start">Grid 0.5 m [G]</text>
+<text x="708" y="1045" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Zoom 100%</text>
+<text x="1900" y="1045" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">High DPI   ·   Fullscreen</text>
+<text x="16" y="1072" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">Click to place · Esc cancels preview · wheel to zoom</text>
+<text x="1900" y="1072" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="end">x 8.00 m   y 0.00 m  ·  Preview only</text>
+</svg>
