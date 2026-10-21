@@ -157,7 +157,9 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     -- Platform snapping: a grounded chassis further than snap_window from the snapped height starts a
     -- realignment that tracks the ground (long climbs and descents, a landing elsewhere) until it settles.
     if grounded and math.abs(target.y-s.ground)>f.snap_window then s.snapping=true end
-    if grounded and s.snapping then s.ground=target.y end
+    if grounded and s.snapping then
+        s.ground=s.ground+(target.y-s.ground)*(1-math.exp(-f.sink_rate*dt))
+    end
     local frame=camera_frame(half)
     local vertical_response=c.camera_response*f.vertical_response_scale
     -- Keep the calm ground window at rest. Both climbing and falling override that framing
