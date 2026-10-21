@@ -33,7 +33,7 @@ local function set_mode(self,mode,note)
     msg.post(EDITOR,"editor_mode",{mode=mode})
     msg.post("#ui","editor_mode",{active=mode=="edit"})
     if html5 then
-        html5.run("window.riderEditing="..tostring(mode=="edit")..";document.getElementById('custom-import')?.toggleAttribute('hidden',window.riderEditing);window.riderCustom?.closeEditor?.()")
+        html5.run("window.riderEditing="..tostring(mode=="edit")..";document.body.classList.toggle('rider-editing',window.riderEditing);document.getElementById('custom-import')?.toggleAttribute('hidden',window.riderEditing);window.riderCustom?.closeEditor?.()")
         -- A reload returns to the custom level or draft, never to the built-in source of a template.
         html5.run("(()=>{const u=new URL(location.href);if(u.searchParams.get('station')!=='custom'){u.searchParams.set('station','custom');u.searchParams.delete('section');u.searchParams.delete('speed');history.replaceState(null,'',u.href);}})()")
     end

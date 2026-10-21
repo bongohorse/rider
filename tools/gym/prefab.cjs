@@ -42,7 +42,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
    await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
-  async function button(name){
+  async function button(name){await require('./editor_ui_target.cjs').reveal(page,name);
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
    const b=e.buttons[name];await click(await canvas(b.x,b.y));
   }
@@ -80,13 +80,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await at(p);return revision(r+1);
   }
   // Frames the course (0-68 m) between the tool palette and the right panel: five zoom-out steps (1.2 each)
-  // around the point that puts x 5 at canvas x 240 (a zoom keeps the point under the cursor).
-  async function frame(){
-   const s=(await ed()).screen,ppm=s.ppm_x/Math.pow(1.2,5);
-   await hover([(240-s.ox-5*ppm)/(s.ppm_x-ppm),5]);
-   for(let i=0;i<5;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
-   await page.waitForFunction(()=>Math.abs(window.riderEditor.screen.ox+5*window.riderEditor.screen.ppm_x-240)<2);
-  }
+  // followed by a pan to put the source origin inside the actual uncovered canvas.
+  async function frame(){await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas);}
   // A case passes only without engine script errors so far.
   const done=name=>{if(errors.length)throw Error(errors.join('\n'));cases.push(name);};
   const started=Date.now();
@@ -334,9 +329,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
   e=await ed();assert.equal(e.mode,'edit');assert.equal(shape(await doc()),shape(big));
   const blocked={message:e.message,sprites:e.view.sprites,gui_nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
-  await page.waitForTimeout(1100);
+  await page.waitForTimeout(1100);await key('Home');
   await at([30,-8]);await page.waitForFunction(n=>window.riderEditor.selection==='o'+n,n);
   const r4=e.revision;await key('Delete');e=await revision(r4+1);assert.equal(e.objects,254);assert.equal(e.problem,'');
+  // Zoom into the Gap before picking it: Fit at 380 m makes neighbouring source points share pixels.
+  await hover([25,0]);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
   // A selected Gap shows its handles and fields within the GUI node budget.
   await at([25,-0.5]);await page.waitForFunction(()=>window.riderEditor.selection==='o13');e=await ed();
   assert.deepEqual(e.handles.map(h=>h.name),['end','floor']);assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));

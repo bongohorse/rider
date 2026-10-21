@@ -34,7 +34,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  async function button(name,mods){const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
+  async function button(name,mods){await require('./editor_ui_target.cjs').reveal(page,name);const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
   async function edit(){await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.view&&window.riderEditor.screen,null,{timeout:20000});await page.waitForTimeout(150);return ed();}
   // A Play run is ready when the world for the newest generation reports telemetry.
   // Telemetry of the previous Play world survives until the new one reports: require a newer generation than the last edit world.
@@ -94,7 +94,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForTimeout(400);
   e=await ed();assert.equal(e.revision,3);assert.deepEqual(e.start.position,start);assert.equal(e.selection,'start');cases.push('focus_loss_cancels_drag');
 
-  // 5. FINISH tool: place it 25 m right of START on the ground line.
+  // 5. FINISH tool: centre the moved START so its target 25 m later is in the uncovered canvas.
+  await button('view_start');
+  at=await canvas(600,350);await page.mouse.move(at.x,at.y);
+  for(let i=0;i<4;i++){await page.mouse.wheel(0,120);await pointer.frames(page);}
   await button('tool_finish');
   const finishAt=[start[0]+25,1.2];await click(await world(finishAt));e=await revision(4);
   assert.equal(e.finish.direction,1);assert.ok(near(e.finish.position[0],finishAt[0],0.1));
@@ -167,7 +170,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Wheel zoom around the cursor: three steps out make the area below the bounds visible.
   at=await world([start[0]+5,2]);await page.mouse.move(at.x,at.y);
   for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
-  await page.waitForFunction(()=>Math.abs(window.riderEditor.camera.zoom-0.2/1.2**3)<1e-6);await page.waitForTimeout(100);
+  await page.waitForFunction(zoom=>Math.abs(window.riderEditor.camera.zoom-zoom/1.2**3)<1e-6,camera.zoom);await page.waitForTimeout(100);
   e=await ed();measurements.zoom_out=e.camera;
   const refused=[];
   for(const [p,mods,expect] of [[[start[0]+5,-12],[],'no surface below'],[[start[0]+5,-12],['Shift'],'outside the level bounds'],[[start[0]+5,0.8],['Shift'],'would overlap']]){
@@ -258,6 +261,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>!window.riderCustom.visible&&window.riderTelemetry?.station==='flat-ltr'&&window.riderCustomStatus==='Saved');
   await page.goto(base+'?station=custom');await played('flat-ltr');assert.equal((await ed()).mode,'play');
   await page.locator('canvas').focus();await key('e');e=await edit();assert.equal(e.id,'flat-ltr');assert.ok(e.undo>=1);
+  await key('Home');at=await world([45,3]);await page.mouse.move(at.x,at.y);
+  for(let i=0;i<8;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
   at=await world([45,3]);await page.mouse.move(at.x,at.y);await page.waitForTimeout(100);await key('f');
   t=await played('flat-ltr');assert.ok(near(t.spawn_x,45,0.05),'test start at 45 m: '+t.spawn_x);
   await key('e');e=await edit();await key('e');await played('flat-ltr');

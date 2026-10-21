@@ -7,50 +7,26 @@ local edit=require "main.gym.editor_edit"
 local prefab=require "main.gym.editor_prefab"
 local snap_lib=require "main.gym.editor_snap"
 local overlay=require "main.gym.editor_overlay"
+local editor_ui=require "main.gym.editor_ui"
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
 local socket=require "socket"
 local LOADER="main:/loader#script"
-local BUTTON=vmath.vector4(0.13,0.24,0.28,1)
-local ACTIVE=vmath.vector4(0.15,0.5,0.45,1)
-local PANEL=vmath.vector4(0.05,0.1,0.13,0.92)
 -- Screen-space behaviour (independent of zoom): pick tolerance, anchor snap radius, handle size,
 -- double-click time and distance. Grid steps are metres (R6).
--- Pixel values are reference pixels (1280 x 720 CSS canvas), scaled like the GUI (HiDPI, window size).
+-- Pixel values are logical canvas pixels; only DPR and the small-window fallback scale them.
 local PICK_PX,SNAP_PX,HANDLE_PX,DOUBLE_S,DOUBLE_PX=10,12,9,0.4,4
 -- Editor zoom range (LE6: down to 0.01, about 650 m across the canvas, so Fit level shows long courses;
 -- it was 0.05, about 130 m).
 local MIN_ZOOM,MAX_ZOOM=0.01,4
 local ui=1
-local C={param=vmath.vector4(1,0.45,0.85,1),vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=vmath.vector4(0.35,0.95,0.45,1),
-    selected=vmath.vector4(1,0.6,0.15,1),hover=vmath.vector4(1,0.95,0.35,1),connect=vmath.vector4(0.35,1,0.45,0.55),
+local C={param=vmath.vector4(1,0.45,0.85,1),vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=editor_ui.c.connected,
+    selected=editor_ui.c.selected,hover=editor_ui.c.hover,connect=editor_ui.c.connected,
     draw=vmath.vector4(0.55,0.8,1,1),rubber=vmath.vector4(0.55,0.8,1,0.6),join=vmath.vector4(1,0.6,0.15,0.5),box=vmath.vector4(1,0.95,0.35,0.7),
     anchor=vmath.vector4(0.35,1,0.45,1),angle=vmath.vector4(0.4,0.7,1,1),grid=vmath.vector4(0.85,0.85,0.85,1),off=vmath.vector4(1,0.35,0.3,1),free_snap=vmath.vector4(0.85,0.85,0.85,0.6),
     bounds=vmath.vector4(1,0.55,0.25,0.75),test=vmath.vector4(0.55,0.8,1,0.7),
     ghost=vmath.vector4(0.8,0.92,1,0.3),ghost_bad=vmath.vector4(1,0.35,0.3,0.35),last=vmath.vector4(0.55,0.8,1,0.22)}
-local function node(self,pos,size,x,y,color)
-    local n=gui.new_box_node(pos,size)
-    gui.set_xanchor(n,x or gui.ANCHOR_NONE);gui.set_yanchor(n,y or gui.ANCHOR_NONE)
-    gui.set_color(n,color or BUTTON)
-    self.nodes[#self.nodes+1]=n
-    return n
-end
-local function text(self,pos,value,x,y,pivot,scale)
-    local n=gui.new_text_node(pos,value)
-    gui.set_font(n,"default");gui.set_xanchor(n,x or gui.ANCHOR_NONE);gui.set_yanchor(n,y or gui.ANCHOR_NONE)
-    gui.set_pivot(n,pivot or gui.PIVOT_CENTER);gui.set_scale(n,vmath.vector3(scale or 0.5,scale or 0.5,1))
-    self.nodes[#self.nodes+1]=n
-    return n
-end
-local function button(self,name,pos,size,label,x,y)
-    local b=node(self,pos,size,x,y)
-    local t=text(self,pos,label,x,y)
-    self.buttons[name]={box=b,label=t}
-    return b
-end
 local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"curve","Curve [C]"},{"prefab","Prefab [P]"},{"start","START"},{"finish","FINISH"},{"label","Label [L]"},{"pan","Pan"}}
--- Right panel rows (LE5a): a selected prefab's fields, one row each (the Kicker + landing has the most).
-local PARAMS=7
 -- editor.gui max_nodes (raised from the default 512 for the LE5a panel rows).
 local MAX_NODES=640
 local KIND_KEYS={}
@@ -63,9 +39,6 @@ local WARN_ROWS=8
 -- View row (LE6) in the bottom bar, left of the page's own High DPI / Fullscreen buttons: name, label, width.
 local VIEW={{"view_fit","Fit [Home]",70},{"view_centre","Centre [.]",70},{"view_start","START",50},{"view_test","Last test",64},{"view_bounds","Bounds",56},
     {"view_ghost","Ghost",50},{"view_help","Help [H]",60}}
-local DIM=vmath.vector4(0.09,0.15,0.17,1)
-local DANGER=vmath.vector4(0.5,0.15,0.12,1)
-local DIALOG=vmath.vector4(0.05,0.1,0.13,1)
 -- Help overlay (LE6b): the shipped controls. Keys in [brackets]; tests/ci/test_editor_help.py checks that
 -- every editor key binding is listed here.
 -- HELP BEGIN
@@ -89,7 +62,7 @@ local HELP_LEFT={
     "  Click places points; click the last one, double-click",
     "  or [Enter] finishes; [Backspace] or Ctrl+[Z] removes",
     "  the last point; [Esc] discards the piece",
-    "  Starting or ending on a free end (green ring) connects",
+    "  Free ends: hollow rings; connected ends: cyan squares",
     "",
     "Snapping",
     "  0.5 m grid + anchors; [Alt] 0.1 m; Shift 15 deg",
@@ -119,6 +92,9 @@ local HELP_RIGHT={
     "",
     "Fields (level name, values, label text)",
     "  While a field is focused every key types into it;",
+    "  [Tab] / Shift+[Tab]: next / previous number field",
+    "  Step buttons: Shift 10x, Alt 0.1x (counts stay whole)",
+    "  Panel headers collapse; Properties wheel scrolls",
     "  [Enter] applies, [Esc] cancels, a click elsewhere applies",
 }
 -- HELP END
@@ -150,126 +126,17 @@ local function show_silhouette(o,list,p,s,color)
     end
 end
 function init(self)
-    -- Overlays first: GUI nodes draw in creation order, so the panels stay on top of grid and handles.
     self.overlay=overlay.init()
-    self.nodes,self.buttons,self.held={},{},{}
-    -- Vehicle silhouettes (LE6b): the test start preview (ghost) and the last test start; below the panels.
+    self.buttons,self.held={},{}
     self.ghost,self.last_ghost=silhouette(self),silhouette(self)
-    -- Test state for the le2/le3/le4 runners only (debug engine); release builds never publish it.
+    self.ui=editor_ui.init()
+    self.templates={}
+    for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
     local case=sys.get_config_string("rider.gym_test","")
     self.debug=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
-    local L,R,T,B=gui.ANCHOR_LEFT,gui.ANCHOR_RIGHT,gui.ANCHOR_TOP,gui.ANCHOR_BOTTOM
-    node(self,vmath.vector3(480,525,0),vmath.vector3(960,30,0),nil,T,PANEL)
-    self.title=text(self,vmath.vector3(10,525,0),"",L,T,gui.PIVOT_W)
-    button(self,"undo",vmath.vector3(518,525,0),vmath.vector3(50,22,0),"Undo",R,T)
-    button(self,"redo",vmath.vector3(572,525,0),vmath.vector3(50,22,0),"Redo",R,T)
-    button(self,"new",vmath.vector3(625,525,0),vmath.vector3(48,22,0),"New",R,T)
-    button(self,"open",vmath.vector3(681,525,0),vmath.vector3(56,22,0),"Open",R,T)
-    button(self,"import",vmath.vector3(744,525,0),vmath.vector3(62,22,0),"Import",R,T)
-    button(self,"export",vmath.vector3(810,525,0),vmath.vector3(62,22,0),"Export",R,T)
-    button(self,"play",vmath.vector3(900,525,0),vmath.vector3(110,22,0),"Play > [E]",R,T)
-    -- Eight tools (LE6b: Label), 24 apart, end where the seven did (the canvas below stays free).
-    for i,tool in ipairs(TOOLS) do button(self,"tool_"..tool[1],vmath.vector3(52,470-(i-1)*24,0),vmath.vector3(92,21,0),tool[2],L,T) end
-    -- Prefab types (shown with the Prefab tool; keys 1-7 pick them too).
-    for i,kind in ipairs(prefab.ORDER) do
-        button(self,"kind_"..kind,vmath.vector3(52,250-(i-1)*26,0),vmath.vector3(92,22,0),i.." "..(kind=="kicker" and "Kicker" or prefab.name(kind)),L,T)
-        gui.set_scale(self.buttons["kind_"..kind].label,vmath.vector3(0.42,0.42,1))
-    end
-    -- The right panel is laid out every frame from the rows it shows (layout()).
-    self.panel=node(self,vmath.vector3(860,329,0),vmath.vector3(196,292,0),R,T,PANEL)
-    self.properties=text(self,vmath.vector3(768,468,0),"",R,T,gui.PIVOT_NW,0.42)
-    button(self,"minus",vmath.vector3(800,330,0),vmath.vector3(40,22,0),"-",R,T)
-    button(self,"plus",vmath.vector3(848,330,0),vmath.vector3(40,22,0),"+",R,T)
-    button(self,"direction",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Flip direction",R,T)
-    button(self,"delete",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Delete [Del]",R,T)
-    button(self,"split",vmath.vector3(860,274,0),vmath.vector3(180,22,0),"Split here [K]",R,T)
-    button(self,"connect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Connect [J]",R,T)
-    button(self,"disconnect",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Disconnect [J]",R,T)
-    -- LE5c: a point's Corner/Smooth switch and a prefab's conversion to an editable path.
-    button(self,"smooth",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make smooth",R,T)
-    button(self,"convert",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Convert to editable path",R,T)
-    -- LE5d: Corner/Smooth for several points or whole objects at once.
-    button(self,"smooth_all",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make smooth",R,T)
-    button(self,"corner_all",vmath.vector3(860,246,0),vmath.vector3(180,22,0),"Make corner",R,T)
-    button(self,"rename",vmath.vector3(860,302,0),vmath.vector3(180,22,0),"Rename level",R,T)
-    for i=1,PARAMS do
-        button(self,"param_"..i,vmath.vector3(860,190,0),vmath.vector3(180,22,0),"",R,T)
-        gui.set_scale(self.buttons["param_"..i].label,vmath.vector3(0.42,0.42,1))
-    end
-    -- Mirror (LE5a, replaces Duplicate): a mirrored copy to the left or right of the selection.
-    self.mirror_label=text(self,vmath.vector3(772,218,0),"Mirror",R,T,gui.PIVOT_W,0.45)
-    button(self,"mirror_left",vmath.vector3(868,218,0),vmath.vector3(52,22,0),"<",R,T)
-    button(self,"mirror_right",vmath.vector3(926,218,0),vmath.vector3(52,22,0),">",R,T)
-    button(self,"paste",vmath.vector3(860,190,0),vmath.vector3(180,22,0),"Paste [Ctrl+V]",R,T)
-    node(self,vmath.vector3(480,12,0),vmath.vector3(960,24,0),nil,B,PANEL)
-    -- View row (LE6): camera and display only, never an edit.
-    local x=6
-    for _,v in ipairs(VIEW) do
-        button(self,v[1],vmath.vector3(x+v[3]/2,12,0),vmath.vector3(v[3],20,0),v[2],L,B)
-        gui.set_scale(self.buttons[v[1]].label,vmath.vector3(0.4,0.4,1))
-        x=x+v[3]+4
-    end
-    self.status=text(self,vmath.vector3(x+6,12,0),"",L,B,gui.PIVOT_W,0.42)
-    -- Top bar: the page's own High DPI / Fullscreen buttons cover the bottom-right corner.
-    button(self,"warnings",vmath.vector3(434,525,0),vmath.vector3(110,22,0),"",R,T)
-    -- LE6: below the message line, clear of the right panel; a header line and one clickable row per
-    -- message (a located one shows its source).
-    self.warning_panel=node(self,vmath.vector3(430,440,0),vmath.vector3(640,76,0),nil,T,PANEL)
-    self.warning_text=text(self,vmath.vector3(118,468,0),"",nil,T,gui.PIVOT_W,0.42)
-    for i=1,WARN_ROWS do
-        local y=446-(i-1)*22
-        local b=node(self,vmath.vector3(430,y,0),vmath.vector3(630,20,0),nil,T)
-        local t=text(self,vmath.vector3(120,y,0),"",nil,T,gui.PIVOT_W,0.4)
-        self.buttons["warn_"..i]={box=b,label=t}
-    end
-    button(self,"warn_prev",vmath.vector3(665,468,0),vmath.vector3(50,18,0),"<",nil,T)
-    button(self,"warn_next",vmath.vector3(720,468,0),vmath.vector3(50,18,0),">",nil,T)
-    self.message=text(self,vmath.vector3(480,492,0),"",nil,T,gui.PIVOT_CENTER,0.5)
-    -- Open dialog (LE4): My levels (newest first, paged) and the built-in templates (R2, R3).
-    self.dialog_nodes={node(self,vmath.vector3(480,290,0),vmath.vector3(720,420,0),nil,nil,DIALOG)}
-    self.library_title=text(self,vmath.vector3(140,474,0),"My levels",nil,nil,gui.PIVOT_W,0.45)
-    self.dialog_nodes[2]=self.library_title
-    self.dialog_nodes[3]=text(self,vmath.vector3(520,474,0),"Templates (open as a copy)",nil,nil,gui.PIVOT_W,0.45)
-    for i=1,ROWS do
-        button(self,"lib_"..i,vmath.vector3(290,440-(i-1)*28,0),vmath.vector3(290,24,0),"")
-        button(self,"libdel_"..i,vmath.vector3(472,440-(i-1)*28,0),vmath.vector3(64,24,0),"Delete")
-        gui.set_scale(self.buttons["lib_"..i].label,vmath.vector3(0.4,0.4,1))
-        gui.set_scale(self.buttons["libdel_"..i].label,vmath.vector3(0.4,0.4,1))
-    end
-    button(self,"lib_newer",vmath.vector3(200,150,0),vmath.vector3(100,24,0),"< Newer")
-    button(self,"lib_older",vmath.vector3(380,150,0),vmath.vector3(100,24,0),"Older >")
-    button(self,"dialog_close",vmath.vector3(760,110,0),vmath.vector3(120,24,0),"Close [Esc]")
-    button(self,"tpl_prev",vmath.vector3(580,150,0),vmath.vector3(100,24,0),"< Previous")
-    button(self,"tpl_next",vmath.vector3(760,150,0),vmath.vector3(100,24,0),"More >")
-    -- One button per station, shown TEMPLATE_ROWS per page at its row (template_page()).
-    self.templates={}
-    for i,id in ipairs(stations.ids) do
-        local d=stations.resource(id)
-        button(self,"template_"..id,vmath.vector3(670,440-((i-1)%TEMPLATE_ROWS)*28,0),vmath.vector3(300,24,0),(d and d.name or id).." ("..id..")")
-        gui.set_scale(self.buttons["template_"..id].label,vmath.vector3(0.4,0.4,1))
-        self.templates[#self.templates+1]="template_"..id
-    end
-    -- R1 choice for a level whose compiled geometry differs from its editor source.
-    self.conflict_nodes={node(self,vmath.vector3(480,300,0),vmath.vector3(700,150,0),nil,nil,DIALOG)}
-    self.conflict_text=text(self,vmath.vector3(480,342,0),"",nil,nil,gui.PIVOT_CENTER,0.42)
-    gui.set_line_break(self.conflict_text,true);gui.set_size(self.conflict_text,vmath.vector3(1600,120,0))
-    self.conflict_nodes[2]=self.conflict_text
-    button(self,"conflict_source",vmath.vector3(320,258,0),vmath.vector3(300,24,0),"Recompile from source")
-    button(self,"conflict_lines",vmath.vector3(640,258,0),vmath.vector3(300,24,0),"Keep compiled geometry (as lines)")
-    -- Help overlay (LE6b): modal, on top of everything; [H], [Esc], Close or a click outside closes it.
-    self.help_nodes={node(self,vmath.vector3(480,290,0),vmath.vector3(880,330,0),nil,nil,DIALOG)}
-    self.help_nodes[2]=text(self,vmath.vector3(60,440,0),table.concat(HELP_LEFT,"\n"),nil,nil,gui.PIVOT_NW,0.5)
-    self.help_nodes[3]=text(self,vmath.vector3(500,440,0),table.concat(HELP_RIGHT,"\n"),nil,nil,gui.PIVOT_NW,0.5)
-    button(self,"help_close",vmath.vector3(820,148,0),vmath.vector3(120,24,0),"Close [Esc]")
-    self.edit_nodes=self.nodes;self.nodes={}
-    self.hint=text(self,vmath.vector3(12,40,0),"Edit level [E]",L,B,gui.PIVOT_W,0.42)
-    self.play_message=text(self,vmath.vector3(480,470,0),"",nil,T,gui.PIVOT_CENTER,0.5)
-    gui.set_color(self.play_message,vmath.vector4(1,0.6,0.4,1))
-    self.gui_nodes=self.overlay.nodes+#self.edit_nodes+#self.nodes+self.extra_nodes
+    self.gui_nodes=self.overlay.nodes+self.extra_nodes+editor_ui.BOXES+editor_ui.TEXTS
     msg.post(".","acquire_input_focus")
     window.set_listener(function(_,event)
-        -- The first press after a focus loss is the click that brings focus back (its gained event may
-        -- arrive after that press), so it is ignored unless focus came back more than 1 s earlier.
         if event==window.WINDOW_EVENT_FOCUS_LOST then self.focus_lost,self.refocus,self.refocus_until=true,true,nil
         elseif event==window.WINDOW_EVENT_FOCUS_GAINED then self.refocus_until=socket.gettime()+1 end
     end)
@@ -1056,6 +923,9 @@ local function anchor_mode(id,i)
     end
     apply_params(id,anchors)
 end
+local function remember_error(self,key,message)
+    self.ui_error={key=key,message=message,revision=editor.doc.editor.revision,opened=editor.opened}
+end
 local function param_click(self,i)
     local o=find(editor.selection)
     if o and o.type=="label" then edit_label(self,o.id);return end
@@ -1068,6 +938,7 @@ local function param_click(self,i)
     else
         local t=number_text(o.params[f.key])
         self.field={text=t,initial=t,all=true,param=f.key,id=o.id,label=f.label,unit=f.unit}
+        self.ui.reveal="param_"..i
         editor.message=string.format("Type %s (%s, %s to %s); Enter applies, Esc cancels.",f.label:lower(),f.unit,number_text(f.min),number_text(f.max))
     end
 end
@@ -1079,11 +950,13 @@ local function confirm_param(self,closing)
     if not o or f.text==f.initial then self.field=nil;editor.message="";return end
     local params,err=prefab.set(o.kind,o.params,f.param,f.text)
     if not params then
-        editor.message=(closing and "Not applied: " or "")..err.." The previous value is kept."
+        f.error=err.." The previous value is kept."
+        editor.message=(closing and "Not applied: " or "")..f.error
+        remember_error(self,f.param,f.error)
         if closing then self.field=nil end
         return
     end
-    self.field=nil;editor.message=""
+    self.field=nil;self.ui_error=nil;editor.message=""
     apply_params(o.id,params)
 end
 -- Export (R9, R12): only a playable level, compiled like Play; the file is the station JSON with its
@@ -1110,10 +983,23 @@ local function drop_char(t)
     return t:sub(1,math.max(0,i-1))
 end
 local function confirm_name(self,closing)
+    if self.field.speed then
+        local f=self.field;local value=tonumber(f.text)
+        if not value or value~=value or math.abs(value)>30 then
+            f.error="Speed must be from -30 to 30 m/s. Previous value kept.";editor.message=f.error
+            if closing then remember_error(self,f.speed,f.error);self.field=nil end
+            return
+        end
+        self.field=nil;self.ui_error=nil;editor.message=""
+        if f.speed=="start" then
+            if value~=editor.doc.editor.start.speed then editor.commit(function(e) e.start.speed=value end) end
+        else editor.test_speed=value;editor.touch() end
+        return
+    end
     if self.field.param then confirm_param(self,closing);return end
     if self.field.label then confirm_label(self,closing);return end
     local name=self.field.text:match("^%s*(.-)%s*$")
-    if name=="" then editor.message="A level name cannot be empty.";return end
+    if name=="" then self.field.error="A level name cannot be empty.";editor.message=self.field.error;return end
     self.field=nil
     if name~=editor.doc.name then editor.commit(function(_,doc) doc.name=name end) end
 end
@@ -1124,11 +1010,8 @@ end
 -- Navigation (LE6): view only. The camera moves and the selection may change; nothing is committed, so
 -- the document, its dirty state and the Undo history stay unchanged.
 -- The canvas area not covered by the panels (canvas pixels): left palette, right panel, top and bottom bars.
-local function usable(self)
-    local w,h=window.get_size()
-    local k=self.overlay.k
-    return {x0=100*k,x1=math.max(100*k+1,w-200*k),y0=26*k,y1=math.max(26*k+1,h-32*k)}
-end
+local function usable(self) return editor_ui.usable(self.ui) end
+
 local function grow(b,x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
 local function empty_box() return {math.huge,-math.huge,math.huge,-math.huge} end
 local function start_box(b,p) local v=doc_lib.VEHICLE;grow(b,p[1]+v[1],p[2]+v[3]);grow(b,p[1]+v[2],p[2]+v[4]) end
@@ -1247,7 +1130,73 @@ local function open_help(self)
     self.help_open,self.warnings_open,self.open_dialog=true,false,false
     editor.message=""
 end
+local function stepped_params(self,o,index,sign,params)
+    local fd=param_rows(o)[index]
+    if not fd or fd.choices then return nil,"This field cannot be stepped." end
+    local step=fd.integer and 1 or fd.unit=="deg" and 1 or .1
+    if not fd.integer then step=step*(self.held.shift and 10 or self.held.alt and .1 or 1) end
+    params=params or o.params
+    return prefab.set(o.kind,params,fd.key,number_text(params[fd.key]+sign*step))
+end
+-- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
+local function step_focused(self,name)
+    local f=self.field
+    local index=tonumber(name:match("^[di][en]c_param_(%d)$"))
+    if f.param and index then
+        local o=find(f.id)
+        if not o then self.field=nil;return true end
+        local params,err=prefab.set(o.kind,o.params,f.param,f.text)
+        if params then params,err=stepped_params(self,o,index,name:sub(1,1)=="d" and -1 or 1,params) end
+        if not params then
+            f.error=err.." The previous value is kept.";editor.message=f.error;remember_error(self,f.param,f.error)
+        else self.field=nil;self.ui_error=nil;apply_params(o.id,params) end
+        return true
+    end
+    local which=(name=="inc_speed" or name=="dec_speed") and "start" or
+        (name=="inc_test_speed" or name=="dec_test_speed" or name=="plus" or name=="minus") and "test"
+    if which and f.speed==which then
+        local value=tonumber(f.text)
+        local step=.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        local sign=(name:sub(1,1)=="d" or name=="minus") and -1 or 1
+        if value and value==value and math.abs(value)<=30 and math.abs(value+sign*step)<=30 then
+            value=value+sign*step;self.field=nil;self.ui_error=nil;editor.message=""
+            if which=="start" then
+                if value~=editor.doc.editor.start.speed then editor.commit(function(e) e.start.speed=value end) end
+            else editor.test_speed=value;editor.touch() end
+        else f.error="Speed must be from -30 to 30 m/s. Previous value kept.";editor.message=f.error end
+        return true
+    end
+    return false
+end
 local function on_button(self,name)
+    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" then
+        local key=name:sub(10);self.ui[key]=not self.ui[key];return
+    elseif name=="speed" or name=="test_speed" then
+        self.ui.reveal=name
+        local which=name=="speed" and "start" or "test"
+        self.field={speed=which,text=number_text(which=="start" and editor.doc.editor.start.speed or editor.test_speed),all=true}
+        return
+    elseif name=="mode_angle" or name=="mode_height" then
+        local o=find(editor.selection)
+        if o and o.type=="prefab" and o.kind=="ramp" and o.params.mode~=name:sub(6) then
+            local params,err=prefab.cycle(o.kind,o.params,"mode")
+            if params then self.ui_error=nil;apply_params(o.id,params) else remember_error(self,"mode",err);editor.message=err end
+        end
+        return
+    elseif name:match("^[di][en]c_param_%d$") then
+        local index=tonumber(name:match("(%d)$"));local o=find(editor.selection);local fd=o and param_rows(o)[index]
+        if o and o.type=="prefab" and fd and not fd.choices then
+            local params,err=stepped_params(self,o,index,name:sub(1,1)=="d" and -1 or 1)
+            if params then self.ui_error=nil;apply_params(o.id,params)
+            else remember_error(self,fd.key,err);editor.message=err end
+        end
+        return
+    elseif name=="dec_speed" or name=="inc_speed" then
+        local value=editor.doc.editor.start.speed+(name:sub(1,1)=="d" and -1 or 1)*.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        if value>=-30 and value<=30 then editor.commit(function(e) e.start.speed=value end) end
+        return
+    elseif name=="inc_test_speed" then name="plus"
+    elseif name=="dec_test_speed" then name="minus" end
     if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
     if name~="convert" then self.confirm_convert=nil end
     if name~="smooth_all" then self.confirm_bulk=nil end
@@ -1261,6 +1210,7 @@ local function on_button(self,name)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
     elseif name=="rename" then
+        self.ui.reveal="rename"
         -- The whole name starts selected: typing replaces it, Backspace clears it.
         self.field={text=editor.doc.name,all=true};editor.message="Type the level name; Enter confirms, Esc cancels."
     elseif name=="mirror_left" or name=="mirror_right" then mirror(self,name=="mirror_left" and -1 or 1)
@@ -1293,11 +1243,12 @@ local function on_button(self,name)
     elseif name:match("^tool_") then set_tool(self,name:sub(6))
     elseif name:match("^template_") then open_template(self,name:sub(10))
     elseif name=="minus" or name=="plus" then
-        local step=(name=="plus" and 1 or -1)*(self.held.shift and 5 or 0.5)
-        if editor.selection=="start" then
-            local speed=math.max(-30,math.min(30,editor.doc.editor.start.speed+step))
-            editor.commit(function(e) e.start.speed=speed end)
-        else editor.test_speed=math.max(-30,math.min(30,editor.test_speed+step));editor.touch() end
+        local step=(name=="plus" and 1 or -1)*.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        local value=(editor.selection=="start" and editor.doc.editor.start.speed or editor.test_speed)+step
+        if value < -30 or value > 30 then editor.message="Speed must be from -30 to 30 m/s. Previous value kept.";return end
+        editor.message=""
+        if editor.selection=="start" then editor.commit(function(e) e.start.speed=value end)
+        else editor.test_speed=value;editor.touch() end
     elseif name=="direction" and editor.doc.editor.finish then
         editor.commit(function(e) e.finish.direction=-e.finish.direction end)
     elseif name=="delete" then delete(self)
@@ -1306,7 +1257,7 @@ local function on_button(self,name)
     elseif name=="warnings" then self.warnings_open,self.open_dialog=not self.warnings_open,false;self.warn_page=0
     elseif name:match("^warn_%d$") then
         local row=(self.problem_rows or {})[(self.warn_page or 0)*WARN_ROWS+tonumber(name:sub(6))]
-        if row then show_problem(self,row) end
+        if row then self.warnings_open=false;show_problem(self,row) end
     elseif name=="warn_prev" then self.warn_page=math.max(0,(self.warn_page or 0)-1)
     elseif name=="warn_next" then self.warn_page=(self.warn_page or 0)+1
     elseif name=="tpl_prev" then self.tpl_page=math.max(0,(self.tpl_page or 0)-1)
@@ -1331,7 +1282,7 @@ local function vertex_state()
     if not o then return nil end
     return {inner=v.index>1 and v.index<#path(o),joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
 end
-local function visible_buttons(self)
+local function offered_buttons(self)
     -- The R1 choice is modal: nothing else is offered until it is made; so is the help overlay (LE6b).
     if editor.conflict then return {"conflict_source","conflict_lines"} end
     if self.help_open then return {"help_close"} end
@@ -1387,13 +1338,16 @@ local function visible_buttons(self)
     end
     return list
 end
+local function visible_buttons(self) return self.ui.visible end
 local function hit(self,action)
     for _,name in ipairs(visible_buttons(self)) do
-        if gui.pick_node(self.buttons[name].box,action.x,action.y) then return name end
+        local b=self.buttons[name]
+        if b and gui.pick_node(b.box,action.x,action.y) then return name end
     end
-    if self.warnings_open and not self.open_dialog and gui.pick_node(self.warning_panel,action.x,action.y) then return "warning_panel" end
-    if self.open_dialog and gui.pick_node(self.dialog_nodes[1],action.x,action.y) then return "dialog_panel" end
+    if self.open_dialog then return "dialog_panel" end
     if editor.conflict then return "conflict_panel" end
+    if self.warnings_open then return "warning_panel" end
+    if editor_ui.area(self.ui,action) then return "chrome_panel" end
 end
 -- Translating a selection: each connected run moves once (R4, R17); the grabbed object's nearest
 -- point snaps (anchors outside the moving set, Shift 15 degree directions, grid).
@@ -1874,10 +1828,13 @@ function on_input(self,action_id,action)
             return true
         end
     end
+    editor_ui.pointer(self.ui,action)
     -- The help overlay (LE6b) is modal: it takes every key and click; [H], [Esc], Close or a click
     -- outside the panel closes it. Nothing behind it is edited or driven.
     if self.help_open then
-        if action_id==hash("ui_pointer") and action.pressed then
+        if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
+            self.ui.help_scroll=math.max(0,math.min(self.ui.help_max or 0,(self.ui.help_scroll or 0)+(action_id==hash("editor_zoom_in") and -64 or 64)))
+        elseif action_id==hash("ui_pointer") and action.pressed then
             if hit(self,action)=="help_close" or not gui.pick_node(self.help_nodes[1],action.x,action.y) then self.help_open=false end
         elseif (action_id==hash("help_toggle") or action_id==hash("editor_cancel")) and action.pressed then self.help_open=false end
         return true
@@ -1885,20 +1842,51 @@ function on_input(self,action_id,action)
     -- A focused name field takes every key (contract controls); a click elsewhere confirms it.
     if self.field then
         local f=self.field
-        if action_id==hash("editor_text") and action.text then
+        if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
+            if editor_ui.area(self.ui,action)=="properties" then self.ui.scroll=math.max(0,math.min(self.ui.max_scroll or 0,self.ui.scroll+(action_id==hash("editor_zoom_in") and -64 or 64))) end
+        elseif action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            local limit=f.param and 16 or 64
+            local limit=(f.param or f.speed) and 16 or 64
             if #f.text+#t>limit then editor.message=f.param and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
+        elseif action_id==hash("editor_cycle") and action.pressed then
+            local old=f.param;local speed=f.speed
+            confirm_name(self)
+            if not self.field then
+                local o=editor.selection and find(editor.selection)
+                if old and o and o.type=="prefab" then
+                    local list=param_rows(o);local index
+                    for i,fd in ipairs(list) do if fd.key==old then index=i end end
+                    if index then
+                        for offset=1,#list do
+                            local next=(index-1+(self.held.shift and -offset or offset))%#list+1
+                            if not list[next].choices then param_click(self,next);break end
+                        end
+                    end
+                elseif speed or not f.label then
+                    on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
+                end
+            end
         elseif action_id==hash("editor_play") and action.pressed then confirm_name(self)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
-        elseif action_id==hash("ui_pointer") and action.pressed then confirm_name(self,true)
+        elseif action_id==hash("ui_pointer") and action.pressed then
+            local name=hit(self,action)
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus") then
+                if not step_focused(self,name) then
+                    confirm_name(self)
+                    if not self.field then on_button(self,name) end
+                end
+            else confirm_name(self,true) end
         elseif action_id==nil then cursor(self,action) end
         return true
     end
-    if action_id==nil then canvas_move(self,action);return true end
+    if action_id==nil then
+        if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
+        else cursor(self,action);set_hover(self,{}) end
+        return true
+    end
     if action_id==hash("ui_pointer") then
         if action.pressed then
             -- The click that returns focus to the canvas never edits the level.
@@ -1907,15 +1895,16 @@ function on_input(self,action_id,action)
                 if not self.refocus_until or socket.gettime()<self.refocus_until then return true end
             end
             local name=hit(self,action)
-            if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" then return true
+            if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" or name=="chrome_panel" then return true
             elseif name then on_button(self,name)
             elseif self.open_dialog then self.open_dialog=false
             else canvas_press(self,action) end
         elseif action.released then canvas_release(self) end
-        canvas_move(self,action)
+        if not editor_ui.area(self.ui,action) then canvas_move(self,action) end
         return true
     end
     if action_id==hash("editor_pan") then
+        if editor_ui.area(self.ui,action) or self.open_dialog or self.warnings_open or editor.conflict then return true end
         if action.pressed and action.screen_x then self.pan={action.screen_x,action.screen_y} elseif action.released then self.pan=nil end
         return true
     end
@@ -1928,9 +1917,19 @@ function on_input(self,action_id,action)
             self[key]=math.max(0,math.min(math.max(0,math.ceil(count/per)-1),(self[key] or 0)+(up and -1 or 1)))
             return true
         end
+        local area=editor_ui.area(self.ui,action)
+        if area then
+            if area=="properties" then self.ui.scroll=math.max(0,math.min(self.ui.max_scroll or 0,self.ui.scroll+(up and -64 or 64))) end
+            return true
+        end
+        if self.warnings_open or editor.conflict then return true end
         cursor(self,action);zoom(self,up and 1.2 or 1/1.2);return true
     end
     if not action.pressed then return true end
+    if self.open_dialog or self.warnings_open then
+        if action_id==hash("editor_cancel") then self.open_dialog,self.warnings_open=false,false end
+        return true
+    end
     -- "Sure? Make smooth" (LE5d) belongs to the click right after it: any key disarms it.
     self.confirm_bulk=nil
     if editor.conflict then editor.message="Choose how to open this level first.";return true end
@@ -2176,7 +2175,7 @@ local function readout(self)
     end
     if editor.tool=="prefab" and self.place then
         local pl=self.place
-        return prefab.name(pl.kind)..string.format(" at x %.2f m  y %.2f m",pl.at[1],pl.at[2])..(pl.target and "  connects to "..pl.target or "")
+        return "Preview: "..prefab.name(pl.kind)..string.format(" at x %.2f m  y %.2f m",pl.at[1],pl.at[2])..(pl.target and "  connects to "..pl.target or "")
     end
     local g=self.ghost_now
     if g then
@@ -2211,7 +2210,8 @@ end
 local function draw_overlay(self)
     local o=self.overlay
     overlay.begin(o)
-    ui=o.s
+    o.s=self.ui.scale or 1;ui=o.s
+    gui.set_scale(o.readout,vmath.vector3(ui/o.k,ui/o.k,1))
     local s=map()
     local w,h=window.get_size()
     if not s then overlay.finish(o);show_silhouette(o,self.ghost,nil);show_silhouette(o,self.last_ghost,nil);return end
@@ -2283,8 +2283,9 @@ local function draw_overlay(self)
     for _,obj in ipairs(e.objects) do
         if doc_lib.terrain(obj) then
             local pts=editor.shape(obj)
-            handle(pts[1],prev[obj.id] and C.joint or C.free,HANDLE_PX-1,true)
-            if not next[obj.id] then handle(pts[#pts],C.free,HANDLE_PX-1,true) end
+            local a,b=to_px(pts[1],s),to_px(pts[#pts],s)
+            if visible(a) then overlay.endpoint(o,a,prev[obj.id]~=nil,C.joint,C.free) end
+            if not next[obj.id] and visible(b) then overlay.endpoint(o,b,false,C.joint,C.free) end
         end
     end
     -- The multi-point selection (LE5d): filled orange squares over the handles.
@@ -2298,7 +2299,15 @@ local function draw_overlay(self)
         local ghost={type="prefab",kind=pl.kind,at=pl.at,params=pl.params}
         local closed=doc_lib.outline(ghost)
         for _,pts in ipairs(closed and {closed} or doc_lib.parts(ghost)) do
-            for i=2,#pts+(closed and 1 or 0) do overlay.line(o,to_px(pts[i-1],s),to_px(pts[(i-1)%#pts+1],s),C.draw,3) end
+            for i=2,#pts+(closed and 1 or 0) do
+                local a,b=to_px(pts[i-1],s),to_px(pts[(i-1)%#pts+1],s)
+                local n=math.max(1,math.min(8,math.ceil(dist(a,b)/(14*ui))))
+                -- Small sampled chords use alternating gaps too; geometry itself is untouched.
+                for j=0,n-1 do
+                    local t0,t1=j/n,(j+.65)/n
+                    overlay.line(o,{a[1]+(b[1]-a[1])*t0,a[2]+(b[2]-a[2])*t0},{a[1]+(b[1]-a[1])*t1,a[2]+(b[2]-a[2])*t1},editor_ui.c.active,3)
+                end
+            end
         end
         if pl.target then handle(pl.p,C.connect,HANDLE_PX+12) end
     end
@@ -2351,41 +2360,115 @@ local function draw_overlay(self)
     local snapping=self.snapped and (drawing_tool() or editor.tool=="prefab" or (self.drag and self.drag.kind~="marker" and (self.drag.kind~="handle" or self.drag.skip)))
     overlay.snap(o,snapping and to_px(self.snapped.p,s) or nil,snapping and (C[self.snapped.kind] or C.free_snap) or nil)
     local text=readout(self)
-    overlay.readout(o,self.cursor_px,text)
+    overlay.readout(o,self.cursor_px,text,usable(self))
     self.readout_text=text
     overlay.finish(o)
 end
--- Right panel (LE5a): the description, then the rows it shows, top to bottom; the panel grows to fit
--- them (never smaller than in LE4). LINE: one description line of the builtin 14 px font at scale 0.42,
--- with a margin (a line count, so no text metrics API is needed).
-local ROW,LINE=26,7.5
-local function layout(self,shown)
-    local y=468-self.description_lines*LINE-6-ROW/2
-    local rows={{"minus","plus"},{"direction","delete","rename"},{"split"},{"connect","disconnect"},{"smooth"},{"smooth_all"},{"corner_all"},{"convert"}}
-    for i=1,PARAMS do rows[#rows+1]={"param_"..i} end
-    rows[#rows+1]={"mirror_left","mirror_right"}
-    rows[#rows+1]={"paste"}
-    local function put(name,x)
-        local b=self.buttons[name]
-        local p=vmath.vector3(x,y,0)
-        gui.set_position(b.box,p);gui.set_position(b.label,p)
+-- Editor A1b adapter: business state and existing actions remain here; the renderer only draws
+-- bounded pools. Templates have logical identities, never one permanent GUI allocation per station.
+local function render_ui(self)
+    local e=editor.doc.editor
+    if self.ui_error and (self.ui_error.revision~=e.revision or self.ui_error.opened~=editor.opened) then self.ui_error=nil end
+    if self.last_opened~=editor.opened then
+        self.last_opened=editor.opened;self.open_dialog,self.field,self.confirm_delete=false,nil,nil
+        self.frame_opened,self.frame_delay=editor.opened,3
     end
-    local mirror=false
-    for _,row in ipairs(rows) do
-        local any=false
-        for _,name in ipairs(row) do any=any or shown[name] end
-        if any then
-            if row[1]=="minus" then put("minus",800);put("plus",848)
-            elseif row[1]=="mirror_left" then
-                put("mirror_left",868);put("mirror_right",926)
-                gui.set_position(self.mirror_label,vmath.vector3(772,y,0));mirror=true
-            else for _,name in ipairs(row) do if shown[name] then put(name,860) end end end
-            y=y-ROW
+    if self.frame_opened then
+        local s=map()
+        if s and s.ppm_x~=0 and editor.screen.opened==editor.opened and self.frame_delay>0 then self.frame_delay=self.frame_delay-1
+        elseif s and s.ppm_x~=0 and editor.screen.opened==editor.opened then
+            local u=usable(self);local start=editor.doc.editor.start.position
+            local target=u.x0+math.min(88*self.ui.scale,(u.x1-u.x0)/4)
+            editor.camera.x=editor.camera.x+(s.ox+start[1]*s.ppm_x-target)/s.ppm_x
+            self.frame_opened=nil;editor.touch()
         end
     end
-    gui.set_enabled(self.mirror_label,mirror)
-    local bottom=math.min(183,y+ROW/2-4)
-    gui.set_position(self.panel,vmath.vector3(860,(475+bottom)/2,0));gui.set_size(self.panel,vmath.vector3(196,475-bottom,0))
+    if self.open_dialog then refresh_library(self) end
+    local rows=problem_rows();self.problem_rows=rows
+    self.warn_page=math.max(0,math.min(self.warn_page or 0,math.max(0,math.ceil(#rows/WARN_ROWS)-1)))
+    self.tpl_page=math.max(0,math.min(self.tpl_page or 0,math.max(0,math.ceil(#self.templates/TEMPLATE_ROWS)-1)))
+    local notes=#editor.warnings+(editor.display_note and 1 or 0)
+    local diagnostics=#editor.errors>0 and (#editor.errors.." errors, "..notes.." warnings") or notes>0 and (notes.." warnings") or "No problems"
+    local offered={};for _,name in ipairs(offered_buttons(self)) do offered[name]=true end
+    local sel=editor.selection and find(editor.selection)
+    local f=self.field
+    if self.ui.error_selection~=editor.selection then self.ui_error=nil;self.ui.error_selection=editor.selection end
+    local fields,actions,disabled={},{},{}
+    if sel and (sel.type=="prefab" or sel.type=="curve" or sel.type=="label") and #editor.selected_ids()==1 then
+        for i,fd in ipairs(param_rows(sel)) do
+            local name="param_"..i
+            local value=sel.type=="prefab" and (fd.choices and sel.params[fd.key] or fd.integer and string.format("%d",sel.params[fd.key]) or string.format(fd.unit=="deg" and "%.1f" or "%.2f",sel.params[fd.key])) or sel.type=="label" and sel.text or (editor.anchor and sel.anchors[editor.anchor.i].mode or "")
+            local focused=f and ((f.param==fd.key and f.id==sel.id) or (sel.type=="label" and f.label==sel.id))
+            if focused then value=(f.all and "["..f.text.."]" or f.text.."_") end
+            fields[#fields+1]={name=name,label=sel.type=="prefab" and sel.kind=="ramp" and fd.key=="length" and "Horizontal length" or fd.label,unit=fd.unit=="" and fd.integer and "count" or fd.unit or "",value=value,choices=fd.choices or sel.type=="curve",
+                ramp=sel.type=="prefab" and sel.kind=="ramp" and fd.key=="mode",error=focused and f.error or self.ui_error and self.ui_error.key==fd.key and self.ui_error.message or nil}
+            if not fd.choices and sel.type=="prefab" then
+                for _,sign in ipairs({-1,1}) do
+                    local step=fd.integer and 1 or fd.unit=="deg" and 1 or .1
+                    if not fd.integer then step=step*(self.held.shift and 10 or self.held.alt and .1 or 1) end
+                    local candidate,err=prefab.set(sel.kind,sel.params,fd.key,number_text(sel.params[fd.key]+sign*step))
+                    disabled[(sign<0 and "dec_" or "inc_")..name]=not candidate and err or nil
+                end
+            end
+        end
+    end
+    local labels={direction="Flip direction",delete="Delete [Del]",split="Split here [K]",connect="Connect [J]",disconnect="Disconnect [J]",
+        smooth="Make smooth",smooth_all="Make smooth",corner_all="Make corner",convert="Convert to editable path",mirror_left="Mirror <",mirror_right="Mirror >",paste="Paste [Ctrl+V]"}
+    local st=smooth_state();labels.smooth=st and not st.corner and "Make corner" or "Make smooth"
+    if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
+    if self.confirm_bulk and (self.confirm_bulk.key~=table.concat(editor.selected_ids(),",") or self.confirm_bulk.revision~=e.revision or editor.point_count()>=2) then self.confirm_bulk=nil end
+    if self.confirm_convert then labels.convert="Sure? Convert" end
+    if self.confirm_bulk then labels.smooth_all="Sure? Make smooth" end
+    for _,name in ipairs({"direction","split","connect","disconnect","smooth","smooth_all","corner_all","mirror_left","mirror_right","convert","paste","delete"}) do
+        if offered[name] then actions[#actions+1]={name=name,label=labels[name]} end
+    end
+    local list=self.library or {};local library_rows,template_rows,problems={},{},{}
+    local page=self.page or 0
+    for i=1,ROWS do
+        local l=list[page*ROWS+i]
+        if l then library_rows[#library_rows+1]={title=(l.key==editor.key() and "* " or "")..l.name.."  "..os.date("%Y-%m-%d",l.time),remove=l.key~=editor.key(),confirm=self.confirm_delete==l.key} end
+    end
+    for i=(self.tpl_page or 0)*TEMPLATE_ROWS+1,math.min(#self.templates,((self.tpl_page or 0)+1)*TEMPLATE_ROWS) do
+        local name=self.templates[i];local id=name:sub(10);local d=stations.resource(id)
+        template_rows[#template_rows+1]={name=name,title=(d and d.name or id).." ("..id..")"}
+    end
+    for i=1,WARN_ROWS do
+        local r=rows[(self.warn_page or 0)*WARN_ROWS+i]
+        if r then problems[#problems+1]={text=r.text,error=r.error,located=r.target~=nil} end
+    end
+    local description=describe(self)
+    -- Keep familiar explanation text for paths/multi-point selection. Prefab forms need a compact
+    -- identity/connection summary so the editable values take precedence over repeated descriptions.
+    if sel and sel.type=="prefab" and #editor.selected_ids()==1 then
+        local next,prev=doc_lib.links(e)
+        description=prefab.name(sel.kind).."  "..sel.id.."\n"..((prev[sel.id] and 1 or 0)+(next[sel.id] and 1 or 0)).." connections"
+        if sel.kind=="ramp" then description=description.."\n"..prefab.derived(sel)[1].."\nEntry fixed; run follows exit." end
+    elseif not editor.selection then description="Level\nNothing selected" end
+    local status=editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"
+    local hint=editor.message or ""
+    if (self.overlay.dropped or 0)>0 then hint=(hint~="" and hint.." | " or "").."Zoom in to see every point." end
+    local d={k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.param and not f.label and not f.speed and f.text or editor.doc.name,
+        status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
+        description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
+        readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
+        name_error=f and not f.param and not f.label and not f.speed and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        field=f and {key=f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
+        modal=editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and "open" or self.warnings_open and "warnings" or nil,
+        help={HELP_LEFT,HELP_RIGHT},conflict=editor.conflict and ("The compiled geometry differs from its source:\n"..editor.conflict.summary.."\nRecompile from source, or keep the compiled geometry as editable lines. Connections are not kept in the line copy.") or "",
+        library_title=self.library_error and "My levels: "..self.library_error or "My levels ("..#list..", newest first)",library_rows=library_rows,template_rows=template_rows,problems=problems,
+        page=page,tpl_page=self.tpl_page or 0,warn_page=self.warn_page or 0,library_more=(page+1)*ROWS<#list,template_more=((self.tpl_page or 0)+1)*TEMPLATE_ROWS<#self.templates,warning_more=((self.warn_page or 0)+1)*WARN_ROWS<#rows}
+    for _,kind in ipairs(prefab.ORDER) do d.full_names[kind]=prefab.name(kind);d.names[kind]=kind=="kicker" and "Kicker" or kind=="wave" and "Wave" or kind=="gap" and "Gap" or prefab.name(kind) end
+    editor_ui.render(self.ui,d)
+    self.buttons=self.ui.buttons
+    if self.buttons.inc_test_speed then self.buttons.plus=self.buttons.inc_test_speed;self.buttons.minus=self.buttons.dec_test_speed
+        self.ui.visible[#self.ui.visible+1]="plus";self.ui.visible[#self.ui.visible+1]="minus"
+    elseif self.buttons.inc_speed and editor.selection=="start" then
+        self.buttons.plus=self.buttons.inc_speed;self.buttons.minus=self.buttons.dec_speed
+        self.ui.visible[#self.ui.visible+1]="plus";self.ui.visible[#self.ui.visible+1]="minus"
+    end
+    -- The legacy +/- commands still change the temporary test speed (or START when it is selected).
+    self.dialog_nodes={self.ui.dialog_panel};self.help_nodes={self.ui.help_panel}
 end
 local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
 -- Test state (debug only): the selected prefab's handles and its panel rows as shown.
@@ -2399,16 +2482,26 @@ end
 local function published_rows(self)
     local o=editor.selection and editor.doc and find(editor.selection)
     if not (o and (o.type=="prefab" or o.type=="curve" or o.type=="label") and #editor.selected_ids()==1) then return {} end
+    if o.type=="curve" then
+        if #param_rows(o)==0 then return {} end
+        return {"Anchor "..editor.anchor.i.." tangents: "..o.anchors[editor.anchor.i].mode.."  (click)"}
+    end
     local list={}
-    for i=1,#param_rows(o) do list[i]=gui.get_text(self.buttons["param_"..i].label) end
+    for i,fd in ipairs(param_rows(o)) do
+        -- A logical row is label + displayed value + unit; it remains queryable while scrolled out.
+        local f=self.field
+        local value=o.type=="prefab" and prefab.value(fd,o.params) or o.type=="label" and o.text or editor.anchor and o.anchors[editor.anchor.i].mode or ""
+        local focused=f and f.param==fd.key and f.id==o.id
+        list[i]=fd.label..": "..(focused and (f.all and "["..f.text.."] " or f.text.."_ ")..(fd.unit or "") or value..(fd.choices and "  (click)" or ""))
+    end
     return list
 end
 -- Test state (debug only): the View row's button rectangles in canvas pixels (LE6 overlap check).
 local function view_rects(self)
-    local list={}
+    local list={};local h=select(2,window.get_size());local s=self.ui.scale or 1
     for _,v in ipairs(VIEW) do
-        local p,k=gui.get_screen_position(self.buttons[v[1]].box),self.overlay.k
-        list[#list+1]={name=v[1],x0=p.x-v[3]/2*k,x1=p.x+v[3]/2*k,y0=p.y-10*k,y1=p.y+10*k}
+        local r=self.ui.rects[v[1]]
+        if r then list[#list+1]={name=v[1],x0=r.x*s,x1=(r.x+r.w)*s,y0=h-(r.y+r.h)*s,y1=h-r.y*s} end
     end
     return list
 end
@@ -2425,6 +2518,7 @@ local function publish(self)
     local e=editor.doc and editor.doc.editor
     local buttons={}
     for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
+    for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
     local o=self.overlay
     html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
         message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,camera=editor.camera,screen=editor.map(),
@@ -2435,7 +2529,7 @@ local function publish(self)
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
-        visible=visible_buttons(self),key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=editor.library().list(),page=self.page or 0,
+        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=editor.library().list(),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
         prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,
@@ -2466,145 +2560,18 @@ function update(self,dt)
     end
     local edit_mode=editor.mode=="edit" and editor.doc~=nil
     self.panel_open=edit_mode and html5 and html5.run("String(!!window.riderCustom?.visible)")=="true"
-    for _,n in ipairs(self.edit_nodes) do gui.set_enabled(n,edit_mode) end
-    gui.set_enabled(self.hint,not edit_mode);gui.set_enabled(self.play_message,not edit_mode)
-    gui.set_text(self.play_message,not edit_mode and editor.message or "")
+    if self.clear_edit~=edit_mode then
+        self.clear_edit=edit_mode
+        msg.post("@render:","clear_color",{color=edit_mode and editor_ui.c.canvas or vmath.vector4(sys.get_config_number("render.clear_color_red",0),sys.get_config_number("render.clear_color_green",0),sys.get_config_number("render.clear_color_blue",0),sys.get_config_number("render.clear_color_alpha",0))})
+    end
     if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
     editor.sync()
     if edit_mode then
+        editor_ui.size(self.ui)
         if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
         local e=editor.doc.editor
-        -- Save status (R12): Unsaved / Saving... / Saved / Save failed; a copy that was never edited is not in My levels.
-        local status=editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"
-        if not editor.key() and not editor.store[editor.opened] then status=status.." (copy)" end
-        if self.field and not self.field.param and not self.field.label then
-            gui.set_text(self.title,self.field.all and "Name: ["..self.field.text.."]  (type to replace)" or "Name: "..self.field.text.."_")
-            gui.set_color(self.title,C.hover)
-        else
-            gui.set_text(self.title,string.format("%s | %s",shorten(editor.doc.name,24),shorten(status,36)))
-            gui.set_color(self.title,vmath.vector4(1,1,1,1))
-        end
-        -- A label's text field shows on the canvas while typing (the edit world draws it); Enter commits it.
         local f=self.field
         editor.label_preview=f and f.label and not f.param and {id=f.label,text=f.text} or nil
-        local description=describe(self)
-        gui.set_text(self.properties,description)
-        self.description_lines=select(2,description:gsub("\n",""))+1
-        gui.set_text(self.message,editor.message or "")
-        local p=self.cursor
-        local snapped=self.snapped and self.snapped.kind~="free" and (drawing_tool() or self.drag) and " -> "..self.snapped.kind or ""
-        gui.set_text(self.status,string.format("x %s m  y %s m | zoom %.2f | %s | %s%s | %d objects | %s",p and string.format("%.2f",p[1]) or "-",p and string.format("%.2f",p[2]) or "-",
-            editor.camera.zoom,editor.tool,snap_mode(self),snapped,#e.objects,editor.problem and "Play blocked" or "Ready to play")
-            ..((self.overlay.dropped or 0)>0 and " | zoom in to see every point" or ""))
-        -- The edit world's display note (large drafts, R7) is listed as a warning.
-        local notes={unpack(editor.warnings)}
-        if editor.display_note then table.insert(notes,1,editor.display_note) end
-        local errors,warnings=#editor.errors,#notes
-        local function plural(n,word) return n.." "..word..(n==1 and "" or "s") end
-        gui.set_text(self.buttons.warnings.label,errors>0 and plural(errors,"error")..", "..warnings.." w." or plural(warnings,"warning"))
-        gui.set_color(self.buttons.warnings.box,errors>0 and vmath.vector4(0.5,0.15,0.12,1) or warnings>0 and vmath.vector4(0.45,0.36,0.1,1) or BUTTON)
-        -- The list (LE6): one clickable row per message, WARN_ROWS per page; a row with a source shows it.
-        local rows=problem_rows()
-        self.problem_rows=rows
-        self.warn_page=math.max(0,math.min(self.warn_page or 0,math.ceil(#rows/WARN_ROWS)-1))
-        local wp=self.warn_page
-        local shown_rows=math.max(0,math.min(WARN_ROWS,#rows-wp*WARN_ROWS))
-        gui.set_text(self.warning_text,#rows==0 and "No errors or warnings." or
-            string.format("%s, %s%s: click a row to show it",plural(errors,"error"),plural(warnings,"warning"),#rows>WARN_ROWS and string.format(" (%d-%d)",wp*WARN_ROWS+1,wp*WARN_ROWS+shown_rows) or ""))
-        for i=1,WARN_ROWS do
-            local r=rows[wp*WARN_ROWS+i]
-            if r then
-                local located=r.target~=nil
-                gui.set_text(self.buttons["warn_"..i].label,(r.error and "Error: " or "Warning: ")..shorten(r.text,135)..(located and "  -> show" or ""))
-            end
-        end
-        local top,bottom=478,458-shown_rows*22
-        gui.set_position(self.warning_panel,vmath.vector3(430,(top+bottom)/2,0));gui.set_size(self.warning_panel,vmath.vector3(640,top-bottom,0))
-        gui.set_enabled(self.warning_panel,self.warnings_open or false);gui.set_enabled(self.warning_text,self.warnings_open or false)
-        for _,n in ipairs(self.dialog_nodes) do gui.set_enabled(n,self.open_dialog or false) end
-        for _,n in ipairs(self.conflict_nodes) do gui.set_enabled(n,editor.conflict~=nil) end
-        for _,n in ipairs(self.help_nodes) do gui.set_enabled(n,self.help_open or false) end
-        -- Text nodes draw above later boxes, so the panel texts behind the help overlay are hidden while it is open.
-        for _,n in ipairs({self.properties,self.status,self.message}) do gui.set_enabled(n,not self.help_open) end
-        if editor.conflict then
-            gui.set_text(self.conflict_text,"The compiled geometry in this level differs from its editor source:\n"..editor.conflict.summary..
-                "\nRecompile from source, or keep the compiled geometry as editable lines (connections are not kept).")
-        end
-        -- Another document became current (an import, Undo/Redo across documents): dialogs and the name
-        -- field belonged to the previous one. The open list follows saves and deletes while it is shown.
-        if self.last_opened~=editor.opened then
-            self.last_opened=editor.opened
-            self.open_dialog,self.field,self.confirm_delete=false,nil,nil
-        end
-        if self.open_dialog then refresh_library(self) end
-        if self.open_dialog then
-            local list=self.library or {}
-            gui.set_text(self.library_title,self.library_error and "My levels: "..self.library_error or
-                #list==0 and "My levels (none yet: edit a level to save it)" or
-                string.format("My levels (%d-%d of %d, newest first)",self.page*ROWS+1,math.min(#list,(self.page+1)*ROWS),#list))
-            for i=1,ROWS do
-                local l=list[self.page*ROWS+i]
-                if l then
-                    local current=l.key==editor.key()
-                    gui.set_text(self.buttons["lib_"..i].label,(current and "* " or "")..shorten(l.name,22).."  "..os.date("%Y-%m-%d %H:%M",l.time)..(current and " (open)" or ""))
-                    local confirm=self.confirm_delete==l.key
-                    gui.set_text(self.buttons["libdel_"..i].label,confirm and "Sure?" or "Delete")
-                end
-            end
-        end
-        local shown={}
-        for _,name in ipairs(visible_buttons(self)) do shown[name]=true end
-        for name,b in pairs(self.buttons) do
-            gui.set_enabled(b.box,shown[name] or false);gui.set_enabled(b.label,shown[name] or false)
-            if name:match("^libdel_") then
-                local l=self.library and self.library[(self.page or 0)*ROWS+tonumber(name:sub(8))]
-                gui.set_color(b.box,l and self.confirm_delete==l.key and DANGER or BUTTON)
-            elseif name~="warnings" then gui.set_color(b.box,(name=="tool_"..editor.tool or name=="kind_"..editor.prefab_kind) and ACTIVE or BUTTON) end
-        end
-        -- "Sure? Convert" belongs to one prefab and one document state: any edit, Undo or other selection drops it.
-        if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
-        if self.confirm_bulk and (self.confirm_bulk.key~=table.concat(editor.selected_ids(),",") or self.confirm_bulk.revision~=e.revision or editor.point_count()>=2) then self.confirm_bulk=nil end
-        gui.set_text(self.buttons.smooth_all.label,self.confirm_bulk and "Sure? Make smooth" or "Make smooth")
-        gui.set_color(self.buttons.smooth_all.box,self.confirm_bulk and DANGER or BUTTON)
-        local st=smooth_state()
-        gui.set_text(self.buttons.smooth.label,st and not st.corner and "Make corner" or "Make smooth")
-        gui.set_text(self.buttons.convert.label,self.confirm_convert and self.confirm_convert==editor.selection and "Sure? Convert" or "Convert to editable path")
-        gui.set_color(self.buttons.convert.box,self.confirm_convert and self.confirm_convert==editor.selection and DANGER or BUTTON)
-        -- A selected prefab's fields: label and value, the focused one as an edit field.
-        local sel=editor.selection and find(editor.selection)
-        if sel and sel.type=="curve" and editor.anchor and editor.anchor.id==sel.id and sel.anchors[editor.anchor.i] then
-            gui.set_text(self.buttons.param_1.label,"Anchor "..editor.anchor.i.." tangents: "..sel.anchors[editor.anchor.i].mode.."  (click)")
-            gui.set_color(self.buttons.param_1.box,BUTTON)
-        elseif sel and sel.type=="label" then
-            -- A label's text (LE6b), the focused one as an edit field.
-            local f=self.field
-            local focused=f and f.label==sel.id
-            gui.set_text(self.buttons.param_1.label,focused and (f.all and "Text: ["..f.text.."]" or "Text: "..f.text.."_") or "Text: "..shorten(sel.text,26).."  (click)")
-            gui.set_color(self.buttons.param_1.box,focused and ACTIVE or BUTTON)
-        elseif sel and sel.type=="prefab" then
-            local f=self.field
-            for i,fd in ipairs(param_rows(sel)) do
-                local b=self.buttons["param_"..i]
-                local focused=f and f.param==fd.key and f.id==sel.id
-                gui.set_text(b.label,focused and (f.all and fd.label..": ["..f.text.."] "..fd.unit or fd.label..": "..f.text.."_ "..fd.unit)
-                    or fd.label..": "..prefab.value(fd,sel.params)..(fd.choices and "  (click)" or ""))
-                gui.set_color(b.box,focused and ACTIVE or BUTTON)
-            end
-        end
-        -- Warning rows by severity; view buttons dimmed while they have nothing to do (LE6).
-        for i=1,WARN_ROWS do
-            local r=rows[wp*WARN_ROWS+i]
-            gui.set_color(self.buttons["warn_"..i].box,r and r.error and vmath.vector4(0.35,0.12,0.1,1) or vmath.vector4(0.3,0.25,0.08,1))
-        end
-        local idle={view_centre=not has_selection(),view_test=editor.last_test_start()==nil}
-        for _,v in ipairs(VIEW) do
-            local b=self.buttons[v[1]]
-            local on=(v[1]=="view_bounds" and editor.show_bounds) or (v[1]=="view_ghost" and editor.show_ghost) or (v[1]=="view_help" and self.help_open)
-            gui.set_color(b.box,on and ACTIVE or idle[v[1]] and DIM or BUTTON)
-            gui.set_color(b.label,vmath.vector4(1,1,1,idle[v[1]] and 0.45 or 1))
-        end
-        self.tpl_page=math.max(0,math.min(self.tpl_page or 0,math.ceil(#self.templates/TEMPLATE_ROWS)-1))
-        layout(self,shown)
         -- After any document change (edit, Undo/Redo, another document) hover is picked again at the cursor.
         local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
         if key~=self.seen then
@@ -2620,11 +2587,18 @@ function update(self,dt)
             self.place=editor.tool=="prefab" and self.cursor and placement(self,self.cursor) or nil
         end
         draw_overlay(self)
+        render_ui(self)
         self.overlay_shown=true
     elseif self.overlay_shown then
         self.overlay_shown=false
+        editor_ui.hide(self.ui)
         overlay.hide(self.overlay)
         show_silhouette(self.overlay,self.ghost,nil);show_silhouette(self.overlay,self.last_ghost,nil)
+    end
+    if not edit_mode then
+        local a,b=gui.get_screen_position(self.overlay.probe0),gui.get_screen_position(self.overlay.probe1)
+        self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
+        editor_ui.play(self.ui,self.overlay.k,editor.message)
     end
     -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
     -- change or every 0.25 s, so the published state costs the driven world little.

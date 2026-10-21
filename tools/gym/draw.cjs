@@ -34,9 +34,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  const at=async p=>click(await world(p));
+  const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
   async function dblclick(p){await pointer.dblclick(page,await world(p));}
-  async function drag(from,to,mods=[],steps=5){
+  async function drag(from,to,mods=[],steps=5){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,from);
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(const m of mods)await page.keyboard.down(m);
@@ -45,7 +45,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const m of mods)await page.keyboard.up(m);
    await pointer.frames(page);
   }
-  async function button(name,mods){const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
+  async function button(name,mods){await require('./editor_ui_target.cjs').reveal(page,name);const b=(await ed()).buttons[name];await click(await canvas(b.x,b.y),mods);}
   async function edit(){await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.view&&window.riderEditor.screen,null,{timeout:20000});await page.waitForTimeout(150);return ed();}
   async function played(id){
    const after=(await ed())?.view?.generation??0;
@@ -71,6 +71,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // 2. Draw a ramp-gap-landing course on the 0.5 m grid (R6): a run-up, a ramp connected to its free end
   // (connect preview, R5), a 2 m gap and a separate landing piece. One connected run compiles into one chain.
+  await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas,{zooms:3,minX:-3.5});
   await key('d');await page.waitForFunction(()=>window.riderEditor.tool==='draw');
   await at([-3.07,1.04]);await page.waitForFunction(()=>window.riderEditor.drawing===1);
   const runEnd=await world([11.93,0.97]);await page.mouse.move(runEnd.x,runEnd.y);
@@ -186,11 +187,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('d');await at([24,4]);await at([24,7]);await at([24,5]);await key('Enter');e=await revision(r0+21);
   assert.ok(e.errors.some(m=>m.includes('doubles back')),JSON.stringify(e.errors));measurements.errors.doubles_back=e.errors[0];
   await button('warnings');await page.waitForFunction(()=>window.riderEditor.warnings_open);
+  await key('Escape'); // Close the modal problem list before editing the underlying document.
   await key('z',['Control']);e=await revision(r0+22);assert.deepEqual(e.errors,[]);await key('Escape');
   cases.push('unsupported_shapes_refused');
 
   // 8b. Box selection (LE3b): a line crossing the box is selected even with both ends outside; a box holding
   // a whole line (and a joint of its neighbour) selects both; a box that touches nothing selects nothing.
+  await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas,{zooms:-3});
   await key('s');const boxes={};
   for(const [name,from,to,expect] of [['crossing',[4,0.2],[6,3],['o2']],['contained',[11.6,0.4],[16.4,2.4],['o2','o3']],['outside',[20,4],[26,6],[]]]){
    await key('Escape');await drag(from,to);await page.waitForTimeout(150);

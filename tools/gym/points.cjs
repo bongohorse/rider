@@ -30,22 +30,22 @@ const TOL=0.005,SEG=0.5;
   }
   const canvas=(x,y)=>page.evaluate(([x,y])=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+x/c.width*r.width,y:r.y+(1-y/c.height)*r.height};},[x,y]);
   async function world(p){const s=(await ed()).screen;return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);}
-  async function hover(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
+  async function hover(p){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  const at=async(p,mods)=>click(await world(p),mods);
+  const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
   async function dblclick(p){await pointer.dblclick(page,await world(p));}
-  async function drag(from,to,steps=6){
+  async function drag(from,to,steps=6){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,from);
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
    await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
-  async function button(name){
+  async function button(name){await require('./editor_ui_target.cjs').reveal(page,name);
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
    const b=e.buttons[name];await click(await canvas(b.x,b.y));
   }
@@ -72,12 +72,7 @@ const TOL=0.005,SEG=0.5;
    await page.keyboard.type(String(value),{delay:40});await page.waitForFunction(v=>window.riderEditor.field===v,String(value));await key('Enter');
    if(rev!==undefined)return revision(rev);return ed();
   }
-  async function frame(){
-   const s=(await ed()).screen,ppm=s.ppm_x/Math.pow(1.2,5);
-   await hover([(240-s.ox-5*ppm)/(s.ppm_x-ppm),2]);
-   for(let i=0;i<5;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
-   await page.waitForFunction(()=>Math.abs(window.riderEditor.screen.ox+5*window.riderEditor.screen.ppm_x-240)<2);
-  }
+  async function frame(){await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas);}
   async function importText(text,name){
    await button('import');await page.waitForFunction(()=>window.riderCustom.visible&&document.getElementById('rider-custom-file'));
    await page.locator('#rider-custom-file').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(text)});
@@ -115,18 +110,13 @@ const TOL=0.005,SEG=0.5;
   const chainOf=f=>JSON.stringify(f.chains);
   const kids=d=>d.objects.map(o=>o.id);
   const pointsOf=o=>o.type==='line'?o.points:o.type==='curve'?o.anchors.map(a=>a.p):null;
-  // Usable canvas area (left tools, top bar and right panel excluded), in canvas pixels.
+  // Use the actual uncovered area from the approved layout, including collapsed panels.
   async function inView(list){
-   const s=(await ed()).screen;
-   for(const p of list){const x=s.ox+p[0]*s.ppm_x,y=s.oy+p[1]*s.ppm_y;assert.ok(x>140&&x<1000&&y>60&&y<660,'outside the view: '+JSON.stringify([p,x,y]));}
+   const e=await ed(),s=e.screen,u=e.usable;
+   for(const p of list){const x=s.ox+p[0]*s.ppm_x,y=s.oy+p[1]*s.ppm_y;assert.ok(x>u.x0&&x<u.x1&&y>u.y0&&y<u.y1,'outside the view: '+JSON.stringify([p,x,y,u]));}
   }
-  // Zooms out (wheel steps around a fixed point) until x0..x1 fits the usable area, with x0 near its left.
-  async function fit(x0,x1,y){
-   const s=(await ed()).screen;let n=0;while(s.ppm_x/Math.pow(1.2,n)*(x1-x0)>780)n++;
-   const ppm=s.ppm_x/Math.pow(1.2,n),x=n?(180-s.ox-x0*ppm)/(s.ppm_x-ppm):x0;
-   const z0=(await ed()).camera.zoom;await hover([x,y]);for(let i=0;i<n;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
-   await page.waitForFunction(([z,n])=>window.riderEditor.camera.zoom<=z/Math.pow(1.2,n)*1.0001,[z0,n]);await page.waitForTimeout(150);
-  }
+  // The shipped Fit action frames all authored geometry, leaving these box corners in its padding.
+  async function fit(){await key('Home');await pointer.frames(page);}
   // A compiled point of o near x (on the object's body, away from its points).
   const bodyAt=async(id,x)=>{const pts=(await paths())[id];return pts.reduce((b,q)=>Math.abs(q[0]-x)<Math.abs(b[0]-x)?q:b);};
   const pointList=e=>e.points.map(p=>p.id+':'+p.i);
