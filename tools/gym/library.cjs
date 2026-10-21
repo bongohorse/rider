@@ -41,7 +41,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
    await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
-  async function button(name){
+  async function button(name){await require('./editor_ui_target.cjs').reveal(page,name);
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
    const b=e.buttons[name];await click(await canvas(b.x,b.y));
   }
@@ -138,6 +138,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   cases.push('copy_paste_keeps_internal_connections');
 
   // 4. Change the pasted passage, reload, continue: the editor reopens the level with every change.
+  await key('Home');
   const end=line(d,'o5').points[1];
   await key('Escape');await drag(end,[end[0],end[1]+1]);await revision(r0+6);d=await doc();
   assert.deepEqual(line(d,'o5').points[1],[end[0],end[1]+1]);
@@ -175,7 +176,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(file.kind,undefined);assert.equal(shape(file.editor),kicker.shape);assert.equal(file.start_speed,1);
   assert.equal(await page.evaluate(()=>document.getElementById('rider-export-text').value),text);
   // While the panel is open the editor takes no input: a canvas click neither selects nor edits.
-  const rx=e.revision;await at([5,0]);e=await ed();
+  const rx=e.revision;await click(await canvas(240,400));e=await ed();
   assert.equal(e.selection,'');assert.equal(e.revision,rx);assert.equal(e.message,'Close the Import/Export panel first.');
   await page.getByRole('button',{name:'Close export',exact:true}).click();await refocused();
   e=await importText(text,'my-level-1.json');assert.ok(e.message.startsWith('Imported'),e.message);

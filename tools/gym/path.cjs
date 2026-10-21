@@ -29,22 +29,22 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   }
   const canvas=(x,y)=>page.evaluate(([x,y])=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+x/c.width*r.width,y:r.y+(1-y/c.height)*r.height};},[x,y]);
   async function world(p){const s=(await ed()).screen;return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);}
-  async function hover(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
+  async function hover(p){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  const at=async(p,mods)=>click(await world(p),mods);
+  const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
   async function dblclick(p){await pointer.dblclick(page,await world(p));}
-  async function drag(from,to,steps=6){
+  async function drag(from,to,steps=6){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,from);
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}
    await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
   }
-  async function button(name){
+  async function button(name){await require('./editor_ui_target.cjs').reveal(page,name);
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
    const b=e.buttons[name];await click(await canvas(b.x,b.y));
   }
@@ -71,12 +71,7 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
    await page.keyboard.type(String(value),{delay:40});await page.waitForFunction(v=>window.riderEditor.field===v,String(value));await key('Enter');
    if(rev!==undefined)return revision(rev);return ed();
   }
-  async function frame(){
-   const s=(await ed()).screen,ppm=s.ppm_x/Math.pow(1.2,5);
-   await hover([(240-s.ox-5*ppm)/(s.ppm_x-ppm),2]);
-   for(let i=0;i<5;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
-   await page.waitForFunction(()=>Math.abs(window.riderEditor.screen.ox+5*window.riderEditor.screen.ppm_x-240)<2);
-  }
+  async function frame(){await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas);}
   async function importText(text,name){
    await button('import');await page.waitForFunction(()=>window.riderCustom.visible&&document.getElementById('rider-custom-file'));
    await page.locator('#rider-custom-file').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(text)});

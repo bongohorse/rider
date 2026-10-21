@@ -8,8 +8,8 @@ local doc_lib=require "main.gym.editor_doc"
 local stations=require "main.gym.stations"
 local socket=require "socket"
 local M={}
-local SELECTED=vmath.vector4(1,0.95,0.35,1)
-local HOVER=vmath.vector4(0.55,0.8,1,1)
+local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
+local HOVER=vmath.vector4(0.8353,0.9529,0.9137,1)
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).
 local function count(v,ids,label)
@@ -195,6 +195,7 @@ function M.build(self)
     editor.drawn_labels=v.label_text
     v.start=start_marker(v,e.start.position)
     if e.finish then v.finish=finish_marker(v,e.finish) end
+    v.opened=editor.opened
     self.view=v
     editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#e.objects,generation=self.session_generation,simplified=editor.display_note~=nil}
 end
@@ -213,7 +214,7 @@ function M.update(self)
     local c=editor.camera
     go.set_position(vmath.vector3(c.x/scale,c.y/scale,500),"/camera")
     go.set("/camera#camera","orthographic_zoom",c.zoom)
-    editor.screen=mapping(c)
+    editor.screen=mapping(c);editor.screen.opened=v.opened
     readable(v,c.zoom)
     local e=editor.doc.editor
     -- A structural change (new or deleted objects or points, template) reloads this world through the

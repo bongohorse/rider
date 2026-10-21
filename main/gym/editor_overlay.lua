@@ -67,11 +67,19 @@ end
 function M.handle(o,p,color,size,diamond)
     local n=take(o,"handles")
     if not n then return end
+    gui.set_size_mode(n,gui.SIZE_MODE_MANUAL)
+    gui.set_texture(n,"editor_solid")
     gui.set_screen_position(n,vmath.vector3(p[1],p[2],0))
     gui.set_size(n,vmath.vector3(size*o.s/o.k,size*o.s/o.k,0))
     gui.set_euler(n,vmath.vector3(0,0,diamond and 45 or 0))
     gui.set_color(n,color)
     return n
+end
+-- Source joints use a ring plus square centre, free ends a hollow ring (A1b).
+function M.endpoint(o,p,connected,joint,free)
+    local n=M.handle(o,p,connected and joint or free,12,false)
+    if n then gui.set_texture(n,"editor_ring") end
+    if connected then M.handle(o,p,joint,4,false) end
 end
 function M.snap(o,p,color)
     gui.set_enabled(o.snap,p~=nil)
@@ -81,11 +89,17 @@ function M.snap(o,p,color)
     gui.set_euler(o.snap,vmath.vector3(0,0,45))
     gui.set_color(o.snap,color)
 end
-function M.readout(o,p,text)
+function M.readout(o,p,text,area)
     gui.set_enabled(o.readout,p~=nil and text~="")
     if not p then return end
     gui.set_text(o.readout,text)
-    gui.set_screen_position(o.readout,vmath.vector3(p[1]+14*o.s,p[2]+12*o.s,0))
+    local width=math.max(32,math.min(#text*8*o.s,area.x1-area.x0-16*o.s))
+    local height=math.max(20,math.ceil(#text*8*o.s/width)*20)*o.s
+    gui.set_line_break(o.readout,true)
+    gui.set_size(o.readout,vmath.vector3(width/o.s,height/o.s,0))
+    local x=math.max(area.x0+8*o.s,math.min(p[1]+14*o.s,area.x1-width-8*o.s))
+    local y=math.max(area.y0+8*o.s,math.min(p[2]+12*o.s,area.y1-height-8*o.s))
+    gui.set_screen_position(o.readout,vmath.vector3(x,y,0))
 end
 -- Grid lines for the visible area. map: world -> canvas mapping; w, h: canvas size in pixels.
 function M.grid(o,map,w,h,step)

@@ -403,6 +403,17 @@ function update(self, dt)
                 local c=b2d.world.get_counters(b2d.body.get_world(self.terrain))
                 html5.run("window.riderWorldCounts="..json.encode({generation=self.session_generation,bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count}))
             end
+            -- A1b budget probe (LE6 runner): counts the components actually created by this world.
+            -- Terrain decoration counts include station text/FINISH; the live vehicle has body,
+            -- rider and two wheel sprites, plus its currently allocated struts. Replay owns four more.
+            if self.testcase=="le6" and html5 then
+                local v,r=self.vehicle,self.replay
+                local struts=v and v.struts and #v.struts or 0
+                local ghost=r and r.ghost and r.ghost_sprites or 0
+                html5.run("window.riderEditorRuntime="..json.encode({generation=self.session_generation,
+                    sprites=(self.decor_sprites or 0)+(v and 4 or 0)+struts+ghost,labels=self.decor_labels or 0,
+                    decoration=self.decor_sprites or 0,vehicle=v and 4 or 0,struts=struts,replay=ghost}))
+            end
             -- LE1b only: Box2D counters/profile parts and the Lua heap go straight to the page (msg.post caps payloads at 2 KiB).
             if self.testcase=="le1b" and html5 then
                 local world=b2d.body.get_world(self.terrain)

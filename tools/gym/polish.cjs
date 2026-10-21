@@ -37,7 +37,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>click(await world(p),mods);
-  async function button(name){
+  async function button(name){await require('./editor_ui_target.cjs').reveal(page,name);
+   if(/^warn_\d+$/.test(name)&&!(await ed()).warnings_open){await button('warnings');await page.waitForFunction(()=>window.riderEditor.warnings_open);}
    const e=await ed();assert.ok(e.visible.includes(name),name+' not visible: '+e.visible.join(','));
    const b=e.buttons[name];await click(await canvas(b.x,b.y));
   }
@@ -146,6 +147,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const fillX=(x[1]-x[0])*e.screen.ppm_x/(e.usable.x1-e.usable.x0),fillY=(x[3]-x[2])*e.screen.ppm_y/(e.usable.y1-e.usable.y0);
   assert.ok(near(Math.max(fillX,fillY),0.8,0.005),JSON.stringify({fillX,fillY}));
   const fitted=e.camera;
+  {const u=e.usable,p=await canvas((u.x0+u.x1)/2,(u.y0+u.y1)/2);await page.mouse.move(p.x,p.y);}
   for(let i=0;i<4;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}
   e=await settle();assert.ok(e.camera.zoom>fitted.zoom*1.5,'zoomed in');
   await button('view_fit');e=await settle();
@@ -172,7 +174,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Escape');await key('Home');await at([47,0]);await at([80,5],['Shift']);e=await settle();assert.deepEqual(e.selected.sort(),['o3','o4']);
   await key('Delete');e=await revision(before.revision+1);e=await settle();
   assert.equal(e.problem,'');
-  await hover([12,3]);await key('f');await played('le6-nav');
+  await key('Home');await hover([12,3]);await key('f');await played('le6-nav');
   await key('e');e=await edit();
   assert.ok(e.last_test&&near(e.last_test[0],12,0.05)&&near(e.last_test[1],0.9,0.01),JSON.stringify(e.last_test));
   const launched=e.last_test;
@@ -193,6 +195,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   before=await snapshot();
   await button('view_bounds');e=await settle();
   assert.equal(e.show_bounds,true);assert.ok([-10,40,-10,21.68].every((v,i)=>near(e.bounds[i],v,1e-9)),JSON.stringify(e.bounds));
+  {const u=e.usable,p=await canvas((u.x0+u.x1)/2,(u.y0+u.y1)/2);await page.mouse.move(p.x,p.y);}
   for(let i=0;i<8;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(60);}
   e=await settle();assert.equal(e.overlay.bounds,4,'the whole bounds rectangle is drawn when it is in view');
   await button('view_bounds');e=await settle();assert.equal(e.show_bounds,false);assert.equal(e.overlay.bounds,0);
@@ -417,6 +420,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('h');await page.screenshot({path:path.join(out,'polish-help.png')});await key('h');
   cases.push('readouts_start_drag_units');
 
+  await require('./editor_ui_checks.cjs')({page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements});
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));

@@ -2,6 +2,8 @@
 
 Static design proposal for [#183](https://github.com/bongohorse/rider/issues/183), based on Rider `0953bf048a34948542f53c657f278f685835f1fc`. These images are mockups, not screenshots of an implemented editor. The binding target specification, inspection findings, controls, visual tokens and budget estimate are in the [contract's screen-layout section](../contracts/level-editor.md#editor-a1a-layout-proposal-183).
 
+Actual implementation screenshots for #171: [runtime gallery](runtime/README.md).
+
 **Contents:** [Build](#build) · [Selected Ramp](#selected-ramp) · [Sources and reproduction](#sources-and-reproduction)
 
 ## Build
