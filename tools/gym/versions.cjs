@@ -59,7 +59,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function saved(){await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&!window.riderEditor.versions_busy);await idle();return ed();}
   async function versions(){if(!(await ed()).versions_open)await button('versions');await page.waitForTimeout(120);return (await ed()).versions;}
   async function close(){if((await ed()).open_dialog)await button('dialog_close');}
-  async function named(name){await versions();await button('snapshot');await page.keyboard.type(name,{delay:30});await key('Enter');await saved();return (await versions()).find(v=>v.named&&v.name===name);}
+  async function named(name,confirm='Enter'){await versions();await button('snapshot');await page.keyboard.type(name,{delay:30});await key(confirm);await saved();return (await versions()).find(v=>v.named&&v.name===name);}
   async function restore(id){await versions();let e=await ed(),i=e.versions.findIndex(v=>v.id===id);assert.ok(i>=0);while(i>=6){await button('versions_next');i-=6;}await button('restore_'+(i+1));await page.waitForTimeout(200);}
   let token=0;
   async function request(r){r={...r,token:++token};await page.evaluate(r=>{window.riderVersionResult=null;window.riderVersionRequest=r;},r);await page.waitForFunction(t=>window.riderVersionResult?.token===t,r.token);return page.evaluate(()=>window.riderVersionResult);}
@@ -72,7 +72,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.goto(base+'?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   await importText(JSON.stringify(fixture),'versions.json');e=await saved();const levelKey=e.key;
-  const original=shape(await doc()),first=await named('First connected course');assert.ok(first);
+  const original=shape(await doc()),first=await named('First connected course','Tab');assert.ok(first);assert.equal((await ed()).field,false,'Tab must not focus a hidden field behind Versions');assert.equal((await ed()).name,fixture.name);
   await close();await button('rename');await page.keyboard.type('Changed course',{delay:60});await key('Enter');await saved();
   await at([8,3]);await key('Delete');await saved();const changed=shape(await doc());assert.notEqual(changed,original);
   await idle();await page.reload();await edit();await page.locator('canvas').focus();await saved();

@@ -1960,7 +1960,7 @@ function on_input(self,action_id,action)
                             if not list[next].choices then param_click(self,next);break end
                         end
                     end
-                elseif not f.object and not f.search and (speed or not f.label) then
+                elseif not f.snapshot and not f.object and not f.search and (speed or not f.label) then
                     on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
                 end
             end
