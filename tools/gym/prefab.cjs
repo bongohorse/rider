@@ -329,7 +329,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
   e=await ed();assert.equal(e.mode,'edit');assert.equal(shape(await doc()),shape(big));
   const blocked={message:e.message,sprites:e.view.sprites,gui_nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
-  await page.waitForTimeout(1100);await key('Home');
+  // Blocked Play now selects the budget source. Clear its point-picking state before selecting
+  // the whole line to remove it; the unchanged budget and geometry assertions still apply.
+  await page.waitForTimeout(1100);await key('Escape');await key('Home');
   await at([30,-8]);await page.waitForFunction(n=>window.riderEditor.selection==='o'+n,n);
   const r4=e.revision;await key('Delete');e=await revision(r4+1);assert.equal(e.objects,254);assert.equal(e.problem,'');
   // Zoom into the Gap before picking it: Fit at 380 m makes neighbouring source points share pixels.
