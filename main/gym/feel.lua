@@ -189,7 +189,8 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     pos.y=position.y+(y-position.y)*(1-math.exp(-vertical_response*dt))
     pos.x,pos.y=inside_x(pos.x),inside(pos.y)
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
-    if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
+    if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(s.ground-target.y)<f.snap_done
+        and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
     local wanted=c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1)
     return pos,zoom+(wanted-zoom)*alpha
 end
