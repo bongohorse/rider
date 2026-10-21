@@ -316,6 +316,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('index cannot be read'));
   e=await ed();assert.equal(e.key,0);
   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  // Observing an unreadable index, including its Open dialog, must let IndexedDB settle.
+  await openDialog();
+  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  assert.deepEqual((await ed()).library,[]);
+  await key('Escape');
   const after=await page.evaluate(()=>({index:['a','b'].map(s=>new TextDecoder().decode(FS.readFile('/data/.rider/custom-index-'+s))),
    files:Object.fromEntries(FS.readdir('/data/.rider').filter(n=>n.startsWith('custom-doc-')).map(n=>[n,Array.from(FS.readFile('/data/.rider/'+n)).join(',')]))}));
   assert.deepEqual(after.index,['not a save file','not a save file']);assert.deepEqual(after.files,levelFiles);

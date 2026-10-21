@@ -502,7 +502,17 @@ end
 local function refresh_library(self)
     local list,err=editor.library().list(),select(2,editor.library().index())
     self.library,self.library_error=list,err
+    self.library_opened,self.library_revision=editor.opened,editor.doc and editor.doc.editor.revision
+    self.library_status,self.library_key=editor.status,editor.key()
     self.page=math.max(0,math.min(self.page or 0,math.floor((#list-1)/ROWS)))
+end
+-- Reads close persistent files too: the pinned HTML5 loader requests an IndexedDB sync on close.
+-- An unreadable index is not cached by storage. Observe it after document/save transitions rather
+-- than on every render/debug frame, so displaying its error cannot keep storage syncing forever.
+local function library_snapshot(self)
+    if not self.library or self.library_opened~=editor.opened or self.library_revision~=(editor.doc and editor.doc.editor.revision)
+        or self.library_status~=editor.status or self.library_key~=editor.key() then refresh_library(self) end
+    return self.library
 end
 local function open_saved(self,key)
     if key==editor.key() then editor.message="This level is already open.";self.open_dialog=false;return end
@@ -2383,7 +2393,7 @@ local function render_ui(self)
             self.frame_opened=nil;editor.touch()
         end
     end
-    if self.open_dialog then refresh_library(self) end
+    if self.open_dialog then library_snapshot(self) end
     local rows=problem_rows();self.problem_rows=rows
     self.warn_page=math.max(0,math.min(self.warn_page or 0,math.max(0,math.ceil(#rows/WARN_ROWS)-1)))
     self.tpl_page=math.max(0,math.min(self.tpl_page or 0,math.max(0,math.ceil(#self.templates/TEMPLATE_ROWS)-1)))
@@ -2529,7 +2539,7 @@ local function publish(self)
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
-        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=editor.library().list(),page=self.page or 0,
+        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
         prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,
