@@ -222,7 +222,63 @@ function M.feel_tick(self,dt)
             local pos=c.camera(fall,v3(0,-2000,0),v3(0,-1500,0),false,v3(0,250,500),1,270,1/60)
             assert(pos.y-(-2000)<=270-f.margin_bottom+1e-3,"Camera lost a falling chassis")
             for _=1,600 do pos=c.camera(fall,v3(0,-1954,0),v3(0,0,0),true,pos,1,270,1/60) end
-            assert(not fall.snapping and math.abs(pos.y-(-1954+c.values.camera_height-f.rest))<f.snap_done,"Camera did not realign after landing")
+            assert(not fall.snapping and math.abs(pos.y-(-1954+math.min(c.values.camera_height-f.rest,270-f.margin_bottom-f.snap_window)))<f.snap_done,"Camera did not realign after landing")
+            -- Signed velocity on each axis, including pure vertical motion and narrow viewports.
+            -- Rotation is deliberately absent from the camera interface.
+            for _,view in ipairs({{480,270},{600,270},{180,400},{160,120}}) do
+                for _,v in ipairs({{600,-600},{600,600},{-600,-600},{-600,600},{0,-900},{0,900}}) do
+                    local state,cam=c.camera_start(0,46,0,0,view[2])
+                    local target=v3(0,46,0)
+                    assert(math.abs(cam.y-target.y)<view[2],"Camera start outside narrow view")
+                    for i=1,120 do
+                        target=target+v3(v[1]/60,v[2]/60,0)
+                        cam=c.camera(state,target,v3(v[1],v[2],0),i<60,cam,1,view[2],1/60,view[1])
+                        assert(math.abs(cam.x-target.x)<view[1] and math.abs(cam.y-target.y)<view[2],"Camera lost vehicle at aspect ratio")
+                        if i>=45 then
+                            assert((cam.y-target.y)*v[2]>0,"Vertical look-ahead opposed motion")
+                            if v[1]~=0 then assert((cam.x-target.x)*v[1]>0,"Horizontal look-ahead opposed motion") end
+                        end
+                    end
+                end
+            end
+            -- Suspension and small waves must leave the vertical camera still.
+            for _,half in ipairs({270,243,400,120}) do
+                local quiet,cam=c.camera_start(0,46,0,0,half)
+                local rest_y=cam.y
+                for i=1,360 do
+                    cam=c.camera(quiet,v3(0,46+5*math.sin(i/10),0),v3(0,15*math.cos(i/10),0),true,cam,1,half,1/60,480)
+                    assert(math.abs(cam.y-rest_y)<0.001,"Suspension moved the vertical camera")
+                end
+            end
+            -- A repeated crest/dip must pan more gently than the previous vertical tuning.
+            -- Compare identical motion, after settling; the direction/fall cases above still require visibility.
+            local sink,scale,deadband,full=f.sink_rate,f.vertical_response_scale,f.vertical_deadband,f.vertical_full
+            local function bounce(rate,response,dead,threshold)
+                f.sink_rate,f.vertical_response_scale=rate,response
+                f.vertical_deadband,f.vertical_full=dead,threshold
+                local state,cam=c.camera_start(0,46,0,0,400)
+                local max_step,max_change,last=0,0,0
+                for i=1,600 do
+                    local t=i/60
+                    local target=v3(600*t,46+60*math.sin(1.8*math.pi*t),0)
+                    local next_cam=c.camera(state,target,v3(600,108*math.pi*math.cos(1.8*math.pi*t),0),true,cam,1,400,1/60,600)
+                    local step=next_cam.y-cam.y
+                    if i>120 then
+                        max_step=math.max(max_step,math.abs(step))
+                        max_change=math.max(max_change,math.abs(step-last))
+                    end
+                    cam,last=next_cam,step
+                end
+                return {step=max_step,change=max_change}
+            end
+            local previous=bounce(8,1,20,200)
+            local first_softening=bounce(3,0.6,20,200)
+            local softened=bounce(sink,scale,deadband,full)
+            f.sink_rate,f.vertical_response_scale=sink,scale
+            f.vertical_deadband,f.vertical_full=deadband,full
+            assert(softened.step<previous.step*0.75 and softened.change<previous.change*0.75,"Vertical camera still hops over repeated crests")
+            assert(softened.step<first_softening.step*0.6 and softened.change<first_softening.change*0.6,"Short hills still drive strong vertical camera changes")
+            print("RIDER_CAMERA_SOFTEN "..json.encode({previous=previous,first_softening=first_softening,softened=softened}))
             self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
             self.drive_cases.camera_direction_zoom=true
