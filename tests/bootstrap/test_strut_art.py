@@ -31,7 +31,7 @@ class StrutArt(unittest.TestCase):
             self.assertEqual(image.tobytes(), ImageOps.flip(image).tobytes())
 
     def test_atlas_and_factory_reference_the_strut(self):
-        self.assertIn('/main/gym/assets/strut.png', (ROOT/'main/gym/assets/gym.atlas').read_text())
+        self.assertIn('/main/gym/assets/car_spring.png', (ROOT/'main/gym/assets/gym.atlas').read_text())
         self.assertIn('/main/gym/strut.sprite', (ROOT/'main/gym/strut.go').read_text())
         self.assertIn('/main/gym/strut.factory', (ROOT/'main/gym/controller.go').read_text())
 

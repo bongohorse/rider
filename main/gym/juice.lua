@@ -13,8 +13,8 @@ local M={}
 -- joint anchor (wheel_x, wheel_y) coincides with the wheel centre at spring rest (local_anchor_b
 -- is the wheel centre), so a strut to it would be ~1.5 u long and invisible.
 M.mount_y=0
--- Local z on the chassis (z 0): in front of the wheels (z 1), behind the rider (local z 2).
-M.z=1.5
+-- Local z on the chassis (0): spring above the body, below the wheel (1).
+M.z=0.5
 local query=html5 and html5.run("new URLSearchParams(location.search).get('struts') || ''") or ""
 M.enabled=not (query=="0" or query=="off")
 local debug=sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="cf3"
@@ -54,6 +54,9 @@ local function probe(self)
     -- spring_rest: strut length at zero joint translation (the travel/compression reference).
     local r={generation=self.session_generation,resets=self.reset_count,enabled=M.enabled,live=live,spring_rest=math.abs(M.mount_y-feel.values.wheel_y),
         created=v.strut_created or 0,deleted=v.strut_deleted or 0,bodies=world.body_count,joints=world.joint_count,shapes=world.shape_count,struts={}}
+    r.layers={rider=go.get_position(v.ids.rider).z+go.get_position(v.ids.chassis).z,
+        body=go.get_position(v.ids.chassis).z,spring=go.get_position(v.ids.chassis).z+M.z,
+        rear=go.get_position(v.ids[1]).z,front=go.get_position(v.ids[2]).z}
     if v.struts then
         local origin,angle=b2d.body.get_position(v.chassis),b2d.body.get_angle(v.chassis)
         local c,sn=math.cos(angle),math.sin(angle)

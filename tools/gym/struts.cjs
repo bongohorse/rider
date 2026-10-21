@@ -22,6 +22,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStruts&&window.riderTelemetry?.sequence>2,{sha,runId});
   }
   function drawn(s,label,tol=1){
+   const z=s.layers;
+   assert(z.rider<z.body && z.body<z.spring && z.spring<Math.min(z.rear,z.front),`${label}: rider/body/spring/wheel layer order ${JSON.stringify(z)}`);
    for(const [i,e] of s.struts.entries()){
     assert(e.length_error<=tol,`${label}: strut ${i+1} length ${e.length} vs mount-wheel ${e.distance}`);
     assert(e.wheel_error<=tol&&e.mount_error<=tol,`${label}: strut ${i+1} ends off by ${e.wheel_error} / ${e.mount_error} u`);
