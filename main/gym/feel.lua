@@ -108,7 +108,8 @@ M.follow={
     margin_side=120,   -- the chassis centre never gets closer to the view's left or right edge
     vertical_deadband=20, -- ignore suspension/standstill speeds below 0.2 m/s
     vertical_full=200, -- at 2 m/s the ground framing fully yields to movement direction
-    sink_rate=8,       -- 1/s: the vertical speed for lead and lag is smoothed at this rate (springs)
+    sink_rate=3,       -- 1/s: delay brief vertical impulses before they move the framing
+    vertical_response_scale=0.6, -- vertical pans ease more slowly than horizontal follow
     settle_speed=20,   -- a realignment ends only below this vertical speed (u/s)
     margin_bottom=100,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
     margin_top=100     -- nor to its top edge
@@ -158,6 +159,7 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     if grounded and math.abs(target.y-s.ground)>f.snap_window then s.snapping=true end
     if grounded and s.snapping then s.ground=target.y end
     local frame=camera_frame(half)
+    local vertical_response=c.camera_response*f.vertical_response_scale
     -- Keep the calm ground window at rest. Both climbing and falling override that framing
     -- progressively: a fixed upward lift must not cancel the downward look-ahead on a slope.
     s.vy=s.vy+(velocity.y-s.vy)*(1-math.exp(-f.sink_rate*dt))
@@ -168,7 +170,7 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local lift=math.min(c.camera_lift,frame-f.snap_window)
     local window=math.max(s.ground+frame,target.y+lift)
     if not grounded then window=math.min(window,target.y+frame+f.snap_window) end
-    local y=window+(target.y-window)*weight+look_y+s.vy/c.camera_response*weight
+    local y=window+(target.y-window)*weight+look_y+s.vy/vertical_response*weight
     -- Hard edges (a narrow view, the smoothing lag): the chassis never leaves the safe part of the view.
     local function inside(v)
         if not half then return v end
@@ -182,6 +184,7 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local alpha=1-math.exp(-c.camera_response*dt)
     -- Clamp the final position on both axes: clamping the target would consume the lag compensation.
     local pos=position+(vmath.vector3(x,y,500)-position)*alpha
+    pos.y=position.y+(y-position.y)*(1-math.exp(-vertical_response*dt))
     pos.x,pos.y=inside_x(pos.x),inside(pos.y)
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
     if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end

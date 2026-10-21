@@ -250,6 +250,31 @@ function M.feel_tick(self,dt)
                     assert(math.abs(cam.y-rest_y)<0.001,"Suspension moved the vertical camera")
                 end
             end
+            -- A repeated crest/dip must pan more gently than the previous vertical tuning.
+            -- Compare identical motion, after settling; the direction/fall cases above still require visibility.
+            local sink,scale=f.sink_rate,f.vertical_response_scale
+            local function bounce(rate,response)
+                f.sink_rate,f.vertical_response_scale=rate,response
+                local state,cam=c.camera_start(0,46,0,0,400)
+                local max_step,max_change,last=0,0,0
+                for i=1,600 do
+                    local t=i/60
+                    local target=v3(600*t,46+30*math.sin(3*math.pi*t),0)
+                    local next_cam=c.camera(state,target,v3(600,90*math.pi*math.cos(3*math.pi*t),0),true,cam,1,400,1/60,600)
+                    local step=next_cam.y-cam.y
+                    if i>120 then
+                        max_step=math.max(max_step,math.abs(step))
+                        max_change=math.max(max_change,math.abs(step-last))
+                    end
+                    cam,last=next_cam,step
+                end
+                return {step=max_step,change=max_change}
+            end
+            local previous=bounce(8,1)
+            local softened=bounce(sink,scale)
+            f.sink_rate,f.vertical_response_scale=sink,scale
+            assert(softened.step<previous.step*0.75 and softened.change<previous.change*0.75,"Vertical camera still hops over repeated crests")
+            print("RIDER_CAMERA_SOFTEN "..json.encode({previous=previous,softened=softened}))
             self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
             self.drive_cases.camera_direction_zoom=true
