@@ -242,11 +242,13 @@ function M.feel_tick(self,dt)
                 end
             end
             -- Suspension and small waves must leave the vertical camera still.
-            local quiet,cam=c.camera_start(0,46,0,0,270)
-            local rest_y=cam.y
-            for i=1,360 do
-                cam=c.camera(quiet,v3(0,46+5*math.sin(i/10),0),v3(0,15*math.cos(i/10),0),true,cam,1,270,1/60,480)
-                assert(math.abs(cam.y-rest_y)<0.001,"Suspension moved the vertical camera")
+            for _,half in ipairs({270,243,400,120}) do
+                local quiet,cam=c.camera_start(0,46,0,0,half)
+                local rest_y=cam.y
+                for i=1,360 do
+                    cam=c.camera(quiet,v3(0,46+5*math.sin(i/10),0),v3(0,15*math.cos(i/10),0),true,cam,1,half,1/60,480)
+                    assert(math.abs(cam.y-rest_y)<0.001,"Suspension moved the vertical camera")
+                end
             end
             self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")

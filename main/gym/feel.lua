@@ -165,7 +165,8 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local weight=M.clamp(speed/(f.vertical_full-f.vertical_deadband),0,1)
     weight=weight*weight*(3-2*weight)
     local look_y=(s.vy<0 and -1 or 1)*look_ahead(speed,1)
-    local window=math.max(s.ground+frame,target.y+c.camera_lift)
+    local lift=math.min(c.camera_lift,frame-f.snap_window)
+    local window=math.max(s.ground+frame,target.y+lift)
     if not grounded then window=math.min(window,target.y+frame+f.snap_window) end
     local y=window+(target.y-window)*weight+look_y+s.vy/c.camera_response*weight
     -- Hard edges (a narrow view, the smoothing lag): the chassis never leaves the safe part of the view.
