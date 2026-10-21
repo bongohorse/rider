@@ -222,7 +222,32 @@ function M.feel_tick(self,dt)
             local pos=c.camera(fall,v3(0,-2000,0),v3(0,-1500,0),false,v3(0,250,500),1,270,1/60)
             assert(pos.y-(-2000)<=270-f.margin_bottom+1e-3,"Camera lost a falling chassis")
             for _=1,600 do pos=c.camera(fall,v3(0,-1954,0),v3(0,0,0),true,pos,1,270,1/60) end
-            assert(not fall.snapping and math.abs(pos.y-(-1954+c.values.camera_height-f.rest))<f.snap_done,"Camera did not realign after landing")
+            assert(not fall.snapping and math.abs(pos.y-(-1954+math.min(c.values.camera_height-f.rest,270-f.margin_bottom-f.snap_window)))<f.snap_done,"Camera did not realign after landing")
+            -- Signed velocity on each axis, including pure vertical motion and narrow viewports.
+            -- Rotation is deliberately absent from the camera interface.
+            for _,view in ipairs({{480,270},{600,270},{180,400},{160,120}}) do
+                for _,v in ipairs({{600,-600},{600,600},{-600,-600},{-600,600},{0,-900},{0,900}}) do
+                    local state,cam=c.camera_start(0,46,0,0,view[2])
+                    local target=v3(0,46,0)
+                    assert(math.abs(cam.y-target.y)<view[2],"Camera start outside narrow view")
+                    for i=1,120 do
+                        target=target+v3(v[1]/60,v[2]/60,0)
+                        cam=c.camera(state,target,v3(v[1],v[2],0),i<60,cam,1,view[2],1/60,view[1])
+                        assert(math.abs(cam.x-target.x)<view[1] and math.abs(cam.y-target.y)<view[2],"Camera lost vehicle at aspect ratio")
+                        if i>=45 then
+                            assert((cam.y-target.y)*v[2]>0,"Vertical look-ahead opposed motion")
+                            if v[1]~=0 then assert((cam.x-target.x)*v[1]>0,"Horizontal look-ahead opposed motion") end
+                        end
+                    end
+                end
+            end
+            -- Suspension and small waves must leave the vertical camera still.
+            local quiet,cam=c.camera_start(0,46,0,0,270)
+            local rest_y=cam.y
+            for i=1,360 do
+                cam=c.camera(quiet,v3(0,46+5*math.sin(i/10),0),v3(0,15*math.cos(i/10),0),true,cam,1,270,1/60,480)
+                assert(math.abs(cam.y-rest_y)<0.001,"Suspension moved the vertical camera")
+            end
             self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
             self.drive_cases.camera_direction_zoom=true
