@@ -4,8 +4,9 @@
 local feel = require "main.gym.feel"
 local M = {}
 M.center_y,M.radius=56,12
--- Hip pivot in chassis space; the sprite sits 16 units above it (rest = old pose).
-M.base=vmath.vector3(0,20,2)
+-- Hip pivot in chassis space; the authored sprite offset keeps its helmet over the head sensor.
+-- Rider behind body (0), spring (0.5) and wheel (1); ahead of replay ghosts (-0.5).
+M.base=vmath.vector3(0,20,-0.1)
 function M.spawn(v)
     v.ids.rider=factory.create("#rider",M.base)
     go.set_parent(v.ids.rider,v.ids.chassis,false)

@@ -1,7 +1,19 @@
 images { image: "/main/gym/assets/checker.png" }
-extrude_borders: 2
-images { image: "/main/gym/assets/chassis.png" }
-images { image: "/main/gym/assets/wheel.png" }
-images { image: "/main/gym/assets/rider.png" }
 images { image: "/main/gym/assets/solid.png" }
-images { image: "/main/gym/assets/strut.png" }
+extrude_borders: 2
+animations {
+  id: "chassis"
+  images { image: "/main/gym/assets/car_body.png" }
+}
+animations {
+  id: "rider"
+  images { image: "/main/gym/assets/car_rider.png" }
+}
+animations {
+  id: "strut"
+  images { image: "/main/gym/assets/car_spring.png" }
+}
+animations {
+  id: "wheel"
+  images { image: "/main/gym/assets/car_wheel.png" }
+}

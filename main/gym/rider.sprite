@@ -1,3 +1,5 @@
 default_animation: "rider"
 material: "/builtins/materials/sprite.material"
 textures { sampler: "texture_sampler" texture: "/main/gym/assets/gym.atlas" }
+size_mode: SIZE_MODE_MANUAL
+size { x: 53.76 y: 64 }
