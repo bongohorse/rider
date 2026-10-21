@@ -252,15 +252,16 @@ function M.feel_tick(self,dt)
             end
             -- A repeated crest/dip must pan more gently than the previous vertical tuning.
             -- Compare identical motion, after settling; the direction/fall cases above still require visibility.
-            local sink,scale=f.sink_rate,f.vertical_response_scale
-            local function bounce(rate,response)
+            local sink,scale,deadband,full=f.sink_rate,f.vertical_response_scale,f.vertical_deadband,f.vertical_full
+            local function bounce(rate,response,dead,threshold)
                 f.sink_rate,f.vertical_response_scale=rate,response
+                f.vertical_deadband,f.vertical_full=dead,threshold
                 local state,cam=c.camera_start(0,46,0,0,400)
                 local max_step,max_change,last=0,0,0
                 for i=1,600 do
                     local t=i/60
-                    local target=v3(600*t,46+30*math.sin(3*math.pi*t),0)
-                    local next_cam=c.camera(state,target,v3(600,90*math.pi*math.cos(3*math.pi*t),0),true,cam,1,400,1/60,600)
+                    local target=v3(600*t,46+60*math.sin(1.8*math.pi*t),0)
+                    local next_cam=c.camera(state,target,v3(600,108*math.pi*math.cos(1.8*math.pi*t),0),true,cam,1,400,1/60,600)
                     local step=next_cam.y-cam.y
                     if i>120 then
                         max_step=math.max(max_step,math.abs(step))
@@ -270,11 +271,14 @@ function M.feel_tick(self,dt)
                 end
                 return {step=max_step,change=max_change}
             end
-            local previous=bounce(8,1)
-            local softened=bounce(sink,scale)
+            local previous=bounce(8,1,20,200)
+            local first_softening=bounce(3,0.6,20,200)
+            local softened=bounce(sink,scale,deadband,full)
             f.sink_rate,f.vertical_response_scale=sink,scale
+            f.vertical_deadband,f.vertical_full=deadband,full
             assert(softened.step<previous.step*0.75 and softened.change<previous.change*0.75,"Vertical camera still hops over repeated crests")
-            print("RIDER_CAMERA_SOFTEN "..json.encode({previous=previous,softened=softened}))
+            assert(softened.step<first_softening.step*0.6 and softened.change<first_softening.change*0.6,"Short hills still drive strong vertical camera changes")
+            print("RIDER_CAMERA_SOFTEN "..json.encode({previous=previous,first_softening=first_softening,softened=softened}))
             self.drive_cases.camera_follow_window=true
             assert(math.abs(go.get("/camera#camera","orthographic_zoom")-self.camera_zoom)<0.001,"Camera zoom was not applied")
             self.drive_cases.camera_direction_zoom=true
