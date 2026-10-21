@@ -214,6 +214,8 @@ jobs:
             cases: 'le5d'
           - group: objects
             cases: 'ea2'
+          - group: versions
+            cases: 'ea3'
           - group: polish
             cases: 'le6'
           - group: struts
@@ -286,6 +288,9 @@ jobs:
       - name: Verify editor object list, naming, visibility and lock protection
         if: contains(format(' {0} ', matrix.cases), ' ea2 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/objects --case ea2
+      - name: Verify editor version restore, backup, failure and storage limits
+        if: contains(format(' {0} ', matrix.cases), ' ea3 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/versions --case ea3
       - name: Verify editor jump-to-problem, navigation, bounds display and paged templates
         if: contains(format(' {0} ', matrix.cases), ' le6 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/polish --case le6
