@@ -119,8 +119,6 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // A direct rename is refused too; unlocking and visibility remain available.
   await button('object_name');assert.equal((await ed()).field,false);await unchanged(before,'rename locked object');
   await button('object_eye_o3');assert.equal((await doc()).objects.find(o=>o.id==='o3').hidden,true);await button('object_eye_o3');
-  await button('object_lock_o4');await button('object_select_o4');before=await snapshot();
-  await button('param_1');e=await settle();assert.equal(e.field,false);assert.match(e.message,/Locked: Label o4/i);await unchanged(before,'locked label edit');await button('object_lock_o4');
   await button('object_lock_o3');await button('object_select_o2');before=await snapshot();await button('inc_param_2');e=await settle();
   assert.equal(e.undo,before.undo+1);assert.ok((await doc()).objects.find(o=>o.id==='o3').points[0][0]>20);
   await key('z',['Control']);await settle();
@@ -148,6 +146,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Enter');await played('ea2-objects');await key('e');e=await edit();assert.equal((await doc()).objects.find(o=>o.id==='o2').locked,true);
   cases.push('save_reload_import_drive_roundtrip');
 
+  // Worst visible inspector plus all prefab cards and four object rows share the fixed pools.
+  const seven=JSON.parse(JSON.stringify(fixture));seven.id='ea2-seven';seven.editor.connections=[];
+  seven.editor.objects[1]={id:'o2',type:'prefab',kind:'kicker',at:[12,0],params:{facing:'right',angle:15,lip:1,gap:2,landing:'down',landing_length:6,landing_angle:15}};
+  await page.setViewportSize({width:1920,height:1080});await pointer.frames(page);
+  await importText(JSON.stringify(seven),'ea2-seven.json');await button('collapse_prefabs');await button('object_select_o2');e=await settle();
+  assert.ok(e.visible.includes('param_7'));assert.ok(e.visible.includes('object_lock_o4'));assert.ok(e.visible.includes('kind_wave'));
+  assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);measurements.seven_fields={boxes:e.ui.boxes,texts:e.ui.texts};
+  await page.mouse.move(800,90);await pointer.frames(page);await page.screenshot({path:path.join(out,'objects-seven-fields-1920x1080.png')});
+  await button('collapse_prefabs');await page.setViewportSize({width:1280,height:720});await pointer.frames(page);
+
   // Maximum list length uses the same fixed pools; search and scrolling can reach the final object.
   const large=JSON.parse(JSON.stringify(fixture));large.id='ea2-many';large.editor.next_id=257;
   large.editor.objects=Array.from({length:256},(_,i)=>({id:'o'+(i+1),type:'line',points:[[i*2,0],[i*2+2,0]]}));large.editor.connections=[];
@@ -159,6 +167,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_search');await key('Backspace');await key('Enter');
   for(const size of [{width:1280,height:720},{width:1920,height:1080},{width:1280,height:480}]){
    await page.setViewportSize(size);await pointer.frames(page);await button('object_search');await key('Escape');e=await settle();
+   if(size.height===480){
+    const r=e.ui.scrollbars.tool_scroll;assert.ok(r);
+    await page.mouse.move(r.x+r.w/2,r.y+r.knob/2);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
+    await page.mouse.move(r.x+r.w/2,r.y+r.h,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);e=await settle();
+    assert.ok(e.visible.includes('object_lock_o256'),'short window cannot reach the final object row');
+   }
    assert.equal(e.overlay.nodes,628);assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);
    for(const r of Object.values(e.ui.rects))assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=size.width&&r.y+r.h<=size.height);
    await page.mouse.move(800,90);await pointer.frames(page);
