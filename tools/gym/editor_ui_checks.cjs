@@ -17,12 +17,63 @@ module.exports=async function uiChecks(h){
  async function field(name,value){await button(name);await page.waitForFunction(()=>window.riderEditor.field!==false);await page.keyboard.type(String(value),{delay:20});await key('Enter');}
  async function panelWheel(delta){const e=await ed(),c=await canvas((e.ui.rects.collapse_properties.x+140)*e.ui.scale,400*e.ui.scale);await page.mouse.move(c.x,c.y);await page.mouse.wheel(0,delta);await pointer.frames(page);}
  let e=await importText(JSON.stringify(base),'ea1-ui.json');await key('Home');
+ const bad=structuredClone(base);bad.id='ea1-error';bad.name='Invalid line';
+ bad.editor.connections=[];bad.editor.next_id=3;
+ bad.editor.objects=[{id:'o1',type:'line',points:[[0,0],[30,0]]},{id:'o2',type:'line',points:[[40,0],[50,0],[44,0]]}];
+ e=await importText(JSON.stringify(bad),'ea1-error.json');
+ assert.ok(e.errors.some(t=>t.includes('doubles back')));assert.equal(e.ui.problem_colour,'error');
+ assert.ok(e.flash,'a new located error must flash without opening Problems');assert.equal(e.selection,'','automatic attention changes the selection');
+ let viewBefore=await snapshot();await button('play');e=await settle();
+ assert.equal(e.mode,'edit');assert.equal(e.warnings_open,false);
+ assert.ok(e.ui.error_banner.includes('Cannot play:')&&e.ui.error_banner.includes('doubles back'),e.ui.error_banner);
+ assert.equal(e.selection,'o2');assert.deepEqual(e.flash,[50,0]);
+ await unchanged(viewBefore,'blocked Play attention');
+ await page.screenshot({path:path.join(out,'editor-a-blocked-play.png')});
+ await key('Delete');await revision(viewBefore.revision+1);e=await settle();
+ assert.equal(e.errors.length,0);assert.equal(e.ui.problem_colour,'normal');assert.equal(e.ui.error_banner,false);
+ await key('z',['Control']);await revision(viewBefore.revision+2);e=await settle();
+ assert.equal(e.ui.problem_colour,'error');assert.ok(e.flash,'Undo restoring an error must flash its source');
+ await key('Enter');e=await settle();assert.ok(e.ui.error_banner.includes('doubles back'));assert.equal(e.mode,'edit');
+ e=await importText(JSON.stringify(base),'ea1-ui.json');await key('Escape');await key('Home');
+ assert.equal(e.ui.error_banner,false,'a new document keeps the previous Play error');
+ viewBefore=await snapshot();await page.setViewportSize({width:1280,height:480});e=await settle();
+ assert.equal(e.ui.scale,1,'short desktop windows must keep control size');
+ assert.ok(e.ui.tool_max_scroll>0&&e.ui.max_scroll>0,'both sidebars need overflow scrolling');
+ assert.ok(e.ui.scrollbars.tool_scroll&&e.ui.scrollbars.scroll,'both scrollbars must be visible');
+ for(const r of [e.ui.tools_panel,e.ui.properties_panel])assert.ok(r.y+r.h<=400,'sidebar covers the footer');
+ async function seekScrollbar(name,bottom){
+  const r=(await ed()).ui.scrollbars[name];assert.ok(r,name+' missing');
+  await page.mouse.move(r.x+r.w/2,r.y+r.knob/2);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
+  await page.mouse.move(r.x+r.w/2,bottom?r.y+r.h-1:r.y+1,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
+ }
+ await page.mouse.move(100,250);
+ for(let i=0;i<4;i++){await page.mouse.wheel(0,120);await pointer.frames(page);}
+ e=await settle();
+ assert.ok(e.ui.tool_scroll>0);assert.ok(e.visible.includes('kind_wave'),'last prefab is unreachable');
+ await seekScrollbar('tool_scroll',false);e=await settle();assert.equal(e.ui.tool_scroll,0);assert.ok(e.visible.includes('tool_select'));
+ await button('rename');assert.notEqual((await ed()).field,false);
+ await seekScrollbar('scroll',true);e=await settle();assert.equal(e.field,false,'scrollbar does not commit valid focused input');assert.ok(e.ui.scroll>0);assert.ok(e.visible.includes('inc_test_speed'));
+ await seekScrollbar('scroll',false);e=await settle();assert.equal(e.ui.scroll,0);
+ await unchanged(viewBefore,'scrollbar drag/wheel and resize');
+ await page.screenshot({path:path.join(out,'editor-a-scrollbars-1280x480.png')});
+ await page.setViewportSize({width:1280,height:720});e=await settle();
+ assert.ok(e.ui.tools_panel.y+e.ui.tools_panel.h<600,'Tools panel has empty solid background');
+ assert.ok(e.ui.properties_panel.y+e.ui.properties_panel.h<600,'Properties panel has empty solid background');
+ assert.equal(e.ui.tool_max_scroll,0);assert.equal(e.ui.max_scroll,0);
+ // The empty area below a short panel belongs to the canvas, including pointer input.
+ const freeBefore=await doc(),freeRevision=(await ed()).revision;
+ await key('d');await pointer.tap(page,{x:1100,y:560});await pointer.tap(page,{x:1160,y:600});await key('Enter');
+ await revision(freeRevision+1);assert.equal((await doc()).objects.length,freeBefore.objects.length+1,'short sidebar still captures canvas input below it');
+ await key('z',['Control']);await revision(freeRevision+2);assert.equal(shape(await doc()),shape(freeBefore));
+ await key('Escape');
+ measurements.editor_a_feedback={error:'red button, automatic source flash, direct Play banner, fix/Undo',scroll:'both panels: wheel + draggable scrollbar, constant control size'};
+ cases.push('a1b_feedback_errors_and_scroll');
  const layouts={};
  for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
   await page.setViewportSize(size);await pointer.frames(page);await key('Home');await key('Escape');await key('p');await key('2');await hover([6,3]);e=await settle();
   assert.equal(e.prefab_kind,'ramp');assert.equal(e.tool,'prefab');
-  assert.equal(e.ui.rects.new.y,16);assert.equal(e.ui.rects.new.x,size.width-320);
-  assert.equal(e.ui.rects.play.y,76);assert.equal(e.ui.rects.play.x,200);
+  assert.equal(e.ui.rects.new.y,8);assert.equal(e.ui.rects.new.x,size.width-264);
+  assert.equal(e.ui.rects.play.y,56);assert.equal(e.ui.rects.play.x,96);
   assert.equal(e.ui.scale,1);assert.equal(e.usable.x1-e.usable.x0,size.width-528);
   const nodes=e.overlay.nodes;assert.ok(nodes<=640);assert.equal(nodes,628);
   const pageTools=await page.locator('#page-tools').boundingBox();
@@ -60,7 +111,7 @@ module.exports=async function uiChecks(h){
  await hi.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.ui.rects.play);
  const high=await hi.evaluate(()=>({state:window.riderEditor,canvas:document.querySelector('canvas').width,css:document.querySelector('canvas').clientWidth}));
  assert.equal(high.canvas/high.css,2);assert.equal(high.state.ui.scale,2);
- assert.equal(high.state.ui.rects.play.x,200);assert.equal(high.state.ui.rects.play.h,32);
+ assert.equal(high.state.ui.rects.play.x,96);assert.equal(high.state.ui.rects.play.h,32);
  assert.equal(high.state.usable.x0,432);assert.equal(high.state.usable.x1,1936);assert.equal(high.state.overlay.nodes,628);
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};

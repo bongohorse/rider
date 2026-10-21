@@ -9,6 +9,30 @@ M.c={canvas=colour('101e26'),panel=colour('192c36'),control=colour('223b47'),bor
     text=colour('edf4f6'),secondary=colour('b0c3cc'),active=colour('8de0c5'),hover=colour('d5f3e9'),
     selected=colour('ffc66d'),connected=colour('72dbe9'),error=colour('ff9298')}
 local C=M.c
+-- Code-native 24 px line icons: no font-dependent Unicode glyphs or external artwork.
+local ICONS={
+ new={{5,3,15,3},{15,3,20,8},{20,8,20,21},{20,21,5,21},{5,21,5,3},{15,3,15,8},{15,8,20,8},{8,14,17,14},{12,10,12,18}},
+ open={{3,7,10,7},{10,7,12,10},{12,10,21,10},{3,7,3,21},{3,21,19,21},{19,21,22,12},{22,12,7,12},{7,12,3,21}},
+ import={{12,3,12,16},{7,11,12,16},{12,16,17,11},{3,16,3,21},{3,21,21,21},{21,21,21,16}},
+ export={{12,17,12,3},{7,8,12,3},{12,3,17,8},{3,16,3,21},{3,21,21,21},{21,21,21,16}},
+ undo={{9,4,3,10},{3,10,9,16},{3,10,15,10},{15,10,20,14},{20,14,20,20}},
+ redo={{15,4,21,10},{21,10,15,16},{21,10,9,10},{9,10,4,14},{4,14,4,20}},
+ play={{6,3,21,12},{21,12,6,21},{6,21,6,3}},
+ tool_select={{5,3,20,14},{20,14,13,15},{13,15,10,22},{10,22,5,3}},
+ tool_draw={{4,20,7,13},{7,13,17,3},{17,3,21,7},{21,7,11,17},{11,17,4,20}},
+ tool_curve={{3,20,7,10},{7,10,12,5},{12,5,18,7},{18,7,21,18}},
+ tool_prefab={{3,7,12,3},{12,3,21,7},{21,7,21,18},{21,18,12,22},{12,22,3,18},{3,18,3,7},{3,7,12,12},{12,12,21,7},{12,12,12,22}},
+ tool_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
+ tool_finish={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12},{10,3,10,12},{15,3,15,12},{5,7,20,7}},
+ tool_label={{3,5,21,5},{12,5,12,21},{7,21,17,21}},
+ tool_pan={{3,12,21,12},{12,3,12,21},{3,12,7,8},{3,12,7,16},{21,12,17,8},{21,12,17,16},{12,3,8,7},{12,3,16,7},{12,21,8,17},{12,21,16,17}},
+ view_fit={{3,9,3,3},{3,3,9,3},{15,3,21,3},{21,3,21,9},{21,15,21,21},{21,21,15,21},{9,21,3,21},{3,21,3,15}},
+ view_centre={{12,2,12,8},{12,16,12,22},{2,12,8,12},{16,12,22,12},{8,8,16,8},{16,8,16,16},{16,16,8,16},{8,16,8,8}},
+ view_bounds={{3,3,21,3},{21,3,21,21},{21,21,3,21},{3,21,3,3}},
+ view_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
+ view_test={{12,3,19,6},{19,6,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,6},{5,6,12,3},{12,6,12,12},{12,12,17,15}},
+ view_ghost={{3,16,5,8},{5,8,18,8},{18,8,22,16},{22,16,3,16},{6,16,6,20},{6,20,9,20},{9,20,9,16},{16,16,16,20},{16,20,19,20},{19,20,19,16}},
+}
 local function inside(r,x,y) return x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
 function M.init()
     -- Three tiny code-native UI masks, uploaded once. Direct textures avoid sampling adjacent
@@ -29,7 +53,21 @@ function M.init()
         end end
         assert(gui.new_texture(spec[1],size,size,'rgba',table.concat(bytes),false))
     end
-    local u={boxes={},texts={},buttons={},visible={},rects={},scroll=0,tools=false,properties=false,prefabs=false}
+    for name,segments in pairs(ICONS) do
+        local bytes={}
+        for y=0,23 do for x=0,23 do
+            local distance=100
+            for _,v in ipairs(segments) do
+                local dx,dy=v[3]-v[1],v[4]-v[2]
+                local t=math.max(0,math.min(1,((x-v[1])*dx+(y-v[2])*dy)/(dx*dx+dy*dy)))
+                distance=math.min(distance,math.sqrt((x-v[1]-t*dx)^2+(y-v[2]-t*dy)^2))
+            end
+            local a=math.floor(255*math.max(0,math.min(1,1.5-distance)))
+            bytes[#bytes+1]=string.char(a,a,a,a)
+        end end
+        assert(gui.new_texture('editor_icon_'..name,24,24,'rgba',table.concat(bytes),false))
+    end
+    local u={boxes={},texts={},buttons={},visible={},rects={},scroll=0,tool_scroll=0,tools=false,properties=false,prefabs=false}
     for i=1,M.BOXES do u.boxes[i]=gui.new_box_node(vmath.vector3(),vmath.vector3(1,1,0));gui.set_size_mode(u.boxes[i],gui.SIZE_MODE_MANUAL);gui.set_enabled(u.boxes[i],false) end
     for i=1,M.TEXTS do
         local n=gui.new_text_node(vmath.vector3(),"");gui.set_font(n,'default');gui.set_pivot(n,gui.PIVOT_W)
@@ -40,7 +78,7 @@ function M.init()
 end
 function M.hide(u)
     for _,pool in ipairs({u.boxes,u.texts}) do for _,n in ipairs(pool) do gui.set_enabled(n,false) end end
-    u.buttons,u.visible,u.rects={},{},{}
+    u.buttons,u.visible,u.rects={},{},{};u.scroll_drag=nil
 end
 function M.size(u)
     local w,h=window.get_size()
@@ -48,13 +86,13 @@ function M.size(u)
     -- the same desktop layout, without claiming a mobile-authoring UI.
     local density=html5 and tonumber(html5.run("(function(){var c=document.querySelector('canvas');return c&&c.clientWidth?c.width/c.clientWidth:1;})()")) or 1
     if not density or density<=0 or density~=density then density=1 end
-    u.scale=density*math.min(1,math.max(1,w)/density/1280,math.max(1,h)/density/720)
+    u.scale=density*math.min(1,math.max(1,w)/density/1280)
     u.w,u.h=math.max(1,w)/u.scale,math.max(1,h)/u.scale
     return u.w,u.h
 end
 function M.usable(u)
     local w,h=M.size(u);local s=u.scale
-    return {x0=(u.tools and 72 or 216)*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-124)*s}
+    return {x0=(u.tools and 72 or 216)*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
 end
 function M.pointer(u,action)
     if action.screen_x then u.pointer={action.screen_x/u.scale,u.h-action.screen_y/u.scale} end
@@ -62,9 +100,10 @@ end
 function M.area(u,action)
     local p=action.screen_x and {action.screen_x/u.scale,u.h-action.screen_y/u.scale} or u.pointer
     if not p then return nil end
-    if p[2]<124 or p[2]>u.h-80 then return 'chrome' end
-    if p[1]<(u.tools and 56 or 200) then return 'tools' end
-    if p[1]>u.w-(u.properties and 56 or 296) then return 'properties' end
+    if p[2]<104 or p[2]>u.h-80 then return 'chrome' end
+    if u.tools_rect and inside(u.tools_rect,p[1],p[2]) then return 'tools' end
+    if u.properties_rect and inside(u.properties_rect,p[1],p[2]) then return 'properties' end
+    if u.error_banner and inside(u.error_banner,p[1],p[2]) then return 'chrome' end
 end
 local function shorten(t,width,size)
     local count=math.max(1,math.floor(width/((size or 14)*.57)))
@@ -97,8 +136,34 @@ function M.play(u,k,message)
         scale=u.scale/k;gui.set_scale(m,vmath.vector3(scale,scale,1))
     end
 end
+function M.scrollbar_hit(u)
+    if not u.pointer then return false end
+    for _,r in pairs(u.scrollbars or {}) do if inside(r,u.pointer[1],u.pointer[2]) then return true end end
+    return false
+end
+-- Scrollbar tracks support both drag and a click to seek; only view state changes.
+function M.scrollbar_input(u,id,action)
+    local p=u.pointer
+    if not p then return false end
+    if id==hash('ui_pointer') and action.released and u.scroll_drag then u.scroll_drag=nil;return true end
+    if id==hash('ui_pointer') and action.pressed then
+        for key,r in pairs(u.scrollbars or {}) do
+            if inside(r,p[1],p[2]) then
+                local y=r.y+(r.h-r.knob)*(u[key] or 0)/r.maximum
+                u.scroll_drag={key=key,offset=p[2]>=y and p[2]<=y+r.knob and p[2]-y or r.knob/2};break
+            end
+        end
+    end
+    if u.scroll_drag and (id==nil or id==hash('ui_pointer')) then
+        local key=u.scroll_drag.key;local r=u.scrollbars[key]
+        if r then u[key]=math.max(0,math.min(r.maximum,(p[2]-r.y-u.scroll_drag.offset)/math.max(1,r.h-r.knob)*r.maximum)) end
+        return true
+    end
+    return false
+end
 function M.render(u,d)
     local w,h=M.size(u);u.k=d.k;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
+    u.scrollbars={};u.error_banner,u.error_text=nil,nil
     u.scroll_key=d.selection..':'..d.tool
     if u.scroll_key~=u.last_scroll_key then u.scroll,u.last_scroll_key=0,u.scroll_key end
     local function box(x,y,bw,bh,c)
@@ -116,12 +181,22 @@ function M.render(u,d)
     end
     local function button(name,x,y,bw,label,active,tip,bh,disabled)
         bh=bh or 32
+        local icon=ICONS[name]
+        local field=name=='rename' or name=='speed' or name=='test_speed' or name:match('^param_')
+        if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
-        local b=box(x,y,bw,bh,active and C.active or C.control)
+        local blocked=name=='warnings' and d.blocking
+        local b=box(x,y,bw,bh,blocked and C.error or active and C.active or C.control)
+        if name=='warnings' then u.problem_colour=blocked and 'error' or 'normal' end
         gui.set_texture(b,'editor_control');gui.set_slice9(b,vmath.vector4(4,4,4,4))
         local danger=name=='delete' or name:match('^libdel_') or label:match('^Sure%?')
-        local t=text(x+8,y+bh/2,label,danger and C.error or disabled and colour('b0c3cc',.6) or active and C.canvas or C.text,14,bw-12)
+        local fg=blocked and C.canvas or danger and C.error or disabled and colour('b0c3cc',.6) or active and C.canvas or C.text
+        local t
+        if icon then
+            local n=box(x+(bw-24)/2,y+(bh-24)/2,24,24,fg)
+            gui.set_texture(n,'editor_icon_'..name)
+        else t=text(x+8,y+bh/2,label,fg,14,bw-12) end
         u.tips[name]=tip or label
         u.buttons[name]={box=b,label=t};u.visible[#u.visible+1]=name;u.rects[name]=r
         if hover then u.hover=name;u.tip=tip or label end
@@ -149,40 +224,66 @@ function M.render(u,d)
     end
     u.hover,u.tip=nil,nil
     local modal=d.modal
+    if modal then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if not modal then
-        box(0,0,w,64,C.panel);text(20,28,'RIDER',C.active,18);text(100,28,'/ Level editor',C.secondary)
-        text(258,26,d.title,C.text,18,math.max(160,w-610));text(258,49,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,math.max(160,w-610))
-        for i,v in ipairs({{'new','New',60},{'open','Open',68},{'import','Import',76},{'export','Export',76}}) do
-            local x=({w-320,w-252,w-176,w-92})[i];button(v[1],x,16,v[3],v[2])
+        box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
+        local title_width=math.min(280,math.max(96,#d.title*10.5+4))
+        text(96,24,d.title,C.text,18,title_width)
+        local sx=112+title_width
+        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-288-sx)
+        u.status_rect={x=sx,y=8,w=math.max(0,w-288-sx),h=32}
+        for i,v in ipairs({{'new','New level'},{'open','Open levels / templates'},{'import','Import JSON'},{'export','Export JSON'}}) do
+            button(v[1],w-264+(i-1)*40,8,32,v[2],false,v[2])
         end
-        button('undo',16,76,92,'Undo');button('redo',116,76,76,'Redo');button('play',200,76,112,'Play [E]',true)
-        text(340,92,'Edit mode',C.active)
-        button('warnings',w-284,76,160,d.diagnostics,false,'Show problems; click a located row to select and centre its source')
-        button('view_help',w-116,76,100,'Help [H]')
+        button('warnings',w-104,8,48,d.blocking and ('! '..d.error_count) or d.warning_count>0 and ('! '..d.warning_count) or 'OK',false,d.diagnostics..': show problems and their sources')
+        button('view_help',w-48,8,32,'?',false,'Help [H]')
+        button('undo',16,56,32,'Undo',false,'Undo [Ctrl+Z]')
+        button('redo',56,56,32,'Redo',false,'Redo [Ctrl+Y]')
+        button('play',96,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
-        box(16,124,lw,h-204,C.panel);button('collapse_tools',28,132,lw-24,u.tools and '>' or 'TOOLS  <',false,'Collapse or expand Tools')
+        local tools_end=u.tools and 160 or u.prefabs and 280 or 508
+        tools_end=math.min(h-80,tools_end)
+        u.tools_rect={x=16,y=104,w=lw,h=math.max(56,tools_end-104)}
+        box(16,104,lw,u.tools_rect.h,C.panel)
+        button('collapse_tools',u.tools and 20 or 28,112,u.tools and 32 or 160,u.tools and '>' or 'TOOLS  <',false,'Collapse or expand Tools')
+        local function scrollbar(key,x,top,bottom,content)
+            local height=math.max(24,bottom-top);local maximum=math.max(0,content-height)
+            local value=math.max(0,math.min(maximum,u[key] or 0));u[key]=value
+            if key=='scroll' then u.max_scroll=maximum else u.tool_max_scroll=maximum end
+            if maximum<=0 then return end
+            local knob=math.max(24,height*height/(height+maximum))
+            local y=top+(height-knob)*value/maximum
+            box(x,top,8,height,C.control);box(x+1,y,6,knob,C.secondary)
+            u.scrollbars[key]={x=x-3,y=top,w=14,h=height,knob=knob,maximum=maximum}
+        end
         if not u.tools then
             local labels={'Select [S]','Draw [D]','Curve [C]','Prefab [P]','START','FINISH','Label [L]','Pan'}
+            local top,bottom=152,tools_end-12
+            scrollbar('tool_scroll',190,top,bottom,(u.prefabs and 268 or 496)-top)
+            local function shown(y,bh) return y>=top and y+bh<=bottom end
             for i,tool in ipairs(d.tools) do
-                local x,y=28+(i-1)%2*80,172+math.floor((i-1)/2)*42
-                button('tool_'..tool[1],x,y,76,labels[i]:match('^[^ ]+'),d.tool==tool[1],labels[i],36)
-                local key=labels[i]:match('%[(%w)%]');if key then text(x+62,y+7,key,d.tool==tool[1] and C.canvas or C.secondary,12) end
+                local x,y=28+(i-1)%4*40,152+math.floor((i-1)/4)*40-u.tool_scroll
+                if shown(y,32) then button('tool_'..tool[1],x,y,32,labels[i],d.tool==tool[1],labels[i]) end
             end
-            button('collapse_prefabs',28,344,160,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library')
+            local py=236-u.tool_scroll
+            if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end
             if not u.prefabs then
                 for i,kind in ipairs(d.kinds) do
-                    local x,y=28+(i-1)%2*80,384+math.floor((i-1)/2)*56
-                    button('kind_'..kind,x,y,76,'',false,tostring(i)..': '..d.full_names[kind]..' — click to place; Esc cancels',52)
-                    thumb(kind,x+18,y+5);text(x+8,y+42,shorten(d.names[kind],64,12),kind==d.prefab_kind and C.selected or C.text,12)
+                    local x,y=28+(i-1)%2*80,276+math.floor((i-1)/2)*56-u.tool_scroll
+                    if shown(y,52) then
+                        button('kind_'..kind,x,y,72,'',false,tostring(i)..': '..d.full_names[kind]..' — click to place; Esc cancels',52)
+                        thumb(kind,x+16,y+5);text(x+8,y+42,shorten(d.names[kind],56,12),kind==d.prefab_kind and C.selected or C.text,12)
+                    end
                 end
             end
-        end
+        else u.tool_scroll,u.tool_max_scroll=0,0 end
         local rx=w-(u.properties and 56 or 296)
-        box(rx,124,u.properties and 40 or 280,h-204,C.panel)
-        button('collapse_properties',rx+12,132,u.properties and 20 or 256,u.properties and '<' or 'PROPERTIES  >',false,'Collapse or expand Properties')
+        local property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
+        u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}
+        button('collapse_properties',rx+(u.properties and 4 or 12),112,u.properties and 32 or 256,u.properties and '<' or 'PROPERTIES  >',false,'Collapse or expand Properties')
         if not u.properties then
-            local clip={176,h-96};local start=190;local y=start-u.scroll
+            local clip={156,h-96};local start=170;local y=start-u.scroll
             local function row(name,label,unit,value,err,choices)
                 local rowh=unit~=nil and 66 or 44
                 if u.reveal==name then
@@ -218,8 +319,8 @@ function M.render(u,d)
                 if f.choices and f.ramp then
                     if y>=clip[1] and y+48<=clip[2] then
                         text(rx+16,y,'Input mode',C.secondary,12)
-                        button('mode_angle',rx+16,y+12,120,'Angle',f.value=='angle')
-                        button('mode_height',rx+144,y+12,120,'Height',f.value=='height')
+                        button('mode_angle',rx+16,y+12,64,'Angle',f.value=='angle')
+                        button('mode_height',rx+88,y+12,72,'Height',f.value=='height')
                         -- Existing tests/keyboard actions retain a single choice-field target.
                         u.buttons[f.name]=u.buttons[f.value=='angle' and 'mode_height' or 'mode_angle']
                         u.visible[#u.visible+1]=f.name
@@ -234,24 +335,30 @@ function M.render(u,d)
             for i,v in ipairs(d.actions) do
                 if v.name=='mirror_left' and d.actions[i+1] and d.actions[i+1].name=='mirror_right' then
                     if y>=clip[1] and y+32<=clip[2] then
-                        button('mirror_left',rx+16,y,120,'Mirror <');button('mirror_right',rx+144,y,120,'Mirror >')
+                        button('mirror_left',rx+16,y,80,'Mirror <');button('mirror_right',rx+104,y,80,'Mirror >')
                     end
                     y=y+44
                 elseif v.name~='mirror_right' then row(v.name,v.label,nil,nil,nil,v.tip) end
             end
-            u.max_scroll=math.max(0,y+u.scroll-clip[2]+12)
-            u.scroll=math.min(u.scroll,u.max_scroll)
-            if u.max_scroll>0 then
-                box(w-22,180,2,h-280,C.border)
-                local f=math.min(1,(h-280)/(h-280+u.max_scroll))
-                box(w-23,180+(h-280)*(1-f)*u.scroll/math.max(1,u.max_scroll),4,math.max(16,(h-280)*f),C.secondary)
-            end
-        end
+            local content_end=y+u.scroll+8
+            local panel_end=math.min(h-80,math.max(160,content_end+16))
+            u.properties_rect.h=panel_end-104
+            gui.set_screen_position(property_panel,vmath.vector3((rx+140)*u.scale,(h-104-u.properties_rect.h/2)*u.scale,0))
+            gui.set_size(property_panel,vmath.vector3(280*u.scale/u.k,u.properties_rect.h*u.scale/u.k,0))
+            scrollbar('scroll',w-26,156,panel_end-16,content_end-156)
+        else u.scroll,u.max_scroll=0,0 end
+        if d.play_error then
+            local width=math.max(240,w-528);local lines=wrap('Cannot play: '..d.play_error,width-24,14)
+            local height=16+math.min(3,#lines)*20
+            u.error_banner={x=216,y=52,w=width,h=height};u.error_text='Cannot play: '..d.play_error
+            box(216,52,width,height,C.error)
+            for i=1,math.min(3,#lines) do text(228,60+i*20-10,lines[i],C.canvas,14,width-24) end
+        else u.error_text=nil end
         box(0,h-64,w,64,C.panel)
-        local views={{'view_fit',16,92,'Fit [Home]'},{'view_centre',116,100,'Centre [.]'},{'view_start',224,68,'START'},
-            {'view_test',300,92,'Last test'},{'view_bounds',400,76,'Bounds'},{'view_ghost',484,76,'Ghost'}}
-        for _,v in ipairs(views) do button(v[1],v[2],h-56,v[3],v[4],d.on[v[1]],d.reasons[v[1]],32,d.reasons[v[1]]~=nil) end
-        text(580,h-40,'Grid '..d.grid..' [G]',C.active,12);text(748,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
+        local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
+            {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
+        for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
+        text(268,h-40,'Grid '..d.grid..' [G]',C.active,12);text(428,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
     else
@@ -298,7 +405,7 @@ function M.render(u,d)
             button('warnings',mx+mw-148,my+mh-48,128,'Close [Esc]')
         end
     end
-    if not modal and u.pointer and inside({x=258,y=36,w=math.max(160,w-610),h=24},u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
+    if not modal and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
     end

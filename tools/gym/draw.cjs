@@ -352,6 +352,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    const entry={name,points:lines.reduce((n,l)=>n+l.length,0),view:e.view,note:e.display_note,error:e.errors.find(m=>m.includes('800'))};
    if(large.length===0){
     await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
+    // Blocked Play now selects/frames its source. Clear that selection and restore working precision
+    // before dragging the whole dense line; keep the same geometry and persistence assertions.
+    assert.equal((await ed()).selection,'o1');assert.ok((await ed()).ui.error_banner.includes('800'));
+    await key('Escape');await require('./editor_ui_target.cjs').frameCourse(page,ed,canvas,{zooms:8,minX:-5});
     await page.waitForTimeout(1100);await drag([10.02,1.03],[10.02,3.03]);e=await revision(2);d=await doc();
     assert.ok(d.objects[0].points[0][1]>2,'line moved');const moved=JSON.stringify(d.objects[0].points.slice(0,3));
     assert.ok(e.view.sprites<=1024,JSON.stringify(e.view));

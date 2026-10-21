@@ -25,7 +25,7 @@ local socket=require "socket"
 -- survive a reload; set until a later sync succeeds.
 local M={keys={},store={},behind={},clipboard=nil,conflict=nil,mode="play",tool="select",prefab_kind="flat",test_mode="surface",test_speed=0,selection=nil,selected={},points={},vertex=nil,vertex2=nil,grid=true,opened=0,instances=0,
     camera={x=0,y=2,zoom=0.2},geometry_version=0,view_version=0,shape_version=0,status="",message="",problem=nil,errors={},warnings={},error_at={},warning_at={},
-    show_bounds=false,show_ghost=true,last_test=nil}
+    show_bounds=false,show_ghost=false,last_test=nil}
 local function parse_draft(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"Draft is not valid JSON" end
