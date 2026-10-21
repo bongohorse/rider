@@ -9,10 +9,10 @@
 -- counts, probe statistics) lives on the per-session vehicle table.
 local feel=require "main.gym.feel"
 local M={}
--- Visual top mount (chassis space, engine units): the chassis centre line above each wheel. The
+-- Visual top mount (chassis space, engine units): 8 u above the centre line, on the new fenders. The
 -- joint anchor (wheel_x, wheel_y) coincides with the wheel centre at spring rest (local_anchor_b
 -- is the wheel centre), so a strut to it would be ~1.5 u long and invisible.
-M.mount_y=0
+M.mount_y=8
 -- Local z on the chassis (0): spring above the body, below the wheel (1).
 M.z=0.5
 local query=html5 and html5.run("new URLSearchParams(location.search).get('struts') || ''") or ""
@@ -55,7 +55,7 @@ local function probe(self)
     local r={generation=self.session_generation,resets=self.reset_count,enabled=M.enabled,live=live,spring_rest=math.abs(M.mount_y-feel.values.wheel_y),
         created=v.strut_created or 0,deleted=v.strut_deleted or 0,bodies=world.body_count,joints=world.joint_count,shapes=world.shape_count,struts={}}
     r.layers={rider=go.get_position(v.ids.rider).z+go.get_position(v.ids.chassis).z,
-        body=go.get_position(v.ids.chassis).z,spring=go.get_position(v.ids.chassis).z+M.z,
+        body=go.get_position(v.ids.chassis).z,spring=go.get_position(v.ids.chassis).z+(v.struts and go.get_position(v.struts[1]).z or M.z),
         rear=go.get_position(v.ids[1]).z,front=go.get_position(v.ids[2]).z}
     if v.struts then
         local origin,angle=b2d.body.get_position(v.chassis),b2d.body.get_angle(v.chassis)
