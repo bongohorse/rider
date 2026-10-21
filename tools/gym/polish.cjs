@@ -388,6 +388,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // 8. Ghost: where F would start (same rules as F), refused in red with the reason, off over objects,
   // in dialogs and when switched off; F at the ghost starts exactly there.
   await key('Escape');await key('Home');await hover([20,3]);e=await settle();
+  assert.equal(e.show_ghost,false,'Ghost must start off');assert.equal(e.ghost,false);
+  await button('view_ghost');await hover([20,3]);e=await settle();
   assert.ok(e.ghost&&e.ghost.mode==='surface'&&near(e.ghost.pos[0],e.cursor[0],1e-9)&&near(e.ghost.pos[1],0.9,1e-9),JSON.stringify(e.ghost));
   assert.ok(e.readout.startsWith('F: test start here'),e.readout);
   await page.keyboard.down('Shift');await page.waitForTimeout(150);await hover([20.5,3]);e=await settle();
