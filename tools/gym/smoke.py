@@ -114,7 +114,9 @@ if args.case=='le5d':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='ea2':
     report=json.loads((out/'objects-result.json').read_text())
-    identity(report);assert len(report['cases'])==8
+    identity(report)
+    expected='list_selection_search_naming hide_undo_export_geometry lock_direct_and_connected_changes copy_mirror_new_ids_unlocked_visible save_reload_import_drive_roundtrip bounded_list_and_viewports invalid_metadata_preserved_or_refused'.split()
+    assert sorted(report['cases'])==sorted(expected), 'ea2 inventory missing or duplicated'
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':
     report=json.loads((out/'polish-result.json').read_text())

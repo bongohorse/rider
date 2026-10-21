@@ -884,6 +884,7 @@ local LABEL_TEXT="Label"
 local function edit_label(self,id)
     local o=find(id)
     if not (o and o.type=="label") then return end
+    if o.locked then editor.message="Locked: "..doc_lib.label(o)..". Unlock it before editing.";return end
     self.field={text=o.text,initial=o.text,all=true,label=id}
     editor.message="Type the label text; Enter applies, Esc keeps it."
 end
@@ -1203,7 +1204,8 @@ local function on_button(self,name)
         self.field={search=true,text=self.ui.object_query or "",all=true};return
     elseif name=="object_name" then
         local o=find(editor.selection)
-        if o then self.ui.reveal=name;self.field={object=o.id,text=o.name or "",all=true} end
+        if o and o.locked then editor.message="Locked: "..doc_lib.label(o)..". Unlock it before editing."
+        elseif o then self.ui.reveal=name;self.field={object=o.id,text=o.name or "",all=true} end
         return
     elseif name:match("^object_select_") then
         cancel(self);editor.select(name:sub(15));return

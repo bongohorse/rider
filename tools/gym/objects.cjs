@@ -1,7 +1,4 @@
-// LE6a: warnings that jump to their source, navigation (Fit level, centre selection, START, last test start),
-// the R13 bounds display and the paged template list in the debug HTML5 gym (level-editor contract R13, R17, LE6).
-// Every navigation and display action is view only: the source document, its dirty state and the Undo
-// history stay unchanged.
+// Editor A2 (#172): exercise the actual object-list controls, source protection and persistence.
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
@@ -56,12 +53,6 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.waitForFunction(()=>!window.riderCustom.visible);await refocused();
    return ed();
   }
-  const near=(a,b,eps)=>Math.abs(a-b)<=eps;
-  const px=(e,p)=>[e.screen.ox+p[0]*e.screen.ppm_x,e.screen.oy+p[1]*e.screen.ppm_y];
-  const middle=e=>[(e.usable.x0+e.usable.x1)/2,(e.usable.y0+e.usable.y1)/2];
-  // p is drawn at the middle of the usable canvas area (not covered by the panels), within 2 px.
-  function centred(e,p,what){const q=px(e,p),m=middle(e);assert.ok(near(q[0],m[0],2)&&near(q[1],m[1],2),what+': '+JSON.stringify({q,m}));}
-  function inside(e,p,what){const q=px(e,p),u=e.usable;assert.ok(q[0]>=u.x0-1&&q[0]<=u.x1+1&&q[1]>=u.y0-1&&q[1]<=u.y1+1,what+' outside the usable area: '+JSON.stringify({q,u}));}
   // View only: same source, revision, dirty state and Undo/Redo depth.
   async function unchanged(before,what){
    const e=await ed(),d=await doc();
@@ -114,6 +105,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_eye_o2');await button('object_eye_o4');
   cases.push('hide_undo_export_geometry');
 
+  await button('object_lock_o4');await button('object_select_o4');before=await snapshot();
+  await button('param_1');e=await settle();assert.equal(e.field,false);assert.match(e.message,/Locked: Label o4/i);await unchanged(before,'locked label edit');await button('object_lock_o4');
   await button('object_lock_o3');await button('object_select_o2');before=await snapshot();
   await button('inc_param_2');e=await settle();assert.match(e.message,/Locked: Line o3/i);await unchanged(before,'indirect locked parameter edit');
   await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,[16,rise/2]);before=await snapshot();
@@ -124,8 +117,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_select_o3');before=await snapshot();await key('Delete');e=await settle();
   assert.match(e.message,/Locked: Line o3/i);await unchanged(before,'delete locked object');
   // A direct rename is refused too; unlocking and visibility remain available.
-  await button('object_name');await type('Should not apply');await key('Enter');await unchanged(before,'rename locked object');
+  await button('object_name');assert.equal((await ed()).field,false);await unchanged(before,'rename locked object');
   await button('object_eye_o3');assert.equal((await doc()).objects.find(o=>o.id==='o3').hidden,true);await button('object_eye_o3');
+  await button('object_lock_o4');await button('object_select_o4');before=await snapshot();
+  await button('param_1');e=await settle();assert.equal(e.field,false);assert.match(e.message,/Locked: Label o4/i);await unchanged(before,'locked label edit');await button('object_lock_o4');
   await button('object_lock_o3');await button('object_select_o2');before=await snapshot();await button('inc_param_2');e=await settle();
   assert.equal(e.undo,before.undo+1);assert.ok((await doc()).objects.find(o=>o.id==='o3').points[0][0]>20);
   await key('z',['Control']);await settle();
@@ -141,6 +136,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_eye_o2');const stored=await exportFile();
   for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
    await page.setViewportSize(size);await pointer.frames(page);await button('object_search');await key('Escape');await settle();
+   await page.mouse.move(800,90);await pointer.frames(page);
    await page.screenshot({path:path.join(out,`objects-named-locked-${size.width}x${size.height}.png`)});
   }
   await page.setViewportSize({width:1280,height:720});
@@ -165,6 +161,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.setViewportSize(size);await pointer.frames(page);await button('object_search');await key('Escape');e=await settle();
    assert.equal(e.overlay.nodes,628);assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);
    for(const r of Object.values(e.ui.rects))assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=size.width&&r.y+r.h<=size.height);
+   await page.mouse.move(800,90);await pointer.frames(page);
    await page.screenshot({path:path.join(out,`objects-${size.width}x${size.height}.png`)});
   }
   await page.setViewportSize({width:1280,height:720});await pointer.frames(page);await button('object_search');await key('Escape');e=await settle();
@@ -179,7 +176,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.mouse.move(cur.x+cur.w/2,end?cur.y+cur.h:cur.y,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
    assert.equal((await ed()).ui.object_scroll,end?252:0);
   }
-  await unchanged(before,'object scrollbar drag');
+  const rows=(await ed()).ui.scrollbars.object_scroll;
+  await page.mouse.move(90,rows.y+20);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page);
+  assert.equal((await ed()).ui.object_scroll,251);await page.mouse.wheel(0,120);await pointer.frames(page);assert.equal((await ed()).ui.object_scroll,252);
+  await unchanged(before,'object scrollbar drag and wheel');
   await button('object_select_o256');before=await snapshot();await key('Delete');await settle();assert.ok(!(await doc()).objects.some(o=>o.id==='o256'));
   await key('z',['Control']);await settle();assert.ok((await doc()).objects.some(o=>o.id==='o256'));
   measurements.budget={gui_nodes:628,max_nodes:640,objects:256,world_sprites_added:0};cases.push('bounded_list_and_viewports');
