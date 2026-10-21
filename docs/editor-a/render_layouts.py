@@ -30,8 +30,8 @@ def render(w, h, selected):
     rect(0,0,w,64,PANEL,r=0); text(20,29,'RIDER',ACCENT,'title'); text(100,29,'/  Level editor',MUTED)
     text(20,51,'STATIC LAYOUT PROPOSAL  ·  #183',MUTED,'small')
     text(258,28,'Hillside practice',TEXT,'title');text(258,50,'Draft saved locally',ACCENT,'small')
-    button(w-316,16,92,'Undo');button(w-216,16,76,'Redo');button(w-132,16,112,'Play [E]',True)
-    for x,bw,label in [(16,60,'New'),(84,68,'Open'),(160,76,'Import'),(244,76,'Export')]: button(x,76,bw,label)
+    for x,bw,label in [(w-320,60,'New'),(w-252,68,'Open'),(w-176,76,'Import'),(w-92,76,'Export')]: button(x,16,bw,label)
+    button(16,76,92,'Undo');button(116,76,76,'Redo');button(200,76,112,'Play [E]',True)
     text(340,97,'Edit mode',ACCENT)
     button(w-284,76,160,'✓  No problems');button(w-116,76,100,'Help [H]')
     # Left palette.

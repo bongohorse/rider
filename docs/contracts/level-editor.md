@@ -112,8 +112,8 @@ All coordinates below are logical canvas pixels at UI scale 1, independent of wo
 
 | Region | Specification |
 | --- | --- |
-| Header | y 0–64; brand, level title and persistence status at left; Undo, Redo, Play at right |
-| Command row | y 76–108; New, Open, Import, Export at left; diagnostic count and Help at right |
+| Header | y 0–64; brand, level title and persistence status at left; New, Open, Import, Export at right |
+| Command row | y 76–108; Undo, Redo, Play at left; diagnostic count and Help at right |
 | Tool panel | x 16, y 124; width 184; lower edge h−80; 2 × 4 tool cells, then 2-column prefab cards |
 | Inspector | x w−296, y 124; width 280; lower edge h−80; fixed heading, scrollable content |
 | Uncovered canvas | x 216 to w−312; y 124 to h−80: **752 × 516** at 720p; **1392 × 876** at 1080p |

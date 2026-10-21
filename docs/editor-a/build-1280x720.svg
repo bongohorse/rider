@@ -9,20 +9,20 @@
 <text x="20" y="51" fill="#b0c3cc" style="fill:#b0c3cc" class="small" text-anchor="start">STATIC LAYOUT PROPOSAL  ·  #183</text>
 <text x="258" y="28" fill="#edf4f6" style="fill:#edf4f6" class="title" text-anchor="start">Hillside practice</text>
 <text x="258" y="50" fill="#8de0c5" style="fill:#8de0c5" class="small" text-anchor="start">Draft saved locally</text>
-<rect x="964" y="16" width="92" height="32" rx="4" fill="#223b47"/>
-<text x="1010.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Undo</text>
-<rect x="1064" y="16" width="76" height="32" rx="4" fill="#223b47"/>
-<text x="1102.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Redo</text>
-<rect x="1148" y="16" width="112" height="32" rx="4" fill="#8de0c5"/>
-<text x="1204.0" y="37" fill="#101e26" style="fill:#101e26" class="" text-anchor="middle">Play [E]</text>
-<rect x="16" y="76" width="60" height="32" rx="4" fill="#223b47"/>
-<text x="46.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">New</text>
-<rect x="84" y="76" width="68" height="32" rx="4" fill="#223b47"/>
-<text x="118.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Open</text>
-<rect x="160" y="76" width="76" height="32" rx="4" fill="#223b47"/>
-<text x="198.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Import</text>
-<rect x="244" y="76" width="76" height="32" rx="4" fill="#223b47"/>
-<text x="282.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Export</text>
+<rect x="960" y="16" width="60" height="32" rx="4" fill="#223b47"/>
+<text x="990.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">New</text>
+<rect x="1028" y="16" width="68" height="32" rx="4" fill="#223b47"/>
+<text x="1062.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Open</text>
+<rect x="1104" y="16" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="1142.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Import</text>
+<rect x="1188" y="16" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="1226.0" y="37" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Export</text>
+<rect x="16" y="76" width="92" height="32" rx="4" fill="#223b47"/>
+<text x="62.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Undo</text>
+<rect x="116" y="76" width="76" height="32" rx="4" fill="#223b47"/>
+<text x="154.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">Redo</text>
+<rect x="200" y="76" width="112" height="32" rx="4" fill="#8de0c5"/>
+<text x="256.0" y="97" fill="#101e26" style="fill:#101e26" class="" text-anchor="middle">Play [E]</text>
 <text x="340" y="97" fill="#8de0c5" style="fill:#8de0c5" class="" text-anchor="start">Edit mode</text>
 <rect x="996" y="76" width="160" height="32" rx="4" fill="#223b47"/>
 <text x="1076.0" y="97" fill="#edf4f6" style="fill:#edf4f6" class="" text-anchor="middle">✓  No problems</text>
