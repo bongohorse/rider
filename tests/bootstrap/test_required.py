@@ -115,12 +115,14 @@ class RequiredCheck(unittest.TestCase):
         self.assertEqual(notifier["permissions"], {"contents": "read", "issues": "write"})
         self.assertEqual(notifier["if"], "${{ always() && github.event_name == 'schedule' }}")
 
-    def test_pages_deploy_waits_for_required_and_only_main_full_suite(self):
+    def test_pages_deploy_waits_for_successful_required_and_only_main_code_change(self):
         workflow = load_workflow()
         deploy = workflow["jobs"]["pages"]
         self.assertEqual(deploy["needs"], ["changes", "required"])
         self.assertEqual(deploy["if"],
-                         "github.ref == 'refs/heads/main' && needs.changes.outputs.docs_only != 'true'")
+                         "always() && github.ref == 'refs/heads/main' "
+                         "&& needs.changes.outputs.docs_only != 'true' "
+                         "&& needs.required.result == 'success'")
         self.assertEqual(deploy["uses"], "./.github/workflows/pages.yml")
         self.assertIn("workflow_dispatch", workflow["on"])
         self.assertEqual(workflow["concurrency"]["cancel-in-progress"],

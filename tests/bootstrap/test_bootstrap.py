@@ -41,15 +41,20 @@ class BootstrapContract(unittest.TestCase):
             self.assertTrue(any('unpinned' in e for e in bootstrap_check.validate(copy)))
 
     def test_pages_write_permission_requires_main_guard(self):
-        with tempfile.TemporaryDirectory() as directory:
-            copy = Path(directory)
-            for filename in bootstrap_check.REQUIRED + ['package.json']:
-                target = copy / filename
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(ROOT / filename, target)
-            workflow = copy / '.github/workflows/ci.yml'
-            workflow.write_text(workflow.read_text().replace("github.ref == 'refs/heads/main'", 'true'))
-            self.assertTrue(any('Pages permission requires main-only guard' in e for e in bootstrap_check.validate(copy)))
+        for guard in ("github.ref == 'refs/heads/main'",
+                      "needs.changes.outputs.docs_only != 'true'",
+                      "needs.required.result == 'success'",
+                      "always()"):
+            with self.subTest(guard=guard), tempfile.TemporaryDirectory() as directory:
+                copy = Path(directory)
+                for filename in bootstrap_check.REQUIRED + ['package.json']:
+                    target = copy / filename
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(ROOT / filename, target)
+                workflow = copy / '.github/workflows/ci.yml'
+                workflow.write_text(workflow.read_text().replace(guard, 'true'))
+                self.assertTrue(any('Pages permission requires main-only guard' in e
+                                    for e in bootstrap_check.validate(copy)))
 
     def test_doctor_returns_machine_readable_report_without_runtime_claim(self):
         result = subprocess.run([sys.executable, str(ROOT / 'tools/doctor.py'), '--json'],
