@@ -113,7 +113,7 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   await button('new');await page.waitForFunction(()=>window.riderEditor.id==='my-level-1');e=await saved();
-  let d=await doc();assert.equal(d.editor_version,6);
+  let d=await doc();assert.equal(d.editor_version,7);
   await frame();
   const hill=[[0,0],[5,0],[10,3],[15,0],[20,0]];
   await key('d');let r=(await ed()).revision;for(const p of hill)await at(p);await key('Enter');e=await revision(r+1);

@@ -11,6 +11,10 @@ M.c={canvas=colour('101e26'),panel=colour('192c36'),control=colour('223b47'),bor
 local C=M.c
 -- Code-native 24 px line icons: no font-dependent Unicode glyphs or external artwork.
 local ICONS={
+ eye={{2,12,7,7},{7,7,17,7},{17,7,22,12},{22,12,17,17},{17,17,7,17},{7,17,2,12},{10,10,14,10},{14,10,14,14},{14,14,10,14},{10,14,10,10}},
+ eye_off={{2,12,7,7},{7,7,17,7},{17,7,22,12},{22,12,17,17},{17,17,7,17},{7,17,2,12},{3,3,21,21}},
+ lock={{5,10,19,10},{19,10,19,21},{19,21,5,21},{5,21,5,10},{8,10,8,5},{8,5,11,2},{11,2,15,3},{15,3,16,6},{16,6,16,10},{12,14,12,17}},
+ unlock={{5,10,19,10},{19,10,19,21},{19,21,5,21},{5,21,5,10},{8,10,8,5},{8,5,11,2},{11,2,15,3},{15,3,16,6},{12,14,12,17}},
  new={{5,3,15,3},{15,3,20,8},{20,8,20,21},{20,21,5,21},{5,21,5,3},{15,3,15,8},{15,8,20,8},{8,14,17,14},{12,10,12,18}},
  open={{3,7,10,7},{10,7,12,10},{12,10,21,10},{3,7,3,21},{3,21,19,21},{19,21,22,12},{22,12,7,12},{7,12,3,21}},
  import={{12,3,12,16},{7,11,12,16},{12,16,17,11},{3,16,3,21},{3,21,21,21},{21,21,21,16}},
@@ -97,6 +101,9 @@ end
 function M.pointer(u,action)
     if action.screen_x then u.pointer={action.screen_x/u.scale,u.h-action.screen_y/u.scale} end
 end
+function M.object_area(u)
+    return u.object_rect and u.pointer and inside(u.object_rect,u.pointer[1],u.pointer[2])
+end
 function M.area(u,action)
     local p=action.screen_x and {action.screen_x/u.scale,u.h-action.screen_y/u.scale} or u.pointer
     if not p then return nil end
@@ -157,6 +164,7 @@ function M.scrollbar_input(u,id,action)
     if u.scroll_drag and (id==nil or id==hash('ui_pointer')) then
         local key=u.scroll_drag.key;local r=u.scrollbars[key]
         if r then u[key]=math.max(0,math.min(r.maximum,(p[2]-r.y-u.scroll_drag.offset)/math.max(1,r.h-r.knob)*r.maximum)) end
+        if key=="object_scroll" then u[key]=math.floor(u[key]+.5) end
         return true
     end
     return false
@@ -181,8 +189,9 @@ function M.render(u,d)
     end
     local function button(name,x,y,bw,label,active,tip,bh,disabled)
         bh=bh or 32
-        local icon=ICONS[name]
-        local field=name=='rename' or name=='speed' or name=='test_speed' or name:match('^param_')
+        local icon_name=d.icons and d.icons[name] or name
+        local icon=ICONS[icon_name]
+        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='speed' or name=='test_speed' or name:match('^param_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -195,7 +204,7 @@ function M.render(u,d)
         local t
         if icon then
             local n=box(x+(bw-24)/2,y+(bh-24)/2,24,24,fg)
-            gui.set_texture(n,'editor_icon_'..name)
+            gui.set_texture(n,'editor_icon_'..icon_name)
         else t=text(x+8,y+bh/2,label,fg,14,bw-12) end
         u.tips[name]=tip or label
         u.buttons[name]={box=b,label=t};u.visible[#u.visible+1]=name;u.rects[name]=r
@@ -243,6 +252,10 @@ function M.render(u,d)
         button('play',96,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
         local tools_end=u.tools and 160 or u.prefabs and 280 or 508
+        local objects_top=u.prefabs and 280 or 508
+        local object_rows=math.min(4,math.max(1,#d.objects))
+        local object_height=u.objects_collapsed and 40 or 80+object_rows*36+24
+        if not u.tools then tools_end=objects_top+object_height+12 end
         tools_end=math.min(h-80,tools_end)
         u.tools_rect={x=16,y=104,w=lw,h=math.max(56,tools_end-104)}
         box(16,104,lw,u.tools_rect.h,C.panel)
@@ -260,7 +273,7 @@ function M.render(u,d)
         if not u.tools then
             local labels={'Select [S]','Draw [D]','Curve [C]','Prefab [P]','START','FINISH','Label [L]','Pan'}
             local top,bottom=152,tools_end-12
-            scrollbar('tool_scroll',190,top,bottom,(u.prefabs and 268 or 496)-top)
+            scrollbar('tool_scroll',190,top,bottom,objects_top+object_height-top)
             local function shown(y,bh) return y>=top and y+bh<=bottom end
             for i,tool in ipairs(d.tools) do
                 local x,y=28+(i-1)%4*40,152+math.floor((i-1)/4)*40-u.tool_scroll
@@ -277,7 +290,44 @@ function M.render(u,d)
                     end
                 end
             end
-        else u.tool_scroll,u.tool_max_scroll=0,0 end
+            local oy=objects_top-u.tool_scroll
+            if shown(oy,32) then button('collapse_objects',28,oy,152,u.objects_collapsed and 'OBJECTS  >' or 'OBJECTS  v',false,'Collapse or expand Objects') end
+            if not u.objects_collapsed then
+                if shown(oy+40,32) then button('object_search',28,oy+40,152,d.search~='' and d.search or 'Search objects',false,'Search by type, name or id; Esc cancels') end
+                local count=#d.objects
+                local rows=4;u.object_max_scroll=math.max(0,count-rows)
+                u.object_scroll=math.max(0,math.min(u.object_scroll or 0,u.object_max_scroll))
+                if u.list_selection~=d.selection or u.list_query~=d.search then
+                    u.list_selection,u.list_query=d.selection,d.search
+                    for i,obj in ipairs(d.objects) do if obj.id==d.selection then
+                        if i<=u.object_scroll then u.object_scroll=i-1 elseif i>u.object_scroll+rows then u.object_scroll=i-rows end
+                    end end
+                end
+                for i=1,rows do
+                    local obj=d.objects[u.object_scroll+i];local y=oy+80+(i-1)*36
+                    if obj and shown(y,32) then
+                        button('object_select_'..obj.id,28,y,88,'',obj.selected,obj.tip)
+                        text(34,y+10,obj.title,obj.selected and C.canvas or C.text,12,78)
+                        text(34,y+24,obj.subtitle,obj.selected and C.canvas or C.secondary,12,78)
+                        button('object_eye_'..obj.id,120,y,28,'',false,obj.hidden and 'Hidden: show '..obj.tip or 'Visible: hide '..obj.tip)
+                        button('object_lock_'..obj.id,152,y,28,'',false,obj.locked and 'Locked: unlock '..obj.tip or 'Editable: lock '..obj.tip)
+                    elseif not obj and i==1 and shown(y,24) then text(28,y+12,'No objects',C.secondary,12) end
+                end
+                -- The shared tools scrollbar reveals this bounded list. Wheel over its rows scrolls
+                -- the object index, independently of the surrounding prefab/tool panel.
+                u.object_rect={x=28,y=oy+80,w=152,h=object_rows*36}
+                local last_y=oy+80+object_rows*36
+                if count>rows and shown(last_y,16) then
+                    local height=rows*36;local knob=math.max(16,height*rows/count)
+                    local top=oy+80;local y=top+(height-knob)*u.object_scroll/u.object_max_scroll
+                    if shown(top,height) then
+                        box(182,top,4,height,C.control);box(182,y,4,knob,C.secondary)
+                        u.scrollbars.object_scroll={x=180,y=top,w=6,h=height,knob=knob,maximum=u.object_max_scroll}
+                    end
+                end
+                if count>rows and shown(oy+224,16) then text(28,oy+232,(u.object_scroll+1)..'-'..math.min(count,u.object_scroll+rows)..' / '..count,C.secondary,12) end
+            else u.object_rect=nil end
+        else u.tool_scroll,u.tool_max_scroll=0,0;u.object_rect=nil end
         local rx=w-(u.properties and 56 or 296)
         local property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
         u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}
@@ -330,6 +380,7 @@ function M.render(u,d)
                 elseif f.choices then row(f.name,f.label..': '..f.value,nil,nil,nil,'Cycle '..f.label)
                 else row(f.name,f.label,f.unit,f.value,f.error) end
             end
+            if d.object_name~=nil then row('object_name','Object name','',d.object_name,d.object_name_error) end
             if d.level then row('rename','Name','',''..d.name,d.name_error);row('speed','START speed','m/s',d.speed,d.speed_error);row('test_speed','Test start speed','m/s',d.test_speed)
             elseif d.start_selected then row('speed','START speed','m/s',d.speed,d.speed_error) end
             for i,v in ipairs(d.actions) do

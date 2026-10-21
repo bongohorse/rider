@@ -212,6 +212,8 @@ jobs:
             cases: 'a20'
           - group: points
             cases: 'le5d'
+          - group: objects
+            cases: 'ea2'
           - group: polish
             cases: 'le6'
           - group: struts
@@ -281,6 +283,9 @@ jobs:
       - name: Verify editor multi-point selection, bulk corner/smooth and prefab conversion
         if: contains(format(' {0} ', matrix.cases), ' le5d ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/points --case le5d
+      - name: Verify editor object list, naming, visibility and lock protection
+        if: contains(format(' {0} ', matrix.cases), ' ea2 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/objects --case ea2
       - name: Verify editor jump-to-problem, navigation, bounds display and paged templates
         if: contains(format(' {0} ', matrix.cases), ' le6 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/polish --case le6

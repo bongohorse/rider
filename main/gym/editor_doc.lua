@@ -10,9 +10,10 @@ local sample=require "main.gym.editor_sample"
 -- chord, so a line turned into an editable path keeps its untouched segments exactly. Version 6 (compiler 6)
 -- samples curved segments with the longest chords that fit the same bounds (editor_sample), so their compiled
 -- points differ; nothing else in the format changes.
--- Version 1-5 documents open upgraded; their lines, connections and prefabs compile unchanged, curves with
--- fewer points (their compiled data from an older compiler is then out of date, not a conflict).
-local M={EDITOR_VERSION=6,COMPILER_VERSION=6}
+-- Version 7 adds optional name/hidden/locked source metadata; compilation ignores it.
+-- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
+-- compiler 6 (their older compiled data is then out of date, not a conflict).
+local M={EDITOR_VERSION=7,COMPILER_VERSION=7}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -116,7 +117,35 @@ end
 function M.entry(o) return o.type=="line" and o.points[1] or o.type=="curve" and o.anchors[1].p or o.at end
 function M.exit(o) local p=M.path(o);return p[#p] end
 -- Display name for messages: "Line o3", "Ramp o5".
-function M.label(o) return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
+function M.label(o) if o.name and o.name~="" then return o.name.." ("..o.id..")" end;return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
+
+-- A2 protection at the document boundary, including indirect connected-run edits. Visibility and
+-- unlocking remain available on locked objects; their source/name and incident connections are protected.
+local function equal(a,b)
+    if a==b then return true end
+    if type(a)~=type(b) then return false end
+    if type(a)~="table" then return a==b end
+    for k,v in pairs(a) do if not equal(v,b[k]) then return false end end
+    for k in pairs(b) do if a[k]==nil then return false end end
+    return true
+end
+function M.lock_conflict(before,after)
+    local ids={};for _,o in ipairs(after.objects) do ids[o.id]=o end
+    local function incident(e,id)
+        local t={};for _,c in ipairs(e.connections or {}) do if c.from==id or c.to==id then t[c.from..":"..c.to]=true end end;return t
+    end
+    for _,o in ipairs(before.objects) do
+        if o.locked then
+            local n=ids[o.id]
+            local changed=not n
+            for k,v in pairs(o) do if k~="hidden" and k~="locked" and not equal(v,n and n[k]) then changed=true;break end end
+            for k in pairs(n or {}) do if k~="hidden" and k~="locked" and o[k]==nil then changed=true;break end end
+            if changed or (before.connections~=after.connections and not equal(incident(before,o.id),incident(after,o.id))) then
+                return "Locked: "..M.label(o)..". Unlock it before changing this object or its connected run."
+            end
+        end
+    end
+end
 
 -- Station JSON (built-in or custom, without editor block) -> editable lines/hulls/labels (R2).
 local function from_station(d,id,name)
@@ -224,7 +253,7 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -242,6 +271,9 @@ function M.validate(doc)
         if not n or n>=e.next_id then return nil,"Invalid object id "..o.id end
         if ids[o.id] then return nil,"Duplicate object id "..o.id end
         ids[o.id]=true
+        if o.name~=nil and (type(o.name)~="string" or #o.name>64 or o.name:find("[%z\1-\31\127]")) then return nil,"Object name is limited to 64 bytes without control characters: "..o.id end
+        if (o.hidden~=nil and type(o.hidden)~="boolean") or (o.locked~=nil and type(o.locked)~="boolean") then return nil,"Invalid visibility/lock: "..o.id end
+        if e.editor_version<7 and (o.name~=nil or o.hidden~=nil or o.locked~=nil) then return nil,"Object metadata needs editor version 7: "..o.id end
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
         if o.type=="label" then
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
@@ -305,6 +337,7 @@ function M.validate(doc)
         for _,o in ipairs(e.objects) do if o.type=="curve" then e.compiled_revision=nil end end
         e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
     end
+    e.editor_version,e.compiler_version=7,7
     return doc
 end
 
