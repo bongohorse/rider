@@ -16,6 +16,12 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": [
+        "renovate"
+      ],
+      "enabled": false
+    },
+    {
       "matchUpdateTypes": [
         "major"
       ],
