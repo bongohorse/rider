@@ -157,6 +157,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Deletion is explicit for named versions, and level deletion removes all its versions.
   await button('open');await page.waitForTimeout(200);
   e=await ed();const deleteRow=e.library.findIndex(v=>v.key===levelKey)+1;assert.ok(deleteRow>0&&deleteRow<=10);
+  await page.evaluate(()=>{const write=FS.write;window.restoreDeleteWrite=()=>FS.write=write;FS.write=function(stream,...args){if(/custom-versions-/.test(stream.path||''))throw new FS.ErrnoError(29);return write.call(this,stream,...args);};});
+  await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);
+  await page.waitForFunction(()=>window.riderEditor.message.includes('Save failed'));
+  assert.ok((await ed()).library.some(v=>v.key===levelKey),'failed version deletion must keep the level available for retry');
+  await page.evaluate(()=>window.restoreDeleteWrite());
   await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);await idle();await page.waitForTimeout(200);
   assert.ok(!(await ed()).library.some(v=>v.key===levelKey));await close();
   const removed=await request({op:'measure',key:levelKey});assert.deepEqual(removed.entries,[]);

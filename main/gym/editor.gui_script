@@ -538,13 +538,14 @@ local function delete_saved(self,key)
     if self.confirm_delete~=key then self.confirm_delete=key;editor.message="Click Sure? to delete this level from My levels.";return end
     self.confirm_delete=nil
     if editor.versions.busy() then editor.message="Wait for the version save before deleting a level.";return end
-    local removed,why=editor.library().remove(key)
-    if not removed then editor.message="Delete failed ("..tostring(why)..").";refresh_library(self);return end
+    -- Keep the level entry available for retry until its version transaction is acknowledged.
     local ok,err=editor.versions.remove(key,nil,function()
-        editor.message="Level and its versions deleted.";refresh_library(self)
+        local removed,why=editor.library().remove(key)
+        editor.message=removed and "Level and its versions deleted." or "Delete failed (My levels: "..tostring(why).."). Retry the deletion."
+        refresh_library(self)
     end)
     if ok then editor.syncing=true;editor.status="Saving..." end
-    editor.message=ok and "Deleting level versions…" or "Save failed (versions: "..tostring(err)..")."
+    editor.message=ok and "Deleting level versions…" or "Save failed (versions: "..tostring(err).."). The level is kept; retry deletion."
     refresh_library(self)
 end
 local function new_level(self)
