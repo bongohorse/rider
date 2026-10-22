@@ -130,16 +130,17 @@ function M.create(parse)
         local idx,ierr=H.index();if not idx then return nil,ierr end
         -- Recover interrupted cleanup before new allocations. The operation is retried after sync.
         if #idx.garbage>0 then return begin(copy(idx),function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end) end
-        local count,oldest=0,nil
+        local count,automatic=0,{}
         for _,v in ipairs(idx.entries) do
             if v.key==key and v.named==named then count=count+1 end
-            if not v.named and not (version(v.id).newest() or {}).unsupported and (not oldest or v.time<oldest.time or v.time==oldest.time and v.id<oldest.id) then oldest=v end
+            if not v.named and not (version(v.id).newest() or {}).unsupported then automatic[#automatic+1]=v end
         end
         if named and count>=M.MAX_NAMED then return nil,"10 named snapshots per level; delete one first" end
+        table.sort(automatic,function(a,b) if a.time~=b.time then return a.time<b.time end;return a.id<b.id end)
         local next=copy(idx)
         local victim
         if not named and count>=M.MAX_AUTO then
-            for _,v in ipairs(idx.entries) do if v.key==key and not v.named and not (version(v.id).newest() or {}).unsupported and (not victim or v.id<victim.id) then victim=v end end
+            for _,v in ipairs(automatic) do if v.key==key then victim=v;break end end
         end
         local id=next.next
         -- Skip an orphan left by an interrupted write; its bytes are registered for cleanup first.
@@ -150,14 +151,30 @@ function M.create(parse)
         end
         local entry={id=id,key=key,time=os.time(),name=name,named=named,count=#doc.editor.objects}
         next.entries[#next.entries+1]=entry;next.next=id+1
-        local peak=H.bytes()+2*version(id).cost(text)+2*index.cost(json.encode(next))-index.bytes()
-        if peak>M.CAP and not victim then victim=oldest end
         if not named and count>=M.MAX_AUTO and not victim then return nil,"Automatic versions are protected by a newer editor; kept unchanged" end
-        if victim then
-            local pruned=copy(idx);retire(pruned,function(v) return v.id==victim.id end)
+        -- Plan the entire oldest-first prefix before syncing. Reclaiming many tiny versions one by
+        -- one otherwise needs dozens of IndexedDB acknowledgements before one large version fits.
+        local selected,freed,chosen={},0,0
+        local used=H.bytes()-index.bytes()
+        local pair=2*version(id).cost(text)
+        local function choose(v)
+            if selected[v.id] then return end
+            selected[v.id]=true;chosen=chosen+1;freed=freed+version(v.id).bytes()
+        end
+        local function peak()
+            local proposed={format=1,next=next.next,entries={},garbage={}}
+            for _,v in ipairs(next.entries) do if not selected[v.id] then proposed.entries[#proposed.entries+1]=v end end
+            return used-freed+pair+2*index.cost(json.encode(proposed))
+        end
+        if victim then choose(victim) end
+        if peak()>M.CAP then
+            for _,v in ipairs(automatic) do choose(v);if peak()<=M.CAP then break end end
+        end
+        if peak()>M.CAP then return nil,"Version storage is full (16 MiB); named/protected snapshots leave insufficient room. Level still saves normally" end
+        if chosen>0 then
+            local pruned=copy(idx);retire(pruned,function(v) return selected[v.id] end)
             return begin(pruned,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end)
         end
-        if peak>M.CAP then return nil,"Version storage is full (16 MiB); only named snapshots remain. Level still saves normally" end
         -- Immutable versions get two independently readable slots. The index is published last.
         local a,aerr=version(id).save(text);if not a then return nil,aerr end
         local b,berr=version(id).save(text);if not b then return nil,berr end

@@ -55,7 +55,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   const canon=v=>Array.isArray(v)?v.map(canon):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canon(v[k])])):v;
   const shape=d=>JSON.stringify(canon({objects:d.objects,connections:d.connections,start:d.start,finish:d.finish??null}));
-  const idle=async()=>{await page.waitForFunction(()=>!window.riderEditor?.versions_busy&&window.riderCustom.syncState()!=='syncing');};
+  const idle=async()=>{const start=Date.now();await page.waitForFunction(()=>!window.riderEditor?.versions_busy&&window.riderCustom.syncState()!=='syncing');measurements.longestVersionWaitMs=Math.max(measurements.longestVersionWaitMs||0,Date.now()-start);};
   async function saved(){await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&!window.riderEditor.versions_busy);await idle();return ed();}
   async function versions(){if(!(await ed()).versions_open)await button('versions');await page.waitForTimeout(120);return (await ed()).versions;}
   async function close(){if((await ed()).open_dialog)await button('dialog_close');}
@@ -137,7 +137,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
   // Independent keys represent other saved levels; global pruning may remove only automatic entries.
   for(let i=0;i<40;i++){if(i%10===0)console.log('global cap auto '+i);const r=await request({op:'add',key:100+i,name:'Large auto '+i,pad:240000});assert.equal(r.ok,true,r.error);await idle();}
-  report=await request({op:'measure'});assert.ok(report.bytes<=16*1024*1024);measurements.capBytes=report.bytes;
+  report=await request({op:'measure'});assert.ok(report.bytes<=16*1024*1024);measurements.capBytes=report.bytes;const diskBytes=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));assert.equal(report.bytes,diskBytes,'registry must account for every physical slot');assert.ok(diskBytes<=16*1024*1024);measurements.diskBytes=diskBytes;
   assert.equal(report.entries.filter(v=>v.named).length,10);
   const over=await request({op:'add',key:199,name:'Too large',pad:262145});assert.equal(over.ok,false);assert.match(over.error,/256 KiB/);
   let refusal;
