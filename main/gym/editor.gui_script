@@ -542,10 +542,13 @@ local function delete_saved(self,key)
     local ok,err=editor.versions.remove(key,nil,function()
         local removed,why=editor.library().remove(key)
         editor.message=removed and "Level and its versions deleted." or "Delete failed (My levels: "..tostring(why).."). Retry the deletion."
+        editor.version_error=not removed and editor.message or nil
+        if not removed then editor.status=editor.message end
         refresh_library(self)
     end)
     if ok then editor.syncing=true;editor.status="Saving..." end
     editor.message=ok and "Deleting level versions…" or "Save failed (versions: "..tostring(err).."). The level is kept; retry deletion."
+    if not ok then editor.version_error=editor.message;editor.status=editor.message end
     refresh_library(self)
 end
 local function new_level(self)
@@ -1284,8 +1287,8 @@ local function on_button(self,name)
             if self.version_delete~=v.id then self.version_delete=v.id;editor.message="Click Sure? to delete this version."
             else
                 self.version_delete=nil
-                local ok,err=editor.versions.remove(editor.key(),v.id)
-                if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")" end
+                local ok,err=editor.versions.remove(editor.key(),v.id,function() editor.version_error=nil end)
+                if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
             end
         end
     elseif name=="new" then new_level(self)
@@ -2611,7 +2614,7 @@ local function render_ui(self)
         version_name=f and f.snapshot and f.text,version_error=self.version_list_error or editor.version_error,
         version_message=f and f.snapshot and f.error or editor.message,version_status=editor.status,
         help={HELP_LEFT,HELP_RIGHT},conflict=editor.conflict and ("The compiled geometry differs from its source:\n"..editor.conflict.summary.."\nRecompile from source, or keep the compiled geometry as editable lines. Connections are not kept in the line copy.") or "",
-        library_title=self.library_error and "My levels: "..self.library_error or "My levels ("..#list..", newest first)",library_rows=library_rows,template_rows=template_rows,problems=problems,
+        dialog_message=editor.message,library_title=self.library_error and "My levels: "..self.library_error or "My levels ("..#list..", newest first)",library_rows=library_rows,template_rows=template_rows,problems=problems,
         page=page,tpl_page=self.tpl_page or 0,warn_page=self.warn_page or 0,library_more=(page+1)*ROWS<#list,template_more=((self.tpl_page or 0)+1)*TEMPLATE_ROWS<#self.templates,warning_more=((self.warn_page or 0)+1)*WARN_ROWS<#rows}
     for _,kind in ipairs(prefab.ORDER) do d.full_names[kind]=prefab.name(kind);d.names[kind]=kind=="kicker" and "Kicker" or kind=="wave" and "Wave" or kind=="gap" and "Gap" or prefab.name(kind) end
     editor_ui.render(self.ui,d)

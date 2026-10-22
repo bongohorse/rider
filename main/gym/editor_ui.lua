@@ -457,6 +457,7 @@ function M.render(u,d)
                 if v.remove then button('libdel_'..i,mx+mw/2-96,y,76,v.confirm and 'Sure?' or 'Delete') end
             end
             for i,v in ipairs(d.template_rows) do button(v.name,mx+mw/2+20,my+48+(i-1)*44,mw/2-40,v.title,false,v.title) end
+            paragraph(mx+20,my+mh-140,d.dialog_message or '',mw-40,(d.dialog_message or ''):lower():find('failed') and C.error or C.secondary,12,{my+mh-144,my+mh-100})
             if d.page>0 then button('lib_newer',mx+20,my+mh-96,112,'< Newer') end
             if d.library_more then button('lib_older',mx+144,my+mh-96,112,'Older >') end
             if d.tpl_page>0 then button('tpl_prev',mx+mw/2+20,my+mh-96,120,'< Previous') end
