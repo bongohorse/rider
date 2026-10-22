@@ -164,7 +164,7 @@ function init(self)
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
+    self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
     self.world_loads,self.generation=0,1
     self.time=time_scale.new()
@@ -226,11 +226,26 @@ function update(self,dt)
         local ok,raw=pcall(json.decode,html5.run("(()=>{const r=window.riderDebugDraft;window.riderDebugDraft=null;return JSON.stringify(r||null)})()"))
         if ok and type(raw)=="table" then
             -- raw.key writes a My levels slot instead (le4: an unsupported saved level).
-            local target=raw.key and editor.library().store(raw.key) or editor.draft_store()
+            local target=raw.version and editor.versions.store(raw.version) or raw.key and editor.library().store(raw.key) or editor.draft_store()
             target.debug_write(raw.slot,raw.seq,raw.text,raw.now and os.time() or nil)
         end
         -- Debug control (le3 only): build two-sided runs one-sided, to show what the reversed chain holds.
         if self.debug_le3 then stations.debug_one_sided=html5.run("String(!!window.riderDebugOneSided)")=="true" end
+    end
+    if self.debug_editor and sys.get_config_string("rider.gym_test","")=="ea3" then
+        local ok,r=pcall(json.decode,html5.run("(()=>{let r=window.riderVersionRequest;window.riderVersionRequest=null;return JSON.stringify(r||null)})()"))
+        if ok and type(r)=="table" then
+            local yes,err
+            if r.op=="add" then
+                local text=r.text or json.encode(editor.doc,{encode_empty_table_as_object=false})
+                if r.pad then text=text..string.rep(" ",r.pad) end
+                yes,err=editor.versions.add(r.key or editor.key(),text,r.name or "Test",r.named==true)
+            elseif r.op=="remove" then yes,err=editor.versions.remove(r.key or editor.key(),r.id)
+            elseif r.op=="clock" then editor.version_times[editor.key()]=socket.gettime()-(r.seconds or 0);yes=true
+            elseif r.op=="measure" then yes=true
+            end
+            html5.run("window.riderVersionResult="..json.encode({token=r.token,ok=yes or false,error=err or false,bytes=editor.versions.bytes(),entries=editor.versions.list(r.key or editor.key())},{encode_empty_table_as_object=false}))
+        end
     end
     if self.syncing then
         local state=custom.sync_state()

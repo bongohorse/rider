@@ -109,8 +109,25 @@ local function store(slots,parse)
         assert(sys.get_engine_info().is_debug,"Raw save writes require debug engine")
         sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text,time=time})
     end
+    function S.bytes()
+        local n=0
+        for _,name in ipairs(slots) do local f=io.open(sys.get_save_file(APP,name),"rb");if f then n=n+f:seek("end");f:close() end end
+        return n
+    end
+    -- Exact pinned serializer size, including the slot wrapper; no temporary save is needed.
+    function S.cost(text)
+        return #sys.serialize({format=1,seq=1,text=text,time=os.time()})
+    end
+    function S.remove()
+        for _,name in ipairs(slots) do
+            local path=sys.get_save_file(APP,name);local f=io.open(path,"rb")
+            if f then f:close();local ok,err=os.remove(path);if not ok then return nil,err end end
+        end
+        return true
+    end
     return S
 end
+M.slot_store=store
 M.level=store(SLOTS,function(text) return M.parse(text) end)
 function M.restore() return M.level.restore() end
 -- key: the My levels entry the level was played from (LE4), nil for an imported file.

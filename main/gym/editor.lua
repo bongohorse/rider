@@ -34,6 +34,52 @@ end
 local function drafts() return custom.drafts(parse_draft) end
 local function library() return custom.library(parse_draft) end
 M.library=library
+local versions=require "main.gym.editor_versions"
+M.versions=versions.create(parse_draft)
+M.versioned={}
+M.version_times={}
+local function version_failure(err)
+    M.version_error="Save failed (versions: "..tostring(err)..")";M.message=M.version_error;M.status=M.version_error
+end
+function M.snapshot(name,named,done)
+    if not M.flush() then M.message="Snapshot not created: the current level is not yet saved. Retry after storage sync.";return nil,M.message end
+    if not M.key() then M.message="Edit or save this template copy first";return nil,M.message end
+    local instance,revision=M.opened,M.doc.editor.revision
+    local text=json.encode(M.doc,{encode_empty_table_as_object=false})
+    local ok,err=M.versions.add(M.key(),text,name,named==true,function()
+        M.version_error=nil
+        if M.opened==instance and M.doc.editor.revision==revision then M.versioned[instance]=revision end
+        if done then done() end
+    end)
+    if not ok then version_failure(err);return nil,err end
+    M.version_error=nil;M.syncing=true;M.status="Saving..."
+    -- Accepted immutable snapshot; document switching can proceed while IndexedDB finishes.
+    M.versioned[instance]=revision;M.version_times[M.key()]=socket.gettime()
+    return true
+end
+function M.restore_version(id)
+    local d,err=M.versions.load(M.key(),id)
+    if not d then M.message="Restore refused: "..tostring(err);return nil end
+    local instance,revision,key=M.opened,M.doc.editor.revision,M.key()
+    return M.snapshot("Before restore",false,function()
+        if M.opened~=instance or M.doc.editor.revision~=revision then M.message="Restore cancelled: the current level changed; try again.";return end
+        -- Open supplies the monotonic revision and exactly one Undo entry, bypassing lock edits.
+        if M.open(d,true,{key=key,store=true}) then M.message="Version restored; the previous state is in Versions and Undo." end
+    end)
+end
+function M.version_tick()
+    M.versions.update()
+    if M.versions.error then
+        if M.seen_version_failure~=M.versions.generation then M.seen_version_failure=M.versions.generation;M.versioned={} end
+        M.version_error=M.versions.error;M.status=M.version_error
+    end
+    if M.versions.busy() or not M.doc or not M.key() or M.behind[M.opened] or M.dirty then return end
+    local last=M.version_times[M.key()]
+    if M.store[M.opened] and M.versioned[M.opened]~=M.doc.editor.revision and (not last or socket.gettime()-last>=300) then
+        M.version_times[M.key()]=socket.gettime()
+        M.snapshot("Automatic",false)
+    end
+end
 function M.key() return M.keys[M.opened] end
 local function touch(geometry)
     M.view_version=M.view_version+1
@@ -124,7 +170,13 @@ end
 -- would replace its draft and its edits would live only in Undo. A refused switch can be repeated
 -- within 10 s to continue anyway (e.g. browser storage unavailable).
 function M.leave()
-    if M.flush() then M.refused_at=nil;return true end
+    if M.flush() then
+        if M.key() and M.versioned[M.opened]~=M.doc.editor.revision then
+            local ok,err=M.snapshot("Before switch",false)
+            if not ok then M.message="Version not created: "..tostring(err)..". The level itself is saved." end
+        end
+        M.refused_at=nil;return true
+    end
     local now=socket.gettime()
     if M.refused_at and now-M.refused_at<=10 then M.refused_at=nil;return true end
     M.refused_at=now
@@ -295,13 +347,17 @@ function M.save_draft()
     return true
 end
 function M.sync()
+    M.version_tick()
     if not M.syncing then return end
+    if M.versions.busy() then M.status="Saving...";return end
     local state=custom.sync_state()
     if state=="syncing" then return end
     M.syncing=false
     -- A good sync persists every file written before it, so it also clears an earlier failure.
     M.unsynced=state=="failed" or nil
     if M.dirty then return end -- a newer action is waiting for its own save
+    if M.behind[M.opened] then M.status="Save failed (current level; retry saving before switching)";return end
+    if M.version_error then M.status=M.version_error;return end
     M.status=state=="saved" and "Saved" or state=="session" and "Saved for this session only" or "Save failed (browser storage sync)"
 end
 -- Newest draft: {doc} or {unsupported=message}; nil without a draft.

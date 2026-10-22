@@ -191,7 +191,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='speed' or name=='test_speed' or name:match('^param_')
+        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -240,13 +240,14 @@ function M.render(u,d)
         local title_width=math.min(280,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
         local sx=112+title_width
-        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-288-sx)
-        u.status_rect={x=sx,y=8,w=math.max(0,w-288-sx),h=32}
+        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-384-sx)
+        u.status_rect={x=sx,y=8,w=math.max(0,w-384-sx),h=32}
         for i,v in ipairs({{'new','New level'},{'open','Open levels / templates'},{'import','Import JSON'},{'export','Export JSON'}}) do
             button(v[1],w-264+(i-1)*40,8,32,v[2],false,v[2])
         end
         button('warnings',w-104,8,48,d.blocking and ('! '..d.error_count) or d.warning_count>0 and ('! '..d.warning_count) or 'OK',false,d.diagnostics..': show problems and their sources')
         button('view_help',w-48,8,32,'?',false,'Help [H]')
+        button('versions',w-352,8,80,'Versions',false,'Restore saved versions / named snapshots')
         button('undo',16,56,32,'Undo',false,'Undo [Ctrl+Z]')
         button('redo',56,56,32,'Redo',false,'Redo [Ctrl+Y]')
         button('play',96,56,40,'Play',true,'Play from START [E]')
@@ -429,6 +430,24 @@ function M.render(u,d)
             paragraph(mx+24,my+36,d.conflict,mw-48,C.text,14)
             button('conflict_source',mx+24,my+mh-56,mw/2-36,'Recompile from source')
             button('conflict_lines',mx+mw/2+12,my+mh-56,mw/2-36,'Keep compiled (as lines)')
+        elseif modal=='versions' then
+            u.dialog_panel=panel
+            text(mx+20,my+24,'Versions — '..d.title,C.text,16,mw-40)
+            text(mx+20,my+52,(d.version_error and 'Save failed' or d.version_status)..' · 10 auto + 10 named / level · 16 MiB · Click a row to restore',d.version_error and C.error or C.secondary,12,mw-40)
+            for i=1,d.version_per do
+                local v=d.version_rows[d.version_page*d.version_per+i]
+                if v then
+                    local y=my+76+(i-1)*48
+                    local label=os.date('%Y-%m-%d %H:%M',v.time)..'  '..v.name..'  ('..v.count..' objects, '..(v.named and 'named' or 'auto')..')'
+                    button('restore_'..i,mx+20,y,mw-128,label,false,'Restore: '..label)
+                    button('versiondel_'..i,mx+mw-96,y,76,d.version_delete==v.id and 'Sure?' or 'Delete')
+                end
+            end
+            if d.version_page>0 then button('versions_prev',mx+20,my+mh-104,112,'< Newer') end
+            if (d.version_page+1)*d.version_per<#d.version_rows then button('versions_next',mx+144,my+mh-104,112,'Older >') end
+            paragraph(mx+20,my+mh-148,d.version_error or d.version_message or '',mw-40,d.version_error and C.error or C.secondary,12,{my+mh-160,my+mh-108})
+            button('snapshot',mx+20,my+mh-56,mw-188,d.version_name and ('Name: '..d.version_name..'_  [Enter]') or 'Create named snapshot',false,'Type a snapshot name and press Enter')
+            button('dialog_close',mx+mw-148,my+mh-56,128,'Close [Esc]')
         elseif modal=='open' then
             u.dialog_panel=panel
             text(mx+20,my+24,d.library_title,C.text,14,mw/2-40);text(mx+mw/2+20,my+24,'Templates (open as a copy)',C.text)
@@ -438,6 +457,7 @@ function M.render(u,d)
                 if v.remove then button('libdel_'..i,mx+mw/2-96,y,76,v.confirm and 'Sure?' or 'Delete') end
             end
             for i,v in ipairs(d.template_rows) do button(v.name,mx+mw/2+20,my+48+(i-1)*44,mw/2-40,v.title,false,v.title) end
+            paragraph(mx+20,my+mh-140,d.dialog_message or '',mw-40,(d.dialog_message or ''):lower():find('failed') and C.error or C.secondary,12,{my+mh-144,my+mh-100})
             if d.page>0 then button('lib_newer',mx+20,my+mh-96,112,'< Newer') end
             if d.library_more then button('lib_older',mx+144,my+mh-96,112,'Older >') end
             if d.tpl_page>0 then button('tpl_prev',mx+mw/2+20,my+mh-96,120,'< Previous') end
