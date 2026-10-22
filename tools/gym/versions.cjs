@@ -136,7 +136,14 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   for(let i=namedCount;i<10;i++){const r=await request({op:'add',named:true,name:'Named '+i});assert.equal(r.ok,true,r.error);await idle();}
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
   // Independent keys represent other saved levels; global pruning may remove only automatic entries.
-  for(let i=0;i<40;i++){if(i%10===0)console.log('global cap auto '+i);const r=await request({op:'add',key:100+i,name:'Large auto '+i,pad:240000});assert.equal(r.ok,true,r.error);await idle();}
+  for(let i=0;i<40;i++){
+   if(i%10===0)console.log('global cap auto '+i);
+   // The first full-cap admission must handle many tiny old versions within the same 30 s bound,
+   // even when each real IndexedDB acknowledgement takes an extra second.
+   if(i===34)await page.evaluate(()=>{const sync=FS.syncfs;window.restoreSlowSync=()=>FS.syncfs=sync;FS.syncfs=function(populate,cb){return sync.call(this,populate,populate?cb:(...args)=>setTimeout(()=>cb(...args),1000));};});
+   const r=await request({op:'add',key:100+i,name:'Large auto '+i,pad:240000});assert.equal(r.ok,true,r.error);await idle();
+   if(i===34)await page.evaluate(()=>window.restoreSlowSync());
+  }
   report=await request({op:'measure'});assert.ok(report.bytes<=16*1024*1024);measurements.capBytes=report.bytes;const diskBytes=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));assert.equal(report.bytes,diskBytes,'registry must account for every physical slot');assert.ok(diskBytes<=16*1024*1024);measurements.diskBytes=diskBytes;
   assert.equal(report.entries.filter(v=>v.named).length,10);
   const over=await request({op:'add',key:199,name:'Too large',pad:262145});assert.equal(over.ok,false);assert.match(over.error,/256 KiB/);
