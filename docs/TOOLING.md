@@ -51,6 +51,8 @@ PYTHON=.venv/bin/python node tools/gym/presets_compare.cjs --bundle artifacts/gy
 python tools/gym/smoke.py --bundle artifacts/gym-bundle --output artifacts/gym/a17-c --case a17 --preset c                          # one station, one preset
 ```
 
+Gym CI installs the lockfile-pinned Chromium binaries, then `node tools/ci/setup_playwright.cjs <evidence-directory>` validates both Chromium variants and their host libraries before using the runner as provisioned. The helper removes Playwright’s transferable `DEPENDENCIES_VALIDATED` cache markers so a browser cache hit cannot stand in for this host’s library check. Only a missing-library diagnostic triggers `playwright install-deps chromium`, followed by another mandatory probe; other failures remain failures. Each job uploads setup timings, image/cache identity and command logs with its usual evidence. Gym uses headless Chromium and the game’s own fonts; additional CJK/X11 font packs are not required by these English, canvas-based protocols. G1 HTML5 and release-preview setup remain separately managed. See [Playwright browser dependencies](https://playwright.dev/docs/browsers#install-system-dependencies).
+
 Remove `build/` and `.internal/` before a debug bundle if the checkout produced release builds: a stale release engine once replaced the debug gym.
 
 ## Local environment (WSL, VS Code)
