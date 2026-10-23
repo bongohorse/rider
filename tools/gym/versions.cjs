@@ -106,22 +106,6 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.match((await ed()).message,/Restore refused.*Unsupported/i);assert.deepEqual(await files(),protectedFiles);
   // Restore its original bytes so later count/prune checks exercise supported versions.
   await page.evaluate(f=>{for(const [n,v] of Object.entries(f))FS.writeFile('/data/.rider/'+n,new Uint8Array(v));},versionFiles);await close();
-  // Warm an automatic version's admission cache, then change its format through the real
-  // debug slot writer. Pruning must notice the change, retain it, and notice a supported rewrite.
-  await idle();let guard=await request({op:'add',key:900,name:'Protected automatic'});assert.equal(guard.ok,true);await idle();
-  const guarded=guard.entries.find(v=>v.name==='Protected automatic').id;
-  assert.equal((await request({op:'add',key:900,name:'Warm guard'})).ok,true);await idle();
-  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:999,text:JSON.stringify(future)});
-  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();const futureAuto=await files();
-  for(let i=0;i<11;i++){const r=await request({op:'add',key:900,name:'Guard pressure '+i});assert.equal(r.ok,true,r.error);await idle();}
-  guard=await request({op:'measure',key:900});assert.equal(guard.entries.length,10);assert.ok(guard.entries.some(v=>v.id===guarded),'a newly unsupported automatic version must not be pruned');
-  const afterPressure=await files();for(const suffix of ['a','b']){const name='custom-version-'+guarded+'-'+suffix;assert.deepEqual(afterPressure[name],futureAuto[name]);}
-  const supported={...future,editor:await doc()};
-  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:1000,text:JSON.stringify(supported)});
-  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();
-  guard=await request({op:'add',key:900,name:'After supported rewrite'});assert.equal(guard.ok,true,guard.error);await idle();
-  assert.ok(!guard.entries.some(v=>v.id===guarded),'a supported rewrite invalidates cached protection and restores oldest-first pruning');
-  assert.equal((await request({op:'remove',key:900})).ok,true);await idle();
   cases.push('incomplete_and_unknown_versions');console.log('PASS incomplete_and_unknown_versions');
 
   // A failed version write leaves every indexed snapshot byte-for-byte intact.
@@ -146,8 +130,25 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // Per-level limits and exact filesystem cap, with large but valid source JSON (whitespace padding).
   const currentKey=(await ed()).key;
-  for(let i=0;i<12;i++){await idle();const r=await request({op:'add',name:'Auto '+i});assert.equal(r.ok,true,r.error);await idle();}
+  const priorAutos=(await request({op:'measure'})).entries.filter(v=>!v.named).map(v=>v.id);assert.ok(priorAutos.length>0);
+  // Reuse this real pruning pressure to check false -> protected -> supported cache invalidation.
+  let guarded,futureAuto;
+  for(let i=0;i<12;i++){
+   await idle();const r=await request({op:'add',name:'Auto '+i});assert.equal(r.ok,true,r.error);await idle();
+   if(i===0){
+    guarded=r.entries.filter(v=>!v.named&&priorAutos.includes(v.id)).sort((a,b)=>a.time-b.time||a.id-b.id)[0]?.id;assert.ok(guarded);
+    await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:999,text:JSON.stringify(future)});
+    await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();futureAuto=await files();
+   }
+  }
   let report=await request({op:'measure'});assert.equal(report.entries.filter(v=>!v.named).length,10);assert.ok(!report.entries.some(v=>v.name==='Auto 0'));
+  assert.ok(report.entries.some(v=>v.id===guarded),'a newly unsupported automatic version must not be pruned');
+  const afterPressure=await files();for(const suffix of ['a','b']){const name='custom-version-'+guarded+'-'+suffix;assert.deepEqual(afterPressure[name],futureAuto[name]);}
+  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:1000,text:JSON.stringify({...future,editor:await doc()})});
+  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();
+  const unprotected=await request({op:'add',name:'Auto 12'});assert.equal(unprotected.ok,true,unprotected.error);await idle();
+  report=await request({op:'measure'});assert.equal(report.entries.filter(v=>!v.named).length,10);
+  assert.ok(!report.entries.some(v=>v.id===guarded),'a supported rewrite invalidates cached protection and restores oldest-first pruning');
   let namedCount=report.entries.filter(v=>v.named).length;
   for(let i=namedCount;i<10;i++){const r=await request({op:'add',named:true,name:'Named '+i});assert.equal(r.ok,true,r.error);await idle();}
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
@@ -179,6 +180,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);
   await page.waitForFunction(()=>window.riderEditor.message.includes('Save failed'));assert.match((await ed()).status,/Save failed/);
   assert.ok((await ed()).library.some(v=>v.key===levelKey),'failed version deletion must keep the level available for retry');
+  await page.evaluate(()=>window.restoreDeleteWrite());
+  // Failure while staging the second retirement slot must leave every source file intact.
+  await page.evaluate(()=>{window.beforeSecondSlot=Object.fromEntries(FS.readdir('/data/.rider').filter(n=>/^custom-version-/.test(n)).map(n=>[n,FS.readFile('/data/.rider/'+n)]));});
+  await page.evaluate(()=>{const write=FS.write;let first;window.restoreDeleteWrite=()=>FS.write=write;FS.write=function(stream,...args){const p=stream.path||'';if(/custom-versions-/.test(p)){if(first===undefined)first=p;else if(p!==first)throw new FS.ErrnoError(29);}return write.call(this,stream,...args);};});
+  await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);
+  await page.waitForFunction(()=>window.riderEditor.message.includes('Save failed'));
+  assert.ok((await ed()).library.some(v=>v.key===levelKey));
+  const changedBeforeAck=await page.evaluate(()=>Object.entries(window.beforeSecondSlot).filter(([n,v])=>{try{const after=FS.readFile('/data/.rider/'+n);return after.length!==v.length||!v.every((x,i)=>after[i]===x);}catch{return true;}}).map(([n])=>n));
+  assert.deepEqual(changedBeforeAck,[],'no source may change before both retirement slots succeed');
+  await page.evaluate(()=>{delete window.beforeSecondSlot;});
   await page.evaluate(()=>window.restoreDeleteWrite());
   await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);await idle();await page.waitForTimeout(200);
   assert.ok(!(await ed()).library.some(v=>v.key===levelKey));await close();

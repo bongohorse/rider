@@ -79,12 +79,15 @@ local function store(slots,parse)
         if protection==nil then local newest=S.newest();protection=newest and newest.unsupported or false end
         return protection
     end
+    local function latest_valid(a,b)
+        a,b=a and not a.unsupported and a,b and not b.unsupported and b
+        return a and b and (a.seq>b.seq and a or b) or a or b
+    end
     -- Newest valid slot. A newer slot that no longer validates (e.g. a start beyond today's limit) is
     -- reported as skipped (or as the error when nothing valid is left), never silently hidden.
     function S.restore()
         local a,b=slot(1),slot(2)
-        a,b=a and not a.unsupported and a,b and not b.unsupported and b
-        local best=a and b and (a.seq>b.seq and a or b) or a or b
+        local best=latest_valid(a,b)
         for i=1,2 do
             local t=raw(i)
             if t and (not best or t.seq>best.seq) then
@@ -98,8 +101,9 @@ local function store(slots,parse)
     end
     function S.save(text,key)
         protection=nil
-        local current=S.restore()
+        -- One fresh pair supplies both target selection and sequence; readback stays mandatory.
         local a,b=slot(1),slot(2)
+        local current=latest_valid(a,b)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
         local target=current and 3-current.slot or 1
         local held=target==1 and a or b
