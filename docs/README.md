@@ -15,7 +15,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](LE1B_REPORT.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
 | Native Bridge | [bridge contract](contracts/bridge.md) |
-| Setup, build, tests, CI, preview | [TOOLING.md](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md) |
+| Setup, build, tests, CI, preview | [TOOLING.md](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md); [CI Speed 3 evidence](CI_SPEED_3_REPORT.md) |
 | Device evidence, phone testing | [platform matrix](PLATFORM_MATRIX.md), [phone trial](MOBILE_TRIAL.md) |
 | Status values and reporting | [evidence policy](contracts/evidence.md) |
 | Unscheduled ideas (do not implement) | [ideas](ideas/README.md) |
@@ -30,6 +30,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, roadmap | Goal · Decisions · Roadmap · Stop points · Later phases |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Design brief | Core loop and duration · Controls and feel trials · Crash, recovery and checkpoints · Identity and fun acceptance |
 | [TOOLING.md](TOOLING.md) | Commands and operations | Prerequisites · Commands · Gym tests · Local environment · Worktrees · CI and required check · Agent CI completion watch · Dependencies and Renovate · Preview deployment · Gemini read-only reviewer setup |
+| [CI_SPEED_3_REPORT.md](CI_SPEED_3_REPORT.md) | P1 browser setup, EA3 correction and before/after evidence (#264) | Scope and implementation · Measurements · Failures and verification · Decisions and limits |
 | [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md) | Pinned Defold/Bob/JDK/Bridge and update rules | — |
 | [ENGINE_REFERENCES.md](ENGINE_REFERENCES.md) | Official Defold/Box2D sources | Read only what the task needs · Defold · Box2D · Automation Bridge · Build, platforms and gameplay evidence · Maintenance |
 | [PLATFORM_MATRIX.md](PLATFORM_MATRIX.md) | Evidence per platform and device | — |
