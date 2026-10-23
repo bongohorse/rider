@@ -67,10 +67,13 @@ function M.create(parse)
         cached=next;H.generation=H.generation+1
         return text
     end
-    local function begin(next,done)
+    local function begin(next,done,retiring)
         local text,err=write_index(next)
         if not text then return nil,err end
-        pending={text=text,phase="first",done=done};return true
+        -- Retirement introduces no new source references. Stage both index slots together,
+        -- then await their real acknowledgement before touching any retired source file.
+        if retiring then local ok,e=index.save(text);if not ok then return nil,e end end
+        pending={text=text,phase=retiring and "second" or "first",done=done};return true
     end
     function H.busy() return pending~=nil end
     -- Called once per frame. Reads are cached, so they cannot perpetually restart IndexedDB sync.
@@ -89,13 +92,15 @@ function M.create(parse)
             -- from the persisted garbage list; no named/live snapshot is ever garbage-collected.
             for _,id in ipairs(cached.garbage) do local ok,err=version(id).remove();if not ok then fail(err);return end end
             if #cached.garbage>0 then
-                local next=copy(cached);next.garbage={}
-                local text,err=write_index(next);if not text then fail(err);return end
-                p.text,p.phase=text,"clean_first";return
+                p.phase="deleted";return
             end
-        elseif p.phase=="clean_first" then
-            local ok,err=index.save(p.text);if not ok then fail(err);return end
-            p.phase="clean_second";return
+        elseif p.phase=="deleted" then
+            -- Keep the persisted garbage registry until deletion itself is acknowledged.
+            -- Clearing it adds no source references, so both cleared slots may share one sync.
+            local next=copy(cached);next.garbage={}
+            local text,err=write_index(next);if not text then fail(err);return end
+            local ok,e=index.save(text);if not ok then fail(e);return end
+            p.text,p.phase=text,"cleaned";return
         end
         pending=nil;H.error=nil;H.generation=H.generation+1
         if p.done then p.done() end
@@ -117,7 +122,7 @@ function M.create(parse)
         if pending then return nil,"Version storage is busy; wait for Saving to finish" end
         local idx,err=H.index();if not idx then return nil,err end
         local next=copy(idx);retire(next,function(v) return v.key==key and (id==nil or id==v.id) end)
-        return begin(next,done)
+        return begin(next,done,true)
     end
     -- on_done only runs after acknowledged browser sync (or native/session-only completion).
     function H.add(key,text,name,named,done)
@@ -129,7 +134,7 @@ function M.create(parse)
         if type(name)~="string" or #name>64 or name:find("[%z\1-\31\127]") or (named and name:match("^%s*$")) then return nil,"Snapshot name must be 1–64 bytes" end
         local idx,ierr=H.index();if not idx then return nil,ierr end
         -- Recover interrupted cleanup before new allocations. The operation is retried after sync.
-        if #idx.garbage>0 then return begin(copy(idx),function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end) end
+        if #idx.garbage>0 then return begin(copy(idx),function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end,true) end
         local count,automatic=0,{}
         for _,v in ipairs(idx.entries) do
             if v.key==key and v.named==named then count=count+1 end
@@ -147,7 +152,7 @@ function M.create(parse)
         if version(id).exists() then
             if (version(id).newest() or {}).unsupported then return nil,"Unindexed version from a newer editor; kept unchanged" end
             next.next=id+1;next.garbage[#next.garbage+1]=id
-            return begin(next,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end)
+            return begin(next,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end,true)
         end
         local entry={id=id,key=key,time=os.time(),name=name,named=named,count=#doc.editor.objects}
         next.entries[#next.entries+1]=entry;next.next=id+1
@@ -173,7 +178,7 @@ function M.create(parse)
         if peak()>M.CAP then return nil,"Version storage is full (16 MiB); named/protected snapshots leave insufficient room. Level still saves normally" end
         if chosen>0 then
             local pruned=copy(idx);retire(pruned,function(v) return selected[v.id] end)
-            return begin(pruned,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end)
+            return begin(pruned,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end,true)
         end
         -- Immutable versions get two independently readable slots. The index is published last.
         local a,aerr=version(id).save(text);if not a then return nil,aerr end

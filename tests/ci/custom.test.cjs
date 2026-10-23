@@ -102,7 +102,7 @@ test('read-only Rider closes do not sync; writes coalesce and remain unsaved unt
  Module.persistentSync();await flush();Module.persistentSync();pending.shift()();
  assert.equal(api.syncState(),'syncing');await flush();assert.equal(pending.length,1);
  pending.shift()();assert.equal(api.syncState(),'saved');
- // Preserve loader behavior for non-Rider reads, unknown flags and a create/truncate open.
+ // Preserve loader behavior for non-Rider reads, missing/non-integer flags and a create/truncate open.
  for(const stream of [{path:'/other/file',flags:0},{path:'/data/.rider/file'},{path:'/data/.rider/file',flags:64},{path:'/data/.rider/file',flags:512}]){
   FS.close(stream);await flush();assert.equal(pending.length,1);pending.shift()();
  }
