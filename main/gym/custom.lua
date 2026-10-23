@@ -139,7 +139,11 @@ local function store(slots,parse)
         protection=nil
         for _,name in ipairs(slots) do
             local path=sys.get_save_file(APP,name);local f=io.open(path,"rb")
-            if f then f:close();local ok,err=os.remove(path);if not ok then return nil,err end end
+            if f then
+                f:close();local ok,err=os.remove(path);if not ok then return nil,err end
+                -- Read-only closes no longer schedule persistence; include successful/partial deletes.
+                if html5 then html5.run("Module.persistentSync()") end
+            end
         end
         return true
     end

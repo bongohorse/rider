@@ -118,7 +118,36 @@
     try { return paths.reduce((bytes, path) => bytes + FS.stat(path).size, 0); }
     catch (_) { return null; }
   };
-  // The pinned dmloader syncs MEM->IndexedDB after each file close and only logs errors.
+  // The pinned loader requests persistence on every close, including reads. Close normally,
+  // but suppress the request for read-only Rider files; explicit deletions request their own sync.
+  // Coalesce writes within one JS turn. Keep queued work visible to Lua until the real sync ends.
+  if (typeof Module !== 'undefined' && typeof Module.persistentSync === 'function') {
+    let readOnlyCloses = 0;
+    if (typeof FS !== 'undefined' && typeof FS.close === 'function') {
+      const close = FS.close;
+      FS.close = function (stream) {
+        // Pinned Emscripten flags: access mode 3, O_CREAT 64, O_TRUNC 512.
+        const readOnly = typeof stream.path === 'string' && stream.path.startsWith('/data/.rider/')
+          && Number.isInteger(stream.flags) && (stream.flags & (3 | 64 | 512)) === 0;
+        if (readOnly) readOnlyCloses++;
+        try { return close.apply(this, arguments); }
+        finally { if (readOnly) readOnlyCloses--; }
+      };
+    }
+    const sync = Module.persistentSync;
+    Module.persistentSync = function () {
+      if (readOnlyCloses) return;
+      if (Module.persistentStorage !== true || !Module._syncInitial) return sync.apply(this, arguments);
+      if (api.syncQueued) return;
+      api.syncQueued = true;
+      const receiver = this, args = arguments;
+      queueMicrotask(() => {
+        api.syncQueued = false;
+        try { sync.apply(receiver, args); }
+        catch (error) { api.syncStopped = true;console.error('Unable to start browser storage sync:', error); }
+      });
+    };
+  }
   // Once its retries are exhausted, _startSyncFS leaves _syncInProgress set for good and never
   // syncs again in this page, so that call is recorded as a terminal failure.
   if (typeof Module !== 'undefined' && typeof Module._startSyncFS === 'function') {
@@ -134,7 +163,7 @@
   api.syncState = () => {
     if (typeof Module === 'undefined' || Module.persistentStorage !== true) return 'session';
     if (api.syncStopped) return 'failed';
-    if (Module._syncInProgress || Module._syncNeeded) return 'syncing';
+    if (api.syncQueued || Module._syncInProgress || Module._syncNeeded) return 'syncing';
     return Module._syncTries > 0 ? 'failed' : 'saved';
   };
   const tools = document.getElementById('page-tools');

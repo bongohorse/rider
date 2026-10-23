@@ -112,13 +112,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const guarded=guard.entries.find(v=>v.name==='Protected automatic').id;
   assert.equal((await request({op:'add',key:900,name:'Warm guard'})).ok,true);await idle();
   await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:999,text:JSON.stringify(future)});
-  await page.waitForTimeout(300);await idle();const futureAuto=await files();
+  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();const futureAuto=await files();
   for(let i=0;i<11;i++){const r=await request({op:'add',key:900,name:'Guard pressure '+i});assert.equal(r.ok,true,r.error);await idle();}
   guard=await request({op:'measure',key:900});assert.equal(guard.entries.length,10);assert.ok(guard.entries.some(v=>v.id===guarded),'a newly unsupported automatic version must not be pruned');
   const afterPressure=await files();for(const suffix of ['a','b']){const name='custom-version-'+guarded+'-'+suffix;assert.deepEqual(afterPressure[name],futureAuto[name]);}
   const supported={...future,editor:await doc()};
   await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:1000,text:JSON.stringify(supported)});
-  await page.waitForTimeout(300);await idle();
+  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();
   guard=await request({op:'add',key:900,name:'After supported rewrite'});assert.equal(guard.ok,true,guard.error);await idle();
   assert.ok(!guard.entries.some(v=>v.id===guarded),'a supported rewrite invalidates cached protection and restores oldest-first pruning');
   assert.equal((await request({op:'remove',key:900})).ok,true);await idle();
@@ -184,6 +184,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.ok(!(await ed()).library.some(v=>v.key===levelKey));await close();
   const removed=await request({op:'measure',key:levelKey});assert.deepEqual(removed.entries,[]);
   const allFiles=await page.evaluate(()=>FS.readdir('/data/.rider'));for(const v of switched.entries)assert.ok(!allFiles.some(n=>n==='custom-version-'+v.id+'-a'||n==='custom-version-'+v.id+'-b'));
+  // Deletions must reach IndexedDB, not only the in-memory filesystem or cached indexes.
+  await page.reload();await edit();await page.locator('canvas').focus();await saved();
+  assert.ok(!(await ed()).library.some(v=>v.key===levelKey),'the deleted level must stay absent after reload');
+  assert.deepEqual((await request({op:'measure',key:levelKey})).entries,[]);
+  const reloadedFiles=await page.evaluate(()=>FS.readdir('/data/.rider'));
+  for(const v of switched.entries)assert.ok(!reloadedFiles.some(n=>n==='custom-version-'+v.id+'-a'||n==='custom-version-'+v.id+'-b'),'deleted version files must stay absent after reload');
   cases.push('delete_level_versions');console.log('PASS delete_level_versions');
   await versions();for(const viewport of [{width:1280,height:720},{width:1920,height:1080},{width:1280,height:480}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(300);e=await ed();assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);await page.screenshot({path:path.join(out,'versions-'+viewport.width+'x'+viewport.height+'.png')});
