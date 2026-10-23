@@ -41,8 +41,18 @@ async function probe() {
     const browser = await chromium.launch({...options, timeout: 30000});
     try {
       const page = await browser.newPage();
-      await page.setContent('<button>Ready</button>');
+      await page.setContent('<canvas></canvas><button>Ready</button>');
+      await page.evaluate(() => {
+        if (!document.querySelector('canvas').getContext('webgl')) throw Error('Chromium WebGL unavailable');
+        document.querySelector('button').onclick = async () => {
+          const audio = new AudioContext();
+          await audio.resume();
+          document.body.dataset.audio = audio.state;
+          await audio.close();
+        };
+      });
       await page.getByRole('button', {name: 'Ready'}).click();
+      await page.waitForFunction(() => document.body.dataset.audio === 'running', null, {timeout: 10000});
       await page.screenshot();
       console.log(JSON.stringify({browser: options.channel || 'headless-shell', version: browser.version(), status: 'PASS'}));
     } finally {

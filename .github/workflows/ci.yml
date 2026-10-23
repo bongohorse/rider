@@ -5,6 +5,11 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      cold_browser_cache:
+        description: Validate empty Chromium cache in the struts group only
+        type: boolean
+        required: false
+        default: false
       full_run:
         description: Force the complete regression suite (manual runs are always full)
         type: boolean
@@ -165,6 +170,7 @@ jobs:
     with:
       caller_managed_concurrency: true
       run_windows_native: ${{ needs.changes.outputs.skip_special != 'true' }}
+      cold_browser_cache: ${{ inputs.cold_browser_cache || false }}
   tooling:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Collect auditable GitHub Gym step timings; requires authenticated gh, no writes to GitHub."""
 import argparse
+import base64
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import json
@@ -29,6 +30,8 @@ def collect(run_id, output):
     dest = output / str(run_id)
     dest.mkdir(parents=True, exist_ok=True)
     run = api(f'repos/{REPO}/actions/runs/{run_id}')
+    if run['status'] != 'completed':
+        raise ValueError(f'Run {run_id} is not complete; timing would be partial')
     # Preserve every page: a successful first page is not proof of a complete matrix.
     jobs, page = [], 1
     while True:
@@ -62,9 +65,11 @@ def collect(run_id, output):
         install = [s for s in setup_steps if 'playwright install' in s['name'] or
                    s['name'] == 'Install pinned Chromium and validate runner dependencies']
         image = re.search(r'Image: (\S+)\s*\n[^\n]*Version: (\S+)', log)
+        checkout = re.search(r'git log -1 --format=%H\n[^\n]*? ([0-9a-f]{40})\s*\n', log)
         cache = re.search(r'Cache restored from key: (\S*playwright\S*)', log)
         return {
             'group': group, 'job_id': job['id'], 'conclusion': job['conclusion'],
+            'source_sha': checkout[1] if checkout else None,
             'runner_image': list(image.groups()) if image else None,
             'browser_cache_key': cache[1] if cache else None,
             'browser_cache_miss': 'Cache not found for input keys:' in log and not cache,
@@ -81,8 +86,17 @@ def collect(run_id, output):
         }
     with ThreadPoolExecutor(max_workers=4) as pool:
         measurements = list(pool.map(measure, gym))
+    source_shas = {g['source_sha'] for g in measurements}
+    source_sha = next(iter(source_shas)) if len(source_shas) == 1 else None
+    playwright = None
+    if source_sha:
+        lock = api(f'repos/{REPO}/contents/package-lock.json?ref={source_sha}')
+        lock_text = base64.b64decode(lock['content']).decode()
+        (dest / 'package-lock.json').write_text(lock_text)
+        playwright = json.loads(lock_text)['packages']['node_modules/playwright']['version']
     result = {
-        'run_id': run_id, 'url': run['html_url'], 'source_sha': run['head_sha'],
+        'source_sha': source_sha, 'playwright': playwright,
+        'run_id': run_id, 'url': run['html_url'], 'run_head_sha': run['head_sha'],
         'event': run['event'], 'attempt': run['run_attempt'], 'conclusion': run['conclusion'],
         'created_at': run['created_at'], 'run_started_at': run['run_started_at'],
         'created_to_run_start_seconds': seconds(run['created_at'], run['run_started_at']),

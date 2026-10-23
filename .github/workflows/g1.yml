@@ -6,11 +6,20 @@ on:
         description: Let the calling CI own cancellation and isolate this run
         type: boolean
         default: false
+      cold_browser_cache:
+        description: Validate empty Chromium cache in the struts group only
+        type: boolean
+        default: false
       run_windows_native:
         description: Include Windows native physics in a called CI matrix
         type: boolean
         default: true
   workflow_dispatch:
+    inputs:
+      cold_browser_cache:
+        description: Validate empty Chromium cache in the struts group only
+        type: boolean
+        default: false
 permissions:
   contents: read
 # The caller owns CI cancellation. Standalone dispatches must not cancel its jobs.
@@ -242,10 +251,17 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Cache pinned Playwright Chromium
         id: browser-cache
+        if: ${{ !(inputs.cold_browser_cache && matrix.group == 'struts') }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-chromium-v1-${{ hashFiles('package-lock.json') }}
+      - name: Select empty browser cache for clean-download validation
+        if: ${{ inputs.cold_browser_cache && matrix.group == 'struts' }}
+        shell: bash
+        run: |
+          test ! -e "$RUNNER_TEMP/rider-playwright-cold"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/rider-playwright-cold" >> "$GITHUB_ENV"
       - name: Install pinned Chromium and validate runner dependencies
         env:
           BROWSER_CACHE_HIT: ${{ steps.browser-cache.outputs.cache-hit }}
