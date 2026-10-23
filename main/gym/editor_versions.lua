@@ -95,12 +95,10 @@ function M.create(parse)
                 p.phase="deleted";return
             end
         elseif p.phase=="deleted" then
-            -- Keep the persisted garbage registry until deletion itself is acknowledged.
-            -- Clearing it adds no source references, so both cleared slots may share one sync.
-            local next=copy(cached);next.garbage={}
-            local text,err=write_index(next);if not text then fail(err);return end
-            local ok,e=index.save(text);if not ok then fail(e);return end
-            p.text,p.phase=text,"cleaned";return
+            -- Deletions are now durable. Retain their recovery IDs on disk until the next
+            -- index mutation; reloading may harmlessly retry removing already absent files.
+            -- Avoid a separate sync just to erase that idempotent recovery metadata.
+            cached=copy(cached);cached.garbage={}
         end
         pending=nil;H.error=nil;H.generation=H.generation+1
         if p.done then p.done() end
@@ -169,7 +167,8 @@ function M.create(parse)
         local function peak()
             local proposed={format=1,next=next.next,entries={},garbage={}}
             for _,v in ipairs(next.entries) do if not selected[v.id] then proposed.entries[#proposed.entries+1]=v end end
-            return used-freed+pair+2*index.cost(json.encode(proposed))
+            -- The last durable registry may still contain acknowledged-deleted IDs.
+            return used-freed+pair+math.max(index.bytes(),2*index.cost(json.encode(proposed)))
         end
         if victim then choose(victim) end
         if peak()>M.CAP then

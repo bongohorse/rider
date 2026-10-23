@@ -201,6 +201,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.deepEqual((await request({op:'measure',key:levelKey})).entries,[]);
   const reloadedFiles=await page.evaluate(()=>FS.readdir('/data/.rider'));
   for(const v of switched.entries)assert.ok(!reloadedFiles.some(n=>n==='custom-version-'+v.id+'-a'||n==='custom-version-'+v.id+'-b'),'deleted version files must stay absent after reload');
+  // A retained durable garbage registry must recover idempotently before the next allocation.
+  const beforeRecovery=await request({op:'measure'});
+  const beforeRecoveryDisk=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));
+  assert.equal(beforeRecovery.bytes,beforeRecoveryDisk,'retained registry bytes must count before allocating a source');assert.ok(beforeRecoveryDisk<=16*1024*1024);
+  const recovered=await request({op:'add',name:'After cleanup reload'});assert.equal(recovered.ok,true,recovered.error);await idle();
+  assert.deepEqual((await request({op:'measure',key:levelKey})).entries,[]);
+  const afterRecovery=await request({op:'measure'});
+  const recoveryDiskBytes=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));
+  assert.equal(afterRecovery.bytes,recoveryDiskBytes);assert.ok(recoveryDiskBytes<=16*1024*1024);
+  for(const v of switched.entries)assert.ok(!(await page.evaluate(id=>FS.readdir('/data/.rider').some(n=>n==='custom-version-'+id+'-a'||n==='custom-version-'+id+'-b'),v.id)),'cleanup recovery must not resurrect retired sources');
   cases.push('delete_level_versions');console.log('PASS delete_level_versions');
   await versions();for(const viewport of [{width:1280,height:720},{width:1920,height:1080},{width:1280,height:480}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(300);e=await ed();assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);await page.screenshot({path:path.join(out,'versions-'+viewport.width+'x'+viewport.height+'.png')});
