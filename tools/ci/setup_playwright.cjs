@@ -72,6 +72,7 @@ function main() {
     run_id: process.env.GITHUB_RUN_ID || null, run_attempt: process.env.GITHUB_RUN_ATTEMPT || null,
     runner_image: process.env.ImageOS || null, runner_image_version: process.env.ImageVersion || null,
     browser_cache_hit: process.env.BROWSER_CACHE_HIT || 'false',
+    dependency_fixture: process.env.RIDER_PLAYWRIGHT_FALLBACK_FIXTURE || null,
     playwright: require('playwright/package.json').version, node: process.version,
     os_release: fs.readFileSync('/etc/os-release', 'utf8'), fallback: false, status: 'FAIL', steps: [],
   };

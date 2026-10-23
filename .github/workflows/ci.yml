@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       cold_browser_cache:
-        description: Validate empty Chromium cache in the struts group only
+        description: Validate empty browser cache and missing-library recovery in struts
         type: boolean
         required: false
         default: false

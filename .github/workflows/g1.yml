@@ -7,7 +7,7 @@ on:
         type: boolean
         default: false
       cold_browser_cache:
-        description: Validate empty Chromium cache in the struts group only
+        description: Validate empty browser cache and missing-library recovery in struts
         type: boolean
         default: false
       run_windows_native:
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       cold_browser_cache:
-        description: Validate empty Chromium cache in the struts group only
+        description: Validate empty browser cache and missing-library recovery in struts
         type: boolean
         default: false
 permissions:
@@ -125,11 +125,15 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Cache pinned Playwright Chromium
+        id: browser-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-chromium-v1-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
+      - name: Install pinned Chromium and validate runner dependencies
+        env:
+          BROWSER_CACHE_HIT: ${{ steps.browser-cache.outputs.cache-hit }}
+        run: node tools/ci/setup_playwright.cjs artifacts/g1/playwright-setup
       - name: Build and run HTML5 physics
         run: python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5
       - name: Verify per-case engine startup injection
@@ -262,10 +266,27 @@ jobs:
         run: |
           test ! -e "$RUNNER_TEMP/rider-playwright-cold"
           echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/rider-playwright-cold" >> "$GITHUB_ENV"
+      - name: Exercise missing-system-library recovery on the isolated CI runner
+        if: ${{ inputs.cold_browser_cache && matrix.group == 'struts' }}
+        shell: bash
+        run: |
+          sudo apt-get remove --yes libxcomposite1
+          test ! -e /usr/lib/x86_64-linux-gnu/libXcomposite.so.1
       - name: Install pinned Chromium and validate runner dependencies
         env:
           BROWSER_CACHE_HIT: ${{ steps.browser-cache.outputs.cache-hit }}
+          RIDER_PLAYWRIGHT_FALLBACK_FIXTURE: ${{ inputs.cold_browser_cache && matrix.group == 'struts' && 'libxcomposite1' || '' }}
         run: node tools/ci/setup_playwright.cjs artifacts/g1/playwright-setup
+      - name: Require the clean-cache missing-library fallback evidence
+        if: ${{ inputs.cold_browser_cache && matrix.group == 'struts' }}
+        run: |
+          node - <<'JS'
+          const assert = require('node:assert/strict');
+          const report = require('./artifacts/g1/playwright-setup/setup.json');
+          assert.equal(report.status, 'PASS');
+          assert.equal(report.fallback, true);
+          assert.equal(report.dependency_fixture, 'libxcomposite1');
+          JS
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: gym-bundle-${{ github.run_id }}-${{ github.run_attempt }}

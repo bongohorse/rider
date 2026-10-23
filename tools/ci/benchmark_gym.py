@@ -84,8 +84,25 @@ def collect(run_id, output):
             'download_summary': re.findall(r'Fetched [^\n]+', log),
             'setup_report': next((json.loads(m) for m in re.findall(r'RIDER_PLAYWRIGHT_SETUP (\{[^\n]+\})', log)), None),
         }
+    def measure_other_browser(job):
+        log = api(f"repos/{REPO}/actions/jobs/{job['id']}/logs", raw=True)
+        (dest / f"browser-{job['id']}.log").write_text(log)
+        selected = [step for step in job['steps'] if 'playwright install' in step['name'] or
+                    step['name'] == 'Install pinned Chromium and validate runner dependencies']
+        image = re.search(r'Image: (\S+)\s*\n[^\n]*Version: (\S+)', log)
+        return {
+            'job': job['name'], 'job_id': job['id'], 'conclusion': job['conclusion'],
+            'runner_image': list(image.groups()) if image else None,
+            'playwright_seconds': sum(seconds(step.get('started_at'), step.get('completed_at')) or 0 for step in selected),
+            'setup_report': next((json.loads(m) for m in re.findall(r'RIDER_PLAYWRIGHT_SETUP (\{[^\n]+\})', log)), None),
+        }
+    gym_ids = {job['id'] for job in gym}
+    others = [job for job in jobs if job['id'] not in gym_ids and any(
+        'playwright install' in step['name'] or step['name'] == 'Install pinned Chromium and validate runner dependencies'
+        for step in job.get('steps', []))]
     with ThreadPoolExecutor(max_workers=4) as pool:
         measurements = list(pool.map(measure, gym))
+        other_browsers = list(pool.map(measure_other_browser, others))
     source_shas = {g['source_sha'] for g in measurements}
     source_sha = next(iter(source_shas)) if len(source_shas) == 1 else None
     playwright = None
@@ -101,11 +118,12 @@ def collect(run_id, output):
         'created_at': run['created_at'], 'run_started_at': run['run_started_at'],
         'created_to_run_start_seconds': seconds(run['created_at'], run['run_started_at']),
         'created_to_required_seconds': seconds(run['created_at'], required['completed_at']) if required else None,
+        'run_start_to_required_seconds': seconds(run['run_started_at'], required['completed_at']) if required else None,
         'run_seconds': seconds(run['created_at'], run['updated_at']),
         'gym_build_seconds': seconds(build['started_at'], build['completed_at']) if build else None,
         'build_ready_to_last_gym_seconds': max((seconds(build['completed_at'], j['completed_at']) for j in gym), default=None) if build else None,
         'build_ready_to_reports_seconds': seconds(build['completed_at'], reports['completed_at']) if build and reports else None,
-        'groups': measurements,
+        'groups': measurements, 'other_browser_setups': other_browsers,
         'limitations': [
             'dependency_ready_to_start includes scheduler/orchestration delay; GitHub does not expose exact per-job queue entry here.',
             'setup includes bundle download; artifact_seconds overlaps setup. Unattributed job time includes runner lifecycle and post steps.',
@@ -123,11 +141,12 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     results = [collect(run_id, args.output) for run_id in args.runs]
-    lines = ['# Gym CI measurements', '', '| Run | Event | Result | Required (s) | Build (s) | Build → last Gym (s) | PW setup median / range (s) |', '| --- | --- | --- | ---: | ---: | ---: | --- |']
+    lines = ['# Gym CI measurements', '', '| Run | Event | Result | Initial wait (s) | Run start → required (s) | Build (s) | Build → last Gym (s) | Gym PW median / range (s) | Other PW max (s) |', '| --- | --- | --- | ---: | ---: | ---: | ---: | --- | ---: |']
     for r in results:
         times = [g['playwright_seconds'] for g in r['groups']]
         timing = f'{statistics.median(times):g} / {min(times):g}–{max(times):g}' if times else 'NOT RUN'
-        lines.append(f'| [{r["run_id"]}]({r["url"]}) | {r["event"]} | {r["conclusion"]} | {r["created_to_required_seconds"]} | {r["gym_build_seconds"]} | {r["build_ready_to_last_gym_seconds"]} | {timing} |')
+        other_max = max((job['playwright_seconds'] for job in r['other_browser_setups']), default=None)
+        lines.append(f'| [{r["run_id"]}]({r["url"]}) | {r["event"]} | {r["conclusion"]} | {r["created_to_run_start_seconds"]} | {r["run_start_to_required_seconds"]} | {r["gym_build_seconds"]} | {r["build_ready_to_last_gym_seconds"]} | {timing} | {other_max} |')
     lines += ['', 'Raw run metadata, paginated jobs, per-group logs and measurements are retained alongside this report.', '', *results[0]['limitations']]
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / 'benchmark.md').write_text('\n'.join(lines) + '\n')
