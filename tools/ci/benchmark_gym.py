@@ -26,6 +26,14 @@ def seconds(start, end):
             datetime.fromisoformat(start.replace('Z', '+00:00'))).total_seconds()
 
 
+def gym_group(name):
+    # Job names come from remote workflow data; never use arbitrary text as a local path.
+    match = re.search(r'(?:^| / )Gym \(([a-z0-9-]+)\)$', name)
+    if not match:
+        raise ValueError(f'Unsafe or unrecognized Gym job name: {name!r}')
+    return match[1]
+
+
 def collect(run_id, output):
     dest = output / str(run_id)
     dest.mkdir(parents=True, exist_ok=True)
@@ -48,7 +56,7 @@ def collect(run_id, output):
     reports = next((j for j in jobs if j['name'].endswith('Merge Gym part reports')), None)
 
     def measure(job):
-        group = re.search(r'Gym \(([^)]+)\)', job['name'])[1]
+        group = gym_group(job['name'])
         log = api(f"repos/{REPO}/actions/jobs/{job['id']}/logs", raw=True)
         (dest / f'{group}.log').write_text(log)
         steps = job.get('steps', [])
