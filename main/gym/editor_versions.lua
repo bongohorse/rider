@@ -164,11 +164,18 @@ function M.create(parse)
             if selected[v.id] then return end
             selected[v.id]=true;chosen=chosen+1;freed=freed+version(v.id).bytes()
         end
+        local function retirement()
+            local registry=copy(idx);retire(registry,function(v) return selected[v.id] end)
+            return registry
+        end
         local function peak()
             local proposed={format=1,next=next.next,entries={},garbage={}}
             for _,v in ipairs(next.entries) do if not selected[v.id] then proposed.entries[#proposed.entries+1]=v end end
-            -- The last durable registry may still contain acknowledged-deleted IDs.
-            return used-freed+pair+math.max(index.bytes(),2*index.cost(json.encode(proposed)))
+            -- Reserve the pair that will actually survive the prerequisite retirement,
+            -- or the current physical pair when no retirement will replace it.
+            local physical=index.bytes()
+            if chosen>0 then physical=2*index.cost(json.encode(retirement(),{encode_empty_table_as_object=false})) end
+            return used-freed+pair+math.max(physical,2*index.cost(json.encode(proposed)))
         end
         if victim then choose(victim) end
         if peak()>M.CAP then
@@ -176,8 +183,7 @@ function M.create(parse)
         end
         if peak()>M.CAP then return nil,"Version storage is full (16 MiB); named/protected snapshots leave insufficient room. Level still saves normally" end
         if chosen>0 then
-            local pruned=copy(idx);retire(pruned,function(v) return selected[v.id] end)
-            return begin(pruned,function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end,true)
+            return begin(retirement(),function() local ok,e=H.add(key,text,name,named,done);if not ok then H.error="Save failed (versions: "..tostring(e)..")" end end,true)
         end
         -- Immutable versions get two independently readable slots. The index is published last.
         local a,aerr=version(id).save(text);if not a then return nil,aerr end
