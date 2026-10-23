@@ -111,6 +111,13 @@
     if (result.state === 'loaded') api.close();
     else status(result.message, result.state === 'error');
   };
+  // Capacity accounting must not open/close every immutable slot: the pinned loader treats
+  // even a read-only close as a request to scan/sync the entire IndexedDB filesystem.
+  // Metadata is the actual serialized file size; a stat failure keeps the Lua io fallback.
+  api.fileBytes = paths => {
+    try { return paths.reduce((bytes, path) => bytes + FS.stat(path).size, 0); }
+    catch (_) { return null; }
+  };
   // The pinned dmloader syncs MEM->IndexedDB after each file close and only logs errors.
   // Once its retries are exhausted, _startSyncFS leaves _syncInProgress set for good and never
   // syncs again in this page, so that call is recorded as a terminal failure.

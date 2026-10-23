@@ -17,9 +17,9 @@ function dmloader(syncfs){
   }};
  return Module;
 }
-function load(Module){
+function load(Module,FS){
  const window={},document={getElementById:()=>null,addEventListener(){},querySelector:()=>null};
- const context=vm.createContext({window,document,Module});
+ const context=vm.createContext({window,document,Module,FS});
  vm.runInContext(SOURCE,context);
  return window.riderCustom;
 }
@@ -72,4 +72,18 @@ test('exhausted dmloader retries report failed instead of syncing forever',()=>{
  assert.equal(api.syncState(),'failed');
  Module.persistentSync();
  assert.equal(api.syncState(),'failed');
+});
+
+
+test('capacity measurement reads exact file metadata without requesting a persistence sync',()=>{
+ const sizes=new Map([['/data/.rider/a',245001],['/data/.rider/b',245007]]),paths=[];
+ const FS={stat(path){paths.push(path);if(!sizes.has(path))throw Error('missing');return {size:sizes.get(path)};},
+  open(){throw Error('must not open a file');},close(){throw Error('must not close a file');}};
+ const Module=dmloader(()=>{throw Error('must not sync for a byte measurement');}),api=load(Module,FS);
+ assert.equal(api.fileBytes([...sizes.keys()]),490008);
+ assert.deepEqual(paths,[...sizes.keys()]);assert.equal(api.syncState(),'saved');
+ sizes.set('/data/.rider/b',0);assert.equal(api.fileBytes([...sizes.keys()]),245001);
+ assert.equal(api.fileBytes(['/data/.rider/missing']),null,'Lua must use its existing io fallback');
+ assert.equal(api.fileBytes(['/data/.rider/a','/data/.rider/missing']),null,'partial sums must not be reported');
+ assert.equal(load(Module).fileBytes(['/data/.rider/a']),null);
 });

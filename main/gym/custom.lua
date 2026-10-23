@@ -110,8 +110,16 @@ local function store(slots,parse)
         sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text,time=time})
     end
     function S.bytes()
+        local paths={}
+        for _,name in ipairs(slots) do paths[#paths+1]=sys.get_save_file(APP,name) end
+        -- HTML5 metadata avoids read-only closes that the pinned loader turns into full syncs.
+        -- Keep native io and the existing io fallback when a slot is missing/unstatable.
+        if html5 then
+            local n=tonumber(html5.run("window.riderCustom.fileBytes("..json.encode(paths)..")"))
+            if n then return n end
+        end
         local n=0
-        for _,name in ipairs(slots) do local f=io.open(sys.get_save_file(APP,name),"rb");if f then n=n+f:seek("end");f:close() end end
+        for _,path in ipairs(paths) do local f=io.open(path,"rb");if f then n=n+f:seek("end");f:close() end end
         return n
     end
     -- Exact pinned serializer size, including the slot wrapper; no temporary save is needed.
