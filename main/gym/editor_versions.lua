@@ -133,7 +133,7 @@ function M.create(parse)
         local count,automatic=0,{}
         for _,v in ipairs(idx.entries) do
             if v.key==key and v.named==named then count=count+1 end
-            if not v.named and not (version(v.id).newest() or {}).unsupported then automatic[#automatic+1]=v end
+            if not v.named and not version(v.id).protected() then automatic[#automatic+1]=v end
         end
         if named and count>=M.MAX_NAMED then return nil,"10 named snapshots per level; delete one first" end
         table.sort(automatic,function(a,b) if a.time~=b.time then return a.time<b.time end;return a.id<b.id end)

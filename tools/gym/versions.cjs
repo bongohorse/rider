@@ -106,6 +106,22 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.match((await ed()).message,/Restore refused.*Unsupported/i);assert.deepEqual(await files(),protectedFiles);
   // Restore its original bytes so later count/prune checks exercise supported versions.
   await page.evaluate(f=>{for(const [n,v] of Object.entries(f))FS.writeFile('/data/.rider/'+n,new Uint8Array(v));},versionFiles);await close();
+  // Warm an automatic version's admission cache, then change its format through the real
+  // debug slot writer. Pruning must notice the change, retain it, and notice a supported rewrite.
+  await idle();let guard=await request({op:'add',key:900,name:'Protected automatic'});assert.equal(guard.ok,true);await idle();
+  const guarded=guard.entries.find(v=>v.name==='Protected automatic').id;
+  assert.equal((await request({op:'add',key:900,name:'Warm guard'})).ok,true);await idle();
+  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:999,text:JSON.stringify(future)});
+  await page.waitForTimeout(300);await idle();const futureAuto=await files();
+  for(let i=0;i<11;i++){const r=await request({op:'add',key:900,name:'Guard pressure '+i});assert.equal(r.ok,true,r.error);await idle();}
+  guard=await request({op:'measure',key:900});assert.equal(guard.entries.length,10);assert.ok(guard.entries.some(v=>v.id===guarded),'a newly unsupported automatic version must not be pruned');
+  const afterPressure=await files();for(const suffix of ['a','b']){const name='custom-version-'+guarded+'-'+suffix;assert.deepEqual(afterPressure[name],futureAuto[name]);}
+  const supported={...future,editor:await doc()};
+  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:1000,text:JSON.stringify(supported)});
+  await page.waitForTimeout(300);await idle();
+  guard=await request({op:'add',key:900,name:'After supported rewrite'});assert.equal(guard.ok,true,guard.error);await idle();
+  assert.ok(!guard.entries.some(v=>v.id===guarded),'a supported rewrite invalidates cached protection and restores oldest-first pruning');
+  assert.equal((await request({op:'remove',key:900})).ok,true);await idle();
   cases.push('incomplete_and_unknown_versions');console.log('PASS incomplete_and_unknown_versions');
 
   // A failed version write leaves every indexed snapshot byte-for-byte intact.
