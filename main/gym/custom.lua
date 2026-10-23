@@ -43,6 +43,7 @@ function M.count() local n=0;for _ in pairs(snapshots) do n=n+1 end;return n end
 -- overwritten: its original text stays as it is (contract R1).
 local function store(slots,parse)
     local S={}
+    local protection
     local function raw(i)
         local ok,t=pcall(sys.load,sys.get_save_file(APP,slots[i]))
         if ok and type(t)=="table" and t.format==1 and type(t.seq)=="number" and type(t.text)=="string" then return t end
@@ -72,12 +73,21 @@ local function store(slots,parse)
         if a and b then return a.seq>b.seq and a or b end
         return a or b
     end
+    -- Admission only: immutable version files need one future-format check per write generation.
+    -- Keep load/restore uncached, and invalidate even failed writes (which may truncate a slot).
+    function S.protected()
+        if protection==nil then local newest=S.newest();protection=newest and newest.unsupported or false end
+        return protection
+    end
+    local function latest_valid(a,b)
+        a,b=a and not a.unsupported and a,b and not b.unsupported and b
+        return a and b and (a.seq>b.seq and a or b) or a or b
+    end
     -- Newest valid slot. A newer slot that no longer validates (e.g. a start beyond today's limit) is
     -- reported as skipped (or as the error when nothing valid is left), never silently hidden.
     function S.restore()
         local a,b=slot(1),slot(2)
-        a,b=a and not a.unsupported and a,b and not b.unsupported and b
-        local best=a and b and (a.seq>b.seq and a or b) or a or b
+        local best=latest_valid(a,b)
         for i=1,2 do
             local t=raw(i)
             if t and (not best or t.seq>best.seq) then
@@ -90,8 +100,10 @@ local function store(slots,parse)
         return best
     end
     function S.save(text,key)
-        local current=S.restore()
+        protection=nil
+        -- One fresh pair supplies both target selection and sequence; readback stays mandatory.
         local a,b=slot(1),slot(2)
+        local current=latest_valid(a,b)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
         local target=current and 3-current.slot or 1
         local held=target==1 and a or b
@@ -107,11 +119,20 @@ local function store(slots,parse)
     -- Debug only: write raw text into a slot, bypassing validation (version-rejection tests).
     function S.debug_write(i,seq,text,time)
         assert(sys.get_engine_info().is_debug,"Raw save writes require debug engine")
+        protection=nil
         sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text,time=time})
     end
     function S.bytes()
+        local paths={}
+        for _,name in ipairs(slots) do paths[#paths+1]=sys.get_save_file(APP,name) end
+        -- HTML5 metadata avoids read-only closes that the pinned loader turns into full syncs.
+        -- Keep native io and the existing io fallback when a slot is missing/unstatable.
+        if html5 then
+            local n=tonumber(html5.run("window.riderCustom.fileBytes("..json.encode(paths)..")"))
+            if n then return n end
+        end
         local n=0
-        for _,name in ipairs(slots) do local f=io.open(sys.get_save_file(APP,name),"rb");if f then n=n+f:seek("end");f:close() end end
+        for _,path in ipairs(paths) do local f=io.open(path,"rb");if f then n=n+f:seek("end");f:close() end end
         return n
     end
     -- Exact pinned serializer size, including the slot wrapper; no temporary save is needed.
@@ -119,9 +140,14 @@ local function store(slots,parse)
         return #sys.serialize({format=1,seq=1,text=text,time=os.time()})
     end
     function S.remove()
+        protection=nil
         for _,name in ipairs(slots) do
             local path=sys.get_save_file(APP,name);local f=io.open(path,"rb")
-            if f then f:close();local ok,err=os.remove(path);if not ok then return nil,err end end
+            if f then
+                f:close();local ok,err=os.remove(path);if not ok then return nil,err end
+                -- Read-only closes no longer schedule persistence; include successful/partial deletes.
+                if html5 then html5.run("Module.persistentSync()") end
+            end
         end
         return true
     end

@@ -130,8 +130,25 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
 
   // Per-level limits and exact filesystem cap, with large but valid source JSON (whitespace padding).
   const currentKey=(await ed()).key;
-  for(let i=0;i<12;i++){await idle();const r=await request({op:'add',name:'Auto '+i});assert.equal(r.ok,true,r.error);await idle();}
+  const priorAutos=(await request({op:'measure'})).entries.filter(v=>!v.named).map(v=>v.id);assert.ok(priorAutos.length>0);
+  // Reuse this real pruning pressure to check false -> protected -> supported cache invalidation.
+  let guarded,futureAuto;
+  for(let i=0;i<12;i++){
+   await idle();const r=await request({op:'add',name:'Auto '+i});assert.equal(r.ok,true,r.error);await idle();
+   if(i===0){
+    guarded=r.entries.filter(v=>!v.named&&priorAutos.includes(v.id)).sort((a,b)=>a.time-b.time||a.id-b.id)[0]?.id;assert.ok(guarded);
+    await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:999,text:JSON.stringify(future)});
+    await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();futureAuto=await files();
+   }
+  }
   let report=await request({op:'measure'});assert.equal(report.entries.filter(v=>!v.named).length,10);assert.ok(!report.entries.some(v=>v.name==='Auto 0'));
+  assert.ok(report.entries.some(v=>v.id===guarded),'a newly unsupported automatic version must not be pruned');
+  const afterPressure=await files();for(const suffix of ['a','b']){const name='custom-version-'+guarded+'-'+suffix;assert.deepEqual(afterPressure[name],futureAuto[name]);}
+  await page.evaluate(r=>{window.riderDebugDraft=r;},{version:guarded,slot:1,seq:1000,text:JSON.stringify({...future,editor:await doc()})});
+  await page.waitForFunction(()=>window.riderDebugDraft===null);await idle();
+  const unprotected=await request({op:'add',name:'Auto 12'});assert.equal(unprotected.ok,true,unprotected.error);await idle();
+  report=await request({op:'measure'});assert.equal(report.entries.filter(v=>!v.named).length,10);
+  assert.ok(!report.entries.some(v=>v.id===guarded),'a supported rewrite invalidates cached protection and restores oldest-first pruning');
   let namedCount=report.entries.filter(v=>v.named).length;
   for(let i=namedCount;i<10;i++){const r=await request({op:'add',named:true,name:'Named '+i});assert.equal(r.ok,true,r.error);await idle();}
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
@@ -164,10 +181,36 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderEditor.message.includes('Save failed'));assert.match((await ed()).status,/Save failed/);
   assert.ok((await ed()).library.some(v=>v.key===levelKey),'failed version deletion must keep the level available for retry');
   await page.evaluate(()=>window.restoreDeleteWrite());
+  // Failure while staging the second retirement slot must leave every source file intact.
+  await page.evaluate(()=>{window.beforeSecondSlot=Object.fromEntries(FS.readdir('/data/.rider').filter(n=>/^custom-version-/.test(n)).map(n=>[n,FS.readFile('/data/.rider/'+n)]));});
+  await page.evaluate(()=>{const write=FS.write;let first;window.restoreDeleteWrite=()=>FS.write=write;FS.write=function(stream,...args){const p=stream.path||'';if(/custom-versions-/.test(p)){if(first===undefined)first=p;else if(p!==first)throw new FS.ErrnoError(29);}return write.call(this,stream,...args);};});
+  await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);
+  await page.waitForFunction(()=>window.riderEditor.message.includes('Save failed'));
+  assert.ok((await ed()).library.some(v=>v.key===levelKey));
+  const changedBeforeAck=await page.evaluate(()=>Object.entries(window.beforeSecondSlot).filter(([n,v])=>{try{const after=FS.readFile('/data/.rider/'+n);return after.length!==v.length||!v.every((x,i)=>after[i]===x);}catch{return true;}}).map(([n])=>n));
+  assert.deepEqual(changedBeforeAck,[],'no source may change before both retirement slots succeed');
+  await page.evaluate(()=>{delete window.beforeSecondSlot;});
+  await page.evaluate(()=>window.restoreDeleteWrite());
   await button('libdel_'+deleteRow);await button('libdel_'+deleteRow);await idle();await page.waitForTimeout(200);
   assert.ok(!(await ed()).library.some(v=>v.key===levelKey));await close();
   const removed=await request({op:'measure',key:levelKey});assert.deepEqual(removed.entries,[]);
   const allFiles=await page.evaluate(()=>FS.readdir('/data/.rider'));for(const v of switched.entries)assert.ok(!allFiles.some(n=>n==='custom-version-'+v.id+'-a'||n==='custom-version-'+v.id+'-b'));
+  // Deletions must reach IndexedDB, not only the in-memory filesystem or cached indexes.
+  await page.reload();await edit();await page.locator('canvas').focus();await saved();
+  assert.ok(!(await ed()).library.some(v=>v.key===levelKey),'the deleted level must stay absent after reload');
+  assert.deepEqual((await request({op:'measure',key:levelKey})).entries,[]);
+  const reloadedFiles=await page.evaluate(()=>FS.readdir('/data/.rider'));
+  for(const v of switched.entries)assert.ok(!reloadedFiles.some(n=>n==='custom-version-'+v.id+'-a'||n==='custom-version-'+v.id+'-b'),'deleted version files must stay absent after reload');
+  // A retained durable garbage registry must recover idempotently before the next allocation.
+  const beforeRecovery=await request({op:'measure'});
+  const beforeRecoveryDisk=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));
+  assert.equal(beforeRecovery.bytes,beforeRecoveryDisk,'retained registry bytes must count before allocating a source');assert.ok(beforeRecoveryDisk<=16*1024*1024);
+  const recovered=await request({op:'add',name:'After cleanup reload'});assert.equal(recovered.ok,true,recovered.error);await idle();
+  assert.deepEqual((await request({op:'measure',key:levelKey})).entries,[]);
+  const afterRecovery=await request({op:'measure'});
+  const recoveryDiskBytes=await page.evaluate(()=>FS.readdir('/data/.rider').filter(n=>/^custom-versions?-/.test(n)).reduce((n,f)=>n+FS.stat('/data/.rider/'+f).size,0));
+  assert.equal(afterRecovery.bytes,recoveryDiskBytes);assert.ok(recoveryDiskBytes<=16*1024*1024);
+  for(const v of switched.entries)assert.ok(!(await page.evaluate(id=>FS.readdir('/data/.rider').some(n=>n==='custom-version-'+id+'-a'||n==='custom-version-'+id+'-b'),v.id)),'cleanup recovery must not resurrect retired sources');
   cases.push('delete_level_versions');console.log('PASS delete_level_versions');
   await versions();for(const viewport of [{width:1280,height:720},{width:1920,height:1080},{width:1280,height:480}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(300);e=await ed();assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);await page.screenshot({path:path.join(out,'versions-'+viewport.width+'x'+viewport.height+'.png')});
