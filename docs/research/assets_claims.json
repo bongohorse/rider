@@ -1,0 +1,338 @@
+{
+  "scope": "Original graphical assets and verified structural exports; English reference evidence",
+  "claims": [
+    {
+      "id": "G01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/terrain.vsh",
+      "locator": "lines 1\u20139,19\u201328",
+      "finding": "a_texCoord.xy supplies UV, z supplies lighting, w supplies drawToEdge; a_position.w is forwarded separately as a multiplier. Vertex xyz is projected through CC_MVPMatrix.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "fc3865f53db68a5d5e189a6c5c4aba79f97ad9798f6c3ffa639335d43def4f14"
+    },
+    {
+      "id": "G02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/terrain.vsh",
+      "locator": "lines 19\u201328",
+      "finding": "newY=(1-edge)*y+edge*min(y+u_params.y,u_cameraBottom); diff=newY-y; texScale=diff/u_params.y. x offset=u_params.x*edge, z offset=u_params.z*max(1,texScale)*edge; UV.y receives u_params.w*texScale. This is shader-side bottom extension/tiling, not a terrain generator.",
+      "limitation": "No CPU mesh creation, triangulation, physics collision, coordinate units, camera follow law or protection against zero u_params.y is proven here.",
+      "sha256": "fc3865f53db68a5d5e189a6c5c4aba79f97ad9798f6c3ffa639335d43def4f14"
+    },
+    {
+      "id": "G03",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/terrain.fsh",
+      "locator": "lines 9\u201316",
+      "finding": "Active fragment expression is texture2D(CC_Texture0,UV)*vec4(light,light,light,1)*multiplier. Declared u_texture is unused in the active expression.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "2486f4e191960b489a0cc9f19a115e03efb19438f08e56b3f28ee13c39534b7b"
+    },
+    {
+      "id": "G04",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/tunnel.vsh",
+      "locator": "lines 11\u201315",
+      "finding": "Tunnel shader treats input position.w as lighting and projects xyz using CC_MVPMatrix.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "4f9f0e5445e362857b205439a62bf5468e849158cdaa363c157ac1a503db719d"
+    },
+    {
+      "id": "G05",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/tunnel.fsh",
+      "locator": "lines 14\u201317",
+      "finding": "Tunnel texture RGB is multiplied by interpolated lighting; alpha is not multiplied by lighting in this expression.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "f49fe3d6eab63a0ebb404c98fc955f31429c58b43b2d10a935cfdbf220ab1a5f"
+    },
+    {
+      "id": "G06",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/terrain_surface_caustics.vsh",
+      "locator": "lines 4,16\u201318",
+      "finding": "Caustic blend coefficient is clamp((vertexY-u_depthfade.y)/u_depthfade.x,0,1). Depth here is a height-driven factor, not a sampled depth buffer.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "e2aa216ebceb10586e65a63c9893e35749507ee5ebae93ef07039ee76980676f"
+    },
+    {
+      "id": "G07",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/terrain_surface_caustics.fsh",
+      "locator": "lines 11\u201324",
+      "finding": "Caustics mix CC_Texture2 and CC_Texture0 by the vertex coefficient; multiply lighting and multiplier; then add shifted CC_Texture1 RGB weighted by alpha, coefficient and 9.5*y*(1-y)^3.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "0594475e86e4abd5eb25c0ed827de5b40148a1f1e055e0f024944a751e5e88ae"
+    },
+    {
+      "id": "G08",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/parallax_multi.vsh",
+      "locator": "lines 6\u201311",
+      "finding": "Parallax vertex projection uses CC_PMatrix and divides incoming UV.y by multi_size.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "e3706b514d6c04bfd965d0592afb743e5630b6505abba1ca85a37a2621db2709"
+    },
+    {
+      "id": "G09",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/parallax_multi.fsh",
+      "locator": "lines 6\u201312,20\u201345",
+      "finding": "Nine entries supplied by loop1/2/3 select vertical texture strip offsets using a wrapped floor-based index. Horizontal coordinate scales by aspectX/multi_scale.",
+      "limitation": "No CPU parallax layer velocities, camera displacement coupling or layer scheduling can be inferred from these uniforms.",
+      "sha256": "1c0b1f9475548c4ab7c89d9f588eca48d78647c9eb70e74e3d2ac26ab3667d30"
+    },
+    {
+      "id": "G10",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/model_float.vsh",
+      "locator": "lines 5\u201320",
+      "finding": "After CC_MVPMatrix projection, clip-space y receives u_b*sin(u_a*CC_Time[0]); UV.y is flipped. This differs from moving a world-space rigid body.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "d88c06677fa386967580d8a85a34586d762145c2ef4556bfce2afe8c19c655c9"
+    },
+    {
+      "id": "G11",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/waterfall.vsh",
+      "locator": "lines 18\u201335,38\u201347",
+      "finding": "Uses u_ssize_cview and CC_PMatrix to convert supplied player position to screen-related coordinates, passing it to the fragment stage; geometry also uses CC_PMatrix.",
+      "limitation": "Uniform producer and camera model remain unknown. An author comment expresses uncertainty; it is not a reliable specification.",
+      "sha256": "f821cafcdda07d08a6a8d04b57cb0d7d5ececdc876ac96ab2c482991e4ce91c3"
+    },
+    {
+      "id": "G12",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/particle_liquid_postprocess.fsh",
+      "locator": "lines 10\u201324",
+      "finding": "Samples a field from CC_Texture0, computes d=(0.5/16)/field.a; for d<1 samples CC_Texture1 at 0.5+d*normalize(field.rg-0.5), otherwise discards.",
+      "limitation": "Shows a two-texture liquid-field composition capability. Does not establish the field accumulation pass, blend state, render-target resolution or simulation.",
+      "sha256": "f07c0a4c6bce3fab6d34f0c12de824140b4aa07c02ab4110b535e507d754bb12"
+    },
+    {
+      "id": "G13",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/postprocess_droplet_distort.fsh",
+      "locator": "lines 89\u2013118,132\u2013193,219\u2013223",
+      "finding": "For u_intensity>0.01, creates aspect-correct rotated tiled procedural droplet masks, distorts scene UV toward a centered 1.075 scale, and mixes a water tint. Otherwise copies CC_Texture0.",
+      "limitation": "Declared uniforms and commented experiments are not active behavior. Weather triggers, intensity curves, framebuffer setup and pass ordering are not established.",
+      "sha256": "04a9d78bad92675d97fb5debbd0c1698080386b98cd9a86724b8cbe29f2d751c"
+    },
+    {
+      "id": "G14",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/postprocess_generic2.fsh",
+      "locator": "lines 7\u201327",
+      "finding": "Despite multiple declared uniforms, active main only samples CC_Texture0 and writes the result.",
+      "limitation": "Names and declarations alone must not be described as a functioning multi-input postprocessor.",
+      "sha256": "6f91511530a884fe1022767871a79884c55c0cf6ccdc87dc10bc6d795d07a7b0"
+    },
+    {
+      "id": "G15",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/particle_animated_2.fsh",
+      "locator": "lines 58\u201361",
+      "finding": "Active fragment main is a direct texture copy; debug overloads above are unused here.",
+      "limitation": "Filename does not prove animated sprites. Vertex time varying is not read by active fragment code.",
+      "sha256": "cf33a326b9907ccd9d1fd32f954fb51a9d26f7379fe636c4edd2da8266e5156a"
+    },
+    {
+      "id": "G16",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/sky.fsh",
+      "locator": "lines 12\u201317",
+      "finding": "Sky fragment is texture2D(u_texture,UV)*u_color.",
+      "limitation": "Shipped shader source establishes this computation; active program selection, uniform values, render state and CPU callers are not established by this source alone.",
+      "sha256": "71943aea1607c80c8762752e0485b84eeff55581e19c7acf9ab20f467ff2dff5"
+    },
+    {
+      "id": "M01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/models/arena-ramp/arena-ramp-middle.obj",
+      "locator": "lines 1\u20135 and v/vt/f records throughout",
+      "finding": "Original OBJ header identifies Blender 2.91.2 and arena-ramp12.blend; this file contains 77 position vertices,126 UV records,91 face records,0 vn records and one material use. Coordinates include differing z values, demonstrating authored 3D mesh geometry.",
+      "limitation": "One static ramp mesh is not evidence of terrain topology construction, runtime collision mesh, perspective camera, or a fully 3D game simulation.",
+      "sha256": "4dcdece401ea5c8e206e45e25c97872547649095b3860d8c613b8f348987da1d"
+    },
+    {
+      "id": "M02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/models/arena-ramp/arena-ramp-middle.mtl",
+      "locator": "lines 4\u201313",
+      "finding": "Material provides Ns/Ka/Kd/Ks/Ke/Ni/d/illum and map_Kd arena-ramp.png.",
+      "limitation": "These are supplied material records; importer support and exact GPU interpretation need runtime/native evidence.",
+      "sha256": "adaeb713e662cde718599542b40135c9c6294b592bf76361f09d80b451b69ffa"
+    },
+    {
+      "id": "A01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/HD/savanna_gfx.plist",
+      "locator": "XML dictionary metadata and frames/textures/parallaxes/savanna_tree.png",
+      "finding": "TexturePacker format3 metadata names savanna_gfx.png,512x1024,RGBA8888,premultiplyAlpha=false. Tree frame records textureRect {{1,1},{466,512}}, spriteSourceSize512x512, offset{-3,0}, textureRotated=false.",
+      "limitation": "Frame metadata permits faithful atlas placement; it does not independently establish runtime blending or parallax motion.",
+      "sha256": "26b5e023008d4ee50fc1f61211e86b0d69aabfb2eed001c2efdb071064e0fd37"
+    },
+    {
+      "id": "A02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/ui/cocosstudio/adventureIcons/animations/nationalpark/nationalpark_adventure_icon.atlas",
+      "locator": "lines 1\u201318",
+      "finding": "Atlas names nationalpark_adventure_icon.png,1254x1032,Linear/Linear filters, packed bounds and optional offsets/90-degree rotations.",
+      "limitation": "Atlas regions alone do not define skeleton animation playback or UI selection behavior.",
+      "sha256": "1ae7d32419576a18c7fc203fd2f10376b7a49d0bd4e32036e91937fa731de24c"
+    },
+    {
+      "id": "U01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/decoded/base.apk/assets/Common/ui/cocosstudio/reward_popup_currency.csb.json",
+      "locator": "/nodeTree/options/data; source CSB WidgetOptions offset8140",
+      "finding": "Decoded authored root Layer has size960x640, anchor0,0, position0,0; /action has duration0,speed1,no timelines.",
+      "limitation": "960x640 is this asset design canvas, not proof of device resolution, global scaling policy or camera size.",
+      "sha256": "1eff237bc82b2241ef65a098f108929a65c70b4d09106af2f2f98402ea6205e2"
+    },
+    {
+      "id": "U02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/decoded/base.apk/assets/Common/ui/cocosstudio/reward_popup_currency.csb.json",
+      "locator": "/nodeTree/children/0/options/data/widgetOptions; source CSB offsets7556,7852,8016",
+      "finding": "Button named closer has touchEnabled1, alpha221, position\u2248481.44,320, size1344x704; percent position\u22480.5015,0.5, percent size\u22481.4,1.1. Callback type/name are empty.",
+      "limitation": "Authored hit-area/layout data does not prove event binding, dismissal behavior or runtime overrides.",
+      "sha256": "1eff237bc82b2241ef65a098f108929a65c70b4d09106af2f2f98402ea6205e2"
+    },
+    {
+      "id": "U03",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/decoded/base.apk/assets/Common/ui/cocosstudio/season_rank_icon_item.csb.json",
+      "locator": "/action; /animationList; source CSB NodeAction offset12452",
+      "finding": "Authored action duration1393,speed0.5;25 named clips include rank1 frames0\u201318,rank6 frames385\u2013401,rank6_idle frames1325\u20131393. Timeline entries bind by actionTag and carry frameIndex,tween,easingData.",
+      "limitation": "Frame indices are stored indices, not seconds. Clip trigger conditions and actual playback rate/framebase require runtime evidence.",
+      "sha256": "1f6dc5d3a30b8c43be7c002fe6a3c59c3f4f605d1d7639848bee82f3ae30db17"
+    },
+    {
+      "id": "U04",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/decoded/base.apk/assets/Common/ui/cocosstudio/season_rank_icon_item.csb.json",
+      "locator": "/action/timeLines/0/frames/0/pointFrame; binary offset224280",
+      "finding": "Position timeline for actionTag -1247020007 begins at frame385 with position0,0,tween1,easing type0 and no control points.",
+      "limitation": "This is authored data, not a capture of execution; mapping actionTag to a node must use the same asset tree.",
+      "sha256": "1f6dc5d3a30b8c43be7c002fe6a3c59c3f4f605d1d7639848bee82f3ae30db17"
+    },
+    {
+      "id": "P01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/effekseer_runtime/recovery_summary.json",
+      "locator": "/reader_parse,/node_tree,/decoded_parameter_reads,/unread_offsets",
+      "finding": "Official compatible Effekseer1.53c reader statically consumed all1988 original runtime bytes;5 nodes total: root,2 None parents and2 Track leaves.279 reader reads decoded with compiler type layouts; no unread bytes.",
+      "limitation": "Reader-produced structural export, not original C++ game source. No effect script execution, simulation, rendering or resource loading occurred.",
+      "sha256": "34c088912914b5b04d83080030c55a527f7888774d72a41b7ff12a4b1e7ca57d"
+    },
+    {
+      "id": "P02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/effekseer_runtime/parameters_by_node.json",
+      "locator": "/nodes/root~10/stored_parameter_reads entries offset100,188,316",
+      "finding": "Stored parent root/0 common parameters: MaxGeneration1,life min=max100,generationTime1,all transform binds Always. Translation PVA fixed(-0.9,-0.2,0) with zero velocity/acceleration; rotation velocity x\u22480.104719758,other axes0.",
+      "limitation": "Values are raw reader-bound serialized parameters. Time units, game attachment transform, playback speed and activation are not established; object summaries may normalize defaults.",
+      "sha256": "ca0710200d9afac6e6bc528ec3a96394a906c832e1ba219a2d30a8fda1e91050"
+    },
+    {
+      "id": "P03",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/effekseer_runtime/parameters_by_node.json",
+      "locator": "/nodes/root~10~10/stored_parameter_reads entry offset596",
+      "finding": "Track leaf root/0/0 stores MaxGeneration2147483647,life100,generationTime1,transform binds WhenCreating,RemoveWhenLifeIsExtinct1.",
+      "limitation": "No claim of actual concurrent particle count; lifetimes/emission and game stop conditions must be interpreted by runtime execution logic.",
+      "sha256": "ca0710200d9afac6e6bc528ec3a96394a906c832e1ba219a2d30a8fda1e91050"
+    },
+    {
+      "id": "P04",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/particles/effekseer/pinata_trail/pinata_trail.efkefc",
+      "locator": "EFKE chunks: INFO offset16 size28; EDIT offset52 size1824; BIN_ offset1884 size1988",
+      "finding": "Editor container includes compressed original editor XML and runtime BIN_ identical to sibling pinata_trail.efk. Decoded editor document reports ToolVersion1.53e.",
+      "limitation": "Editor authoring version differs from compatible parser runtime1.53c; these are separately recorded, not assumed identical source versions.",
+      "sha256": "5db90c0e2c4144802cfcbdda3410d25f3a1d390e902a41d3651b3464a27dbe5b"
+    },
+    {
+      "id": "AU01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/audio/backfire_single.ogg",
+      "locator": "whole file; verified decode metadata in assets/audio_font_status.json corresponding source row",
+      "finding": "Source fully decodes to4145 mono samples at48000Hz,duration0.0863541667 seconds. Raw source and floatPCM derivative are both retained.",
+      "limitation": "Filename suggests intended use but does not prove engine backfire trigger, gain, pitch, mixing or loop policy.",
+      "sha256": "b40285a1f6a05b7cabcbc9923fa614553e930f1869882d06f3c203bb390e31be"
+    },
+    {
+      "id": "F01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/summary.json",
+      "locator": "/counts",
+      "finding": "Verified base inventory records128.vsh,126.fsh,276.obj,209.mtl,1255.csb,549.plist,447.ogg,7115.png,191.rube and1794.json assets.",
+      "limitation": "Counts concern shipped base asset files, not runtime-loaded resources or semantic recovery. Resource-split media and derived outputs are separate.",
+      "sha256": "f66d2170dd04cc32f7b4678de6cedd10869376808524b297f626e2c3097a00e7"
+    },
+    {
+      "id": "F02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/asset_status_final.json",
+      "locator": "per-file records for .rube and shared-marker .json",
+      "finding": "191 RUBE plus1717 JSON-extension files have shared binary prefix1213aa1213ba13ba and no validated format reader.",
+      "limitation": "Extensions are not decoded schemas. Terrain/vehicle numerical definitions cannot be quoted from these; binary prefix alone does not establish encryption.",
+      "sha256": "a93403d2af5b3926053c6bdff39c644b152be4fb57fe4ce8a05e41c86010d39a"
+    },
+    {
+      "id": "F03",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/codex_verified/assets/nested_wire/summary.verified.json",
+      "locator": "complete original DAT and inflated payload roots",
+      "finding": "DAT work preserves63 complete supported wire streams,42 unsupported original streams and36 complete zlib payloads, retaining wire numbers,raw byte ranges and unproven nested candidates.",
+      "limitation": "Physical wire compatibility is not a validated replay/physics schema. Historical hcr2_replay.proto semantics must not be promoted to facts.",
+      "sha256": "d8e755c6522da756f5d1d9f8bdefc747c6c80cd20ec373cf0c93324c4e17065c"
+    },
+    {
+      "id": "V01",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/wheel_sprite_sheet.vsh",
+      "locator": "lines 16\u201319,28\u201350",
+      "finding": "Transforms mask UV through u_transform, subtracts atlas center, compensates aspect and divides by supplied sheet column/row counts. Source comment identifies SpriteTransforms::setMaskUniforms() as the intended transform producer.",
+      "limitation": "The comment is a useful native-search lead, not a verified call binding. Actual transforms and sheet dimensions require the producer.",
+      "sha256": "109ab378ebc833d34e911be4e47e7d6a0f5ed831bbff92fc964c6785b208e883"
+    },
+    {
+      "id": "V02",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/wheel_sprite_sheet.fsh",
+      "locator": "lines 35\u201378",
+      "finding": "Samples tier0 then traverses sheet stages; u_blendmode0 interpolates RGB between successive tiers based on u_blend, other modes select completed tiers. Alpha is retained from tier0; final color is multiplied by parent tint/opacity and vertex color.",
+      "limitation": "The visual blend does not establish tire damage, grip, upgrade or wear semantics. CPU meaning and value range of u_blend are unverified.",
+      "sha256": "86130f7735bbbe2fa1205e47d85b51e11e942de9ab044efab467ff3510b1da4b"
+    },
+    {
+      "id": "V03",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/motionblur.fsh",
+      "locator": "lines 16\u201320,43\u201361",
+      "finding": "Rotational blur uses10 samples, repeatedly rotating the sampling offset by u_params.z; valid atlas samples contribute squared RGBA and output is sqrt(sum/10). An annular spinner region instead takes one stationary sample. Translational blur matrix code is commented out.",
+      "limitation": "This is atlas-local rotational texture blur, not proof of full-screen velocity-buffer motion blur. Angular uniform source and physical wheel-speed coupling remain unverified.",
+      "sha256": "67f8c75fce78e2815999fc839fac1794b18b2f55d6bf54fe0dc76df24889f63d"
+    },
+    {
+      "id": "V04",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/iridescent_vehicle.fsh",
+      "locator": "lines 55\u201377",
+      "finding": "Vehicle iridescence samples separate mask and base textures, derives a brightness-weighted red-channel mask, rotates normalized fragment coordinates by0.25*u_playerRot+time, synthesizes HSV color and overlays it with a0.2*mask mix.",
+      "limitation": "u_playerRot proves an input dependency in this shader, not a verified CPU vehicle orientation producer or shader-selection rule.",
+      "sha256": "d1378cdab9a562fc16385d8e3418c16166129709629fa8ca440ab774cdba5632"
+    },
+    {
+      "id": "V05",
+      "confidence": "verified shipped data / source",
+      "path": "/workspace/HC2/decompiled/unpacked/base.apk/assets/Common/shaders/box_blur.fsh",
+      "locator": "lines 8\u201328",
+      "finding": "Box blur samples a square UV neighborhood using step-controlled nested loops and multiplies the sum by step squared; u_box_blur packs boxSize,step,pixel dimensions.",
+      "limitation": "Sampling behavior follows the exact loop bounds; do not substitute a mathematically normalized kernel without checking the supplied step. Actual render target and pass scheduling unknown.",
+      "sha256": "4453fa83dbb9e5df5c3ab0c46a0aecdb9c75d7094b60c537653e637ee710c977"
+    }
+  ]
+}

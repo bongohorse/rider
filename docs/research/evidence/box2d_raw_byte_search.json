@@ -1,0 +1,197 @@
+{
+  "needles": [
+    "Box2D",
+    "box2d",
+    "b2World",
+    "b2Body",
+    "b2WheelJoint",
+    "b2PolygonShape",
+    "b2ChainShape",
+    "b2EdgeShape",
+    "b2Fixture",
+    "b2ContactListener"
+  ],
+  "binaries": [
+    {
+      "binary": "decompiled/native/arm64-v8a/libapplovin-native-crash-reporter.so/libapplovin-native-crash-reporter.so",
+      "sha256": "eb0a1d4ee2ad2dfec8cef21368d8c6326e37608bec4cb6a1e1d3bce382809adb",
+      "byte_count": 843152,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libbts.so/libbts.so",
+      "sha256": "b25273122a913c3a3fb3f17c7904bcd41d53285141fef77e79e8ac053ff8a466",
+      "byte_count": 974512,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libcocos2dcpp.so/libcocos2dcpp.so",
+      "sha256": "32d1198004a39ecaec3fcf0e9aa4efdd2f3a73e52491fdb4ee11b9a0b7f26181",
+      "byte_count": 36340160,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libcrashlytics-common.so/libcrashlytics-common.so",
+      "sha256": "db3c33bc6e1c0d049466280c32bd7419f9708f53ca8f5f95d584ef281996918f",
+      "byte_count": 755864,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libcrashlytics-handler.so/libcrashlytics-handler.so",
+      "sha256": "810521d2e125c4f87a8bd5fa70e73877dd832494acac9e9f86734258f359935f",
+      "byte_count": 185960,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libcrashlytics-trampoline.so/libcrashlytics-trampoline.so",
+      "sha256": "b3d2d4bd3eb068ed624d406d8626b7300e8f65e7aa6863e08a736984fc0ecea2",
+      "byte_count": 9584,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libcrashlytics.so/libcrashlytics.so",
+      "sha256": "cad4bd6e1a6fb97cea9d02ac3f2c9c0e90c62064f7b018cf26b0a806e1489b6e",
+      "byte_count": 195568,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libdatastore_shared_counter.so/libdatastore_shared_counter.so",
+      "sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+      "byte_count": 7112,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libfingersoft_hcr2.so/libfingersoft_hcr2.so",
+      "sha256": "f9b4ee1664ec8b681da145d97dcbfbeefe6dd8c6a78d1543f22d25933e62c803",
+      "byte_count": 7465456,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/arm64-v8a/libwtp.so/libwtp.so",
+      "sha256": "f634b70fe9d356ea1af494d3643156a5d218a49a5fbaa6992bf109913875c3cf",
+      "byte_count": 944896,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libapplovin-native-crash-reporter.so/libapplovin-native-crash-reporter.so",
+      "sha256": "5e96fc780036525cabc0f34e772a2d0110f41f84acc3b1a2e9e8b2c0ec1b0619",
+      "byte_count": 480384,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libbts.so/libbts.so",
+      "sha256": "43f5104d711d4cb9295a7e1c672b9355f340295f577e8614ccbe374bb75a3460",
+      "byte_count": 623848,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libcocos2dcpp.so/libcocos2dcpp.so",
+      "sha256": "a01508229fa438a666212b3af55b9807e81f5e5f5d9a8f42f22fd1e90c81d63a",
+      "byte_count": 27853384,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libcrashlytics-common.so/libcrashlytics-common.so",
+      "sha256": "4b8bcec5c0464d7b1741386e30eef9308c43d4ca8f57501ae6734fa48e1c55d2",
+      "byte_count": 435732,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libcrashlytics-handler.so/libcrashlytics-handler.so",
+      "sha256": "f58fca61975d2450e8bef2bc4b0ea68e5e181cdd0aff3693b04e469c1c6ccdb6",
+      "byte_count": 87908,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libcrashlytics-trampoline.so/libcrashlytics-trampoline.so",
+      "sha256": "5366393c1292cfb5c8b49bf846e644f8ce24e683e8c0e97566124b29f89eb722",
+      "byte_count": 6912,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libcrashlytics.so/libcrashlytics.so",
+      "sha256": "be0dedcd52a35e717ec0eeb832108e42c8d62552bc7005fef55ca233d0679260",
+      "byte_count": 94540,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libdatastore_shared_counter.so/libdatastore_shared_counter.so",
+      "sha256": "716c5d8d2cac8ca0edf65da8f139c7886b726ac79d542a14edeb94994ba6d3dc",
+      "byte_count": 4416,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libfingersoft_hcr2.so/libfingersoft_hcr2.so",
+      "sha256": "da34822d9a44e1355b4114ca19d4272ffec814e49359fde64e225757cfd92788",
+      "byte_count": 5016384,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/armeabi-v7a/libwtp.so/libwtp.so",
+      "sha256": "123babd79cb56c6ac405172bbf349488c885ff5ee31fecf3a2060ddbfa2aef74",
+      "byte_count": 603516,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libapplovin-native-crash-reporter.so/libapplovin-native-crash-reporter.so",
+      "sha256": "f55b7024f04cc687a970ff6c97ab0e49c82d4506c87c871b58df1a3522de693a",
+      "byte_count": 873464,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libbts.so/libbts.so",
+      "sha256": "f900f7bf1b355719efd72bbca3127f817f46806c852a1890e53cfaa1915693ff",
+      "byte_count": 947600,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libcocos2dcpp.so/libcocos2dcpp.so",
+      "sha256": "7e9d815c31735734913d5dc607a76beb7be778074180d8a80933e2e7f9ff81e8",
+      "byte_count": 36701248,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libcrashlytics-common.so/libcrashlytics-common.so",
+      "sha256": "14472884361b45dc9cc98603067d56a0a76280efd852b7146765fb0f739ec505",
+      "byte_count": 794272,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libcrashlytics-handler.so/libcrashlytics-handler.so",
+      "sha256": "7de56130991b32ab6fa5cd2bfe1d0aa9a4b2a1b281430161bea40547250c720b",
+      "byte_count": 190456,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libcrashlytics-trampoline.so/libcrashlytics-trampoline.so",
+      "sha256": "fe7a4c7c14580c38afc9f399c1e30c80fbbc7885d4d96f0c930e0cc63d9991d3",
+      "byte_count": 8768,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libcrashlytics.so/libcrashlytics.so",
+      "sha256": "aea5b9110cf04cf8571baa915f04c32a2ae5a285e5ebef4d3e49aa9d846b80ff",
+      "byte_count": 199872,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libdatastore_shared_counter.so/libdatastore_shared_counter.so",
+      "sha256": "fb6c9208988c49ae94943bc3236fa763ba584722e044fa4ea9a12d2941027105",
+      "byte_count": 6224,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libfingersoft_hcr2.so/libfingersoft_hcr2.so",
+      "sha256": "033e929c7bdb23b9d70a978e9513f48c7a7255945bea9cdc1509302a019c0924",
+      "byte_count": 6791656,
+      "hits": []
+    },
+    {
+      "binary": "decompiled/native/x86_64/libwtp.so/libwtp.so",
+      "sha256": "3e6a8c3c3752ade48519eca21bae64c5267c2e6e52b4ef9d1be353e339bc2c3e",
+      "byte_count": 917680,
+      "hits": []
+    }
+  ],
+  "scope": "All30 original copied native ELF inputs; full raw bytes. Absence is bounded and does not prove a library absent from transformed/hidden code."
+}

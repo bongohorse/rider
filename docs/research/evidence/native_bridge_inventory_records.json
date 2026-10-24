@@ -1,0 +1,132 @@
+[
+  {
+    "source_binary": "native/arm64-v8a/libcocos2dcpp.so/libcocos2dcpp.so",
+    "architecture": "arm64-v8a",
+    "binary": "libcocos2dcpp.so",
+    "binary_sha256": "32d1198004a39ecaec3fcf0e9aa4efdd2f3a73e52491fdb4ee11b9a0b7f26181",
+    "stable_id": "32d1198004a39ecaec3fcf0e9aa4efdd2f3a73e52491fdb4ee11b9a0b7f26181:ghidra:00ec09c0",
+    "ghidra": {
+      "address": "00ec09c0",
+      "name": "Java_com_fingersoft_hcr2_AppActivity_getTimeStampNow",
+      "thunk": false,
+      "external": false,
+      "body_bytes": 4,
+      "instruction_count": 1,
+      "instruction_bytes": 4,
+      "ranges_inclusive": [
+        [
+          "00ec09c0",
+          "00ec09c3"
+        ]
+      ]
+    },
+    "file_ranges_exclusive": [
+      [
+        14420416,
+        14420420
+      ]
+    ],
+    "pf_x_body_file_ranges_exclusive": [
+      [
+        14420416,
+        14420420
+      ]
+    ],
+    "historical_record": {
+      "address": "0x00ec09c0",
+      "name": "Java_com_fingersoft_hcr2_AppActivity_getTimeStampNow",
+      "size": 4,
+      "is_thunk": false,
+      "is_external": false,
+      "status": "Success",
+      "diagnostic": "",
+      "pseudocode_path": "00ec09c0_Java_com_fingersoft_hcr2_AppActivity_getTimeStampNow.c",
+      "disassembly_path": "00ec09c0_Java_com_fingersoft_hcr2_AppActivity_getTimeStampNow.asm"
+    },
+    "export_variants": [
+      {
+        "path": "native/arm64-v8a/libcocos2dcpp.so/pseudocode/00ec09c0_Java_com_fingersoft_hcr2_AppActivity_getTimeStampNow.c",
+        "sha256": "9d7e3042c2327e782331bedf21cbf0e76ab9968e50376e83b66a263945048c77",
+        "size": 234,
+        "category": "exact_halt_only_stub",
+        "halt_baddata_occurrences": 1,
+        "balanced_braces_heuristic": true,
+        "semantic_correctness": "not established by text inspection",
+        "provenance": "Ghidra exporter path; diagnostic association in function_export_audit.jsonl",
+        "source_layer": "historical",
+        "decompile_completed_record": true
+      }
+    ],
+    "discovery_attempts": [],
+    "boundary_adjudication": null,
+    "metadata_boundary_conflict": false,
+    "status": "halt_only_output",
+    "verification": "Live Ghidra function/body/instruction census; file mappings and output diagnostics separate",
+    "semantic_correctness": "not established"
+  },
+  {
+    "source_binary": "native/arm64-v8a/libcocos2dcpp.so/libcocos2dcpp.so",
+    "architecture": "arm64-v8a",
+    "binary": "libcocos2dcpp.so",
+    "binary_sha256": "32d1198004a39ecaec3fcf0e9aa4efdd2f3a73e52491fdb4ee11b9a0b7f26181",
+    "stable_id": "32d1198004a39ecaec3fcf0e9aa4efdd2f3a73e52491fdb4ee11b9a0b7f26181:ghidra:01c31f74",
+    "ghidra": {
+      "address": "01c31f74",
+      "name": "Java_org_cocos2dx_lib_Cocos2dxRenderer_nativeRender",
+      "thunk": false,
+      "external": false,
+      "body_bytes": 8,
+      "instruction_count": 2,
+      "instruction_bytes": 8,
+      "ranges_inclusive": [
+        [
+          "01c31f74",
+          "01c31f7b"
+        ]
+      ]
+    },
+    "file_ranges_exclusive": [
+      [
+        28516212,
+        28516220
+      ]
+    ],
+    "pf_x_body_file_ranges_exclusive": [
+      [
+        28516212,
+        28516220
+      ]
+    ],
+    "historical_record": {
+      "address": "0x01c31f74",
+      "name": "Java_org_cocos2dx_lib_Cocos2dxRenderer_nativeRender",
+      "size": 8,
+      "is_thunk": false,
+      "is_external": false,
+      "status": "Success",
+      "diagnostic": "",
+      "pseudocode_path": "01c31f74_Java_org_cocos2dx_lib_Cocos2dxRenderer_nativeRender.c",
+      "disassembly_path": "01c31f74_Java_org_cocos2dx_lib_Cocos2dxRenderer_nativeRender.asm"
+    },
+    "export_variants": [
+      {
+        "path": "native/arm64-v8a/libcocos2dcpp.so/pseudocode/01c31f74_Java_org_cocos2dx_lib_Cocos2dxRenderer_nativeRender.c",
+        "sha256": "51bbadae6550998c0c9464ee0f13bdf18419623e723382ac2ee23984a3a7005e",
+        "size": 233,
+        "category": "exact_halt_only_stub",
+        "halt_baddata_occurrences": 1,
+        "balanced_braces_heuristic": true,
+        "semantic_correctness": "not established by text inspection",
+        "provenance": "Ghidra exporter path; diagnostic association in function_export_audit.jsonl",
+        "source_layer": "historical",
+        "decompile_completed_record": true
+      }
+    ],
+    "discovery_attempts": [],
+    "boundary_adjudication": null,
+    "metadata_boundary_conflict": false,
+    "status": "halt_only_output",
+    "verification": "Live Ghidra function/body/instruction census; file mappings and output diagnostics separate",
+    "semantic_correctness": "not established"
+  }
+]

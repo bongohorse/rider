@@ -1,0 +1,14 @@
+{
+  "document": "/workspace/HC2/research/HCR2_Technical_Reference_for_Rider.md",
+  "utf8": true,
+  "word_count": 12558,
+  "explicit_anchors": 123,
+  "local_link_occurrences": 218,
+  "unique_local_link_targets": 116,
+  "claim_ids": 110,
+  "evidence_rows": 195,
+  "hashes_verified": 179,
+  "errors": [],
+  "status": "PASS",
+  "scope": "Local existence, supplied SHA-256, navigation and basic format checks. Does not prove inferred semantics or online URL availability."
+}
