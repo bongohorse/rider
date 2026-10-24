@@ -1,0 +1,139 @@
+{
+  "source_sha": "2a2289865a8733608ba58ae83a1092e1bd4bc310",
+  "run_id": "terrain-p0-1792874737849",
+  "note": "Same source, fixtures and drag/Undo behavior; final runner only corrected the first-preview observation predicate. First-preview metric from this run is excluded.",
+  "results": [
+    {
+      "id": "six-anchor",
+      "segments": 666,
+      "runtime": {
+        "decoration": 667,
+        "struts": 2,
+        "generation": 12,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 673
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 58.5,
+          "p95": 59.60000002384186,
+          "p99": 59.60000002384186,
+          "max": 59.60000002384186
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17.099999994039536,
+          "p99": 17.400000005960464,
+          "max": 17.900000005960464
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2.0999999940395355,
+          "p95": 5.300000011920929,
+          "p99": 7.0999999940395355,
+          "max": 7.800000011920929
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "over25": 0
+      }
+    },
+    {
+      "id": "long-curves",
+      "segments": 735,
+      "runtime": {
+        "decoration": 736,
+        "struts": 2,
+        "generation": 23,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 742
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 61.39999997615814,
+          "p95": 76.40000000596046,
+          "p99": 76.40000000596046,
+          "max": 76.40000000596046
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17.099999994039536,
+          "p99": 17.599999994039536,
+          "max": 33.400000005960464
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2.2000000178813934,
+          "p95": 5.5,
+          "p99": 6.700000017881393,
+          "max": 7
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.2,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "over25": 1
+      }
+    },
+    {
+      "id": "mixed",
+      "segments": 735,
+      "runtime": {
+        "decoration": 784,
+        "struts": 2,
+        "generation": 34,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 7,
+        "sprites": 790
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 56.400000005960464,
+          "p95": 65.10000002384186,
+          "p99": 65.10000002384186,
+          "max": 65.10000002384186
+        },
+        "interval_ms": {
+          "n": 357,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 18,
+          "max": 33.5
+        },
+        "callback_ms": {
+          "n": 358,
+          "p50": 2.2000000178813934,
+          "p95": 5.799999982118607,
+          "p99": 9.699999988079071,
+          "max": 11.199999988079071
+        },
+        "physics_ms": {
+          "n": 358,
+          "p50": 0.1,
+          "p95": 0.2,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "over25": 2
+      }
+    }
+  ]
+}

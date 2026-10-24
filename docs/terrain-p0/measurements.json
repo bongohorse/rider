@@ -1,0 +1,1554 @@
+{
+  "schema": 1,
+  "source_sha": "2a2289865a8733608ba58ae83a1092e1bd4bc310",
+  "run_id": "terrain-p0-1792875308617",
+  "status": "PASS",
+  "browser": "156.0.8078.4",
+  "identity": {
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "cross_origin_isolated": false,
+    "clock_step_ms": 0.09999999403953552,
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "dpr": 1,
+      "highDpi": true,
+      "bufferWidth": 1280,
+      "bufferHeight": 720
+    }
+  },
+  "protocol": {
+    "repeats": 5,
+    "warmup_ms": 1000,
+    "sample_ms": 6000,
+    "viewport": [
+      1280,
+      720
+    ],
+    "dpr": 1
+  },
+  "errors": [],
+  "camera": [
+    {
+      "id": "descent",
+      "query": "ramps&section=down-30",
+      "telemetry": {
+        "station_name": "Ramps short [down-30]",
+        "audio_started": false,
+        "custom_snapshots": 0,
+        "first_tick_speed": 1.000000359118,
+        "head_contact": false,
+        "audio_pitch": 0,
+        "projection_y": 0.0035042755771428,
+        "speed": 206.74163818359,
+        "world_loads": 1,
+        "spawn_y": 2.2,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "decor_sprites": 45,
+        "spawn_x": 82.351882774216,
+        "terrain_shapes": 45,
+        "section_index": 14,
+        "crash_enabled": false,
+        "decor_labels": 11,
+        "reset_count": 0,
+        "station": "ramps",
+        "audio_muted": false,
+        "pitch": -0.34429129958153,
+        "first_tick_omega": -4.5454545021057,
+        "sequence": 3,
+        "projection_x": 0.0019711549393833,
+        "modified": false,
+        "preset_refused": false,
+        "velocity_x": 203.29627990723,
+        "contact1": true,
+        "station_result": "down-30 ACCELERATED | best 0 deg | h 0.00 m",
+        "fps": 59.856344571097,
+        "station_top_speed": 2.3636266561532,
+        "station_note": "",
+        "frame_ms": 16.706666722894,
+        "ui_captured": false,
+        "section_count": 14,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 1.0934766887602,
+        "snapshot": "",
+        "session_generation": 1,
+        "finish_count": 0,
+        "station_brake_stopped": false,
+        "start_speed": 1,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 5.4106636047363,
+        "custom": false,
+        "speed_mps": 2.0674163356256,
+        "travel1": 0.94344520568848,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "station_brake_distance": 0,
+        "finish": false
+      }
+    },
+    {
+      "id": "jump",
+      "query": "air&section=big",
+      "telemetry": {
+        "station_name": "Air control [big]",
+        "audio_started": true,
+        "custom_snapshots": 0,
+        "first_tick_speed": 6.9999998435378,
+        "head_contact": false,
+        "audio_pitch": 2.1681294441223,
+        "projection_y": 0.0031579525675625,
+        "speed": 567.77496337891,
+        "world_loads": 1,
+        "spawn_y": 17.7,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "decor_sprites": 38,
+        "spawn_x": 2,
+        "terrain_shapes": 38,
+        "section_index": 1,
+        "crash_enabled": false,
+        "decor_labels": 8,
+        "reset_count": 0,
+        "station": "air",
+        "audio_muted": false,
+        "pitch": -0.39928725361824,
+        "first_tick_omega": -31.818181991577,
+        "sequence": 5,
+        "projection_x": 0.0017763483338058,
+        "modified": false,
+        "preset_refused": false,
+        "velocity_x": 529.85687255859,
+        "contact1": false,
+        "station_result": "In air 0.28 s | rot -29 deg",
+        "fps": 59.91212828382,
+        "station_top_speed": 7.0000004538894,
+        "station_note": "",
+        "frame_ms": 16.691111276547,
+        "ui_captured": false,
+        "section_count": 4,
+        "contact2": false,
+        "finish_time": 0,
+        "station_distance": 7.4634702474593,
+        "snapshot": "",
+        "session_generation": 1,
+        "finish_count": 0,
+        "station_brake_stopped": false,
+        "start_speed": 7,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": -0.093706130981445,
+        "custom": false,
+        "speed_mps": 5.6777495068815,
+        "travel1": -0.094722747802734,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "station_brake_distance": 0,
+        "finish": false
+      }
+    },
+    {
+      "id": "reverse",
+      "query": "straight",
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 0,
+        "first_tick_speed": -8.1985499888375e-12,
+        "head_contact": false,
+        "travel1": 3.9622344970703,
+        "projection_y": 0.003601040225476,
+        "speed": 152.2357635498,
+        "world_loads": 1,
+        "spawn_y": 1.7,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 0,
+        "decor_sprites": 170,
+        "terrain_shapes": 1,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "straight",
+        "station_brake_distance": 0,
+        "pitch": -0.053916458040476,
+        "first_tick_omega": 0,
+        "sequence": 6,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 1,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0020255849231035,
+        "velocity_x": -152.23167419434,
+        "station_name": "Straight",
+        "contact1": true,
+        "fps": 59.920106511556,
+        "decor_labels": 13,
+        "station_note": "",
+        "frame_ms": 16.688888892531,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": -0.36802535188141,
+        "snapshot": "",
+        "session_generation": 1,
+        "finish_count": 0,
+        "station_top_speed": 1.4700762610865,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 8.9227828979492,
+        "custom": false,
+        "speed_mps": 1.5223576014707,
+        "audio_pitch": 0.97094214439392,
+        "station_brake_stopped": true,
+        "audio_muted": false,
+        "finish": false
+      }
+    }
+  ],
+  "unmeasured": [
+    "phone",
+    "isolated HTML5 sampler CPU",
+    "GPU time",
+    "draw calls",
+    "total process/GPU memory",
+    "engine-wide GameObject pool census"
+  ],
+  "environment": {
+    "system": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+    "logical_cpus": 12
+  },
+  "observer_sha256": "03b1f4cbf3eb91209f801cf57021b95cfae990f5fb937ed1f9c373791384d258",
+  "cpu_observer_sha256": "7d24ef64beae418bfff3547f6db0d7ba833f13270f38e3cd6ea0e8cfe21752be",
+  "bundle": {
+    "source_sha": "2a2289865a8733608ba58ae83a1092e1bd4bc310",
+    "platform": "wasm-web",
+    "variant": "debug",
+    "files": {
+      "RiderG1/.gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
+      "RiderG1/RiderG1.wasm": "47cc8cd439fedb56bd523d236a3ccd7d7aafcb218d59111270986cda942cffc7",
+      "RiderG1/RiderG1_pthread.wasm": "57909542cc7e6c0b04b14ca0189eba3b46cf9cb68042868bc4d8a78661c9e685",
+      "RiderG1/RiderG1_pthread_wasm.js": "68539300421f98baa8ba4c724bb21633898163fe91a36b3cf88d95e3d2fc497e",
+      "RiderG1/RiderG1_wasm.js": "f8905038b220e1573273c7e5da13e4b6fe80c18b0bf341981c9b1c8fa4b9ced9",
+      "RiderG1/archive/archive_files.json": "44e0b81c8c4deb884d37de364f552ca91dfd9f25e13f0d35aff45f7c855f774c",
+      "RiderG1/archive/game0.arcd": "591f4d7045351994fee3e68027b19f8105ebebd9887acfb72df07dd0e6a51c59",
+      "RiderG1/archive/game0.arci": "ff17c534c1bf198c327c08f39bdcfd315cc507cad639682493714091bdf91a73",
+      "RiderG1/archive/game0.dmanifest": "744f08b37399ee7e97848ad05f87554b270c4b6a7b4a1d7fab982bc8ca47ef97",
+      "RiderG1/archive/game0.projectc": "570624116efb22fa51e6e32a55c601e34939f01ce748c3453e1fe3c3ebc4947e",
+      "RiderG1/dmloader.js": "9a23948a9d05003ba48ce00c9cfcfaac50796fa6a87fcdc4ba1a7c644f998b6d",
+      "RiderG1/index.html": "cd9baafc5dffdb7dfe0a53ad6302b194b14fc7120faab693213f79a34ffbca0a",
+      "build.log": "ebc91a2e061713becbe7fa8bfa0491655a47b939335e2b6ffa0bf6c4681db285",
+      "build_input_data.json": "aa7ad51aa1802c6dbd6a4673f35f3f44ca50b2c2031b09646927baad2286bbdb",
+      "engines.json": "95478dc9d7a5a5d11c2d3765e8ccee9a0e08c29002709ada2983ba469458e13e",
+      "extender/wasm-web/log.txt": "1f90b3b6a28d9d212cde890019422fa262006a369883e89ff897cad823ec0e05",
+      "extender/wasm_pthread-web/log.txt": "c1e3eaa91ac6fa4055585108f589d395ae1fee25c33c93c634389e06785949d4",
+      "gym.settings": "53cb59be95b5acb287ec4fa1c4f6ad12a4556fd638f05b82b96e4ac68c7aeadf",
+      "toolchain.json": "138f484fee9f0c6d9c4ac08798955ffe41f0a00ebf43f581c9f9f429a80dc3bc"
+    }
+  },
+  "fixtures": [
+    {
+      "id": "six-anchor",
+      "source_bytes": 983,
+      "export_bytes": 23782,
+      "anchors": 6,
+      "objects": 1,
+      "segments": 666,
+      "chain_vertices": 667,
+      "chains": 1,
+      "hulls": 0,
+      "hull_vertices": 0,
+      "labels": 0,
+      "runtime": {
+        "decoration": 667,
+        "struts": 2,
+        "generation": 12,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 673
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 66.90000000596046,
+          "observer_upper_ms": 809,
+          "callback_max_ms": 22.200000017881393
+        },
+        {
+          "event_ms": 56.70000001788139,
+          "observer_upper_ms": 805.0999999940395,
+          "callback_max_ms": 18
+        },
+        {
+          "event_ms": 46,
+          "observer_upper_ms": 797.1999999880791,
+          "callback_max_ms": 16.900000005960464
+        },
+        {
+          "event_ms": 53.400000005960464,
+          "observer_upper_ms": 805.4000000059605,
+          "callback_max_ms": 17.399999976158142
+        },
+        {
+          "event_ms": 42.400000005960464,
+          "observer_upper_ms": 795,
+          "callback_max_ms": 16.900000005960464
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 41.80000001192093,
+          "observer_upper_ms": 158.09999999403954,
+          "callback_max_ms": 16.69999998807907
+        },
+        {
+          "event_ms": 45.10000002384186,
+          "observer_upper_ms": 134.10000002384186,
+          "callback_max_ms": 17.099999994039536
+        },
+        {
+          "event_ms": 43.5,
+          "observer_upper_ms": 145.7000000178814,
+          "callback_max_ms": 15.799999982118607
+        },
+        {
+          "event_ms": 43.400000005960464,
+          "observer_upper_ms": 139.09999999403954,
+          "callback_max_ms": 17.700000017881393
+        },
+        {
+          "event_ms": 43.099999994039536,
+          "observer_upper_ms": 171.5,
+          "callback_max_ms": 15.799999982118607
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 240.80000001192093,
+          "observer_upper_ms": 246.5,
+          "callback_max_ms": 6
+        },
+        {
+          "event_ms": 238,
+          "observer_upper_ms": 244.7999999821186,
+          "callback_max_ms": 7.4000000059604645
+        },
+        {
+          "event_ms": 238.69999998807907,
+          "observer_upper_ms": 244.80000001192093,
+          "callback_max_ms": 6.399999976158142
+        },
+        {
+          "event_ms": 236.7000000178814,
+          "observer_upper_ms": 244.2000000178814,
+          "callback_max_ms": 5.899999976158142
+        },
+        {
+          "event_ms": 239,
+          "observer_upper_ms": 245.2999999821186,
+          "callback_max_ms": 7.300000011920929
+        }
+      ],
+      "imports": [
+        {
+          "ready_ms": 136.90000000596046,
+          "callback_max_ms": 23.600000023841858,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 9.0000629425049,
+            "build_ms": 5.9998035430908,
+            "generation": 2,
+            "switch_ms": 122.99990653992
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 67.59999999403954,
+          "callback_max_ms": 19.30000001192093,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 8.0001354217529,
+            "build_ms": 4.9998760223389,
+            "generation": 3,
+            "switch_ms": 63.999891281128
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 59.900000005960464,
+          "callback_max_ms": 14,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 8.0001354217529,
+            "build_ms": 3.9999485015869,
+            "generation": 4,
+            "switch_ms": 48.00009727478
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 56.599999994039536,
+          "callback_max_ms": 15.200000017881393,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 9.0000629425049,
+            "build_ms": 5.000114440918,
+            "generation": 5,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 53,
+          "callback_max_ms": 12.199999988079071,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 3.9999485015869,
+            "generation": 6,
+            "switch_ms": 46.999931335449
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 61.80000001192093,
+          "callback_max_ms": 12.5,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 3.9999485015869,
+            "generation": 7,
+            "switch_ms": 49.999952316284
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 667,
+            "labels": 1
+          }
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 59.900000005960464,
+          "p95": 67.59999999403954,
+          "p99": 67.59999999403954,
+          "max": 67.59999999403954
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17.100000023841858,
+          "p99": 17.69999998807907,
+          "max": 33.099999994039536
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2.2999999821186066,
+          "p95": 5.699999988079071,
+          "p99": 8.5,
+          "max": 9.800000011920929
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.2,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "over25": 1
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 4931188
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 10625024
+        }
+      ],
+      "edit": {
+        "view": {
+          "objects": 1,
+          "generation": 3,
+          "simplified": false,
+          "labels": 2,
+          "sprites": 671
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 1,
+          "max_nodes": 640,
+          "grid": 75
+        }
+      },
+      "source_derived_gameobjects": {
+        "edit": 677,
+        "play": 678,
+        "mesh_components": 0
+      },
+      "drag": [
+        {
+          "first_preview_upper_ms": 397.7000000178814,
+          "gesture_to_commit_ms": 956.7000000178814,
+          "observer_upper_ms": 1004.1000000238419,
+          "callback_ms": {
+            "n": 50,
+            "p50": 7.700000017881393,
+            "p95": 28.19999998807907,
+            "max": 30
+          }
+        },
+        {
+          "first_preview_upper_ms": 417.5,
+          "gesture_to_commit_ms": 991.0999999940395,
+          "observer_upper_ms": 1070.199999988079,
+          "callback_ms": {
+            "n": 53,
+            "p50": 8.5,
+            "p95": 26.099999994039536,
+            "max": 30
+          }
+        },
+        {
+          "first_preview_upper_ms": 405.89999997615814,
+          "gesture_to_commit_ms": 915.6999999880791,
+          "observer_upper_ms": 964.5,
+          "callback_ms": {
+            "n": 49,
+            "p50": 7.300000011920929,
+            "p95": 27,
+            "max": 32.400000005960464
+          }
+        },
+        {
+          "first_preview_upper_ms": 278.30000001192093,
+          "gesture_to_commit_ms": 798.3000000119209,
+          "observer_upper_ms": 898.7000000178814,
+          "callback_ms": {
+            "n": 44,
+            "p50": 7.5,
+            "p95": 28.799999982118607,
+            "max": 35.099999994039536
+          }
+        },
+        {
+          "first_preview_upper_ms": 426.80000001192093,
+          "gesture_to_commit_ms": 973.9000000059605,
+          "observer_upper_ms": 1056.2000000178814,
+          "callback_ms": {
+            "n": 52,
+            "p50": 8.200000017881393,
+            "p95": 27.200000017881393,
+            "max": 32.5
+          }
+        }
+      ],
+      "drag_callback_ms": {
+        "n": 248,
+        "p50": 7.800000011920929,
+        "p95": 28.19999998807907,
+        "p99": 32.400000005960464,
+        "max": 35.099999994039536
+      },
+      "drag_interval_ms": {
+        "n": 243,
+        "p50": 17.30000001192093,
+        "p95": 37.099999994039536,
+        "max": 47.5
+      },
+      "memory": {
+        "last_world": {
+          "bytes": 742088,
+          "pairs_ms": 0,
+          "sequence": 31,
+          "lua_kib": 3467.4912109375,
+          "contacts": 5,
+          "sensors_ms": 0,
+          "shapes": 670,
+          "solve_ms": 0,
+          "collide_ms": 0,
+          "step_ms": 0,
+          "station": "p0-six-anchor",
+          "static_tree_height": 11
+        },
+        "box2d_bytes_range": [
+          742088,
+          742088
+        ],
+        "lua_kib_range": [
+          2543.60546875,
+          4534.6396484375
+        ],
+        "wasm_capacity_bytes": 268435456
+      },
+      "physics_zero_samples": 150,
+      "world_observations": 24,
+      "drive_telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": -1.0619898820555e-08,
+        "head_contact": false,
+        "travel1": 7.0003147125244,
+        "projection_y": 0.003037037095055,
+        "speed": 681.59985351562,
+        "world_loads": 7,
+        "spawn_y": 2,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 2,
+        "decor_sprites": 667,
+        "terrain_shapes": 666,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-six-anchor",
+        "station_brake_distance": 0,
+        "pitch": 0.084710739552975,
+        "first_tick_omega": 0,
+        "sequence": 31,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017083333805203,
+        "velocity_x": 679.91149902344,
+        "station_name": "Custom: P0 six-anchor",
+        "contact1": true,
+        "fps": 59.896179982306,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.695555547873,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 36.851173448015,
+        "snapshot": "s6",
+        "session_generation": 7,
+        "finish_count": 0,
+        "station_top_speed": 6.8566642754525,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 5.8837909698486,
+        "custom": true,
+        "speed_mps": 6.8159983828068,
+        "audio_pitch": 2.0911652374268,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      },
+      "contacts_max": 6,
+      "fixture_hashes": {
+        "six-anchor-source.json": "a691148c15d9b0bb1a6508ac3a2b095ddb6350fe9ee47262a6aa4c80a6386331",
+        "six-anchor.json": "8437bc930a33cf8d1b74f9819df49ce6bb2746110f8a23fcbdec5d2bfcbaeae2"
+      }
+    },
+    {
+      "id": "long-curves",
+      "source_bytes": 1903,
+      "export_bytes": 27059,
+      "anchors": 18,
+      "objects": 3,
+      "segments": 735,
+      "chain_vertices": 736,
+      "chains": 1,
+      "hulls": 0,
+      "hull_vertices": 0,
+      "labels": 0,
+      "runtime": {
+        "decoration": 736,
+        "struts": 2,
+        "generation": 23,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 742
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 62.80000001192093,
+          "observer_upper_ms": 824.3000000119209,
+          "callback_max_ms": 39.400000005960464
+        },
+        {
+          "event_ms": 62.5,
+          "observer_upper_ms": 849.3999999761581,
+          "callback_max_ms": 48.89999997615814
+        },
+        {
+          "event_ms": 63.400000005960464,
+          "observer_upper_ms": 832.9000000059605,
+          "callback_max_ms": 46.30000001192093
+        },
+        {
+          "event_ms": 63.29999998211861,
+          "observer_upper_ms": 852.5999999940395,
+          "callback_max_ms": 53.5
+        },
+        {
+          "event_ms": 65.59999999403954,
+          "observer_upper_ms": 843.5,
+          "callback_max_ms": 46.099999994039536
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 59.900000005960464,
+          "observer_upper_ms": 220,
+          "callback_max_ms": 32.20000001788139
+        },
+        {
+          "event_ms": 67.5,
+          "observer_upper_ms": 215.7000000178814,
+          "callback_max_ms": 31.099999994039536
+        },
+        {
+          "event_ms": 59.400000005960464,
+          "observer_upper_ms": 212.69999998807907,
+          "callback_max_ms": 27.700000017881393
+        },
+        {
+          "event_ms": 60.400000005960464,
+          "observer_upper_ms": 185.90000000596046,
+          "callback_max_ms": 32.30000001192093
+        },
+        {
+          "event_ms": 51,
+          "observer_upper_ms": 155.19999998807907,
+          "callback_max_ms": 26
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 239.5,
+          "observer_upper_ms": 245.80000001192093,
+          "callback_max_ms": 4.700000017881393
+        },
+        {
+          "event_ms": 238.5,
+          "observer_upper_ms": 244.90000000596046,
+          "callback_max_ms": 4.699999988079071
+        },
+        {
+          "event_ms": 239.5,
+          "observer_upper_ms": 246,
+          "callback_max_ms": 4.4000000059604645
+        },
+        {
+          "event_ms": 239,
+          "observer_upper_ms": 247.59999999403954,
+          "callback_max_ms": 7.199999988079071
+        },
+        {
+          "event_ms": 239.90000000596046,
+          "observer_upper_ms": 246.09999999403954,
+          "callback_max_ms": 4.5999999940395355
+        }
+      ],
+      "imports": [
+        {
+          "ready_ms": 59.29999998211861,
+          "callback_max_ms": 16.900000005960464,
+          "lua": {
+            "parse_ms": 2.000093460083,
+            "decorate_ms": 9.9999904632568,
+            "build_ms": 5.000114440918,
+            "generation": 8,
+            "switch_ms": 49.999952316284
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 58.599999994039536,
+          "callback_max_ms": 14.099999994039536,
+          "lua": {
+            "parse_ms": 2.9997825622559,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 6.0000419616699,
+            "generation": 9,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 57.80000001192093,
+          "callback_max_ms": 12.299999982118607,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 6.0000419616699,
+            "build_ms": 5.000114440918,
+            "generation": 10,
+            "switch_ms": 46.999931335449
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 77,
+          "callback_max_ms": 27.599999994039536,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 16.999959945679,
+            "build_ms": 9.0000629425049,
+            "generation": 11,
+            "switch_ms": 69.999933242798
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 69.7999999821186,
+          "callback_max_ms": 12.699999988079071,
+          "lua": {
+            "parse_ms": 5.000114440918,
+            "decorate_ms": 5.9998035430908,
+            "build_ms": 5.000114440918,
+            "generation": 12,
+            "switch_ms": 63.000202178955
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        },
+        {
+          "ready_ms": 77.59999999403954,
+          "callback_max_ms": 13.299999982118607,
+          "lua": {
+            "parse_ms": 2.9997825622559,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 5.000114440918,
+            "generation": 13,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 735,
+            "sprites": 736,
+            "labels": 1
+          }
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 69.7999999821186,
+          "p95": 77.59999999403954,
+          "p99": 77.59999999403954,
+          "max": 77.59999999403954
+        },
+        "interval_ms": {
+          "n": 358,
+          "p50": 16.69999998807907,
+          "p95": 17.099999994039536,
+          "p99": 17.799999982118607,
+          "max": 33.79999998211861
+        },
+        "callback_ms": {
+          "n": 359,
+          "p50": 2.0999999940395355,
+          "p95": 5.299999982118607,
+          "p99": 8.599999994039536,
+          "max": 14.799999982118607
+        },
+        "physics_ms": {
+          "n": 359,
+          "p50": 0.1,
+          "p95": 0.2,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "over25": 1
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 5039484
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 14032896
+        }
+      ],
+      "edit": {
+        "view": {
+          "objects": 3,
+          "generation": 14,
+          "simplified": false,
+          "labels": 2,
+          "sprites": 740
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 1,
+          "max_nodes": 640,
+          "grid": 75
+        }
+      },
+      "source_derived_gameobjects": {
+        "edit": 746,
+        "play": 747,
+        "mesh_components": 0
+      },
+      "drag": [
+        {
+          "first_preview_upper_ms": 380.09999999403954,
+          "gesture_to_commit_ms": 956.1999999880791,
+          "observer_upper_ms": 1033.9000000059605,
+          "callback_ms": {
+            "n": 55,
+            "p50": 8.400000005960464,
+            "p95": 19.400000005960464,
+            "max": 26.599999994039536
+          }
+        },
+        {
+          "first_preview_upper_ms": 291,
+          "gesture_to_commit_ms": 821.3000000119209,
+          "observer_upper_ms": 915.5999999940395,
+          "callback_ms": {
+            "n": 48,
+            "p50": 7.699999988079071,
+            "p95": 16.69999998807907,
+            "max": 25.19999998807907
+          }
+        },
+        {
+          "first_preview_upper_ms": 439.09999999403954,
+          "gesture_to_commit_ms": 809.5,
+          "observer_upper_ms": 872.7999999821186,
+          "callback_ms": {
+            "n": 44,
+            "p50": 8.099999994039536,
+            "p95": 18,
+            "max": 24.399999976158142
+          }
+        },
+        {
+          "first_preview_upper_ms": 371.69999998807907,
+          "gesture_to_commit_ms": 912.7999999821186,
+          "observer_upper_ms": 988.4000000059605,
+          "callback_ms": {
+            "n": 53,
+            "p50": 8.199999988079071,
+            "p95": 21,
+            "max": 28.200000017881393
+          }
+        },
+        {
+          "first_preview_upper_ms": 377.80000001192093,
+          "gesture_to_commit_ms": 954.5,
+          "observer_upper_ms": 1043.300000011921,
+          "callback_ms": {
+            "n": 53,
+            "p50": 8.700000017881393,
+            "p95": 16,
+            "max": 25.100000023841858
+          }
+        }
+      ],
+      "drag_callback_ms": {
+        "n": 253,
+        "p50": 8.300000011920929,
+        "p95": 18,
+        "p99": 25.700000017881393,
+        "max": 28.200000017881393
+      },
+      "drag_interval_ms": {
+        "n": 248,
+        "p50": 17.799999982118607,
+        "p95": 30.200000017881393,
+        "max": 38.80000001192093
+      },
+      "memory": {
+        "last_world": {
+          "bytes": 796652,
+          "pairs_ms": 0,
+          "sequence": 31,
+          "lua_kib": 4666.2138671875,
+          "contacts": 6,
+          "sensors_ms": 0,
+          "shapes": 739,
+          "solve_ms": 0,
+          "collide_ms": 0,
+          "step_ms": 0,
+          "station": "p0-long-curves",
+          "static_tree_height": 12
+        },
+        "box2d_bytes_range": [
+          796652,
+          796652
+        ],
+        "lua_kib_range": [
+          2619.3173828125,
+          5513.8203125
+        ],
+        "wasm_capacity_bytes": 268435456
+      },
+      "physics_zero_samples": 149,
+      "world_observations": 24,
+      "drive_telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": -1.0619898820555e-08,
+        "head_contact": false,
+        "travel1": 4.4879894256592,
+        "projection_y": 0.003037037095055,
+        "speed": 698.30963134766,
+        "world_loads": 13,
+        "spawn_y": 2,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 2,
+        "decor_sprites": 736,
+        "terrain_shapes": 735,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-long-curves",
+        "station_brake_distance": 0,
+        "pitch": -0.27874886989594,
+        "first_tick_omega": 0,
+        "sequence": 31,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017083333805203,
+        "velocity_x": 679.18090820312,
+        "station_name": "Custom: P0 long-curves",
+        "contact1": true,
+        "fps": 59.888208124401,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.697777931889,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 34.821066071516,
+        "snapshot": "s12",
+        "session_generation": 13,
+        "finish_count": 0,
+        "station_top_speed": 6.9955906639489,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 8.1852416992188,
+        "custom": true,
+        "speed_mps": 6.9830961573922,
+        "audio_pitch": 2.0876086711884,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      },
+      "contacts_max": 6,
+      "fixture_hashes": {
+        "long-curves-source.json": "5af280a3b1047e3de9d31d4be0fd5ce321931cf0822af6ddbd17e8119cfee879",
+        "long-curves.json": "920ca3e4937f925fb48710fd5b2e45931d1355a625ed4f5381ff92cad37fb9d1"
+      }
+    },
+    {
+      "id": "mixed",
+      "source_bytes": 3180,
+      "export_bytes": 29159,
+      "anchors": 18,
+      "objects": 21,
+      "segments": 735,
+      "chain_vertices": 736,
+      "chains": 1,
+      "hulls": 12,
+      "hull_vertices": 48,
+      "labels": 6,
+      "runtime": {
+        "decoration": 784,
+        "struts": 2,
+        "generation": 34,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 7,
+        "sprites": 790
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 69.59999999403954,
+          "observer_upper_ms": 839.3000000119209,
+          "callback_max_ms": 44.30000001192093
+        },
+        {
+          "event_ms": 68.59999999403954,
+          "observer_upper_ms": 860.5999999940395,
+          "callback_max_ms": 45.80000001192093
+        },
+        {
+          "event_ms": 57.599999994039536,
+          "observer_upper_ms": 826.1999999880791,
+          "callback_max_ms": 43.29999998211861
+        },
+        {
+          "event_ms": 52.19999998807907,
+          "observer_upper_ms": 822,
+          "callback_max_ms": 45.900000005960464
+        },
+        {
+          "event_ms": 61.29999998211861,
+          "observer_upper_ms": 843.1999999880791,
+          "callback_max_ms": 41.099999994039536
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 77.40000000596046,
+          "observer_upper_ms": 237.59999999403954,
+          "callback_max_ms": 45.19999998807907
+        },
+        {
+          "event_ms": 55.5,
+          "observer_upper_ms": 206.59999999403954,
+          "callback_max_ms": 28.099999994039536
+        },
+        {
+          "event_ms": 52.5,
+          "observer_upper_ms": 143.5,
+          "callback_max_ms": 27.19999998807907
+        },
+        {
+          "event_ms": 53.5,
+          "observer_upper_ms": 189,
+          "callback_max_ms": 27.30000001192093
+        },
+        {
+          "event_ms": 67.5,
+          "observer_upper_ms": 211.2999999821186,
+          "callback_max_ms": 35.099999994039536
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 240.40000000596046,
+          "observer_upper_ms": 247.5,
+          "callback_max_ms": 6
+        },
+        {
+          "event_ms": 227.5,
+          "observer_upper_ms": 235.2999999821186,
+          "callback_max_ms": 4.299999982118607
+        },
+        {
+          "event_ms": 239.59999999403954,
+          "observer_upper_ms": 245.2000000178814,
+          "callback_max_ms": 4.5
+        },
+        {
+          "event_ms": 238.69999998807907,
+          "observer_upper_ms": 245,
+          "callback_max_ms": 6.5999999940395355
+        },
+        {
+          "event_ms": 239.19999998807907,
+          "observer_upper_ms": 246.39999997615814,
+          "callback_max_ms": 4.299999982118607
+        }
+      ],
+      "imports": [
+        {
+          "ready_ms": 75.09999999403954,
+          "callback_max_ms": 14.800000011920929,
+          "lua": {
+            "parse_ms": 6.0000419616699,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 6.0000419616699,
+            "generation": 14,
+            "switch_ms": 65.000057220459
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        },
+        {
+          "ready_ms": 69.90000000596046,
+          "callback_max_ms": 17.299999982118607,
+          "lua": {
+            "parse_ms": 5.000114440918,
+            "decorate_ms": 9.9999904632568,
+            "build_ms": 6.0000419616699,
+            "generation": 15,
+            "switch_ms": 59.999942779541
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        },
+        {
+          "ready_ms": 56.80000001192093,
+          "callback_max_ms": 14.899999976158142,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 5.000114440918,
+            "build_ms": 7.9998970031738,
+            "generation": 16,
+            "switch_ms": 49.999952316284
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        },
+        {
+          "ready_ms": 63.599999994039536,
+          "callback_max_ms": 13.200000017881393,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 7.000207901001,
+            "build_ms": 4.9998760223389,
+            "generation": 17,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        },
+        {
+          "ready_ms": 57.19999998807907,
+          "callback_max_ms": 13,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 4.9998760223389,
+            "generation": 18,
+            "switch_ms": 50.000190734863
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        },
+        {
+          "ready_ms": 56.599999994039536,
+          "callback_max_ms": 13.699999988079071,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 6.0000419616699,
+            "generation": 19,
+            "switch_ms": 50.000190734863
+          },
+          "counts": {
+            "shapes": 747,
+            "sprites": 784,
+            "labels": 7
+          }
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 57.19999998807907,
+          "p95": 69.90000000596046,
+          "p99": 69.90000000596046,
+          "max": 69.90000000596046
+        },
+        "interval_ms": {
+          "n": 358,
+          "p50": 16.69999998807907,
+          "p95": 16.900000005960464,
+          "p99": 17.599999994039536,
+          "max": 31.30000001192093
+        },
+        "callback_ms": {
+          "n": 359,
+          "p50": 1.9000000059604645,
+          "p95": 5.100000023841858,
+          "p99": 6,
+          "max": 7
+        },
+        "physics_ms": {
+          "n": 359,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "over25": 1
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 6761232
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 15605760
+        }
+      ],
+      "edit": {
+        "view": {
+          "objects": 21,
+          "generation": 25,
+          "simplified": false,
+          "labels": 8,
+          "sprites": 788
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 1,
+          "max_nodes": 640,
+          "grid": 75
+        }
+      },
+      "source_derived_gameobjects": {
+        "edit": 800,
+        "play": 801,
+        "mesh_components": 0
+      },
+      "drag": [
+        {
+          "first_preview_upper_ms": 326.10000002384186,
+          "gesture_to_commit_ms": 944.5,
+          "observer_upper_ms": 1027.300000011921,
+          "callback_ms": {
+            "n": 52,
+            "p50": 8.399999976158142,
+            "p95": 19.400000005960464,
+            "max": 41.400000005960464
+          }
+        },
+        {
+          "first_preview_upper_ms": 389.2000000178814,
+          "gesture_to_commit_ms": 990.2000000178814,
+          "observer_upper_ms": 1093.4000000059605,
+          "callback_ms": {
+            "n": 55,
+            "p50": 8.5,
+            "p95": 16.400000005960464,
+            "max": 28.400000005960464
+          }
+        },
+        {
+          "first_preview_upper_ms": 383,
+          "gesture_to_commit_ms": 991.8000000119209,
+          "observer_upper_ms": 1083.0999999940395,
+          "callback_ms": {
+            "n": 55,
+            "p50": 8.899999976158142,
+            "p95": 19.19999998807907,
+            "max": 24.400000005960464
+          }
+        },
+        {
+          "first_preview_upper_ms": 414.7999999821186,
+          "gesture_to_commit_ms": 1001.8999999761581,
+          "observer_upper_ms": 1091.5999999940395,
+          "callback_ms": {
+            "n": 55,
+            "p50": 8.799999982118607,
+            "p95": 20.30000001192093,
+            "max": 25.400000005960464
+          }
+        },
+        {
+          "first_preview_upper_ms": 390.69999998807907,
+          "gesture_to_commit_ms": 980.3000000119209,
+          "observer_upper_ms": 1070.699999988079,
+          "callback_ms": {
+            "n": 55,
+            "p50": 8.300000011920929,
+            "p95": 26.099999994039536,
+            "max": 42.80000001192093
+          }
+        }
+      ],
+      "drag_callback_ms": {
+        "n": 272,
+        "p50": 8.5,
+        "p95": 19.19999998807907,
+        "p99": 28.400000005960464,
+        "max": 42.80000001192093
+      },
+      "drag_interval_ms": {
+        "n": 267,
+        "p50": 18.399999976158142,
+        "p95": 29.80000001192093,
+        "max": 54.400000005960464
+      },
+      "memory": {
+        "last_world": {
+          "bytes": 801308,
+          "pairs_ms": 0,
+          "sequence": 31,
+          "lua_kib": 4759.484375,
+          "contacts": 6,
+          "sensors_ms": 0,
+          "shapes": 751,
+          "solve_ms": 0,
+          "collide_ms": 0,
+          "step_ms": 0,
+          "station": "p0-mixed",
+          "static_tree_height": 12
+        },
+        "box2d_bytes_range": [
+          801308,
+          801308
+        ],
+        "lua_kib_range": [
+          2668.671875,
+          5544.2451171875
+        ],
+        "wasm_capacity_bytes": 268435456
+      },
+      "physics_zero_samples": 172,
+      "world_observations": 24,
+      "drive_telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": -1.0619898820555e-08,
+        "head_contact": false,
+        "travel1": 4.4879894256592,
+        "projection_y": 0.003037037095055,
+        "speed": 698.30963134766,
+        "world_loads": 19,
+        "spawn_y": 2,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 2,
+        "decor_sprites": 784,
+        "terrain_shapes": 747,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-mixed",
+        "station_brake_distance": 0,
+        "pitch": -0.27874886989594,
+        "first_tick_omega": 0,
+        "sequence": 31,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017083333805203,
+        "velocity_x": 679.18090820312,
+        "station_name": "Custom: P0 mixed",
+        "contact1": true,
+        "fps": 59.872271663233,
+        "decor_labels": 7,
+        "station_note": "",
+        "frame_ms": 16.702222451568,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 34.821066071516,
+        "snapshot": "s18",
+        "session_generation": 19,
+        "finish_count": 0,
+        "station_top_speed": 6.9955906639489,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 8.1852416992188,
+        "custom": true,
+        "speed_mps": 6.9830961573922,
+        "audio_pitch": 2.0876086711884,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      },
+      "contacts_max": 6,
+      "fixture_hashes": {
+        "mixed-source.json": "63d493f8f17e0343c37f424839d39d79b4fbeac90cf59804bed026469682d655",
+        "mixed.json": "c172d0505f6f3da752a2e5e0b2661c881e2aefb5ed31802cf683752fa833738b"
+      }
+    }
+  ]
+}
