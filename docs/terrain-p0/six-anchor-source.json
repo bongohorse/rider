@@ -12,9 +12,9 @@
   "run_out": 0,
   "bounds": [
     -10,
-    400,
-    -20,
-    30
+    350,
+    -40,
+    50
   ],
   "chains": [
     [
@@ -42,7 +42,6 @@
     },
     "objects": [
       {
-        "id": "o1",
         "type": "curve",
         "anchors": [
           {
@@ -135,7 +134,9 @@
             ],
             "mode": "smooth"
           }
-        ]
+        ],
+        "name": "Six anchors",
+        "id": "o1"
       }
     ],
     "connections": [],

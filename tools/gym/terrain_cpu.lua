@@ -2,6 +2,7 @@
 -- This is native interpreter CPU, not HTML5 engine/frame timing. No physics/engine calls.
 local doc=require 'main.gym.editor_doc'
 local sample=require 'main.gym.editor_sample'
+local function count(d) local n=0;for _,c in ipairs(d.chains) do n=n+#c-1 end;return n end
 local function measure(fn)
     local times={}
     for i=1,31 do local at=os.clock();fn();times[i]=(os.clock()-at)*1000 end
@@ -17,13 +18,14 @@ for i,id in ipairs({'six-anchor','long-curves','mixed'}) do
         for _,o in ipairs(source.editor.objects) do if o.type=='curve' then n=n+#assert(sample.curve(o.anchors))-1 end end
         return n
     end
-    local segments=sampled()
+    local curve_segments=sampled()
+    local segments=count(assert(doc.compile(source)))
     local cold=measure(sampled)
     for _,o in ipairs(source.editor.objects) do doc.path(o) end
     local cached=measure(function() for _,o in ipairs(source.editor.objects) do doc.path(o) end end)
-    local compile=measure(function() local d=assert(doc.compile(doc.copy(source)));assert(#d.chains[1]-1==segments) end)
+    local compile=measure(function() local d=assert(doc.compile(doc.copy(source)));assert(count(d)==segments) end)
     assert(doc.compile(source))
     local warm=measure(function() assert(doc.compile(source)) end)
-    print(string.format('%s{"id":"%s","segments":%d,"sampling_ms":%s,"cached_paths_ms":%s,"cold_compile_ms":%s,"warm_compile_ms":%s}',i>1 and ',' or '',id,segments,cold,cached,compile,warm))
+    print(string.format('%s{"id":"%s","segments":%d,"sampled_curve_segments":%d,"sampling_ms":%s,"cached_paths_ms":%s,"cold_compile_ms":%s,"warm_compile_ms":%s}',i>1 and ',' or '',id,segments,curve_segments,cold,cached,compile,warm))
 end
 print(']}')

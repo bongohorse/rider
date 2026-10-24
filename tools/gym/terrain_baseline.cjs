@@ -6,6 +6,10 @@ const {chromium}=require('playwright');
 const {configure}=require('./launch.cjs'),pointer=require('./pointer.cjs'),ui=require('./editor_ui_target.cjs');
 const [bundleArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg);
 fs.mkdirSync(out,{recursive:true});
+if(bundleArg==='--fixtures'){
+ for(const id of ['six-anchor','long-curves','mixed','long-over-budget']){const source=fixture(id,id==='mixed',id==='long-over-budget');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');}
+ process.exit(0);
+}
 const deadline=setTimeout(()=>{console.error('Terrain observation exceeded 240 s');process.exit(1);},240000);
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bundle import verify_bundle;verify_bundle(sys.argv[1],sys.argv[2])',bundle,sha]);
@@ -14,11 +18,37 @@ const web=path.dirname(find(bundle));
 const stats=v=>{if(!v.length)return null;const s=[...v].sort((a,b)=>a-b),q=f=>s[Math.ceil(s.length*f)-1];return {n:s.length,p50:q(.5),p95:q(.95),p99:q(.99),max:s.at(-1)};};
 function auto(pts){return pts.map((p,i)=>{const a=pts[i-1]||p,b=pts[i+1]||p,k=(i===0||i===pts.length-1)?2:1,t=[(b[0]-a[0])*k/6,(b[1]-a[1])*k/6];return {p,in:i===0?[0,0]:t.map(x=>-x),out:i===pts.length-1?[0,0]:t,mode:'smooth'};});}
 function lua(v){return Array.isArray(v)?'{'+v.map(lua).join(',')+'}':v&&typeof v==='object'?'{'+Object.entries(v).map(([k,x])=>'['+JSON.stringify(k)+']='+lua(x)).join(',')+'}':JSON.stringify(v);}
-function fixture(id,mixed=false){
- const six=id==='six-anchor',curves=six?[[[0,0],[66,4],[132,-2],[198,5],[264,0],[330,3]]]:[0,120,240].map(x=>[[x,0],[x+24,2],[x+48,-2],[x+72,2],[x+96,-2],[x+120,0]]);
- const objects=curves.map((pts,i)=>({id:'o'+(i+1),type:'curve',anchors:auto(pts)})),connections=curves.slice(1).map((_,i)=>({from:'o'+(i+1),to:'o'+(i+2)}));
- if(mixed){for(let i=0;i<12;i++){const x=20+i*27,y=-6;objects.push({id:'o'+(objects.length+1),type:'hull',vertices:[[x,y],[x+2,y],[x+2,y+1],[x,y+1]]});}for(let i=0;i<6;i++)objects.push({id:'o'+(objects.length+1),type:'label',text:'P0 prop '+i,position:[20+i*54,5]});}
- return {schema:1,units:'metres',id:'p0-'+id,name:'P0 '+id,spawn:[2,2],start_speed:0,run_in:0,run_out:0,bounds:[-10,400,-20,30],chains:[[[10,0],[0,0]]],hulls:[],labels:[],checkpoints:[],editor:{editor_version:7,compiler_version:7,revision:1,next_id:objects.length+1,sampling:{tolerance:.005,max_segment:.5},objects,connections,start:{position:[2,2],speed:0},finish:{position:[six?325:355,six?3:0],direction:1}}};
+function fixture(id,mixed=false,large=false){
+ const objects=[],connections=[];
+ const line=(pts,name)=>add({type:'line',points:pts,name});
+ const curve=(pts,name)=>add({type:'curve',anchors:auto(pts),name});
+ let last;
+ function add(o,connect=true){o.id='o'+(objects.length+1);objects.push(o);if(connect&&last)connections.push({from:last.id,to:o.id});last=o;return o;}
+ const six=id==='six-anchor';
+ let endX;
+ if(six){curve([[0,0],[66,4],[132,-2],[198,5],[264,0],[330,3]],'Six anchors');endX=330;}
+ else{
+  // Geometric authoring fixture, not a claim that preset A can climb every obstacle.
+  // The larger variant extends both wide bends, retaining the same tight/steep/jump features.
+  const w=large?230:150;
+  line([[0,0],[24,0]],'Flat run-in');
+  curve([[24,0],[24+w/2,10],[24+w,0]],'Wide hill');
+  const x=24+w;
+  line([[x,0],[x+24,0]],'Flat approach');
+  curve([[x+24,0],[x+27,3],[x+30,0],[x+33,-3],[x+36,0]],'Tight S bends');
+  line([[x+36,0],[x+56,20]],'45 degree climb');
+  curve([[x+56,20],[x+62,22],[x+68,20]],'Rounded crest');
+  line([[x+68,20],[x+88,0]],'45 degree descent');
+  line([[x+88,0],[x+112,0]],'Flat jump approach');
+  line([[x+112,0],[x+120,4]],'Jump lip');
+  last=null; // Explicit seven-metre open gap: no connection across it.
+  line([[x+127,2],[x+139,0]],'Landing');
+  curve([[x+139,0],[x+139+w/2,-10],[x+139+w,0]],'Wide valley');
+  endX=x+139+w+37;
+  line([[endX-37,0],[endX,0]],'Flat run-out');
+ }
+ if(mixed){for(let i=0;i<12;i++){const x=20+i*27,y=-16;add({type:'hull',vertices:[[x,y],[x+2,y],[x+2,y+1],[x,y+1]],name:'Extra box '+i},false);}for(let i=0;i<6;i++)add({type:'label',text:'P0 prop '+i,position:[20+i*54,25]},false);}
+ return {schema:1,units:'metres',id:'p0-'+id,name:'P0 '+id,spawn:[2,2],start_speed:0,run_in:0,run_out:0,bounds:[-10,endX+20,-40,50],chains:[[[10,0],[0,0]]],hulls:[],labels:[],checkpoints:[],editor:{editor_version:7,compiler_version:7,revision:1,next_id:objects.length+1,sampling:{tolerance:.005,max_segment:.5},objects,connections,start:{position:[2,2],speed:0},finish:{position:[endX-5,six?3:0],direction:1}}};
 }
 // The same observation boundaries as sizes.cjs, plus the existing editor publication.
 function probes(){
@@ -46,6 +76,18 @@ function probes(){
   async function playReady(){await page.waitForFunction(()=>window.riderEditor?.mode==='play'&&window.riderTelemetry?.sequence>2&&window.riderTelemetry.session_generation===window.riderLoad?.generation);}
   async function measureAction(action,ready,kind){const t=await page.evaluate(()=>({at:performance.now(),generation:window.riderEditor.view.generation,reset:window.riderTelemetry.reset_count}));await action();await ready();return page.evaluate(({t,kind})=>{const p=window.__p0,event=kind==='play'?p.ready.find(x=>x.at>=t.at):kind==='edit'?p.editor.find(x=>x.at>=t.at&&x.data.mode==='edit'&&x.data.view?.generation>t.generation):p.telemetry.find(x=>x.at>=t.at&&x.data.reset_count>t.reset);if(!event)throw Error('Missing '+kind+' endpoint');const f=p.frames.filter(x=>x.at>=t.at&&x.at<=event.at);return {event_ms:event.at-t.at,observer_upper_ms:performance.now()-t.at,callback_max_ms:Math.max(0,...f.map(x=>x.work))};},{t,kind});}
   await page.locator('canvas').focus();await key('e');await editReady();
+  // Preserve a source-valid larger variant and observe the unchanged admission refusal in the real editor.
+  const over=fixture('long-over-budget',false,true);
+  fs.writeFileSync(path.join(out,'long-over-budget-source.json'),JSON.stringify(over,null,2)+'\n');
+  fs.writeFileSync(path.join(out,'long-over-budget-source.lua'),'return '+lua(over)+'\n');
+  await button('import');await page.waitForFunction(()=>window.riderCustom.visible);
+  await page.locator('#rider-custom-file').setInputFiles({name:'long-over-budget.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(over))});
+  await page.waitForFunction(()=>!window.riderCustom.visible);await page.waitForTimeout(1100);await editReady();
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()!=='syncing');
+  const rejected=await ed();assert.ok(rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
+  report.rejected={id:'long-over-budget',source_bytes:Buffer.byteLength(JSON.stringify(over)),errors:rejected.errors,view:rejected.view,source_saved:true,paths:await page.evaluate(()=>window.riderEditorPaths)};
+  await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;
+  await page.screenshot({path:path.join(out,'long-over-budget-edit.png')});
   for(const id of ['six-anchor','long-curves','mixed']){
    const source=fixture(id,id==='mixed');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');
    await button('import');await page.waitForFunction(()=>window.riderCustom.visible);
@@ -63,7 +105,7 @@ function probes(){
     r.play_to_edit.push(await measureAction(()=>key('e'),editReady,'edit'));
    }
    // Select and centre the first curve through real UI, then drag its visible anchor.
-   await button('object_select_o1');await button('view_centre');await pointer.frames(page);
+   await button('object_select_'+source.editor.objects.find(o=>o.type==='curve').id);await button('view_centre');await pointer.frames(page);
    for(let i=0;i<5;i++){
     const e=await ed(),h=e.handles.find(h=>/^a\d+$/.test(h.name));assert.ok(h,'curve anchor handle');
     const a=await canvas(e.screen.ox+h.p[0]*e.screen.ppm_x,e.screen.oy+h.p[1]*e.screen.ppm_y);await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
@@ -92,8 +134,14 @@ function probes(){
    await page.screenshot({path:path.join(out,r.id+'-drive.png')});console.log(r.id+': '+JSON.stringify(r.summary));
   }
   report.camera=[];
-  for(const c of [{id:'descent',query:'ramps&section=down-30',key:'ArrowUp',condition:()=>window.riderTelemetry?.pitch<-.3},{id:'jump',query:'air&section=big',key:'ArrowUp',condition:()=>window.riderTelemetry?.station_distance>7&&!window.riderTelemetry.contact1&&!window.riderTelemetry.contact2},{id:'reverse',query:'straight',key:'ArrowDown',condition:()=>window.riderTelemetry?.velocity_x< -100}]){
-   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station='+c.query);await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);await page.locator('canvas').focus();await page.keyboard.down(c.key);try{await page.waitForFunction(c.condition,null,{timeout:15000});await page.screenshot({path:path.join(out,'camera-'+c.id+'.png')});report.camera.push({id:c.id,query:c.query,telemetry:await page.evaluate(()=>window.riderTelemetry)});}finally{await page.keyboard.up(c.key);}
+  const course=JSON.parse(fs.readFileSync(path.join(out,'long-curves.json'),'utf8'));
+  const descent=course.editor.objects.find(o=>o.name==='45 degree descent').points[0],lip=course.editor.objects.find(o=>o.name==='Jump lip').points[0];
+  for(const c of [{id:'descent',spawn:[descent[0]+2,descent[1]-2+.9],speed:5,key:'ArrowUp',condition:()=>window.riderTelemetry?.pitch<-.3&&window.riderTelemetry.station_distance>2},{id:'jump',spawn:[lip[0]-4,.9],speed:7,key:'ArrowUp',condition:()=>window.riderTelemetry?.station_distance>13&&!window.riderTelemetry.contact1&&!window.riderTelemetry.contact2},{id:'reverse',spawn:[12,.9],speed:0,key:'ArrowDown',condition:()=>window.riderTelemetry?.velocity_x< -100}]){
+   const d=JSON.parse(JSON.stringify(course));d.spawn=c.spawn;d.start_speed=c.speed;d.editor.start={position:c.spawn,speed:c.speed};
+   if(!await page.evaluate(()=>window.riderCustom.visible))await page.evaluate(()=>window.riderCustom.open());
+   const n=await page.evaluate(body=>{const n=window.__p0.ready.length;document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();return n;},JSON.stringify(d));
+   await page.waitForFunction(n=>window.__p0.ready.length>n,n);await page.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderTelemetry.session_generation===window.riderLoad?.generation&&window.riderCustomStatus==='Saved');
+   await page.locator('canvas').focus();await page.keyboard.down(c.key);try{await page.waitForFunction(c.condition,null,{timeout:15000});await page.screenshot({path:path.join(out,'camera-'+c.id+'.png')});report.camera.push({id:c.id,source_fixture:'long-curves.json',spawn:c.spawn,start_speed:c.speed,input:c.key,telemetry:await page.evaluate(()=>window.riderTelemetry)});}finally{await page.keyboard.up(c.key);}
   }
   assert.deepEqual(report.errors,[]);assert.equal(report.fixtures.length,3);report.status='PASS';
  }catch(e){report.status='FAIL';report.failure=e.stack;throw e;}finally{fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();server.close();clearTimeout(deadline);}
