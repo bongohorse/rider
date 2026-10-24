@@ -1,0 +1,202 @@
+[
+  {
+    "id": "G01",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 1529–1533; msgid Hold the brake pedal / Hold the throttle",
+    "finding": "Packaged tutorial text instructs brake for forward rotation and throttle for backward rotation.",
+    "limitation": "Confirms the shipped instruction; neither torque law nor grounding gate nor magnitude is recovered.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G02",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 6208–6265; AIR CONTROL, FLIP BOOST, JUMP SHOCKS descriptions",
+    "finding": "Packaged descriptions specify faster airborne turns, boosts after flips, and jump shocks activated by tapping both pedals.",
+    "limitation": "No numeric thresholds, force model or cooldown recovered.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G03",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 6211–6239, 6268–6325",
+    "finding": "Descriptions connect power boosts to coins, fuel, low fuel, perfect landings, perfect starts and wheelies; magnets increase pickup radius.",
+    "limitation": "Content describes intended triggers; actual detection/update order and balances remain unknown.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G04",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 6244–6259, 6298–6335",
+    "finding": "Wings are described as glide; heavyweight affects breakable damage; rollcage protects driver; spoiler effect ends on detachment; winter tires benefit snow/ice.",
+    "limitation": "Lift/drag formulas, breakage thresholds, head sensor topology and friction mixing are not established.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G05",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 8011–8056; ENGINE, SUSPENSION, GRAPPLING HOOK, FUME HOOK, EXTRA PART",
+    "finding": "ATV text describes speed/turbo, lower weight point/shock absorption, longer fuel duration, hook rope length/pull motor, up to three hook uses after fuel exhaustion, and fourth tuning slot unlock.",
+    "limitation": "Association is local text context, not parsed config or runtime traces. This is not a complete vehicle roster.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G06",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 733, 928, 1249, 1337, 1932, 1974, 2130, 4613–4616",
+    "finding": "Packaged text includes timed checkpoint failure, did-not-finish, cup rewards, fastest-track goal, records, ghost absence, out-of-fuel and fuel collection tasks.",
+    "limitation": "Exact race state transitions, checkpoint geometry, finish timing and reward math remain unknown.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G07",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 706, 1084–1090, 2860, 3028, 3458",
+    "finding": "Editor messages include overlap validation, themes, track compatibility requirement and drive-and-finish-before-publish instruction.",
+    "limitation": "Actual editing spline type, overlap algorithm and server enforcement are not recovered.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G08",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 748–754, 862, 1310, 1758, 2292, 2518, 2539",
+    "finding": "Cloud/local career, overwrite, corruption and newer-client save/replay rejection messages are shipped.",
+    "limitation": "No persisted save schema, migration implementation, network authority or encryption identified.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "G09",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/unpacked/base.apk/assets/Common/translations/german.po",
+    "locator": "lines 6115–6127, 6139–6175, 6934",
+    "finding": "Text describes cargo time bonuses, collection time trial, airtime penalty, stunt feedback and football checkpoints.",
+    "limitation": "Does not establish universal game modes, enabled availability or event scoring details.",
+    "provenance": "original_asset",
+    "sha256": "0f4dd0aa7ef2eb1bcf5384ae923c79bc7eecc8a794623084ffc178eb3b0894be"
+  },
+  {
+    "id": "P01",
+    "confidence": "Unverified",
+    "artifact": "src/graphics/PerspectiveCamera.js",
+    "locator": "PerspectiveCamera constructor/update, lines 12–21, 38–65",
+    "finding": "Prototype specifies 0.35-second lookahead, 7/s damping, 55-degree FOV and speed zoom.",
+    "limitation": "These are confirmed prototype values only; no inspected original-game mapping supports them.",
+    "provenance": "browser_prototype",
+    "sha256": "f0f63fc8c559010c9e1b7f16bfe2ff7d7fae72925aad9316bf4452bed9750d6f"
+  },
+  {
+    "id": "P02",
+    "confidence": "Unverified",
+    "artifact": "src/terrain/SplineTrack.js",
+    "locator": "generateInitialTrack/getHeightAt/getSlopeNormalAt",
+    "finding": "Prototype builds sinusoidal hills and uses Catmull–Rom interpolation with 15-unit control-point spacing.",
+    "limitation": "Neither original curve representation nor physics sampling is established.",
+    "provenance": "browser_prototype",
+    "sha256": "3b4ce28d78c7aef4960f66b4d371884d72e88eb4d936f4d51f90996bc12986b6"
+  },
+  {
+    "id": "P03",
+    "confidence": "Unverified",
+    "artifact": "src/vehicles/Vehicle.js",
+    "locator": "constructor/update",
+    "finding": "Prototype defines 850 mass, 4.5 Hz, 0.7 damping, friction 2.2, air torque180, fuel rules and contact-distance gating.",
+    "limitation": "No original parameter provenance; prototype uses its own rigid-body solver, not the original native Box2D implementation.",
+    "provenance": "browser_prototype",
+    "sha256": "9a84f0a7a90cbfd21e38d0cb82f6e1caff79a8e571dbf2c7d0df0814ea1e4c13"
+  },
+  {
+    "id": "P04",
+    "confidence": "Unverified",
+    "artifact": "src/game/GhostReplaySystem.js",
+    "locator": "parseProtobufGhost/unpackTelemetryStream/generateSyntheticKeyframes/update",
+    "finding": "Prototype assumes a16-byte telemetry record, field12 keyframes and Hermite playback, with synthetic fallback.",
+    "limitation": "Old report assigns telemetry to field15 instead; neither schema has reader-backed provenance.",
+    "provenance": "browser_prototype",
+    "sha256": "fada2ecba3b963a51bf45618353d6c581d4d60a65fce7d0dd931292b4d5a7c59"
+  },
+  {
+    "id": "P05",
+    "confidence": "Unverified",
+    "artifact": "src/game/GameEngine.js",
+    "locator": "update cup finish logic; Math.random and recordHeatResults",
+    "finding": "Prototype fabricates finish times with24.5+Math.random()*2.5 at1000 distance.",
+    "limitation": "Cannot establish original timing, competition or networking.",
+    "provenance": "browser_prototype",
+    "sha256": "14902d0bbb57d39087477e3405c88072e757bc8106c9ac85d2b1214a4f23bfdc"
+  },
+  {
+    "id": "P06",
+    "confidence": "Unverified",
+    "artifact": "src/terrain/VolumetricMesh.js",
+    "locator": "generateMeshForView lines 33–52",
+    "finding": "Prototype bottomZ negates u_params.z while original terrain.vsh adds its signed value.",
+    "limitation": "Uniform sign/runtime convention unknown; do not claim exact implementation identity.",
+    "provenance": "browser_prototype",
+    "sha256": "1623284336e6b432a0a391ffdba37da20f725eb095ab9526d3c78ab743427336"
+  },
+  {
+    "id": "P07",
+    "confidence": "Unverified",
+    "artifact": "decompiled_src/cpp/TerrainMeshGenerator.cpp",
+    "locator": "file header and generateMeshSlices",
+    "finding": "C++ labels itself decompiled core engine but has no address/tool attempt/source-to-binary provenance.",
+    "limitation": "Treat as analyst reconstruction, not recovered original code.",
+    "provenance": "reconstructed_source",
+    "sha256": "04b55654a183376fbcd0d0bd4e681b37062688da265cb2123700f40309c496ca"
+  },
+  {
+    "id": "P08",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/codex_verified/provenance/legacy_work_classification.json",
+    "locator": "reconstructed_cpp array",
+    "finding": "Six legacy C++ files were classified without archive-byte matches or native export provenance.",
+    "limitation": "Classification establishes evidence limits, not proof every proposed algorithm is wrong.",
+    "provenance": "verified_analysis",
+    "sha256": "c877fbfa8f2efecef75b22a82aa44b20e0897d3aaa1fd4e43859b4a9c1c4b091"
+  },
+  {
+    "id": "M01",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/codex_verified/android/java_summary.json",
+    "locator": "coverage and method_status_counts",
+    "finding": "16-DEX accounting:562847defined,529347executable,33500declarations;477361syntax-verified structured bodies,29932simplified,3877initializer fragments,18177diagnostic bodies.",
+    "limitation": "Successful syntax is not semantic equivalence; Java counts include extensive SDK code.",
+    "provenance": "verified_analysis",
+    "sha256": "6401ff423389cd42967a33e750f74e830dbb624de6d25a0abc54a8bcd6bd4190"
+  },
+  {
+    "id": "M02",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/codex_verified/native_final/totals.json",
+    "locator": "PF_X unions and status fields",
+    "finding": "Raw-original analysis totals69624Ghidrafunctions,6280395function-bodyPF_Xunionbytes of123175991;28054completed-no-halt outputs.",
+    "limitation": "No-halt status does not prove correctness; thunks and failed outputs separate; derived helper stage excluded.",
+    "provenance": "verified_analysis",
+    "sha256": "d9fc1557c4c36e783d6542eaac5ce09c9a0c76ccb0c79c5f43631bcf6bcb9d73"
+  },
+  {
+    "id": "M03",
+    "confidence": "Confirmed",
+    "artifact": "decompiled/codex_verified/native_final/unwind_candidate_summary.json",
+    "locator": "unique_metadata_starts, per-binary list",
+    "finding": "320486metadata starts across all binaries;98729 is ARM64Cocos subset.",
+    "limitation": "Metadata starts are not distinct proven complete functions or high-level implementations.",
+    "provenance": "verified_analysis",
+    "sha256": "aeb9aa9fb4faea8464904e73ee2f5002e6069195008e6feb21f051bc48ca35ed"
+  }
+]

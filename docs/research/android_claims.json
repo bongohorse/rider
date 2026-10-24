@@ -1,0 +1,733 @@
+{
+  "scope": "Targeted static research of supplied Android manifest, original Java exports and corroborating Smali. No recovery jobs or target execution were performed for this research pass.",
+  "language": "English",
+  "confidence_definition": {
+    "high_static": "Direct configuration or code-path evidence in the supplied files; not an observed runtime behavior.",
+    "bounded_negative": "Absence only within the explicitly documented search boundary."
+  },
+  "claims": [
+    {
+      "claim_id": "AND-001",
+      "confidence": "high_static",
+      "path": "decompiled/android/apktool/base/AndroidManifest.xml",
+      "locator": {
+        "line_start": 94,
+        "line_end": 105,
+        "method_descriptor": null
+      },
+      "source_sha256": "77bd2486e26b172e7a75fab578f24cca44c6da44c963d785104b08a35262cddb",
+      "finding": "The manifest declares androidx.multidex.MultiDexApplication as Application, com.fingersoft.hcr2.AppActivity as the game activity, and cocos2dcpp as android.app.lib_name.",
+      "usage_evidence": "manifest_configuration",
+      "limitation": "Manifest configuration is static evidence; it is not an observed launch trace.",
+      "additional_evidence": []
+    },
+    {
+      "claim_id": "AND-002",
+      "confidence": "high_static",
+      "path": "decompiled/android/dex/base_classes_03/smali/androidx/multidex/MultiDexApplication.smali",
+      "locator": {
+        "line_start": 1,
+        "line_end": 32,
+        "method_descriptor": "Landroidx/multidex/MultiDexApplication;->attachBaseContext(Landroid/content/Context;)V"
+      },
+      "source_sha256": "cdfe0133e5a357aca9c7dbe7c0a513a4947c36160e1e3b10cc5b876cfed67acd",
+      "finding": "MultiDexApplication extends nmokwhs.ab. attachBaseContext calls its superclass, CrashpadLoader.onAttachBaseContext, then MultiDex.install. Its class initializer calls nmokwhs.d.b().",
+      "usage_evidence": "app_startup_bytecode",
+      "limitation": "Native callbacks and class initialization side effects can add behavior beyond this explicit Dalvik sequence.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_03/sources/androidx/multidex/MultiDexApplication.java",
+          "locator": {
+            "line_start": 8,
+            "line_end": 20
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-003",
+      "confidence": "high_static",
+      "path": "decompiled/android/dex/base_classes_02/smali/nmokwhs/d.smali",
+      "locator": {
+        "line_start": 172,
+        "line_end": 198,
+        "method_descriptor": "Lnmokwhs/d;->c()V; Lnmokwhs/d;->d()V"
+      },
+      "source_sha256": "c0f6da1e9a8285747e9cc0c5f0bbe6b4b71d99a4df71135fadeffb81a289e66e",
+      "finding": "nmokwhs.d.c() calls W.c(), then d.d(); d.d explicitly calls System.loadLibrary(\"fingersoft_hcr2\"). The superclass nmokwhs.ab class initializer calls d.b().",
+      "usage_evidence": "app_startup_bytecode",
+      "limitation": "This establishes a Java-driven bootstrap path, not a complete native dependency order or proof of what the native initializer does.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_01/smali/nmokwhs/ab.smali",
+          "locator": {
+            "line_start": 7,
+            "line_end": 12
+          }
+        },
+        {
+          "path": "decompiled/android/dex/base_classes_02/smali/nmokwhs/d.smali",
+          "locator": {
+            "line_start": 37,
+            "line_end": 92
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-004",
+      "confidence": "high_static",
+      "path": "decompiled/android/dex/base_classes_01/smali/no/promon/backtrace_support/CrashpadLoader.smali",
+      "locator": {
+        "line_start": 19,
+        "line_end": 34,
+        "method_descriptor": "Lno/promon/backtrace_support/CrashpadLoader;-><clinit>()V"
+      },
+      "source_sha256": "9ccfd65c29625fe2c24721c23a5d9a1056d8e676c41f828f97f03db5df9394aa",
+      "finding": "CrashpadLoader loads bts and initializes its hookable library list with backtrace-native and crashlytics-common. Its onAttachBaseContext initializes the native library directory and attempts to load the listed libraries.",
+      "usage_evidence": "app_startup_bytecode",
+      "limitation": "Loading attempts catch UnsatisfiedLinkError; these sources do not prove successful initialization on a device. No explicit wtp load is established by this inspected chain.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_01/smali/no/promon/backtrace_support/CrashpadLoader.smali",
+          "locator": {
+            "line_start": 69,
+            "line_end": 113
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-005",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+      "locator": {
+        "line_start": 1888,
+        "line_end": 1919,
+        "method_descriptor": "Lcom/fingersoft/hcr2/AppActivity;->onCreate(Landroid/os/Bundle;)V"
+      },
+      "source_sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74",
+      "finding": "AppActivity.onCreate calls Cocos2dxActivity.onCreate, attaches ControllerInput, registers PlayGamesInput, then configures platform services after checking the native-library error flag.",
+      "usage_evidence": "direct_game_activity_call",
+      "limitation": "Initialization is conditional on successful earlier work; no runtime launch or traffic was observed.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/AppActivity.smali",
+          "locator": {
+            "line_start": 7288,
+            "line_end": 7305
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-006",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxActivity.java",
+      "locator": {
+        "line_start": 131,
+        "line_end": 174,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxActivity;->init()V; ->onCreate(Landroid/os/Bundle;)V"
+      },
+      "source_sha256": "8d33cc5da990d08a9094292441a2eeb094bef369115da8918ad8675aede93555",
+      "finding": "The activity builds a Cocos2dxGLSurfaceView, installs Cocos2dxRenderer, and calls onLoadNativeLibraries during onCreate. onLoadNativeLibraries reads android.app.lib_name and calls CrashpadLoader.loadLibrary.",
+      "usage_evidence": "engine_launch_path",
+      "limitation": "This proves Cocos2dx-style Java integration on the launch path, not an exact upstream Cocos2d-x version or an unmodified engine.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxActivity.java",
+          "locator": {
+            "line_start": 203,
+            "line_end": 217
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-007",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxGLSurfaceView.java",
+      "locator": {
+        "line_start": 133,
+        "line_end": 137,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxGLSurfaceView;->initView()V"
+      },
+      "source_sha256": "48aff3d86e1dadb04bae53e5eb6e3dd0a932151bc5ab516e45a2951e357986c9",
+      "finding": "The GL view requests an EGL client context version of 2 and uses the custom FSGLSurfaceView layer.",
+      "usage_evidence": "engine_view_configuration",
+      "limitation": "A requested context version does not establish every native graphics feature, extension, backend, or shader version used.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_02/smali/org/cocos2dx/lib/Cocos2dxGLSurfaceView.smali",
+          "locator": {
+            "line_start": 513,
+            "line_end": 518
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-008",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxRenderer.java",
+      "locator": {
+        "line_start": 97,
+        "line_end": 127,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxRenderer;->onDrawFrame(Ljavax/microedition/khronos/opengles/GL10;)V; ->onSurfaceCreated(Ljavax/microedition/khronos/opengles/GL10;Ljavax/microedition/khronos/egl/EGLConfig;)V"
+      },
+      "source_sha256": "63450cebffdb5b443224e5660d8179f9bc53efa5e18c7c743e0936ff5563ed2d",
+      "finding": "Surface creation forwards screen dimensions to nativeInit; frame callbacks call nativeRender. The Java renderer keeps a default 16,666,666 ns animation interval, supports changing it, and can sleep when a longer interval is configured.",
+      "usage_evidence": "engine_native_boundary",
+      "limitation": "This is render-callback pacing. It does not prove the native physics timestep, deterministic simulation, frame-to-tick ratio, or replay determinism.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxRenderer.java",
+          "locator": {
+            "line_start": 7,
+            "line_end": 45
+          }
+        },
+        {
+          "path": "decompiled/android/dex/base_classes_02/smali/org/cocos2dx/lib/Cocos2dxRenderer.smali",
+          "locator": {
+            "line_start": 205,
+            "line_end": 290
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-009",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxGLSurfaceView.java",
+      "locator": {
+        "line_start": 240,
+        "line_end": 309,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxGLSurfaceView;->onTouchEvent(Landroid/view/MotionEvent;)Z"
+      },
+      "source_sha256": "48aff3d86e1dadb04bae53e5eb6e3dd0a932151bc5ab516e45a2951e357986c9",
+      "finding": "Touch handling gathers pointer IDs and getX/getY values, handles down/up/move/cancel and additional-pointer actions, and queues renderer calls on the GL event queue. Renderer handlers forward these values to nativeTouchesBegin/Move/End/Cancel.",
+      "usage_evidence": "engine_input_dispatch",
+      "limitation": "Native coordinate conversion, UI hit testing, pedal scaling and driving physics are beyond this Java boundary.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxRenderer.java",
+          "locator": {
+            "line_start": 52,
+            "line_end": 65
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-010",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+      "locator": {
+        "line_start": 49,
+        "line_end": 73,
+        "method_descriptor": "Lcom/fingersoft/hcr2/ControllerInput;->attach(Landroidx/appcompat/app/AppCompatActivity;)V"
+      },
+      "source_sha256": "a1ed58c0ce8d882e9c894bbe978e194b81f78ed5dbcb51695ec457996870895c",
+      "finding": "ControllerInput replaces the activity Window.Callback while retaining the prior callback and registers an InputDeviceListener. AppActivity explicitly attaches it.",
+      "usage_evidence": "direct_game_activity_call",
+      "limitation": "This is a direct integration path; it does not prove which devices were connected or used during gameplay.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/ControllerInput.smali",
+          "locator": {
+            "line_start": 210,
+            "line_end": 230
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 1888,
+            "line_end": 1893
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-011",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+      "locator": {
+        "line_start": 420,
+        "line_end": 444,
+        "method_descriptor": "Lcom/fingersoft/hcr2/ControllerInput;->dispatchGenericMotionEvent(Landroid/view/MotionEvent;)Z"
+      },
+      "source_sha256": "a1ed58c0ce8d882e9c894bbe978e194b81f78ed5dbcb51695ec457996870895c",
+      "finding": "For eligible motion events, the controller bridge reads axes 0,1,15,16 and maxima of axis pairs (23,17) and (22,18), then queues six floats to nativeGamepadAxis indices 0 through 5.",
+      "usage_evidence": "game_controller_native_boundary",
+      "limitation": "The native meanings, deadzones, response curves and vehicle effects of these six channels are not established here.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/ControllerInput.smali",
+          "locator": {
+            "line_start": 861,
+            "line_end": 889
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-012",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+      "locator": {
+        "line_start": 446,
+        "line_end": 509,
+        "method_descriptor": "Lcom/fingersoft/hcr2/ControllerInput;->dispatchKeyEvent(Landroid/view/KeyEvent;)Z"
+      },
+      "source_sha256": "a1ed58c0ce8d882e9c894bbe978e194b81f78ed5dbcb51695ec457996870895c",
+      "finding": "Keyboard and gamepad events are mapped separately and forwarded to nativeKeyboardButton or nativeGamepadButton. Editing text and visible overlays receive special routing. Overlay detection includes ComposeView and Fingersoft home/account package prefixes.",
+      "usage_evidence": "game_input_routing",
+      "limitation": "Overlay-routing support is not proof that the full game UI uses Compose, or that every advertised control changes vehicle state.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+          "locator": {
+            "line_start": 42,
+            "line_end": 45
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+          "locator": {
+            "line_start": 247,
+            "line_end": 264
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-013",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/PlayGamesInput.java",
+      "locator": {
+        "line_start": 9,
+        "line_end": 25,
+        "method_descriptor": "Lcom/fingersoft/hcr2/PlayGamesInput;->register(Landroid/app/Activity;)V; ->unregister(Landroid/app/Activity;)V"
+      },
+      "source_sha256": "5c5386a9a2502840701eef8f35bf7456474894cea1c07bbc1125ec840f0dd1df",
+      "finding": "Play Games input-map registration is conditional on the com.google.android.play.feature.HPE_EXPERIENCE system feature. It installs Hcr2InputMap and clears the provider on unregister.",
+      "usage_evidence": "conditional_platform_integration",
+      "limitation": "This proves a platform-specific registration path; the analysis did not run a Play Games PC environment.",
+      "additional_evidence": []
+    },
+    {
+      "claim_id": "AND-014",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/Hcr2InputMap.java",
+      "locator": {
+        "line_start": 15,
+        "line_end": 36,
+        "method_descriptor": "Lcom/fingersoft/hcr2/Hcr2InputMap;->onProvideInputMap()Lcom/google/android/libraries/play/games/inputmapping/datamodel/InputMap;"
+      },
+      "source_sha256": "0c0f398cb192edbd4f8b9dad866deeb5c7f6062e8b575c638294e7b6d693940c",
+      "finding": "The advertised input map labels left as Navigate left / Brake / Reverse and right as Navigate right / Accelerate; it also exposes selection, pause, tab/navigation and action-button labels.",
+      "usage_evidence": "advertised_control_mapping",
+      "limitation": "These are mapping-provider labels and key bindings, not recovered torque/brake formulas. Provider InputIdentifier values must not be conflated with ControllerInput native button IDs.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/Hcr2InputMap.smali",
+          "locator": {
+            "line_start": 92,
+            "line_end": 112
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-015",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxAccelerometer.java",
+      "locator": {
+        "line_start": 18,
+        "line_end": 62,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxAccelerometer;->enable()V; ->onSensorChanged(Landroid/hardware/SensorEvent;)V"
+      },
+      "source_sha256": "883e0d67f199f00c18295790126743dedaf384d5e45d58ebf55fa1674ab1c4ba",
+      "finding": "The sensor bridge obtains sensor type 1, can register/unregister its listener, applies orientation-dependent adjustments, and queues three sensor values plus the timestamp to native onSensorChanged(FFFJ).",
+      "usage_evidence": "sensor_bridge_capability",
+      "limitation": "Bridge capability is established. An actual gameplay call enabling it, tilt-based driving, and the native interpretation are not established by these reads.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_02/smali/org/cocos2dx/lib/Cocos2dxAccelerometer.smali",
+          "locator": {
+            "line_start": 76,
+            "line_end": 111
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxGLSurfaceView.java",
+          "locator": {
+            "line_start": 85,
+            "line_end": 92
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-016",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_02/sources/org/cocos2dx/lib/Cocos2dxHelper.java",
+      "locator": {
+        "line_start": 188,
+        "line_end": 214,
+        "method_descriptor": "Lorg/cocos2dx/lib/Cocos2dxHelper;->init(Landroid/app/Activity;)V"
+      },
+      "source_sha256": "f15e2456ac1ad2172104381fe3dfff3b3c0d149ab892de5243adbbf012c42402",
+      "finding": "Engine helper initialization passes the APK source path and Android Context/AssetManager to native functions, constructs the accelerometer helper, and supplies audio-device information.",
+      "usage_evidence": "engine_platform_native_boundary",
+      "limitation": "The Java bridge does not reveal native asset decoding, scene formats, audio mixing or asset-to-gameplay semantics.",
+      "additional_evidence": []
+    },
+    {
+      "claim_id": "AND-017",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+      "locator": {
+        "line_start": 1511,
+        "line_end": 1537,
+        "method_descriptor": "Lcom/fingersoft/hcr2/AppActivity;->startAnalytics(Ljava/lang/String;)V"
+      },
+      "source_sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74",
+      "finding": "The app-authored startAnalytics path initializes Firebase analytics conditionally, logs an AppsFlyer af_login event, and calls initFSHome. This is stronger evidence than SDK package presence.",
+      "usage_evidence": "app_callable_sdk_path",
+      "limitation": "The native or other calling conditions, consent state, actual transmitted data, and live SDK activation were not observed.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/AppActivity.smali",
+          "locator": {
+            "line_start": 5566,
+            "line_end": 5578
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-018",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/CFirebaseAnalytics.java",
+      "locator": {
+        "line_start": 38,
+        "line_end": 70,
+        "method_descriptor": "Lcom/fingersoft/hcr2/firebase/CFirebaseAnalytics;-><init>(Landroid/app/Activity;Ljava/lang/String;)V"
+      },
+      "source_sha256": "b89b9203df1e9eca2a625823a0df0fdabc57f7d9b493b51b4c6b87ec34b5fb4e",
+      "finding": "CFirebaseAnalytics initializes Firebase, obtains FirebaseAnalytics and conditionally FirebaseRemoteConfig, enables analytics collection in this code path, and has an asynchronous remote-config fetch/activation path.",
+      "usage_evidence": "app_sdk_implementation",
+      "limitation": "Remote-config capabilities do not prove which keys or gameplay parameters are used, and static configuration does not prove network execution or current server values.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/CFirebaseAnalytics.java",
+          "locator": {
+            "line_start": 216,
+            "line_end": 231
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 426,
+            "line_end": 454
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-019",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+      "locator": {
+        "line_start": 1903,
+        "line_end": 1919,
+        "method_descriptor": "Lcom/fingersoft/hcr2/AppActivity;->onCreate(Landroid/os/Bundle;)V"
+      },
+      "source_sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74",
+      "finding": "The startup code configures FingerAccount with an HTTPS account endpoint and configures LiveopsManager with a separate HTTPS live-ops endpoint. Library-link failures have another explicit HTTPS reporting endpoint.",
+      "usage_evidence": "configured_app_service_endpoints",
+      "limitation": "Literal endpoint configuration is not evidence of live availability, successful traffic, a race-network protocol, transport guarantees for all native traffic, or server-authoritative physics.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 1944,
+            "line_end": 1945
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 2604,
+            "line_end": 2652
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-020",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+      "locator": {
+        "line_start": 576,
+        "line_end": 587,
+        "method_descriptor": "Lcom/fingersoft/hcr2/AppActivity;->getRemoteGameDataAllAsync(Z)V"
+      },
+      "source_sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74",
+      "finding": "The app exposes an asynchronous FSHome game-data retrieval bridge selecting public or private access and routing success/failure callbacks.",
+      "usage_evidence": "app_callable_storage_bridge",
+      "limitation": "The game-data payload meaning is not established. It must not be identified as a replay, ghost, race state or save format from this method name alone.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/dex/base_classes_05/smali/com/fingersoft/hcr2/AppActivity.smali",
+          "locator": {
+            "line_start": 2258,
+            "line_end": 2280
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-021",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/FSAssetPackManager.java",
+      "locator": {
+        "line_start": 32,
+        "line_end": 36,
+        "method_descriptor": "Lcom/fingersoft/hcr2/FSAssetPackManager;-><init>(Landroid/app/Activity;)V"
+      },
+      "source_sha256": "50c2254ae8741249515ceabb2de6340ef7815437a70d705e44244d44b84310c7",
+      "finding": "FSAssetPackManager uses Google Play AssetPackManagerFactory, registers a state listener, and implements fetch(list) and getPackLocation paths. AppActivity constructs this manager.",
+      "usage_evidence": "direct_manager_setup_and_capability",
+      "limitation": "This establishes asset-delivery integration, not the names, runtime availability, necessity, or contents of any external pack.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/FSAssetPackManager.java",
+          "locator": {
+            "line_start": 78,
+            "line_end": 101
+          }
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 1916,
+            "line_end": 1919
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-022",
+      "confidence": "high_static",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+      "locator": {
+        "line_start": 2326,
+        "line_end": 2339,
+        "method_descriptor": "Lcom/fingersoft/hcr2/AppActivity;->onPause()V; ->onResume()V"
+      },
+      "source_sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74",
+      "finding": "App lifecycle code forwards pause/resume to the Firebase ads wrapper and GooglePlayBillingHandler when those objects exist, with inventory/pending-purchase query logic on resume.",
+      "usage_evidence": "app_sdk_lifecycle_paths",
+      "limitation": "Conditional integration is established; particular purchases, ad providers, impressions, or runtime SDK responses are not.",
+      "additional_evidence": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "locator": {
+            "line_start": 2378,
+            "line_end": 2415
+          }
+        }
+      ]
+    },
+    {
+      "claim_id": "AND-023",
+      "confidence": "bounded_negative",
+      "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2",
+      "locator": {
+        "kind": "bounded_text_search",
+        "include_glob": "*.java",
+        "exclude_filename": "R.java",
+        "regex": "\\b(replay|ghost|rollback|lockstep|deterministic)\\b",
+        "case_insensitive": true,
+        "match_count": 0,
+        "exit_code": 1
+      },
+      "finding": "A bounded case-insensitive search for whole words replay, ghost, rollback, lockstep and deterministic found no matches in the inspected com/fingersoft/hcr2 Java package after excluding generated R.java.",
+      "usage_evidence": "bounded_negative",
+      "limitation": "This is a scoped negative result, not proof that replay/multiplayer/deterministic simulation is absent. Native code and other packages were outside that search. Java decompiler omissions also constrain this search.",
+      "additional_evidence": [],
+      "search": {
+        "command": "rg -n -i '\\b(replay|ghost|rollback|lockstep|deterministic)\\b' decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2 -g '*.java' -g '!R.java'",
+        "exit_code": 1,
+        "matches": 0
+      },
+      "search_input_manifest": [
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AnalyticsCrashlyticsImpl.java",
+          "sha256": "ec5a7f0878b6c73cd4ab72a9d76fa2090c25af61841313e5ac48eb51a6b3064f"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AnrCrashlyticsForwarder.java",
+          "sha256": "8d89fff2dbef85342fee65c9cde257594428ade9f0e71e59695e9f793554ca87"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity$$ExternalSyntheticBackportWithForwarding0.java",
+          "sha256": "76a46b4c6ba02c37634e416f37eb5cb341a9469f432f55b1949b8f096914334a"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AppActivity.java",
+          "sha256": "1c5d80295647ed507d99a2bcf73e5f6e263ed95407b4f04f6c98cf4bd6717f74"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AudienceLabAdInfo.java",
+          "sha256": "9453e62f888faafa61b8154b1c36bc0909a7d08a6b7f49b265d98e32c56e9f46"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AudienceLabIAPInfo.java",
+          "sha256": "76f686c1749f4350ac6f97d3a91a4abb4ba2fb2f733d5df49f9b8079b63688e7"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/AudienceLabManager.java",
+          "sha256": "fe51a64f417e72f74678097e162c95d4f489b78460ecc7b8aa5f9bd6e06c401d"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/BuildConfig.java",
+          "sha256": "0c5a362b4d330ae008a923dcc20dc312e3da86d944154483dc97e5c2f66c15d1"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/BusinessIntelligence.java",
+          "sha256": "1f696c82f82de095951cb0126a59b3d72e0fc4ba598870d9527c82912b7da4b6"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/Config.java",
+          "sha256": "1144cd7c4eccf049abb7809393637ba15c8defb459f6f3e00e3af33fecec4efd"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ControllerInput.java",
+          "sha256": "a1ed58c0ce8d882e9c894bbe978e194b81f78ed5dbcb51695ec457996870895c"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/DataStoreManager$init$1$1.java",
+          "sha256": "99c8c0a5ac3b781d152904a18ae6761873966f21844120eff32b6bb35e4e4829"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/DataStoreManager$init$1$2.java",
+          "sha256": "0cb510acfd2a8e205909a082afa5720b940331698b5f98fd81d48d2c56d860c3"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/DataStoreManager$processBatch$2$1.java",
+          "sha256": "4a4a68086db843fb1fea87974ab080d86f59df37571f8ce94efbea956a473973"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/DataStoreManager$special$$inlined$CoroutineExceptionHandler$1.java",
+          "sha256": "f85670d1d09c4da5c7764ad3b0a27f0361ee9331451461b65a247d1b348bd704"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/DataStoreManager.java",
+          "sha256": "e33edc99ee8b22fd0d528326ec84404312ae0803869204198f9bfa90ef287190"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/FSAssetPackManager.java",
+          "sha256": "50c2254ae8741249515ceabb2de6340ef7815437a70d705e44244d44b84310c7"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/FingerAccount.java",
+          "sha256": "9c2c84efcc383c0ffe3213ddabd139c8e25cdfe4653e59f2099f0449e566027e"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/GameServices.java",
+          "sha256": "87b9d5bf446b30a0dc77e38d0273c19301312bb45873ab6b50fc4c3f2ec7f9f1"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/Hcr2InputMap.java",
+          "sha256": "0c0f398cb192edbd4f8b9dad866deeb5c7f6062e8b575c638294e7b6d693940c"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/HelpshiftUtils.java",
+          "sha256": "2a5e909329162e5f23c8adaa724ecf4c7bd6336648095585aaedd678e6c09382"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/InputEventIds.java",
+          "sha256": "c58d8154a4ba50e2b2a9bc478ea52ab000b02725bcc01d3796bbf9620ec138bb"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/InstallReceiver.java",
+          "sha256": "72e91756682d4a6c1e211cd862e3eb49f5f4b8fa72ef8f4840a43157fd80761d"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/Log.java",
+          "sha256": "c9594cf0548c7b28c034de2ae11353b6329cf0e9f73326a873c5f602c798fd66"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/NotificationChannels.java",
+          "sha256": "542e5b28146ea04673d0ae933fa203159885fa713a03ae0de2b0edc5b46cda10"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/NotificationReceiver.java",
+          "sha256": "01654f1b66e55a23bd16c1103234bc4383012846819de5ebd7655dc9f0bb92f4"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/PlatformConfig.java",
+          "sha256": "a3d513bcfabda01053bd2c56a25785918e1820835311ad062e7881175e7f5868"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/PlayGamesInput.java",
+          "sha256": "5c5386a9a2502840701eef8f35bf7456474894cea1c07bbc1125ec840f0dd1df"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/ProcessExitInfoLogger.java",
+          "sha256": "e930181514773322ff2f4a135a644007875663eb5301e71861310d4c64afea97"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/Utils.java",
+          "sha256": "88dacfacbeedbe4f5d98fd14c45b2f5cb2d8fa50b3d6db64c2baea017f3cf163"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/AdDurationTracker.java",
+          "sha256": "f18dec70dab5c5480849dbef4f838aa2ee8e95ba805fce44c6e59d7ff5811a51"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/AdTierCalculator.java",
+          "sha256": "b2c8e1d15232288fb178737d89a30b586a84e36dd12a2c762f360df3c3e39bf0"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/AdvertisingUtils.java",
+          "sha256": "dfc45f2c0c52229af3ec3c9f58ef9ac69259607af645aaa027e5638ed6ac93cd"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/CFirebaseAds.java",
+          "sha256": "0ca6c361e08350cf146be1f538228f67449da264fbe844f34bf570690d8f8722"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/CFirebaseAnalytics.java",
+          "sha256": "b89b9203df1e9eca2a625823a0df0fdabc57f7d9b493b51b4c6b87ec34b5fb4e"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/CFirebaseCrossPromoInterstitial.java",
+          "sha256": "18c502181c5017b85932665d392b660593b1726f99c347a4dfb289848ada33ef"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/ConsentManager.java",
+          "sha256": "9774920d258320a5b7f971305f8ebddd5bf953ff59cdfb76a4f36674d645f2a9"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/Firebase.java",
+          "sha256": "2be68de1556ab54e736d711327fbbb4047116e06aa3ae0dc24f4e8b461811abe"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/FirebaseMessageReceiver.java",
+          "sha256": "8440f7aaa55ecac37c8495c1f0f3864120c8e41a437667de1077a025d9144e3b"
+        },
+        {
+          "path": "decompiled/android/jadx/base_classes_05/sources/com/fingersoft/hcr2/firebase/MyFirebaseInstanceIDService.java",
+          "sha256": "a9872c9b00e2460623bf963d262f082ad3112cc9ebb576c04ab7a9f5f82ea037"
+        }
+      ]
+    }
+  ]
+}
