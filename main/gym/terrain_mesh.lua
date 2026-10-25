@@ -2,6 +2,7 @@
 local geometry=require "main.gym.terrain_geometry"
 local stations=require "main.gym.stations"
 local socket=require "socket"
+local residency=require "main.gym.terrain_residency"
 local M={}
 local SELECT_GAIN={1.6,.95,.5}
 -- Scalar debug accounting only; no world/resource handles are kept in module state.
@@ -70,39 +71,51 @@ function M.drop(entry,delete_object)
 end
 function M.build(self,d)
     local started=socket.gettime()
-    local state={resources={},objects={},paths={}};self.terrain_mesh=state
-    local chunks,stats=geometry.build(d)
-    local scale=sys.get_config_number("physics.scale",0.01)
-    for i,c in ipairs(chunks) do
-        local b=M.buffer(c)
-        local path="/terrain_mesh/g"..self.session_generation.."-"..c.key..".bufferc"
-        local resource_id=resource.create_buffer(path,{buffer=b,transfer_ownership=true})
-        state.resources[#state.resources+1]=resource_id
-        created=created+1
-        state.paths[#state.paths+1]=path
-        local id=factory.create("#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
-        state.objects[#state.objects+1]=id
-        go.set(msg.url(nil,id,"mesh"),"vertices",resource_id)
-    end
+    local state={};self.terrain_mesh=state
+    local entries,stats=geometry.describe(d);state.entries,state.stats=entries,stats
+    M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
     local decor={};for k,v in pairs(d) do decor[k]=v end;decor.chains={}
     local sprites,labels=stations.decorate(decor)
-    stats.decoration_sprites,stats.labels,stats.mesh_gameobjects=sprites,labels,#state.objects
+    stats.decoration_sprites,stats.labels=sprites,labels
     stats.build_ms=(socket.gettime()-started)*1000
     state.stats=stats
     publish()
     if html5 and sys.get_engine_info().is_debug then
-        stats.generation,stats.station,stats.paths=self.session_generation,d.id,state.paths
+        stats.generation,stats.station=self.session_generation,d.id
         html5.run("window.riderTerrainMesh="..json.encode(stats))
     end
     return sprites,labels
+end
+function M.diagnostics(state,mode,generation)
+    if not (html5 and sys.get_engine_info().is_debug) then return end
+    local r=state.last;local keys={r.visible,r.allocated,r.cached,r.enabled,r.bytes,r.uploaded,r.reassigned,r.released,r.queued,state.revision or 0}
+    for _,e in ipairs(state.entries) do keys[#keys+1]=tostring(e.key)..":"..tostring(e.path)..":"..tostring(e.enabled) end
+    local key=table.concat(keys,"|")
+    if state.published==key then return end
+    state.published=key
+    local entries={}
+    for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,path=e.path,bytes=e.geometry and e.geometry.bytes or 0} end
+    html5.run("window.riderTerrainResources="..json.encode({mode=mode,generation=generation,counts=r,high_water=state.high_water,view=state.view,entries=entries}))
+end
+function M.update(self)
+    local state=self.terrain_mesh;if not state then return end
+    local started=socket.gettime()
+    local r=residency.update(state,state.entries,residency.viewport(),function(e)
+        local c=geometry.section(e.prep,e.first,e.last,e.key)
+        if not e.resource then state.serial=(state.serial or 0)+1 end
+        M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")
+    end,function(e) M.drop(e,true) end)
+    state.stats.mesh_gameobjects,state.stats.allocated_bytes=r.allocated,r.bytes
+    state.stats.resident=r
+    r.update_ms=(socket.gettime()-started)*1000
+    M.diagnostics(state,"play",self.session_generation)
 end
 function M.final(self,failed)
     local state=self.terrain_mesh
     if state then
         -- Drop our resource references; mesh components retain theirs until Defold destroys this world.
-        if failed then for _,id in ipairs(state.objects) do go.delete(id) end end
-        for _,id in ipairs(state.resources) do resource.release(id);released=released+1 end
+        for _,e in ipairs(state.entries) do M.drop(e,failed);e.geometry=nil end
         publish()
         self.terrain_mesh=nil
     end

@@ -369,6 +369,7 @@ function update(self, dt)
     else
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
+    require("main.gym.terrain_mesh").update(self)
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
         rider.animate(self.vehicle,dt)

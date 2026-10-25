@@ -108,4 +108,32 @@ function M.build(d)
     end
     return chunks,{chunks=#chunks,vertices=total,triangles=total/3,buffer_bytes=total*36,version=M.VERSION,intervals=M.INTERVALS,lower_extent=d.bounds[3],depth=M.DEPTH,projection=M.PROJECTION}
 end
+-- Cheap world-space projected bounds; no emitted vertex/color/UV arrays.
+function M.extent(prep,first,last)
+    local b={math.huge,math.huge,-math.huge,-math.huge}
+    for i=first,last do
+        for _,q in ipairs({{prep.p[i][1],prep.p[i][2],0},prep.offset(i,M.EDGE),prep.bottom(i)}) do
+            b[1],b[2]=math.min(b[1],q[1]),math.min(b[2],q[2])
+            b[3],b[4]=math.max(b[3],q[1]+M.DEPTH*M.PROJECTION[1]),math.max(b[4],q[2]+M.DEPTH*M.PROJECTION[2])
+        end
+    end
+    -- Same half-engine-unit guard as the uploaded AABB, including floating conversion error.
+    b[1],b[2],b[3],b[4]=b[1]-.005,b[2]-.005,b[3]+.005,b[4]+.005
+    return b
+end
+function M.describe(d)
+    local entries,total,arc,previous={},0,0,nil
+    for chain_index,raw in ipairs(d.chains) do
+        local start=raw[raw[1][1]>raw[#raw][1] and #raw or 1]
+        if previous then arc=arc+distance(previous,start) end
+        local prep=M.prepare(raw,d.bounds[3],arc);arc,previous=prep.arc,prep.p[#prep.p]
+        for first=1,#prep.p-1,M.INTERVALS do
+            local last=math.min(first+M.INTERVALS,#prep.p)
+            local vertices=(last-first)*18+(first==1 and 6 or 0)+(last==#prep.p and 6 or 0)
+            entries[#entries+1]={prep=prep,first=first,last=last,key="run"..chain_index.."-"..first.."-"..last,bounds=M.extent(prep,first,last),vertices=vertices,bytes=vertices*36,dirty=true}
+            total=total+vertices
+        end
+    end
+    return entries,{chunks=#entries,vertices=total,triangles=total/3,buffer_bytes=total*36,version=M.VERSION,intervals=M.INTERVALS,lower_extent=d.bounds[3],depth=M.DEPTH,projection=M.PROJECTION}
+end
 return M

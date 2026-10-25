@@ -12,7 +12,7 @@ resource={create_buffer=function(path,args) assert(not alive[path]);alive[path]=
  release=function(id) assert(alive[id]);alive[id]=nil end}
 local next_id=0
 factory={create=function() next_id=next_id+1;return next_id end}
-msg={url=function(_,id) return id end}
+msg={url=function(_,id) return id end,post=function() end}
 go={set=function() end,set_position=function() end,delete=function() end}
 local terrain=require 'main.gym.editor_terrain'
 local doc=require 'main.gym.editor_doc'
