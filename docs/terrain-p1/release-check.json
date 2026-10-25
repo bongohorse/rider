@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "07c6f9267a8ed98578b609d37babf0cc2c397a91",
+  "errors": [],
+  "engine_guard": {
+    "platform": "wasm-web",
+    "status": "PASS",
+    "cache_invalidations": [],
+    "architectures": {
+      "wasm-web": [
+        {
+          "bundled": "RiderG1.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "57127d029fda695af182ca4ba1a81e163e2fa2fa2515523915d7800515d6b03d"
+        },
+        {
+          "bundled": "RiderG1_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "43ec8b426efa2b9fedfcafc4ca0d19fb6800031cf5d8b206c3262aeef6bb618f"
+        }
+      ],
+      "wasm_pthread-web": [
+        {
+          "bundled": "RiderG1_pthread.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "14bddd6e70f46af0f2996a839a16270bd9f7f79556c1bfffa8fb2817544714b1"
+        },
+        {
+          "bundled": "RiderG1_pthread_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "d1ddf072eafa719f8a6a88748497051fe2a462e2d855379b5b14e3184e89c14a"
+        }
+      ]
+    },
+    "extender_lines": 2
+  },
+  "switches": [
+    {
+      "look": "depth",
+      "observed_ready_upper_ms": 1295.69970703125
+    },
+    {
+      "look": "sprites",
+      "observed_ready_upper_ms": 1217.300048828125
+    },
+    {
+      "look": "flat",
+      "observed_ready_upper_ms": 1213.60009765625
+    },
+    {
+      "look": "depth",
+      "observed_ready_upper_ms": 1185.099853515625
+    },
+    {
+      "look": "flat",
+      "observed_ready_upper_ms": 1199.199951171875
+    }
+  ],
+  "views": [
+    "climb",
+    "landing",
+    "valley"
+  ],
+  "checks": [
+    "Release has no riderEditor/riderWorld debug globals",
+    "preset A, time factor 1, modified false",
+    "696 unchanged terrain shapes in each selected START",
+    "R retains world generation and world load count",
+    "E cannot enter normal editor",
+    "ArrowUp recognized by existing controller"
+  ],
+  "physical_device": "NOT RUN",
+  "gpu_duration_and_memory": "unmeasured"
+}

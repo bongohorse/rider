@@ -1,0 +1,6 @@
+name: "terrain_comparison"
+tags: "tile"
+vertex_program: "/main/terrain_compare/terrain.vp"
+fragment_program: "/main/terrain_compare/terrain.fp"
+vertex_space: VERTEX_SPACE_LOCAL
+vertex_constants { name: "world_view_proj" type: CONSTANT_TYPE_WORLDVIEWPROJ }

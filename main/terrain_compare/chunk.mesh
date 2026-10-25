@@ -1,0 +1,4 @@
+material: "/main/terrain_compare/terrain.material"
+vertices: "/main/terrain_compare/empty.buffer"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"

@@ -166,7 +166,11 @@ local function setup(self)
         chains,self.segments=stations.build(self.terrain,self.station)
         local built_at=socket.gettime()
         self.chain=chains[1]
-        self.decor_sprites,self.decor_labels=stations.decorate(self.station)
+        if sys.get_config_int("rider.terrain_compare",0)==1 then
+            self.decor_sprites,self.decor_labels=require("main.terrain_compare.renderer").build(self,self.station)
+        else
+            self.decor_sprites,self.decor_labels=stations.decorate(self.station)
+        end
         self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
     if not built then
@@ -580,6 +584,7 @@ function fixed_update(self, dt)
     if self.time_probe then self.time_probe.fixed(self,dt) end
 end
 function final(self)
+    if self.terrain_compare then require("main.terrain_compare.renderer").final(self) end
     mobile.final()
     audio.stop(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;

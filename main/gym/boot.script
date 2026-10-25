@@ -170,7 +170,9 @@ function init(self)
     self.time=time_scale.new()
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
-    if id=="custom" then
+    if sys.get_config_int("rider.terrain_compare",0)==1 and require("main.terrain_compare.entry").initial(self) then
+        -- Isolated P1 build: do not restore or replace the player's saved editor documents.
+    elseif id=="custom" then
         self.station,self.speed=id,speed
         local saved,rejected=custom.restore()
         local draft=editor.saved_draft()
@@ -220,7 +222,10 @@ function update(self,dt)
         end
     end
     local request=custom.take()
-    if request then import(self,request) end
+    if request then
+        if sys.get_config_int("rider.terrain_compare",0)==1 then custom.notify(request.request,"error","Use the comparison course selector; normal saved levels are unchanged.")
+        else import(self,request) end
+    end
     if self.debug_editor then
         -- Debug fault injection (le2 only): write a raw draft slot, e.g. an unsupported editor version.
         local ok,raw=pcall(json.decode,html5.run("(()=>{const r=window.riderDebugDraft;window.riderDebugDraft=null;return JSON.stringify(r||null)})()"))
@@ -257,6 +262,10 @@ function update(self,dt)
     end
 end
 function on_message(self,id,data,sender)
+    if sys.get_config_int("rider.terrain_compare",0)==1 and (id==hash("editor_enter") or id==hash("editor_play") or id==hash("editor_reload") or id==hash("select_station")) then
+        msg.post("#ui","custom_status",{text="Use the terrain comparison controls; editor and saved levels are unchanged."})
+        return
+    end
     if id==hash("preset_changed") then self.preset,self.preset_refused=data.key,data.refused
     -- A20 pause/slow motion: play worlds only. Pausing stops ticks at once; any running factor is set only after
     -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.

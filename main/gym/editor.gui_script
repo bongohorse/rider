@@ -2757,7 +2757,8 @@ function update(self,dt)
     if not edit_mode then
         local a,b=gui.get_screen_position(self.overlay.probe0),gui.get_screen_position(self.overlay.probe1)
         self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
-        editor_ui.play(self.ui,self.overlay.k,editor.message)
+        if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui)
+        else editor_ui.play(self.ui,self.overlay.k,editor.message) end
     end
     -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
     -- change or every 0.25 s, so the published state costs the driven world little.

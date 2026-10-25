@@ -1,0 +1,3 @@
+name: "main"
+instances { id: "loader" prototype: "/main/terrain_compare/boot.go" }
+instances { id: "editor" prototype: "/main/gym/editor.go" }
