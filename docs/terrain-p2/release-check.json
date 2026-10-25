@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "8c85cdd3b15efc5f196ac3a1ada6f007d945c0a5",
+  "errors": [],
+  "views": [
+    {
+      "course": "six-anchor",
+      "view": "start",
+      "shapes": 666,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "crest",
+      "shapes": 696,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "descent",
+      "shapes": 696,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "jump",
+      "shapes": 696,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "landing",
+      "shapes": 696,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "valley",
+      "shapes": 696,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "mixed",
+      "view": "start",
+      "shapes": 708,
+      "generation": 2,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    }
+  ],
+  "switches": [
+    {
+      "station": "straight",
+      "generation": 5,
+      "world_loads": 5
+    },
+    {
+      "station": "ramps",
+      "generation": 6,
+      "world_loads": 6
+    },
+    {
+      "station": "straight",
+      "generation": 7,
+      "world_loads": 7
+    }
+  ],
+  "checks": [
+    "release exact source identity",
+    "no debug world/editor/terrain inspection globals",
+    "preset A / factor 1 / unmodified",
+    "normal import of all three P0 fixtures",
+    "R retains generation and world-load count",
+    "normal editor entry/return retains original collision",
+    "real keyboard A to B to A station switching",
+    "1280x720, 1280x480 and 390x844 browser viewports"
+  ],
+  "engine_guard": {
+    "platform": "wasm-web",
+    "status": "PASS",
+    "cache_invalidations": [],
+    "architectures": {
+      "wasm-web": [
+        {
+          "bundled": "RiderG1.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "57127d029fda695af182ca4ba1a81e163e2fa2fa2515523915d7800515d6b03d"
+        },
+        {
+          "bundled": "RiderG1_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "43ec8b426efa2b9fedfcafc4ca0d19fb6800031cf5d8b206c3262aeef6bb618f"
+        }
+      ],
+      "wasm_pthread-web": [
+        {
+          "bundled": "RiderG1_pthread.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "14bddd6e70f46af0f2996a839a16270bd9f7f79556c1bfffa8fb2817544714b1"
+        },
+        {
+          "bundled": "RiderG1_pthread_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "d1ddf072eafa719f8a6a88748497051fe2a462e2d855379b5b14e3184e89c14a"
+        }
+      ]
+    },
+    "extender_lines": 2
+  },
+  "launcher_sha256": "ea20da56b9ac98af2142ae87e3dd55bcbd8210e2e9891ae6e9160d99b34a5d66",
+  "limitations": "Physical phone, GPU time and physical GPU memory NOT RUN / unmeasured; viewport emulation only."
+}

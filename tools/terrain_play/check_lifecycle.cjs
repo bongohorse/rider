@@ -29,6 +29,11 @@ function probe(){const p=window.__buffers={live:new Map(),created:0,deleted:0};
   r.loads.push(await page.evaluate(()=>{const p=window.__buffers,h={};for(const size of p.live.values())h[size]=(h[size]||0)+1;return {generation:window.riderTelemetry.session_generation,mesh:window.riderTerrainMesh,lifecycle:window.riderTerrainMeshLifecycle,webgl:{created:p.created,deleted:p.deleted,live:p.live.size,histogram:h}};}));
  }
  // Current mesh VBs have exactly their interleaved source payload size. None from prior worlds may accumulate.
- if(mode==='mesh')for(const x of r.loads){assert.equal(x.lifecycle.owned,11);assert.equal(x.webgl.histogram[41472],9);assert.equal(x.webgl.histogram[41688],1);assert.equal(x.webgl.histogram[17064],1);}
+ if(mode==='mesh')for(const [i,x] of r.loads.entries()){
+  assert.equal(x.lifecycle.owned,11);assert.equal(x.webgl.histogram[41472],9);assert.equal(x.webgl.histogram[41688],1);assert.equal(x.webgl.histogram[17064],1);
+  // Existing reference teardown grows by one 16-byte and one 64-byte scratch UBO per switch.
+  // Keeping the shared terrain material resident must add no extra per-switch UBO growth.
+  for(const size of [16,64])assert.ok((x.webgl.histogram[size]||0)<=(r.loads[0].webgl.histogram[size]||0)+i,'Additional shader-buffer growth at '+size+' bytes');
+ }
  assert.equal(r.loads.length,8);assert.deepEqual(r.errors,[]);r.status='PASS';
 }catch(e){r.status='FAIL';r.failure=e.stack;throw e;}finally{fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(r,null,2)+'\n');if(browser)await browser.close();server?.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
