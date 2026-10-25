@@ -74,7 +74,7 @@ function step(values){
     const p=window.__le1b,ready=p.ready[t.before].at,tm=window.riderTelemetry,lt=window.riderLoad,in_window=p.frames.filter(f=>f.start>=t.at&&f.start<=ready);
     return {switch_ms:ready-t.at,longest_frame_ms:Math.max(0,...in_window.map(f=>f.work)),frames:in_window.length,
      lua:{switch_ms:lt.switch_ms??null,parse_ms:lt.parse_ms??null,build_ms:lt.build_ms??null,decorate_ms:lt.decorate_ms??null},
-     counts:{terrain_shapes:tm.terrain_shapes,decor_sprites:tm.decor_sprites,decor_labels:tm.decor_labels,custom_snapshots:tm.custom_snapshots}};
+     counts:{terrain_shapes:tm.terrain_shapes,decor_sprites:tm.decor_sprites,decor_labels:tm.decor_labels,custom_snapshots:tm.custom_snapshots,terrain_meshes:window.riderTerrainMesh.chunks,terrain_buffer_bytes:window.riderTerrainMesh.buffer_bytes}};
    },{t});
   }
   const identity=await page.evaluate(()=>{
@@ -96,7 +96,9 @@ function step(values){
    const counts=repeats[0].counts;
    for(const r of [first,...repeats])assert.deepEqual(r.counts,counts,c.id+': counts changed between identical imports');
    assert.equal(counts.terrain_shapes,c.segments+c.hulls,c.id+': terrain shapes');
-   assert.equal(counts.decor_sprites,c.objects,c.id+': decoration sprites');
+   assert.equal(counts.decor_sprites,c.objects-c.segments,c.id+': residual decoration sprites');
+   assert.equal(counts.terrain_meshes,c.level.chains.reduce((n,line)=>n+Math.ceil((line.length-1)/64),0),c.id+': actual terrain sections');
+   assert.equal(counts.terrain_buffer_bytes,(c.segments*18+c.chains*12)*36,c.id+': actual terrain vertex payload');
    assert.equal(counts.custom_snapshots,1);
    // Fixed full-throttle window after a warm-up; samples come from the probes, not from wall-clock guesses.
    await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');
