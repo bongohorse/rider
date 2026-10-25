@@ -109,7 +109,7 @@ function M.refresh(self,force)
     local ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation)
     if not ok then err="Mesh preview unavailable: "..tostring(result);result=nil end
     if not result then
-        M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return
+        print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return
     end
     objects(v,e);markers(v,e)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
@@ -117,17 +117,22 @@ function M.refresh(self,force)
 end
 function M.update(self)
     if self.editor_rebuild then
-        self.editor_rebuild=nil;M.build(self)
-        if self.editor_fallback and self.view.mesh then
-            M.final(self,true);lines.build(self);self.view.line_mode=true;self.view.capacity_shape=editor.shape_version
+        self.editor_rebuild=nil
+        if self.editor_fallback then
+            lines.build(self);self.view.line_mode=true;self.view.capacity_shape=editor.shape_version
             editor.display_note=self.editor_fallback;self.editor_fallback=nil
-        end
+        else M.build(self) end
     end
     local v=self.view;if not v then return end
-    local mode=terrain.admitted(editor.doc.editor) and v.capacity_shape~=editor.shape_version
-    if v.opened~=editor.opened or mode==(v.line_mode==true) then
-        M.final(self,true);self.editor_rebuild=true;return
+    if v.opened~=editor.opened then
+        local now=socket.gettime()
+        if not v.reload_requested or now-v.reload_requested>.5 then
+            v.reload_requested=now;msg.post("main:/loader#script","editor_reload")
+        end
+        return
     end
+    local mode=terrain.admitted(editor.doc.editor) and v.capacity_shape~=editor.shape_version
+    if mode==(v.line_mode==true) then M.final(self,true);self.editor_rebuild=true;return end
     if v.line_mode then lines.update(self);return end
     local scale=sys.get_config_number("physics.scale",.01);local c=editor.camera
     go.set_position(vmath.vector3(c.x/scale,c.y/scale,500),"/camera")
