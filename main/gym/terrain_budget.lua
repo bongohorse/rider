@@ -1,7 +1,7 @@
 -- Pure admission policy for the production depth renderer. No engine/physics mutation.
 -- Limits are application headroom, not claims about physical GPU/process memory.
 local M={MESHES=128,SPRITES=1024,LABELS=1024,INSTANCES=1024,
-    PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=4096,RESERVE=64}
+    PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=2048,RESERVE=64}
 function M.measure(d)
     local r={sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
@@ -34,6 +34,10 @@ function M.measure(d)
     -- Conservative CPU working envelope: retained editor arrays (including base colors),
     -- staging/replacement arrays, descriptors and two engine-owned buffer copies.
     r.cpu_estimate=r.vertices*512+r.physics_vertices*512+r.payload*2
+    -- Pinned mesh-world VB freelist reuses handles but retains their uploaded size.
+    -- Current editor planner emits <=96 intervals/section; one shared seed VB is extra.
+    r.engine_pool_ceiling=(M.MESHES+1)*(96*18+12)*36
+    r.replacement_payload=2*r.payload
     return r
 end
 local function over(name,n,limit,fix)
@@ -44,7 +48,7 @@ function M.check(d)
     local target=string.format('Shorten or simplify chain %d (%d segments); keep sampling accuracy.',r.largest_chain,r.largest_segments)
     local err=over('mesh components at replacement peak',r.mesh_peak,M.MESHES,'Reduce separate terrain runs. '..target)
         or over('terrain vertex payload bytes at Fit',r.payload,M.PAYLOAD,target)
-        or over('estimated CPU working bytes',r.cpu_estimate,M.CPU,'Reduce terrain/content; save separate courses.'..target)
+        or over('estimated CPU working bytes',r.cpu_estimate,M.CPU,'Reduce terrain/content; save separate courses. '..target)
         or over('physics vertices (two-sided copies and hulls included)',r.physics_vertices,M.PHYSICS_VERTICES,'Reduce runs, two-sided terrain or obstacles; split the course.')
         or over('sprites including vehicle/replay reserve',r.sprites+M.RESERVE,M.SPRITES,'Remove obstacle edges or distance markers.')
         or over('labels including reserve',r.labels+M.RESERVE,M.LABELS,'Remove labels or major distance markers.')

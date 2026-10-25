@@ -25,9 +25,9 @@ d=doc.copy(base);d.labels={};for i=1,900 do d.labels[i]={position={0,0},text='x'
 d.hulls={};for i=1,30 do d.hulls[i]={vertices={{0,0},{1,0},{1,1},{0,1}}} end;reject(d,'GameObjects')
 -- Two-sided physics is charged twice, mesh once; independent from physical component capacity.
 d=doc.copy(base);d.chains={chain(200)};d.two_sided={true};local r=assert(budget.check(d));assert(r.physics_vertices==402 and r.sections==4)
--- Guard the independent physics boundary directly with many short two-sided runs, within mesh/payload caps.
-d.chains={};d.two_sided={};for i=1,32 do d.chains[i]=chain(64);d.two_sided[i]=true end
--- CPU/physics limits may be preceded by the independent payload limit; measurements remain separate.
-r=budget.measure(d);assert(r.physics_vertices==4160 and r.mesh_peak==64 and r.physics_vertices>budget.PHYSICS_VERTICES)
+d.chains={chain(1100)};d.two_sided={true};reject(d,'physics vertices')
+-- Exercise the policy's nearest CPU boundary without conflating it with the per-run compiler cap.
+d=doc.copy(base);d.chains={chain(1521)};d.hulls={};d.labels={};d.finish=nil
+assert(budget.check(d));d.chains={chain(1522)};reject(d,'estimated CPU working bytes')
 local original=fixture('long-over-budget');original.editor.start.position={501,1};local ok,err=doc.compile(original);assert(not ok and err:find('500',1,true))
 print('PASS independent source/compiler/START contracts retained; renderer budgets reject oversized inputs')

@@ -101,9 +101,14 @@ local function check()
         -- Point resource problems at the most expensive sampled source.
         if err:match("^Resource budget") then
             local most,n=nil,0
-            for _,o in ipairs(e.objects) do local k=doc_lib.drawn(o);if k>n then most,n=o,k end end
+            for _,o in ipairs(e.objects) do
+                local k=doc_lib.drawn(o)
+                if err:find("labels including",1,true) then k=o.type=="label" and 1 or 0
+                elseif err:find("sprites including",1,true) then k=doc_lib.outline(o) and #doc_lib.outline(o) or 0 end
+                if k>n then most,n=o,k end
+            end
             if most then
-                errors[#errors]=err.."; most: "..doc_lib.label(most).." with "..n..(doc_lib.outline(most) and " edges" or " segments")
+                errors[#errors]=err.."; most: "..doc_lib.label(most).." with "..n..(most.type=="label" and " label" or doc_lib.outline(most) and " edges" or " segments")
                 error_at[#errors]={ids={most.id}}
             end
         end

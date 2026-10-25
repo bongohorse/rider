@@ -72,7 +72,7 @@ end
 function M.build(self,d)
     local started=socket.gettime()
     local state={};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);state.entries,state.stats=entries,stats
+    local entries,stats=geometry.describe(d);stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
     M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
     local decor={};for k,v in pairs(d) do decor[k]=v end;decor.chains={}
