@@ -10,7 +10,7 @@ if(bundleArg==='--fixtures'){
  for(const id of ['six-anchor','long-curves','mixed','long-over-budget']){const source=fixture(id,id==='mixed',id==='long-over-budget');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');}
  process.exit(0);
 }
-const budgets=process.argv.includes('--budgets');
+const budgets=process.argv.includes('--budgets'),legacy=process.argv.includes('--legacy-admission');
 const mesh=process.argv.includes("--mesh"),editorMesh=process.argv.includes("--editor-mesh"),resident=process.argv.includes("--resident");
 const deadline=setTimeout(()=>{console.error('Terrain observation exceeded 240 s');process.exit(1);},240000);
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
@@ -95,9 +95,9 @@ function probes(){
   await page.locator('#rider-custom-file').setInputFiles({name:'long-over-budget.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(over))});
   await page.waitForFunction(()=>!window.riderCustom.visible);await page.waitForTimeout(1100);await editReady();
   await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()!=='syncing');
-  const rejected=await ed();assert.ok(budgets?rejected.errors.length===0:rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
+  const rejected=await ed();assert.ok(!legacy?rejected.errors.length===0:rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
   report.rejected={id:'long-over-budget',source_bytes:Buffer.byteLength(JSON.stringify(over)),errors:rejected.errors,view:rejected.view,source_saved:true,paths:await page.evaluate(()=>window.riderEditorPaths)};
-  if(!budgets){await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;}else report.rejected.now_admitted=true;
+  if(legacy){await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;}else report.rejected.now_admitted=true;
   await page.screenshot({path:path.join(out,'long-over-budget-edit.png')});
   for(const id of budgets?['long-over-budget','mixed-over-budget']:['six-anchor','long-curves','mixed']){
    const source=fixture(id,id.startsWith('mixed'),budgets);fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');
