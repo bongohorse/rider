@@ -1,4 +1,4 @@
-// #272: bounded, local-only cost observation using the existing le6/le1b probes.
+// #272 baseline / #274 --mesh comparison: bounded observation using existing le6/le1b probes.
 // No runtime edits, limits overrides, injected physics or CI registration.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process');
@@ -10,6 +10,7 @@ if(bundleArg==='--fixtures'){
  for(const id of ['six-anchor','long-curves','mixed','long-over-budget']){const source=fixture(id,id==='mixed',id==='long-over-budget');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');}
  process.exit(0);
 }
+const mesh=process.argv.includes("--mesh");
 const deadline=setTimeout(()=>{console.error('Terrain observation exceeded 240 s');process.exit(1);},240000);
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bundle import verify_bundle;verify_bundle(sys.argv[1],sys.argv[2])',bundle,sha]);
@@ -53,14 +54,21 @@ function fixture(id,mixed=false,large=false){
 // The same observation boundaries as sizes.cjs, plus the existing editor publication.
 function probes(){
  const p=window.__p0={frames:[],polls:[],ready:[],world:[],editor:[],telemetry:[],editorCount:0};
+ p.draws=0;p.gl_created=0;p.gl_deleted=0;p.gl_live=new Set();
+ for(const proto of [window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype].filter(Boolean)){
+  for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){const fn=proto[name];if(fn)proto[name]=function(...args){p.draws++;return fn.apply(this,args);};}
+  const create=proto.createBuffer,del=proto.deleteBuffer;
+  proto.createBuffer=function(...args){const b=create.apply(this,args);if(b){p.gl_live.add(b);p.gl_created++;}return b;};
+  proto.deleteBuffer=function(b){if(p.gl_live.delete(b))p.gl_deleted++;return del.call(this,b);};
+ }
  for(const [name,list] of [['riderReady',p.ready],['riderWorld',p.world],['riderEditor',p.editor],['riderTelemetry',p.telemetry]]){let value;Object.defineProperty(window,name,{configurable:true,get:()=>value,set:v=>{value=v;if(name==='riderEditor')p.editorCount++;list.push({at:performance.now(),data:v});if(list.length>3000)list.shift();}});}
  const raf=window.requestAnimationFrame.bind(window);
- window.requestAnimationFrame=cb=>raf(ts=>{const m=window.riderMobile;if(m&&!m.__p0){const poll=m.poll;m.poll=(dt,physics)=>{p.polled=true;p.polls.push({at:performance.now(),dt:dt*1000,physics});return poll(dt,physics);};m.__p0=true;}p.polled=false;const start=performance.now(),before=p.editorCount;try{cb(ts);}finally{p.frames.push({at:start,work:performance.now()-start,polled:p.polled,engine_edit:p.editorCount!==before});}});
+ window.requestAnimationFrame=cb=>raf(ts=>{const m=window.riderMobile;if(m&&!m.__p0){const poll=m.poll;m.poll=(dt,physics)=>{p.polled=true;p.polls.push({at:performance.now(),dt:dt*1000,physics});return poll(dt,physics);};m.__p0=true;}p.polled=false;const start=performance.now(),before=p.editorCount,draws=p.draws;try{cb(ts);}finally{p.frames.push({at:start,work:performance.now()-start,draws:p.draws-draws,polled:p.polled,engine_edit:p.editorCount!==before});}});
 }
 (async()=>{
  const server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(file).pipe(res);});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
- const report={schema:1,source_sha:sha,run_id:'terrain-p0-'+Date.now(),status:'INCOMPLETE',fixtures:[],errors:[],protocol:{repeats:5,warmup_ms:1000,sample_ms:6000,viewport:[1280,720],dpr:1},unmeasured:['phone','isolated sampler CPU','GPU time','draw calls','total process/GPU memory','engine-wide GameObject pool census']};
+ const report={schema:1,source_sha:sha,run_id:'terrain-p0-'+Date.now(),status:'INCOMPLETE',renderer:mesh?'depth':'original',fixtures:[],errors:[],protocol:{repeats:5,warmup_ms:1000,sample_ms:6000,viewport:[1280,720],dpr:1},unmeasured:['phone','isolated sampler CPU','GPU time','total process/GPU memory','engine-wide GameObject pool census']};
  try{
   browser=await chromium.launch();report.browser=browser.version();
   async function pageFor(testcase){const context=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:1});const page=await context.newPage();await configure(page,report.run_id,testcase);await page.addInitScript(probes);page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))report.errors.push(m.text());});return page;}
@@ -124,13 +132,13 @@ function probes(){
     if(!await page.evaluate(()=>window.riderCustom.visible))await page.evaluate(()=>window.riderCustom.open());
     const t=await page.evaluate(body=>{const p=window.__p0,before=p.ready.length,at=performance.now();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();return {at,before};},body);
     await page.waitForFunction(n=>window.__p0.ready.length>n,t.before);await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry?.session_generation&&window.riderTelemetry.sequence>2);await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
-    r.imports.push(await page.evaluate(t=>({ready_ms:window.__p0.ready[t.before].at-t.at,callback_max_ms:Math.max(...window.__p0.frames.filter(f=>f.at>=t.at&&f.at<=window.__p0.ready[t.before].at).map(f=>f.work)),lua:window.riderLoad,counts:{shapes:window.riderTelemetry.terrain_shapes,sprites:window.riderTelemetry.decor_sprites,labels:window.riderTelemetry.decor_labels}}),t));
+    r.imports.push(await page.evaluate(t=>({ready_ms:window.__p0.ready[t.before].at-t.at,callback_max_ms:Math.max(...window.__p0.frames.filter(f=>f.at>=t.at&&f.at<=window.__p0.ready[t.before].at).map(f=>f.work)),lua:window.riderLoad,counts:{shapes:window.riderTelemetry.terrain_shapes,sprites:window.riderTelemetry.decor_sprites,labels:window.riderTelemetry.decor_labels,meshes:window.riderTerrainMesh?.chunks,buffer_bytes:window.riderTerrainMesh?.buffer_bytes},mesh:window.riderTerrainMesh,lifecycle:window.riderTerrainMeshLifecycle,webgl_buffers:{created:window.__p0.gl_created,deleted:window.__p0.gl_deleted,live:window.__p0.gl_live.size}}),t));
    }
-   assert.ok(r.imports.every(x=>x.counts.shapes===r.segments+r.hulls),'shape count');for(const x of r.imports)assert.deepEqual(x.counts,r.imports[0].counts,'stable repeated allocation');assert.equal(r.imports[0].counts.sprites,r.segments+r.hull_vertices+1);assert.equal(r.imports[0].counts.labels,r.labels+1);
+   assert.ok(r.imports.every(x=>x.counts.shapes===r.segments+r.hulls),'shape count');for(const x of r.imports)assert.deepEqual(x.counts,r.imports[0].counts,'stable repeated allocation');assert.equal(r.imports[0].counts.sprites,(mesh?0:r.segments)+r.hull_vertices+1);if(mesh){for(const x of r.imports){assert.equal(x.mesh.generation,x.lua.generation);assert.equal(x.lifecycle.owned,x.mesh.chunks);assert.equal(x.mesh.buffer_bytes,(r.segments*18+r.chains*12)*36);}assert.equal(r.imports[0].counts.meshes,JSON.parse(body).chains.reduce((n,c)=>n+Math.ceil((c.length-1)/64),0));}assert.equal(r.imports[0].counts.labels,r.labels+1);
    await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');await page.waitForTimeout(1000);const from=await page.evaluate(()=>performance.now());await page.waitForTimeout(6000);await page.keyboard.up('ArrowUp');
    r.drive=await page.evaluate(from=>{const p=window.__p0,polls=p.polls.filter(x=>x.at>=from),frames=p.frames.filter(x=>x.at>=from&&x.polled),world=p.world.filter(x=>x.at>=from);return {polls:polls.map(x=>({...x,at:x.at-from})),frames:frames.map(x=>({...x,at:x.at-from})),world:world.map(x=>({...x,at:x.at-from})),telemetry:window.riderTelemetry,wasm_bytes:typeof HEAPU8!=='undefined'?HEAPU8.length:null};},from);
    const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');r.js_heap_metrics=(await cdp.send('Performance.getMetrics')).metrics.filter(m=>/^JSHeap/.test(m.name));await cdp.detach();
-   r.summary={import_ms:stats(r.imports.slice(1).map(x=>x.ready_ms)),interval_ms:stats(r.drive.polls.slice(1).map((p,i)=>p.at-r.drive.polls[i].at)),callback_ms:stats(r.drive.frames.map(x=>x.work)),physics_ms:stats(r.drive.polls.map(x=>x.physics)),over25:r.drive.polls.slice(1).filter((p,i)=>p.at-r.drive.polls[i].at>25).length};
+   r.summary={import_ms:stats(r.imports.slice(1).map(x=>x.ready_ms)),interval_ms:stats(r.drive.polls.slice(1).map((p,i)=>p.at-r.drive.polls[i].at)),callback_ms:stats(r.drive.frames.map(x=>x.work)),physics_ms:stats(r.drive.polls.map(x=>x.physics)),webgl_calls:stats(r.drive.frames.map(x=>x.draws)),over25:r.drive.polls.slice(1).filter((p,i)=>p.at-r.drive.polls[i].at>25).length};
    await page.screenshot({path:path.join(out,r.id+'-drive.png')});console.log(r.id+': '+JSON.stringify(r.summary));
   }
   report.camera=[];
