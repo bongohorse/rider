@@ -1,5 +1,6 @@
 -- Pure selection/ownership policy with the real descriptors; no simulated physics.
 local geom=require 'main.gym.terrain_geometry'
+local doc=require 'main.gym.editor_doc'
 local policy=require 'main.gym.terrain_residency'
 msg={url=function(_,id) return id end,post=function() end}
 local serial,uploads,drops=0,0,0
@@ -9,7 +10,7 @@ local function activate(e)
 end
 local function drop(e) e.resource,e.object=nil,nil;drops=drops+1 end
 for _,name in ipairs({'six-anchor','long-curves','mixed'}) do
-    local d=dofile(arg[1]..'/'..name..'.lua')
+    local d=assert(doc.compile(dofile(arg[1]..'/'..name..'-source.lua')))
     local entries,stats=geom.describe(d)
     local chunks,oldstats=geom.build(d)
     assert(stats.buffer_bytes==oldstats.buffer_bytes and #entries==#chunks)

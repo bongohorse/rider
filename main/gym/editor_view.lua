@@ -123,6 +123,7 @@ function M.refresh(self,force)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
     v.mesh_revision,v.style_key=e.revision,style_key
     counts(self);if mesh_dirty then publish(self,(socket.gettime()-started)*1000) end
+    return mesh_dirty
 end
 function M.update(self)
     if self.editor_rebuild then
@@ -147,11 +148,14 @@ function M.update(self)
     go.set_position(vmath.vector3(c.x/scale,c.y/scale,500),"/camera")
     go.set("/camera#camera","orthographic_zoom",c.zoom)
     editor.screen=lines.mapping(c);editor.screen.opened=v.opened
-    M.refresh(self)
+    local refreshed=M.refresh(self)
     if self.view then
-        local ok,err=pcall(terrain.resident,v.mesh,self.session_generation,residency.viewport(c))
-        if not ok then
-            print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=tostring(err);return
+        -- A source/style refresh already applied residency; keep one speculative budget per frame.
+        if not refreshed then
+            local ok,err=pcall(terrain.resident,v.mesh,self.session_generation,residency.viewport(c))
+            if not ok then
+                print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=tostring(err);return
+            end
         end
         counts(self);lines.readable(self.view,c.zoom)
     end
