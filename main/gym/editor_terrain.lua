@@ -14,7 +14,6 @@ local function signature(prep,first,last,styles)
     if not prep.monotone then
         for _,i in ipairs({first,last}) do t[#t+1]=prep.normals[i][1];t[#t+1]=prep.normals[i][2] end
     end
-    for i=first,last-1 do t[#t+1]=styles[i] or 0 end
     return t
 end
 local function matches(entry,p,i)
@@ -72,8 +71,9 @@ function M.plan(e,previews,selected,hover,old)
                     local sig=signature(prep,i,last,styles)
                     local points={};for k=i,last do points[#points+1]={prep.p[k][1],prep.p[k][2]} end
                     if entry then used[entry]=true end
-                    plans[#plans+1]={entry=entry,prep=prep,first=i,last=last,signature=sig,points=points,styles=styles,
-                        changed=not entry or not same(entry.signature,sig),phase=prep.u[i],lower=lower}
+                    local color={};for k=i,last-1 do color[#color+1]=styles[k] or 0 end
+                    plans[#plans+1]={entry=entry,prep=prep,first=i,last=last,signature=sig,color=color,points=points,styles=styles,
+                        changed=not entry or not same(entry.signature,sig),restyled=not entry or not same(entry.color or {},color),phase=prep.u[i],lower=lower}
                     i=last
                 end
             end
@@ -91,7 +91,7 @@ function M.update(state,e,previews,selected,hover,generation)
     local retained,retired={},{}
     for _,p in ipairs(plans) do if p.entry then retained[p.entry]=true end end
     for _,entry in ipairs(state.entries) do if not retained[entry] then retired[#retired+1]=entry end end
-    local result={rebuilt=0,reused=0,uniforms=0,chunks=#plans,vertices=0,buffer_bytes=0}
+    local result={rebuilt=0,reused=0,recolored=0,uniforms=0,chunks=#plans,vertices=0,buffer_bytes=0}
     local entries={};state.pending=entries
     local scale=sys.get_config_number("physics.scale",0.01)
     for _,p in ipairs(plans) do
@@ -102,7 +102,10 @@ function M.update(state,e,previews,selected,hover,generation)
             local c=geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
             mesh.upload(entry,c,"/editor_terrain/g"..generation.."-"..entry.key..".bufferc")
             result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
-        else result.reused=result.reused+1 end
+        else
+            result.reused=result.reused+1
+            if p.restyled then mesh.colors(entry,p.styles);result.recolored=result.recolored+1 end
+        end
         local c=entry.geometry
         if entry.phase~=p.phase or entry.lower~=p.lower or p.changed then
             go.set(msg.url(nil,entry.object,"mesh"),"editor_params",vmath.vector4(p.phase,(p.lower-c.origin[2])/scale,geometry.DEPTH/scale,1))
@@ -112,7 +115,7 @@ function M.update(state,e,previews,selected,hover,generation)
             end
             result.uniforms=result.uniforms+1
         end
-        entry.signature,entry.points,entry.phase,entry.lower=p.signature,p.points,p.phase,p.lower
+        entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
         result.vertices=result.vertices+c.vertices;result.buffer_bytes=result.buffer_bytes+c.bytes
     end
     for _,entry in ipairs(retired) do mesh.drop(entry,true) end

@@ -44,6 +44,7 @@ function M.section(prep,first,last,key,editing,styles)
     local offset,bottom=prep.offset,prep.bottom
     local depth,edge=M.DEPTH,M.EDGE
             local c={position={},color={},uv={},first=first,last=last,key=key,body=monotone and "filled" or "ribbon",origin={p[first][1],p[first][2]},bounds={math.huge,math.huge,0,-math.huge,-math.huge,0},u0=u[first],u1=u[last]}
+            if editing then c.base_colors={};c.color_groups={} end
             local state=0
             local function vertex(q,color,uv)
                 local x,y,z=q[1]-c.origin[1],q[2]-c.origin[2],q[3]
@@ -51,6 +52,7 @@ function M.section(prep,first,last,key,editing,styles)
                 if editing and q[4] then y=0;encoded=z>0 and -2*M.DEPTH or -M.DEPTH end
                 for _,v in ipairs({x,y,encoded}) do c.position[#c.position+1]=v end
                 for k,v in ipairs(color) do
+                    if editing then c.base_colors[#c.base_colors+1]=v end
                     if state==-1 and k==4 then v=0
                     elseif state==1 and k<4 then v=v*({1.6,0.95,0.5})[k]
                     elseif state==2 and k<4 then v=v*1.2 end
@@ -73,13 +75,16 @@ function M.section(prep,first,last,key,editing,styles)
                 if depth>0 then
                     quad({a[1],a[2],0},{b[1],b[2],0},{b[1],b[2],depth},{a[1],a[2],depth},TOP,TOP,BACK,BACK,u[i],u[i+1])
                 end
+                if editing then c.color_groups[#c.color_groups+1]={first=(i-first)*72+1,last=(i-first+1)*72,interval=i} end
             end
             -- End caps belong only to physical run ends, never to chunk seams or across gaps.
             if depth>0 then
                 for _,i in ipairs({first==1 and 1 or false,last==#p and #p or false}) do
                     if i then state=styles and styles[i==1 and 1 or i-1] or 0;local q=p[i]
                         local e,b=offset(i,edge),bottom(i)
+                        local color_first=#c.color+1
                         quad(e,{e[1],e[2],depth},{b[1],b[2],depth,b[4]},b,CAP,CAP,BODY_BOTTOM,BODY_BOTTOM,u[i],u[i])
+                        if editing then c.color_groups[#c.color_groups+1]={first=color_first,last=#c.color,interval=i==1 and 1 or i-1} end
                     end
                 end
             end

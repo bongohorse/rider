@@ -105,14 +105,22 @@ function M.refresh(self,force)
     local dirty=force or v.shape~=editor.shape_version or v.drawn~=editor.view_version or v.label_preview~=live
     if not dirty then return end
     if not force and editor.preview_objects and v.updated and now-v.updated<.033 then return end
+    local style={}
+    for _,o in ipairs(e.objects) do
+        if doc.terrain(o) then style[#style+1]=o.id..(o.hidden and "h" or "v")..(editor.selected[o.id] and "s" or "n")..(editor.hover_object==o.id and "o" or "n") end
+    end
+    local style_key=table.concat(style,"|")
+    local mesh_dirty=force or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
     local started=socket.gettime()
-    local ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation)
+    local ok,result,err=true,true,nil
+    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation) end
     if not ok then err="Mesh preview unavailable: "..tostring(result);result=nil end
     if not result then
         print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return
     end
     objects(v,e);markers(v,e)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
+    v.mesh_revision,v.style_key=e.revision,style_key
     counts(self);publish(self,(socket.gettime()-started)*1000)
 end
 function M.update(self)

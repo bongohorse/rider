@@ -43,6 +43,23 @@ function M.upload(entry,c,path)
     entry.geometry=c
     publish()
 end
+-- Selection/visibility changes write colors in place; positions and resource identity stay retained.
+function M.colors(entry,styles)
+    local c=entry.geometry
+    local b=resource.get_buffer(entry.resource)
+    local col=buffer.get_stream(b,"color")
+    for _,g in ipairs(c.color_groups) do
+        local state=styles[g.interval] or 0
+        for i=g.first,g.last do
+            local k=(i-1)%4+1;local v=c.base_colors[i]
+            if state==-1 and k==4 then v=0
+            elseif state==1 and k<4 then v=v*({1.6,.95,.5})[k]
+            elseif state==2 and k<4 then v=v*1.2 end
+            col[i]=v
+        end
+    end
+    resource.set_buffer(entry.resource,b,{transfer_ownership=true})
+end
 function M.drop(entry,delete_object)
     if delete_object and entry.object then go.delete(entry.object) end
     if entry.resource then resource.release(entry.resource);released=released+1 end
