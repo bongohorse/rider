@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "47c980a3725f8203a234153e9eeae930da5a3065",
+  "errors": [],
+  "before": {
+    "revision": 2,
+    "speed": 0
+  },
+  "edited": {
+    "revision": 3,
+    "speed": 1
+  },
+  "restored": {
+    "revision": 3,
+    "speed": 1
+  },
+  "test_helper_sha256": "d776257f5e27bceed018429e9a062ac35fc0962f2f097be223f909c14711d724",
+  "prior_attempts": [
+    {
+      "status": "FAIL",
+      "failure": "frame.waitForFunction: Timeout 30000ms exceeded.\n    at /home/mega/rider-worktrees/276-terrain-resources/tools/terrain_editor/check_launcher.cjs:19:14",
+      "source_sha": "37e9ed9d2973bb8e227d3caa42dd489414897ab9",
+      "errors": [],
+      "before": {
+        "revision": 2,
+        "speed": 0
+      },
+      "failure_editor": null,
+      "raw_sha256": "295df34dcbed3a2671f488cd8bbe863b51ebbd1e680b62b74baf0d657aba16bb"
+    },
+    {
+      "status": "FAIL",
+      "failure": "frame.waitForFunction: Timeout 30000ms exceeded.\n    at /home/mega/rider-worktrees/276-terrain-resources/tools/terrain_editor/check_launcher.cjs:19:14",
+      "source_sha": "37e9ed9d2973bb8e227d3caa42dd489414897ab9",
+      "errors": [],
+      "before": {
+        "revision": 2,
+        "speed": 0
+      },
+      "failure_editor": {
+        "mode": "edit",
+        "revision": 2,
+        "field": false,
+        "start": {
+          "speed": 0,
+          "position": [
+            2,
+            2
+          ]
+        },
+        "status": ""
+      },
+      "raw_sha256": "6624ceda9625cb1e456ff903f55256013e6b162202a214ff1f2d8db21aaa84ab"
+    }
+  ]
+}

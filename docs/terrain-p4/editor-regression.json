@@ -1,0 +1,181 @@
+{
+  "source_sha": "47c980a3725f8203a234153e9eeae930da5a3065",
+  "run_id": "f1d3049a-116b-49d7-8d5b-e6a45994d5c3",
+  "browser": "156.0.8078.4",
+  "status": "PASS",
+  "cases": [
+    "problems_jump_to_source_after_edit_and_undo",
+    "fit_centre_start_last_test_view_only",
+    "bounds_display_matches_compile",
+    "template_pages_view_row_budget",
+    "unlocated_message_shown_only",
+    "labels_place_edit_move_copy_undo_persist",
+    "help_modal_lists_controls",
+    "ghost_matches_test_start",
+    "readouts_start_drag_units",
+    "a1b_feedback_errors_and_scroll",
+    "a1b_layout_viewports_and_collapse",
+    "a1b_numeric_focus_steps_and_connected_run",
+    "a1b_scrolling_and_modal_capture",
+    "a1b_maximum_level_and_switch_budgets"
+  ],
+  "measurements": {
+    "jump": {
+      "zoom": 0.090239724610215,
+      "problems": 3
+    },
+    "fit": {
+      "extent": [
+        0,
+        110,
+        0,
+        10
+      ],
+      "zoom": 0.041018092724211
+    },
+    "bounds": {
+      "shown": [
+        -10,
+        40,
+        -10,
+        25.658941153017
+      ],
+      "compiled": [
+        -10,
+        40,
+        -10,
+        25.658941153017
+      ]
+    },
+    "gui": {
+      "nodes": 628,
+      "max_nodes": 640,
+      "templates": 12
+    },
+    "view_row": {
+      "1280x720": {
+        "last": 1264,
+        "tools": 1091.875
+      },
+      "844x390": {
+        "last": 833.45,
+        "tools": 655.875
+      },
+      "390x844": {
+        "last": 385.125,
+        "tools": 201.875
+      }
+    },
+    "labels": {
+      "text_limit": 64,
+      "compiled": [
+        {
+          "text": "Gap 3 m",
+          "position": [
+            10,
+            4
+          ]
+        }
+      ]
+    },
+    "ghost": {
+      "pos": [
+        15.94414109502,
+        0.9
+      ]
+    },
+    "gui_le6b": {
+      "nodes": 628,
+      "max_nodes": 640
+    },
+    "editor_a_feedback": {
+      "error": "red button, automatic source flash, direct Play banner, fix/Undo",
+      "scroll": "both panels: wheel + draggable scrollbar, constant control size"
+    },
+    "editor_a_layout": {
+      "1280": {
+        "nodes": 628,
+        "usable": {
+          "y1": 616,
+          "y0": 80,
+          "x0": 216,
+          "x1": 968
+        },
+        "chrome": {
+          "y": 8,
+          "x": 1016,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "1920": {
+        "nodes": 628,
+        "usable": {
+          "y1": 976,
+          "y0": 80,
+          "x0": 216,
+          "x1": 1608
+        },
+        "chrome": {
+          "y": 8,
+          "x": 1656,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "hidpi": {
+        "canvas": 2560,
+        "css": 1280,
+        "scale": 2,
+        "nodes": 628
+      }
+    },
+    "editor_a_fields": {
+      "invalid_preserved": true,
+      "shift_length": 9,
+      "alt_length": 9.01,
+      "limit_refused": true,
+      "pending_step_single_undo": true
+    },
+    "editor_a_scroll": {
+      "scroll": 64,
+      "gui_nodes": 628
+    },
+    "editor_a_budget": {
+      "edit": {
+        "meshes": 13,
+        "allocated_mesh_bytes": 518832,
+        "simplified": false,
+        "mesh_bytes": 518832,
+        "sprites": 4,
+        "objects": 1,
+        "allocated_meshes": 13,
+        "generation": 8,
+        "labels": 1,
+        "nodes": 628
+      },
+      "play": {
+        "terrain_meshes": 13,
+        "struts": 2,
+        "replay": 0,
+        "sprites": 6,
+        "decoration": 0,
+        "generation": 9,
+        "vehicle": 4,
+        "terrain_buffer_bytes": 518832,
+        "labels": 0
+      },
+      "replay": {
+        "terrain_meshes": 13,
+        "struts": 2,
+        "replay": 4,
+        "sprites": 10,
+        "decoration": 0,
+        "generation": 9,
+        "vehicle": 4,
+        "terrain_buffer_bytes": 518832,
+        "labels": 0
+      }
+    }
+  }
+}

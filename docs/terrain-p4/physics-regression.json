@@ -1,0 +1,283 @@
+{
+ "status": "PASS",
+ "source_sha": "37e9ed9d2973bb8e227d3caa42dd489414897ab9",
+ "run_id": "bd1b71a2-6737-4f85-91df-8402428ccc4f",
+ "browser": "156.0.8078.4",
+ "mode": "check",
+ "tolerance": {
+  "pose": {
+   "position_m": 0.05,
+   "angle_rad": 0.05
+  },
+  "top_speed_mps": 0.02,
+  "gaps": {
+   "jump_distance_m": 0.05,
+   "takeoff_speed_mps": 0.02,
+   "peak_compression_m": 0.005
+  },
+  "air": {
+   "takeoff_speed_mps": 0.02,
+   "airtime_s": 0.034,
+   "rotation_deg": 5,
+   "landing_angle_deg": 5,
+   "peak_compression_m": 0.005
+  }
+ },
+ "cases": [
+  "trace_gaps-3",
+  "trace_straight-top",
+  "trace_air-big-back",
+  "render_30fps",
+  "perturbed_trace_fails",
+  "perturbed_preset_fails",
+  "malformed_trace_refused"
+ ],
+ "results": {
+  "trace gaps-3": {
+   "label": "trace gaps-3",
+   "trace": "gaps-3",
+   "verdict": "MATCH",
+   "max_position_m": 6.7921879313748e-7,
+   "max_angle_rad": 4.9945259095185e-7,
+   "applied": 180,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 1,
+   "measured": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   },
+   "failures": [],
+   "tune": false,
+   "preset": "a",
+   "modified": false,
+   "damped_ticks": 0,
+   "pass": true
+  },
+  "trace straight-top": {
+   "label": "trace straight-top",
+   "trace": "straight-top",
+   "verdict": "MATCH",
+   "max_position_m": 6.8737742276047e-7,
+   "max_angle_rad": 4.9868803098797e-7,
+   "applied": 600,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 0.998,
+   "measured": {
+    "top_speed_mps": 6.9569810456712,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 6.9569810456712,
+    "complete": true
+   },
+   "failures": [],
+   "tune": false,
+   "preset": "a",
+   "modified": false,
+   "damped_ticks": 0,
+   "pass": true
+  },
+  "trace air-big-back": {
+   "label": "trace air-big-back",
+   "trace": "air-big-back",
+   "verdict": "MATCH",
+   "max_position_m": 6.9640370310338e-7,
+   "max_angle_rad": 4.9826812742459e-7,
+   "applied": 420,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 1,
+   "measured": {
+    "top_speed_mps": 8.0280454748561,
+    "status": "CRASHED",
+    "takeoff_speed_mps": 5.5927877021996,
+    "airtime_s": 1.7500000912696,
+    "rotation_deg": 422.22519790029,
+    "landing_angle_deg": 116.47180579203,
+    "peak_compression_m": 0.099115941693277,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 8.0280454748561,
+    "status": "CRASHED",
+    "takeoff_speed_mps": 5.5927877021996,
+    "airtime_s": 1.7500000912696,
+    "rotation_deg": 422.22519790029,
+    "landing_angle_deg": 116.47180579203,
+    "peak_compression_m": 0.099115941693277,
+    "complete": true
+   },
+   "failures": [],
+   "tune": false,
+   "preset": "a",
+   "modified": false,
+   "damped_ticks": 0,
+   "pass": true
+  },
+  "render 30 FPS gaps-3": {
+   "label": "render 30 FPS gaps-3",
+   "trace": "gaps-3",
+   "verdict": "MATCH",
+   "max_position_m": 6.7921879313748e-7,
+   "max_angle_rad": 4.9945259095185e-7,
+   "applied": 180,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 0.503,
+   "measured": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   },
+   "failures": [],
+   "tune": false,
+   "preset": "a",
+   "modified": false,
+   "damped_ticks": 0,
+   "pass": true
+  },
+  "perturbed trace gaps-3": {
+   "label": "perturbed trace gaps-3",
+   "trace": "gaps-3",
+   "verdict": "DIVERGED",
+   "max_position_m": 11.562717409223,
+   "max_angle_rad": 1.3400366862411,
+   "applied": 180,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 1,
+   "measured": {
+    "top_speed_mps": 7.0000004538894,
+    "status": "MISSED",
+    "jump_distance_m": null,
+    "takeoff_speed_mps": 4.7101787277271,
+    "peak_compression_m": 0,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 6.9999998435378,
+    "status": "CLEARED",
+    "jump_distance_m": 3.3184256965,
+    "takeoff_speed_mps": 6.0152000608623,
+    "peak_compression_m": 0.27324715003564,
+    "complete": true
+   },
+   "failures": [
+    {
+     "check": "verdict",
+     "expected": "MATCH",
+     "measured": "DIVERGED",
+     "tolerance": {
+      "position_m": 0.05,
+      "angle_rad": 0.05
+     }
+    },
+    {
+     "check": "status",
+     "expected": "CLEARED",
+     "measured": "MISSED",
+     "tolerance": null
+    },
+    {
+     "check": "jump_distance_m",
+     "expected": 3.3184256965,
+     "measured": null,
+     "tolerance": 0.05
+    },
+    {
+     "check": "takeoff_speed_mps",
+     "expected": 6.0152000608623,
+     "measured": 4.7101787277271,
+     "tolerance": 0.02
+    },
+    {
+     "check": "peak_compression_m",
+     "expected": 0.27324715003564,
+     "measured": 0,
+     "tolerance": 0.005
+    }
+   ],
+   "tune": false,
+   "preset": "a",
+   "modified": false,
+   "damped_ticks": 0,
+   "pass": false
+  },
+  "perturbed preset straight-top": {
+   "label": "perturbed preset straight-top",
+   "trace": "straight-top",
+   "verdict": "COMPARED",
+   "max_position_m": 1.6651712624875,
+   "max_angle_rad": 0.017000878891468,
+   "applied": 600,
+   "mismatches": 0,
+   "scaled_ticks": 0,
+   "frames_per_tick": 0.998,
+   "measured": {
+    "top_speed_mps": 6.7474693316042,
+    "complete": true
+   },
+   "expected": {
+    "top_speed_mps": 6.9569810456712,
+    "complete": true
+   },
+   "failures": [
+    {
+     "check": "verdict",
+     "expected": "MATCH",
+     "measured": "COMPARED",
+     "tolerance": {
+      "position_m": 0.05,
+      "angle_rad": 0.05
+     }
+    },
+    {
+     "check": "top_speed_mps",
+     "expected": 6.9569810456712,
+     "measured": 6.7474693316042,
+     "tolerance": 0.02
+    }
+   ],
+   "tune": {
+    "value": -31,
+    "key": "motor_speed",
+    "applied": true
+   },
+   "preset": "a",
+   "modified": true,
+   "damped_ticks": 0,
+   "pass": false
+  },
+  "refused": {
+   "malformed": "lean length is not one entry per tick",
+   "modified": "trace is not preset A unmodified"
+  }
+ },
+ "limits": "HTML5 debug build in headless Playwright Chromium only; 60 Hz physics at time factor 1.0; render checked at 60 and 30 FPS. No cross-platform, native, Android or device determinism claim.",
+ "real_device": "NOT RUN"
+}

@@ -1,0 +1,20 @@
+{
+  "source_sha": "37e9ed9d2973bb8e227d3caa42dd489414897ab9",
+  "run_id": "f36fdcee-c414-443b-9183-4891033fc6e7",
+  "status": "PASS",
+  "event": "suite_end",
+  "cases": {
+    "brake_priority": true,
+    "drive_dx": 1302.4530035132,
+    "camera_follow": true,
+    "stopped_speed": 7.9657921791077,
+    "reverse_speed": -175.62208557129,
+    "max_angle": 0.11107128858566,
+    "drive_speed": 683.23498535156,
+    "camera_direction_zoom": true,
+    "reverse_dx": -349.12927246094,
+    "camera_follow_window": true,
+    "air_angle": 0.8794196844101,
+    "wheel_contact": true
+  }
+}

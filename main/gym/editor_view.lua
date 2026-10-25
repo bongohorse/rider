@@ -3,6 +3,7 @@ local editor=require "main.gym.editor"
 local doc=require "main.gym.editor_doc"
 local lines=require "main.gym.editor_lines"
 local terrain=require "main.gym.editor_terrain"
+local residency=require "main.gym.terrain_residency"
 local socket=require "socket"
 local M={}
 local SELECTED,HOVER=vmath.vector4(1,0.7765,0.4275,1),vmath.vector4(0.8353,0.9529,0.9137,1)
@@ -72,16 +73,16 @@ local function markers(v,e)
     if v.finish then lines.tint({v.finish.ids[1]},editor.selection=="finish" and SELECTED or require("main.gym.stations").FINISH_TINT) end
 end
 local function counts(self)
-    local v=self.view;local last=v.mesh.last or {chunks=0,buffer_bytes=0}
+    local v=self.view;local last=v.mesh.last_geometry or {chunks=0,buffer_bytes=0}
     editor.view_counts={sprites=v.sprites,labels=v.labels,objects=#editor.doc.editor.objects,generation=self.session_generation,simplified=false,
-        meshes=last.chunks,mesh_bytes=last.buffer_bytes}
+        meshes=last.chunks,mesh_bytes=last.buffer_bytes,allocated_meshes=last.allocated,allocated_mesh_bytes=last.allocated_bytes}
 end
 local function publish(self,elapsed)
     if html5 and sys.get_engine_info().is_debug then
         local v=self.view;local entries={}
-        for _,e in ipairs(v.mesh.entries) do entries[#entries+1]={key=e.key,path=e.path,vertices=e.geometry.vertices,first=e.points[1],last=e.points[#e.points]} end
+        for _,e in ipairs(v.mesh.entries) do entries[#entries+1]={key=e.key,path=e.path,vertices=e.geometry and e.geometry.vertices or 0,first=e.points[1],last=e.points[#e.points]} end
         html5.run("window.riderEditorMesh="..json.encode({generation=self.session_generation,opened=v.opened,revision=editor.doc.editor.revision,
-            shape_version=editor.shape_version,updates=v.mesh.updates,uploads=v.mesh.uploads,last=v.mesh.last,elapsed_ms=elapsed,entries=entries}))
+            shape_version=editor.shape_version,updates=v.mesh.updates,uploads=v.mesh.uploads,last=v.mesh.last_geometry,elapsed_ms=elapsed,entries=entries}))
     end
 end
 function M.build(self)
@@ -113,7 +114,7 @@ function M.refresh(self,force)
     local mesh_dirty=force or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
     local started=socket.gettime()
     local ok,result,err=true,true,nil
-    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation) end
+    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation,residency.viewport(editor.camera)) end
     if not ok then err="Mesh preview unavailable: "..tostring(result);result=nil end
     if not result then
         print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return
@@ -122,14 +123,16 @@ function M.refresh(self,force)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
     v.mesh_revision,v.style_key=e.revision,style_key
     counts(self);if mesh_dirty then publish(self,(socket.gettime()-started)*1000) end
+    return mesh_dirty
 end
 function M.update(self)
+    local built=false
     if self.editor_rebuild then
         self.editor_rebuild=nil
         if self.editor_fallback then
             lines.build(self);self.view.line_mode=true;self.view.capacity_shape=editor.shape_version
             editor.display_note=self.editor_fallback;self.editor_fallback=nil
-        else M.build(self) end
+        else M.build(self);built=true end
     end
     local v=self.view;if not v then return end
     if v.opened~=editor.opened then
@@ -146,7 +149,16 @@ function M.update(self)
     go.set_position(vmath.vector3(c.x/scale,c.y/scale,500),"/camera")
     go.set("/camera#camera","orthographic_zoom",c.zoom)
     editor.screen=lines.mapping(c);editor.screen.opened=v.opened
-    M.refresh(self)
-    if self.view then lines.readable(self.view,c.zoom) end
+    local refreshed=M.refresh(self)
+    if self.view then
+        -- A source/style refresh already applied residency; keep one speculative budget per frame.
+        if not refreshed and not built then
+            local ok,err=pcall(terrain.resident,v.mesh,self.session_generation,residency.viewport(c))
+            if not ok then
+                print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=tostring(err);return
+            end
+        end
+        counts(self);lines.readable(self.view,c.zoom)
+    end
 end
 return M

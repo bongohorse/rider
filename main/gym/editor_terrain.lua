@@ -1,6 +1,7 @@
 -- Source-to-preview dependency planning. No compiler/physics/source writes; no per-frame rebuild.
 local doc=require "main.gym.editor_doc"
 local geometry=require "main.gym.terrain_geometry"
+local residency=require "main.gym.terrain_residency"
 local M={}
 local function point_key(p) return string.format("%.17g,%.17g",p[1],p[2]) end
 local function same(a,b)
@@ -84,7 +85,36 @@ function M.plan(e,previews,selected,hover,old)
     return plans
 end
 function M.create() return {entries={},serial=0,updates=0,uploads=0} end
-function M.update(state,e,previews,selected,hover,generation)
+local function materialize(state,entry,generation,result)
+    local mesh=require "main.gym.terrain_mesh"
+    local p=entry.plan
+    local rebuilt=entry.dirty or not entry.resource
+    if rebuilt then
+        local c=geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
+        if not entry.resource then state.resource_serial=(state.resource_serial or 0)+1 end
+        mesh.upload(entry,c,"/editor_terrain/g"..generation.."-slot"..state.resource_serial..".bufferc")
+        result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
+    elseif entry.restyle then
+        mesh.colors(entry,p.styles,p.first);result.recolored=result.recolored+1
+    end
+    local c=entry.geometry
+    local scale=sys.get_config_number("physics.scale",0.01)
+    go.set(msg.url(nil,entry.object,"mesh"),"editor_params",vmath.vector4(p.phase,(p.lower-c.origin[2])/scale,geometry.DEPTH/scale,1))
+    if c.body=="filled" then c.bounds[2]=p.lower-c.origin[2];mesh.bounds(resource.get_buffer(entry.resource),c) end
+    result.uniforms=result.uniforms+1
+    entry.restyle=nil
+end
+function M.resident(state,generation,view,result)
+    local mesh=require "main.gym.terrain_mesh"
+    result=result or {rebuilt=0,recolored=0,uniforms=0}
+    local r=residency.update(state,state.entries,view,function(entry) materialize(state,entry,generation,result) end,function(entry) mesh.drop(entry,true) end)
+    if state.last_geometry then
+        state.last_geometry.allocated,state.last_geometry.allocated_bytes=r.allocated,r.bytes
+    end
+    mesh.diagnostics(state,"edit",generation)
+    return r
+end
+function M.update(state,e,previews,selected,hover,generation,view)
     local mesh=require "main.gym.terrain_mesh"
     local plans,err=M.plan(e,previews,selected,hover,state.entries)
     if not plans then return nil,err end
@@ -93,33 +123,24 @@ function M.update(state,e,previews,selected,hover,generation)
     for _,entry in ipairs(state.entries) do if not retained[entry] then retired[#retired+1]=entry end end
     local result={rebuilt=0,reused=0,recolored=0,uniforms=0,chunks=#plans,vertices=0,buffer_bytes=0}
     local entries={};state.pending=entries
-    local scale=sys.get_config_number("physics.scale",0.01)
     for _,p in ipairs(plans) do
         local entry=p.entry or table.remove(retired) or {}
         if not entry.key then state.serial=state.serial+1;entry.key=state.serial end
         entries[#entries+1]=entry
-        if p.changed then
-            local c=geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
-            mesh.upload(entry,c,"/editor_terrain/g"..generation.."-"..entry.key..".bufferc")
-            result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
-        else
-            result.reused=result.reused+1
-            if p.restyled then mesh.colors(entry,p.styles,p.first);result.recolored=result.recolored+1 end
-        end
-        local c=entry.geometry
-        if entry.phase~=p.phase or entry.lower~=p.lower or p.changed then
-            go.set(msg.url(nil,entry.object,"mesh"),"editor_params",vmath.vector4(p.phase,(p.lower-c.origin[2])/scale,geometry.DEPTH/scale,1))
-            if c.body=="filled" and entry.lower~=p.lower then
-                c.bounds[2]=p.lower-c.origin[2]
-                mesh.bounds(resource.get_buffer(entry.resource),c)
-            end
-            result.uniforms=result.uniforms+1
-        end
+        entry.dirty=entry.dirty or p.changed
+        entry.refresh=entry.refresh or p.restyled or entry.phase~=p.phase or entry.lower~=p.lower
+        entry.restyle=entry.restyle or p.restyled
+        if not p.changed then result.reused=result.reused+1 end
+        entry.plan=p;entry.bounds=geometry.extent(p.prep,p.first,p.last)
         entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
-        result.vertices=result.vertices+c.vertices;result.buffer_bytes=result.buffer_bytes+c.bytes
+        local vertices=(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0)
+        result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*36
     end
-    for _,entry in ipairs(retired) do mesh.drop(entry,true) end
-    state.entries=entries;state.pending=nil;state.updates=state.updates+1;state.last=result
+    for _,entry in ipairs(retired) do mesh.drop(entry,true);entry.geometry=nil end
+    -- Register new entries before any potentially failing upload; pending retains partial failure cleanup.
+    state.entries=entries;state.last_geometry=result;state.revision=(state.revision or 0)+1
+    M.resident(state,generation,view,result)
+    state.pending=nil;state.updates=state.updates+1
     return result
 end
 function M.final(state,remove)
