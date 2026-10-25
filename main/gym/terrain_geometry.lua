@@ -111,11 +111,14 @@ end
 -- Cheap world-space projected bounds; no emitted vertex/color/UV arrays.
 function M.extent(prep,first,last)
     local b={math.huge,math.huge,-math.huge,-math.huge}
+    local function include(x,y)
+        b[1],b[2]=math.min(b[1],x),math.min(b[2],y)
+        b[3],b[4]=math.max(b[3],x+M.DEPTH*M.PROJECTION[1]),math.max(b[4],y+M.DEPTH*M.PROJECTION[2])
+    end
     for i=first,last do
-        for _,q in ipairs({{prep.p[i][1],prep.p[i][2],0},prep.offset(i,M.EDGE),prep.bottom(i)}) do
-            b[1],b[2]=math.min(b[1],q[1]),math.min(b[2],q[2])
-            b[3],b[4]=math.max(b[3],q[1]+M.DEPTH*M.PROJECTION[1]),math.max(b[4],q[2]+M.DEPTH*M.PROJECTION[2])
-        end
+        local p,n=prep.p[i],prep.normals[i];include(p[1],p[2])
+        if prep.monotone then include(p[1],math.min(prep.lower,p[2]-M.EDGE))
+        else include(p[1]+n[1]*M.EDGE,p[2]+n[2]*M.EDGE);include(p[1]+n[1]*.9,p[2]+n[2]*.9) end
     end
     -- Same half-engine-unit guard as the uploaded AABB, including floating conversion error.
     b[1],b[2],b[3],b[4]=b[1]-.005,b[2]-.005,b[3]+.005,b[4]+.005
