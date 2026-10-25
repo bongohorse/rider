@@ -3,6 +3,7 @@ local geometry=require "main.gym.terrain_geometry"
 local stations=require "main.gym.stations"
 local socket=require "socket"
 local M={}
+local SELECT_GAIN={1.6,.95,.5}
 -- Scalar debug accounting only; no world/resource handles are kept in module state.
 local created,released=0,0
 local function publish()
@@ -53,7 +54,7 @@ function M.colors(entry,styles)
         for i=g.first,g.last do
             local k=(i-1)%4+1;local v=c.base_colors[i]
             if state==-1 and k==4 then v=0
-            elseif state==1 and k<4 then v=v*({1.6,.95,.5})[k]
+            elseif state==1 and k<4 then v=v*SELECT_GAIN[k]
             elseif state==2 and k<4 then v=v*1.2 end
             col[i]=v
         end

@@ -2,6 +2,7 @@
 local M={VERSION=1,INTERVALS=64,PROJECTION={0.18,0.55},DEPTH=0.9,EDGE=0.18}
 local BODY_TOP,BODY_BOTTOM={0.25,0.34,0.29,1},{0.10,0.16,0.17,1}
 local TOP,BACK,EDGE,CAP={0.63,0.76,0.62,1},{0.43,0.60,0.47,1},{0.29,0.43,0.36,1},{0.17,0.25,0.22,1}
+local SELECT_GAIN={1.6,.95,.5}
 local function distance(a,b) return math.sqrt((b[1]-a[1])^2+(b[2]-a[2])^2) end
 -- Shared preparation and section builder. Normal Play keeps its original partition/coordinates.
 function M.prepare(raw,lower,arc)
@@ -50,11 +51,11 @@ function M.section(prep,first,last,key,editing,styles)
                 local x,y,z=q[1]-c.origin[1],q[2]-c.origin[2],q[3]
                 local encoded=z
                 if editing and q[4] then y=0;encoded=z>0 and -2*M.DEPTH or -M.DEPTH end
-                for _,v in ipairs({x,y,encoded}) do c.position[#c.position+1]=v end
+                local n=#c.position;c.position[n+1],c.position[n+2],c.position[n+3]=x,y,encoded
                 for k,v in ipairs(color) do
                     if editing then c.base_colors[#c.base_colors+1]=v end
                     if state==-1 and k==4 then v=0
-                    elseif state==1 and k<4 then v=v*({1.6,0.95,0.5})[k]
+                    elseif state==1 and k<4 then v=v*SELECT_GAIN[k]
                     elseif state==2 and k<4 then v=v*1.2 end
                     c.color[#c.color+1]=v
                 end
