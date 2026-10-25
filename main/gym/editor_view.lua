@@ -126,12 +126,13 @@ function M.refresh(self,force)
     return mesh_dirty
 end
 function M.update(self)
+    local built=false
     if self.editor_rebuild then
         self.editor_rebuild=nil
         if self.editor_fallback then
             lines.build(self);self.view.line_mode=true;self.view.capacity_shape=editor.shape_version
             editor.display_note=self.editor_fallback;self.editor_fallback=nil
-        else M.build(self) end
+        else M.build(self);built=true end
     end
     local v=self.view;if not v then return end
     if v.opened~=editor.opened then
@@ -151,7 +152,7 @@ function M.update(self)
     local refreshed=M.refresh(self)
     if self.view then
         -- A source/style refresh already applied residency; keep one speculative budget per frame.
-        if not refreshed then
+        if not refreshed and not built then
             local ok,err=pcall(terrain.resident,v.mesh,self.session_generation,residency.viewport(c))
             if not ok then
                 print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=tostring(err);return
