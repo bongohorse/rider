@@ -35,6 +35,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [ENGINE_REFERENCES.md](ENGINE_REFERENCES.md) | Official Defold/Box2D sources | Read only what the task needs · Defold · Box2D · Automation Bridge · Build, platforms and gameplay evidence · Maintenance |
 | [PLATFORM_MATRIX.md](PLATFORM_MATRIX.md) | Evidence per platform and device | — |
 | [MOBILE_TRIAL.md](MOBILE_TRIAL.md) | Reference-phone test procedure | Touch and layout · Coasting and HUD · Comparable phone captures · Tilt comparison |
+| [TERRAIN_P1_REPORT.md](TERRAIN_P1_REPORT.md) | Isolated flat/depth mesh experiment (#273) | Preview and scope · Geometry and ownership · Measurements · Verification and limits · Engine evidence and reproduction |
 | [TERRAIN_P0_REPORT.md](TERRAIN_P0_REPORT.md) | Curve and mixed-course resource/performance baseline (#272) | Scope and environment · Fixtures and allocations · Measurement method · Results · Cost and limit audit · Recommendation for #273 · Reproduction and verification |
 | [LE1B_REPORT.md](LE1B_REPORT.md) | Custom level size, performance and world-switch measurement (`le1b` case) | Summary · Protocol · Desktop results · Phone results · Phone procedure · Findings for later tasks · Reproduction · Engine sources |
 | [A18_SEAM_PROTOCOL.md](A18_SEAM_PROTOCOL.md) | Chain vs hull seam experiment (`a18` case) | Revision history · Fixed commands and qualification · Sampling and bump definition · Reproduction · Engine boundary |
