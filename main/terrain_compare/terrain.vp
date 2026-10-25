@@ -4,13 +4,17 @@ in lowp vec4 color;
 in highp vec2 texcoord0;
 out lowp vec4 var_color;
 out highp vec2 var_uv;
-uniform vs_uniforms { highp mat4 world_view_proj; };
+uniform vs_uniforms { highp mat4 world_view_proj; highp vec4 editor_params; };
 void main() {
     // Shallow visual extrusion only. Camera and 2D collision coordinates stay unchanged.
     vec3 p = position;
+    if (editor_params.w > 0.5 && p.z < 0.0) {
+        p.y = editor_params.y;
+        p.z = p.z < -1.5 * editor_params.z ? editor_params.z : 0.0;
+    }
     p.xy += p.z * vec2(0.18, 0.55);
     p.z = 0.0;
     gl_Position = world_view_proj * vec4(p, 1.0);
     var_color = color;
-    var_uv = texcoord0;
+    var_uv = texcoord0 + vec2(editor_params.x, 0.0);
 }

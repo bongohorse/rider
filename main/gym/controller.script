@@ -585,6 +585,7 @@ function fixed_update(self, dt)
     if self.time_probe then self.time_probe.fixed(self,dt) end
 end
 function final(self)
+    editor_view.final(self)
     if self.terrain_compare then require("main.terrain_compare.renderer").final(self) end
     require("main.gym.terrain_mesh").final(self)
     mobile.final()

@@ -9,8 +9,8 @@ const r={schema:1,status:'INCOMPLETE',source_sha:expected,views:[],switches:[],e
  async function ready(){
   await page.waitForFunction(()=>document.getElementById('state')?.textContent==='Ready · normal Play',null,{timeout:65000});
   const frame=page.frames().find(f=>f.url().includes('/index.html'));
-  const s=await frame.evaluate(()=>({ready:window.riderReady,telemetry:window.riderTelemetry,debug:[typeof window.riderWorld,typeof window.riderEditor,typeof window.riderTerrainMesh,typeof window.riderTerrainCompare]}));
-  assert.equal(s.ready.source_sha,expected);assert.deepEqual(s.debug,['undefined','undefined','undefined','undefined']);
+  const s=await frame.evaluate(()=>({ready:window.riderReady,telemetry:window.riderTelemetry,debug:[typeof window.riderWorld,typeof window.riderEditor,typeof window.riderTerrainMesh,typeof window.riderTerrainCompare,typeof window.riderEditorMesh]}));
+  assert.equal(s.ready.source_sha,expected);assert.deepEqual(s.debug,['undefined','undefined','undefined','undefined','undefined']);
   assert.equal(s.telemetry.preset,'a');assert.equal(s.telemetry.time_factor,1);assert.equal(s.telemetry.modified,false);
   return {frame,s};
  }
@@ -26,8 +26,24 @@ const r={schema:1,status:'INCOMPLETE',source_sha:expected,views:[],switches:[],e
  let after=await frame.evaluate(()=>window.riderTelemetry);assert.equal(after.session_generation,before.session_generation);assert.equal(after.world_loads,before.world_loads);
  // The normal editor remains available, drawing its previous line view. This is not mesh editor integration.
  await page.keyboard.down('e');await frame.waitForFunction(()=>window.riderEditing===true);await page.keyboard.up('e');
+ if(process.argv.includes('--editor')){
+  await page.waitForTimeout(600);await page.keyboard.down('Home');await page.waitForTimeout(120);await page.keyboard.up('Home');await page.waitForTimeout(200);
+  assert.equal(await frame.evaluate(()=>window.riderEditing),true);
+  await page.screenshot({path:path.join(out,'editor-mixed.png')});
+  await page.setViewportSize({width:1280,height:480});await page.waitForTimeout(150);await page.screenshot({path:path.join(out,'editor-short.png')});
+  await page.setViewportSize({width:1280,height:720});
+  await page.keyboard.down('Control');await page.keyboard.down('s');await page.waitForTimeout(150);await page.keyboard.up('s');await page.keyboard.up('Control');
+  r.editor={entered:true,view_only_home:true,save_shortcut_sent:true,debug_mesh:await frame.evaluate(()=>typeof window.riderEditorMesh)};
+ }
  await page.waitForTimeout(300);await page.keyboard.down('e');await frame.waitForFunction(n=>!window.riderEditing&&window.riderTelemetry.session_generation>n,before.session_generation);await page.keyboard.up('e');
  await frame.waitForFunction(()=>window.riderTelemetry.sequence>2);assert.equal((await frame.evaluate(()=>window.riderTelemetry)).terrain_shapes,708);
+ if(process.argv.includes('--editor')){
+  await page.reload();({frame,s}=await ready());
+  assert.equal(await page.locator('#state').getAttribute('data-resumed'),'true','Reload reimported the benchmark');
+  assert.equal(s.telemetry.session_generation,1,'Reload created a replacement import world');
+  assert.equal(s.telemetry.station,'p0-mixed');r.editor.reload_without_reimport=true;
+  await frame.locator('canvas').focus();await page.waitForTimeout(1100);
+ }
  // Real keyboard A→B→A proxy switches, in the same engine instance.
  for(const [key,id] of [['1','straight'],['2','ramps'],['1','straight']]){
   const generation=await frame.evaluate(()=>window.riderTelemetry.session_generation);

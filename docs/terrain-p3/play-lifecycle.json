@@ -1,0 +1,497 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "5380b9a029672b350df7c23683381b07b344ec51",
+  "mode": "mesh",
+  "loads": [
+    {
+      "generation": 2,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g2-run1-1-65.bufferc",
+          "/terrain_mesh/g2-run1-65-129.bufferc",
+          "/terrain_mesh/g2-run1-129-193.bufferc",
+          "/terrain_mesh/g2-run1-193-257.bufferc",
+          "/terrain_mesh/g2-run1-257-321.bufferc",
+          "/terrain_mesh/g2-run1-321-385.bufferc",
+          "/terrain_mesh/g2-run1-385-449.bufferc",
+          "/terrain_mesh/g2-run1-449-513.bufferc",
+          "/terrain_mesh/g2-run1-513-577.bufferc",
+          "/terrain_mesh/g2-run1-577-641.bufferc",
+          "/terrain_mesh/g2-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 55.000066757202,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 2,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 12,
+        "owned": 11,
+        "released": 1
+      },
+      "webgl": {
+        "created": 96,
+        "deleted": 32,
+        "live": 64,
+        "histogram": {
+          "0": 37,
+          "16": 2,
+          "64": 6,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 3,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g3-run1-1-65.bufferc",
+          "/terrain_mesh/g3-run1-65-129.bufferc",
+          "/terrain_mesh/g3-run1-129-193.bufferc",
+          "/terrain_mesh/g3-run1-193-257.bufferc",
+          "/terrain_mesh/g3-run1-257-321.bufferc",
+          "/terrain_mesh/g3-run1-321-385.bufferc",
+          "/terrain_mesh/g3-run1-385-449.bufferc",
+          "/terrain_mesh/g3-run1-449-513.bufferc",
+          "/terrain_mesh/g3-run1-513-577.bufferc",
+          "/terrain_mesh/g3-run1-577-641.bufferc",
+          "/terrain_mesh/g3-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 57.000160217285,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 3,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 23,
+        "owned": 11,
+        "released": 12
+      },
+      "webgl": {
+        "created": 136,
+        "deleted": 70,
+        "live": 66,
+        "histogram": {
+          "0": 37,
+          "16": 3,
+          "64": 7,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 4,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g4-run1-1-65.bufferc",
+          "/terrain_mesh/g4-run1-65-129.bufferc",
+          "/terrain_mesh/g4-run1-129-193.bufferc",
+          "/terrain_mesh/g4-run1-193-257.bufferc",
+          "/terrain_mesh/g4-run1-257-321.bufferc",
+          "/terrain_mesh/g4-run1-321-385.bufferc",
+          "/terrain_mesh/g4-run1-385-449.bufferc",
+          "/terrain_mesh/g4-run1-449-513.bufferc",
+          "/terrain_mesh/g4-run1-513-577.bufferc",
+          "/terrain_mesh/g4-run1-577-641.bufferc",
+          "/terrain_mesh/g4-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 51.000118255615,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 4,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 34,
+        "owned": 11,
+        "released": 23
+      },
+      "webgl": {
+        "created": 176,
+        "deleted": 108,
+        "live": 68,
+        "histogram": {
+          "0": 37,
+          "16": 4,
+          "64": 8,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 5,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g5-run1-1-65.bufferc",
+          "/terrain_mesh/g5-run1-65-129.bufferc",
+          "/terrain_mesh/g5-run1-129-193.bufferc",
+          "/terrain_mesh/g5-run1-193-257.bufferc",
+          "/terrain_mesh/g5-run1-257-321.bufferc",
+          "/terrain_mesh/g5-run1-321-385.bufferc",
+          "/terrain_mesh/g5-run1-385-449.bufferc",
+          "/terrain_mesh/g5-run1-449-513.bufferc",
+          "/terrain_mesh/g5-run1-513-577.bufferc",
+          "/terrain_mesh/g5-run1-577-641.bufferc",
+          "/terrain_mesh/g5-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 37.999868392944,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 5,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 45,
+        "owned": 11,
+        "released": 34
+      },
+      "webgl": {
+        "created": 216,
+        "deleted": 146,
+        "live": 70,
+        "histogram": {
+          "0": 37,
+          "16": 5,
+          "64": 9,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 6,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g6-run1-1-65.bufferc",
+          "/terrain_mesh/g6-run1-65-129.bufferc",
+          "/terrain_mesh/g6-run1-129-193.bufferc",
+          "/terrain_mesh/g6-run1-193-257.bufferc",
+          "/terrain_mesh/g6-run1-257-321.bufferc",
+          "/terrain_mesh/g6-run1-321-385.bufferc",
+          "/terrain_mesh/g6-run1-385-449.bufferc",
+          "/terrain_mesh/g6-run1-449-513.bufferc",
+          "/terrain_mesh/g6-run1-513-577.bufferc",
+          "/terrain_mesh/g6-run1-577-641.bufferc",
+          "/terrain_mesh/g6-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 42.999982833862,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 6,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 56,
+        "owned": 11,
+        "released": 45
+      },
+      "webgl": {
+        "created": 256,
+        "deleted": 184,
+        "live": 72,
+        "histogram": {
+          "0": 37,
+          "16": 6,
+          "64": 10,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 7,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g7-run1-1-65.bufferc",
+          "/terrain_mesh/g7-run1-65-129.bufferc",
+          "/terrain_mesh/g7-run1-129-193.bufferc",
+          "/terrain_mesh/g7-run1-193-257.bufferc",
+          "/terrain_mesh/g7-run1-257-321.bufferc",
+          "/terrain_mesh/g7-run1-321-385.bufferc",
+          "/terrain_mesh/g7-run1-385-449.bufferc",
+          "/terrain_mesh/g7-run1-449-513.bufferc",
+          "/terrain_mesh/g7-run1-513-577.bufferc",
+          "/terrain_mesh/g7-run1-577-641.bufferc",
+          "/terrain_mesh/g7-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 49.000024795532,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 7,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 67,
+        "owned": 11,
+        "released": 56
+      },
+      "webgl": {
+        "created": 296,
+        "deleted": 222,
+        "live": 74,
+        "histogram": {
+          "0": 37,
+          "16": 7,
+          "64": 11,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 8,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g8-run1-1-65.bufferc",
+          "/terrain_mesh/g8-run1-65-129.bufferc",
+          "/terrain_mesh/g8-run1-129-193.bufferc",
+          "/terrain_mesh/g8-run1-193-257.bufferc",
+          "/terrain_mesh/g8-run1-257-321.bufferc",
+          "/terrain_mesh/g8-run1-321-385.bufferc",
+          "/terrain_mesh/g8-run1-385-449.bufferc",
+          "/terrain_mesh/g8-run1-449-513.bufferc",
+          "/terrain_mesh/g8-run1-513-577.bufferc",
+          "/terrain_mesh/g8-run1-577-641.bufferc",
+          "/terrain_mesh/g8-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 39.000034332275,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 8,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 78,
+        "owned": 11,
+        "released": 67
+      },
+      "webgl": {
+        "created": 336,
+        "deleted": 260,
+        "live": 76,
+        "histogram": {
+          "0": 37,
+          "16": 8,
+          "64": 12,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    },
+    {
+      "generation": 9,
+      "mesh": {
+        "paths": [
+          "/terrain_mesh/g9-run1-1-65.bufferc",
+          "/terrain_mesh/g9-run1-65-129.bufferc",
+          "/terrain_mesh/g9-run1-129-193.bufferc",
+          "/terrain_mesh/g9-run1-193-257.bufferc",
+          "/terrain_mesh/g9-run1-257-321.bufferc",
+          "/terrain_mesh/g9-run1-321-385.bufferc",
+          "/terrain_mesh/g9-run1-385-449.bufferc",
+          "/terrain_mesh/g9-run1-449-513.bufferc",
+          "/terrain_mesh/g9-run1-513-577.bufferc",
+          "/terrain_mesh/g9-run1-577-641.bufferc",
+          "/terrain_mesh/g9-run1-641-667.bufferc"
+        ],
+        "chunks": 11,
+        "mesh_gameobjects": 11,
+        "buffer_bytes": 432000,
+        "intervals": 64,
+        "build_ms": 38.000106811523,
+        "decoration_sprites": 1,
+        "labels": 1,
+        "vertices": 12000,
+        "lower_extent": -12.003485581898,
+        "version": 1,
+        "generation": 9,
+        "projection": [
+          0.18,
+          0.55
+        ],
+        "depth": 0.9,
+        "station": "p0-six-anchor",
+        "triangles": 4000
+      },
+      "lifecycle": {
+        "created": 89,
+        "owned": 11,
+        "released": 78
+      },
+      "webgl": {
+        "created": 376,
+        "deleted": 298,
+        "live": 78,
+        "histogram": {
+          "0": 37,
+          "16": 9,
+          "64": 13,
+          "72": 1,
+          "80": 1,
+          "108": 2,
+          "576": 1,
+          "13200": 1,
+          "17064": 1,
+          "41472": 9,
+          "41688": 1,
+          "71904": 1,
+          "640000": 1
+        }
+      }
+    }
+  ],
+  "errors": []
+}

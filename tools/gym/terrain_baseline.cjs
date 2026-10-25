@@ -10,7 +10,7 @@ if(bundleArg==='--fixtures'){
  for(const id of ['six-anchor','long-curves','mixed','long-over-budget']){const source=fixture(id,id==='mixed',id==='long-over-budget');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');}
  process.exit(0);
 }
-const mesh=process.argv.includes("--mesh");
+const mesh=process.argv.includes("--mesh"),editorMesh=process.argv.includes("--editor-mesh");
 const deadline=setTimeout(()=>{console.error('Terrain observation exceeded 240 s');process.exit(1);},240000);
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bundle import verify_bundle;verify_bundle(sys.argv[1],sys.argv[2])',bundle,sha]);
@@ -53,7 +53,7 @@ function fixture(id,mixed=false,large=false){
 }
 // The same observation boundaries as sizes.cjs, plus the existing editor publication.
 function probes(){
- const p=window.__p0={frames:[],polls:[],ready:[],world:[],editor:[],telemetry:[],editorCount:0};
+ const p=window.__p0={frames:[],polls:[],ready:[],world:[],editor:[],telemetry:[],mesh:[],editorCount:0};
  p.draws=0;p.gl_created=0;p.gl_deleted=0;p.gl_live=new Set();
  for(const proto of [window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype].filter(Boolean)){
   for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){const fn=proto[name];if(fn)proto[name]=function(...args){p.draws++;return fn.apply(this,args);};}
@@ -61,7 +61,7 @@ function probes(){
   proto.createBuffer=function(...args){const b=create.apply(this,args);if(b){p.gl_live.add(b);p.gl_created++;}return b;};
   proto.deleteBuffer=function(b){if(p.gl_live.delete(b))p.gl_deleted++;return del.call(this,b);};
  }
- for(const [name,list] of [['riderReady',p.ready],['riderWorld',p.world],['riderEditor',p.editor],['riderTelemetry',p.telemetry]]){let value;Object.defineProperty(window,name,{configurable:true,get:()=>value,set:v=>{value=v;if(name==='riderEditor')p.editorCount++;list.push({at:performance.now(),data:v});if(list.length>3000)list.shift();}});}
+ for(const [name,list] of [['riderEditorMesh',p.mesh],['riderReady',p.ready],['riderWorld',p.world],['riderEditor',p.editor],['riderTelemetry',p.telemetry]]){let value;Object.defineProperty(window,name,{configurable:true,get:()=>value,set:v=>{value=v;if(name==='riderEditor')p.editorCount++;list.push({at:performance.now(),data:v});if(list.length>3000)list.shift();}});}
  const raf=window.requestAnimationFrame.bind(window);
  window.requestAnimationFrame=cb=>raf(ts=>{const m=window.riderMobile;if(m&&!m.__p0){const poll=m.poll;m.poll=(dt,physics)=>{p.polled=true;p.polls.push({at:performance.now(),dt:dt*1000,physics});return poll(dt,physics);};m.__p0=true;}p.polled=false;const start=performance.now(),before=p.editorCount,draws=p.draws;try{cb(ts);}finally{p.frames.push({at:start,work:performance.now()-start,draws:p.draws-draws,polled:p.polled,engine_edit:p.editorCount!==before});}});
 }
@@ -115,11 +115,14 @@ function probes(){
    // Select and centre the first curve through real UI, then drag its visible anchor.
    await button('object_select_'+source.editor.objects.find(o=>o.type==='curve').id);await button('view_centre');await pointer.frames(page);
    for(let i=0;i<5;i++){
-    const e=await ed(),h=e.handles.find(h=>/^a\d+$/.test(h.name));assert.ok(h,'curve anchor handle');
+    const e=await ed(),h=e.handles.find(h=>editorMesh?h.name===(id==='six-anchor'?'o3':'o2'):/^a\d+$/.test(h.name));assert.ok(h,'curve anchor handle');
     const a=await canvas(e.screen.ox+h.p[0]*e.screen.ppm_x,e.screen.oy+h.p[1]*e.screen.ppm_y);await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
+    const beforeMesh=editorMesh?await page.evaluate(()=>window.riderEditorMesh):null;
     const from=await page.evaluate(()=>performance.now()),rev=(await ed()).revision;
-    for(let step=1;step<=12;step++){await page.mouse.move(a.x,a.y-8*step/12);await pointer.frames(page,{n:1});}await page.mouse.up();await page.waitForFunction(n=>window.riderEditor.revision>n,rev);await editReady();
-    r.drag.push(await page.evaluate(({from,rev})=>({observed_ms:performance.now()-from,first_preview_ms:window.__p0.editor.find(x=>x.at>=from&&/^anchor \d+:/.test(x.data.readout))?.at-from,commit_observed_ms:window.__p0.editor.find(x=>x.at>=from&&x.data.revision>rev).at-from,frames:window.__p0.frames.filter(f=>f.at>=from&&f.engine_edit).map(f=>({at:f.at-from,work:f.work})),view:window.riderEditor.view}),{from,rev}));
+    const inputs=[];for(let step=1;step<=12;step++){inputs.push({step,at:await page.evaluate(from=>performance.now()-from,from)});await page.mouse.move(a.x,a.y-8*step/12);await pointer.frames(page,{n:1});}const released=await page.evaluate(from=>performance.now()-from,from);await page.mouse.up();await page.waitForFunction(n=>window.riderEditor.revision>n,rev);await editReady();
+    if(editorMesh)await page.waitForFunction(()=>window.riderEditorMesh?.revision===window.riderEditor.revision);
+    r.drag.push(await page.evaluate(({from,rev})=>({observed_ms:performance.now()-from,first_preview_ms:window.__p0.editor.find(x=>x.at>=from&&/^(anchor|tangent)/.test(x.data.readout))?.at-from,commit_observed_ms:window.__p0.editor.find(x=>x.at>=from&&x.data.revision>rev).at-from,frames:window.__p0.frames.filter(f=>f.at>=from&&f.engine_edit).map(f=>({at:f.at-from,work:f.work})),view:window.riderEditor.view,owned_refs:window.riderTerrainMeshLifecycle?.owned,mesh_events:window.__p0.mesh.filter(x=>x.at>=from).map(x=>({at:x.at-from,data:x.data}))}),{from,rev}));
+    if(editorMesh){const m=r.drag.at(-1);m.before_mesh=beforeMesh;m.inputs=inputs;m.release_at=released;assert.equal(m.owned_refs,m.view.meshes,'Edit mesh references are unbalanced');const events=m.mesh_events.filter(x=>x.data.updates>beforeMesh.updates);assert.ok(events.length,'No mesh preview publication');assert.ok(events.some(x=>x.data.last.rebuilt>0),'No local geometry update');assert.ok(events.every(x=>x.data.last.rebuilt<beforeMesh.last.chunks),'Local tangent rebuilt the full route');assert.ok(events.every(x=>x.data.generation===beforeMesh.generation),'A tangent preview reloaded the edit world');}
     await page.keyboard.down('Control');await pointer.frames(page);await key('z');await page.keyboard.up('Control');await pointer.frames(page);await editReady();assert.deepEqual(await page.evaluate(()=>window.riderEditorDoc.objects),geometry.doc.objects,'Undo restores the benchmark source');
    }
    r.edited_frames=stats(r.drag.flatMap(d=>d.frames.map(f=>f.work)));console.log(id+': '+r.segments+' segments, Edit/Play and drag captured');

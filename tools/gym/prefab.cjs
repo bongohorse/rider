@@ -195,10 +195,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderEditor.selection==='o8');e=await ed();
   assert.equal(e.rows.length,6);assert.deepEqual(e.handles.map(x=>x.name),['lip','gap','end']);
   await page.screenshot({path:path.join(out,'prefab-course.png')});
-  // Jumping left swaps the kicker's parts: the edit world reloads. Its gap handle sits on the kicker's back
+  // Jumping left swaps the kicker's parts through local mesh updates. Its gap handle sits on the kicker's back
   // wall and follows a drag (the landing end holds the entry).
-  const gen=e.view.generation,r5=e.revision;await button('param_1');e=await revision(r5+1);
-  await page.waitForFunction(g=>window.riderEditor.view.generation>g,gen);e=await ed();
+  const gen=e.view.generation,r5=e.revision,uploads=await page.evaluate(()=>window.riderEditorMesh.uploads);await button('param_1');e=await revision(r5+1);
+  await page.waitForFunction(n=>window.riderEditorMesh.uploads>n,uploads);e=await ed();assert.equal(e.view.generation,gen,'a local prefab edit reloaded the world');
   assert.equal((await doc()).objects[7].params.facing,'left');assert.deepEqual(e.handles.map(x=>x.name),['lip','gap']);
   const gh=e.handles.find(x=>x.name==='gap').p;const flipped=(await paths()).o8;assert.ok(nearPoint(gh,flipped[2]),JSON.stringify([gh,flipped]));
   await drag(gh,[gh[0]+1,gh[1]]);e=await revision(r5+2);

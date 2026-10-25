@@ -167,7 +167,7 @@ module.exports=async function uiChecks(h){
  const full=JSON.parse(JSON.stringify(base));full.id='ea1-budget';full.name='800 segments';full.editor.connections=[];full.editor.next_id=2;
  full.editor.objects=[{id:'o1',type:'line',points:Array.from({length:801},(_,i)=>[i*.5,0])}];
  await importText(JSON.stringify(full),'ea1-budget.json');await key('Home');e=await settle();
- assert.equal(e.problem,'');assert.equal(e.view.sprites,804);assert.ok(e.view.labels<=1024);assert.equal(e.overlay.nodes,628);
+ assert.equal(e.problem,'');assert.equal(e.view.sprites,4);assert.equal(e.view.meshes,13);assert.equal(e.view.mesh_bytes,518832);assert.ok(e.view.labels<=1024);assert.equal(e.overlay.nodes,628);
  const counts={edit:{...e.view,nodes:e.overlay.nodes}};
  await key('e');await played('ea1-budget');await page.waitForFunction(()=>window.riderEditorRuntime?.decoration===0&&window.riderEditorRuntime.terrain_meshes===13);
  counts.play=await page.evaluate(()=>window.riderEditorRuntime);assert.equal(counts.play.sprites,6);assert.equal(counts.play.terrain_meshes,13);assert.equal(counts.play.terrain_buffer_bytes,518832);assert.equal(counts.play.struts,2);
@@ -175,7 +175,7 @@ module.exports=async function uiChecks(h){
  await page.waitForFunction(()=>window.riderEditorRuntime?.replay===4);
  counts.replay=await page.evaluate(()=>window.riderEditorRuntime);assert.equal(counts.replay.sprites,10);assert.equal(counts.replay.terrain_meshes,13);assert.equal(counts.replay.terrain_buffer_bytes,518832);
  for(let i=0;i<2;i++){
-  await key('e');e=await edit();assert.equal(e.view.sprites,804);assert.equal(e.overlay.nodes,628);
+  await key('e');e=await edit();assert.equal(e.view.sprites,4);assert.equal(e.view.meshes,13);assert.equal(e.view.mesh_bytes,518832);assert.equal(e.overlay.nodes,628);
   await key('e');await played('ea1-budget');await page.waitForFunction(()=>window.riderEditorRuntime?.decoration===0&&window.riderEditorRuntime.terrain_meshes===13&&window.riderEditorRuntime.replay===0);
   const live=await page.evaluate(()=>window.riderEditorRuntime);assert.equal(live.sprites,6);assert.equal(live.terrain_meshes,13);assert.equal(live.terrain_buffer_bytes,518832);assert.ok(live.labels<=1024);
  }

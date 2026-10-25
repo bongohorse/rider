@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "5380b9a029672b350df7c23683381b07b344ec51",
+  "errors": [],
+  "editor": {
+    "entered": true,
+    "view_only_home": true,
+    "save_shortcut_sent": true,
+    "debug_mesh": "undefined",
+    "reload_without_reimport": true
+  },
+  "views": [
+    {
+      "course": "six-anchor",
+      "view": "start",
+      "shapes": 666,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "crest",
+      "shapes": 696,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "descent",
+      "shapes": 696,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "jump",
+      "shapes": 696,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "landing",
+      "shapes": 696,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "long-curves",
+      "view": "valley",
+      "shapes": 696,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    },
+    {
+      "course": "mixed",
+      "view": "start",
+      "shapes": 708,
+      "debug_globals": [
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined",
+        "undefined"
+      ]
+    }
+  ],
+  "switches": [
+    {
+      "station": "straight",
+      "generation": 5
+    },
+    {
+      "station": "ramps",
+      "generation": 6
+    },
+    {
+      "station": "straight",
+      "generation": 7
+    }
+  ],
+  "engine_guard": {
+    "platform": "wasm-web",
+    "status": "PASS",
+    "cache_invalidations": [],
+    "architectures": {
+      "wasm-web": [
+        {
+          "bundled": "RiderG1.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "57127d029fda695af182ca4ba1a81e163e2fa2fa2515523915d7800515d6b03d"
+        },
+        {
+          "bundled": "RiderG1_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "43ec8b426efa2b9fedfcafc4ca0d19fb6800031cf5d8b206c3262aeef6bb618f"
+        }
+      ],
+      "wasm_pthread-web": [
+        {
+          "bundled": "RiderG1_pthread.wasm",
+          "extender": "dmengine.wasm",
+          "sha256": "14bddd6e70f46af0f2996a839a16270bd9f7f79556c1bfffa8fb2817544714b1"
+        },
+        {
+          "bundled": "RiderG1_pthread_wasm.js",
+          "extender": "dmengine.js",
+          "sha256": "d1ddf072eafa719f8a6a88748497051fe2a462e2d855379b5b14e3184e89c14a"
+        }
+      ]
+    },
+    "extender_lines": 2
+  },
+  "limitation": "Save shortcut input only in release; persistence/restore is established by debug le4/ea3/ea2, not inferred from this input. No physical phone/GPU proof."
+}
