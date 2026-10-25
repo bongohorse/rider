@@ -1,0 +1,14 @@
+components { id: "script" component: "/main/gym/controller.script" }
+components { id: "checker" component: "/main/gym/checker.factory" }
+components { id: "probe" component: "/main/gym/probe.factory" }
+components { id: "chassis" component: "/main/gym/chassis.factory" }
+components { id: "wheel" component: "/main/gym/wheel.factory" }
+components { id: "rider" component: "/main/gym/rider.factory" }
+components { id: "marker" component: "/main/gym/marker.factory" }
+components { id: "engine" component: "/main/gym/engine.sound" }
+components { id: "line" component: "/main/gym/line.factory" }
+components { id: "seesaw" component: "/main/gym/seesaw.factory" }
+components { id: "strut" component: "/main/gym/strut.factory" }
+components { id: "ghost_chassis" component: "/main/gym/ghost_chassis.factory" }
+components { id: "ghost_wheel" component: "/main/gym/ghost_wheel.factory" }
+components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory" }
