@@ -1,0 +1,139 @@
+{
+  "source_sha": "75a9a3dcdf3826b17e6a57aa2b38111d15d83110",
+  "run_id": "terrain-p0-1792876060188",
+  "note": "Same refined source, fixtures and cost protocol. The final runner changed only the later camera captures to use START variants of the actual long course instead of built-in stations.",
+  "results": [
+    {
+      "id": "six-anchor",
+      "segments": 666,
+      "runtime": {
+        "decoration": 667,
+        "struts": 2,
+        "generation": 13,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 673
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 54.400000005960464,
+          "p95": 68.19999998807907,
+          "p99": 68.19999998807907,
+          "max": 68.19999998807907
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 17.599999994039536,
+          "max": 17.69999998807907
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2.0999999940395355,
+          "p95": 5.199999988079071,
+          "p99": 6.199999988079071,
+          "max": 6.799999982118607
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "over25": 0
+      }
+    },
+    {
+      "id": "long-curves",
+      "segments": 696,
+      "runtime": {
+        "decoration": 697,
+        "struts": 2,
+        "generation": 24,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 1,
+        "sprites": 703
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 53.70000001788139,
+          "p95": 71.09999999403954,
+          "p99": 71.09999999403954,
+          "max": 71.09999999403954
+        },
+        "interval_ms": {
+          "n": 358,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 17.400000005960464,
+          "max": 33.30000001192093
+        },
+        "callback_ms": {
+          "n": 359,
+          "p50": 2,
+          "p95": 5.199999988079071,
+          "p99": 7.5999999940395355,
+          "max": 12.599999994039536
+        },
+        "physics_ms": {
+          "n": 359,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "over25": 1
+      }
+    },
+    {
+      "id": "mixed",
+      "segments": 696,
+      "runtime": {
+        "decoration": 745,
+        "struts": 2,
+        "generation": 45,
+        "replay": 0,
+        "vehicle": 4,
+        "labels": 7,
+        "sprites": 751
+      },
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 56.400000005960464,
+          "p95": 79.59999999403954,
+          "p99": 79.59999999403954,
+          "max": 79.59999999403954
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 17.69999998807907,
+          "max": 19.200000017881393
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 1.9000000059604645,
+          "p95": 5.0999999940395355,
+          "p99": 7.5,
+          "max": 9.599999994039536
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "over25": 0
+      }
+    }
+  ]
+}

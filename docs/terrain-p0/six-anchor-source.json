@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "units": "metres",
+  "id": "p0-six-anchor",
+  "name": "P0 six-anchor",
+  "spawn": [
+    2,
+    2
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    350,
+    -40,
+    50
+  ],
+  "chains": [
+    [
+      [
+        10,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [],
+  "checkpoints": [],
+  "editor": {
+    "editor_version": 7,
+    "compiler_version": 7,
+    "revision": 1,
+    "next_id": 2,
+    "sampling": {
+      "tolerance": 0.005,
+      "max_segment": 0.5
+    },
+    "objects": [
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              0,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              22,
+              1.3333333333333333
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              66,
+              4
+            ],
+            "in": [
+              -22,
+              0.3333333333333333
+            ],
+            "out": [
+              22,
+              -0.3333333333333333
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              132,
+              -2
+            ],
+            "in": [
+              -22,
+              -0.16666666666666666
+            ],
+            "out": [
+              22,
+              0.16666666666666666
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              198,
+              5
+            ],
+            "in": [
+              -22,
+              -0.3333333333333333
+            ],
+            "out": [
+              22,
+              0.3333333333333333
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              264,
+              0
+            ],
+            "in": [
+              -22,
+              0.3333333333333333
+            ],
+            "out": [
+              22,
+              -0.3333333333333333
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              330,
+              3
+            ],
+            "in": [
+              -22,
+              -1
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Six anchors",
+        "id": "o1"
+      }
+    ],
+    "connections": [],
+    "start": {
+      "position": [
+        2,
+        2
+      ],
+      "speed": 0
+    },
+    "finish": {
+      "position": [
+        325,
+        3
+      ],
+      "direction": 1
+    }
+  }
+}

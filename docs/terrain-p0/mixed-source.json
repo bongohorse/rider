@@ -1,0 +1,790 @@
+{
+  "schema": 1,
+  "units": "metres",
+  "id": "p0-mixed",
+  "name": "P0 mixed",
+  "spawn": [
+    2,
+    2
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    520,
+    -40,
+    50
+  ],
+  "chains": [
+    [
+      [
+        10,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [],
+  "checkpoints": [],
+  "editor": {
+    "editor_version": 7,
+    "compiler_version": 7,
+    "revision": 1,
+    "next_id": 31,
+    "sampling": {
+      "tolerance": 0.005,
+      "max_segment": 0.5
+    },
+    "objects": [
+      {
+        "type": "line",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            24,
+            0
+          ]
+        ],
+        "name": "Flat run-in",
+        "id": "o1"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              24,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              25,
+              3.3333333333333335
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              99,
+              10
+            ],
+            "in": [
+              -25,
+              0
+            ],
+            "out": [
+              25,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              174,
+              0
+            ],
+            "in": [
+              -25,
+              3.3333333333333335
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Wide hill",
+        "id": "o2"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            174,
+            0
+          ],
+          [
+            198,
+            0
+          ]
+        ],
+        "name": "Flat approach",
+        "id": "o3"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              198,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              1,
+              1
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              201,
+              3
+            ],
+            "in": [
+              -1,
+              0
+            ],
+            "out": [
+              1,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              204,
+              0
+            ],
+            "in": [
+              -1,
+              1
+            ],
+            "out": [
+              1,
+              -1
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              207,
+              -3
+            ],
+            "in": [
+              -1,
+              0
+            ],
+            "out": [
+              1,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              210,
+              0
+            ],
+            "in": [
+              -1,
+              -1
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Tight S bends",
+        "id": "o4"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            210,
+            0
+          ],
+          [
+            230,
+            20
+          ]
+        ],
+        "name": "45 degree climb",
+        "id": "o5"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              230,
+              20
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              2,
+              0.6666666666666666
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              236,
+              22
+            ],
+            "in": [
+              -2,
+              0
+            ],
+            "out": [
+              2,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              242,
+              20
+            ],
+            "in": [
+              -2,
+              0.6666666666666666
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Rounded crest",
+        "id": "o6"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            242,
+            20
+          ],
+          [
+            262,
+            0
+          ]
+        ],
+        "name": "45 degree descent",
+        "id": "o7"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            262,
+            0
+          ],
+          [
+            286,
+            0
+          ]
+        ],
+        "name": "Flat jump approach",
+        "id": "o8"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            286,
+            0
+          ],
+          [
+            294,
+            4
+          ]
+        ],
+        "name": "Jump lip",
+        "id": "o9"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            301,
+            2
+          ],
+          [
+            313,
+            0
+          ]
+        ],
+        "name": "Landing",
+        "id": "o10"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              313,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              25,
+              -3.3333333333333335
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              388,
+              -10
+            ],
+            "in": [
+              -25,
+              0
+            ],
+            "out": [
+              25,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              463,
+              0
+            ],
+            "in": [
+              -25,
+              -3.3333333333333335
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Wide valley",
+        "id": "o11"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            463,
+            0
+          ],
+          [
+            500,
+            0
+          ]
+        ],
+        "name": "Flat run-out",
+        "id": "o12"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            20,
+            -16
+          ],
+          [
+            22,
+            -16
+          ],
+          [
+            22,
+            -15
+          ],
+          [
+            20,
+            -15
+          ]
+        ],
+        "name": "Extra box 0",
+        "id": "o13"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            47,
+            -16
+          ],
+          [
+            49,
+            -16
+          ],
+          [
+            49,
+            -15
+          ],
+          [
+            47,
+            -15
+          ]
+        ],
+        "name": "Extra box 1",
+        "id": "o14"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            74,
+            -16
+          ],
+          [
+            76,
+            -16
+          ],
+          [
+            76,
+            -15
+          ],
+          [
+            74,
+            -15
+          ]
+        ],
+        "name": "Extra box 2",
+        "id": "o15"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            101,
+            -16
+          ],
+          [
+            103,
+            -16
+          ],
+          [
+            103,
+            -15
+          ],
+          [
+            101,
+            -15
+          ]
+        ],
+        "name": "Extra box 3",
+        "id": "o16"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            128,
+            -16
+          ],
+          [
+            130,
+            -16
+          ],
+          [
+            130,
+            -15
+          ],
+          [
+            128,
+            -15
+          ]
+        ],
+        "name": "Extra box 4",
+        "id": "o17"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            155,
+            -16
+          ],
+          [
+            157,
+            -16
+          ],
+          [
+            157,
+            -15
+          ],
+          [
+            155,
+            -15
+          ]
+        ],
+        "name": "Extra box 5",
+        "id": "o18"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            182,
+            -16
+          ],
+          [
+            184,
+            -16
+          ],
+          [
+            184,
+            -15
+          ],
+          [
+            182,
+            -15
+          ]
+        ],
+        "name": "Extra box 6",
+        "id": "o19"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            209,
+            -16
+          ],
+          [
+            211,
+            -16
+          ],
+          [
+            211,
+            -15
+          ],
+          [
+            209,
+            -15
+          ]
+        ],
+        "name": "Extra box 7",
+        "id": "o20"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            236,
+            -16
+          ],
+          [
+            238,
+            -16
+          ],
+          [
+            238,
+            -15
+          ],
+          [
+            236,
+            -15
+          ]
+        ],
+        "name": "Extra box 8",
+        "id": "o21"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            263,
+            -16
+          ],
+          [
+            265,
+            -16
+          ],
+          [
+            265,
+            -15
+          ],
+          [
+            263,
+            -15
+          ]
+        ],
+        "name": "Extra box 9",
+        "id": "o22"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            290,
+            -16
+          ],
+          [
+            292,
+            -16
+          ],
+          [
+            292,
+            -15
+          ],
+          [
+            290,
+            -15
+          ]
+        ],
+        "name": "Extra box 10",
+        "id": "o23"
+      },
+      {
+        "type": "hull",
+        "vertices": [
+          [
+            317,
+            -16
+          ],
+          [
+            319,
+            -16
+          ],
+          [
+            319,
+            -15
+          ],
+          [
+            317,
+            -15
+          ]
+        ],
+        "name": "Extra box 11",
+        "id": "o24"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 0",
+        "position": [
+          20,
+          25
+        ],
+        "id": "o25"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 1",
+        "position": [
+          74,
+          25
+        ],
+        "id": "o26"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 2",
+        "position": [
+          128,
+          25
+        ],
+        "id": "o27"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 3",
+        "position": [
+          182,
+          25
+        ],
+        "id": "o28"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 4",
+        "position": [
+          236,
+          25
+        ],
+        "id": "o29"
+      },
+      {
+        "type": "label",
+        "text": "P0 prop 5",
+        "position": [
+          290,
+          25
+        ],
+        "id": "o30"
+      }
+    ],
+    "connections": [
+      {
+        "from": "o1",
+        "to": "o2"
+      },
+      {
+        "from": "o2",
+        "to": "o3"
+      },
+      {
+        "from": "o3",
+        "to": "o4"
+      },
+      {
+        "from": "o4",
+        "to": "o5"
+      },
+      {
+        "from": "o5",
+        "to": "o6"
+      },
+      {
+        "from": "o6",
+        "to": "o7"
+      },
+      {
+        "from": "o7",
+        "to": "o8"
+      },
+      {
+        "from": "o8",
+        "to": "o9"
+      },
+      {
+        "from": "o10",
+        "to": "o11"
+      },
+      {
+        "from": "o11",
+        "to": "o12"
+      }
+    ],
+    "start": {
+      "position": [
+        2,
+        2
+      ],
+      "speed": 0
+    },
+    "finish": {
+      "position": [
+        495,
+        0
+      ],
+      "direction": 1
+    }
+  }
+}
