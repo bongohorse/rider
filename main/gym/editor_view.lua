@@ -121,7 +121,7 @@ function M.refresh(self,force)
     objects(v,e);markers(v,e)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
     v.mesh_revision,v.style_key=e.revision,style_key
-    counts(self);publish(self,(socket.gettime()-started)*1000)
+    counts(self);if mesh_dirty then publish(self,(socket.gettime()-started)*1000) end
 end
 function M.update(self)
     if self.editor_rebuild then

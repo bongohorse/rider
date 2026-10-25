@@ -66,7 +66,7 @@ function M.plan(e,previews,selected,hover,old)
                     if not entry then
                         for j=i+1,last-1 do if anchors[j] then last=j;break end end
                         -- Absorb a short changed sliver's neighbor to avoid fragmentation over repeated drags.
-                        if last-i<32 and anchors[last] then last=last+#anchors[last].points-1 end
+                        if last-i<32 and anchors[last] then last=math.min(i+96,last+#anchors[last].points-1) end
                     end
                     local sig=signature(prep,i,last,styles)
                     local points={};for k=i,last do points[#points+1]={prep.p[k][1],prep.p[k][2]} end

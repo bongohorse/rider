@@ -16,7 +16,7 @@ function M.prepare(raw,lower,arc)
         local normals={}
         for i=1,#p do
             local function normal(a,b)
-                local dx,dy=b[1]-a[1],b[2]-a[2];local len=distance(a,b)
+                local dx,dy=b[1]-a[1],b[2]-a[2];local len=math.max(distance(a,b),1e-12)
                 return {dy/len,-dx/len}
             end
             local a=normal(p[math.max(1,i-1)],p[i==1 and 2 or i])
