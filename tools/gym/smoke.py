@@ -58,8 +58,8 @@ if args.preset is not None:
     assert report['preset']==args.preset and report['preset_checks']>0, 'preset run without per-trial preset checks'
 if args.case=='le1b':
     report=json.loads((out/'sizes-result.json').read_text())
-    # Part 1 measures the first 8 of the 15 accepted levels; part 2 the other 7 plus all 12 rejected limit cases.
-    accepted,rejected={'1/2':(8,0),'2/2':(7,12)}.get(args.part,(15,12))
+    # Part 1 measures the first 9 of the 17 accepted levels; part 2 the other 8 plus all 13 rejected limit cases.
+    accepted,rejected={'1/2':(9,0),'2/2':(8,13)}.get(args.part,(17,13))
     identity(report);assert len(report['results'])==accepted+rejected
     # Starts beyond ±500 m are rejected (LE2); every accepted level, including the 500 m start, must become drive-ready.
     assert sum(r.get('outcome')=='drive_ready' for r in report['results'])==accepted
