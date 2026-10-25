@@ -335,7 +335,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_select_o'+n);await page.waitForFunction(n=>window.riderEditor.selection==='o'+n,n);
   const r4=e.revision;await key('Delete');e=await revision(r4+1);assert.equal(e.objects,254);assert.equal(e.problem,'');
   // Zoom into the Gap before picking it: Fit at 380 m makes neighbouring source points share pixels.
-  await button('object_select_o13');await button('view_centre');await hover([25,0]);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
+  await key('Home');await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,[25,0]);await hover([25,0]);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
   // A selected Gap shows its handles and fields within the GUI node budget.
   await at([25,-0.5]);await page.waitForFunction(()=>window.riderEditor.selection==='o13');e=await ed();
   assert.deepEqual(e.handles.map(h=>h.name),['end','floor']);assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));
