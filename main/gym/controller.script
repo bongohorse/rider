@@ -169,11 +169,12 @@ local function setup(self)
         if sys.get_config_int("rider.terrain_compare",0)==1 then
             self.decor_sprites,self.decor_labels=require("main.terrain_compare.renderer").build(self,self.station)
         else
-            self.decor_sprites,self.decor_labels=stations.decorate(self.station)
+            self.decor_sprites,self.decor_labels=require("main.gym.terrain_mesh").build(self,self.station)
         end
         self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
     if not built then
+        require("main.gym.terrain_mesh").final(self,true)
         print("GYM_BUILD_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
         msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station").." could not be built. Import another level [I]."})
         self.station,self.segments,self.chain=nil,nil,nil
@@ -416,7 +417,7 @@ function update(self, dt)
                 local ghost=r and r.ghost and r.ghost_sprites or 0
                 html5.run("window.riderEditorRuntime="..json.encode({generation=self.session_generation,
                     sprites=(self.decor_sprites or 0)+(v and 4 or 0)+struts+ghost,labels=self.decor_labels or 0,
-                    decoration=self.decor_sprites or 0,vehicle=v and 4 or 0,struts=struts,replay=ghost}))
+                    decoration=self.decor_sprites or 0,terrain_meshes=self.terrain_mesh and self.terrain_mesh.stats.chunks or 0,terrain_buffer_bytes=self.terrain_mesh and self.terrain_mesh.stats.buffer_bytes or 0,vehicle=v and 4 or 0,struts=struts,replay=ghost}))
             end
             -- LE1b only: Box2D counters/profile parts and the Lua heap go straight to the page (msg.post caps payloads at 2 KiB).
             if self.testcase=="le1b" and html5 then
@@ -585,6 +586,7 @@ function fixed_update(self, dt)
 end
 function final(self)
     if self.terrain_compare then require("main.terrain_compare.renderer").final(self) end
+    require("main.gym.terrain_mesh").final(self)
     mobile.final()
     audio.stop(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
