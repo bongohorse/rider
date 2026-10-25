@@ -104,7 +104,7 @@ function M.update(state,e,previews,selected,hover,generation)
             result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
         else
             result.reused=result.reused+1
-            if p.restyled then mesh.colors(entry,p.styles);result.recolored=result.recolored+1 end
+            if p.restyled then mesh.colors(entry,p.styles,p.first);result.recolored=result.recolored+1 end
         end
         local c=entry.geometry
         if entry.phase~=p.phase or entry.lower~=p.lower or p.changed then

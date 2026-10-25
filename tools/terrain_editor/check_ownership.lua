@@ -30,4 +30,23 @@ fail=true
 local failed=pcall(terrain.update,state,e,nil,{},nil,7);assert(not failed)
 terrain.final(state,true);assert(not next(alive))
 terrain.final(state,true);assert(not next(alive))
+-- The same downstream samples may start at a different index after upstream resampling.
+-- Recoloring must use their new owner indices, including both physical end caps.
+local mesh=require 'main.gym.terrain_mesh'
+local geom=require 'main.gym.terrain_geometry'
+fail=false
+local c=geom.section(geom.prepare({{0,0},{1,0},{2,0}},-2),1,3,'shifted',true,{})
+local entry={};mesh.upload(entry,c,'/shifted.bufferc')
+mesh.colors(entry,{[7]=-1,[8]=1},7)
+local col=alive[entry.resource].streams.color
+for _,g in ipairs(c.color_groups) do
+ for i=g.first,g.last do
+  local k=(i-1)%4+1;local expected=c.base_colors[i]
+  if g.interval==1 and k==4 then expected=0
+  elseif g.interval==2 and k<4 then expected=expected*({1.6,.95,.5})[k] end
+  assert(col[i]==expected,'Retained section used stale interval owner during recolor')
+ end
+end
+mesh.drop(entry,true);assert(not next(alive))
 print('PASS: initial 11 resources; idle retains 11; tangent updates 3/reuses 8 with same resource identities; selection recolors without geometry; failed upload cleanup balances all resources')
+print('PASS: shifted retained section uses new selection/hidden owner indices, including end caps')

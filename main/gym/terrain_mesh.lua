@@ -45,12 +45,13 @@ function M.upload(entry,c,path)
     publish()
 end
 -- Selection/visibility changes write colors in place; positions and resource identity stay retained.
-function M.colors(entry,styles)
+function M.colors(entry,styles,first)
     local c=entry.geometry
     local b=resource.get_buffer(entry.resource)
     local col=buffer.get_stream(b,"color")
     for _,g in ipairs(c.color_groups) do
-        local state=styles[g.interval] or 0
+        -- Retained geometry can move to a different sample offset after an upstream edit.
+        local state=styles[g.interval-c.first+(first or c.first)] or 0
         for i=g.first,g.last do
             local k=(i-1)%4+1;local v=c.base_colors[i]
             if state==-1 and k==4 then v=0
