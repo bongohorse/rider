@@ -66,7 +66,7 @@ end
 function M.drop(entry,delete_object)
     if delete_object and entry.object then go.delete(entry.object) end
     if entry.resource then resource.release(entry.resource);released=released+1 end
-    entry.resource,entry.object=nil,nil
+    entry.resource,entry.object,entry.geometry,entry.enabled=nil,nil,nil,nil
     publish()
 end
 function M.build(self,d)

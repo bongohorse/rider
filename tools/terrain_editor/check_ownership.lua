@@ -48,5 +48,26 @@ for _,g in ipairs(c.color_groups) do
  end
 end
 mesh.drop(entry,true);assert(not next(alive))
+-- Change a culled end of the route, then reveal it. Only its latest source may be uploaded.
+local bounded=terrain.create()
+local near={-8,-20,12,10}
+terrain.update(bounded,e,nil,{},nil,9,near)
+assert(bounded.last.allocated<11)
+local offscreen=doc.copy(e.objects[1]);offscreen.anchors[6].p[2]=offscreen.anchors[6].p[2]+2
+terrain.update(bounded,e,{o1=offscreen},{o1=true},nil,9,near)
+local far={310,-20,345,15}
+terrain.resident(bounded,9,far)
+for _,v in ipairs(bounded.entries) do
+ if v.enabled then
+  assert(v.resource and not v.dirty)
+  local p=v.plan;local expected=geom.section(p.prep,p.first,p.last,tostring(v.key),true,p.styles)
+  assert(#expected.position==#v.geometry.position)
+  for i,n in ipairs(expected.position) do assert(n==v.geometry.position[i],'Revealed stale source geometry') end
+  for i,n in ipairs(expected.color) do assert(n==alive[v.resource].streams.color[i],'Revealed stale source style') end
+ end
+end
+assert(bounded.last.cached<=2)
+terrain.final(bounded,true);assert(not next(alive))
 print('PASS: initial 11 resources; idle retains 11; tangent updates 3/reuses 8 with same resource identities; selection recolors without geometry; failed upload cleanup balances all resources')
 print('PASS: shifted retained section uses new selection/hidden owner indices, including end caps')
+print('PASS: culled source/style edits materialize current geometry when revealed; bounded cache and balanced cleanup')

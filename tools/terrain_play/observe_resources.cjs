@@ -25,7 +25,7 @@ function probe(){
  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);
  r.identity=await page.evaluate(()=>{const gl=document.createElement('canvas').getContext('webgl2'),e=gl.getExtension('WEBGL_debug_renderer_info');return {renderer:e&&gl.getParameter(e.UNMASKED_RENDERER_WEBGL),isolated:crossOriginIsolated,user_agent:navigator.userAgent};});
  async function key(k){await page.keyboard.down(k);await pointer.frames(page);await page.keyboard.up(k);await pointer.frames(page);}
- async function snapshot(){return page.evaluate(()=>{const p=window.__terrain,h={};for(const n of p.live.values())h[n]=(h[n]||0)+1;return {at:performance.now(),terrain:window.riderTerrainResources,mesh:window.riderTerrainMesh,lifecycle:window.riderTerrainMeshLifecycle,telemetry:window.riderTelemetry,editor:window.riderEditor,webgl:{created:p.created,deleted:p.deleted,live:p.live.size,bytes:[...p.live.values()].reduce((a,b)=>a+b,0),histogram:h},wasm_bytes:typeof HEAPU8!=='undefined'?HEAPU8.length:null};});}
+ async function snapshot(){return page.evaluate(()=>{const p=window.__terrain,h={},canvas=document.querySelector('canvas');for(const n of p.live.values())h[n]=(h[n]||0)+1;return {at:performance.now(),canvas:[canvas.width,canvas.height],terrain:window.riderTerrainResources,mesh:window.riderTerrainMesh,lifecycle:window.riderTerrainMeshLifecycle,telemetry:window.riderTelemetry,editor:window.riderEditor,webgl:{created:p.created,deleted:p.deleted,live:p.live.size,bytes:[...p.live.values()].reduce((a,b)=>a+b,0),histogram:h},wasm_bytes:typeof HEAPU8!=='undefined'?HEAPU8.length:null};});}
  async function load(d,label){
   const before=await page.evaluate(()=>({generation:window.riderTelemetry.session_generation,at:performance.now()}));
   await page.evaluate(body=>{window.riderCustom.open();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();},JSON.stringify(d));
@@ -41,7 +41,7 @@ function probe(){
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen);await key('Home');await pointer.frames(page,{n:8});r.pan.push({label:name+'-fit',...await snapshot()});
   await page.mouse.move(650,360);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
   r.pan.push({label:name+'-zoom-in',...await snapshot()});
-  for(const [dx,dy] of [...Array.from({length:12},()=>[-280,0]),[-280,-150],[-280,150],...Array.from({length:12},()=>[280,0]),[280,150],[280,-150]]){
+  for(const [dx,dy] of [...Array.from({length:12},()=>[-280,0]),[-280,-150],[-280,150],...Array.from({length:24},()=>[280,0]),[280,150],[280,-150],...Array.from({length:12},()=>[-280,0])]){
    await page.mouse.move(650,360);await page.mouse.down({button:'middle'});await pointer.frames(page);
    for(let i=1;i<=8;i++){await page.mouse.move(650+dx*i/8,360+dy*i/8);await pointer.frames(page,{n:1});}
    await page.mouse.up({button:'middle'});await pointer.frames(page,{n:5});r.pan.push({label:name+'-pan-'+dx+','+dy,...await snapshot()});
@@ -59,6 +59,10 @@ function probe(){
   const events=r.events.filter(x=>x.name==='riderTerrainResources');assert.ok(events.length>20,'No residency transition evidence');
   for(const x of events){const s=x.data,c=s.counts,allocated=s.entries.filter(e=>e.allocated);assert.equal(c.allocated,allocated.length);assert.equal(x.owned,c.allocated);assert.ok(c.cached<=2);assert.equal(c.bytes,allocated.reduce((n,e)=>n+e.bytes,0));
    for(const e of s.entries){const a=e.bounds,b=s.view;if(a[0]<=b[2]+.005&&a[2]>=b[0]-.005&&a[1]<=b[3]+.005&&a[3]>=b[1]-.005)assert.ok(e.allocated&&e.enabled,'Missing incoming '+e.key);}
+  }
+  // Validate against the editor's actual projected pixel mapping too, independently of our view math.
+  for(const x of r.pan){const s=x.editor.screen,[w,h]=x.canvas,b=[-s.ox/s.ppm_x,-s.oy/s.ppm_y,(w-s.ox)/s.ppm_x,(h-s.oy)/s.ppm_y];
+   for(const e of x.terrain.entries){const a=e.bounds;if(a[0]<=b[2]&&a[2]>=b[0]&&a[1]<=b[3]&&a[3]>=b[1])assert.ok(e.allocated&&e.enabled,'Actual projected viewport is missing '+e.key+' at '+x.label);}
   }
  }
  assert.deepEqual(r.errors,[]);r.status='PASS';
