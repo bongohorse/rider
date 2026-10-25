@@ -34,7 +34,7 @@ Each proxied owner instance retains its generated resource hashes. Buffers trans
 
 ## Measurements
 
-Detailed statistics and hashes: [measurements.json](terrain-p1/measurements.json). Runtime measurement build is `c11971ad0521f790e23bd4781208b674e819f508`; subsequent extra view selectors do not change its geometry, renderer, shaders or collision resources. The release preview/QA records its own source identity separately.
+Detailed statistics and hashes: [measurements.json](terrain-p1/measurements.json). Runtime measurement build is `c11971ad0521f790e23bd4781208b674e819f508`; subsequent extra view selectors do not change its geometry, renderer, shaders or collision resources. Release preview/QA source is `07c6f9267a8ed98578b609d37babf0cc2c397a91`; later report/status evidence commits do not change the runtime files. [Release check](terrain-p1/release-check.json) records the source, engine guard and actual button navigation.
 
 Nine local debug HTML5 cases use the same isolated entry/UI and physical courses, alternating reference/new order. One second warm-up, six seconds full throttle, preset A/default struts, 1280×720 DPR 1, non-isolated Chromium 156.0.8078.4 with ANGLE SwiftShader. Nearest-rank quantiles, natural GC. This is one drive window per cell, not a statistical speed ranking or long-duration/full-course test. The P0 import/Edit protocol is not silently equated with separate-page loading here.
 
@@ -68,7 +68,7 @@ WebGL counts observe actual JavaScript draw entry calls, including GUI/vehicle/l
 
 ## Verification and limits
 
-The local measurement completes all nine cases, 27 canonical Retries, ten difficult flat/depth captures (tight bends, crest, descent, airborne gap and reverse), portrait aspect checks and a 128-interval resource check, with no observed script/resource/GO errors. Snapshots are actual runtime captures. The release checker separately exercises direct URLs, real variant buttons and extra landing/valley/climb selectors; it does not claim physical-device input. Inspected examples:
+The local measurement completes all nine cases, 27 canonical Retries, ten difficult flat/depth captures (tight bends, crest, descent, airborne gap and reverse), portrait aspect checks and a 128-interval resource check, with no observed script/resource/GO errors. Snapshots are actual runtime captures. Release interaction QA PASS: five actual variant-button navigations, climb/landing/valley selectors, canonical R Retry, blocked Edit and throttle input, with no observed runtime errors. Both bundled Wasm variants passed the pinned engine provenance guard. Release has no debug editor/world inspection globals. Observed click-to-telemetry-ready upper bounds were 1.185–1.296 s on a warm local browser (includes navigation/download/startup, not first GPU presentation or P0 Edit→Play). The checker does not claim physical-device input. Inspected examples:
 
 | View | Flat | Top/edge/depth |
 | --- | --- | --- |
