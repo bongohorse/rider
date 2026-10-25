@@ -37,6 +37,13 @@ const r={schema:1,status:'INCOMPLETE',source_sha:expected,views:[],switches:[],e
  }
  await page.waitForTimeout(300);await page.keyboard.down('e');await frame.waitForFunction(n=>!window.riderEditing&&window.riderTelemetry.session_generation>n,before.session_generation);await page.keyboard.up('e');
  await frame.waitForFunction(()=>window.riderTelemetry.sequence>2);assert.equal((await frame.evaluate(()=>window.riderTelemetry)).terrain_shapes,708);
+ if(process.argv.includes('--editor')){
+  await page.reload();({frame,s}=await ready());
+  assert.equal(await page.locator('#state').getAttribute('data-resumed'),'true','Reload reimported the benchmark');
+  assert.equal(s.telemetry.session_generation,1,'Reload created a replacement import world');
+  assert.equal(s.telemetry.station,'p0-mixed');r.editor.reload_without_reimport=true;
+  await frame.locator('canvas').focus();await page.waitForTimeout(1100);
+ }
  // Real keyboard A→B→A proxy switches, in the same engine instance.
  for(const [key,id] of [['1','straight'],['2','ramps'],['1','straight']]){
   const generation=await frame.evaluate(()=>window.riderTelemetry.session_generation);

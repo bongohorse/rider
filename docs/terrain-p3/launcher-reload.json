@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "5380b9a029672b350df7c23683381b07b344ec51",
+  "errors": [],
+  "before": {
+    "revision": 2,
+    "speed": 0
+  },
+  "edited": {
+    "revision": 3,
+    "speed": 1
+  },
+  "restored": {
+    "revision": 3,
+    "speed": 1
+  }
+}

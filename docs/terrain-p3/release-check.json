@@ -7,7 +7,8 @@
     "entered": true,
     "view_only_home": true,
     "save_shortcut_sent": true,
-    "debug_mesh": "undefined"
+    "debug_mesh": "undefined",
+    "reload_without_reimport": true
   },
   "views": [
     {
