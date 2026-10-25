@@ -63,7 +63,7 @@ function cases(){
   ['corner',level('corner-99km-800','LE1b 99 km, 800 segments',{length:LONG,segments:800})],
  ].map(([dimension,d])=>({dimension,id:d.id,expect:'accepted',level:d,objects:objects(d),length_m:d.bounds[1],segments:d.chains.reduce((n,c)=>n+c.length-1,0),chains:d.chains.length,hulls:(d.hulls||[]).length}));
  const long=level('reject-length-100km','Rejected: 100 km',{length:100000,segments:100});
- const tooMany=level('reject-render-801','Rejected: 801 render objects',{length:400,segments:801});
+ const tooMany=level('reject-mesh-payload','Rejected: Fit vertex payload',{length:900,segments:1650});
  const chain=level('reject-chain-2049','Rejected: 2049-point chain',{length:400,segments:2048});
  const chains=level('reject-chains-33','Rejected: 33 chains',{length:400,segments:33,chains:33});
  const hull65=level('reject-hulls-65','Rejected: 65 hulls',{length:400,segments:100,hullCount:65});
@@ -71,7 +71,7 @@ function cases(){
  const big=level('reject-text-256k','Rejected: text above 256 KiB',{length:400,segments:100});big.notes='x'.repeat(256*1024);
  const rejected=[
   ['length',long,'Non-finite bounds'],
-  ['segments',tooMany,'Station render budget exceeds 800 objects: 801 drawn (801 terrain segments)'],
+  ['segments',tooMany,'Resource budget: terrain vertex payload bytes at Fit needs 1069632; limit 1048576. Shorten or simplify chain 1 (1650 segments); keep sampling accuracy.'],
   ['segments',chain,'Invalid chain length'],
   ['chains',chains,'Missing/too many chains'],
   ['hulls',hull65,'Invalid hulls'],

@@ -10,6 +10,7 @@ if(bundleArg==='--fixtures'){
  for(const id of ['six-anchor','long-curves','mixed','long-over-budget']){const source=fixture(id,id==='mixed',id==='long-over-budget');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');}
  process.exit(0);
 }
+const budgets=process.argv.includes('--budgets');
 const mesh=process.argv.includes("--mesh"),editorMesh=process.argv.includes("--editor-mesh"),resident=process.argv.includes("--resident");
 const deadline=setTimeout(()=>{console.error('Terrain observation exceeded 240 s');process.exit(1);},240000);
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
@@ -54,12 +55,14 @@ function fixture(id,mixed=false,large=false){
 // The same observation boundaries as sizes.cjs, plus the existing editor publication.
 function probes(){
  const p=window.__p0={frames:[],polls:[],ready:[],world:[],editor:[],telemetry:[],mesh:[],editorCount:0};
- p.draws=0;p.gl_created=0;p.gl_deleted=0;p.gl_live=new Set();
+ p.draws=0;p.gl_created=0;p.gl_deleted=0;p.gl_live=new Set();p.gl_sizes=new Map();
  for(const proto of [window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype].filter(Boolean)){
   for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){const fn=proto[name];if(fn)proto[name]=function(...args){p.draws++;return fn.apply(this,args);};}
-  const create=proto.createBuffer,del=proto.deleteBuffer;
+  const create=proto.createBuffer,del=proto.deleteBuffer,bind=proto.bindBuffer,data=proto.bufferData,bound=new Map();
+  proto.bindBuffer=function(t,b){bound.set(t,b);return bind.call(this,t,b);};
+  proto.bufferData=function(t,d,...a){const b=bound.get(t);if(b)p.gl_sizes.set(b,typeof d==='number'?d:a.length>=3?a[2]*(d.BYTES_PER_ELEMENT||1):a.length>=2?(d.length-a[1])*(d.BYTES_PER_ELEMENT||1):d?.byteLength||0);return data.call(this,t,d,...a);};
   proto.createBuffer=function(...args){const b=create.apply(this,args);if(b){p.gl_live.add(b);p.gl_created++;}return b;};
-  proto.deleteBuffer=function(b){if(p.gl_live.delete(b))p.gl_deleted++;return del.call(this,b);};
+  proto.deleteBuffer=function(b){if(p.gl_live.delete(b))p.gl_deleted++;p.gl_sizes.delete(b);return del.call(this,b);};
  }
  for(const [name,list] of [['riderEditorMesh',p.mesh],['riderReady',p.ready],['riderWorld',p.world],['riderEditor',p.editor],['riderTelemetry',p.telemetry]]){let value;Object.defineProperty(window,name,{configurable:true,get:()=>value,set:v=>{value=v;if(name==='riderEditor')p.editorCount++;list.push({at:performance.now(),data:v});if(list.length>3000)list.shift();}});}
  const raf=window.requestAnimationFrame.bind(window);
@@ -92,12 +95,12 @@ function probes(){
   await page.locator('#rider-custom-file').setInputFiles({name:'long-over-budget.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(over))});
   await page.waitForFunction(()=>!window.riderCustom.visible);await page.waitForTimeout(1100);await editReady();
   await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()!=='syncing');
-  const rejected=await ed();assert.ok(rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
+  const rejected=await ed();assert.ok(budgets?rejected.errors.length===0:rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
   report.rejected={id:'long-over-budget',source_bytes:Buffer.byteLength(JSON.stringify(over)),errors:rejected.errors,view:rejected.view,source_saved:true,paths:await page.evaluate(()=>window.riderEditorPaths)};
-  await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;
+  if(!budgets){await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;}else report.rejected.now_admitted=true;
   await page.screenshot({path:path.join(out,'long-over-budget-edit.png')});
-  for(const id of ['six-anchor','long-curves','mixed']){
-   const source=fixture(id,id==='mixed');fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');
+  for(const id of budgets?['long-over-budget','mixed-over-budget']:['six-anchor','long-curves','mixed']){
+   const source=fixture(id,id.startsWith('mixed'),budgets);fs.writeFileSync(path.join(out,id+'-source.json'),JSON.stringify(source,null,2)+'\n');fs.writeFileSync(path.join(out,id+'-source.lua'),'return '+lua(source)+'\n');
    await button('import');await page.waitForFunction(()=>window.riderCustom.visible);
    await page.locator('#rider-custom-file').setInputFiles({name:id+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(source))});await page.waitForFunction(()=>!window.riderCustom.visible);await page.waitForTimeout(1100);await editReady();
    const e=await ed();assert.equal(e.conflict,false);assert.equal(e.errors.length,0,JSON.stringify(e.errors));
@@ -125,6 +128,17 @@ function probes(){
     if(editorMesh){const m=r.drag.at(-1);m.before_mesh=beforeMesh;m.inputs=inputs;m.release_at=released;assert.equal(m.owned_refs,resident?m.view.allocated_meshes:m.view.meshes,'Edit mesh references are unbalanced');const events=m.mesh_events.filter(x=>x.data.updates>beforeMesh.updates);assert.ok(events.length,'No mesh preview publication');assert.ok(events.some(x=>x.data.last.rebuilt>0),'No local geometry update');assert.ok(events.every(x=>x.data.last.rebuilt<beforeMesh.last.chunks),'Local tangent rebuilt the full route');assert.ok(events.every(x=>x.data.generation===beforeMesh.generation),'A tangent preview reloaded the edit world');}
     await page.keyboard.down('Control');await pointer.frames(page);await key('z');await page.keyboard.up('Control');await pointer.frames(page);await editReady();assert.deepEqual(await page.evaluate(()=>window.riderEditorDoc.objects),geometry.doc.objects,'Undo restores the benchmark source');
    }
+   if(budgets){
+    await key('Home');await pointer.frames(page,{n:8});
+    r.fit=await page.evaluate(()=>({resources:window.riderTerrainResources,view:window.riderEditor.view,webgl_bytes:[...window.__p0.gl_sizes.values()].reduce((n,b)=>n+b,0)}));
+    assert.equal(r.fit.resources.counts.visible,r.fit.resources.entries.length,'Fit needs all sections');
+    assert.equal(r.fit.resources.counts.allocated,r.fit.resources.entries.length);
+    await page.screenshot({path:path.join(out,id+'-fit.png')});
+    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved');
+    const saved=await page.evaluate(()=>window.riderEditorDoc);
+    await page.reload();await editReady();assert.deepEqual(await page.evaluate(()=>window.riderEditorDoc),saved,'Saved source/revision reopens exactly');
+    r.reopen={revision:(await ed()).revision,exact_source:true};
+   }
    r.edited_frames=stats(r.drag.flatMap(d=>d.frames.map(f=>f.work)));console.log(id+': '+r.segments+' segments, Edit/Play and drag captured');
   }
   await page.context().close();
@@ -135,7 +149,7 @@ function probes(){
     if(!await page.evaluate(()=>window.riderCustom.visible))await page.evaluate(()=>window.riderCustom.open());
     const t=await page.evaluate(body=>{const p=window.__p0,before=p.ready.length,at=performance.now();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();return {at,before};},body);
     await page.waitForFunction(n=>window.__p0.ready.length>n,t.before);await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry?.session_generation&&window.riderTelemetry.sequence>2);await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
-    r.imports.push(await page.evaluate(t=>({ready_ms:window.__p0.ready[t.before].at-t.at,callback_max_ms:Math.max(...window.__p0.frames.filter(f=>f.at>=t.at&&f.at<=window.__p0.ready[t.before].at).map(f=>f.work)),lua:window.riderLoad,counts:{shapes:window.riderTelemetry.terrain_shapes,sprites:window.riderTelemetry.decor_sprites,labels:window.riderTelemetry.decor_labels,meshes:window.riderTerrainMesh?.chunks,buffer_bytes:window.riderTerrainMesh?.buffer_bytes},mesh:window.riderTerrainMesh,residency:window.riderTerrainResources,lifecycle:window.riderTerrainMeshLifecycle,webgl_buffers:{created:window.__p0.gl_created,deleted:window.__p0.gl_deleted,live:window.__p0.gl_live.size}}),t));
+    r.imports.push(await page.evaluate(t=>({ready_ms:window.__p0.ready[t.before].at-t.at,callback_max_ms:Math.max(...window.__p0.frames.filter(f=>f.at>=t.at&&f.at<=window.__p0.ready[t.before].at).map(f=>f.work)),lua:window.riderLoad,counts:{shapes:window.riderTelemetry.terrain_shapes,sprites:window.riderTelemetry.decor_sprites,labels:window.riderTelemetry.decor_labels,meshes:window.riderTerrainMesh?.chunks,buffer_bytes:window.riderTerrainMesh?.buffer_bytes},mesh:window.riderTerrainMesh,residency:window.riderTerrainResources,lifecycle:window.riderTerrainMeshLifecycle,webgl_buffers:{created:window.__p0.gl_created,deleted:window.__p0.gl_deleted,live:window.__p0.gl_live.size,bytes:[...window.__p0.gl_sizes.values()].reduce((n,b)=>n+b,0)}}),t));
    }
    assert.ok(r.imports.every(x=>x.counts.shapes===r.segments+r.hulls),'shape count');for(const x of r.imports)assert.deepEqual(x.counts,r.imports[0].counts,'stable repeated allocation');assert.equal(r.imports[0].counts.sprites,(mesh?0:r.segments)+r.hull_vertices+1);if(mesh){for(const x of r.imports){assert.equal(x.mesh.generation,x.lua.generation);assert.equal(x.lifecycle.owned,resident?x.residency.counts.allocated:x.mesh.chunks);if(resident){assert.ok(x.residency.counts.cached<=2);assert.ok(x.residency.counts.allocated<=x.mesh.chunks);}assert.equal(x.mesh.buffer_bytes,(r.segments*18+r.chains*12)*36);}assert.equal(r.imports[0].counts.meshes,JSON.parse(body).chains.reduce((n,c)=>n+Math.ceil((c.length-1)/64),0));}assert.equal(r.imports[0].counts.labels,r.labels+1);
    await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');await page.waitForTimeout(1000);const from=await page.evaluate(()=>performance.now());await page.waitForTimeout(6000);await page.keyboard.up('ArrowUp');
@@ -145,7 +159,7 @@ function probes(){
    await page.screenshot({path:path.join(out,r.id+'-drive.png')});console.log(r.id+': '+JSON.stringify(r.summary));
   }
   report.camera=[];
-  const course=JSON.parse(fs.readFileSync(path.join(out,'long-curves.json'),'utf8'));
+  const course=JSON.parse(fs.readFileSync(path.join(out,budgets?'long-over-budget.json':'long-curves.json'),'utf8'));
   const descent=course.editor.objects.find(o=>o.name==='45 degree descent').points[0],lip=course.editor.objects.find(o=>o.name==='Jump lip').points[0];
   for(const c of [{id:'descent',spawn:[descent[0]+2,descent[1]-2+.9],speed:5,key:'ArrowUp',condition:()=>window.riderTelemetry?.pitch<-.3&&window.riderTelemetry.station_distance>2},{id:'jump',spawn:[lip[0]-4,.9],speed:7,key:'ArrowUp',condition:()=>window.riderTelemetry?.station_distance>13&&!window.riderTelemetry.contact1&&!window.riderTelemetry.contact2},{id:'reverse',spawn:[12,.9],speed:0,key:'ArrowDown',condition:()=>window.riderTelemetry?.velocity_x< -100}]){
    const d=JSON.parse(JSON.stringify(course));d.spawn=c.spawn;d.start_speed=c.speed;d.editor.start={position:c.spawn,speed:c.speed};
@@ -154,6 +168,6 @@ function probes(){
    await page.waitForFunction(n=>window.__p0.ready.length>n,n);await page.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderTelemetry.session_generation===window.riderLoad?.generation&&window.riderCustomStatus==='Saved');
    await page.locator('canvas').focus();await page.keyboard.down(c.key);try{await page.waitForFunction(c.condition,null,{timeout:15000});await page.screenshot({path:path.join(out,'camera-'+c.id+'.png')});report.camera.push({id:c.id,source_fixture:'long-curves.json',spawn:c.spawn,start_speed:c.speed,input:c.key,telemetry:await page.evaluate(()=>window.riderTelemetry)});}finally{await page.keyboard.up(c.key);}
   }
-  assert.deepEqual(report.errors,[]);assert.equal(report.fixtures.length,3);report.status='PASS';
+  assert.deepEqual(report.errors,[]);assert.equal(report.fixtures.length,budgets?2:3);report.status='PASS';
  }catch(e){report.status='FAIL';report.failure=e.stack;throw e;}finally{fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();server.close();clearTimeout(deadline);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

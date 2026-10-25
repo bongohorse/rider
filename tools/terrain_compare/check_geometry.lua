@@ -37,5 +37,5 @@ for _,id in ipairs({"six-anchor","long-curves","mixed"}) do
 end
 local over=dofile(arg[1].."/long-over-budget-source.lua")
 assert(doc.validate(over));local invalid,err=doc.compile(over)
-assert(not invalid and err:match("render budget exceeds 800"),"Original admission guard changed")
-print("PASS: "..checks.." fixture/variant/chunk combinations; immutable collision/source, seams, UVs, gaps, bounds, allocations and original admission guard")
+assert(invalid and not err,"660 m must pass measured resource admission")
+print("PASS: "..checks.." fixture/variant/chunk combinations; immutable collision/source, seams, UVs, gaps, bounds, allocations and measured 660 m admission")

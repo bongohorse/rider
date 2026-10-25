@@ -98,8 +98,8 @@ local function check()
         local s=e.start.position
         local blocked=err:match("^START overlaps") and doc_lib.blocked(e,s)
         if blocked or err:match("^Start is limited") then error_at[#errors]={start=true,ids=blocked and {blocked.id} or nil,at={s[1],s[2]}} end
-        -- The render budget names and points at the object that draws the most line sprites.
-        if err:match("^Station render budget") then
+        -- Point resource problems at the most expensive sampled source.
+        if err:match("^Resource budget") then
             local most,n=nil,0
             for _,o in ipairs(e.objects) do local k=doc_lib.drawn(o);if k>n then most,n=o,k end end
             if most then

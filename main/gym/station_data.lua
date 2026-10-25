@@ -30,7 +30,7 @@ function M.validate(d)
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
-    -- Render budget: every drawn sprite or label (one line sprite per chain segment and hull edge).
+    -- Structural geometry counts; rendering and physics admission are checked independently below.
     local objects,segments,edges,labels,seesaws=0,0,0,0,0
     for _,chain in ipairs(d.chains) do
         if type(chain)~="table" or #chain<2 or #chain>2048 then return nil,"Invalid chain length" end
@@ -166,14 +166,8 @@ function M.validate(d)
     local markers=0
     if d.markers then markers=(d.markers.to_m-d.markers.from_m)/d.markers.minor_m+1+(d.markers.to_m-d.markers.from_m)/d.markers.major_m+1 end
     objects=objects+markers
-    if objects>800 then
-        -- Name what is counted, so a level can be cut where it costs most.
-        local parts={}
-        for _,p in ipairs({{segments,"terrain segments"},{edges,"obstacle edges"},{labels,"labels"},{finish,"FINISH"},{seesaws,"seesaw"},{markers,"distance markers"}}) do
-            if p[1]>0 then parts[#parts+1]=string.format("%d %s",math.ceil(p[1]),p[2]) end
-        end
-        return nil,string.format("Station render budget exceeds 800 objects: %d drawn (%s)",math.ceil(objects),table.concat(parts,", "))
-    end
+    local resources,err=require("main.gym.terrain_budget").check(d)
+    if not resources then return nil,err end
     return d
 end
 function M.speed(value,default)

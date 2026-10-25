@@ -56,7 +56,7 @@ test('length and complexity vary independently with at least three accepted step
 test('each rejected case breaks exactly the named limit', () => {
   const rejected = Object.fromEntries(all.filter(c => c.expect === 'rejected').map(c => [c.id, c]));
   assert.equal(rejected['reject-length-100km'].level.bounds[1], 100000);
-  assert.equal(objects(rejected['reject-render-801'].level), 801);
+  assert.equal(objects(rejected['reject-mesh-payload'].level), 1650);
   assert.equal(rejected['reject-chain-2049'].level.chains[0].length, 2049);
   assert.equal(rejected['reject-chains-33'].level.chains.length, 33);
   assert.equal(rejected['reject-hulls-65'].level.hulls.length, 65);

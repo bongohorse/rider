@@ -79,5 +79,5 @@ check({chains={curl},bounds={-20,20,-20,20}})
 local many={};for i=1,32 do many[i]={{i*3,0},{i*3+1,0}} end
 assert(#check({chains=many,bounds={-10,110,-10,10}})==32)
 local over=dofile(arg[1]..'/long-over-budget-source.lua')
-local invalid,err=doc.compile(over);assert(not invalid and err:match('render budget exceeds 800'))
-print('PASS: '..count..' routes; unchanged P1 world geometry, immutable source/collision, deterministic sections, seams/UV/bounds, general-domain compatibility, unchanged 800 guard')
+local invalid,err=doc.compile(over);assert(invalid and not err, '660 m must pass measured resource admission')
+print('PASS: '..count..' routes; unchanged P1 world geometry, immutable source/collision, deterministic sections, seams/UV/bounds, general-domain compatibility, measured 660 m admission')

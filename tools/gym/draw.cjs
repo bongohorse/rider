@@ -335,7 +335,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const big=lines=>JSON.stringify({schema:1,units:'metres',id:'big',name:'Big draft',editor:{editor_version:2,compiler_version:2,revision:1,next_id:lines.length+1,
    objects:lines.map((points,i)=>({id:'o'+(i+1),type:'line',points})),connections:[],start:{position:[0,1.7],speed:0}}});
   const large=[];
-  for(const [name,lines] of [['1101 points',[wave(1101,-5,1)]],['7245 points',[wave(1101,-5,1),wave(2048,-5,10),wave(2048,-5,20),wave(2048,-5,30)]]]){
+  for(const [name,lines] of [['1651 points',[wave(1651,-5,1)]],['7245 points',[wave(1101,-5,1),wave(2048,-5,10),wave(2048,-5,20),wave(2048,-5,30)]]]){
    // A pending autosave of the open document would get a higher slot sequence than the injected draft.
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
    await page.evaluate(([text,seq])=>{window.riderDebugDraft={slot:1,seq,text,now:true};},[big(lines),100000*(large.length+1)]);
@@ -348,8 +348,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    assert.equal(e.id,'big');
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'||!window.riderEditor.dirty);assert.equal(e.objects,lines.length);
    assert.ok(e.view.sprites<=1024&&e.view.simplified,name+' '+JSON.stringify(e.view));assert.ok(e.display_note.includes('Display simplified'),e.display_note);
-   assert.ok(e.errors.some(m=>m.includes('800')),JSON.stringify(e.errors));
-   const entry={name,points:lines.reduce((n,l)=>n+l.length,0),view:e.view,note:e.display_note,error:e.errors.find(m=>m.includes('800'))};
+   assert.ok(e.errors.some(m=>m.includes('Resource budget')),JSON.stringify(e.errors));
+   const entry={name,points:lines.reduce((n,l)=>n+l.length,0),view:e.view,note:e.display_note,error:e.errors.find(m=>m.includes('Resource budget'))};
    if(large.length===0){
     await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
     // Blocked Play now selects/frames its source. Clear that selection and restore working precision
