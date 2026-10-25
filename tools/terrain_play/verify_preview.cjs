@@ -9,8 +9,8 @@ const r={schema:1,status:'INCOMPLETE',source_sha:expected,views:[],switches:[],e
  async function ready(){
   await page.waitForFunction(()=>document.getElementById('state')?.textContent==='Ready · normal Play',null,{timeout:65000});
   const frame=page.frames().find(f=>f.url().includes('/index.html'));
-  const s=await frame.evaluate(()=>({ready:window.riderReady,telemetry:window.riderTelemetry,debug:[typeof window.riderWorld,typeof window.riderEditor,typeof window.riderTerrainMesh,typeof window.riderTerrainCompare,typeof window.riderEditorMesh]}));
-  assert.equal(s.ready.source_sha,expected);assert.deepEqual(s.debug,['undefined','undefined','undefined','undefined','undefined']);
+  const s=await frame.evaluate(()=>({ready:window.riderReady,telemetry:window.riderTelemetry,debug:[typeof window.riderWorld,typeof window.riderEditor,typeof window.riderTerrainMesh,typeof window.riderTerrainCompare,typeof window.riderEditorMesh,typeof window.riderTerrainResources,typeof window.riderTerrainMeshLifecycle]}));
+  assert.equal(s.ready.source_sha,expected);assert.deepEqual(s.debug,Array(7).fill('undefined'));
   assert.equal(s.telemetry.preset,'a');assert.equal(s.telemetry.time_factor,1);assert.equal(s.telemetry.modified,false);
   return {frame,s};
  }

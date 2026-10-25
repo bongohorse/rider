@@ -12,9 +12,14 @@ local count=0
 local function check(d)
     local before=doc.copy(d)
     local chunks,stats=geom.build(d)
+    local descriptors,described=geom.describe(d)
+    assert(#descriptors==#chunks and described.buffer_bytes==stats.buffer_bytes)
     assert(equal(d,before),'Visual builder changed physical/source data')
     local previous,segments,vertices,keys={},0,0,{}
-    for _,c in ipairs(chunks) do
+    for index,c in ipairs(chunks) do
+        local descriptor=descriptors[index]
+        local emitted=geom.section(descriptor.prep,descriptor.first,descriptor.last,descriptor.key)
+        assert(equal(emitted.position,c.position) and equal(emitted.color,c.color) and equal(emitted.uv,c.uv),'Lazy descriptor changed accepted geometry')
         assert(not keys[c.key]);keys[c.key]=true
         assert(c.vertices<=1164 and #c.position==c.vertices*3 and #c.color==c.vertices*4 and #c.uv==c.vertices*2)
         if previous[c.chain] then
@@ -35,6 +40,8 @@ local function check(d)
             assert(x==x and y==y and z==z)
             x,y=x+z*.18,y+z*.55
             assert(x>=c.bounds[1]-1e-9 and x<=c.bounds[4]+1e-9 and y>=c.bounds[2]-1e-9 and y<=c.bounds[5]+1e-9)
+            local b=descriptor.bounds
+            assert(x+c.origin[1]>=b[1]-1e-9 and x+c.origin[1]<=b[3]+1e-9 and y+c.origin[2]>=b[2]-1e-9 and y+c.origin[2]<=b[4]+1e-9,'Residency bounds would cull emitted geometry')
         end
     end
     local expected=0;for _,chain in ipairs(d.chains) do expected=expected+#chain-1 end
