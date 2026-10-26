@@ -2,7 +2,7 @@
 local projection=require 'main.terrain_perspective.projection'
 local M={ID='authored-v1',LOCAL={'width','side','shading'}}
 local cache=setmetatable({},{__mode='k'})
-local function source(d) return d and (d.editor or d) end
+local function source(d) return d and (type(d.editor)=='table' and d.editor or (d.schema~=nil and {} or d)) end
 function M.authored(d) local e=source(d);return e and e.road_profile==M.ID end
 function M.params(d)
  local e=source(d)
@@ -48,7 +48,8 @@ function M.samples(chain,values)
 end
 function M.validate_station(d)
  if not M.authored(d) then return true end
- local doc=require 'main.gym.editor_doc'
+ local doc=M.document
+ if not doc then return nil,'Terrain Look requires supported editor source validation; open the source in the editor.' end
  local ok,err,unsupported=doc.validate({schema=d.schema,units=d.units,id=d.id,name=d.name,editor=d.editor})
  if not ok then return nil,err,unsupported end
  if not M.has_sections(d) then return true end

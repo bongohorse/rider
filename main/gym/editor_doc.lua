@@ -691,4 +691,5 @@ function M.step(h,doc,back,instance)
     local entry=table.remove(from)
     return entry.doc,entry.instance
 end
+require("main.terrain_perspective.look").document=M -- source-only callbacks avoid a Bob module cycle
 return M
