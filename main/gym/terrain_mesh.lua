@@ -141,6 +141,8 @@ local function live_look(self,state)
         e.looks=values
     end
     state.perspective,state.params,state.baked=projected,look.params(d),look.has_sections(d)
+    state.stats.buffer_bytes=state.stats.vertices*(projected and 48 or 36)
+    state.stats.budget=require('main.gym.terrain_budget').measure(d)
     state.look_source=d;state.revision=(state.revision or 0)+1
 end
 function M.update(self)

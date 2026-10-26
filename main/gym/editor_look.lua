@@ -14,7 +14,7 @@ function M.sync()
  if not editor.doc then return end
  local s=M.session;local e=editor.doc.editor
  if not s or s.instance~=editor.opened then
-  s={instance=editor.opened,open=false,scope='level',params=look.params({editor=e}),revision=e.revision,signature=signature(e)};M.session=s;editor.look_preview=nil
+  s={instance=editor.opened,open=false,scope='level',params=look.params({editor=e}),revision=e.revision,signature=signature(e)};M.session=s;M.play_level=nil;editor.look_preview=nil
  elseif s.revision~=e.revision then
   local sig=signature(e)
   if sig~=s.signature then
@@ -79,7 +79,7 @@ function M.preview()
  -- Invalid geometry drafts remain editable; valid courses must pass actual selected-layout admission.
  local compiled,blocked=doc.compile(wrapper)
  if not compiled and blocked and blocked:find('Resource budget:',1,true) then s.error_detail=blocked;s.error=(blocked:match('^[^%.]+%.') or blocked)..' Shorten/simplify terrain or split the course.';return nil end
- s.error=nil;s.play_level=compiled;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
+ s.error=nil;M.play_level=s.play_generation and compiled or nil;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
 end
 function M.change(k,value)
  local s=M.sync();local r=projection.RANGES[k]
@@ -112,7 +112,11 @@ function M.play_open(generation)
 end
 function M.live(generation)
  local s=M.session
- if s and s.instance==editor.opened and s.play_generation==generation then return s.play_level end
+ if s and s.instance==editor.opened and s.play_generation==generation then return M.play_level end
+end
+function M.clear_play()
+ local s=M.session;if s then s.open=false;s.play_generation=nil end
+ M.play_level=nil
 end
 function M.confirm()
  local s=M.sync();local f=s.field;if not f then return true end

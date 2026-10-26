@@ -13,8 +13,7 @@ local EDITOR="main:/editor#gui"
 local time_scale=require "main.gym.time_scale"
 local OWNER="gym:/owner#script"
 local function switch(self,request)
-    local session=require('main.gym.editor_look').session
-    if session then session.open=false;session.play_generation=nil;session.play_level=nil end
+    require('main.gym.editor_look').clear_play()
     self.station,self.speed=request.id,request.speed or ""
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
     self.edit,self.play=request.edit,request.play
