@@ -2,6 +2,7 @@
 -- Shared immutable terrain material lives with the loader, not each proxied world.
 -- Pinned OpenGL program teardown retains scratch UBOs; avoid shader churn on switches.
 go.property("terrain_material",resource.material("/main/terrain_compare/terrain.material"))
+go.property("perspective_material",resource.material("/main/terrain_perspective/terrain.material"))
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
 local station_data=require "main.gym.station_data"
@@ -163,6 +164,7 @@ local function import(self,request)
     else switch(self,next) end
 end
 function init(self)
+    self.look_comparison=require("main.terrain_perspective.runtime").init()
     msg.post(".","acquire_input_focus")
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
@@ -208,6 +210,7 @@ function init(self)
     msg.post("#world","load")
 end
 function update(self,dt)
+    if self.look_comparison then require("main.terrain_perspective.runtime").poll() end
     if self.loading then
         self.deadline=self.deadline+dt
         if self.deadline>15 and not self.failed then

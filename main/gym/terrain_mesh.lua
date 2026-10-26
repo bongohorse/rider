@@ -22,7 +22,10 @@ function M.bounds(b,c)
 end
 function M.buffer(c)
     local scale=sys.get_config_number("physics.scale",0.01)
-    local b=buffer.create(c.vertices,{{name=hash("position"),type=buffer.VALUE_TYPE_FLOAT32,count=3},{name=hash("color"),type=buffer.VALUE_TYPE_FLOAT32,count=4},{name=hash("texcoord0"),type=buffer.VALUE_TYPE_FLOAT32,count=2}})
+    local streams={{name=hash("position"),type=buffer.VALUE_TYPE_FLOAT32,count=3},{name=hash("color"),type=buffer.VALUE_TYPE_FLOAT32,count=4},{name=hash("texcoord0"),type=buffer.VALUE_TYPE_FLOAT32,count=2}}
+    if c.look_data then streams[#streams+1]={name=hash("look_data"),type=buffer.VALUE_TYPE_FLOAT32,count=3} end
+    local b=buffer.create(c.vertices,streams)
+    if c.look_data then local stream=buffer.get_stream(b,"look_data");for i,v in ipairs(c.look_data) do stream[i]=v end end
     local p,col,uv=buffer.get_stream(b,"position"),buffer.get_stream(b,"color"),buffer.get_stream(b,"texcoord0")
     for j,v in ipairs(c.position) do p[j]=v/scale end
     for j,v in ipairs(c.color) do col[j]=v end
@@ -39,10 +42,11 @@ function M.upload(entry,c,path)
         created=created+1;entry.path=path
     end
     if not entry.object then
-        entry.object=factory.create("#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
+        entry.object=factory.create(c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2),entry.object) end
     entry.geometry=c
+    if c.perspective then entry.look_object=nil end
     publish()
 end
 -- Selection/visibility changes write colors in place; positions and resource identity stay retained.
@@ -72,7 +76,7 @@ end
 function M.build(self,d)
     local started=socket.gettime()
     local state={};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
+    local entries,stats=geometry.describe(d);if require("main.terrain_perspective.runtime").enabled() then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
     M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
     local decor={};for k,v in pairs(d) do decor[k]=v end;decor.chains={}
@@ -101,11 +105,16 @@ end
 function M.update(self)
     local state=self.terrain_mesh;if not state then return end
     local started=socket.gettime()
-    local r=residency.update(state,state.entries,residency.viewport(),function(e)
-        local c=geometry.section(e.prep,e.first,e.last,e.key)
+    local view=residency.viewport()
+    local perspective=require "main.terrain_perspective.runtime"
+    if perspective.enabled() then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
+    local r=residency.update(state,state.entries,view,function(e)
+        local c=perspective.enabled() and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key) or geometry.section(e.prep,e.first,e.last,e.key)
+        state.uploads=(state.uploads or 0)+1
         if not e.resource then state.serial=(state.serial or 0)+1 end
         M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")
     end,function(e) M.drop(e,true) end)
+    if perspective.enabled() then perspective.apply(state,M.bounds) end
     state.stats.mesh_gameobjects,state.stats.allocated_bytes=r.allocated,r.bytes
     state.stats.resident=r
     r.update_ms=(socket.gettime()-started)*1000

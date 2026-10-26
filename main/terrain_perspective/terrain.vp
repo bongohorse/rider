@@ -1,0 +1,38 @@
+#version 140
+in highp vec3 position;
+in lowp vec4 color;
+in highp vec2 texcoord0;
+in highp vec3 look_data;
+out lowp vec4 var_color;
+out highp vec2 var_uv;
+uniform vs_uniforms {
+    highp mat4 world_view_proj;
+    highp vec4 editor_params;
+    highp vec4 look_origin; // world origin m, local floor m, engine-to-metres scale
+    highp vec4 look_shape; // width m, reciprocal focal contribution, side depth m, shading
+    highp vec4 look_camera; // unchanged camera XY m, view shear XY
+};
+void main() {
+    vec3 p=position;
+    float s=look_origin.w;
+    float depth=p.z>0.0?look_shape.x:0.0;
+    if(p.z<0.0) {
+        depth=p.z < -1.5*0.9/s?look_shape.x:0.0;
+        if(look_data.z>0.5) p.y=max(look_origin.z,look_data.y-look_shape.z)/s;
+        else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
+    }
+    float perspective_w=1.0;
+    if(depth>0.0 && look_shape.y==0.0) {
+        p.xy+=(depth/s)*look_camera.zw;
+    } else if(depth>0.0) {
+    vec2 world=p.xy*s+look_origin.xy;
+    // One central projection for the entire rigid shallow body. z=0 is exactly invariant.
+    perspective_w=1.0+look_shape.y*depth;
+    vec2 projected=look_camera.xy+(world-look_camera.xy+depth*look_camera.zw)/(1.0+look_shape.y*depth);
+    p.xy=(projected-look_origin.xy)/s;
+    }
+    p.z=0.0; // preserve accepted terrain/sprite layering; no gameplay camera or 3D physics
+    gl_Position=(world_view_proj*vec4(p,1.0))*perspective_w;
+    var_color=vec4(mix(vec3(0.46,0.61,0.51),color.rgb,look_shape.w),color.a);
+    var_uv=texcoord0+vec2(editor_params.x,0.0);
+}

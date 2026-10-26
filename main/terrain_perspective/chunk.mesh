@@ -1,0 +1,4 @@
+material: "/main/terrain_perspective/terrain.material"
+vertices: "/main/terrain_perspective/empty.buffer"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"
