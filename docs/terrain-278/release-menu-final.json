@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff",
+  "errors": [],
+  "browser": "156.0.8078.4",
+  "raw_sha256": "817608504483363c33f028bb67cae82234b571ac12ac526779480ae707a9819a",
+  "checks": [
+    {
+      "name": "retained_closed_draft_apply_and_exact_collision_export",
+      "params": {
+        "version": 1,
+        "mode": "perspective",
+        "width": 1.25,
+        "perspective": 0.4,
+        "angle": 30,
+        "side": 6,
+        "shading": 0.6
+      },
+      "export_sha256": "ff8462161d462b59e6e4bd5afc6c89fef6b45b4739ba6726aeb80cd99a6782d2"
+    },
+    {
+      "name": "saved_reload_and_menu_reopen_restore_values"
+    },
+    {
+      "name": "reset_preview_close_reopen_apply",
+      "params": {
+        "shading": 1,
+        "side": 64,
+        "version": 1,
+        "angle": 28.810793742973,
+        "mode": "perspective",
+        "perspective": 0.35,
+        "width": 0.9
+      }
+    },
+    {
+      "name": "ordinary_play_and_same_generation_retry",
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": -1.0619898820555e-08,
+        "head_contact": false,
+        "travel1": 3.814697265625e-06,
+        "projection_y": 0.0029629629570991,
+        "speed": 245.24989318848,
+        "world_loads": 2,
+        "spawn_y": 2,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 2,
+        "decor_sprites": 1,
+        "terrain_shapes": 696,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 1,
+        "station": "p0-long-curves",
+        "station_brake_distance": 0,
+        "pitch": -1.6451689788255e-08,
+        "first_tick_omega": 0,
+        "sequence": 10,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0020833334419876,
+        "velocity_x": -7.0048713496362e-07,
+        "station_name": "Custom: P0 long-curves",
+        "contact1": false,
+        "fps": 59.880239278741,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.700000067552,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": false,
+        "finish_time": 0,
+        "station_distance": -4.4703483581543e-08,
+        "snapshot": "s2",
+        "session_generation": 2,
+        "finish_count": 0,
+        "station_top_speed": 1.0619898820555e-08,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 3.814697265625e-06,
+        "custom": true,
+        "speed_mps": 2.4524988770671,
+        "audio_pitch": 0.65,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      }
+    }
+  ]
+}

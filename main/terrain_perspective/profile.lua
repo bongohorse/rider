@@ -8,10 +8,10 @@ function M.id(d)
     if e.road_profile~=nil then return e.road_profile end
     return d._road_profile
 end
-function M.enabled(d) return M.id(d)==M.ID end
+function M.enabled(d) local id=M.id(d);return id==M.ID or id=='authored-v1' end
 function M.validate(d)
     local id=M.id(d)
-    if id~=nil and id~=M.ID then return nil,'Unsupported road profile '..tostring(id)..'; keep the original file and use a supported Rider version.' end
+    if id~=nil and id~=M.ID and id~='authored-v1' then return nil,'Unsupported road profile '..tostring(id)..'; keep the original file and use a supported Rider version.' end
     return true
 end
 return M

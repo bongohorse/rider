@@ -1,0 +1,33 @@
+{
+  "platform": "wasm-web",
+  "status": "PASS",
+  "cache_invalidations": [],
+  "architectures": {
+    "wasm-web": [
+      {
+        "bundled": "RiderG1.wasm",
+        "extender": "dmengine.wasm",
+        "sha256": "57127d029fda695af182ca4ba1a81e163e2fa2fa2515523915d7800515d6b03d"
+      },
+      {
+        "bundled": "RiderG1_wasm.js",
+        "extender": "dmengine.js",
+        "sha256": "43ec8b426efa2b9fedfcafc4ca0d19fb6800031cf5d8b206c3262aeef6bb618f"
+      }
+    ],
+    "wasm_pthread-web": [
+      {
+        "bundled": "RiderG1_pthread.wasm",
+        "extender": "dmengine.wasm",
+        "sha256": "14bddd6e70f46af0f2996a839a16270bd9f7f79556c1bfffa8fb2817544714b1"
+      },
+      {
+        "bundled": "RiderG1_pthread_wasm.js",
+        "extender": "dmengine.js",
+        "sha256": "d1ddf072eafa719f8a6a88748497051fe2a462e2d855379b5b14e3184e89c14a"
+      }
+    ]
+  },
+  "extender_lines": 2,
+  "source_sha": "8e2c64b2bff2069e8cac24944e318d54634d70d1"
+}

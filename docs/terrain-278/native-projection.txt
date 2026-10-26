@@ -1,0 +1,6 @@
+Runtime functions final source: fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff
+PASS six-anchor: 11 sections; collision plane invariant, exact 48 B stride, min/max controls and projected bounds
+PASS long-curves: 12 sections; collision plane invariant, exact 48 B stride, min/max controls and projected bounds
+PASS mixed: 12 sections; collision plane invariant, exact 48 B stride, min/max controls and projected bounds
+PASS long-over-budget: 17 sections; collision plane invariant, exact 48 B stride, min/max controls and projected bounds
+PASS ribbon/overhang, invalid/version/NaN guards, deterministic reverse projection

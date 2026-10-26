@@ -168,6 +168,8 @@ function M.validate(d)
     local markers=0
     if d.markers then markers=(d.markers.to_m-d.markers.from_m)/d.markers.minor_m+1+(d.markers.to_m-d.markers.from_m)/d.markers.major_m+1 end
     objects=objects+markers
+    local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate_station(d)
+    if not look_ok then return nil,look_err,look_unknown end
     local resources,err=require("main.gym.terrain_budget").check(d)
     if not resources then return nil,err end
     return d

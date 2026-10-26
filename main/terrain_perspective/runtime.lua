@@ -24,14 +24,18 @@ function M.poll()
     end
 end
 function M.prepare(state,camera)
-    state.look_camera=camera;state.look_revision=M.revision
+    state.look_camera=camera
+    local p=M.comparison() and M.params or state.params or projection.DEFAULT
+    state.current_params=p
+    state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        e.bounds=projection.bounds(e.base_bounds,camera,M.params)
+        local width=state.baked and 2 or p.width -- also covers wider dirty/cached sections before materialization
+        e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end
 function M.apply(state,set_bounds)
-    local p,c=M.params,state.look_camera
+    local p,c=state.current_params,state.look_camera
     local a=p.mode=='perspective' and p.perspective/projection.FOCAL or 0
     local scale=sys.get_config_number('physics.scale',.01)
     for _,e in ipairs(state.entries) do if e.resource then
@@ -44,11 +48,11 @@ function M.apply(state,set_bounds)
             e.look_x,e.look_y,e.look_lower=g.origin[1],g.origin[2],lower
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
-        if fresh or e.look_revision~=M.revision then
-            go.set(url,'look_shape',vmath.vector4(p.width,a,p.side,p.shading))
+        if fresh or e.look_revision~=state.param_key then
+            go.set(url,'look_shape',vmath.vector4(g.baked and .9 or p.width,a,p.side,g.baked and 1 or p.shading))
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
-        if fresh or e.look_revision~=M.revision or e.look_cx~=c[1] or e.look_cy~=c[2] then
+        if fresh or e.look_revision~=state.param_key or e.look_cx~=c[1] or e.look_cy~=c[2] then
             go.set(url,'look_camera',vmath.vector4(c[1],c[2],.18,math.tan(p.angle*math.pi/180)))
             e.look_cx,e.look_cy=c[1],c[2]
             state.uniform_writes=(state.uniform_writes or 0)+1
@@ -57,7 +61,7 @@ function M.apply(state,set_bounds)
             go.set(url,'editor_params',vmath.vector4(phase,0,0,0));e.look_phase=phase
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
-        e.look_object,e.look_revision=e.object,M.revision
+        e.look_object,e.look_revision=e.object,state.param_key
         local b=e.bounds
         if fresh or e.look_b1~=b[1] or e.look_b2~=b[2] or e.look_b3~=b[3] or e.look_b4~=b[4] then
             g.bounds={b[1]-g.origin[1],b[2]-g.origin[2],0,b[3]-g.origin[1],b[4]-g.origin[2],0}
@@ -70,7 +74,7 @@ function M.apply(state,set_bounds)
     if html5 and sys.get_engine_info().is_debug then
         local entries={}
         for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,bytes=e.geometry and e.geometry.bytes or 0} end
-        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
+        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,params=p,baked=state.baked==true,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
     end
 end
 return M

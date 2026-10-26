@@ -75,8 +75,10 @@ function M.drop(entry,delete_object)
 end
 function M.build(self,d)
     local started=socket.gettime()
-    local state={perspective=require("main.terrain_perspective.runtime").enabled(d)};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
+    local look=require "main.terrain_perspective.look"
+    local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d)};self.terrain_mesh=state
+    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
+    local mapping=look.mapping(d);if mapping then for _,e in ipairs(entries) do e.looks=mapping[e.chain] end end
     if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
     M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
@@ -103,14 +105,62 @@ function M.diagnostics(state,mode,generation)
     for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,path=e.path,bytes=e.geometry and e.geometry.bytes or 0} end
     html5.run("window.riderTerrainResources="..json.encode({mode=mode,generation=generation,counts=r,high_water=state.high_water,view=state.view,entries=entries}))
 end
+-- Change visual state only. A Gym draft may never replace the running collision samples.
+local function same_chains(a,b)
+    if #a.chains~=#b.chains then return false end
+    for i,c in ipairs(a.chains) do
+        if #c~=#b.chains[i] then return false end
+        for j,p in ipairs(c) do local q=b.chains[i][j]
+            if math.abs(p[1]-q[1])>1e-6 or math.abs(p[2]-q[2])>1e-6 then return false end
+        end
+    end
+    return true
+end
+local function same_looks(a,b,first,last)
+    if not a or not b then return a==b end
+    for i=first,last do for _,k in ipairs({'width','side','shading'}) do if a[i][k]~=b[i][k] then return false end end end
+    return true
+end
+local function live_look(self,state)
+    local session=require("main.gym.editor_look")
+    local d=session.live(self.session_generation) or state.source
+    if d==state.look_source then return end
+    if not same_chains(state.source,d) then
+        if session.session then session.session.error='The editor geometry differs from this run. Play from the Editor first, then change Terrain Look.' end
+        state.look_source=d;return
+    end
+    -- Retain the actual running station's markers/props/physics costs, even for a template copy.
+    local visual={};for k,v in pairs(state.source) do visual[k]=v end;visual.editor=d.editor
+    local budget,err=require('main.gym.terrain_budget').check(visual)
+    if not budget then
+        if session.session then session.session.error=err end
+        state.look_source=d;return
+    end
+    local look=require("main.terrain_perspective.look")
+    local projected=require("main.terrain_perspective.runtime").enabled(d)
+    local mapping=look.mapping(d)
+    for _,e in ipairs(state.entries) do
+        local values=mapping and mapping[e.chain]
+        if state.perspective~=projected then
+            -- Factory/material layout changes only on explicit legacy opt-in, never camera motion.
+            M.drop(e,true);e.dirty=true
+        elseif not same_looks(e.looks,values,e.first,e.last) then e.dirty=true end
+        e.looks=values
+    end
+    state.perspective,state.params,state.baked=projected,look.params(d),look.has_sections(d)
+    state.stats.buffer_bytes=state.stats.vertices*(projected and 48 or 36)
+    state.stats.budget=budget
+    state.look_source=d;state.revision=(state.revision or 0)+1
+end
 function M.update(self)
     local state=self.terrain_mesh;if not state then return end
+    live_look(self,state)
     local started=socket.gettime()
     local view=residency.viewport()
     local perspective=require "main.terrain_perspective.runtime"
     if state.perspective then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
     local r=residency.update(state,state.entries,view,function(e)
-        local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key) or geometry.section(e.prep,e.first,e.last,e.key)
+        local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key,nil,e.looks) or geometry.section(e.prep,e.first,e.last,e.key)
         state.uploads=(state.uploads or 0)+1
         if not e.resource then state.serial=(state.serial or 0)+1 end
         M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")

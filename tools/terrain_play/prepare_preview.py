@@ -8,6 +8,7 @@ p = argparse.ArgumentParser()
 p.add_argument('bundle', type=Path)
 p.add_argument('--output', type=Path, help='External launcher; keep immutable engine bundle unchanged')
 p.add_argument('--perspective-profile', action='store_true', help='Explicitly mark derived fixtures for the accepted production profile')
+p.add_argument('--terrain-look', action='store_true', help='Label the artifact launcher for the native authoring menu')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
 web = a.output or next(a.bundle.rglob('index.html')).parent
@@ -54,5 +55,9 @@ if a.perspective_profile:
     text=text.replace('<option value="six-anchor">','<option value="legacy-long-curves">Legacy fixed Depth (500 m)</option><option value="six-anchor">',1)
     text=text.replace("allowed=['six-anchor'","allowed=['legacy-long-curves','six-anchor'")
     text=text.replace('This launcher imports the saved course through normal Play.', 'Marked fixtures use perspective-v1; the legacy option is the unchanged unmarked file. This launcher imports through normal Play, with no rendering override.')
+    launcher.write_text(text)
+if a.terrain_look:
+    launcher=web/'terrain-preview.html';text=launcher.read_text().replace('Accepted perspective · normal Play / editor','Terrain Look · Gym / editor')
+    text=text.replace('Arrows drive/brake/reverse · A/D lean · R retries · E opens the editor.', 'Arrows drive · A/D lean · R Retry · E Edit/Play. Choose Terrain Look in Gym or Edit for live preview. Apply saves; Close keeps preview values.')
     launcher.write_text(text)
 print(web / 'terrain-preview.html')

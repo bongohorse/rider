@@ -1,0 +1,13 @@
+Runtime functions final source: fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff
+PASS six-anchor: source/physics equality, 48-byte baked sections, projected bounds, versioned roundtrip, template and Undo/Redo
+PASS long-curves: source/physics equality, 48-byte baked sections, projected bounds, versioned roundtrip, template and Undo/Redo
+PASS mixed: source/physics equality, 48-byte baked sections, projected bounds, versioned roundtrip, template and Undo/Redo
+PASS long-over-budget: source/physics equality, 48-byte baked sections, projected bounds, versioned roundtrip, template and Undo/Redo
+PASS future version and incoherent local projection refusal
+PASS baked floor dependency and legacy root-extension isolation
+PASS manual boundary pinning against level-default changes
+PASS nested future parameter version and invalid section-format protection
+PASS explicit editor-context parity with preserved extension fields
+PASS prefab Mirror preserves manual look; prop styling is refused
+PASS authored two-sided curl/ribbon bounds; original physics domain retained
+PASS dirty/cached authored bounds cover full permitted width before upload

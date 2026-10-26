@@ -15,10 +15,11 @@ uniform vs_uniforms {
 void main() {
     vec3 p=position;
     float s=look_origin.w;
-    float depth=p.z>0.0?look_shape.x:0.0;
+    float depth=p.z>0.0?p.z*s/0.9*look_shape.x:0.0;
     if(p.z<0.0) {
-        depth=p.z < -1.5*0.9/s?look_shape.x:0.0;
-        if(look_data.z>0.5) p.y=max(look_origin.z,look_data.y-look_shape.z)/s;
+        depth=max(0.0,-p.z*s-0.9)/0.9*look_shape.x;
+        if(look_data.z>1.5) { /* source-authored bottom already baked */ }
+        else if(look_data.z>0.5) p.y=max(look_origin.z,look_data.y-look_shape.z)/s;
         else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
     }
     float perspective_w=1.0;

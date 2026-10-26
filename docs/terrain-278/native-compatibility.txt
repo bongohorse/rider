@@ -1,0 +1,7 @@
+Runtime functions final source: fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff
+PASS six-anchor: legacy exact reopen/copy; perspective profile retained; collision/source unchanged; 36/48 B budgets
+PASS long-curves: legacy exact reopen/copy; perspective profile retained; collision/source unchanged; 36/48 B budgets
+PASS mixed: legacy exact reopen/copy; perspective profile retained; collision/source unchanged; 36/48 B budgets
+PASS long-over-budget: legacy exact reopen/copy; perspective profile retained; collision/source unchanged; 36/48 B budgets
+PASS new default, unsupported-profile refusal and independent legacy/perspective Fit admission
+PASS future-profile parse propagation and alternating save-slot overwrite protection

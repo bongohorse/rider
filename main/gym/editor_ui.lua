@@ -1,3 +1,4 @@
+local socket=require 'socket'
 -- Editor A1b: fixed-size desktop chrome. A fixed pool is reused between the inspector and every
 -- modal/list; disabling a node never frees its budget. Coordinates here are canvas pixels, top-left.
 local M={BOXES=128,TEXTS=128}
@@ -130,18 +131,9 @@ local function wrap(t,width,size)
     return out
 end
 -- Preserve the existing driving-mode entry hint/message using the same text pool.
-function M.play(u,k,message)
-    M.hide(u);M.size(u)
-    local n=u.texts[1]
-    gui.set_enabled(n,true);gui.set_text(n,'Edit level [E]');gui.set_color(n,C.secondary)
-    gui.set_screen_position(n,vmath.vector3(16*u.scale,53*u.scale,0))
-    local scale=12/14*u.scale/k;gui.set_scale(n,vmath.vector3(scale,scale,1))
-    if message and message~='' then
-        local value=shorten(message,u.w-32,14);local m=u.texts[2]
-        gui.set_enabled(m,true);gui.set_text(m,value);gui.set_color(m,C.error)
-        gui.set_screen_position(m,vmath.vector3(math.max(16,(u.w-#value*8)/2)*u.scale,(u.h-94)*u.scale,0))
-        scale=u.scale/k;gui.set_scale(m,vmath.vector3(scale,scale,1))
-    end
+function M.play(u,k,message,session,legacy,status)
+    M.render(u,{play=true,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,
+        look_legacy=legacy,status=status or '',modal=session and session.open and 'terrain_look' or nil})
 end
 function M.scrollbar_hit(u)
     if not u.pointer then return false end
@@ -235,7 +227,11 @@ function M.render(u,d)
     local modal=d.modal
     if modal then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
-    if not modal then
+    if d.play and not modal then
+        text(16,h-40,'Edit level [E]',C.secondary,12)
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Change Terrain Look live in this run; Apply saves to the level.')
+        if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
+    elseif not modal then
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
         local title_width=math.min(280,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
@@ -410,14 +406,45 @@ function M.render(u,d)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Terrain Look: level or selected terrain sections. * means preview values need Apply.')
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12);text(428,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
     else
-        box(0,0,w,h,C.canvas)
+        if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16 end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
-        if modal=='help' then
+        if modal=='terrain_look' then
+            local s=d.look
+            text(mx+16,my+24,'Terrain Look',C.active,18)
+            button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
+            button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
+            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
+            local top,bottom=my+104,my+mh-104
+            local height=5*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
+            for i,spec in ipairs(require('main.terrain_perspective.projection').CONTROLS) do
+                local y=top+(i-1)*44-u.look_scroll;local key=spec.key
+                if y>=top and y+40<=bottom then
+                    local disabled=s.scope=='selected' and (key=='perspective' or key=='angle')
+                    local value=s.field and s.field.key==key and (s.field.text..'_') or string.format('%.4g',s.params[key])
+                    text(mx+16,y+10,spec.label,disabled and C.secondary or C.text,12,268)
+                    button('look_value_'..key,mx+300,y,100,value,false,'Numeric '..spec.label,24,disabled)
+                    local r=require('main.terrain_perspective.projection').RANGES[key];local x=mx+16;local width=mw-36
+                    local track=box(x,y+30,width,8,C.border);u.buttons['look_slider_'..key]={box=track};u.visible[#u.visible+1]='look_slider_'..key
+                    u.rects['look_slider_'..key]={x=x,y=y+24,w=width,h=18}
+                    local fraction=(s.params[key]-r[1])/(r[2]-r[1]);box(x+fraction*(width-8),y+26,8,16,disabled and C.secondary or C.active)
+                end
+            end
+            if s.error then paragraph(mx+16,my+mh-96,s.error,mw-32,C.error,12,{my+mh-104,my+mh-40})
+            else
+                text(mx+16,my+mh-86,'Strength / angle: level-wide. Scroll for all controls.',C.secondary,12,mw-32)
+                paragraph(mx+16,my+mh-68,s.dirty and 'Preview only; Apply saves one Undo action.' or ('Applied settings: '..d.status),mw-32,C.secondary,12,{my+mh-84,my+mh-36})
+            end
+            button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset preview; Apply to store. Selected reset restores inheritance.',28)
+            button('look_apply',mx+120,my+mh-36,92,'Apply',true,'Store this scope as one Undo action',28)
+            button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
+        elseif modal=='help' then
             u.help_panel=panel
             for col,lines in ipairs(d.help) do
                 local x=mx+20+(col-1)*mw/2
@@ -476,7 +503,7 @@ function M.render(u,d)
             button('warnings',mx+mw-148,my+mh-48,128,'Close [Esc]')
         end
     end
-    if not modal and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
+    if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
     end
