@@ -100,8 +100,8 @@
     #rider-mobile .zones button{width:clamp(62px,12vw,130px);height:clamp(64px,18vh,100px);font-weight:bold;background:#142e38ce}
     #rider-mobile .zones button.held{background:#277b67}
     #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
-    #rider-mobile .course-progress{display:flex;align-items:center;gap:8px;min-width:250px;max-width:100%;margin-top:6px;font-size:12px}
-    #rider-mobile .progress-track{height:4px;min-width:80px;flex:1;position:relative;background:#486963}
+    #rider-mobile .course-progress{display:flex;align-items:center;gap:8px;min-width:0;width:250px;max-width:100%;margin-top:6px;font-size:12px}
+    #rider-mobile .progress-track{height:4px;min-width:24px;flex:1;position:relative;background:#486963}
     #rider-mobile .progress-car{position:absolute;top:-7px;width:14px;height:6px;border-radius:2px;background:#4de6d9;transform:translateX(-50%)}
     #rider-mobile .progress-car:before{content:'';position:absolute;top:-4px;left:3px;width:8px;height:4px;background:#4de6d9}
     #rider-mobile .progress-car:after{content:'';position:absolute;top:5px;left:1px;width:3px;height:3px;background:#ecfff8;box-shadow:9px 0 #ecfff8}

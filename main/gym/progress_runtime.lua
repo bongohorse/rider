@@ -27,6 +27,7 @@ end
 function M.update(self,dt)
     local p=self.progress;if not p then return end
     local status=phase(self)
+    if not p.enabled and p.sent then return end
     p.poll=(p.poll or 0)+dt
     if p.sent==status and p.poll<.1 then return end
     p.poll=0;p.sent=status
