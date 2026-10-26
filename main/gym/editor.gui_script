@@ -2816,7 +2816,7 @@ function update(self,dt)
         self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
         if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui)
         else
-            editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session,
+            editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session and terrain_look.session.play_generation and terrain_look.session,
                 editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status)
             self.buttons=self.ui.buttons
         end

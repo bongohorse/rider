@@ -30,7 +30,7 @@ function M.sync()
 end
 function M.scope(value)
  local s=M.sync();s.scope=value;s.ids=editor.selected_ids();s.params=look.params(editor.doc);s.clear=nil;s.error=nil;s.dirty=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1
- s.pending=true
+ s.pending=nil;M.play_level=s.play_generation and doc.compile(editor.doc) or nil
  s.mixed=false
  if value=='selected' then local values=look.values(editor.doc.editor)
   local first

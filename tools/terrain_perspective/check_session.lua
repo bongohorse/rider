@@ -21,7 +21,7 @@ function E.commit(fn)
 end
 package.loaded['main.gym.editor']=E
 local session=require 'main.gym.editor_look'
-session.open();session.close();assert(not E.doc.editor.road_profile and not E.look_preview)
+session.open();session.scope('level');session.tick();session.close();assert(not E.doc.editor.road_profile and not E.look_preview)
 session.open();assert(session.change('width',1.4));assert(session.preview());assert(not E.doc.editor.road_profile)
 session.close();session.open();assert(session.session.params.width==1.4 and not E.doc.editor.road_profile)
 assert(session.apply());assert(count==1 and E.doc.editor.road_profile==look.ID and E.doc.editor.road_look.params.width==1.4)
