@@ -2,7 +2,9 @@
 local M={ID='perspective-v1'}
 function M.id(d)
     if type(d)~='table' then return nil end
-    local e=type(d.editor)=='table' and d.editor or d
+    -- Full station/source documents opt in only through their editor block.
+    -- Planner callers also pass a raw editor block (no station schema).
+    local e=type(d.editor)=='table' and d.editor or (d.schema~=nil and {} or d)
     if e.road_profile~=nil then return e.road_profile end
     return d._road_profile
 end

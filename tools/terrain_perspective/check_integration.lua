@@ -52,11 +52,18 @@ print('PASS new default, unsupported-profile refusal and independent legacy/pers
 local docs={legacy=assert(doc.compile(dofile(arg[1]..'/six-anchor-source.lua')))}
 docs.future=doc.copy(docs.legacy);docs.future.editor.road_profile='future'
 docs.internal=doc.copy(docs.legacy);docs.internal._road_profile=profile.ID
+docs.root=doc.copy(docs.legacy);docs.root.editor=nil;docs.root.road_profile=profile.ID
+docs.root_future=doc.copy(docs.root);docs.root_future.road_profile='future'
 local saved={a={format=1,seq=1,text='legacy'},b={format=1,seq=2,text='future'}}
 json={decode=function(text) return doc.copy(assert(docs[text])) end}
 sys={get_save_file=function(_,n) return n end,load=function(n) return doc.copy(saved[n] or {}) end,save=function(n,t) saved[n]=doc.copy(t) end}
 local custom=require 'main.gym.custom'
 local internal=assert(custom.parse('internal'));assert(not profile.enabled(internal) and internal._road_profile==nil,'Imported runtime flag must not restyle an unmarked course')
+for _,name in ipairs({'root','root_future'}) do
+ local root=assert(custom.parse(name));assert(not profile.enabled(root) and budget.measure(root).stride==36)
+ assert(not profile.enabled(assert(doc.open_level(root))),'Root extension must not be promoted into source opt-in')
+end
+assert(profile.enabled({road_profile=profile.ID}),'Raw editor-block planner opt-in lost')
 local parsed,why,unknown=custom.parse('future');assert(not parsed and unknown and why:find('Unsupported road profile'))
 local store=custom.slot_store({'a','b'},custom.parse)
 assert(store.protected());assert(store.save('legacy'));assert(saved.b.text=='future' and saved.b.seq==2)
