@@ -14,6 +14,7 @@ fs.mkdirSync(out,{recursive:true});
  async function menu(){const s=await size();await tap(616,s.h-40);await page.waitForTimeout(350);if(!release)await page.waitForFunction(()=>window.riderEditor.look?.open);}
  async function action(which){const s=await size(),x=s.w-436,mh=Math.min(580,s.h-96);await tap(x+({reset:44,apply:148,close:344}[which]),16+mh-22);await page.waitForTimeout(220);}
  async function number(index,value){const s=await size();await tap(s.w-436+316,16+104+index*44+12);await page.keyboard.type(String(value),{delay:30});await key('Enter');await page.waitForTimeout(180);}
+ async function playFromEditor(){const g=(await telemetry()).session_generation;await key('e');await page.waitForFunction(n=>!window.riderEditing&&window.riderTelemetry?.session_generation>n&&window.riderTelemetry.sequence>2,g);}
  async function ready(){await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);}
  async function telemetry(){return page.evaluate(()=>window.riderTelemetry);}
  async function sameRun(t){const now=await telemetry();assert.equal(now.session_generation,t.session_generation);assert.equal(now.reset_count,t.reset_count);assert.equal(now.terrain_shapes,t.terrain_shapes);assert.equal(await page.evaluate(()=>!!window.riderEditing),false);}
@@ -39,7 +40,7 @@ fs.mkdirSync(out,{recursive:true});
  // Legacy 660 m, with full exact collision export comparison and persistence.
  await page.context().close();await fresh();await page.goto(base+'/index.html?station=custom');await page.waitForFunction(()=>window.riderCustom?.visible);
  const fixture=JSON.parse(fs.readFileSync('docs/terrain-p5/mixed-over-budget.json'));delete fixture.editor.road_profile;
- await page.evaluate(body=>window.riderCustom.importFile(new File([body],'gym-legacy-660.json',{type:'application/json'})),JSON.stringify(fixture));await page.waitForFunction(()=>window.riderCustomStatus==='Saved');await ready();await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);const collisionBaseline=await exported();await key('e');await page.waitForFunction(()=>!window.riderEditing&&window.riderTelemetry?.sequence>2);const old=await telemetry();await menu();await sameRun(old);
+ await page.evaluate(body=>window.riderCustom.importFile(new File([body],'gym-legacy-660.json',{type:'application/json'})),JSON.stringify(fixture));await page.waitForFunction(()=>window.riderCustomStatus==='Saved');await ready();await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);const collisionBaseline=await exported();await playFromEditor();const old=await telemetry();await menu();await sameRun(old);
  if(!release)assert.equal(await page.evaluate(()=>window.riderRoadProjection),null,'Opening converted legacy terrain');
  await action('close');await menu();if(!release)assert.equal(await page.evaluate(()=>window.riderRoadProjection),null);
  for(const [i,v] of [2,1,45,.25,0].entries())await number(i,v);
@@ -49,12 +50,12 @@ fs.mkdirSync(out,{recursive:true});
  await menu();await action('apply');await durable();await sameRun(old);await action('close');await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);const styled=await exported();
  assert.deepEqual(styled.editor.road_look.params,{version:1,mode:'perspective',width:2,perspective:1,angle:45,side:.25,shading:0});for(const k of ['chains','bounds','spawn','start_speed','hulls','labels','finish','two_sided'])assert.deepEqual(styled[k],collisionBaseline[k],k);
  r.checks.push({name:'legacy_660_menu_no_conversion_until_explicit_preview_apply_and_collision_unchanged',export:styled,telemetry:old});
- await durable();await page.reload();await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);assert.deepEqual((await exported()).editor.road_look,styled.editor.road_look);await key('e');await page.waitForFunction(()=>!window.riderEditing&&window.riderTelemetry?.sequence>2);
+ await durable();await page.reload();await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);assert.deepEqual((await exported()).editor.road_look,styled.editor.road_look);await playFromEditor();
  const resetBefore=await telemetry();await menu();await action('reset');await action('apply');await durable();await action('close');await sameRun(resetBefore);await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);assert.deepEqual((await exported()).editor.road_look.params,{version:1,mode:'perspective',width:.9,perspective:.35,angle:28.810793742973,side:64,shading:1});
  r.checks.push({name:'gym_apply_acknowledged_reload_and_shared_reset'});
  if(!release){
   await require('../gym/editor_ui_target.cjs').reveal(page,'object_select_o2');let b=await page.evaluate(()=>window.riderEditor.buttons.object_select_o2);let sz=await size();await tap(b.x,sz.h-b.y);
-  await key('e');await page.waitForFunction(()=>!window.riderEditing&&window.riderTelemetry?.sequence>2);const localRun=await telemetry();await menu();sz=await size();await tap(sz.w-436+228,16+56);await number(0,1.8);await number(3,4);await number(4,.2);await action('apply');await durable();await sameRun(localRun);
+  await playFromEditor();const localRun=await telemetry();await menu();sz=await size();await tap(sz.w-436+228,16+56);await number(0,1.8);await number(3,4);await number(4,.2);await action('apply');await durable();await sameRun(localRun);
   assert.equal(await page.evaluate(()=>window.riderRoadProjection.baked),true);assert.equal(await page.evaluate(()=>window.riderEditorDoc.objects.find(o=>o.id==='o2').road_look.width),1.8);
   await action('close');await key('r');await page.waitForFunction(n=>window.riderTelemetry.reset_count>n,localRun.reset_count);assert.equal((await telemetry()).session_generation,localRun.session_generation);
   await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);const locals=await exported();assert.deepEqual(locals.editor.objects.find(o=>o.id==='o2').road_look,{version:1,width:1.8,side:4,shading:.2});for(const k of ['chains','bounds','spawn','start_speed','hulls','labels','finish','two_sided'])assert.deepEqual(locals[k],collisionBaseline[k],k);

@@ -129,6 +129,13 @@ local function live_look(self,state)
         if session.session then session.session.error='The editor geometry differs from this run. Play from the Editor first, then change Terrain Look.' end
         state.look_source=d;return
     end
+    -- Retain the actual running station's markers/props/physics costs, even for a template copy.
+    local visual={};for k,v in pairs(state.source) do visual[k]=v end;visual.editor=d.editor
+    local budget,err=require('main.gym.terrain_budget').check(visual)
+    if not budget then
+        if session.session then session.session.error=err end
+        state.look_source=d;return
+    end
     local look=require("main.terrain_perspective.look")
     local projected=require("main.terrain_perspective.runtime").enabled(d)
     local mapping=look.mapping(d)
@@ -142,7 +149,7 @@ local function live_look(self,state)
     end
     state.perspective,state.params,state.baked=projected,look.params(d),look.has_sections(d)
     state.stats.buffer_bytes=state.stats.vertices*(projected and 48 or 36)
-    state.stats.budget=require('main.gym.terrain_budget').measure(d)
+    state.stats.budget=budget
     state.look_source=d;state.revision=(state.revision or 0)+1
 end
 function M.update(self)
