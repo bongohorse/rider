@@ -2,6 +2,7 @@ local socket=require "socket"
 local stations=require "main.gym.stations"
 local mobile=require "main.gym.mobile"
 local layout=require "main.gym.layout"
+local run_ui=require "main.gym.run_ui"
 local feel=require "main.gym.feel"
 local graph=require "main.gym.graph"
 local feedback=require "main.gym.feedback"
@@ -150,6 +151,7 @@ function init(self)
     gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
     self.reason = layout.text(vmath.vector3(480,498,0), "")
     gui.set_font(self.reason,"default");gui.set_scale(self.reason,vmath.vector3(0.55,0.55,1))
+    self.run_ui=run_ui.new()
 end
 local function fps_color(fps)
     return fps>=55 and vmath.vector4(0.3,0.9,0.6,1) or fps>=30 and vmath.vector4(1,0.65,0.2,1) or vmath.vector4(1,0.25,0.25,1)
@@ -163,6 +165,12 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
+    if id==hash("run_state") then
+        if data.generation<(self.session_generation or 1) then return end
+        run_ui.show(self.run_ui,data,mobile.enabled())
+        if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
+        return
+    elseif id==hash("station_loading") then run_ui.show(self.run_ui,nil);if html5 then html5.run("window.riderRun=null") end end
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
         self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
@@ -311,9 +319,16 @@ function update(self,dt)
             undo=editor.history and #editor.history.undo or 0,toast=gui.get_text(self.reason),line=gui.get_text(self.replay_line)}))
     end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
-    gui.set_visible(self.reason,self.toast_time>0 and not enabled)
+    gui.set_visible(self.reason,self.toast_time>0 and not enabled and not self.run_ui.data)
     gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
     for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
+    if self.run_ui.data then
+        run_ui.show(self.run_ui,self.run_ui.data,mobile.enabled())
+        gui.set_visible(self.time_line,false)
+        gui.set_visible(self.station_result,false);gui.set_visible(self.replay_line,false)
+        for _,b in pairs(self.replay_buttons) do gui.set_visible(b.box,false);gui.set_visible(b.label,false) end
+        gui.set_visible(self.time_buttons.step.box,false);gui.set_visible(self.time_buttons.step.label,false)
+    end
     local compact=mobile.compact()
     self.compact=compact
     local open=mobile.enabled() and not compact or self.tuning_open
@@ -339,7 +354,7 @@ function update(self,dt)
     gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
     layout.readable(base)
     local narrow=html5 and tonumber(html5.run("innerWidth"))<520
-    graph.visible(self.graph,not (open and narrow))
+    graph.visible(self.graph,not self.run_ui.data and not (open and narrow))
     if html5 then
         local function point(n)
             local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
@@ -368,6 +383,7 @@ function update(self,dt)
     end
 end
 function on_input(self,id,action)
+    if not self.feedback_modal and run_ui.input(self.run_ui,id,action,self.owner) then return true end
     if id==hash("ui_pointer") and action.pressed and self.latest and (self.latest.section_count or 0)>1 and gui.pick_node(self.section_next,action.x,action.y) then
         msg.post(self.owner,"next_section");return true
     end

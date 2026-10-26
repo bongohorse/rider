@@ -18,6 +18,7 @@ local editor_view = require "main.gym.editor_view"
 local juice = require "main.gym.juice"
 -- A21 record and replay: one more command source in this tick owner; the recording lives on self.replay.
 local replay=require "main.gym.replay"
+local race=require "main.gym.run_runtime"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
 local LOADER="main:/loader#script"
 local GAMEPLAY={}
@@ -28,8 +29,15 @@ local function clear_time_input(self)
 end
 -- Authored recovery proposal, deliberately inside the chain ends. No inactivity rule.
 local function request_reset(self,reason)
+    if (reason=="head" or reason=="bounds") and race.failed(self,reason) then return end
     if self.vehicle and self.vehicle.ready and not self.pending_reset then
         self.pending_reset = {generation=self.generation,reason=reason,requested=socket.gettime()}
+    end
+end
+local function manual_retry(self)
+    request_reset(self,"manual")
+    if self.race and require("main.gym.run").terminal(self.race) then
+        msg.post(LOADER,"run_retry_resume",{generation=self.session_generation,id=self.race.id})
     end
 end
 -- Follow camera at the start of an attempt (first start, Retry, section): the view it will settle on,
@@ -79,6 +87,7 @@ local function reset(self)
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1
     self.last_reset_reason = request.reason
+    race.ready(self)
     self.resetting = false
     self.check_reset_pose = self.testcase=="a3"
     local elapsed = (socket.gettime()-started)*1000
@@ -109,6 +118,8 @@ local function check_finish(self,state)
     local x,y=q[1]+(p[1]-q[1])*t,q[2]+(p[2]-q[2])*t
     local u=((x-a[1])*lx+(y-a[2])*ly)/(lx*lx+ly*ly)
     if u<0 or u>1 then return end
+    if self.race and self.race.state~="running" then return end
+    race.finish(self)
     self.finish_done,self.finish_count,self.finish_time=true,(self.finish_count or 0)+1,self.attempt_time
     print("GYM_FINISH "..json.encode({count=self.finish_count,time=self.attempt_time,speed=feel.metres(state.vx)}))
     msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time,time_scaled=self.time_scaled_ticks>0})
@@ -158,6 +169,7 @@ local function setup(self)
         msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation})
         return
     end
+    if self.station.id=="first-run" and not self.station.custom then self.crash_enabled=true end
     stations.configure(self.station)
     -- A failed build leaves a vehicle-less error world; the next load replaces it entirely.
     local built,err=pcall(function()
@@ -285,6 +297,7 @@ end
 function update(self, dt)
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
+    race.update(self,dt)
     if self.placement_report then
         self.placement_report=self.placement_report-1
         if self.placement_report==0 then
@@ -304,20 +317,21 @@ function update(self, dt)
     local frame_dt=self.time_factor>0 and (self.frame_skip or 0)==0 and dt/self.time_factor or 0
     self.frame_skip=math.max(0,(self.frame_skip or 0)-1)
     self.mobile=mobile.poll(frame_dt,self.vehicle and self.vehicle.ready and b2d.world.get_profile(b2d.body.get_world(self.vehicle.chassis)).step or 0)
+    if self.mobile.background then msg.post(LOADER,"run_focus_lost") end
     if self.mobile.pause then msg.post(LOADER,"time_control",{action="pause"}) end
     if self.mobile.time_step then msg.post(LOADER,"time_control",{action="step"}) end
     if self.paused then
         -- Paused: touch drive, Retry and section requests are dropped; a station switch leaves the pause.
         local m=self.mobile
         if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right or m.record or m.replay then self.time_dropped=self.time_dropped+1 end
-        self.mobile={station=m.station,clear=m.clear,started=m.started}
+        self.mobile={station=m.station,clear=m.clear,started=m.started,retry=self.race and require("main.gym.run").terminal(self.race) and m.retry or nil}
     end
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
-    if self.mobile.retry then request_reset(self,"manual") end
+    if self.mobile.retry then manual_retry(self) end
     if self.mobile.next_section then self.pending_section=true end
-    if self.mobile.record then replay.toggle_record(self) end
-    if self.mobile.replay then replay.toggle_play(self) end
+    if self.mobile.record then race.practice(self,"Record/replay");replay.toggle_record(self) end
+    if self.mobile.replay then race.practice(self,"Record/replay");replay.toggle_play(self) end
     if self.mobile.station then msg.post("main:/loader#script","select_station",{id=self.mobile.station,preset=self.preset}) end
     if self.scenario then self.scenario.update_before(self) end
     if self.vehicle and not self.vehicle.ready then
@@ -333,6 +347,7 @@ function update(self, dt)
         if not placed then fail_placement(self,err);return end
         start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
+        race.ready(self)
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
@@ -472,6 +487,9 @@ function on_input(self, action_id, action)
             return
         end
     end
+    if self.race and require("main.gym.run").terminal(self.race) and action_id==hash("retry") then
+        if action.pressed then manual_retry(self) end;return
+    end
     if self.paused then
         -- Paused: drive, Retry, section, preset and crash keys are dropped (counted for the a20 probe).
         if action.pressed and GAMEPLAY[action_id] then self.time_dropped=self.time_dropped+1 end
@@ -479,10 +497,12 @@ function on_input(self, action_id, action)
     end
     if action_id==hash("section_cycle") then if action.pressed then self.pending_section=true end;return end
     if action_id==hash("preset_cycle") then
+        if action.pressed then race.practice(self,"Preset changed") end
         if action.pressed then self.pending_preset=feel.next(self.preset) end
         return
     end
     if action_id == hash("crash_toggle") then
+        if action.pressed then race.practice(self,"Crash rule changed") end
         if action.pressed then self.crash_enabled=not self.crash_enabled end
         return
     end
@@ -490,6 +510,7 @@ function on_input(self, action_id, action)
         if action.pressed then request_reset(self,"manual") end
         return
     end
+    if action.pressed and (action_id==hash("replay_record") or action_id==hash("replay_play")) then race.practice(self,"Record/replay") end
     if action_id==hash("replay_record") then if action.pressed then replay.toggle_record(self) end;return end
     if action_id==hash("replay_play") then if action.pressed then replay.toggle_play(self) end;return end
     if self.resetting then return end
@@ -507,7 +528,12 @@ function fixed_update(self, dt)
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
         if self.scenario then self.scenario.check_pose(self,state) end
-        self.attempt_time=(self.attempt_time or 0)+dt
+        race.observe(self,dt)
+        if self.race then
+            if stations.outside(self.station,state) then race.failed(self,"bounds") end
+            if self.sensor_skip==0 and self.crash_enabled and rider.contact(self.vehicle) then race.failed(self,"head") end
+            self.attempt_time=self.race.elapsed
+        else self.attempt_time=(self.attempt_time or 0)+dt end
         check_finish(self,state)
         if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5d" then
             -- LE3b, LE5a, LE5b, LE5d only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
@@ -574,6 +600,7 @@ function fixed_update(self, dt)
             end
         end
         self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
+        self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         vehicle.apply(self.vehicle,self.last_command,dt)
         rider.sample(self.vehicle,self.last_command)
@@ -609,24 +636,27 @@ function on_message(self,id,data,sender)
         self.load={requested=data.requested,parse_ms=data.parse_ms}
     elseif id==hash("world_load_count") then self.world_loads=data.count
     elseif id==hash("crash_toggle") and self.paused then self.time_dropped=self.time_dropped+1
-    elseif id==hash("crash_toggle") then self.crash_enabled=not self.crash_enabled
+    elseif id==hash("crash_toggle") then race.practice(self,"Crash rule changed");self.crash_enabled=not self.crash_enabled
     elseif id==hash("struts_toggle") then juice.toggle()
     elseif id==hash("time_state") and data.generation==self.session_generation then
         if data.paused~=self.paused then clear_time_input(self);audio.pause(self,data.paused) end
         if self.paused and not data.paused then self.since_resume={ticks=0,driven=0} end
         if data.factor~=self.time_factor then self.frame_skip=2 end
+        race.pause(self,data.paused)
+        if data.step~=1 then race.practice(self,"Slow motion") end
         self.paused,self.time_factor=data.paused,data.factor
         msg.post(sender,"time_ready",{generation=data.generation,seq=data.seq})
     elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("replay_control") and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("replay_control") and not self.ui_captured and not self.look_captured and self.vehicle and self.vehicle.ready then
+        race.practice(self,"Record/replay")
         if data.action=="record" then replay.toggle_record(self) else replay.toggle_play(self) end
     elseif id==hash("next_section") then self.pending_section=true
-    elseif id==hash("select_preset") then self.pending_preset=data.key
+    elseif id==hash("select_preset") then race.practice(self,"Preset changed");self.pending_preset=data.key
     elseif id==hash("audio_mute") then audio.mute(self)
     elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
-    elseif id==hash("tune") then self.pending_tuning=data
+    elseif id==hash("tune") then race.practice(self,"Live tuning");self.pending_tuning=data
     elseif id==hash("terrain_look_capture") then self.look_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("graph_shown") and data.generation==self.history.generation then
@@ -634,5 +664,6 @@ function on_message(self,id,data,sender)
         if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
     elseif id==hash("hud_probe_result") then self.hud_probe_result=data
     elseif id==hash("measurements_shown") then self.measurements_shown=data
+    elseif id==hash("run_retry") and self.race and data.id==self.race.id and require("main.gym.run").terminal(self.race) then manual_retry(self)
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

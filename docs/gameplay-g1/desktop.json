@@ -1,0 +1,116 @@
+{
+  "source_sha": "8f614763d177efe2dca634cf89b53b2fa4e2f3a0",
+  "status": "PASS",
+  "real_device": "NOT RUN",
+  "checks": [
+    {
+      "name": "ready-flat-start-and-pause-resume",
+      "paused": {
+        "new_best": false,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "paused",
+        "time": 1.0833333898336,
+        "generation": 1,
+        "official": true,
+        "best": 0,
+        "practice": ""
+      }
+    },
+    {
+      "name": "directed-finish-once-unrounded-best-acknowledged",
+      "first": {
+        "new_best": true,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "finished",
+        "time": 27.56666810438,
+        "generation": 1,
+        "official": true,
+        "best": 27.56666810438,
+        "practice": ""
+      }
+    },
+    {
+      "name": "same-world-retry-and-slower-finish-no-downgrade",
+      "state": {
+        "new_best": false,
+        "id": "1:2",
+        "save": "saved",
+        "reason": "",
+        "state": "finished",
+        "time": 30.133334904909,
+        "generation": 1,
+        "official": true,
+        "best": 27.56666810438,
+        "practice": ""
+      }
+    },
+    {
+      "name": "close-reopen-loads-acknowledged-best",
+      "state": {
+        "new_best": false,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "ready",
+        "time": 0,
+        "generation": 1,
+        "official": true,
+        "best": 27.56666810438,
+        "practice": ""
+      }
+    },
+    {
+      "name": "native-terrain-look-apply-preserves-official-identity-and-world",
+      "state": {
+        "new_best": false,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "ready",
+        "time": 0,
+        "generation": 1,
+        "official": true,
+        "best": 27.56666810438,
+        "practice": ""
+      }
+    },
+    {
+      "name": "changed-assists-practice-cannot-overwrite",
+      "state": {
+        "new_best": false,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "finished",
+        "time": 25.833334680647,
+        "generation": 1,
+        "official": false,
+        "best": 27.56666810438,
+        "practice": "Crash rule changed"
+      }
+    },
+    {
+      "name": "editor-play-is-custom-and-has-no-official-scoring-authority"
+    },
+    {
+      "name": "failed-browser-sync-keeps-last-acknowledged-best",
+      "state": {
+        "new_best": true,
+        "id": "1:1",
+        "save": "Best not saved (failed)",
+        "reason": "",
+        "state": "finished",
+        "time": 25.866668015718,
+        "generation": 1,
+        "official": true,
+        "best": 27.56666810438,
+        "practice": ""
+      }
+    }
+  ],
+  "errors": []
+}

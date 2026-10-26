@@ -15,6 +15,7 @@ local OWNER="gym:/owner#script"
 local function switch(self,request)
     require('main.gym.editor_look').clear_play()
     self.station,self.speed=request.id,request.speed or ""
+    self.run_terminal=nil
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
     self.edit,self.play=request.edit,request.play
     -- Loop latency (R15): the world reports trigger -> drive-ready from this loader-side trigger time.
@@ -278,7 +279,19 @@ function on_message(self,id,data,sender)
     if id==hash("preset_changed") then self.preset,self.preset_refused=data.key,data.refused
     -- A20 pause/slow motion: play worlds only. Pausing stops ticks at once; any running factor is set only after
     -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.
-    elseif id==hash("time_control") and not self.loading and editor.mode=="play" then
+    elseif id==hash("run_stop") and data.generation==self.generation and self.station=="first-run" and not self.loading then
+        self.run_terminal=data.id
+        if time_scale.control(self.time,"suspend") then
+            self.time.seq=self.time.seq+1;time_scale.apply(self.time,"#world")
+            msg.post(OWNER,"time_state",time_scale.state(self.time,self.generation));msg.post("#ui","time_state",time_scale.state(self.time))
+        end
+    elseif id==hash("run_retry_resume") and data.generation==self.generation and data.id==self.run_terminal and not self.loading then
+        self.run_terminal=nil
+        self.time.paused=false;self.time.seq=self.time.seq+1
+        msg.post(OWNER,"time_state",time_scale.state(self.time,self.generation));msg.post("#ui","time_state",time_scale.state(self.time))
+    elseif id==hash("run_focus_lost") and self.station=="first-run" and not self.loading and editor.mode=="play" then
+        msg.post("#script","time_control",{action="suspend"})
+    elseif id==hash("time_control") and not self.loading and editor.mode=="play" and not self.run_terminal then
         if time_scale.control(self.time,data.action) then
             self.time.seq=self.time.seq+1
             if self.time.paused then time_scale.apply(self.time,"#world") end

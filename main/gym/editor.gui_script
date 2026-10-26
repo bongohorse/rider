@@ -141,7 +141,11 @@ function init(self)
     self.gui_nodes=self.overlay.nodes+self.extra_nodes+editor_ui.BOXES+editor_ui.TEXTS
     msg.post(".","acquire_input_focus")
     window.set_listener(function(_,event)
-        if event==window.WINDOW_EVENT_FOCUS_LOST then self.focus_lost,self.refocus,self.refocus_until=true,true,nil
+        if event==window.WINDOW_EVENT_FOCUS_LOST then
+            -- HTML5 reports canvas blur when a native DOM toolbar takes focus too.
+            -- Only document/window loss suspends a run; the toolbar's own Pause request stays single.
+            if not html5 or html5.run("document.hidden || !document.hasFocus()")=='true' then msg.post(LOADER,"run_focus_lost") end
+            self.focus_lost,self.refocus,self.refocus_until=true,true,nil
         elseif event==window.WINDOW_EVENT_FOCUS_GAINED then self.refocus_until=socket.gettime()+1 end
     end)
 end
