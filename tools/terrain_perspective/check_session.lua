@@ -36,7 +36,7 @@ session.reset();assert(session.preview());assert(E.doc.editor.road_look.params.w
 session.scope('selected');session.reset();assert(session.apply());assert(not E.doc.editor.objects[2].road_look)
 print('PASS persistent draft/Apply transactions, protected connected transitions, manual defaults and scoped Reset')
 
-assert(session.change('width',1.3));assert(session.preview());session.close()
+session.scope('level');assert(session.change('width',1.3));assert(session.preview());session.close()
 local anchor=E.doc.editor.objects[2].anchors[2];anchor['out'][2]=anchor['out'][2]+1;E.doc.editor.revision=E.doc.editor.revision+1
 session.tick();assert(E.look_preview.objects[2].anchors[2]['out'][2]==anchor['out'][2]);assert(E.look_preview.road_look.params.width==1.3 and E.doc.editor.road_look.params.width==.9)
 print('PASS retained look preview rebases onto geometry edits without applying its settings')
