@@ -1,0 +1,253 @@
+{
+  "source_sha": "05a163ecfd405e8c1638288290aa34244961f6c1",
+  "run_id": "d983dcc8-134b-4398-b3d7-33897ba4413f",
+  "browser": "156.0.8078.4",
+  "status": "PASS",
+  "cases": [
+    "empty_course_blocks_play",
+    "draw_ramp_gap_landing_on_grid",
+    "course_driven_to_finish",
+    "connected_edit_undo_redo",
+    "run_and_multi_select_move_once",
+    "insert_split_disconnect_cycle_connect_delete",
+    "snapping_alt_shift_ctrl_g",
+    "unsupported_shapes_refused",
+    "box_select_crossing_contained_outside",
+    "bridge_separated_ends_undo_redo",
+    "template_change_discards_drawing",
+    "draft_keeps_connections",
+    "overhang_curl_drives_two_sided",
+    "editor_budget_recheck",
+    "drafts_above_sprite_budget"
+  ],
+  "measurements": {
+    "course": {
+      "finish_time_s": 5.1666669361293,
+      "terrain_shapes": 4,
+      "chains": [
+        [
+          [
+            16,
+            2
+          ],
+          [
+            12,
+            1
+          ],
+          [
+            -3,
+            1
+          ]
+        ],
+        [
+          [
+            42,
+            1
+          ],
+          [
+            22,
+            1
+          ],
+          [
+            18,
+            1.5
+          ]
+        ]
+      ]
+    },
+    "cycle": {
+      "candidates": 4,
+      "first": "v:o4:3",
+      "second": "v:o5:1"
+    },
+    "snapping": [
+      [
+        5.2,
+        6.4
+      ],
+      [
+        8.0977774788672,
+        7.1764571353076
+      ],
+      [
+        10.346405526035,
+        6.7677024357349
+      ],
+      [
+        12.290405573496,
+        7.026902442063
+      ]
+    ],
+    "errors": {
+      "crossing": "Line o8 crosses itself near (19.00, 5.00) m: a run must not cross or close on itself.",
+      "doubles_back": "Line o9 doubles back on itself at (24.00, 7.00) m."
+    },
+    "box_select": {
+      "crossing": [
+        "o2"
+      ],
+      "contained": [
+        "o2",
+        "o3"
+      ],
+      "outside": []
+    },
+    "bridge": {
+      "piece": "o10",
+      "points": [
+        [
+          16,
+          2
+        ],
+        [
+          18,
+          1.5
+        ]
+      ]
+    },
+    "curl": {
+      "points": [
+        [
+          -1,
+          1
+        ],
+        [
+          10,
+          1
+        ],
+        [
+          12,
+          1.5
+        ],
+        [
+          13.5,
+          2.5
+        ],
+        [
+          14.5,
+          3.5
+        ],
+        [
+          15,
+          4.5
+        ],
+        [
+          14.5,
+          5.5
+        ],
+        [
+          13.5,
+          6
+        ],
+        [
+          -2.5,
+          6.5
+        ]
+      ],
+      "two_sided": {
+        "max_y": 4.887708020634,
+        "wheel_max_x": 14.761502355602,
+        "resets": 0,
+        "min_y": 1.3512760623259,
+        "y": 1.4555518778663,
+        "x": 7.0997575317377,
+        "generation": 5,
+        "max_x": 14.420458662053,
+        "window": false,
+        "vx": 0.31406193984906,
+        "ticks": 287
+      },
+      "one_sided_control": {
+        "max_y": 1.698296776005,
+        "wheel_max_x": 4.7099998947233,
+        "resets": 3,
+        "min_y": 1.3004469008644,
+        "y": 1.3004469008644,
+        "x": 4.2499999050051,
+        "generation": 7,
+        "max_x": 4.2499999050051,
+        "window": false,
+        "vx": 14.999999664724,
+        "ticks": 17
+      }
+    },
+    "budget": {
+      "play_decor_sprites": 0,
+      "edit": [
+        {
+          "zoom": 0.2,
+          "sprites": 4,
+          "labels": 1,
+          "overlay": {
+            "bounds": 0,
+            "lines": 0,
+            "dropped": 0,
+            "spacing": 1,
+            "nodes": 628,
+            "handles": 94,
+            "max_nodes": 640,
+            "grid": 75
+          }
+        },
+        {
+          "zoom": 0.066979595336077,
+          "sprites": 4,
+          "labels": 1,
+          "overlay": {
+            "bounds": 0,
+            "lines": 0,
+            "dropped": 8,
+            "spacing": 5,
+            "nodes": 628,
+            "handles": 192,
+            "max_nodes": 640,
+            "grid": 45
+          }
+        }
+      ],
+      "editor_gui_max_nodes": 640
+    },
+    "large_drafts": [
+      {
+        "name": "1651 points",
+        "points": 1651,
+        "view": {
+          "objects": 1,
+          "generation": 1,
+          "simplified": true,
+          "labels": 1,
+          "sprites": 1012
+        },
+        "note": "Display simplified: 1650 segments exceed the editor's budget of 1008 line sprites. Geometry and handles are exact; see Problems for the limiting Play resource.",
+        "error": "Resource budget: terrain vertex payload bytes at Fit needs 1069632; limit 1048576. Shorten or simplify chain 1 (1650 segments); keep sampling accuracy.; most: Line o1 with 1650 segments",
+        "after_reload": {
+          "objects": 1,
+          "generation": 1,
+          "simplified": true,
+          "labels": 1,
+          "sprites": 1012
+        },
+        "with_finish": {
+          "objects": 1,
+          "generation": 1,
+          "simplified": true,
+          "labels": 2,
+          "sprites": 1013
+        }
+      },
+      {
+        "name": "7245 points",
+        "points": 7245,
+        "view": {
+          "objects": 4,
+          "generation": 1,
+          "simplified": true,
+          "labels": 1,
+          "sprites": 1009
+        },
+        "note": "Display simplified: 7241 segments exceed the editor's budget of 1008 line sprites. Geometry and handles are exact; see Problems for the limiting Play resource.",
+        "error": "Resource budget: mesh components at replacement peak needs 228; limit 128. Reduce separate terrain runs. Shorten or simplify chain 2 (2047 segments); keep sampling accuracy.; most: Line o2 with 2047 segments"
+      }
+    ]
+  }
+}

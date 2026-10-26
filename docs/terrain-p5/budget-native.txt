@@ -1,0 +1,12 @@
+six-anchor: 11 sections, 12000 vertices, 432000 payload B, 7349504 estimated CPU B, 667 physics vertices
+long-curves: 12 sections, 12552 vertices, 451872 payload B, 7687744 estimated CPU B, 698 physics vertices
+mixed: 12 sections, 12552 vertices, 451872 payload B, 7712320 estimated CPU B, 746 physics vertices
+long-over-budget: 17 sections, 18312 vertices, 659232 payload B, 11215424 estimated CPU B, 1018 physics vertices
+PASS refusal: Resource budget: terrain vertex payload bytes at Fit needs 1069632; limit 1048576. Shorten or simplify chain 1 (1650 segments); keep sampling accuracy.
+PASS refusal: Resource budget: mesh components at replacement peak needs 192; limit 128. Reduce separate terrain runs. Shorten or simplify chain 1 (129 segments); keep sampling accuracy.
+PASS refusal: Resource budget: labels including reserve needs 1026; limit 1024. Remove labels or major distance markers.
+PASS refusal: Resource budget: sprites including vehicle/replay reserve needs 1066; limit 1024. Remove obstacle edges or distance markers.
+PASS refusal: Resource budget: GameObjects including reserve needs 1103; limit 1024. Remove obstacle edges, labels or distance markers; split the course.
+PASS refusal: Resource budget: physics vertices (two-sided copies and hulls included) needs 2202; limit 2048. Reduce runs, two-sided terrain or obstacles; split the course.
+PASS refusal: Resource budget: estimated CPU working bytes needs 16786048; limit 16777216. Reduce terrain/content; save separate courses. Shorten or simplify chain 1 (1522 segments); keep sampling accuracy.
+PASS independent source/compiler/START contracts retained; renderer budgets reject oversized inputs

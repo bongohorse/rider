@@ -1,0 +1,1 @@
+PASS: 22 routes; unchanged P1 world geometry, immutable source/collision, deterministic sections, seams/UV/bounds, general-domain compatibility, measured 660 m admission
