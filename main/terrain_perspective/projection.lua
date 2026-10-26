@@ -18,6 +18,7 @@ end
 function M.project(x,y,z,c,p)
     if z==0 then return x,y end
     local a=p.mode=='perspective' and p.perspective/M.FOCAL or 0
+    if a==0 then return x+z*.18,y+z*math.tan(p.angle*math.pi/180) end
     local w=1+a*z
     return c[1]+(x-c[1]+z*.18)/w,c[2]+(y-c[2]+z*math.tan(p.angle*math.pi/180))/w
 end

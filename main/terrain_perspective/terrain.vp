@@ -22,7 +22,9 @@ void main() {
         else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
     }
     float perspective_w=1.0;
-    if(depth>0.0) {
+    if(depth>0.0 && look_shape.y==0.0) {
+        p.xy+=(depth/s)*look_camera.zw;
+    } else if(depth>0.0) {
     vec2 world=p.xy*s+look_origin.xy;
     // One central projection for the entire rigid shallow body. z=0 is exactly invariant.
     perspective_w=1.0+look_shape.y*depth;
