@@ -57,3 +57,8 @@ local valid,why,unsupported=doc.validate(future);assert(not valid and unsupporte
 future.editor.road_look.params.version=1;future.editor.objects[1].road_look=false
 valid,why,unsupported=doc.validate(future);assert(not valid and unsupported)
 print('PASS nested future parameter version and invalid section-format protection')
+
+local extension=dofile(arg[1]..'/long-curves-source.lua');extension.editor.schema=1;extension.editor.road_profile=look.ID;extension.editor.road_look={version=1,params=proj.validate(proj.DEFAULT)};extension.editor.objects[2].road_look={version=1,width=2,side=4,shading=.5}
+local level=assert(doc.compile(extension));assert(look.params(level).width==.9 and look.has_sections(level));assert(look.has_sections({editor=extension.editor}));assert(require('main.gym.terrain_budget').preview(12,12552,0,0,extension.editor))
+assert(require('main.gym.editor_terrain').create(extension.editor).perspective)
+print('PASS explicit editor-context parity with preserved extension fields')

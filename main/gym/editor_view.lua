@@ -119,7 +119,7 @@ function M.refresh(self,force)
         if doc.terrain(o) then style[#style+1]=o.id..(o.hidden and "h" or "v")..(editor.selected[o.id] and "s" or "n")..(editor.hover_object==o.id and "o" or "n") end
     end
     local style_key=table.concat(style,"|")
-    local wanted=require("main.terrain_perspective.runtime").enabled(terrain_e)
+    local wanted=require("main.terrain_perspective.runtime").enabled({editor=terrain_e})
     if v.mesh.perspective~=wanted then
         self.mesh_serial=math.max(self.mesh_serial or 0,v.mesh.resource_serial or 0)
         terrain.final(v.mesh,true);v.mesh=terrain.create(terrain_e);v.mesh.resource_serial=self.mesh_serial;force=true

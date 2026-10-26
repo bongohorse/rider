@@ -52,7 +52,7 @@ function M.plan(e,previews,selected,hover,old)
         styles_by[o.id]=o.hidden and -1 or selected[o.id] and 1 or hover==o.id and 2 or 0
     end
     local look=require "main.terrain_perspective.look"
-    local baked=look.has_sections(e);local values=baked and look.values(e)
+    local baked=look.has_sections({editor=e});local values=baked and look.values(e)
     local lower=doc.bounds(effective)[3]
     local pieces=doc.pieces(effective)
     local candidates={}
@@ -108,9 +108,9 @@ function M.plan(e,previews,selected,hover,old)
     return plans
 end
 function M.create(e)
-    local projected=require('main.terrain_perspective.runtime').enabled(e)
+    local projected=require('main.terrain_perspective.runtime').enabled({editor=e})
     if not projected and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
-    return {entries={},serial=0,updates=0,uploads=0,perspective=projected,params=require("main.terrain_perspective.look").params(e),baked=require("main.terrain_perspective.look").has_sections(e)}
+    return {entries={},serial=0,updates=0,uploads=0,perspective=projected,params=require("main.terrain_perspective.look").params({editor=e}),baked=require("main.terrain_perspective.look").has_sections({editor=e})}
 end
 local function materialize(state,entry,generation,result)
     local mesh=require "main.gym.terrain_mesh"
@@ -146,7 +146,7 @@ function M.resident(state,generation,view,result)
 end
 function M.update(state,e,previews,selected,hover,generation,view)
     local mesh=require "main.gym.terrain_mesh"
-    state.params=require("main.terrain_perspective.look").params(e);state.baked=require("main.terrain_perspective.look").has_sections(e)
+    state.params=require("main.terrain_perspective.look").params({editor=e});state.baked=require("main.terrain_perspective.look").has_sections({editor=e})
     local plans,err=M.plan(e,previews,selected,hover,state.entries)
     if not plans then return nil,err end
     local retained,retired={},{}

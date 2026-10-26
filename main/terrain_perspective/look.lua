@@ -6,15 +6,15 @@ local function source(d) return d and (type(d.editor)=='table' and d.editor or (
 function M.authored(d) local e=source(d);return e and e.road_profile==M.ID end
 function M.params(d)
  local e=source(d)
- return projection.validate(M.authored(e) and e.road_look.params or projection.DEFAULT)
+ return projection.validate(e and e.road_profile==M.ID and e.road_look.params or projection.DEFAULT)
 end
 function M.has_sections(d)
- local e=source(d);if not M.authored(e) then return false end
+ local e=source(d);if not e or e.road_profile~=M.ID then return false end
  for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look~=nil then return true end end
  return false
 end
 function M.validate(e)
- if not M.authored(e) then return true end
+ if e.road_profile~=M.ID then return true end
  if e.editor_version~=7 or e.compiler_version~=7 then return nil,'Authored Terrain Look requires editor/compiler version 7 source; keep the original file.',true end
  local l=e.road_look
  if type(l)~='table' or l.version~=1 then return nil,'Unsupported Terrain Look version; keep the original file.',true end
@@ -30,8 +30,8 @@ function M.validate(e)
  return true
 end
 function M.values(e)
- local p=M.params(e);local values={}
- for _,o in ipairs(e.objects) do local v=M.authored(e) and o.road_look or nil;values[o.id]={manual=v~=nil}
+ local p=M.params({editor=e});local values={}
+ for _,o in ipairs(e.objects) do local v=e.road_profile==M.ID and o.road_look or nil;values[o.id]={manual=v~=nil}
   for _,k in ipairs(M.LOCAL) do values[o.id][k]=v and v[k] or p[k] end
  end
  return values

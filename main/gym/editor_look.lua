@@ -6,27 +6,30 @@ local projection=require 'main.terrain_perspective.projection'
 local socket=require 'socket'
 local M={}
 local function signature(e)
- local p=look.params(e);local t={e.road_profile or 'legacy',{p.mode,p.width,p.perspective,p.angle,p.side,p.shading},{}}
- for _,o in ipairs(e.objects) do if look.authored(e) and o.road_look then t[3][#t[3]+1]={o.id,o.road_look.version,o.road_look.width,o.road_look.side,o.road_look.shading} end end
+ local p=look.params({editor=e});local t={e.road_profile or 'legacy',{p.mode,p.width,p.perspective,p.angle,p.side,p.shading},{}}
+ for _,o in ipairs(e.objects) do if e.road_profile==look.ID and o.road_look then t[3][#t[3]+1]={o.id,o.road_look.version,o.road_look.width,o.road_look.side,o.road_look.shading} end end
  return json.encode(t)
 end
 function M.sync()
  if not editor.doc then return end
  local s=M.session;local e=editor.doc.editor
  if not s or s.instance~=editor.opened then
-  s={instance=editor.opened,open=false,scope='level',params=look.params(e),revision=e.revision,signature=signature(e)};M.session=s;editor.look_preview=nil
+  s={instance=editor.opened,open=false,scope='level',params=look.params({editor=e}),revision=e.revision,signature=signature(e)};M.session=s;editor.look_preview=nil
  elseif s.revision~=e.revision then
   local sig=signature(e)
   if sig~=s.signature then
-   s.params=look.params(e);if s.scope=='selected' then local values=look.values(e);for _,id in ipairs(s.ids or {}) do if values[id] then for _,k in ipairs(look.LOCAL) do s.params[k]=values[id][k] end;break end end end
+   s.params=look.params({editor=e});if s.scope=='selected' then local values=look.values(e);for _,id in ipairs(s.ids or {}) do if values[id] then for _,k in ipairs(look.LOCAL) do s.params[k]=values[id][k] end;break end end end
    s.dirty=false;s.clear=nil;editor.look_preview=nil;s.signature=sig
+  elseif s.dirty and editor.look_preview then
+   -- Rebase retained look preview onto newly edited source; never draw stale geometry.
+   editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1;s.pending=true;s.last=nil
   end
   s.revision=e.revision
  end
  return s
 end
 function M.scope(value)
- local s=M.sync();s.scope=value;s.ids=editor.selected_ids();s.params=look.params(editor.doc.editor);s.clear=nil;s.error=nil;s.dirty=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1
+ local s=M.sync();s.scope=value;s.ids=editor.selected_ids();s.params=look.params(editor.doc);s.clear=nil;s.error=nil;s.dirty=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1
  s.mixed=false
  if value=='selected' then local values=look.values(editor.doc.editor)
   local first
@@ -45,7 +48,7 @@ function M.close() local s=M.sync();if s then s.open=false;s.field=nil;s.drag=ni
 local function candidate(s)
  local e=editor.doc.editor;local copy=doc.copy(e);local ids={}
  if s.scope=='selected' then
-  if not require('main.terrain_perspective.profile').enabled(e) then return nil,'Legacy level: Apply a level-wide look first. Loading or opening this menu never converts it.' end
+  if not require('main.terrain_perspective.profile').enabled({editor=e}) then return nil,'Legacy level: Apply a level-wide look first. Loading or opening this menu never converts it.' end
   for _,id in ipairs(s.ids or {}) do ids[id]=true end
   if not next(ids) then return nil,'Select terrain sections first, then choose Selected sections.' end
   local objects={};for _,o in ipairs(e.objects) do objects[o.id]=o end
@@ -63,7 +66,7 @@ local function candidate(s)
  elseif ids[o.id] then return nil,'Terrain Look applies only to terrain sections, not props or labels.' end end
  if s.scope=='selected' and count==0 then return nil,'Select terrain sections first.' end
  copy.road_profile=look.ID
- copy.road_look={version=1,params=s.scope=='level' and projection.validate(s.params) or look.params(e)}
+ copy.road_look={version=1,params=s.scope=='level' and projection.validate(s.params) or look.params({editor=e})}
  return copy
 end
 function M.preview()
@@ -81,10 +84,10 @@ function M.change(k,value)
  local s=M.sync();local r=projection.RANGES[k]
  if s.scope=='selected' and (k=='perspective' or k=='angle') then s.error='Perspective and view angle are level-wide.';return end
  if not r or type(value)~='number' or value~=value or value<r[1] or value>r[2] then s.error=k..' must be '..r[1]..'..'..r[2];return nil end
- s.params[k]=value;s.params.mode='perspective';s.dirty=true;s.clear=nil;s.pending=true;s.error=nil;return true
+ s.params[k]=value;if s.scope=="level" then s.params.mode="perspective" end;s.dirty=true;s.clear=nil;s.pending=true;s.error=nil;return true
 end
 function M.reset()
- local s=M.sync();s.params=s.scope=='selected' and look.params(editor.doc.editor) or projection.validate(projection.DEFAULT);s.clear=s.scope=='selected';s.dirty=true;s.pending=true;s.field=nil
+ local s=M.sync();s.params=s.scope=='selected' and look.params(editor.doc) or projection.validate(projection.DEFAULT);s.clear=s.scope=='selected';s.dirty=true;s.pending=true;s.field=nil
 end
 function M.apply()
  local s=M.sync();local e=M.preview();if not e then return nil end
