@@ -1,15 +1,16 @@
--- Gated visual comparison. No physics, source, camera writes or persistent world handles.
+-- Shared production/comparison projection. No physics/source/camera writes or world handles.
 local projection=require 'main.terrain_perspective.projection'
 local M={params=projection.validate(projection.DEFAULT),revision=0}
-function M.enabled() return sys and sys.get_config_int and sys.get_config_int('rider.terrain_perspective',0)==1 or false end
+function M.comparison() return sys and sys.get_config_int and sys.get_config_int('rider.terrain_perspective',0)==1 or false end
+function M.enabled(d) return M.comparison() or require('main.terrain_perspective.profile').enabled(d) end
 function M.init()
-    if not M.enabled() then return false end
+    if not M.comparison() then return false end
     require('main.gym.terrain_budget').COMPARISON=true
     if html5 then html5.run([[window.riderRoadLook={current:null,pending:null,status:'Starting',token:0,set(p){this.pending={token:++this.token,params:p};return this.token;}};]]) end
     return true
 end
 function M.poll()
-    if not (M.enabled() and html5) then return end
+    if not (M.comparison() and html5) then return end
     local text=html5.run("(()=>{const a=window.riderRoadLook;if(!a?.pending)return '';const p=a.pending;a.pending=null;return JSON.stringify(p)})()")
     if text and text~='' then
         local ok,r=false,nil

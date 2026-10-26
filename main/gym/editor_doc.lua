@@ -151,6 +151,7 @@ end
 local function from_station(d,id,name)
     local e={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,revision=0,next_id=1,objects={},connections={},
         sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
+    if require('main.terrain_perspective.profile').enabled(d) then e.road_profile=require('main.terrain_perspective.profile').ID end
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -176,7 +177,7 @@ end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
 function M.blank(id,name)
     return {schema=1,units="metres",id=id,name=name,editor={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,
-        revision=0,next_id=1,objects={},connections={},sampling=copy(M.SAMPLING),start={position={0,1},speed=0}}}
+        revision=0,next_id=1,objects={},connections={},sampling=copy(M.SAMPLING),start={position={0,1},speed=0},road_profile=require('main.terrain_perspective.profile').ID}}
 end
 -- Opening a custom level (R1, R2, LE4). d is a validated station (custom.parse), so its compiled
 -- geometry is always usable. Returns doc, note, conflict:
@@ -253,6 +254,8 @@ function M.validate(doc)
     if type(doc.name)~="string" or #doc.name>64 then return nil,"Level name is limited to 64 bytes" end
     local e=doc.editor
     if type(e)~="table" then return nil,"Missing editor block" end
+    local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
+    if not profile_ok then return nil,profile_err,true end
     if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end

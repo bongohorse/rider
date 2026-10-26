@@ -29,6 +29,7 @@ function M.resource(id)
     for _,key in ipairs(M.ids) do if id==key then found=true end end
     if not found then return nil,"Unknown station" end
     local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/gym/stations/"..id..".json"))) end)
+    if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     if not ok or not data.validate(d) then return nil,"Unreadable station file" end
     return d
 end
@@ -39,6 +40,7 @@ function M.load(id,speed,section,snapshot)
     local note=not found and "Unknown station; using Straight" or ""
     id=found and id or "straight"
     local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/gym/stations/"..id..".json"))) end)
+    if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     local valid,err
     if ok then valid,err=data.validate(d) else err="Unreadable station file" end
     if not valid or d.id~=id then return nil,err or "Station id mismatch" end

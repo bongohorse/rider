@@ -1,0 +1,4149 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "294ae68328c8467f026414c4e8b4343b1f112493",
+  "observer_sha256": "0ebfba9d9642802074ce46352a6d8a2f3bd1fbddc7a8a807a31a0603528646bc",
+  "browser": "156.0.8078.4",
+  "errors": [],
+  "raw_sha256": "a44fe0916fadad82bb7e0dc755845c6bcbeac8efd50087db88b890fa7158e5c5",
+  "courses": [
+    {
+      "projected": false,
+      "future_refused": true,
+      "payload_refused": true,
+      "play": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 696,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.91212828382,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.691111276547,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": null,
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 390,
+          "segments": 696,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 698,
+          "replacement_payload": 903744,
+          "visible_max": 12,
+          "cpu_estimate": 7687744,
+          "sprites": 1,
+          "stride": 36,
+          "instances": 78,
+          "engine_pool_ceiling": 8080560,
+          "payload": 451872,
+          "hull_vertices": 0,
+          "vertices": 12552,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "edited": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 696,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.91212828382,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.691111276547,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": null,
+        "source": {
+          "compiler_version": 7,
+          "revision": 14,
+          "editor_version": 7,
+          "next_id": 13,
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "compiled_revision": 13,
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "finish": {
+            "position": [
+              495,
+              0
+            ],
+            "direction": 1
+          }
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 390,
+          "segments": 696,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 698,
+          "replacement_payload": 903744,
+          "visible_max": 12,
+          "cpu_estimate": 7687744,
+          "sprites": 1,
+          "stride": 36,
+          "instances": 78,
+          "engine_pool_ceiling": 8080560,
+          "payload": 451872,
+          "hull_vertices": 0,
+          "vertices": 12552,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "reopened": {
+        "projection": null,
+        "source": {
+          "compiler_version": 7,
+          "revision": 14,
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "next_id": 13,
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "compiled_revision": 13,
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "editor_version": 7,
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "finish": {
+            "direction": 1,
+            "position": [
+              495,
+              0
+            ]
+          }
+        },
+        "budget": null
+      },
+      "play_after_edit": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 697,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.896179091328,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.695555796226,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s2",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": null,
+        "source": {
+          "compiler_version": 7,
+          "revision": 14,
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "next_id": 13,
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "compiled_revision": 13,
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "editor_version": 7,
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "finish": {
+            "direction": 1,
+            "position": [
+              495,
+              0
+            ]
+          }
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 391,
+          "segments": 697,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 699,
+          "replacement_payload": 905040,
+          "visible_max": 12,
+          "cpu_estimate": 7698768,
+          "sprites": 1,
+          "stride": 36,
+          "instances": 78,
+          "engine_pool_ceiling": 8080560,
+          "payload": 452520,
+          "hull_vertices": 0,
+          "vertices": 12570,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "reload_play": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 1,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 697,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.816561667383,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.717778022091,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 1,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": null,
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 391,
+          "segments": 697,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 699,
+          "replacement_payload": 905040,
+          "visible_max": 12,
+          "cpu_estimate": 7698768,
+          "sprites": 1,
+          "stride": 36,
+          "instances": 78,
+          "engine_pool_ceiling": 8080560,
+          "payload": 452520,
+          "hull_vertices": 0,
+          "vertices": 12570,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      }
+    },
+    {
+      "projected": true,
+      "future_refused": true,
+      "payload_refused": true,
+      "play": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 696,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.920106511556,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.688888892531,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": {
+          "view": [
+            -2.8001369619665,
+            -2.2316040498355,
+            6.7999726879929,
+            4.5184730477922
+          ],
+          "revision": 0,
+          "sections": 12,
+          "entries": [
+            {
+              "enabled": true,
+              "bounds": [
+                -0.015,
+                -20.015,
+                55.201450747536,
+                6.1059039936937
+              ],
+              "key": "run1-1-65",
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                54.755918492578,
+                -20.015,
+                86.714033765291,
+                10.425599189235
+              ],
+              "key": "run1-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                86.022278921952,
+                -20.015,
+                118.59673372874,
+                10.928025099025
+              ],
+              "key": "run1-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                117.65586439976,
+                -20.015,
+                150.03556089796,
+                9.7698515860434
+              ],
+              "key": "run1-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                148.84904526963,
+                -20.015,
+                201.32924884643,
+                4.8969756403815
+              ],
+              "key": "run1-257-321",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                199.7419515809,
+                -20.015,
+                240.78400869478,
+                22.834263471839
+              ],
+              "key": "run1-321-385",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                238.88843288895,
+                -20.015,
+                294.177,
+                21.392719710481
+              ],
+              "key": "run1-385-391",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                298.80954543289,
+                -20.015,
+                344.20145074754,
+                2.9905328504819
+              ],
+              "key": "run2-1-65",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                341.49782597119,
+                -20.015,
+                375.71403376529,
+                -4.0935844170013
+              ],
+              "key": "run2-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                372.76418640056,
+                -20.015,
+                407.59673372874,
+                -7.7575320093509
+              ],
+              "key": "run2-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                404.39777187837,
+                -20.015,
+                439.03556089796,
+                -2.8846560636891
+              ],
+              "key": "run2-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                435.59095274824,
+                -20.015,
+                500.177,
+                1.0061597883462
+              ],
+              "key": "run2-257-307",
+              "allocated": false,
+              "bytes": 0
+            }
+          ],
+          "stride": 48,
+          "camera": [
+            1.9999178630132,
+            1.1434344989784
+          ],
+          "aabb_writes": 48,
+          "uniform_writes": 51,
+          "mode": "perspective",
+          "counts": {
+            "visible": 1,
+            "released": 0,
+            "allocated": 1,
+            "uploaded": 0,
+            "reassigned": 0,
+            "cached": 0,
+            "bytes": 55584,
+            "queued": 0,
+            "enabled": 1
+          },
+          "uploads": 1
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 390,
+          "segments": 696,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 698,
+          "replacement_payload": 1204992,
+          "visible_max": 12,
+          "cpu_estimate": 8591488,
+          "sprites": 1,
+          "stride": 48,
+          "instances": 78,
+          "engine_pool_ceiling": 10774080,
+          "payload": 602496,
+          "hull_vertices": 0,
+          "vertices": 12552,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "edited": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 696,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.920106511556,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.688888892531,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": {
+          "view": [
+            -344.99807697777,
+            -323.50008057617,
+            615.00190156456,
+            351.49990433641
+          ],
+          "revision": 0,
+          "sections": 12,
+          "entries": [
+            {
+              "enabled": true,
+              "bounds": [
+                -0.015,
+                -20.015,
+                56.220443991304,
+                4.4668408626901
+              ],
+              "key": 6,
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                55.245961178425,
+                -20.015,
+                87.492833700521,
+                8.5202075838125
+              ],
+              "key": 5,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                86.764620956602,
+                -20.015,
+                118.80464507846,
+                12.606712125589
+              ],
+              "key": 4,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                118.32301284914,
+                -20.015,
+                149.83714063811,
+                12.415714600777
+              ],
+              "key": 3,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                149.59988931133,
+                -20.015,
+                201.177,
+                6.3145386958552
+              ],
+              "key": 2,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                200.6300992775,
+                -20.015,
+                240.78400869478,
+                22.934717158433
+              ],
+              "key": 1,
+              "allocated": true,
+              "bytes": 56160
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                239.92763984035,
+                -20.015,
+                294.177,
+                21.493173397076
+              ],
+              "key": 7,
+              "allocated": true,
+              "bytes": 5472
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                299.84875238428,
+                -20.015,
+                344.20145074754,
+                3.0909865370765
+              ],
+              "key": 8,
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                342.53703292258,
+                -20.015,
+                375.71403376529,
+                -3.9931307304067
+              ],
+              "key": 9,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                373.80339335195,
+                -20.015,
+                407.59673372874,
+                -7.6570783227564
+              ],
+              "key": 10,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                405.43697882977,
+                -20.015,
+                439.03556089796,
+                -2.7842023770945
+              ],
+              "key": 11,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": true,
+              "bounds": [
+                436.63015969963,
+                -20.015,
+                500.177,
+                1.1066134749408
+              ],
+              "key": 12,
+              "allocated": true,
+              "bytes": 43488
+            }
+          ],
+          "stride": 48,
+          "camera": [
+            135.0019122934,
+            13.999911880119
+          ],
+          "aabb_writes": 52,
+          "uniform_writes": 201,
+          "mode": "perspective",
+          "counts": {
+            "visible": 12,
+            "released": 0,
+            "allocated": 12,
+            "uploaded": 0,
+            "reassigned": 0,
+            "cached": 0,
+            "bytes": 603360,
+            "queued": 0,
+            "enabled": 12
+          },
+          "uploads": 38
+        },
+        "source": {
+          "compiler_version": 7,
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "road_profile": "perspective-v1",
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "next_id": 13,
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "revision": 14,
+          "compiled_revision": 13,
+          "editor_version": 7,
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "finish": {
+            "position": [
+              495,
+              0
+            ],
+            "direction": 1
+          }
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 390,
+          "segments": 696,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 698,
+          "replacement_payload": 1204992,
+          "visible_max": 12,
+          "cpu_estimate": 8591488,
+          "sprites": 1,
+          "stride": 48,
+          "instances": 78,
+          "engine_pool_ceiling": 10774080,
+          "payload": 602496,
+          "hull_vertices": 0,
+          "vertices": 12552,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "reopened": {
+        "projection": {
+          "view": [
+            -9.3999968886388,
+            -10.874999622814,
+            38.600002038478,
+            22.874999622814
+          ],
+          "revision": 0,
+          "sections": 12,
+          "entries": [
+            {
+              "enabled": true,
+              "bounds": [
+                -0.015,
+                -20.015,
+                55.437961178425,
+                4.4043337997548
+              ],
+              "key": 1,
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                55.089031327002,
+                -20.015,
+                86.956620956602,
+                8.4577005208772
+              ],
+              "key": 2,
+              "allocated": true,
+              "bytes": 55296
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                86.361421036219,
+                -20.015,
+                118.51501284914,
+                12.544205062654
+              ],
+              "key": 3,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                117.67323241416,
+                -20.015,
+                149.79188931133,
+                12.353207537841
+              ],
+              "key": 4,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                148.70572797381,
+                -20.015,
+                201.177,
+                6.2520316329199
+              ],
+              "key": 5,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                199.68934269654,
+                -20.015,
+                240.3274059262,
+                22.872210095498
+              ],
+              "key": 6,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                238.53384814236,
+                -20.015,
+                294.177,
+                21.629991805425
+              ],
+              "key": 7,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                298.90799580333,
+                -20.015,
+                344.20145074754,
+                3.0284794741411
+              ],
+              "key": 8,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                341.59627634162,
+                -20.015,
+                375.71403376529,
+                -4.055637793342
+              ],
+              "key": 9,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                372.862636771,
+                -20.015,
+                407.59673372874,
+                -7.7195853856917
+              ],
+              "key": 10,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                404.49622224881,
+                -20.015,
+                439.03556089796,
+                -2.8467094400298
+              ],
+              "key": 11,
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                435.68940311868,
+                -20.015,
+                500.177,
+                1.0441064120055
+              ],
+              "key": 12,
+              "allocated": false,
+              "bytes": 0
+            }
+          ],
+          "stride": 48,
+          "camera": [
+            14.600002574919,
+            6
+          ],
+          "aabb_writes": 2,
+          "uniform_writes": 9,
+          "mode": "perspective",
+          "counts": {
+            "visible": 1,
+            "released": 0,
+            "allocated": 2,
+            "uploaded": 0,
+            "reassigned": 0,
+            "cached": 1,
+            "bytes": 110880,
+            "queued": 0,
+            "enabled": 1
+          },
+          "uploads": 2
+        },
+        "source": {
+          "compiler_version": 7,
+          "revision": 14,
+          "finish": {
+            "direction": 1,
+            "position": [
+              495,
+              0
+            ]
+          },
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "next_id": 13,
+          "compiled_revision": 13,
+          "editor_version": 7,
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "road_profile": "perspective-v1"
+        },
+        "budget": null
+      },
+      "play_after_edit": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 2,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 697,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.896179982306,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.695555547873,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s2",
+          "session_generation": 2,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": {
+          "view": [
+            -2.8001000546649,
+            -2.2420428294179,
+            6.7999998676039,
+            4.5080274284274
+          ],
+          "revision": 0,
+          "sections": 12,
+          "entries": [
+            {
+              "enabled": true,
+              "bounds": [
+                -0.015,
+                -20.015,
+                55.437961178425,
+                4.3663055862944
+              ],
+              "key": "run1-1-65",
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                54.990581206933,
+                -20.015,
+                86.956620956602,
+                8.4196723074168
+              ],
+              "key": "run1-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                86.262970916151,
+                -20.015,
+                118.51501284914,
+                12.506176849194
+              ],
+              "key": "run1-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                117.57478229409,
+                -20.015,
+                149.79188931133,
+                12.315179324381
+              ],
+              "key": "run1-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                148.60727785374,
+                -20.015,
+                201.177,
+                6.2140034194595
+              ],
+              "key": "run1-257-321",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                199.59089257647,
+                -20.015,
+                240.3274059262,
+                22.834181882038
+              ],
+              "key": "run1-321-385",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                238.43539802229,
+                -20.015,
+                294.177,
+                21.591963591965
+              ],
+              "key": "run1-385-392",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                298.80954568326,
+                -20.015,
+                344.20145074754,
+                2.9904512606807
+              ],
+              "key": "run2-1-65",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                341.49782622155,
+                -20.015,
+                375.71403376529,
+                -4.0936660068024
+              ],
+              "key": "run2-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                372.76418665093,
+                -20.015,
+                407.59673372874,
+                -7.7576135991521
+              ],
+              "key": "run2-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                404.39777212874,
+                -20.015,
+                439.03556089796,
+                -2.8847376534902
+              ],
+              "key": "run2-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                435.59095299861,
+                -20.015,
+                500.177,
+                1.0060781985451
+              ],
+              "key": "run2-257-307",
+              "allocated": false,
+              "bytes": 0
+            }
+          ],
+          "stride": 48,
+          "camera": [
+            1.9999499064695,
+            1.1329922995047
+          ],
+          "aabb_writes": 45,
+          "uniform_writes": 48,
+          "mode": "perspective",
+          "counts": {
+            "visible": 1,
+            "released": 0,
+            "allocated": 1,
+            "uploaded": 0,
+            "reassigned": 0,
+            "cached": 0,
+            "bytes": 55584,
+            "queued": 0,
+            "enabled": 1
+          },
+          "uploads": 1
+        },
+        "source": {
+          "compiler_version": 7,
+          "revision": 14,
+          "finish": {
+            "direction": 1,
+            "position": [
+              495,
+              0
+            ]
+          },
+          "objects": [
+            {
+              "id": "o1",
+              "type": "line",
+              "name": "Flat run-in",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  24,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    24,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -24.309662346795,
+                    -5.8344079892316
+                  ],
+                  "p": [
+                    99,
+                    10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    6.0000915541314
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    3.3333333333333
+                  ],
+                  "p": [
+                    174,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide hill",
+              "id": "o2"
+            },
+            {
+              "id": "o3",
+              "type": "line",
+              "name": "Flat approach",
+              "points": [
+                [
+                  174,
+                  0
+                ],
+                [
+                  198,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    198,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    201,
+                    3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    1
+                  ],
+                  "p": [
+                    204,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    -1
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    0
+                  ],
+                  "p": [
+                    207,
+                    -3
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -1,
+                    -1
+                  ],
+                  "p": [
+                    210,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Tight S bends",
+              "id": "o4"
+            },
+            {
+              "id": "o5",
+              "type": "line",
+              "name": "45 degree climb",
+              "points": [
+                [
+                  210,
+                  0
+                ],
+                [
+                  230,
+                  20
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    230,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0.66666666666667
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0
+                  ],
+                  "p": [
+                    236,
+                    22
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    2,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -2,
+                    0.66666666666667
+                  ],
+                  "p": [
+                    242,
+                    20
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Rounded crest",
+              "id": "o6"
+            },
+            {
+              "id": "o7",
+              "type": "line",
+              "name": "45 degree descent",
+              "points": [
+                [
+                  242,
+                  20
+                ],
+                [
+                  262,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o8",
+              "type": "line",
+              "name": "Flat jump approach",
+              "points": [
+                [
+                  262,
+                  0
+                ],
+                [
+                  286,
+                  0
+                ]
+              ]
+            },
+            {
+              "id": "o9",
+              "type": "line",
+              "name": "Jump lip",
+              "points": [
+                [
+                  286,
+                  0
+                ],
+                [
+                  294,
+                  4
+                ]
+              ]
+            },
+            {
+              "id": "o10",
+              "type": "line",
+              "name": "Landing",
+              "points": [
+                [
+                  301,
+                  2
+                ],
+                [
+                  313,
+                  0
+                ]
+              ]
+            },
+            {
+              "anchors": [
+                {
+                  "in": [
+                    0,
+                    0
+                  ],
+                  "p": [
+                    313,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    -3.3333333333333
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    0
+                  ],
+                  "p": [
+                    388,
+                    -10
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    25,
+                    0
+                  ]
+                },
+                {
+                  "in": [
+                    -25,
+                    -3.3333333333333
+                  ],
+                  "p": [
+                    463,
+                    0
+                  ],
+                  "mode": "smooth",
+                  "out": [
+                    0,
+                    0
+                  ]
+                }
+              ],
+              "type": "curve",
+              "name": "Wide valley",
+              "id": "o11"
+            },
+            {
+              "id": "o12",
+              "type": "line",
+              "name": "Flat run-out",
+              "points": [
+                [
+                  463,
+                  0
+                ],
+                [
+                  500,
+                  0
+                ]
+              ]
+            }
+          ],
+          "next_id": 13,
+          "compiled_revision": 13,
+          "editor_version": 7,
+          "start": {
+            "speed": 0,
+            "position": [
+              2,
+              2
+            ]
+          },
+          "connections": [
+            {
+              "to": "o2",
+              "from": "o1"
+            },
+            {
+              "to": "o3",
+              "from": "o2"
+            },
+            {
+              "to": "o4",
+              "from": "o3"
+            },
+            {
+              "to": "o5",
+              "from": "o4"
+            },
+            {
+              "to": "o6",
+              "from": "o5"
+            },
+            {
+              "to": "o7",
+              "from": "o6"
+            },
+            {
+              "to": "o8",
+              "from": "o7"
+            },
+            {
+              "to": "o9",
+              "from": "o8"
+            },
+            {
+              "to": "o11",
+              "from": "o10"
+            },
+            {
+              "to": "o12",
+              "from": "o11"
+            }
+          ],
+          "sampling": {
+            "max_segment": 0.5,
+            "tolerance": 0.005
+          },
+          "road_profile": "perspective-v1"
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 391,
+          "segments": 697,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 699,
+          "replacement_payload": 1206720,
+          "visible_max": 12,
+          "cpu_estimate": 8603808,
+          "sprites": 1,
+          "stride": 48,
+          "instances": 78,
+          "engine_pool_ceiling": 10774080,
+          "payload": 603360,
+          "hull_vertices": 0,
+          "vertices": 12570,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      },
+      "reload_play": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": false,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 25.15903377533,
+          "projection_y": 0.0029629343189299,
+          "speed": 170.17678833008,
+          "world_loads": 1,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 697,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": -3.0371948014363e-05,
+          "first_tick_omega": 0,
+          "sequence": 3,
+          "command": {
+            "throttle": 0,
+            "allow_reverse": true,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.002083312952891,
+          "velocity_x": -0.060760196298361,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 59.824514016956,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.715555762251,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": -8.3052514128212e-05,
+          "snapshot": "s1",
+          "session_generation": 1,
+          "finish_count": 0,
+          "station_top_speed": 0.00070936752760334,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 25.161870956421,
+          "custom": true,
+          "speed_mps": 1.7017678452633,
+          "audio_pitch": 0,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "projection": {
+          "view": [
+            -2.8001134633806,
+            -2.2414818195257,
+            6.7999916088396,
+            4.5085920593791
+          ],
+          "revision": 0,
+          "sections": 12,
+          "entries": [
+            {
+              "enabled": true,
+              "bounds": [
+                -0.015,
+                -20.015,
+                55.437961178425,
+                4.3663099838742
+              ],
+              "key": "run1-1-65",
+              "allocated": true,
+              "bytes": 55584
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                54.990581122285,
+                -20.015,
+                86.956620956602,
+                8.4196767049967
+              ],
+              "key": "run1-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                86.262970831502,
+                -20.015,
+                118.51501284914,
+                12.506181246773
+              ],
+              "key": "run1-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                117.57478220944,
+                -20.015,
+                149.79188931133,
+                12.315183721961
+              ],
+              "key": "run1-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                148.6072777691,
+                -20.015,
+                201.177,
+                6.2140078170393
+              ],
+              "key": "run1-257-321",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                199.59089249182,
+                -20.015,
+                240.3274059262,
+                22.834186279617
+              ],
+              "key": "run1-321-385",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                238.43539793764,
+                -20.015,
+                294.177,
+                21.591967989545
+              ],
+              "key": "run1-385-392",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                298.80954559861,
+                -20.015,
+                344.20145074754,
+                2.9904556582606
+              ],
+              "key": "run2-1-65",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                341.49782613691,
+                -20.015,
+                375.71403376529,
+                -4.0936616092225
+              ],
+              "key": "run2-65-129",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                372.76418656628,
+                -20.015,
+                407.59673372874,
+                -7.7576092015722
+              ],
+              "key": "run2-129-193",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                404.39777204409,
+                -20.015,
+                439.03556089796,
+                -2.8847332559104
+              ],
+              "key": "run2-193-257",
+              "allocated": false,
+              "bytes": 0
+            },
+            {
+              "enabled": false,
+              "bounds": [
+                435.59095291396,
+                -20.015,
+                500.177,
+                1.0060825961249
+              ],
+              "key": "run2-257-307",
+              "allocated": false,
+              "bytes": 0
+            }
+          ],
+          "stride": 48,
+          "camera": [
+            1.9999390727295,
+            1.1335551199267
+          ],
+          "aabb_writes": 45,
+          "uniform_writes": 48,
+          "mode": "perspective",
+          "counts": {
+            "visible": 1,
+            "released": 0,
+            "allocated": 1,
+            "uploaded": 0,
+            "reassigned": 0,
+            "cached": 0,
+            "bytes": 55584,
+            "queued": 0,
+            "enabled": 1
+          },
+          "uploads": 1
+        },
+        "budget": {
+          "cached_max": 2,
+          "sections": 12,
+          "largest_segments": 391,
+          "segments": 697,
+          "allocated_max": 12,
+          "physics_chains": 2,
+          "mesh_peak": 24,
+          "physics_vertices": 699,
+          "replacement_payload": 1206720,
+          "visible_max": 12,
+          "cpu_estimate": 8603808,
+          "sprites": 1,
+          "stride": 48,
+          "instances": 78,
+          "engine_pool_ceiling": 10774080,
+          "payload": 603360,
+          "hull_vertices": 0,
+          "vertices": 12570,
+          "largest_chain": 1,
+          "labels": 1
+        }
+      }
+    }
+  ]
+}

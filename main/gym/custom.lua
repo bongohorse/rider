@@ -16,8 +16,11 @@ function M.parse(text)
     if #text>M.limit then return nil,"The level file is larger than 256 KiB" end
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"The level file is not valid JSON" end
-    local valid,err=data.validate(d)
-    if not valid then return nil,err end
+    -- Built-in selection is runtime-only. Imported/saved JSON opts in only via source metadata.
+    -- The original text remains unchanged in its save slot/snapshot.
+    d._road_profile=nil
+    local valid,err,unsupported=data.validate(d)
+    if not valid then return nil,err,unsupported end
     if d.kind~=nil then return nil,"Custom levels cannot use station kind \""..tostring(d.kind).."\"" end
     return d
 end
