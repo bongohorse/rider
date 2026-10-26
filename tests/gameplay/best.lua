@@ -31,7 +31,7 @@ print('PASS best minimum/reopen/practice/rule identity/version protection/write 
 local a='rider/best-'..best.KEY..'-a';local b='rider/best-'..best.KEY..'-b'
 files[a]={format=1,seq=1,text=json.encode({version=1,key=best.KEY,time=5})}
 for _,broken in ipairs({'unreadable',{}, {format=99,seq=2,text='bad'}, {format=1,seq=2,text='bad'}, {format=1,seq=0/0,text=json.encode({version=1,key=best.KEY,time=4})}}) do
- files[b]=broken;local record=best.new();assert(record.blocked)
+ files[b]=broken;local record=best.new();assert(record.blocked and record.best==5)
  assert(not best.offer(record,{official=true,time=1}));assert(files[b]==broken and files[a].seq==1)
 end
 files[b]=nil;assert(not best.new().blocked)
