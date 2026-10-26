@@ -43,4 +43,9 @@ local curl={};for i=0,100 do local a=i/100*math.pi*1.5;curl[#curl+1]={math.cos(a
 check({chains={curl},bounds={-20,20,-20,20}})
 for _,bad in ipairs({{version=99},{version=1,mode='other'}, {version=1,mode='fixed',width=0/0}}) do assert(not proj.validate(bad)) end
 local p=assert(proj.validate(proj.DEFAULT));p.extra=1;assert(not proj.validate(p))
+local many={};for i=0,1212 do many[#many+1]={i*.5,0} end
+budget.COMPARISON=true
+assert(budget.check({chains={many}}))
+many[#many+1]={606.5,0};local ok,err=budget.check({chains={many}});assert(not ok and err:find('terrain vertex payload',1,true))
+budget.COMPARISON=false;assert(budget.check({chains={many}}),'Normal renderer must keep its existing admission')
 print('PASS ribbon/overhang, invalid/version/NaN guards, deterministic reverse projection')

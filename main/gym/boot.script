@@ -164,7 +164,7 @@ local function import(self,request)
     else switch(self,next) end
 end
 function init(self)
-    require("main.terrain_perspective.runtime").init()
+    self.look_comparison=require("main.terrain_perspective.runtime").init()
     msg.post(".","acquire_input_focus")
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
@@ -210,6 +210,7 @@ function init(self)
     msg.post("#world","load")
 end
 function update(self,dt)
+    if self.look_comparison then require("main.terrain_perspective.runtime").poll() end
     if self.loading then
         self.deadline=self.deadline+dt
         if self.deadline>15 and not self.failed then

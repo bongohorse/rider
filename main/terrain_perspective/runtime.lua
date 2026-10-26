@@ -3,9 +3,10 @@ local projection=require 'main.terrain_perspective.projection'
 local M={params=projection.validate(projection.DEFAULT),revision=0}
 function M.enabled() return sys and sys.get_config_int and sys.get_config_int('rider.terrain_perspective',0)==1 or false end
 function M.init()
-    if not M.enabled() then return end
+    if not M.enabled() then return false end
     require('main.gym.terrain_budget').COMPARISON=true
     if html5 then html5.run([[window.riderRoadLook={current:null,pending:null,status:'Starting',token:0,set(p){this.pending={token:++this.token,params:p};return this.token;}};]]) end
+    return true
 end
 function M.poll()
     if not (M.enabled() and html5) then return end
@@ -22,7 +23,6 @@ function M.poll()
     end
 end
 function M.prepare(state,camera)
-    M.poll()
     state.look_camera=camera;state.look_revision=M.revision
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
