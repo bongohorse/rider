@@ -62,7 +62,7 @@ function M.preview()
  if not ok then s.error=why;return nil end
  -- Invalid geometry drafts remain editable; valid courses must pass actual selected-layout admission.
  local compiled,blocked=doc.compile(wrapper)
- if not compiled and blocked and blocked:find('Resource budget:',1,true) then s.error=blocked;return nil end
+ if not compiled and blocked and blocked:find('Resource budget:',1,true) then s.error_detail=blocked;s.error=(blocked:match('^[^%.]+%.') or blocked)..' Shorten/simplify terrain or split the course.';return nil end
  s.error=nil;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
 end
 function M.change(k,value)

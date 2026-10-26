@@ -417,14 +417,14 @@ function M.render(u,d)
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
-        if modal=='terrain_look' then mw=420;mh=math.min(580,h-32);mx=w-mw-16;my=16 end
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16 end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
             local s=d.look
             text(mx+16,my+24,'Terrain Look',C.active,18)
             button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
             button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
-            text(mx+16,my+88,s.scope=='level' and 'Level defaults; manual section looks stay intact.' or ('Selected source sections: '..#(s.ids or {})),C.secondary,12,mw-32)
+            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or 'Level defaults; manual section looks stay intact.') or ('Selected source sections: '..#(s.ids or {})),C.secondary,12,mw-32)
             local top,bottom=my+104,my+mh-104
             local height=5*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
             for i,spec in ipairs(require('main.terrain_perspective.projection').CONTROLS) do
@@ -440,9 +440,11 @@ function M.render(u,d)
                     local fraction=(s.params[key]-r[1])/(r[2]-r[1]);box(x+fraction*(width-8),y+26,8,16,disabled and C.secondary or C.active)
                 end
             end
-            text(mx+16,my+mh-86,'Perspective / angle are always level-wide. Scroll for controls.',C.secondary,12,mw-32)
-            local note=s.error or (s.dirty and 'Preview only; Apply saves one Undo action.' or ('Applied settings: '..d.status))
-            paragraph(mx+16,my+mh-68,note,mw-32,s.error and C.error or C.secondary,12,{my+mh-84,my+mh-36})
+            if s.error then paragraph(mx+16,my+mh-96,s.error,mw-32,C.error,12,{my+mh-104,my+mh-40})
+            else
+                text(mx+16,my+mh-86,'Strength / angle: level-wide. Scroll for all controls.',C.secondary,12,mw-32)
+                paragraph(mx+16,my+mh-68,s.dirty and 'Preview only; Apply saves one Undo action.' or ('Applied settings: '..d.status),mw-32,C.secondary,12,{my+mh-84,my+mh-36})
+            end
             button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset preview; Apply to store. Selected reset restores inheritance.',28)
             button('look_apply',mx+120,my+mh-36,92,'Apply',true,'Store this scope as one Undo action',28)
             button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
