@@ -1,17 +1,27 @@
 """Add an artifact-only launcher to an ordinary release bundle; no runtime settings override."""
 import argparse
+import json
 from pathlib import Path
 import shutil
 
 p = argparse.ArgumentParser()
 p.add_argument('bundle', type=Path)
+p.add_argument('--output', type=Path, help='External launcher; keep immutable engine bundle unchanged')
+p.add_argument('--perspective-profile', action='store_true', help='Explicitly mark derived fixtures for the accepted production profile')
 a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
-web = next(a.bundle.rglob('index.html')).parent
+web = a.output or next(a.bundle.rglob('index.html')).parent
+web.mkdir(parents=True, exist_ok=True)
 (web / 'courses').mkdir(exist_ok=True)
 for name in ('six-anchor', 'long-curves', 'mixed', 'long-over-budget', 'mixed-over-budget'):
     source = root / ('docs/terrain-p5' if name.endswith('over-budget') else 'docs/terrain-p0') / (name + '.json')
-    shutil.copyfile(source, web / 'courses' / (name + '.json'))
+    if a.perspective_profile:
+        d=json.loads(source.read_text()); d['editor']['road_profile']='perspective-v1'
+        (web / 'courses' / (name + '.json')).write_text(json.dumps(d)+'\n')
+    else:
+        shutil.copyfile(source, web / 'courses' / (name + '.json'))
+if a.perspective_profile:
+    shutil.copyfile(root/'docs/terrain-p0/long-curves.json', web/'courses/legacy-long-curves.json')
 (web / 'terrain-preview.html').write_text('''<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rider — normal Play depth terrain</title>
@@ -38,4 +48,11 @@ const poll=setInterval(()=>{try{const w=frame.contentWindow;
  if(submitted&&w.riderCustomStatus==='Saved'&&w.riderTelemetry?.station===d.id&&w.riderTelemetry.sequence>2&&w.riderTelemetry.session_generation>before){clearInterval(poll);sessionStorage.setItem(sessionKey,selection);state.textContent='Ready · normal Play';w.document.querySelector('canvas').focus();}
 }catch(e){state.textContent=e.message;clearInterval(poll);}},50);
 </script></html>''')
+if a.perspective_profile:
+    launcher=web/'terrain-preview.html'
+    text=launcher.read_text().replace('Terrain meshes · Play / editor','Accepted perspective · normal Play / editor')
+    text=text.replace('<option value="six-anchor">','<option value="legacy-long-curves">Legacy fixed Depth (500 m)</option><option value="six-anchor">',1)
+    text=text.replace("allowed=['six-anchor'","allowed=['legacy-long-curves','six-anchor'")
+    text=text.replace('This launcher imports the saved course through normal Play.', 'Marked fixtures use perspective-v1; the legacy option is the unchanged unmarked file. This launcher imports through normal Play, with no rendering override.')
+    launcher.write_text(text)
 print(web / 'terrain-preview.html')

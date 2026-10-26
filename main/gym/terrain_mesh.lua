@@ -75,8 +75,9 @@ function M.drop(entry,delete_object)
 end
 function M.build(self,d)
     local started=socket.gettime()
-    local state={};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);if require("main.terrain_perspective.runtime").enabled() then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
+    local state={perspective=require("main.terrain_perspective.runtime").enabled(d)};self.terrain_mesh=state
+    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
+    if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
     M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
     local decor={};for k,v in pairs(d) do decor[k]=v end;decor.chains={}
@@ -107,14 +108,14 @@ function M.update(self)
     local started=socket.gettime()
     local view=residency.viewport()
     local perspective=require "main.terrain_perspective.runtime"
-    if perspective.enabled() then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
+    if state.perspective then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
     local r=residency.update(state,state.entries,view,function(e)
-        local c=perspective.enabled() and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key) or geometry.section(e.prep,e.first,e.last,e.key)
+        local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key) or geometry.section(e.prep,e.first,e.last,e.key)
         state.uploads=(state.uploads or 0)+1
         if not e.resource then state.serial=(state.serial or 0)+1 end
         M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")
     end,function(e) M.drop(e,true) end)
-    if perspective.enabled() then perspective.apply(state,M.bounds) end
+    if state.perspective then perspective.apply(state,M.bounds) end
     state.stats.mesh_gameobjects,state.stats.allocated_bytes=r.allocated,r.bytes
     state.stats.resident=r
     r.update_ms=(socket.gettime()-started)*1000

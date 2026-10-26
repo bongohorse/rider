@@ -94,7 +94,7 @@ local function admitted(self)
 end
 function M.build(self)
     if not admitted(self) then lines.build(self);self.view.line_mode=true;return end
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(),opened=editor.opened}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(editor.doc.editor),opened=editor.opened}
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
     v.start=lines.start_marker(v,editor.doc.editor.start.position)

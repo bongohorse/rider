@@ -3,7 +3,8 @@
 local M={MESHES=128,SPRITES=1024,LABELS=1024,INSTANCES=1024,
     PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=2048,RESERVE=64}
 function M.measure(d)
-    local stride,working=M.COMPARISON and 48 or 36,M.COMPARISON and 560 or 512
+    local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled(d)
+    local stride,working=projected and 48 or 36,projected and 560 or 512
     local r={stride=stride,sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
     for i,c in ipairs(d.chains) do
@@ -57,9 +58,10 @@ function M.check(d)
     if err then return nil,err,r end
     return r
 end
-function M.preview(sections,vertices,sprites,labels)
+function M.preview(sections,vertices,sprites,labels,document)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
-    return sections*2<=M.MESHES and vertices*(M.COMPARISON and 48 or 36)<=M.PAYLOAD and
+    local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled(document)
+    return sections*2<=M.MESHES and vertices*(projected and 48 or 36)<=M.PAYLOAD and
         2*sprites+12<=M.SPRITES and 2*labels+4<=M.LABELS and
         2*(sections+sprites+labels)+16<=M.INSTANCES
 end

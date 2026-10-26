@@ -20,6 +20,8 @@ end
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
     if type(d)~="table" or d.schema~=1 or d.units~="metres" then return nil,"Unsupported station schema/units" end
+    local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(d)
+    if not profile_ok then return nil,profile_err,true end
     if type(d.id)~="string" or not d.id:match("^[a-z][a-z0-9%-]*$") or type(d.name)~="string" then return nil,"Invalid station identity" end
     if not text(d.id) or not text(d.name) then return nil,"Station id and name are limited to "..TEXT_LIMIT.." bytes" end
     if not point(d.spawn) or not finite(d.start_speed) or math.abs(d.start_speed)>30 then return nil,"Invalid station start" end

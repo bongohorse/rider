@@ -1,10 +1,10 @@
 # Road look comparison contract (#290)
 
-**Contents:** [Scope and activation](#scope-and-activation) · [Parameter set v1](#parameter-set-v1) · [Projection and spaces](#projection-and-spaces) · [Geometry and resources](#geometry-and-resources) · [Controls and retention](#controls-and-retention) · [Consumer boundary](#consumer-boundary)
+**Contents:** [Scope and activation](#scope-and-activation) · [Parameter set v1](#parameter-set-v1) · [Projection and spaces](#projection-and-spaces) · [Geometry and resources](#geometry-and-resources) · [Controls and retention](#controls-and-retention) · [Production compatibility](#production-compatibility) · [Consumer boundary](#consumer-boundary)
 
 ## Scope and activation
 
-This is an explicit, bounded comparison for Claudio’s visual selection. `rider.terrain_perspective = 1` is supplied only by `tools/terrain_perspective/build.py`. Ordinary builds retain the accepted renderer, 36-byte vertex layout, current source/physics/camera/Retry behavior and admission. A URL or retained parameter set cannot enable the prototype in an ordinary build. No production look is selected automatically.
+Claudio accepted the camera-dependent direction in #290 and authorized the separate #292 integration. The explicit comparison remains available through `rider.terrain_perspective = 1`, supplied only by `tools/terrain_perspective/build.py`. Ordinary builds select the immutable profile using the compatibility rule below; they do not expose the comparison tuner or read its retained parameters. Source/collision/physics/camera/Retry remain unchanged.
 
 The prototype keeps the existing 64-interval partition, source sampling and front contour. It adds a visual depth projection; it does not introduce 3D physics or move the actual follow camera. All state affecting the projection is the parameter set plus the current camera XY. There is no speed/direction input, oscillator, lag or shape-history filter.
 
@@ -56,7 +56,7 @@ Residency uses current-frame projected bounds and the existing visible-first/pre
 
 No pool or admission cap is increased. The comparison configures the existing budget policy for stride 48 and working estimate 560 bytes/vertex (512 plus two generations of three eight-byte Lua value slots). The 1 MiB payload and 16 MiB renderer/source working caps, 128 mesh components, Sprite/Label/GameObject reserves, physical-vertex guard and all source/compiler/START/coordinate constraints remain. At Fit all logical sections may be needed; cache is a subset. Actual fragmented editor plans and deferred old/new component overlap remain guarded. The retained engine VB ceiling changes with stride (not pool count); it is not physical GPU-memory evidence.
 
-The loader retains the shared prototype material to avoid per-proxy shader churn. The additional material/factory assets are also packaged in normal builds, but normal rendering does not select them. Baseline fixed-versus-camera measurements in the comparison include the same material/layout overhead in both modes; they do not establish a zero-cost addition relative to the earlier production executable.
+The loader retains the shared prototype material to avoid per-proxy shader churn. Both materials/factories remain packaged; each normal course selects only its compatibility profile. Baseline fixed-versus-camera measurements in the comparison include the same material/layout overhead in both modes; they do not establish a zero-cost addition relative to the earlier production executable.
 
 ## Controls and retention
 
@@ -64,6 +64,19 @@ The artifact-only parent panel supplies five labeled ranges plus numeric inputs.
 
 The panel lives outside the game iframe: its arrows/numeric editing do not become drive inputs. Gameplay commands remain the existing Arrows/A/D/R/E/Home. The engine exposes only a bounded style-request interface in the explicit comparison build, not physics, source, camera mutation or debug services. Retained tuning is separate from the existing level saves/Undo/versions; the launcher preserves editor drafts instead of silently replacing them on a reload.
 
+## Production compatibility
+
+The immutable identifier `perspective-v1` selects exactly `projection.DEFAULT`: perspective mode, width 0.9 m, strength 0.35, angle atan(0.55) = 28.810793742973°, side cap 64 m, shading 1. This is the preset recorded in the shipped/hosted #290 evidence. Claudio accepted the camera-dependent direction and requested no further tuning; his private retained browser JSON was not supplied. Do not claim that unreported personal changes were observed. A different future preset must use a different identifier rather than changing this mapping silently.
+
+- Existing saved/imported documents without `editor.road_profile` retain the previous fixed Depth renderer, exact uncapped accepted floor behavior, and 36-byte budget layout. Open, editing, save/export, reopen, Play and Retry never add a profile. This also preserves larger legacy courses that fit 36-byte budgets but would exceed 48-byte budgets.
+- New empty documents carry `editor.road_profile = "perspective-v1"`. Compilation copies this source metadata through the existing editor block; geometry, sampling and compiler versions stay unchanged. It is a coarse course compatibility identifier, not tunable parameters or per-section authoring.
+- Built-in station resource loads select that profile in memory (`_road_profile`); original station JSON is not rewritten. An editor template copy carries its source profile. Copying an old unmarked custom course keeps it unmarked.
+- Play resolves the profile from the validated course; Editor resolves it from the same source document. Both use the same `projection`/`runtime` modules and immutable preset. There is no ordinary-build style-request API, localStorage adoption or extra tuner.
+- Admission and editor planning resolve 36/48-byte stride and 512/560-byte working estimate from each document, including import/restore before a world exists. They do not depend on the previously displayed course. Fit, cache and delayed old/new overlap keep existing caps.
+- Unsupported profile identifiers return an unsupported-format refusal. The existing alternating-slot protections keep unknown saves unchanged; they may not be overwritten as ordinary invalid data. Known profile metadata does not upgrade editor/compiler geometry versions. Older Rider executables cannot be assumed to understand the new profile; downgrade is not a supported look-preserving workflow.
+
+The existing renderer is retained to preserve old courses, not selected from a date/id heuristic. Changing a legacy course to perspective or adding full section look settings is deferred to #278 with its explicit user action, source persistence and Undo contract.
+
 ## Consumer boundary
 
-#278 is not authorized by this comparison. After Claudio’s selection, reuse this parameter contract rather than another tuner. Per-section authoring, source-format migration, Undo/versioned level persistence and any production integration require their own scoped work. Physical phone/GPU evidence and load/editor spikes remain open; no general FPS or arbitrary-length claim follows from the projection.
+#278 remains blocked pending Claudio’s #292 integration test. Reuse this parameter contract rather than another tuner. Full per-section authoring, parameter persistence and Undo/versioned look settings remain #278; #292 adds only the coarse compatibility identifier described above. Physical phone/GPU evidence and load/editor spikes remain open; no general FPS or arbitrary-length claim follows from the projection.
