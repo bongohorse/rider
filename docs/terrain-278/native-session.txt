@@ -1,0 +1,3 @@
+Runtime functions final source: fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff
+PASS persistent draft/Apply transactions, protected connected transitions, manual defaults and scoped Reset
+PASS retained look preview rebases onto geometry edits without applying its settings

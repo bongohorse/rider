@@ -68,3 +68,15 @@ local id=assert(edit.add_prefab(mirrored,'ramp',prefab.defaults('ramp'),{0,0}));
 assert(edit.mirror(mirrored,{id},1));assert(same(mirrored.objects[1].road_look,mirrored.objects[2].road_look))
 mirrored.objects[1].kind='platform';assert(not look.validate(mirrored))
 print('PASS prefab Mirror preserves manual look; prop styling is refused')
+-- The existing two-sided curl domain also uses the baked ribbon path.
+local curl=doc.blank('my-curl-look','Curl look');curl.editor.road_profile=look.ID;curl.editor.road_look={version=1,params=proj.validate(proj.DEFAULT)};curl.editor.start.position={0,3};curl.editor.next_id=2
+curl.editor.objects={{id='o1',type='line',points={{-1,1},{10,1},{12,1.5},{13.5,2.5},{14.5,3.5},{15,4.5},{14.5,5.5},{13.5,6},{-2.5,6.5}},road_look={version=1,width=2,side=.25,shading=.3}}}
+local cd=assert(doc.compile(curl));assert(cd.two_sided[1]);local cm=look.mapping(cd)
+for _,entry in ipairs(geo.describe(cd)) do local g=proj.section(entry.prep,entry.first,entry.last,entry.key,nil,cm[entry.chain]);assert(g.baked and g.body=='ribbon')
+ local p={mode='perspective',perspective=1,angle=45,width=2};local bounds=proj.bounds(entry.bounds,{700,50},p)
+ for j=1,g.vertices do local n=(j-1)*3;local z=g.position[n+3];local depth=z>0 and z or math.max(0,-z-.9);local x,y=proj.project(g.position[n+1]+g.origin[1],g.position[n+2]+g.origin[2],depth,{700,50},p);assert(x>=bounds[1]-1e-8 and x<=bounds[3]+1e-8 and y>=bounds[2]-1e-8 and y<=bounds[4]+1e-8) end
+end
+print('PASS authored two-sided curl/ribbon bounds; original physics domain retained')
+local runtime=require 'main.terrain_perspective.runtime';local base={0,-10,30,1};local state={baked=true,params=proj.validate(proj.DEFAULT),entries={{base_bounds=base,geometry={max_width=.25},dirty=true}}}
+runtime.prepare(state,{0,0});assert(same(state.entries[1].bounds,proj.bounds(base,{0,0},state.params,2)),'Dirty cached narrow style underbounds a wider pending style')
+print('PASS dirty/cached authored bounds cover full permitted width before upload')
