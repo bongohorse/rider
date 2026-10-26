@@ -34,6 +34,12 @@ local function request_reset(self,reason)
         self.pending_reset = {generation=self.generation,reason=reason,requested=socket.gettime()}
     end
 end
+local function manual_retry(self)
+    request_reset(self,"manual")
+    if self.race and require("main.gym.run").terminal(self.race) then
+        msg.post(LOADER,"run_retry_resume",{generation=self.session_generation,id=self.race.id})
+    end
+end
 -- Follow camera at the start of an attempt (first start, Retry, section): the view it will settle on,
 -- over the station surface below the start. The look-ahead starts on the start speed's side.
 local function start_camera(self)
@@ -318,11 +324,11 @@ function update(self, dt)
         -- Paused: touch drive, Retry and section requests are dropped; a station switch leaves the pause.
         local m=self.mobile
         if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right or m.record or m.replay then self.time_dropped=self.time_dropped+1 end
-        self.mobile={station=m.station,clear=m.clear,started=m.started}
+        self.mobile={station=m.station,clear=m.clear,started=m.started,retry=self.race and require("main.gym.run").terminal(self.race) and m.retry or nil}
     end
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
-    if self.mobile.retry then request_reset(self,"manual") end
+    if self.mobile.retry then manual_retry(self) end
     if self.mobile.next_section then self.pending_section=true end
     if self.mobile.record then race.practice(self,"Record/replay");replay.toggle_record(self) end
     if self.mobile.replay then race.practice(self,"Record/replay");replay.toggle_play(self) end
@@ -480,6 +486,9 @@ function on_input(self, action_id, action)
             if action.pressed then msg.post("main:/loader#script","select_station",{id=id,preset=self.preset}) end
             return
         end
+    end
+    if self.race and require("main.gym.run").terminal(self.race) and action_id==hash("retry") then
+        if action.pressed then manual_retry(self) end;return
     end
     if self.paused then
         -- Paused: drive, Retry, section, preset and crash keys are dropped (counted for the a20 probe).
@@ -655,6 +664,6 @@ function on_message(self,id,data,sender)
         if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
     elseif id==hash("hud_probe_result") then self.hud_probe_result=data
     elseif id==hash("measurements_shown") then self.measurements_shown=data
-    elseif id==hash("run_retry") and self.race and not self.paused and data.id==self.race.id then request_reset(self,"manual")
+    elseif id==hash("run_retry") and self.race and data.id==self.race.id and require("main.gym.run").terminal(self.race) then manual_retry(self)
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

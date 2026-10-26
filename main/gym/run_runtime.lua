@@ -14,7 +14,7 @@ function M.ready(self)
     if not self.station or self.station.id~='first-run' or self.station.custom then return end
     self.race=self.race or run.new(self.session_generation)
     self.personal=self.personal or best.new()
-    run.reset(self.race,M.eligible(self));self.race_step=nil
+    run.reset(self.race,M.eligible(self));self.race_step=nil;self.race_stopped=nil
 end
 function M.practice(self,reason) if self.race then run.practice(self.race,reason) end end
 function M.failed(self,reason)
@@ -43,6 +43,10 @@ function M.pause(self,active) if self.race then run.pause(self.race,active) end 
 function M.update(self,dt)
     if not self.race then return end
     best.poll(self.personal)
+    if run.terminal(self.race) and not self.race_stopped then
+        self.race_stopped=true
+        msg.post("main:/loader#script","run_stop",{generation=self.session_generation,id=self.race.id})
+    end
     self.race_poll=(self.race_poll or 0)+dt
     if self.race_poll<.05 and self.race.state=='running' then return end
     self.race_poll=0

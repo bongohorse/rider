@@ -5,7 +5,7 @@ function M.new(generation) return {generation=generation,attempt=0} end
 function M.reset(r,official)
     r.attempt=r.attempt+1;r.id=tostring(r.generation)..':'..r.attempt
     r.state,r.elapsed,r.result,r.reason,r.resume='ready',0,nil,nil,nil
-    r.official=official==true;r.practice_reason=nil
+    r.official=official==true;r.practice_reason=nil;r.new_best=false
     return r.id
 end
 function M.practice(r,reason) r.official=false;r.practice_reason=r.practice_reason or reason end
