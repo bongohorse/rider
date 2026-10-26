@@ -25,7 +25,7 @@ function M.new(key)
         local slot=s.slot(i)
         local valid=slot and not slot.unsupported and slot.seq>=1 and slot.seq%1==0
         if not ok or exists and not valid then bad=true end
-        if valid then best_time=math.min(best_time or slot.doc.time,slot.doc.time);medal=math.max(medal,slot.doc.medal or 0) end
+        if valid then best_time=math.min(best_time or slot.doc.time,slot.doc.time);medal=math.max(medal,slot.doc.version==2 and slot.doc.medal or 0) end
     end
     local t={store=s,key=key,best=best_time,medal=medal,status=bad and 'Record unavailable; save protected' or 'saved',blocked=bad}
     if not bad and custom.sync_state()~='saved' then t.status='Checking storage';t.pending=t.best or false end

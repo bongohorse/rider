@@ -51,3 +51,9 @@ state='saved';local revised=best.new('first-run-course2-rules1-buggy-a-crash');a
 assert(best.offer(revised,{official=true,time=45,medal=0}));best.poll(revised);assert(revised.best==45 and revised.medal==0)
 assert(best.new().best==24 and best.new().medal==3) -- only the fake RAM file survives the injected sync error
 print('PASS legacy upgrade, medal-only save, monotonic time/medal, practice isolation, failed acknowledgement and revision namespaces')
+
+files[a]={format=1,seq=1,text=json.encode({version=1,key=best.KEY,time=22,medal='unknown legacy extra'})};files[b]=nil
+assert(best.new().best==22 and best.new().medal==0)
+files[b]={format=1,seq=2,text=json.encode({version=2,key=best.KEY,time=21,medal=99})}
+local corrupt=best.new();assert(corrupt.blocked and corrupt.best==22 and corrupt.medal==0)
+print('PASS legacy extras cannot invent medals; malformed version-2 medal protects its survivor')
