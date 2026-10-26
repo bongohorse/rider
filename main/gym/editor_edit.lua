@@ -343,7 +343,7 @@ function M.mirror(e,ids,side)
         elseif o.type=="label" then n.position={c2-o.position[1],o.position[2]}
         elseif o.type=="curve" then n=M.mirror_curve(o,c2)
         else n=prefab.mirror(o,c2) end
-        n.name=o.name
+        n.name=o.name;n.road_look=doc_lib.copy(o.road_look)
         objects[i]=n
     end
     local mirrored={objects=objects,connections={}}

@@ -62,3 +62,9 @@ local extension=dofile(arg[1]..'/long-curves-source.lua');extension.editor.schem
 local level=assert(doc.compile(extension));assert(look.params(level).width==.9 and look.has_sections(level));assert(look.has_sections({editor=extension.editor}));assert(require('main.gym.terrain_budget').preview(12,12552,0,0,extension.editor))
 assert(require('main.gym.editor_terrain').create(extension.editor).perspective)
 print('PASS explicit editor-context parity with preserved extension fields')
+
+local prefab=require 'main.gym.editor_prefab';local mirrored=doc.blank('my-style','Style').editor;mirrored.road_profile=look.ID;mirrored.road_look={version=1,params=proj.validate(proj.DEFAULT)}
+local id=assert(edit.add_prefab(mirrored,'ramp',prefab.defaults('ramp'),{0,0}));mirrored.objects[1].road_look={version=1,width=1.4,side=5,shading=.6}
+assert(edit.mirror(mirrored,{id},1));assert(same(mirrored.objects[1].road_look,mirrored.objects[2].road_look))
+mirrored.objects[1].kind='platform';assert(not look.validate(mirrored))
+print('PASS prefab Mirror preserves manual look; prop styling is refused')

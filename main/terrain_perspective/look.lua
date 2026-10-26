@@ -22,7 +22,7 @@ function M.validate(e)
  local p,err=projection.validate(l.params);if not p then return nil,'Terrain Look: '..err,(err:find('Unsupported',1,true) or err:find('Unknown',1,true))~=nil end
  for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look~=nil then
   local v=o.road_look
-  if o.type~='line' and o.type~='curve' and o.type~='prefab' then return nil,'Terrain Look applies only to terrain sections' end
+  if (o.type~='line' and o.type~='curve' and o.type~='prefab') or (o.type=='prefab' and o.kind=='platform') then return nil,'Terrain Look applies only to terrain sections' end
   if type(v)~='table' or v.version~=1 then return nil,'Unsupported section Terrain Look version',true end
   for k in pairs(v) do if k~='version' and k~='width' and k~='side' and k~='shading' then return nil,'Section look: projection strength/angle are level-wide; unsupported field '..tostring(k),true end end
   for _,k in ipairs(M.LOCAL) do local n,r=v[k],projection.RANGES[k];if type(n)~='number' or n~=n or n<r[1] or n>r[2] then return nil,'Section '..k..' must be '..r[1]..'..'..r[2] end end
