@@ -13,6 +13,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
 | Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
+| First playable run (#279) | [Behavior, scoring, persistence and checks](GAMEPLAY_G1_REPORT.md) |
 | Terrain Look (#278) | [Authoring report](TERRAIN_LOOK_REPORT.md), [shared contract](contracts/road-look.md#editor-authoring) |
 | Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](LE1B_REPORT.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
@@ -52,6 +53,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/automation.md](contracts/automation.md) | Test CLI, runner protocol, release boundary | Interfaces · Test CLI and results · Engine/runner protocol · Release boundary |
 | [contracts/bridge.md](contracts/bridge.md) | Native Automation Bridge | Setup and commands · Tested behavior · Limits and license · Network boundary · Network test procedure |
 | [TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | #292 normal Play/Edit, legacy compatibility and evidence | Scope and settings · Compatibility · Verification · Resources and timings · Reproduction · Limits and stop point |
+| [GAMEPLAY_G1_REPORT.md](GAMEPLAY_G1_REPORT.md) | #279 short official course/run timer/result/best/Retry | Behavior · Scoring and storage · Verification · Preview and limits · Engine evidence |
 | [TERRAIN_LOOK_REPORT.md](TERRAIN_LOOK_REPORT.md) | #278 shared Editor/Gym live menu, source styling and evidence | Authorization and preview · Controls and compatibility · Rendering and budgets · Verification · Reproduction · Limits and stop point |
 | [TERRAIN_PERSPECTIVE_REPORT.md](TERRAIN_PERSPECTIVE_REPORT.md) | Gated #290 fixed/perspective comparison and evidence | Scope and preview · Projection and resources · Measurements · Verification · Limits and stop point · Engine sources |
 | [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Production compatibility · Editor authoring · Consumer boundary |

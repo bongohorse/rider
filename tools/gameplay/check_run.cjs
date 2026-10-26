@@ -23,9 +23,21 @@ module.exports=async function check(browser,base,sha,out){
   // Slower valid finish cannot downgrade the acknowledged best.
   await page.keyboard.down('ArrowUp');await page.waitForFunction(()=>window.riderRun.time>.3);await page.keyboard.up('ArrowUp');await page.waitForTimeout(4000);await drive();await page.waitForFunction(()=>window.riderRun.save==='saved');assert.equal((await state()).best,first.best);assert.equal((await state()).new_best,false);checks.push({name:'same-world-retry-and-slower-finish-no-downgrade',state:await state()});
   await page.close();await open();assert.equal((await state()).best,first.best);checks.push({name:'close-reopen-loads-acknowledged-best',state:await state()});
+  // Tune the real native look menu at READY. Appearance must not change scoring identity/world.
+  const cosmetic=await page.evaluate(()=>({id:window.riderRun.id,generation:window.riderTelemetry.session_generation,shapes:window.riderTelemetry.terrain_shapes}));
+  async function tapCanvas(x,y){const p=await page.locator('canvas').evaluate((c,p)=>{const r=c.getBoundingClientRect();return {x:r.x+p.x/c.width*r.width,y:r.y+p.y/c.height*r.height};},{x,y});await pointer.tap(page,p);await pointer.frames(page,{n:6});}
+  const size=await page.locator('canvas').evaluate(c=>({w:c.width,h:c.height}));
+  await tapCanvas(616,size.h-40);await tapCanvas(size.w-436+316,16+104+12);await page.keyboard.type('1.2');await key('Enter');
+  const footer=16+Math.min(580,size.h-96)-22;await tapCanvas(size.w-436+148,footer);await tapCanvas(size.w-436+344,footer);
+  assert.equal((await state()).official,true);assert.equal((await state()).id,cosmetic.id);assert.equal(await page.evaluate(()=>window.riderTelemetry.session_generation),cosmetic.generation);assert.equal(await page.evaluate(()=>window.riderTelemetry.terrain_shapes),cosmetic.shapes);
+  checks.push({name:'native-terrain-look-apply-preserves-official-identity-and-world',state:await state()});
   // Custom preset/assists are practice for the entire attempt, even if changed back.
   await key('c');await key('c');await page.waitForFunction(()=>!window.riderRun.official);await drive();assert.equal((await state()).best,first.best);assert.equal((await state()).official,false);checks.push({name:'changed-assists-practice-cannot-overwrite',state:await state()});
   await key('r');await page.waitForFunction(()=>window.riderRun.state==='ready');
+  await key('e');await page.waitForFunction(()=>window.riderEditing===true);await key('e');
+  await page.waitForFunction(()=>window.riderEditing===false&&window.riderTelemetry?.custom===true&&window.riderTelemetry.sequence>2);
+  assert.equal(await state(),null);checks.push({name:'editor-play-is-custom-and-has-no-official-scoring-authority'});
+  await page.close();await open();assert.equal((await state()).best,first.best);
   await page.evaluate(()=>{const sync=FS.syncfs;window.restoreRunSync=()=>FS.syncfs=sync;FS.syncfs=function(populate,cb){if(!populate){setTimeout(()=>{Module._syncTries=0;cb(new Error('injected record sync failure'));},0);return;}return sync.apply(this,arguments);};});
   await drive();assert.ok((await state()).time<first.best,'Fault run must improve the old best');
   await page.waitForFunction(()=>window.riderRun.save.includes('not saved'));assert.equal((await state()).best,first.best);
