@@ -5,7 +5,7 @@
   const enabled=forced==='1'||(forced!=='0'&&navigator.maxTouchPoints>0);
   const pointers=new Map(),pending={};
   const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false};
-  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode;
+  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes;
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
@@ -42,6 +42,16 @@
     }else if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
+    }
+    if(enabled&&progressNodes){
+      const p=window.riderProgress,n=progressNodes;
+      n.root.hidden=!p?.enabled||p.modal||!!window.riderEditing||!!data?.ui_captured;
+      if(p){
+        for(const node of [n.start,n.finish,n.track,n.value])node.hidden=!p.available;
+        n.reason.hidden=p.available;
+        n.reason.textContent=p.available?'':'Progress unavailable: '+p.reason;
+        if(p.available){n.car.style.left=(100*p.fraction)+'%';n.value.textContent=Math.floor(100*p.fraction+.000001)+'%';}
+      }
     }
     if(enabled){
       if(api.sectionButton)api.sectionButton.hidden=!(data?.section_count>1);
@@ -90,6 +100,12 @@
     #rider-mobile .zones button{width:clamp(62px,12vw,130px);height:clamp(64px,18vh,100px);font-weight:bold;background:#142e38ce}
     #rider-mobile .zones button.held{background:#277b67}
     #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
+    #rider-mobile .course-progress{display:flex;align-items:center;gap:8px;min-width:250px;max-width:100%;margin-top:6px;font-size:12px}
+    #rider-mobile .progress-track{height:4px;min-width:80px;flex:1;position:relative;background:#486963}
+    #rider-mobile .progress-car{position:absolute;top:-7px;width:14px;height:6px;border-radius:2px;background:#4de6d9;transform:translateX(-50%)}
+    #rider-mobile .progress-car:before{content:'';position:absolute;top:-4px;left:3px;width:8px;height:4px;background:#4de6d9}
+    #rider-mobile .progress-car:after{content:'';position:absolute;top:5px;left:1px;width:3px;height:3px;background:#ecfff8;box-shadow:9px 0 #ecfff8}
+    #rider-mobile .course-progress[hidden],#rider-mobile .course-progress [hidden]{display:none}
     #rider-mobile .toast{position:absolute;top:56px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:6px 12px;background:#10252bf0;border-radius:6px;text-align:center;pointer-events:none}
     #rider-mobile .toast[hidden]{display:none}
     #rider-mobile .measure,#rider-mobile .tilt-panel{display:none;position:absolute;top:114px;left:10px;right:10px;gap:5px;align-items:center;flex-wrap:wrap}
@@ -151,7 +167,11 @@
   tiltHud=document.createElement('div');tiltHud.textContent='Tilt OFF — touch controls available';
   const replayHud=document.createElement('div');replayHud.dataset.replay='';
   api.setReplay=text=>{replayHud.textContent=text;};
-  readout.append(hud,status,tiltHud,replayHud);root.append(readout);
+  const progress=document.createElement('div');progress.className='course-progress';progress.hidden=true;
+  const start=document.createElement('span'),finish=document.createElement('span'),value=document.createElement('span'),reason=document.createElement('span');start.textContent='Start';finish.textContent='Finish';
+  const track=document.createElement('div'),car=document.createElement('div');track.className='progress-track';car.className='progress-car';track.append(car);
+  progress.append(start,track,finish,value,reason);progressNodes={root:progress,start,finish,value,reason,track,car};
+  readout.append(hud,progress,status,tiltHud,replayHud);root.append(readout);
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;
