@@ -1,0 +1,43 @@
+{
+  "source_sha": "b735b3346a8eabd4a79bd115a2b5d1b4211b7379",
+  "status": "PASS",
+  "real_device": "NOT RUN",
+  "checks": [
+    {
+      "name": "touch-start-pause-resume-finish-saved",
+      "state": {
+        "new_best": true,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "finished",
+        "time": 25.866668015718,
+        "generation": 1,
+        "official": true,
+        "best": 25.866668015718,
+        "practice": ""
+      }
+    },
+    {
+      "name": "touch-toolbar-retry-same-world"
+    },
+    {
+      "name": "route-progress-touch-ready-pause-and-retry",
+      "state": {
+        "enabled": true,
+        "modal": false,
+        "phase": "ready",
+        "distance": 0,
+        "reason": "",
+        "available": true,
+        "fraction": 0,
+        "generation": 1,
+        "gaps": 0,
+        "on_gap": false,
+        "length": 168.60153950308,
+        "attempt": 2
+      }
+    }
+  ],
+  "errors": []
+}

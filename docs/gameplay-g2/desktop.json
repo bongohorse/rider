@@ -1,0 +1,172 @@
+{
+  "source_sha": "b735b3346a8eabd4a79bd115a2b5d1b4211b7379",
+  "status": "PASS",
+  "real_device": "NOT RUN",
+  "checks": [
+    {
+      "name": "route-marker-moves-back-on-real-reverse",
+      "forward": {
+        "data": {
+          "enabled": true,
+          "modal": false,
+          "phase": "running",
+          "distance": 10.561240420669,
+          "reason": "",
+          "available": true,
+          "fraction": 0.062640237163886,
+          "generation": 1,
+          "gaps": 0,
+          "on_gap": false,
+          "length": 168.60153950308,
+          "attempt": 1
+        },
+        "ui": {
+          "start": {
+            "y": 617.33331298828,
+            "x": 480
+          },
+          "label": "6%",
+          "marker": {
+            "y": 622.66668701172,
+            "x": 500.04486083984
+          },
+          "finish": {
+            "y": 617.33331298828,
+            "x": 800
+          }
+        }
+      },
+      "back": {
+        "data": {
+          "enabled": true,
+          "modal": false,
+          "phase": "running",
+          "distance": 9.6154487351698,
+          "reason": "",
+          "available": true,
+          "fraction": 0.057030610535997,
+          "generation": 1,
+          "gaps": 0,
+          "on_gap": false,
+          "length": 168.60153950308,
+          "attempt": 1
+        },
+        "ui": {
+          "start": {
+            "y": 617.33331298828,
+            "x": 480
+          },
+          "label": "5%",
+          "marker": {
+            "y": 622.66668701172,
+            "x": 498.24978637695
+          },
+          "finish": {
+            "y": 617.33331298828,
+            "x": 800
+          }
+        }
+      }
+    },
+    {
+      "name": "pause-and-canonical-retry-preserve-clock-and-world",
+      "state": {
+        "enabled": true,
+        "modal": false,
+        "phase": "ready",
+        "distance": 0,
+        "reason": "",
+        "available": true,
+        "fraction": 0,
+        "generation": 1,
+        "gaps": 0,
+        "on_gap": false,
+        "length": 168.60153950308,
+        "attempt": 2
+      }
+    },
+    {
+      "name": "real-gap-flight-to-existing-directed-finish",
+      "flight": {
+        "data": {
+          "enabled": true,
+          "modal": false,
+          "phase": "running",
+          "distance": 16.590768484312,
+          "reason": "",
+          "available": true,
+          "fraction": 0.4125436698618,
+          "generation": 2,
+          "gaps": 1,
+          "on_gap": true,
+          "length": 40.215787312576,
+          "attempt": 1
+        },
+        "ui": {
+          "start": {
+            "y": 617.33331298828,
+            "x": 480
+          },
+          "label": "41%",
+          "marker": {
+            "y": 622.66668701172,
+            "x": 612.01397705078
+          },
+          "finish": {
+            "y": 617.33331298828,
+            "x": 800
+          }
+        }
+      },
+      "finish": {
+        "enabled": true,
+        "modal": false,
+        "phase": "finished",
+        "distance": 40.215787312576,
+        "reason": "",
+        "available": true,
+        "fraction": 1,
+        "generation": 2,
+        "gaps": 1,
+        "on_gap": false,
+        "length": 40.215787312576,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "unsupported-switchback-reports-unavailable",
+      "state": {
+        "data": {
+          "enabled": true,
+          "modal": false,
+          "phase": "running",
+          "distance": 0,
+          "reason": "Switchbacks or loops",
+          "available": false,
+          "fraction": 0,
+          "generation": 3,
+          "gaps": 0,
+          "on_gap": false,
+          "length": 0,
+          "attempt": 1
+        },
+        "ui": {
+          "start": {
+            "y": 617.33331298828,
+            "x": 480
+          },
+          "label": "Progress unavailable: Switchbacks or loops",
+          "marker": {
+            "y": 622.66668701172,
+            "x": 800
+          },
+          "finish": {
+            "y": 617.33331298828,
+            "x": 800
+          }
+        }
+      }
+    }
+  ],
+  "errors": []
+}

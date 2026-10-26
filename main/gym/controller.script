@@ -19,6 +19,7 @@ local juice = require "main.gym.juice"
 -- A21 record and replay: one more command source in this tick owner; the recording lives on self.replay.
 local replay=require "main.gym.replay"
 local race=require "main.gym.run_runtime"
+local progress=require "main.gym.progress_runtime"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
 local LOADER="main:/loader#script"
 local GAMEPLAY={}
@@ -88,6 +89,7 @@ local function reset(self)
     self.reset_count = self.reset_count+1
     self.last_reset_reason = request.reason
     race.ready(self)
+    progress.reset(self)
     self.resetting = false
     self.check_reset_pose = self.testcase=="a3"
     local elapsed = (socket.gettime()-started)*1000
@@ -298,6 +300,7 @@ function update(self, dt)
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
     race.update(self,dt)
+    progress.update(self,dt)
     if self.placement_report then
         self.placement_report=self.placement_report-1
         if self.placement_report==0 then
@@ -348,6 +351,7 @@ function update(self, dt)
         start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         race.ready(self)
+        progress.reset(self)
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
@@ -535,6 +539,7 @@ function fixed_update(self, dt)
             self.attempt_time=self.race.elapsed
         else self.attempt_time=(self.attempt_time or 0)+dt end
         check_finish(self,state)
+        progress.observe(self,state)
         if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5d" then
             -- LE3b, LE5a, LE5b, LE5d only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided
             -- curl holds the vehicle and that a jump gap is open; a 0.25 s telemetry sample could miss a pass-through.
