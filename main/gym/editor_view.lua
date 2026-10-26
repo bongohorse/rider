@@ -88,7 +88,7 @@ end
 local function admitted(self)
     if self.admission_doc~=editor.doc or self.admission_shape~=editor.shape_version then
         self.admission_doc,self.admission_shape=editor.doc,editor.shape_version
-        self.admission_ok=terrain.admitted(editor.doc.editor)
+        self.admission_ok=terrain.admitted(editor.doc.editor,editor.render_budget)
     end
     return self.admission_ok
 end

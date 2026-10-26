@@ -9,6 +9,7 @@ for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
     assert(r.sections==#chunks and r.vertices==s.vertices and r.payload==s.buffer_bytes)
     assert(r.mesh_peak==2*#chunks and r.allocated_max==#chunks and r.cached_max<=2)
     assert(require('main.gym.editor_terrain').admitted(d.editor))
+    assert(require('main.gym.editor_terrain').admitted(d.editor,r),'Cached live validation must admit the same mesh preview')
     print(name..': '..r.sections..' sections, '..r.vertices..' vertices, '..r.payload..' payload B, '..r.cpu_estimate..' estimated CPU B, '..r.physics_vertices..' physics vertices')
 end
 local base=assert(doc.compile(fixture('long-over-budget')))

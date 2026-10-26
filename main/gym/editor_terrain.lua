@@ -23,7 +23,12 @@ local function matches(entry,p,i)
     return true
 end
 -- Source-only estimate, using the same connected runs as the compiler. Invalid drafts stay editable.
-function M.admitted(e)
+function M.admitted(e,compiled_budget)
+    if compiled_budget then
+        -- Reuse the existing live validation result; a drag's actual plan is guarded below.
+        return require("main.gym.terrain_budget").preview(compiled_budget.sections,compiled_budget.vertices,
+            compiled_budget.sprites-(e.finish and 1 or 0),compiled_budget.labels-(e.finish and 1 or 0))
+    end
     local sections,vertices,sprites,labels=0,0,0,0
     local pieces=doc.pieces(e)
     for _,run in ipairs(doc.runs(e)) do

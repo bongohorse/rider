@@ -92,6 +92,7 @@ local function check()
     local e=M.doc.editor
     local errors,warnings,error_at,warning_at=doc_lib.problems(e)
     local level,err=doc_lib.compile(M.doc,nil,errors)
+    M.render_budget=level and require("main.gym.terrain_budget").measure(level) or nil
     if err and errors[1]~=err then
         errors[#errors+1]=err
         -- Compile errors about START (its clearance, the start limit) point at START and what it overlaps.
