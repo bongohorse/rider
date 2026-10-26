@@ -10,9 +10,17 @@ function M.parse(text)
     return d
 end
 function M.new()
-    local s=custom.slot_store({'best-'..M.KEY..'-a','best-'..M.KEY..'-b'},M.parse)
+    local names={'best-'..M.KEY..'-a','best-'..M.KEY..'-b'}
+    local s=custom.slot_store(names,M.parse)
     local restored,err=s.restore();local latest=s.newest()
     local bad=latest and latest.unsupported or restored and restored.skipped or err or not restored and s.exists()
+    -- A valid survivor must not hide an unreadable alternate (including sys.load returning {}).
+    -- Keep both files intact rather than silently treating existing bad data as an empty slot.
+    for i,name in ipairs(names) do
+        local ok,exists=pcall(sys.exists,sys.get_save_file('rider',name))
+        local slot=s.slot(i)
+        if not ok or exists and (not slot or slot.unsupported or slot.seq<1 or slot.seq%1~=0) then bad=true end
+    end
     local t={store=s,best=restored and restored.doc.time,status=bad and 'Record unavailable; save protected' or 'saved',blocked=bad}
     if not bad and custom.sync_state()~='saved' then t.status='Checking storage';t.pending=t.best or false end
     return t

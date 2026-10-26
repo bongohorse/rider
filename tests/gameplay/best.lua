@@ -1,7 +1,8 @@
 -- Exercise the production alternating-slot store, parser and sync boundary with faulting file APIs.
 local files={};local state='saved';local mode;local last
 sys={get_save_file=function(app,name)return app..'/'..name end,get_engine_info=function()return {is_debug=true}end,
- load=function(path)return files[path] or {}end,save=function(path,t)
+ exists=function(path)return files[path]~=nil end,
+ load=function(path)if files[path]=='unreadable' then error('injected unreadable slot') end;return files[path] or {}end,save=function(path,t)
  last=path
  if mode=='write' then files[path]=nil;error('injected write failure') end
  files[path]=t;return true end}
@@ -25,3 +26,13 @@ assert(not best.parse(json.encode({version=1,key='other-rules',time=1})))
 files[last]={format=1,seq=99,text=json.encode(future)}
 local protected=best.new();assert(protected.blocked and not best.offer(protected,{official=true,time=1}))
 print('PASS best minimum/reopen/practice/rule identity/version protection/write failure/async acknowledgement')
+
+-- One valid slot cannot hide any unreadable/malformed alternate, regardless of sequence.
+local a='rider/best-'..best.KEY..'-a';local b='rider/best-'..best.KEY..'-b'
+files[a]={format=1,seq=1,text=json.encode({version=1,key=best.KEY,time=5})}
+for _,broken in ipairs({'unreadable',{}, {format=99,seq=2,text='bad'}, {format=1,seq=2,text='bad'}, {format=1,seq=0/0,text=json.encode({version=1,key=best.KEY,time=4})}}) do
+ files[b]=broken;local record=best.new();assert(record.blocked)
+ assert(not best.offer(record,{official=true,time=1}));assert(files[b]==broken and files[a].seq==1)
+end
+files[b]=nil;assert(not best.new().blocked)
+print('PASS valid survivor plus unreadable/empty/malformed/NaN alternate is protected; missing alternate remains writable')
