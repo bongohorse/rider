@@ -170,6 +170,7 @@ async function main(){
     for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air']){
       if(plan.includes(name))results.push(await require('./'+name+'.cjs')(browser,url,sha,out));
     }
+    if(plan.includes('desktop')&&mode!=='deployment')await require('../gameplay/check_run.cjs')(browser,url,sha,out);
     if(results.length!==plan.length)throw Error('Incomplete verification group');
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,mode,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
     console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));

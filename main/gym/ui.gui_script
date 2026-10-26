@@ -322,6 +322,7 @@ function update(self,dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled)
     gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
     for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
+    if self.run_ui.data then run_ui.show(self.run_ui,self.run_ui.data) end
     local compact=mobile.compact()
     self.compact=compact
     local open=mobile.enabled() and not compact or self.tuning_open

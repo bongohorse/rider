@@ -6,8 +6,12 @@ for _,o in ipairs(d.editor.objects) do
     for _,a in ipairs(o.anchors) do for _,k in ipairs({'p','in','out'}) do a[k][1]=a[k][1]*.5;a[k][2]=a[k][2]*.5 end end
 end
 -- A short flat run-in/run-out retains the smooth P0 roller shape between 0 and 165 m.
-local edit=require 'main.gym.editor_edit'
-d.editor.start.position={2,1.7};d.editor.finish.position={160,1.5}
+local curve=d.editor.objects[1]
+for _,a in ipairs(curve.anchors) do a.p[1]=a.p[1]+10 end
+curve.anchors[1].out[2]=0
+d.editor.objects[2]={id='o2',type='line',name='Flat staging pad',points={{-12,0},{10,0}}}
+d.editor.connections={{from='o2',to='o1'}};d.editor.next_id=3
+d.editor.start.position={2,1.7};d.editor.finish.position={170,1.5}
 d.editor.road_profile='perspective-v1'
 local compiled=assert(doc.compile(d))
 -- Small serializer used only by this offline course authoring tool.
