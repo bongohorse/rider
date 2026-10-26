@@ -50,3 +50,10 @@ local chain={points={{0,0},{1,0},{2,0}},owner={'a','a','b'}}
 local before=look.samples(chain,values);values.a.width=.25;values.a.side=.25;values.a.shading=0
 local after=look.samples(chain,values);assert(same(before[2],after[2]),'Level defaults altered manual boundary');assert(after[2].width==1.8)
 print('PASS manual boundary pinning against level-default changes')
+
+local future=dofile(arg[1]..'/long-curves-source.lua');future.editor.road_profile=look.ID;future.editor.road_look={version=1,params=proj.validate(proj.DEFAULT)}
+future.editor.road_look.params.version=999
+local valid,why,unsupported=doc.validate(future);assert(not valid and unsupported)
+future.editor.road_look.params.version=1;future.editor.objects[1].road_look=false
+valid,why,unsupported=doc.validate(future);assert(not valid and unsupported)
+print('PASS nested future parameter version and invalid section-format protection')

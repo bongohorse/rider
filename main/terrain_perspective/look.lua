@@ -10,7 +10,7 @@ function M.params(d)
 end
 function M.has_sections(d)
  local e=source(d);if not M.authored(e) then return false end
- for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look then return true end end
+ for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look~=nil then return true end end
  return false
 end
 function M.validate(e)
@@ -19,8 +19,8 @@ function M.validate(e)
  local l=e.road_look
  if type(l)~='table' or l.version~=1 then return nil,'Unsupported Terrain Look version; keep the original file.',true end
  for k in pairs(l) do if k~='version' and k~='params' then return nil,'Unsupported Terrain Look field '..tostring(k),true end end
- local p,err=projection.validate(l.params);if not p then return nil,'Terrain Look: '..err end
- for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look then
+ local p,err=projection.validate(l.params);if not p then return nil,'Terrain Look: '..err,(err:find('Unsupported',1,true) or err:find('Unknown',1,true))~=nil end
+ for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look~=nil then
   local v=o.road_look
   if o.type~='line' and o.type~='curve' and o.type~='prefab' then return nil,'Terrain Look applies only to terrain sections' end
   if type(v)~='table' or v.version~=1 then return nil,'Unsupported section Terrain Look version',true end

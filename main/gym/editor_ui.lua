@@ -410,7 +410,7 @@ function M.render(u,d)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
-        button('terrain_look',560,h-56,132,'Terrain Look',false,'Terrain Look: level or selected terrain sections')
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Terrain Look: level or selected terrain sections. * means preview values need Apply.')
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12);text(428,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
