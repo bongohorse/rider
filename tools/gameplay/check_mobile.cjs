@@ -1,0 +1,19 @@
+// First-run touch loop; synthetic Chromium touch is not physical-device acceptance.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+module.exports=async function check(browser,base,sha,out){
+ const context=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true});const page=await context.newPage(),errors=[],checks=[];const r={source_sha:sha,status:'INCOMPLETE',real_device:'NOT RUN',checks,errors};
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
+ try{
+  await page.goto(new URL('index.html?station=first-run&touch=1',base).href);await page.waitForFunction(()=>window.riderRun?.state==='ready'&&window.riderTelemetry?.sequence>2&&window.riderMobile?.enabled);assert.equal(await page.evaluate(()=>window.riderBuild),sha);
+  await page.screenshot({path:path.join(out,'run-phone-ready.png')});const g=await page.evaluate(()=>window.riderTelemetry.session_generation);
+  const cdp=await context.newCDPSession(page);const box=await page.locator('[data-command="throttle"]').boundingBox();assert(box&&box.width>=44&&box.height>=44);
+  const drive=()=>cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]});
+  await drive();await page.waitForFunction(()=>window.riderRun.state==='running'&&window.riderRun.time>1);await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await page.getByRole('button',{name:'Pause',exact:true}).tap();await page.waitForFunction(()=>window.riderRun.state==='paused');
+  const t=await page.evaluate(()=>window.riderRun.time);await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>window.riderRun.time),t);await page.getByRole('button',{name:'Resume',exact:true}).tap();await page.waitForFunction(()=>window.riderRun.state==='running');
+  await drive();await page.waitForFunction(()=>['finished','failed'].includes(window.riderRun.state),null,{timeout:45000});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await page.evaluate(()=>window.riderRun.state),'finished');await page.waitForFunction(()=>window.riderRun.save==='saved'&&window.riderRun.best>0&&window.riderTimeState.paused);await page.screenshot({path:path.join(out,'run-phone-finished.png')});checks.push({name:'touch-start-pause-resume-finish-saved',state:await page.evaluate(()=>window.riderRun)});
+  await page.getByRole('button',{name:'Retry',exact:true}).tap();await page.waitForFunction(()=>window.riderRun.state==='ready');assert.equal(await page.evaluate(()=>window.riderTelemetry.session_generation),g);checks.push({name:'touch-toolbar-retry-same-world'});
+  assert.deepEqual(errors,[]);r.status='PASS';return r;
+ }catch(e){r.status='FAIL';r.failure=e.stack;r.state=await page.evaluate(()=>window.riderRun).catch(()=>null);await page.screenshot({path:path.join(out,'run-phone-failure.png')}).catch(()=>{});throw e;
+ }finally{fs.writeFileSync(path.join(out,'run-phone-results.json'),JSON.stringify(r,null,2));await context.close();}
+};
+if(require.main===module){const {chromium}=require('playwright');const [base,sha,out]=process.argv.slice(2);fs.mkdirSync(out,{recursive:true});(async()=>{const b=await chromium.launch();try{console.log(JSON.stringify(await module.exports(b,base,sha,out)));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});}
