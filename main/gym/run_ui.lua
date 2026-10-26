@@ -43,6 +43,7 @@ function M.input(t,id,action,owner)
  if not t.data and gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','select_station',{id='first-run',preset='a'});return true end
  local r=t.data
  if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.retry,action.x,action.y) then msg.post(owner,'run_retry',{id=r.id});return true end
+ if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.card,action.x,action.y) then return true end
  return false
 end
 return M
