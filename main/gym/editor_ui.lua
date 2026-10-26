@@ -424,7 +424,7 @@ function M.render(u,d)
             text(mx+16,my+24,'Terrain Look',C.active,18)
             button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
             button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
-            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or 'Level defaults; manual section looks stay intact.') or ('Selected source sections: '..#(s.ids or {})),C.secondary,12,mw-32)
+            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or 'Level defaults; manual section looks stay intact.') or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
             local top,bottom=my+104,my+mh-104
             local height=5*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
             for i,spec in ipairs(require('main.terrain_perspective.projection').CONTROLS) do

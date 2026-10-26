@@ -24,10 +24,10 @@ function M.project(x,y,z,c,p)
     return c[1]+(x-c[1]+z*.18)/w,c[2]+(y-c[2]+z*math.tan(p.angle*math.pi/180))/w
 end
 -- A linear-fractional map with positive denominator: extrema occur at box corners and z endpoints.
-function M.bounds(base,c,p)
+function M.bounds(base,c,p,width)
     local b={math.huge,math.huge,-math.huge,-math.huge}
     for _,x in ipairs({base[1],base[3]}) do for _,y in ipairs({base[2],base[4]}) do
-        for _,z in ipairs({0,p.width}) do
+        for _,z in ipairs({0,width or p.width}) do
             local u,v=M.project(x,y,z,c,p)
             b[1],b[2],b[3],b[4]=math.min(b[1],u),math.min(b[2],v),math.max(b[3],u),math.max(b[4],v)
         end

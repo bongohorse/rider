@@ -17,15 +17,23 @@ function M.sync()
   s={instance=editor.opened,open=false,scope='level',params=look.params(e),revision=e.revision,signature=signature(e)};M.session=s;editor.look_preview=nil
  elseif s.revision~=e.revision then
   local sig=signature(e)
-  if sig~=s.signature then s.params=look.params(e);s.dirty=false;s.clear=nil;editor.look_preview=nil;s.signature=sig end
+  if sig~=s.signature then
+   s.params=look.params(e);if s.scope=='selected' then local values=look.values(e);for _,id in ipairs(s.ids or {}) do if values[id] then for _,k in ipairs(look.LOCAL) do s.params[k]=values[id][k] end;break end end end
+   s.dirty=false;s.clear=nil;editor.look_preview=nil;s.signature=sig
+  end
   s.revision=e.revision
  end
  return s
 end
 function M.scope(value)
  local s=M.sync();s.scope=value;s.ids=editor.selected_ids();s.params=look.params(editor.doc.editor);s.clear=nil;s.error=nil;s.dirty=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1
+ s.mixed=false
  if value=='selected' then local values=look.values(editor.doc.editor)
-  for _,id in ipairs(s.ids) do if values[id] then for _,k in ipairs(look.LOCAL) do s.params[k]=values[id][k] end;break end end
+  local first
+  for _,id in ipairs(s.ids) do if values[id] then
+   if not first then first=values[id];for _,k in ipairs(look.LOCAL) do s.params[k]=first[k] end
+   else for _,k in ipairs(look.LOCAL) do if values[id][k]~=first[k] then s.mixed=true end end end
+  end end
  end
  editor.touch()
 end
@@ -82,7 +90,7 @@ function M.apply()
   for i,o in ipairs(target.objects) do o.road_look=doc.copy(e.objects[i].road_look) end
  end,false)
  if ok then
-  s.signature=signature(editor.doc.editor);s.revision=editor.doc.editor.revision;s.dirty=false;s.clear=nil;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();s.error=nil
+  s.signature=signature(editor.doc.editor);s.revision=editor.doc.editor.revision;s.dirty=false;s.clear=nil;s.mixed=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();s.error=nil
  else s.error=editor.message end
  return ok
 end

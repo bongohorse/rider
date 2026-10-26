@@ -2,7 +2,7 @@
 // No physics mutation, debug command endpoint, new CI group or device/GPU-time claim.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs');
-const [bundleArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg),baseline=process.argv.includes('--baseline'),perspectiveProfile=process.argv.includes('--perspective-profile'),large=process.argv.includes('--large');fs.mkdirSync(out,{recursive:true});
+const [bundleArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg),baseline=process.argv.includes('--baseline'),perspectiveProfile=process.argv.includes('--perspective-profile')||process.argv.includes('--authored-look'),large=process.argv.includes('--large'),authored=process.argv.includes('--authored-look');fs.mkdirSync(out,{recursive:true});
 const sha=JSON.parse(fs.readFileSync(path.join(bundle,'bundle.json'))).source_sha;
 execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bundle import verify_bundle;verify_bundle(sys.argv[1],sys.argv[2])',bundle,sha]);
 function find(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory()){const f=find(p);if(f)return f;}else if(e.name==='index.html')return p;}}
@@ -18,7 +18,7 @@ function probe(){
  for(const name of ['riderTerrainResources','riderReady']){let value;Object.defineProperty(window,name,{configurable:true,get:()=>value,set:v=>{value=v;p.events.push({name,at:performance.now(),data:v,owned:window.riderTerrainMeshLifecycle?.owned});}});}
  const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>raf(t=>{const start=performance.now();try{cb(t);}finally{p.frames.push({at:start,ms:performance.now()-start});}});
 }
-(async()=>{let browser,server,page;const r={schema:1,status:'INCOMPLETE',source_sha:sha,observer_sha256:crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),baseline,perspective_profile:perspectiveProfile,large,viewport:[1280,720],dpr:1,loads:[],pan:[],camera:[],errors:[],unmeasured:['phone','physical GPU memory','GPU time']};try{
+(async()=>{let browser,server,page;const r={schema:1,status:'INCOMPLETE',source_sha:sha,observer_sha256:crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),baseline,perspective_profile:perspectiveProfile,authored,large,viewport:[1280,720],dpr:1,loads:[],pan:[],camera:[],errors:[],unmeasured:['phone','physical GPU memory','GPU time']};try{
  const web=path.dirname(find(bundle));server=http.createServer((q,res)=>{const f=path.resolve(web,'.'+new URL(q.url,'http://localhost').pathname);if(!f.startsWith(web+path.sep)||!fs.existsSync(f)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(f).pipe(res);});await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
  browser=await chromium.launch();r.browser=browser.version();page=await browser.newPage({viewport:{width:1280,height:720}});await configure(page,'terrain-residency','le6');await page.addInitScript(probe);
  page.on('pageerror',e=>r.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))r.errors.push(m.text());});
@@ -34,7 +34,7 @@ function probe(){
   assert.equal(s.telemetry.terrain_shapes,d.chains.reduce((n,c)=>n+c.length-1,0)+(d.hulls||[]).length);assert.equal(s.mesh.budget.stride,perspectiveProfile?48:36);assert.equal(s.projection?.mode||null,perspectiveProfile?'perspective':null);assert.equal(await page.evaluate(()=>typeof window.riderRoadLook),'undefined');r.loads.push({label,...s,timing});return s;
  }
  const names=['six-anchor','long-curves','mixed',...(large?['mixed-over-budget']:[])];
- const sources=Object.fromEntries(names.map(n=>{const d=JSON.parse(fs.readFileSync('docs/'+(n.endsWith('over-budget')?'terrain-p5':'terrain-p0')+'/'+n+'.json'));if(perspectiveProfile)d.editor.road_profile='perspective-v1';return [n,d];}));
+ const sources=Object.fromEntries(names.map(n=>{const d=JSON.parse(fs.readFileSync('docs/'+(n.endsWith('over-budget')?'terrain-p5':'terrain-p0')+'/'+n+'.json'));if(perspectiveProfile)d.editor.road_profile='perspective-v1';if(authored){d.editor.road_profile='authored-v1';d.editor.road_look={version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:Math.atan(.55)*180/Math.PI,side:64,shading:1}};d.editor.objects.filter(o=>['line','curve','prefab'].includes(o.type)).forEach((o,i)=>o.road_look={version:1,width:i%2?2:.25,side:i%2?.25:64,shading:i%2?0:1});}return [n,d];}));
  for(const [name,d] of Object.entries(sources)){
   for(let i=0;i<5;i++)await load(d,name+'-'+i);
   await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');await page.waitForTimeout(8000);await page.keyboard.up('ArrowUp');r.camera.push({label:name+'-drive',...await snapshot()});

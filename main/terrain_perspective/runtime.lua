@@ -30,8 +30,8 @@ function M.prepare(state,camera)
     state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        local b=projection.validate(p);b.width=e.geometry and e.geometry.max_width or (state.baked and 2 or p.width)
-        e.bounds=projection.bounds(e.base_bounds,camera,b)
+        local width=e.geometry and e.geometry.max_width or (state.baked and 2 or p.width)
+        e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end
 function M.apply(state,set_bounds)
