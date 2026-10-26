@@ -36,3 +36,18 @@ for _,broken in ipairs({'unreadable',{}, {format=99,seq=2,text='bad'}, {format=1
 end
 files[b]=nil;assert(not best.new().blocked)
 print('PASS valid survivor plus unreadable/empty/malformed/NaN alternate is protected; missing alternate remains writable')
+
+-- Legacy v1 survives the additive record upgrade; achievements are independent monotonic values.
+files[a]={format=1,seq=1,text=json.encode({version=1,key=best.KEY,time=25})};files[b]=nil
+local upgrade=best.new();assert(upgrade.best==25 and upgrade.medal==0)
+assert(not best.offer(upgrade,{official=true,time=29,medal=2})) -- medal-only save is not a new time record
+assert(upgrade.pending==25 and upgrade.medal==0);best.poll(upgrade)
+assert(upgrade.best==25 and upgrade.medal==2)
+assert(not best.offer(upgrade,{official=true,time=35,medal=1}));assert(not best.offer(upgrade,{official=false,time=24,medal=3}))
+assert(best.new().best==25 and best.new().medal==2)
+assert(best.offer(upgrade,{official=true,time=24,medal=1}));best.poll(upgrade);assert(upgrade.best==24 and upgrade.medal==2)
+assert(not best.offer(upgrade,{official=true,time=24,medal=3}));state='failed';best.poll(upgrade);assert(upgrade.best==24 and upgrade.medal==2 and upgrade.blocked)
+state='saved';local revised=best.new('first-run-course2-rules1-buggy-a-crash');assert(not revised.best and revised.medal==0)
+assert(best.offer(revised,{official=true,time=45,medal=0}));best.poll(revised);assert(revised.best==45 and revised.medal==0)
+assert(best.new().best==24 and best.new().medal==3) -- only the fake RAM file survives the injected sync error
+print('PASS legacy upgrade, medal-only save, monotonic time/medal, practice isolation, failed acknowledgement and revision namespaces')

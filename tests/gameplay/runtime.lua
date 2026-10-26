@@ -14,3 +14,11 @@ runtime.update(s,1/60);runtime.update(s,1/60);local stops=0;for _,m in ipairs(se
 runtime.ready(s);assert(s.race.id~=id and s.race.official and not s.race.new_best)
 runtime.practice(s,'Record/replay');runtime.command(s,cmd,1/60);runtime.observe(s,1/60);assert(not s.race.official)
 print('PASS production adapter official isolation, cosmetic identity, completed-step clock, exactly-once finish/stop and Retry')
+
+local medalOwner=owner();medalOwner.station.finish={};medalOwner.station.medal_times={version=1,gold=26,silver=30,bronze=40}
+runtime.ready(medalOwner);runtime.command(medalOwner,cmd,1/60);medalOwner.race.elapsed=30;runtime.finish(medalOwner)
+assert(medalOwner.race.result.medal==2);runtime.finish(medalOwner);runtime.update(medalOwner,1/60)
+assert(sent[#sent].data.medal==2 and sent[#sent].data.next_medal=='Gold' and sent[#sent].data.next_time==26)
+runtime.practice(medalOwner,'Late rule change');assert(medalOwner.race.result.official)
+runtime.ready(medalOwner);assert(not medalOwner.race.result and medalOwner.race.elapsed==0)
+print('PASS authoritative unrounded inclusive result medal, next target, terminal freeze and Retry reset')

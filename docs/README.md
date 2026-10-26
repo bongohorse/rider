@@ -13,6 +13,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
 | Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
+| Medal times (#298) | [Scoring, authoring, revisions and checks](GAMEPLAY_G3_REPORT.md) |
 | Course progress (#296) | [Route, limits, HUD and verification](GAMEPLAY_G2_REPORT.md) |
 | First playable run (#279) | [Behavior, scoring, persistence and checks](GAMEPLAY_G1_REPORT.md) |
 | Terrain Look (#278) | [Authoring report](TERRAIN_LOOK_REPORT.md), [shared contract](contracts/road-look.md#editor-authoring) |
@@ -54,6 +55,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/automation.md](contracts/automation.md) | Test CLI, runner protocol, release boundary | Interfaces · Test CLI and results · Engine/runner protocol · Release boundary |
 | [contracts/bridge.md](contracts/bridge.md) | Native Automation Bridge | Setup and commands · Tested behavior · Limits and license · Network boundary · Network test procedure |
 | [TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | #292 normal Play/Edit, legacy compatibility and evidence | Scope and settings · Compatibility · Verification · Resources and timings · Reproduction · Limits and stop point |
+| [GAMEPLAY_G3_REPORT.md](GAMEPLAY_G3_REPORT.md) | #298 authored target times, highest medal and next target | Behavior and authoring · Competition and revision policy · Verification · Preview and stop point · Engine evidence |
 | [GAMEPLAY_G2_REPORT.md](GAMEPLAY_G2_REPORT.md) | #296 current terrain-route position, reverse/Retry and unsupported topology | Route definition and limits · Lifecycle and display · Verification · Preview and stop point · Engine evidence |
 | [GAMEPLAY_G1_REPORT.md](GAMEPLAY_G1_REPORT.md) | #279 short official course/run timer/result/best/Retry | Behavior · Scoring and storage · Verification · Preview and limits · Engine evidence |
 | [TERRAIN_LOOK_REPORT.md](TERRAIN_LOOK_REPORT.md) | #278 shared Editor/Gym live menu, source styling and evidence | Authorization and preview · Controls and compatibility · Rendering and budgets · Verification · Reproduction · Limits and stop point |
