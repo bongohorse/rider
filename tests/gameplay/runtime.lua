@@ -22,3 +22,7 @@ assert(sent[#sent].data.medal==2 and sent[#sent].data.next_medal=='Gold' and sen
 runtime.practice(medalOwner,'Late rule change');assert(medalOwner.race.result.official)
 runtime.ready(medalOwner);assert(not medalOwner.race.result and medalOwner.race.elapsed==0)
 print('PASS authoritative unrounded inclusive result medal, next target, terminal freeze and Retry reset')
+
+runtime.practice(medalOwner,'Changed assists');runtime.command(medalOwner,cmd,1/60);medalOwner.race.elapsed=25;runtime.finish(medalOwner)
+assert(medalOwner.race.result.medal==0 and not medalOwner.race.result.official)
+print('PASS practice attempts cannot receive a medal')

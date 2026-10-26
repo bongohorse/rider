@@ -29,9 +29,9 @@ function M.show(t,r,touch)
  local saved=r.save=='saved';local suffix=not saved and (' | '..r.save) or ''
  gui.set_text(t.best,(r.best>0 and string.format('Best %.2f s',r.best) or 'Best --')..(r.has_medals and (' | '..medals.names[(r.highest_medal or 0)+1]) or '')..(r.official and ' | Official' or ' | Practice')..suffix)
  gui.set_text(t.result,r.state=='failed' and (r.reason=='head' and 'Head contact' or 'Outside the course') or string.format('Finished!  %.2f s',r.time))
- gui.set_text(t.medal,r.state=='finished' and r.has_medals and ((r.official and '' or 'Practice: ')..(r.medal>0 and medals.names[r.medal+1]..' medal' or 'Completed - no medal')) or '')
+ gui.set_text(t.medal,r.state=='finished' and r.has_medals and (not r.official and 'Practice - no medal awarded' or r.medal>0 and medals.names[r.medal+1]..' medal' or 'Completed - no medal') or '')
  local next_text=r.next_time and r.next_time>0 and string.format('Next: %s <= %.2f s  (%.2f s faster)',r.next_medal,r.next_time,math.max(.01,math.ceil((r.time-r.next_time)*100)/100)) or 'All target times beaten'
- gui.set_text(t.next,r.state=='finished' and r.has_medals and next_text or '')
+ gui.set_text(t.next,r.state=='finished' and r.has_medals and r.official and next_text or '')
  gui.set_text(t.detail,not r.official and 'Practice - official best unchanged' or r.new_best and (saved and 'New personal best - saved' or r.save) or (r.best>0 and string.format('Personal best %.2f s',r.best) or r.save))
 end
 function M.geometry(t)

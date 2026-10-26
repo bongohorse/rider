@@ -33,7 +33,7 @@ module.exports=async function check(browser,base,sha,out){
   assert.equal((await state()).official,true);assert.equal((await state()).id,cosmetic.id);assert.equal(await page.evaluate(()=>window.riderTelemetry.session_generation),cosmetic.generation);assert.equal(await page.evaluate(()=>window.riderTelemetry.terrain_shapes),cosmetic.shapes);
   checks.push({name:'native-terrain-look-apply-preserves-official-identity-and-world',state:await state()});
   // Custom preset/assists are practice for the entire attempt, even if changed back.
-  await key('c');await key('c');await page.waitForFunction(()=>!window.riderRun.official);await drive();assert.equal((await state()).best,first.best);assert.equal((await state()).official,false);assert.equal((await state()).highest_medal,first.highest_medal);checks.push({name:'changed-assists-practice-cannot-overwrite',state:await state()});
+  await key('c');await key('c');await page.waitForFunction(()=>!window.riderRun.official);await drive();assert.equal((await state()).best,first.best);assert.equal((await state()).official,false);assert.equal((await state()).medal,0);assert.match(await page.evaluate(()=>window.riderRunUI.medal),/Practice - no medal awarded/);assert.equal((await state()).highest_medal,first.highest_medal);checks.push({name:'changed-assists-practice-cannot-overwrite',state:await state()});
   await key('r');await page.waitForFunction(()=>window.riderRun.state==='ready');
   await key('e');await page.waitForFunction(()=>window.riderEditing===true);await key('e');
   await page.waitForFunction(()=>window.riderEditing===false&&window.riderTelemetry?.custom===true&&window.riderTelemetry.sequence>2);

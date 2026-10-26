@@ -39,7 +39,7 @@ function M.finish(self)
     if not self.race then return end
     local result=run.finish(self.race,self.race.id)
     if result then
-        result.medal=medals.award(self.station.medal_times,result.time)
+        result.medal=result.official and medals.award(self.station.medal_times,result.time) or 0
         self.race.new_best=best.offer(self.personal,result)
     end
 end
