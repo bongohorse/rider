@@ -1,0 +1,3 @@
+PASS persistent draft/Apply transactions, protected connected transitions, manual defaults and scoped Reset
+PASS retained look preview rebases onto geometry edits without applying its settings
+PASS Gym preview shares the session, retains Close/Apply and is bound to document/world generation

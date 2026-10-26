@@ -8,7 +8,9 @@ Claudio explicitly authorized finalizing #293 and continuing with #278. **No add
 
 Claudio subsequently reported that the Editor feature works very well and granted GO to add the same Terrain Look menu with live preview to in-game Gym Play. This records only his stated Editor acceptance; no additional device or driving observation is inferred. The same open draft PR #294 covers that extension.
 
-#278 is implemented in draft PR #294. Playable ordinary release: http://127.0.0.1:8794/terrain-preview.html?course=long-curves. Press **E**, then **Terrain Look** in the editor footer. Select source terrain objects before opening the menu for Selected scope. The launcher includes an unchanged **Legacy fixed Depth (500 m)** option and a normal Gym link.
+#278 is implemented in draft PR #294. Current ordinary release: http://127.0.0.1:8795/index.html?station=straight (Gym) and http://127.0.0.1:8795/terrain-preview.html?course=long-curves (fixture launcher). Choose **Terrain Look** directly in the Gym footer, or **E → Terrain Look** in the Editor. Select source terrain objects before opening the menu for Selected scope. The launcher includes an unchanged **Legacy fixed Depth (500 m)** option and a normal Gym link.
+
+Current Gym extension runtime: **`8e2c64b2bff2069e8cac24944e318d54634d70d1`**, ordinary debug/release builds. [Actual Gym menu](terrain-278/gym-menu.png), [660 m live draft after Close](terrain-278/gym-live-660.png).
 
 Original Editor-only release source: `fb9c21fdd5d724bba594cb5089f9daf6beb7d0ff`; pinned Defold 1.14.0 / engine `a81dbb0478e8b73931dc2d671563204f6ac0ef82`. [Reopened release menu](terrain-278/menu-reopened.png), [applied menu](terrain-278/menu-applied.png), [short window](terrain-278/short-menu.png) and [660 m Fit](terrain-278/660-fit.png) are unmodified actual screenshots.
 
@@ -20,10 +22,10 @@ The [shared road-look contract](contracts/road-look.md#editor-authoring) defines
 
 - **Level** changes defaults and the common projection. Existing manual section overrides remain. Any locked terrain blocks a level operation.
 - **Selected sections** means existing source lines, curves and terrain prefabs, with stable IDs. Split source using the existing editor when a finer section is needed. Width, side depth and shading can be local. Perspective strength/view angle stay level-wide, shown disabled in Selected scope, keeping one coherent projection space. A connected run containing locked terrain blocks a selected operation to protect its shared transitions.
-- Slider/numeric input previews without changing source, revision, save slots or Undo. Close/Esc retain valid session values; `Terrain Look *` marks preview values awaiting Apply. Closing is neither Apply nor Reset. Play uses committed source.
+- Slider/numeric input previews without changing source, revision, save slots or Undo. Close/Esc retain valid session values; `Terrain Look *` marks preview values awaiting Apply. Closing is neither Apply nor Reset. Entering Play from the Editor uses committed source; Gym edits can then preview in that running world.
 - **Apply** is one existing source commit/Undo transaction, using normal autosave, acknowledged IndexedDB persistence, backups and versions. Closing/reopening and reloading restore applied values. Unapplied values are session state; reloading uses the committed source.
 - **Reset** previews the accepted level defaults or, for Selected, removal of overrides/inheritance. Apply stores the reset. Level Reset preserves manual overrides. Undo/Redo restore look data through existing source snapshots.
-- Unmarked existing levels keep the original 36-byte fixed Depth renderer until explicit **Level Apply**. Opening their menu does not change appearance/source. The menu labels the explicit perspective conversion; Selected cannot silently convert the rest of a legacy course.
+- Unmarked existing levels load with the original 36-byte fixed Depth renderer. Opening the menu or navigating scope does not change appearance/source. Explicit control edits preview the look; **Level Apply** alone persists the conversion. The menu labels the explicit perspective conversion; Selected cannot silently convert the rest of a legacy course.
 
 Apply stores `editor.road_profile = "authored-v1"` and `editor.road_look = {version=1,params=...}`. An object's optional `road_look = {version=1,width=...,side=...,shading=...}` is separate from source geometry. Editor/compiler versions stay 7; known source and look versions are required. Older #292 readers safely refuse the new profile instead of ignoring its authoring. Unknown container/parameter/section versions/keys remain protected by save-slot handling. Root extension fields never opt compiled-only files into a look; explicit editor-context calls preserve Play/Edit parity even with other extension fields.
 
@@ -52,9 +54,15 @@ No pool or guard is raised. Mixed 660 m: 1,016 segments, 18,312 vertices, 17 all
 
 Steady windows are the last seven seconds of each eight-second drive (420 callbacks each). Largest sampled import callback was 84.1 ms; maximum published Play residency update while uploading was 17 ms. The 173.6 ms ready tail and earlier load/editor spikes remain **OPEN**. These samples do not isolate a causal projection cost or establish an FPS gain. Tracked live WebGL buffers at all-section 660 m Fit were 1,793,384 B including nonterrain/retained buffers; API sizes are not physical GPU residency.
 
-The normal-Play adapter validates exact equality of the running chain samples before accepting a candidate's visual settings; an unplayed design with different geometry is refused with a request to Play it from the Editor first. The same section mappings, projector and resource ownership are reused. Global controls update uniforms; baked section changes dirty only sections whose local samples differ. Camera movement does not compile source or dirty meshes. Legacy layout switches use delayed retirement and monotonically named resources within the unchanged replacement budget. An independent menu-capture flag preserves any concurrent feedback/import capture.
+The normal-Play adapter checks the same running chain/sample counts and coordinates within 1e-6 m (JSON/source roundtrip tolerance) before accepting a candidate's visual settings; an unplayed design with different geometry is refused with a request to Play it from the Editor first. Admission also charges the actual running station’s markers, props, labels and physics costs, rather than assuming the source/template copy contains those decorations. The same section mappings, projector and resource ownership are reused. Global controls update uniforms; baked section changes dirty only sections whose local samples differ. Camera movement does not compile source or dirty meshes. Legacy layout switches use delayed retirement and monotonically named resources within the unchanged replacement budget. An independent menu-capture flag preserves any concurrent feedback/import capture.
 
 ## Verification
+
+Gym extension **`8e2c64b`**: [five debug workflows](terrain-278/gym-live-debug.json) and [three ordinary release workflows](terrain-278/gym-live-release.json) PASS, using Chromium 156.0.8078.4 and actual native pointer/text input. They cover built-in template copies; opening/tuning/Apply without world or vehicle reset; all five numeric values; modal input and resumed driving; same-generation Retry; E opening the same source copy; one existing Undo action; legacy 660 m menu/scope navigation without conversion; explicit live extremes/Apply; acknowledged save/reload; shared Reset; and retained selected-source-section authoring with baked local values. Exact same-browser before/after exported chains, bounds, spawn/start speed, hulls, labels, FINISH and two-sided flags remain equal. The running vehicle/shape counts and world generation stay fixed during Gym tuning/Apply. Camera movement over the already visible built-in mesh performs no additional terrain uploads. Release has no editor/projection/comparison debug globals.
+
+The [ten-workflow existing Editor menu regression](terrain-278/gym-editor-debug.json) and [four existing release Editor workflows](terrain-278/gym-editor-release.json) also PASS on `8e2c64b`. New native [session](terrain-278/gym-native-session.txt), [authoring](terrain-278/gym-native-authoring.txt), [projection](terrain-278/gym-native-projection.txt), [compatibility](terrain-278/gym-native-integration.txt) and [ownership](terrain-278/gym-native-ownership.txt) checks PASS. [Debug](terrain-278/gym-debug-engines.json) and [release](terrain-278/gym-release-engines.json) pinned engine guards PASS. Bootstrap check/55 tests, 79 Node CI/mobile, 39 G1, 8 G2 and 31 Python CI tooling tests PASS. These extension browser runs check functionality, not comparative timing; some ran concurrently with builds/other functional checks. They do not replace the earlier isolated resource/timing observations below. Exact final PR-head CI is tracked in PR #294.
+
+Gym pilot attempts are excluded from PASS evidence. Actual fixes include the running-source-copy handoff on E, HUD drawing over the menu, navigation-triggered legacy preview, resource costs from the real station, and keeping large compiled preview data outside published GUI state. Observer corrections addressed invalid numeric-field cancellation, unavailable telemetry X, stale generation after Play, telemetry absent after Editor-only reload, same-browser source rounding for exact export comparisons, and a mistyped expected build SHA. No production limits or assertions were weakened to make those pilots pass.
 
 [Final debug menu results](terrain-278/menu-final.json), runtime `76c8783`, pass ten real-input workflows: all five numeric controls; preview isolation and Close/Reopen; input capture; Apply as one Undo action, Undo/Redo, acknowledged save/reload; selected styling with exact compiled collision export; locks/manual preservation; both scoped resets; short-window controls; Play/Retry; retained preview after real tangent edit/Undo; legacy conversion only on explicit Apply; future-format refusal preserving the world. The native source-context/protection and later Mirror fixes do not change the tested valid projection/parameter path.
 
@@ -86,13 +94,20 @@ Build ordinary release via existing `tools/g1/build.py` `build('wasm-web', outpu
 
 ```sh
 python tools/terrain_play/prepare_preview.py artifacts/look-release --perspective-profile --terrain-look
-python -m http.server 8794 --bind 127.0.0.1 --directory artifacts/look-release/RiderG1
+python -m http.server 8795 --bind 127.0.0.1 --directory artifacts/look-release/RiderG1
 # Separate terminal; actual release SHA required:
-node tools/terrain_perspective/check_menu_release.cjs http://127.0.0.1:8794 SOURCE_SHA artifacts/look-release-menu
+node tools/terrain_perspective/check_menu_release.cjs http://127.0.0.1:8795 SOURCE_SHA artifacts/look-release-menu
+```
+
+Gym live-preview QA against a debug bundle, or an ordinary release bundle with its actual SHA:
+
+```sh
+node tools/terrain_perspective/check_gym_menu.cjs artifacts/look-debug artifacts/gym-look-debug
+node tools/terrain_perspective/check_gym_menu.cjs artifacts/look-release artifacts/gym-look-release SOURCE_SHA
 ```
 
 ## Limits and stop point
 
 Loading peaks now reach 173.6 ms in this authored fixture run; existing editor peaks up to 115 ms remain open. Current menu/geometry editing is functionally verified, not a new comprehensive editor-latency benchmark. Hardware-GPU time/memory/draw calls, physical phone/touch/app-switch/thermal behavior and shader-buffer-retention concerns remain unmeasured/open. No FPS improvement or new human observation is claimed.
 
-**STOP for Claudio's editor test.** PR #294 remains draft and is not merged automatically. Try Level/Selected, Close/Reopen, Apply/Reset, Save/Reload, Undo/Redo and driving. Decoration, weather and atmosphere remain outside this task.
+**STOP for Claudio's new Gym live-preview test.** His earlier Editor acceptance is recorded above. PR #294 remains draft and is not merged automatically. Try Level/Selected, Close/Reopen, Apply/Reset, Save/Reload, Undo/Redo and driving. Decoration, weather and atmosphere remain outside this task.

@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "8e2c64b2bff2069e8cac24944e318d54634d70d1",
+  "browser": "156.0.8078.4",
+  "errors": [],
+  "raw_result_sha256": "4b9ead095864cf1dd0466131c10690453831ae99c93446c9a10e9955546990fa",
+  "checks": [
+    {
+      "name": "retained_closed_draft_apply_and_exact_collision_export",
+      "export_sha256": "d85c434cd2a1b80b2a98ed8f1fd4fd5b3e8f749d4fb56d8ec37ee066a4de6691",
+      "road_look": {
+        "version": 1,
+        "params": {
+          "shading": 0.6,
+          "side": 6,
+          "version": 1,
+          "angle": 30,
+          "mode": "perspective",
+          "perspective": 0.4,
+          "width": 1.25
+        }
+      },
+      "section_looks": {},
+      "collision_fields_sha256": "5ec14649da1f5e24998e6ba559642c08aaa45b83e1fd326b100d0a51ef71b671",
+      "params": {
+        "version": 1,
+        "mode": "perspective",
+        "width": 1.25,
+        "perspective": 0.4,
+        "angle": 30,
+        "side": 6,
+        "shading": 0.6
+      }
+    },
+    {
+      "name": "saved_reload_and_menu_reopen_restore_values"
+    },
+    {
+      "name": "reset_preview_close_reopen_apply",
+      "params": {
+        "shading": 1,
+        "side": 64,
+        "version": 1,
+        "angle": 28.810793742973,
+        "mode": "perspective",
+        "perspective": 0.35,
+        "width": 0.9
+      }
+    },
+    {
+      "name": "ordinary_play_and_same_generation_retry",
+      "telemetry": {
+        "session_generation": 2,
+        "world_loads": 2,
+        "reset_count": 1,
+        "terrain_shapes": 696,
+        "station": "p0-long-curves",
+        "ui_captured": false,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "speed_mps": 2.4524988770671
+      }
+    }
+  ]
+}

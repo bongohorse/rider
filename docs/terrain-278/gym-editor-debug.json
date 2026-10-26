@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "8e2c64b2bff2069e8cac24944e318d54634d70d1",
+  "browser": "156.0.8078.4",
+  "observer_sha256": "7f545b4f73cbef7f045d9ffb5458e7a592a0c6a0c36ab3e69fa55d15753d870b",
+  "errors": [],
+  "checks": [
+    {
+      "name": "five_controls_preview_close_reopen_and_input_isolation"
+    },
+    {
+      "name": "apply_single_undo_redo_save_reload"
+    },
+    {
+      "name": "selected_section_and_exact_collision_export"
+    },
+    {
+      "name": "locks_and_manual_overrides_preserved"
+    },
+    {
+      "name": "selected_reset_and_undo"
+    },
+    {
+      "name": "level_reset_keeps_manual_content"
+    },
+    {
+      "name": "short_menu_play_retry"
+    },
+    {
+      "name": "retained_preview_follows_geometry_edit_and_undo"
+    },
+    {
+      "name": "legacy_stays_fixed_until_explicit_level_apply"
+    },
+    {
+      "name": "future_authored_version_keeps_world"
+    }
+  ],
+  "raw_result_sha256": "b61fa4961cd9e8ff1d20b5759c25a1d53e2b7d8fd75c71528a3644a4b164196c"
+}

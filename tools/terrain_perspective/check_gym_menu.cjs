@@ -14,7 +14,7 @@ fs.mkdirSync(out,{recursive:true});
  async function menu(){const s=await size();await tap(616,s.h-40);await page.waitForTimeout(350);if(!release)await page.waitForFunction(()=>window.riderEditor.look?.open);}
  async function action(which){const s=await size(),x=s.w-436,mh=Math.min(580,s.h-96);await tap(x+({reset:44,apply:148,close:344}[which]),16+mh-22);await page.waitForTimeout(220);}
  async function number(index,value){const s=await size();await tap(s.w-436+316,16+104+index*44+12);await page.keyboard.type(String(value),{delay:30});await key('Enter');await page.waitForTimeout(180);}
- async function playFromEditor(){const g=(await telemetry()).session_generation;await key('e');await page.waitForFunction(n=>!window.riderEditing&&window.riderTelemetry?.session_generation>n&&window.riderTelemetry.sequence>2,g);}
+ async function playFromEditor(){const g=await page.evaluate(()=>window.riderTelemetry?.session_generation||0);await key('e');await page.waitForFunction(n=>!window.riderEditing&&window.riderTelemetry?.session_generation>n&&window.riderTelemetry.sequence>2,g);}
  async function ready(){await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);}
  async function telemetry(){return page.evaluate(()=>window.riderTelemetry);}
  async function sameRun(t){const now=await telemetry();assert.equal(now.session_generation,t.session_generation);assert.equal(now.reset_count,t.reset_count);assert.equal(now.terrain_shapes,t.terrain_shapes);assert.equal(await page.evaluate(()=>!!window.riderEditing),false);}

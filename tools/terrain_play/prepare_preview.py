@@ -57,7 +57,7 @@ if a.perspective_profile:
     text=text.replace('This launcher imports the saved course through normal Play.', 'Marked fixtures use perspective-v1; the legacy option is the unchanged unmarked file. This launcher imports through normal Play, with no rendering override.')
     launcher.write_text(text)
 if a.terrain_look:
-    launcher=web/'terrain-preview.html';text=launcher.read_text().replace('Accepted perspective · normal Play / editor','Terrain Look · editor / Play')
-    text=text.replace('Arrows drive/brake/reverse · A/D lean · R retries · E opens the editor.', 'Arrows drive · A/D lean · R Retry · E Edit/Play. In Edit choose Terrain Look; Apply saves, Close keeps preview values.')
+    launcher=web/'terrain-preview.html';text=launcher.read_text().replace('Accepted perspective · normal Play / editor','Terrain Look · Gym / editor')
+    text=text.replace('Arrows drive/brake/reverse · A/D lean · R retries · E opens the editor.', 'Arrows drive · A/D lean · R Retry · E Edit/Play. Choose Terrain Look in Gym or Edit for live preview. Apply saves; Close keeps preview values.')
     launcher.write_text(text)
 print(web / 'terrain-preview.html')
