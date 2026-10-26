@@ -1,0 +1,26 @@
+{
+  "source_sha": "8f614763d177efe2dca634cf89b53b2fa4e2f3a0",
+  "status": "PASS",
+  "real_device": "NOT RUN",
+  "checks": [
+    {
+      "name": "touch-start-pause-resume-finish-saved",
+      "state": {
+        "new_best": true,
+        "id": "1:1",
+        "save": "saved",
+        "reason": "",
+        "state": "finished",
+        "time": 25.866668015718,
+        "generation": 1,
+        "official": true,
+        "best": 25.866668015718,
+        "practice": ""
+      }
+    },
+    {
+      "name": "touch-toolbar-retry-same-world"
+    }
+  ],
+  "errors": []
+}

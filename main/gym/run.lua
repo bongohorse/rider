@@ -8,7 +8,10 @@ function M.reset(r,official)
     r.official=official==true;r.practice_reason=nil;r.new_best=false
     return r.id
 end
-function M.practice(r,reason) r.official=false;r.practice_reason=r.practice_reason or reason end
+function M.practice(r,reason)
+    if r.state=='finished' or r.state=='failed' then return end
+    r.official=false;r.practice_reason=r.practice_reason or reason
+end
 function M.start(r,id)
     if id~=r.id or r.state~='ready' then return false end
     r.state='running';return true
