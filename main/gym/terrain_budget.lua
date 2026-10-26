@@ -3,7 +3,8 @@
 local M={MESHES=128,SPRITES=1024,LABELS=1024,INSTANCES=1024,
     PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=2048,RESERVE=64}
 function M.measure(d)
-    local r={sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
+    local stride,working=M.COMPARISON and 48 or 36,M.COMPARISON and 560 or 512
+    local r={stride=stride,sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
     for i,c in ipairs(d.chains) do
         local n=#c-1
@@ -26,17 +27,17 @@ function M.measure(d)
         end
     end
     if d.id and d.id:match('^straight') and not d.custom then r.sprites=r.sprites+48 end
-    r.payload=r.vertices*36
+    r.payload=r.vertices*stride
     -- Fit can activate everything; caching is a subset, never an extra two beyond all sections.
     r.visible_max=r.sections;r.allocated_max=r.sections;r.cached_max=math.min(2,r.sections)
     r.mesh_peak=2*r.sections -- retiring old + incoming, before end-of-frame deletion
     r.instances=r.sections+r.sprites+r.labels+M.RESERVE
     -- Conservative CPU working envelope: retained editor arrays (including base colors),
     -- staging/replacement arrays, descriptors and two engine-owned buffer copies.
-    r.cpu_estimate=r.vertices*512+r.physics_vertices*512+r.payload*2
+    r.cpu_estimate=r.vertices*working+r.physics_vertices*512+r.payload*2
     -- Pinned mesh-world VB freelist reuses handles but retains their uploaded size.
     -- Current editor planner emits <=96 intervals/section; one shared seed VB is extra.
-    r.engine_pool_ceiling=(M.MESHES+1)*(96*18+12)*36
+    r.engine_pool_ceiling=(M.MESHES+1)*(96*18+12)*stride
     r.replacement_payload=2*r.payload
     return r
 end
@@ -58,7 +59,7 @@ function M.check(d)
 end
 function M.preview(sections,vertices,sprites,labels)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
-    return sections*2<=M.MESHES and vertices*36<=M.PAYLOAD and
+    return sections*2<=M.MESHES and vertices*(M.COMPARISON and 48 or 36)<=M.PAYLOAD and
         2*sprites+12<=M.SPRITES and 2*labels+4<=M.LABELS and
         2*(sections+sprites+labels)+16<=M.INSTANCES
 end

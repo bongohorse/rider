@@ -12,3 +12,4 @@ components { id: "strut" component: "/main/gym/strut.factory" }
 components { id: "ghost_chassis" component: "/main/gym/ghost_chassis.factory" }
 components { id: "ghost_wheel" component: "/main/gym/ghost_wheel.factory" }
 components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory" }
+components { id: "perspective_mesh" component: "/main/terrain_perspective/chunk.factory" }

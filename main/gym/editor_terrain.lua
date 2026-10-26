@@ -109,7 +109,7 @@ local function materialize(state,entry,generation,result)
     local p=entry.plan
     local rebuilt=entry.dirty or not entry.resource
     if rebuilt then
-        local c=geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
+        local c=require("main.terrain_perspective.runtime").enabled() and require("main.terrain_perspective.projection").section(p.prep,p.first,p.last,tostring(entry.key),p.styles) or geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
         if not entry.resource then state.resource_serial=(state.resource_serial or 0)+1 end
         mesh.upload(entry,c,"/editor_terrain/g"..generation.."-slot"..state.resource_serial..".bufferc")
         result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
@@ -126,7 +126,10 @@ end
 function M.resident(state,generation,view,result)
     local mesh=require "main.gym.terrain_mesh"
     result=result or {rebuilt=0,recolored=0,uniforms=0}
+    local perspective=require "main.terrain_perspective.runtime"
+    if perspective.enabled() then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
     local r=residency.update(state,state.entries,view,function(entry) materialize(state,entry,generation,result) end,function(entry) mesh.drop(entry,true) end)
+    if perspective.enabled() then perspective.apply(state) end
     if state.last_geometry then
         state.last_geometry.allocated,state.last_geometry.allocated_bytes=r.allocated,r.bytes
     end
@@ -150,10 +153,10 @@ function M.update(state,e,previews,selected,hover,generation,view)
         entry.refresh=entry.refresh or p.restyled or entry.phase~=p.phase or entry.lower~=p.lower
         entry.restyle=entry.restyle or p.restyled
         if not p.changed then result.reused=result.reused+1 end
-        entry.plan=p;entry.bounds=geometry.extent(p.prep,p.first,p.last)
+        entry.plan=p;entry.bounds=geometry.extent(p.prep,p.first,p.last);entry.base_bounds=entry.bounds
         entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
         local vertices=(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0)
-        result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*36
+        result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*(require("main.gym.terrain_budget").COMPARISON and 48 or 36)
     end
     for _,entry in ipairs(retired) do mesh.drop(entry,true);entry.geometry=nil end
     -- Register new entries before any potentially failing upload; pending retains partial failure cleanup.
