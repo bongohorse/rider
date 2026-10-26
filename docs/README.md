@@ -12,7 +12,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Physics, units, tick owner, reset | [physics contract](contracts/physics.md), [engine pitfalls](contracts/engine-pitfalls.md); measured API table in [G1 baseline](contracts/g1-baseline.md) |
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
-| Road look comparison (#290) | [Contract](contracts/road-look.md), [measurements and preview](TERRAIN_PERSPECTIVE_REPORT.md) |
+| Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
 | Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](LE1B_REPORT.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
 | Native Bridge | [bridge contract](contracts/bridge.md) |
@@ -50,8 +50,9 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/engine-pitfalls.md](contracts/engine-pitfalls.md) | Recurring engine traps | — |
 | [contracts/automation.md](contracts/automation.md) | Test CLI, runner protocol, release boundary | Interfaces · Test CLI and results · Engine/runner protocol · Release boundary |
 | [contracts/bridge.md](contracts/bridge.md) | Native Automation Bridge | Setup and commands · Tested behavior · Limits and license · Network boundary · Network test procedure |
+| [TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | #292 normal Play/Edit, legacy compatibility and evidence | Scope and settings · Compatibility · Verification · Resources and timings · Reproduction · Limits and stop point |
 | [TERRAIN_PERSPECTIVE_REPORT.md](TERRAIN_PERSPECTIVE_REPORT.md) | Gated #290 fixed/perspective comparison and evidence | Scope and preview · Projection and resources · Measurements · Verification · Limits and stop point · Engine sources |
-| [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Consumer boundary |
+| [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Production compatibility · Consumer boundary |
 | [contracts/evidence.md](contracts/evidence.md) | PASS/FAIL/BLOCKED/NOT RUN and reporting | — |
 | [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints |
 | [main/gym/README.md](../main/gym/README.md) | Gym implementation and test protocols | See its Contents line |

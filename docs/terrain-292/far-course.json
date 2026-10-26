@@ -1,0 +1,731 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "294ae68328c8467f026414c4e8b4343b1f112493",
+  "perspective_profile": true,
+  "errors": [],
+  "start": [
+    488,
+    -8.547662771206431
+  ],
+  "end": {
+    "preset_refused": false,
+    "audio_started": true,
+    "custom_snapshots": 1,
+    "first_tick_speed": 6.9999998435378,
+    "head_contact": false,
+    "travel1": 6.2177696228027,
+    "projection_y": 0.003037037095055,
+    "speed": 694.11407470703,
+    "world_loads": 2,
+    "spawn_y": -8.5476627712064,
+    "time_scaled_ticks": 0,
+    "preset": "a",
+    "physics_ms": 0.10000000149012,
+    "spawn_x": 488,
+    "decor_sprites": 49,
+    "terrain_shapes": 1028,
+    "crash_enabled": false,
+    "section_index": 0,
+    "reset_count": 0,
+    "station": "p0-mixed-over-budget",
+    "station_brake_distance": 0,
+    "pitch": -0.02978890016675,
+    "first_tick_omega": -31.818181991577,
+    "sequence": 101,
+    "command": {
+      "throttle": 1,
+      "allow_reverse": false,
+      "brake_reverse": 0,
+      "lean": 0
+    },
+    "modified": false,
+    "projection_x": 0.0017083333805203,
+    "velocity_x": 693.30877685547,
+    "station_name": "Custom: P0 mixed-over-budget",
+    "contact1": true,
+    "fps": 59.555319850583,
+    "decor_labels": 7,
+    "station_note": "",
+    "frame_ms": 16.79111123085,
+    "ui_captured": false,
+    "section_count": 0,
+    "contact2": false,
+    "finish_time": 24.60000128299,
+    "station_distance": 172.07873524609,
+    "snapshot": "s1",
+    "session_generation": 2,
+    "finish_count": 1,
+    "station_top_speed": 7.0832658328876,
+    "start_speed": 7,
+    "time_factor": 1,
+    "finish_done": true,
+    "travel2": 1.960485458374,
+    "custom": true,
+    "speed_mps": 6.9411405919237,
+    "audio_pitch": 2.1296132659912,
+    "station_brake_stopped": false,
+    "audio_muted": false,
+    "finish": true
+  },
+  "retry": {
+    "preset_refused": false,
+    "audio_started": true,
+    "custom_snapshots": 1,
+    "first_tick_speed": 6.9999998435378,
+    "head_contact": false,
+    "travel1": -0.00014495849609375,
+    "projection_y": 0.003369354410097,
+    "speed": 712.11553955078,
+    "world_loads": 2,
+    "spawn_y": -8.5476627712064,
+    "time_scaled_ticks": 0,
+    "preset": "a",
+    "physics_ms": 0,
+    "spawn_x": 488,
+    "decor_sprites": 49,
+    "terrain_shapes": 1028,
+    "crash_enabled": false,
+    "section_index": 0,
+    "reset_count": 1,
+    "station": "p0-mixed-over-budget",
+    "station_brake_distance": 0,
+    "pitch": -1.5150473700487e-05,
+    "first_tick_omega": -31.818181991577,
+    "sequence": 102,
+    "command": {
+      "throttle": 0,
+      "allow_reverse": true,
+      "brake_reverse": 0,
+      "lean": 0
+    },
+    "modified": false,
+    "projection_x": 0.0018952620448545,
+    "velocity_x": 699.99987792969,
+    "station_name": "Custom: P0 mixed-over-budget",
+    "contact1": false,
+    "fps": 55.776891566025,
+    "decor_labels": 7,
+    "station_note": "",
+    "frame_ms": 17.928571706372,
+    "ui_captured": false,
+    "section_count": 0,
+    "contact2": false,
+    "finish_time": 24.60000128299,
+    "station_distance": 0.9333484464878,
+    "snapshot": "s1",
+    "session_generation": 2,
+    "finish_count": 1,
+    "station_top_speed": 6.9999998435378,
+    "start_speed": 7,
+    "time_factor": 1,
+    "finish_done": false,
+    "travel2": 0.00020217895507812,
+    "custom": true,
+    "speed_mps": 7.1211552363376,
+    "audio_pitch": 2.081818189621,
+    "station_brake_stopped": false,
+    "audio_muted": false,
+    "finish": true
+  },
+  "raw_sha256": "98473bcbd359cd7f0dc306bff93bd2f27cfba768d31db18491bf3d45fec3684e",
+  "sampled_views": 230,
+  "views": [
+    {
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": false,
+        "custom_snapshots": 1,
+        "first_tick_speed": 6.9999998435378,
+        "head_contact": false,
+        "travel1": 2.2339935302734,
+        "projection_y": 0.0030446962919086,
+        "speed": 663.97277832031,
+        "world_loads": 2,
+        "spawn_y": -8.5476627712064,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0.10000000149012,
+        "spawn_x": 488,
+        "decor_sprites": 49,
+        "terrain_shapes": 1028,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-mixed-over-budget",
+        "station_brake_distance": 0,
+        "pitch": -0.059304043650627,
+        "first_tick_omega": -31.818181991577,
+        "sequence": 3,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017126416787505,
+        "velocity_x": 663.58172607422,
+        "station_name": "Custom: P0 mixed-over-budget",
+        "contact1": true,
+        "fps": 59.872271663233,
+        "decor_labels": 7,
+        "station_note": "",
+        "frame_ms": 16.702222451568,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 5.0748327289184,
+        "snapshot": "s1",
+        "session_generation": 2,
+        "finish_count": 0,
+        "station_top_speed": 7.0384757948262,
+        "start_speed": 7,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 3.761022567749,
+        "custom": true,
+        "speed_mps": 6.6397276347936,
+        "audio_pitch": 0,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      },
+      "projection": {
+        "view": [
+          490.79589924241,
+          -10.532346656743,
+          502.49157855589,
+          -3.9535270429104
+        ],
+        "revision": 0,
+        "sections": 17,
+        "entries": [
+          {
+            "enabled": false,
+            "bounds": [
+              -0.015,
+              -26.015,
+              59.067251833904,
+              4.1740332410355
+            ],
+            "key": "run1-1-65",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              55.267258248265,
+              -26.015,
+              90.240317231013,
+              7.6916234821658
+            ],
+            "key": "run1-65-129",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              86.685811535376,
+              -26.015,
+              121.83864641942,
+              10.290683108742
+            ],
+            "key": "run1-129-193",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              118.53297756614,
+              -26.015,
+              153.51430876786,
+              10.862498447037
+            ],
+            "key": "run1-193-257",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              150.45808575558,
+              -26.015,
+              185.14047789389,
+              10.674841252728
+            ],
+            "key": "run1-257-321",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              182.33331096347,
+              -26.015,
+              216.34809947814,
+              8.574392706332
+            ],
+            "key": "run1-321-385",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              213.7866925677,
+              -26.015,
+              247.85120958033,
+              5.1973716252967
+            ],
+            "key": "run1-385-449",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              245.53788966194,
+              -26.015,
+              290.15653648744,
+              3.9171927295623
+            ],
+            "key": "run1-449-513",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              288.17637101845,
+              -26.015,
+              375.29470241233,
+              22.768736819851
+            ],
+            "key": "run1-513-551",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              380.985,
+              -26.015,
+              425.18408179794,
+              2.9250061984945
+            ],
+            "key": "run2-1-65",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              424.26725824827,
+              -26.015,
+              456.35714719505,
+              -2.2927669683179
+            ],
+            "key": "run2-65-129",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": true,
+            "bounds": [
+              455.68581153538,
+              -26.015,
+              487.95547638345,
+              -5.8103572094482
+            ],
+            "key": "run2-129-193",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": true,
+            "bounds": [
+              487.53297756614,
+              -26.015,
+              519.65008575558,
+              -8.4094168360245
+            ],
+            "key": "run2-193-257",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              519.44048264855,
+              -26.015,
+              551.52531096347,
+              -6.6931264336145
+            ],
+            "key": "run2-257-321",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              551.06665177458,
+              -26.015,
+              582.9786925677,
+              -3.3161053525791
+            ],
+            "key": "run2-321-385",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              582.27427335883,
+              -26.015,
+              614.72988966194,
+              0.16224107510692
+            ],
+            "key": "run2-385-449",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              613.77738346102,
+              -26.015,
+              660.177,
+              0.94063313635879
+            ],
+            "key": "run2-449-467",
+            "allocated": false,
+            "bytes": 0
+          }
+        ],
+        "stride": 48,
+        "camera": [
+          496.64373889915,
+          -7.2429368498265
+        ],
+        "aabb_writes": 210,
+        "uniform_writes": 225,
+        "mode": "perspective",
+        "counts": {
+          "visible": 1,
+          "released": 0,
+          "allocated": 4,
+          "uploaded": 0,
+          "reassigned": 0,
+          "cached": 2,
+          "bytes": 221184,
+          "queued": 0,
+          "enabled": 2
+        },
+        "uploads": 5
+      }
+    },
+    {
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": 6.9999998435378,
+        "head_contact": false,
+        "travel1": 6.2177696228027,
+        "projection_y": 0.003037037095055,
+        "speed": 694.11407470703,
+        "world_loads": 2,
+        "spawn_y": -8.5476627712064,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0.10000000149012,
+        "spawn_x": 488,
+        "decor_sprites": 49,
+        "terrain_shapes": 1028,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-mixed-over-budget",
+        "station_brake_distance": 0,
+        "pitch": -0.02978890016675,
+        "first_tick_omega": -31.818181991577,
+        "sequence": 101,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017083333805203,
+        "velocity_x": 693.30877685547,
+        "station_name": "Custom: P0 mixed-over-budget",
+        "contact1": true,
+        "fps": 59.555319850583,
+        "decor_labels": 7,
+        "station_note": "",
+        "frame_ms": 16.79111123085,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": false,
+        "finish_time": 24.60000128299,
+        "station_distance": 172.07873524609,
+        "snapshot": "s1",
+        "session_generation": 2,
+        "finish_count": 1,
+        "station_top_speed": 7.0832658328876,
+        "start_speed": 7,
+        "time_factor": 1,
+        "finish_done": true,
+        "travel2": 1.960485458374,
+        "custom": true,
+        "speed_mps": 6.9411405919237,
+        "audio_pitch": 2.1296132659912,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      },
+      "projection": {
+        "view": [
+          657.22984234712,
+          -0.98805097545765,
+          668.93715926073,
+          5.5973147884482
+        ],
+        "revision": 0,
+        "sections": 17,
+        "entries": [
+          {
+            "enabled": false,
+            "bounds": [
+              -0.015,
+              -26.015,
+              60.367723742623,
+              4.2486328728906
+            ],
+            "key": "run1-1-65",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              55.267258248265,
+              -26.015,
+              91.540789139732,
+              7.7662231140209
+            ],
+            "key": "run1-65-129",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              86.685811535376,
+              -26.015,
+              123.13911832814,
+              10.365282740597
+            ],
+            "key": "run1-129-193",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              118.53297756614,
+              -26.015,
+              154.81478067658,
+              10.937098078892
+            ],
+            "key": "run1-193-257",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              150.45808575558,
+              -26.015,
+              186.44094980261,
+              10.749440884583
+            ],
+            "key": "run1-257-321",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              182.33331096347,
+              -26.015,
+              217.64857138686,
+              8.6489923381872
+            ],
+            "key": "run1-321-385",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              213.7866925677,
+              -26.015,
+              249.15168148904,
+              5.2719712571519
+            ],
+            "key": "run1-385-449",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              245.53788966194,
+              -26.015,
+              291.45700839616,
+              3.9917923614175
+            ],
+            "key": "run1-449-513",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              288.17637101845,
+              -26.015,
+              376.59517432105,
+              22.843336451706
+            ],
+            "key": "run1-513-551",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              380.985,
+              -26.015,
+              426.48455370666,
+              2.9996058303496
+            ],
+            "key": "run2-1-65",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              424.26725824827,
+              -26.015,
+              457.65761910377,
+              -2.2181673364627
+            ],
+            "key": "run2-65-129",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              455.68581153538,
+              -26.015,
+              489.25594829217,
+              -5.735757577593
+            ],
+            "key": "run2-129-193",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              487.53297756614,
+              -26.015,
+              520.93161064062,
+              -8.3348172041693
+            ],
+            "key": "run2-193-257",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              519.45808575558,
+              -26.015,
+              552.55777976664,
+              -6.6185268017593
+            ],
+            "key": "run2-257-321",
+            "allocated": false,
+            "bytes": 0
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              551.33331096347,
+              -26.015,
+              583.76540135089,
+              -3.2415057207239
+            ],
+            "key": "run2-321-385",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": false,
+            "bounds": [
+              582.7866925677,
+              -26.015,
+              615.26851145308,
+              0.23684070696209
+            ],
+            "key": "run2-385-449",
+            "allocated": true,
+            "bytes": 55296
+          },
+          {
+            "enabled": true,
+            "bounds": [
+              614.53788966194,
+              -26.015,
+              660.36052220646,
+              1.015232768214
+            ],
+            "key": "run2-449-467",
+            "allocated": true,
+            "bytes": 15840
+          }
+        ],
+        "stride": 48,
+        "camera": [
+          663.08350080393,
+          2.3046319064953
+        ],
+        "aabb_writes": 5833,
+        "uniform_writes": 5857,
+        "mode": "perspective",
+        "counts": {
+          "visible": 1,
+          "released": 0,
+          "allocated": 3,
+          "uploaded": 0,
+          "reassigned": 0,
+          "cached": 2,
+          "bytes": 126432,
+          "queued": 0,
+          "enabled": 1
+        },
+        "uploads": 8
+      }
+    }
+  ]
+}

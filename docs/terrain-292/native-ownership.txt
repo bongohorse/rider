@@ -1,0 +1,4 @@
+Runtime source: 294ae68328c8467f026414c4e8b4343b1f112493
+PASS: initial 11 resources; idle retains 11; tangent updates 3/reuses 8 with same resource identities; selection recolors without geometry; failed upload cleanup balances all resources
+PASS: shifted retained section uses new selection/hidden owner indices, including end caps
+PASS: culled source/style edits materialize current geometry when revealed; bounded cache and balanced cleanup
