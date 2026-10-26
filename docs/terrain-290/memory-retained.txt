@@ -1,0 +1,8 @@
+six-anchor accepted-layout two_generations_delta_bytes=4228600 vertex_payload_bytes=432000 cpu_estimate_bytes=7349504
+six-anchor comparison-layout two_generations_delta_bytes=4994440 vertex_payload_bytes=576000 cpu_estimate_bytes=8213504
+long-curves accepted-layout two_generations_delta_bytes=4381672 vertex_payload_bytes=451872 cpu_estimate_bytes=7687744
+long-curves comparison-layout two_generations_delta_bytes=5193704 vertex_payload_bytes=602496 cpu_estimate_bytes=8591488
+mixed accepted-layout two_generations_delta_bytes=4381672 vertex_payload_bytes=451872 cpu_estimate_bytes=7712320
+mixed comparison-layout two_generations_delta_bytes=5193704 vertex_payload_bytes=602496 cpu_estimate_bytes=8616064
+long-over-budget accepted-layout two_generations_delta_bytes=6508024 vertex_payload_bytes=659232 cpu_estimate_bytes=11215424
+long-over-budget comparison-layout two_generations_delta_bytes=7688648 vertex_payload_bytes=878976 cpu_estimate_bytes=12533888
