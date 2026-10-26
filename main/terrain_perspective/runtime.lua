@@ -30,7 +30,7 @@ function M.prepare(state,camera)
     state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        local width=e.geometry and e.geometry.max_width or (state.baked and 2 or p.width)
+        local width=state.baked and 2 or p.width -- also covers wider dirty/cached sections before materialization
         e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end
@@ -74,7 +74,7 @@ function M.apply(state,set_bounds)
     if html5 and sys.get_engine_info().is_debug then
         local entries={}
         for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,bytes=e.geometry and e.geometry.bytes or 0} end
-        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
+        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,params=p,baked=state.baked==true,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
     end
 end
 return M

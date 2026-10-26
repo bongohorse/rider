@@ -48,6 +48,10 @@ local function candidate(s)
   if not require('main.terrain_perspective.profile').enabled(e) then return nil,'Legacy level: Apply a level-wide look first. Loading or opening this menu never converts it.' end
   for _,id in ipairs(s.ids or {}) do ids[id]=true end
   if not next(ids) then return nil,'Select terrain sections first, then choose Selected sections.' end
+  local objects={};for _,o in ipairs(e.objects) do objects[o.id]=o end
+  for _,run in ipairs(doc.runs(e)) do local selected=false;for _,id in ipairs(run) do selected=selected or ids[id] end
+   if selected then for _,id in ipairs(run) do if objects[id].locked then return nil,'Locked terrain in the connected run: unlock it or select another run. Shared transitions stay protected.' end end end
+  end
  end
  local count=0
  for _,o in ipairs(copy.objects) do if doc.terrain(o) and (s.scope=='level' or ids[o.id]) then

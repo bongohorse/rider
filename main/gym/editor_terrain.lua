@@ -88,7 +88,7 @@ function M.plan(e,previews,selected,hover,old)
                         if last-i<32 and anchors[last] then last=math.min(i+96,last+#anchors[last].points-1) end
                     end
                     local sig=signature(prep,i,last,styles)
-                    if looks then for j=i,last do for _,k in ipairs(look.LOCAL) do sig[#sig+1]=looks[j][k] end end end
+                    if looks then sig[#sig+1]=lower;for j=i,last do for _,k in ipairs(look.LOCAL) do sig[#sig+1]=looks[j][k] end end end
                     local points={};for k=i,last do points[#points+1]={prep.p[k][1],prep.p[k][2]} end
                     if entry then used[entry]=true end
                     local color={};for k=i,last-1 do color[#color+1]=styles[k] or 0 end

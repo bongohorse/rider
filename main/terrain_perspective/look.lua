@@ -31,18 +31,19 @@ function M.validate(e)
 end
 function M.values(e)
  local p=M.params(e);local values={}
- for _,o in ipairs(e.objects) do local v=M.authored(e) and o.road_look or nil;values[o.id]={}
+ for _,o in ipairs(e.objects) do local v=M.authored(e) and o.road_look or nil;values[o.id]={manual=v~=nil}
   for _,k in ipairs(M.LOCAL) do values[o.id][k]=v and v[k] or p[k] end
  end
  return values
 end
--- A joint has one shared cross-section: mean of incoming/outgoing values. Interpolation is
+-- A joint has one shared cross-section. A manual section pins its default neighbor;
+-- two manual (or two default) sections use their mean. Interpolation is
 -- between fixed source samples, independent of camera/chunk boundaries or travel direction.
 function M.samples(chain,values)
  local n=#chain.points;local q={}
  for j=1,n do
   local a=values[chain.owner[j==1 and 2 or j]];local b=values[chain.owner[j==n and n or j+1]]
-  q[j]={};for _,k in ipairs(M.LOCAL) do q[j][k]=(a[k]+b[k])/2 end
+  q[j]={};for _,k in ipairs(M.LOCAL) do q[j][k]=a.manual and not b.manual and a[k] or b.manual and not a.manual and b[k] or (a[k]+b[k])/2 end
  end
  if chain.points[1][1]>chain.points[n][1] then local r={};for j=n,1,-1 do r[#r+1]=q[j] end;q=r end
  return q

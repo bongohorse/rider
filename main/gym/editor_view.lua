@@ -95,6 +95,7 @@ end
 function M.build(self)
     if not admitted(self) then lines.build(self);self.view.line_mode=true;return end
     local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(editor.look_preview or editor.doc.editor),opened=editor.opened}
+    v.mesh.resource_serial=self.mesh_serial or 0
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
     v.start=lines.start_marker(v,editor.doc.editor.start.position)
@@ -103,7 +104,7 @@ end
 function M.final(self,remove_objects)
     local v=self.view
     if not v then return end
-    if v.mesh then terrain.final(v.mesh,remove_objects) end
+    if v.mesh then self.mesh_serial=math.max(self.mesh_serial or 0,v.mesh.resource_serial or 0);terrain.final(v.mesh,remove_objects) end
     if remove_objects then for _,id in ipairs(v.gos) do go.delete(id) end end
     self.view=nil
 end
@@ -119,7 +120,10 @@ function M.refresh(self,force)
     end
     local style_key=table.concat(style,"|")
     local wanted=require("main.terrain_perspective.runtime").enabled(terrain_e)
-    if v.mesh.perspective~=wanted then terrain.final(v.mesh,true);v.mesh=terrain.create(terrain_e);force=true end
+    if v.mesh.perspective~=wanted then
+        self.mesh_serial=math.max(self.mesh_serial or 0,v.mesh.resource_serial or 0)
+        terrain.final(v.mesh,true);v.mesh=terrain.create(terrain_e);v.mesh.resource_serial=self.mesh_serial;force=true
+    end
     local mesh_dirty=force or v.look_epoch~=look_epoch or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
     local started=socket.gettime()
     local ok,result,err=true,true,nil

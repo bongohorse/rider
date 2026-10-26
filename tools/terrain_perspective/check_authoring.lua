@@ -32,3 +32,21 @@ local e=dofile(arg[1]..'/long-curves-source.lua').editor;e.road_profile=look.ID;
 local ok,err,unknown=look.validate(e);assert(not ok and unknown)
 e.objects[1].road_look={version=1,width=.9,side=64,shading=1,angle=20};assert(not look.validate(e))
 print('PASS future version and incoherent local projection refusal')
+
+-- A derived global floor change must invalidate baked bottoms of otherwise unchanged sections.
+local t=dofile(arg[1]..'/long-curves-source.lua').editor;t.road_profile=look.ID;t.road_look={version=1,params=proj.validate(proj.DEFAULT)};t.objects[1].road_look={version=1,width=1,side=64,shading=1}
+local terrain=require 'main.gym.editor_terrain';local plans=assert(terrain.plan(t,nil,{},nil))
+local old={};for i,p in ipairs(plans) do old[i]={points=p.points,signature=p.signature,color=p.color,key=i} end
+local curve=t.objects[#t.objects-1]
+for _,o in ipairs(t.objects) do if o.type=='curve' then curve=o end end
+curve.anchors[#curve.anchors].p[2]=curve.anchors[#curve.anchors].p[2]-30
+local changed=assert(terrain.plan(t,nil,{},nil,old));assert(changed[1].changed,'Stale baked floor on unchanged first section')
+local compiled=assert(doc.compile(dofile(arg[1]..'/six-anchor-source.lua')));compiled.editor=nil;compiled.road_profile=look.ID
+assert(require('main.gym.station_data').validate(compiled));assert(not look.authored(compiled));assert(require('main.gym.terrain_budget').measure(compiled).stride==36)
+print('PASS baked floor dependency and legacy root-extension isolation')
+
+local values={a={width=.9,side=64,shading=1,manual=false},b={width=1.8,side=4,shading=.4,manual=true}}
+local chain={points={{0,0},{1,0},{2,0}},owner={'a','a','b'}}
+local before=look.samples(chain,values);values.a.width=.25;values.a.side=.25;values.a.shading=0
+local after=look.samples(chain,values);assert(same(before[2],after[2]),'Level defaults altered manual boundary');assert(after[2].width==1.8)
+print('PASS manual boundary pinning against level-default changes')
