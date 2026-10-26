@@ -167,7 +167,7 @@ end
 function on_message(self,id,data,sender)
     if id==hash("run_state") then
         if data.generation<(self.session_generation or 1) then return end
-        run_ui.show(self.run_ui,data)
+        run_ui.show(self.run_ui,data,mobile.enabled())
         if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
         return
     elseif id==hash("station_loading") then run_ui.show(self.run_ui,nil);if html5 then html5.run("window.riderRun=null") end end
@@ -323,7 +323,7 @@ function update(self,dt)
     gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
     for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
     if self.run_ui.data then
-        run_ui.show(self.run_ui,self.run_ui.data)
+        run_ui.show(self.run_ui,self.run_ui.data,mobile.enabled())
         gui.set_visible(self.time_line,false)
         gui.set_visible(self.station_result,false);gui.set_visible(self.replay_line,false)
         for _,b in pairs(self.replay_buttons) do gui.set_visible(b.box,false);gui.set_visible(b.label,false) end

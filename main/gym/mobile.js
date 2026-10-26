@@ -34,7 +34,12 @@
     const now=performance.now(),gap=lastFrame===undefined?null:now-lastFrame;
     lastFrame=now;
     const data=window.riderTelemetry;
-    if(enabled&&data&&data.sequence!==lastSequence){
+    const run=window.riderRun;
+    api.setRun?.(run);
+    if(enabled&&run){
+      const label=run.state==='ready'?'Drive to start':run.state==='paused'?'Paused':run.state==='failed'?'Attempt ended':run.state==='finished'?'Finished':'First run';
+      hud.textContent=`${label} · ${run.time.toFixed(2)} s · Best ${run.best>0?run.best.toFixed(2)+' s':'--'} · ${run.official?'Official':'Practice'}${run.save==='saved'?'':' · '+run.save}`;
+    }else if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
@@ -117,7 +122,12 @@
   // A20: the same pause and slow-motion requests as Space and X; the loader owns the time step.
   const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
   const speedButton=button('Speed 1x',toolbar,()=>{pending.time_step=true;});
-  api.setTime=(paused,step)=>{pauseButton.textContent=paused?'Resume':'Pause';speedButton.textContent='Speed '+step+'x';};
+  api.setRun=run=>{
+    const terminal=run?.state==='finished'||run?.state==='failed';
+    pauseButton.disabled=terminal;
+    pauseButton.textContent=terminal?(run.state==='finished'?'Finished':'Attempt ended'):api.paused?'Resume':'Pause';
+  };
+  api.setTime=(paused,step)=>{api.paused=paused;api.setRun(window.riderRun);speedButton.textContent='Speed '+step+'x';};
   // A21: the same record and replay requests as B and G; the Lua tick owner records and replays.
   button('Record run',toolbar,()=>{pending.record=true;});
   button('Replay run',toolbar,()=>{pending.replay=true;});

@@ -15,11 +15,12 @@ function M.new()
  t.retry_label=text(480,258,'Retry [R]',.75,'centre')
  M.show(t,nil);return t
 end
-function M.show(t,r)
+function M.show(t,r,touch)
  t.data=r;local active=r~=nil;local done=active and (r.state=='finished' or r.state=='failed')
- for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active) end
+ for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch) end
  for _,n in ipairs({t.card,t.result,t.detail,t.retry,t.retry_label}) do gui.set_visible(n,done or false) end
  gui.set_visible(t.entry,not active);gui.set_visible(t.entry_label,not active)
+ gui.set_text(t.retry_label,touch and "Retry" or "Retry [R]")
  if not r then return end
  local state=r.state=='ready' and 'Drive to start' or r.state=='paused' and 'Paused - Resume to drive' or r.state=='failed' and 'Attempt ended' or r.state=='finished' and 'Finished' or 'First run'
  gui.set_text(t.clock,string.format('%s  %.2f s',state,r.time))
