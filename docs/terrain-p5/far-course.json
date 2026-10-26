@@ -1,0 +1,3846 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "05a163ecfd405e8c1638288290aa34244961f6c1",
+  "errors": [],
+  "views": [
+    {
+      "station_distance": 5.0748327289184,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 5.0748327289184,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 6.7501842539714,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 6.7501842539714,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 8.4658092156242,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 8.4658092156242,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 10.174012302443,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 10.174012302443,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 10.174012302443,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 11.878113826853,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 11.878113826853,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 13.584324726216,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 13.584324726216,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 1,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 15.29053562558,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 15.29053562558,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 15.29053562558,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 17.109441834924,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 17.109441834924,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 18.814324609317,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 18.814324609317,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 18.814324609317,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 20.51873863372,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 20.51873863372,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 22.222996408127,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 22.222996408127,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 23.926629182548,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 23.926629182548,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 23.926629182548,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 25.629988519475,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 25.629988519475,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 27.333191606405,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 27.333191606405,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 29.035691568351,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 29.035691568351,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 29.035691568351,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 30.737957155303,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 30.737957155303,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 32.439910242261,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 32.439910242261,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 34.141160204235,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 34.141160204235,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 34.141160204235,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 35.841589853728,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 35.841589853728,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 37.542214815716,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 37.542214815716,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 37.542214815716,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 39.241863215226,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 39.241863215226,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 40.941081927245,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 40.941081927245,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 42.639949076773,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 42.639949076773,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 42.639949076773,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 44.338230288813,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 44.338230288813,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 46.036042750864,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 46.036042750864,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 5,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 207360,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 47.733386462925,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 47.733386462925,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 47.733386462925,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 49.429909862505,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 49.429909862505,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 51.126277012088,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 51.126277012088,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 52.82182384919,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 52.82182384919,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 52.82182384919,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 54.517136311297,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 54.517136311297,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 56.211784710918,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 56.211784710918,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 56.211784710918,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 57.906159673046,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 57.906159673046,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 59.599909635188,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 59.599909635188,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 61.293268972338,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 61.293268972338,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 61.293268972338,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 62.986081434501,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 62.986081434501,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 64.678698584168,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 64.678698584168,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 66.370768858847,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 66.370768858847,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 66.370768858847,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 68.06225319604,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 68.06225319604,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 69.866276593217,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 69.866276593217,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 71.55729218042,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 71.55729218042,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 71.55729218042,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 73.248112455127,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 73.248112455127,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 74.938151479852,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 74.938151479852,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 74.938151479852,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 76.627917067082,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 76.627917067082,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 78.317292029322,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 5,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 207360,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 78.317292029322,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 80.006901366556,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 80.006901366556,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 80.006901366556,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 81.696041953801,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 81.696041953801,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 83.385104416047,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 83.385104416047,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 85.073854378301,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 85.073854378301,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 85.073854378301,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 86.76236996556,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 86.76236996556,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 88.450612115324,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 88.450612115324,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 90.138854265089,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 90.138854265089,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 90.138854265089,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 91.827057352355,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 91.827057352355,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 93.515065127125,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 93.515065127125,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 93.515065127125,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 95.20330727689,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 95.20330727689,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 96.891510364156,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 96.891510364156,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 98.579752513921,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 98.579752513921,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 98.579752513921,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 100.26799466369,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 100.26799466369,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 101.95623681345,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 101.95623681345,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 103.75760396069,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 103.75760396069,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 103.75760396069,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 105.44690079793,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 105.44690079793,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 107.13623669767,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 107.13623669767,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 107.13623669767,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 108.82623665989,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 165888,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 108.82623665989,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 5,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 177768,
+        "queued": 0,
+        "enabled": 3
+      }
+    },
+    {
+      "station_distance": 110.51627568462,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 110.51627568462,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 112.20670533433,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 112.20670533433,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 112.20670533433,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 113.89768185904,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 113.89768185904,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 115.58904900873,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 115.58904900873,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 117.28057240842,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 117.28057240842,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 117.28057240842,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 118.97244737061,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 118.97244737061,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 120.77764264276,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 120.77764264276,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 122.47057229242,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 122.47057229242,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 122.47057229242,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 124.16428319206,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 124.16428319206,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 125.8580331542,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 125.8580331542,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 125.8580331542,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 127.55248624133,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 127.55248624133,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 129.24713464095,
+      "reset_count": 0,
+      "counts": {
+        "visible": 2,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 129.24713464095,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 130.94256429056,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 130.94256429056,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 130.94256429056,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 132.63865800264,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 132.63865800264,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 134.33537671472,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 134.33537671472,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 134.33537671472,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 136.07127511342,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 136.07127511342,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 137.80900944958,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 137.80900944958,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 139.50174378674,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 139.50174378674,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 139.50174378674,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 141.20904843608,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 4,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 136296,
+        "queued": 0,
+        "enabled": 2
+      }
+    },
+    {
+      "station_distance": 141.20904843608,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 142.92119683531,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 142.92119683531,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 144.62814992216,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 144.62814992216,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 144.62814992216,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 146.33604050898,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 146.33604050898,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 148.0445951583,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 148.0445951583,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 149.75299355761,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 149.75299355761,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 149.75299355761,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 151.46135289442,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 151.46135289442,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 153.16971223124,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 153.16971223124,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 153.16971223124,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 154.99197781551,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 154.99197781551,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 156.70037621482,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 156.70037621482,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 158.40873555164,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 158.40873555164,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 158.40873555164,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 160.11709488845,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 160.11709488845,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 161.82549328777,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 161.82549328777,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 163.53385262458,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 163.53385262458,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 163.53385262458,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 165.2422510239,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 165.2422510239,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 166.95061036071,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 166.95061036071,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 168.65896969753,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 168.65896969753,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 168.65896969753,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 170.4812352818,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 170.4812352818,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    },
+    {
+      "station_distance": 172.1947508685,
+      "reset_count": 0,
+      "counts": {
+        "visible": 1,
+        "update_ms": 0,
+        "released": 0,
+        "allocated": 3,
+        "uploaded": 0,
+        "reassigned": 0,
+        "cached": 2,
+        "bytes": 94824,
+        "queued": 0,
+        "enabled": 1
+      }
+    }
+  ],
+  "start": [
+    488,
+    -8.547662771206431
+  ],
+  "end": {
+    "preset_refused": false,
+    "audio_started": true,
+    "custom_snapshots": 1,
+    "first_tick_speed": 6.9999998435378,
+    "head_contact": false,
+    "travel1": 6.1053867340088,
+    "projection_y": 0.003037037095055,
+    "speed": 698.43359375,
+    "world_loads": 2,
+    "spawn_y": -8.5476627712064,
+    "time_scaled_ticks": 0,
+    "preset": "a",
+    "physics_ms": 0.10000000149012,
+    "spawn_x": 488,
+    "decor_sprites": 49,
+    "terrain_shapes": 1028,
+    "crash_enabled": false,
+    "section_index": 0,
+    "reset_count": 0,
+    "station": "p0-mixed-over-budget",
+    "station_brake_distance": 0,
+    "pitch": -0.046598762273788,
+    "first_tick_omega": -31.818181991577,
+    "sequence": 101,
+    "command": {
+      "throttle": 1,
+      "allow_reverse": false,
+      "brake_reverse": 0,
+      "lean": 0
+    },
+    "modified": false,
+    "projection_x": 0.0017083333805203,
+    "velocity_x": 697.06280517578,
+    "station_name": "Custom: P0 mixed-over-budget",
+    "contact1": true,
+    "fps": 59.468745740002,
+    "decor_labels": 7,
+    "station_note": "",
+    "frame_ms": 16.815555592378,
+    "ui_captured": false,
+    "section_count": 0,
+    "contact2": false,
+    "finish_time": 24.60000128299,
+    "station_distance": 172.1947508685,
+    "snapshot": "s1",
+    "session_generation": 2,
+    "finish_count": 1,
+    "station_top_speed": 7.0832658328876,
+    "start_speed": 7,
+    "time_factor": 1,
+    "finish_done": true,
+    "travel2": 1.2388401031494,
+    "custom": true,
+    "speed_mps": 6.9843357813879,
+    "audio_pitch": 2.139074382782,
+    "station_brake_stopped": false,
+    "audio_muted": false,
+    "finish": true
+  },
+  "retry": {
+    "preset_refused": false,
+    "audio_started": true,
+    "custom_snapshots": 1,
+    "first_tick_speed": 6.9999998435378,
+    "head_contact": false,
+    "travel1": -0.00014495849609375,
+    "projection_y": 0.003368028672412,
+    "speed": 712.11553955078,
+    "world_loads": 2,
+    "spawn_y": -8.5476627712064,
+    "time_scaled_ticks": 0,
+    "preset": "a",
+    "physics_ms": 0.10000000149012,
+    "spawn_x": 488,
+    "decor_sprites": 49,
+    "terrain_shapes": 1028,
+    "crash_enabled": false,
+    "section_index": 0,
+    "reset_count": 1,
+    "station": "p0-mixed-over-budget",
+    "station_brake_distance": 0,
+    "pitch": -1.5150473700487e-05,
+    "first_tick_omega": -31.818181991577,
+    "sequence": 102,
+    "command": {
+      "throttle": 0,
+      "allow_reverse": true,
+      "brake_reverse": 0,
+      "lean": 0
+    },
+    "modified": false,
+    "projection_x": 0.0018945160554722,
+    "velocity_x": 699.99987792969,
+    "station_name": "Custom: P0 mixed-over-budget",
+    "contact1": false,
+    "fps": 53.252253835336,
+    "decor_labels": 7,
+    "station_note": "",
+    "frame_ms": 18.778547910707,
+    "ui_captured": false,
+    "section_count": 0,
+    "contact2": false,
+    "finish_time": 24.60000128299,
+    "station_distance": 0.9333484464878,
+    "snapshot": "s1",
+    "session_generation": 2,
+    "finish_count": 1,
+    "station_top_speed": 6.9999998435378,
+    "start_speed": 7,
+    "time_factor": 1,
+    "finish_done": false,
+    "travel2": 0.00020217895507812,
+    "custom": true,
+    "speed_mps": 7.1211552363376,
+    "audio_pitch": 2.081818189621,
+    "station_brake_stopped": false,
+    "audio_muted": false,
+    "finish": true
+  },
+  "raw_sha256": "4f8c3838404c171e1e65a253b669c3db9a0d1216efddd13433950d50e884ef36",
+  "checked_views": 232
+}

@@ -182,7 +182,7 @@ function M.build(self)
     local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},label_text={},live="",shapes={},tints={},hidden={},geometry=editor.geometry_version}
     local e=editor.doc.editor
     local k,simplified=allocation(e)
-    editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; Play needs 800 or fewer.",
+    editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; see Problems for the limiting Play resource.",
         simplified.segments,simplified.sprites) or nil
     for _,o in ipairs(e.objects) do
         if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id]);v.counts[o.id]=#doc_lib.path(o)

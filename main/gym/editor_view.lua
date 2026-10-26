@@ -85,8 +85,15 @@ local function publish(self,elapsed)
             shape_version=editor.shape_version,updates=v.mesh.updates,uploads=v.mesh.uploads,last=v.mesh.last_geometry,elapsed_ms=elapsed,entries=entries}))
     end
 end
+local function admitted(self)
+    if self.admission_doc~=editor.doc or self.admission_shape~=editor.shape_version then
+        self.admission_doc,self.admission_shape=editor.doc,editor.shape_version
+        self.admission_ok=terrain.admitted(editor.doc.editor,editor.render_budget)
+    end
+    return self.admission_ok
+end
 function M.build(self)
-    if not terrain.admitted(editor.doc.editor) then lines.build(self);self.view.line_mode=true;return end
+    if not admitted(self) then lines.build(self);self.view.line_mode=true;return end
     local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(),opened=editor.opened}
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
@@ -142,7 +149,7 @@ function M.update(self)
         end
         return
     end
-    local mode=terrain.admitted(editor.doc.editor) and v.capacity_shape~=editor.shape_version
+    local mode=admitted(self) and v.capacity_shape~=editor.shape_version
     if mode==(v.line_mode==true) then M.final(self,true);self.editor_rebuild=true;return end
     if v.line_mode then lines.update(self);return end
     local scale=sys.get_config_number("physics.scale",.01);local c=editor.camera

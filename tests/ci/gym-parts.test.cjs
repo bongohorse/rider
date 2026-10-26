@@ -47,8 +47,8 @@ test('LE1b parts measure every accepted level once; rejected limits run once in 
   const all=cases(),split=sizes.PARTS.map(p=>reported(sizes.select(all,p)));
   assert.deepEqual(split.flat().map(c=>c.id).sort(),all.map(c=>c.id).sort());
   assert.equal(new Set(split.flat().map(c=>c.id)).size,all.length);
-  assert.deepEqual(split.map(p=>p.filter(c=>c.expect==='accepted').length),[8,7]);
-  assert.deepEqual(split.map(p=>p.filter(c=>c.expect==='rejected').length),[0,12]);
+  assert.deepEqual(split.map(p=>p.filter(c=>c.expect==='accepted').length),[9,8]);
+  assert.deepEqual(split.map(p=>p.filter(c=>c.expect==='rejected').length),[0,13]);
   assert.deepEqual(split.flat().map(c=>c.id),all.map(c=>c.id));
   assert.equal(sizes.select(all,null),all);
   assert.throws(()=>sizes.select(all,'3/2'));

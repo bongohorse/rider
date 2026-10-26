@@ -1,0 +1,7374 @@
+{
+  "schema": 1,
+  "source_sha": "9709453e05c504fe3c67925aa69611b9c6377469",
+  "run_id": "terrain-p0-1792972486055",
+  "status": "PASS",
+  "renderer": "depth-resident",
+  "fixtures": [
+    {
+      "id": "six-anchor",
+      "source_bytes": 1004,
+      "export_bytes": 23803,
+      "anchors": 6,
+      "objects": 1,
+      "segments": 666,
+      "chain_vertices": 667,
+      "chains": 1,
+      "hulls": 0,
+      "hull_vertices": 0,
+      "labels": 0,
+      "geometry": {
+        "view": {
+          "meshes": 11,
+          "allocated_mesh_bytes": 83160,
+          "simplified": false,
+          "mesh_bytes": 432000,
+          "sprites": 5,
+          "objects": 1,
+          "allocated_meshes": 2,
+          "generation": 4,
+          "labels": 2
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 1,
+          "max_nodes": 640,
+          "grid": 75
+        },
+        "observed_doc_sha256": "9ea75b21691c38be289e8e6875c32da97cb0463f0872c2689cef039c1d1e078d"
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 63.900000005960464,
+          "observer_upper_ms": 810.4000000059605,
+          "callback_max_ms": 20.399999976158142
+        },
+        {
+          "event_ms": 56.5,
+          "observer_upper_ms": 817.5,
+          "callback_max_ms": 15.5
+        },
+        {
+          "event_ms": 51.39999997615814,
+          "observer_upper_ms": 808.7999999821186,
+          "callback_max_ms": 13.5
+        },
+        {
+          "event_ms": 47,
+          "observer_upper_ms": 788.6999999880791,
+          "callback_max_ms": 14.5
+        },
+        {
+          "event_ms": 39.599999994039536,
+          "observer_upper_ms": 793.8000000119209,
+          "callback_max_ms": 14
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 46.599999994039536,
+          "observer_upper_ms": 179.69999998807907,
+          "callback_max_ms": 20.5
+        },
+        {
+          "event_ms": 52.599999994039536,
+          "observer_upper_ms": 187.5,
+          "callback_max_ms": 24.099999994039536
+        },
+        {
+          "event_ms": 48.60000002384186,
+          "observer_upper_ms": 127.30000001192093,
+          "callback_max_ms": 22.299999982118607
+        },
+        {
+          "event_ms": 50.30000001192093,
+          "observer_upper_ms": 140,
+          "callback_max_ms": 21.799999982118607
+        },
+        {
+          "event_ms": 49.30000001192093,
+          "observer_upper_ms": 128.2000000178814,
+          "callback_max_ms": 22
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 236.90000000596046,
+          "observer_upper_ms": 242.80000001192093,
+          "callback_max_ms": 5.199999988079071
+        },
+        {
+          "event_ms": 239.7999999821186,
+          "observer_upper_ms": 247.19999998807907,
+          "callback_max_ms": 3.7999999821186066
+        },
+        {
+          "event_ms": 239.90000000596046,
+          "observer_upper_ms": 246.09999999403954,
+          "callback_max_ms": 4
+        },
+        {
+          "event_ms": 239.09999999403954,
+          "observer_upper_ms": 245.09999999403954,
+          "callback_max_ms": 4.199999988079071
+        },
+        {
+          "event_ms": 239.90000000596046,
+          "observer_upper_ms": 245.80000001192093,
+          "callback_max_ms": 3.699999988079071
+        }
+      ],
+      "drag": [
+        {
+          "observed_ms": 1232.4000000059605,
+          "first_preview_ms": 341.10000002384186,
+          "commit_observed_ms": 1110.6000000238419,
+          "view": {
+            "meshes": 11,
+            "allocated_mesh_bytes": 432648,
+            "simplified": false,
+            "mesh_bytes": 432648,
+            "sprites": 5,
+            "objects": 1,
+            "allocated_meshes": 11,
+            "generation": 14,
+            "labels": 2
+          },
+          "owned_refs": 11,
+          "release_at": 1067.7000000178814
+        },
+        {
+          "observed_ms": 1283.5999999940395,
+          "first_preview_ms": 465.2999999821186,
+          "commit_observed_ms": 1173.699999988079,
+          "view": {
+            "meshes": 11,
+            "allocated_mesh_bytes": 432648,
+            "simplified": false,
+            "mesh_bytes": 432648,
+            "sprites": 5,
+            "objects": 1,
+            "allocated_meshes": 11,
+            "generation": 14,
+            "labels": 2
+          },
+          "owned_refs": 11,
+          "release_at": 1137.4000000059605
+        },
+        {
+          "observed_ms": 1139.3999999761581,
+          "first_preview_ms": 406.2999999821186,
+          "commit_observed_ms": 1111.2999999821186,
+          "view": {
+            "meshes": 11,
+            "allocated_mesh_bytes": 432648,
+            "simplified": false,
+            "mesh_bytes": 432648,
+            "sprites": 5,
+            "objects": 1,
+            "allocated_meshes": 11,
+            "generation": 14,
+            "labels": 2
+          },
+          "owned_refs": 11,
+          "release_at": 1082
+        },
+        {
+          "observed_ms": 1173.199999988079,
+          "first_preview_ms": 407.80000001192093,
+          "commit_observed_ms": 1144.699999988079,
+          "view": {
+            "meshes": 11,
+            "allocated_mesh_bytes": 432648,
+            "simplified": false,
+            "mesh_bytes": 432648,
+            "sprites": 5,
+            "objects": 1,
+            "allocated_meshes": 11,
+            "generation": 14,
+            "labels": 2
+          },
+          "owned_refs": 11,
+          "release_at": 1105.0999999940395
+        },
+        {
+          "observed_ms": 1303.199999988079,
+          "first_preview_ms": 400.69999998807907,
+          "commit_observed_ms": 1193.5999999940395,
+          "view": {
+            "meshes": 11,
+            "allocated_mesh_bytes": 432648,
+            "simplified": false,
+            "mesh_bytes": 432648,
+            "sprites": 5,
+            "objects": 1,
+            "allocated_meshes": 11,
+            "generation": 14,
+            "labels": 2
+          },
+          "owned_refs": 11,
+          "release_at": 1151.699999988079
+        }
+      ],
+      "runtime": {
+        "terrain_meshes": 11,
+        "struts": 2,
+        "replay": 0,
+        "sprites": 7,
+        "decoration": 1,
+        "generation": 13,
+        "vehicle": 4,
+        "terrain_buffer_bytes": 432000,
+        "labels": 1
+      },
+      "edited_frames": {
+        "n": 289,
+        "p50": 7,
+        "p95": 50.60000002384186,
+        "p99": 57,
+        "max": 62.20000001788139
+      },
+      "imports": [
+        {
+          "ready_ms": 127.80000001192093,
+          "callback_max_ms": 27.100000023841858,
+          "lua": {
+            "parse_ms": 5.000114440918,
+            "decorate_ms": 9.9999904632568,
+            "build_ms": 4.9998760223389,
+            "generation": 2,
+            "switch_ms": 114.00008201599
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 9.9999904632568,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 2,
+            "resident": {
+              "visible": 1,
+              "update_ms": 6.9999694824219,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.74962110751224,
+              6.7999998480082,
+              4.6503787717884
+            ],
+            "generation": 2,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 1,
+            "owned": 1,
+            "released": 0
+          },
+          "webgl_buffers": {
+            "created": 78,
+            "deleted": 24,
+            "live": 54,
+            "bytes": 768152
+          }
+        },
+        {
+          "ready_ms": 62.19999998807907,
+          "callback_max_ms": 11.299999982118607,
+          "lua": {
+            "parse_ms": 2.000093460083,
+            "decorate_ms": 6.0000419616699,
+            "build_ms": 3.9999485015869,
+            "generation": 3,
+            "switch_ms": 51.000118255615
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 6.0000419616699,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 3,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.76690885736997,
+              6.7999998480082,
+              4.6330910219306
+            ],
+            "generation": 3,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 2,
+            "owned": 1,
+            "released": 1
+          },
+          "webgl_buffers": {
+            "created": 108,
+            "deleted": 52,
+            "live": 56,
+            "bytes": 768232
+          }
+        },
+        {
+          "ready_ms": 62.099999994039536,
+          "callback_max_ms": 13.800000011920929,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 8.0001354217529,
+            "build_ms": 4.9998760223389,
+            "generation": 4,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 8.0001354217529,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 4,
+            "resident": {
+              "visible": 1,
+              "update_ms": 6.0000419616699,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.7648867626886,
+              6.7999998480082,
+              4.635113116612
+            ],
+            "generation": 4,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 3,
+            "owned": 1,
+            "released": 2
+          },
+          "webgl_buffers": {
+            "created": 138,
+            "deleted": 80,
+            "live": 58,
+            "bytes": 768312
+          }
+        },
+        {
+          "ready_ms": 62,
+          "callback_max_ms": 13.400000005960464,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 6.0000419616699,
+            "build_ms": 4.9998760223389,
+            "generation": 5,
+            "switch_ms": 52.000045776367
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 6.0000419616699,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 5,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.76158964362168,
+              6.7999998480082,
+              4.6384102356789
+            ],
+            "generation": 5,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 4,
+            "owned": 1,
+            "released": 3
+          },
+          "webgl_buffers": {
+            "created": 168,
+            "deleted": 108,
+            "live": 60,
+            "bytes": 768392
+          }
+        },
+        {
+          "ready_ms": 58.79999998211861,
+          "callback_max_ms": 11.099999994039536,
+          "lua": {
+            "parse_ms": 4.000186920166,
+            "decorate_ms": 5.9998035430908,
+            "build_ms": 4.000186920166,
+            "generation": 6,
+            "switch_ms": 50.000190734863
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 5.9998035430908,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 6,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.76690885736997,
+              6.7999998480082,
+              4.6330910219306
+            ],
+            "generation": 6,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 5,
+            "owned": 1,
+            "released": 4
+          },
+          "webgl_buffers": {
+            "created": 198,
+            "deleted": 136,
+            "live": 62,
+            "bytes": 768472
+          }
+        },
+        {
+          "ready_ms": 60.89999997615814,
+          "callback_max_ms": 11.900000005960464,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 3.9999485015869,
+            "generation": 7,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 666,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 11,
+            "buffer_bytes": 432000
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -12.003485581898,
+            "budget": {
+              "cached_max": 2,
+              "sections": 11,
+              "largest_segments": 666,
+              "segments": 666,
+              "allocated_max": 11,
+              "physics_chains": 1,
+              "mesh_peak": 22,
+              "hull_vertices": 0,
+              "replacement_payload": 864000,
+              "visible_max": 11,
+              "sprites": 1,
+              "vertices": 12000,
+              "cpu_estimate": 7349504,
+              "engine_pool_ceiling": 8080560,
+              "payload": 432000,
+              "instances": 77,
+              "physics_vertices": 667,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4000,
+            "buffer_bytes": 432000,
+            "mesh_gameobjects": 1,
+            "station": "p0-six-anchor",
+            "build_ms": 6.0000419616699,
+            "chunks": 11,
+            "vertices": 12000,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 7,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.76654081538601,
+              6.7999998480082,
+              4.6334590639146
+            ],
+            "generation": 7,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 6,
+            "owned": 1,
+            "released": 5
+          },
+          "webgl_buffers": {
+            "created": 228,
+            "deleted": 164,
+            "live": 64,
+            "bytes": 768552
+          }
+        }
+      ],
+      "drive": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": true,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 7.0003147125244,
+          "projection_y": 0.003037037095055,
+          "speed": 681.59985351562,
+          "world_loads": 7,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 666,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-six-anchor",
+          "station_brake_distance": 0,
+          "pitch": 0.084710739552975,
+          "first_tick_omega": 0,
+          "sequence": 31,
+          "command": {
+            "throttle": 1,
+            "allow_reverse": false,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.0017083333805203,
+          "velocity_x": 679.91149902344,
+          "station_name": "Custom: P0 six-anchor",
+          "contact1": true,
+          "fps": 59.904153071583,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 16.69333341221,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": 36.851173448015,
+          "snapshot": "s6",
+          "session_generation": 7,
+          "finish_count": 0,
+          "station_top_speed": 6.8566642754525,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 5.8837909698486,
+          "custom": true,
+          "speed_mps": 6.8159983828068,
+          "audio_pitch": 2.0911652374268,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "wasm_bytes": 268435456,
+        "world_summary": {
+          "bytes": [
+            742088,
+            742088
+          ],
+          "lua_kib": [
+            3475.994140625,
+            6955.4228515625
+          ]
+        }
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 4947696
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 10362880
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 62,
+          "p95": 62.19999998807907,
+          "p99": 62.19999998807907,
+          "max": 62.19999998807907
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 18.200000017881393,
+          "max": 31.5
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2,
+          "p95": 5.300000011920929,
+          "p99": 6.700000017881393,
+          "max": 10.700000017881393
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "webgl_calls": {
+          "n": 360,
+          "p50": 22,
+          "p95": 23,
+          "p99": 23,
+          "max": 23
+        },
+        "over25": 1
+      }
+    },
+    {
+      "id": "long-curves",
+      "source_bytes": 2419,
+      "export_bytes": 25943,
+      "anchors": 14,
+      "objects": 12,
+      "segments": 696,
+      "chain_vertices": 698,
+      "chains": 2,
+      "hulls": 0,
+      "hull_vertices": 0,
+      "labels": 0,
+      "geometry": {
+        "view": {
+          "meshes": 12,
+          "allocated_mesh_bytes": 83160,
+          "simplified": false,
+          "mesh_bytes": 451872,
+          "sprites": 5,
+          "objects": 12,
+          "allocated_meshes": 2,
+          "generation": 15,
+          "labels": 2
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 3,
+          "max_nodes": 640,
+          "grid": 75
+        },
+        "observed_doc_sha256": "34676c8d517ee7122eca251d90a497ed2740a222ac82c3253ad1dcafd00b4d48"
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 44.10000002384186,
+          "observer_upper_ms": 798.2000000178814,
+          "callback_max_ms": 39.099999994039536
+        },
+        {
+          "event_ms": 59.400000005960464,
+          "observer_upper_ms": 869.4000000059605,
+          "callback_max_ms": 70.5
+        },
+        {
+          "event_ms": 57.30000001192093,
+          "observer_upper_ms": 855.1999999880791,
+          "callback_max_ms": 63.099999994039536
+        },
+        {
+          "event_ms": 68.59999999403954,
+          "observer_upper_ms": 866.1999999880791,
+          "callback_max_ms": 61.19999998807907
+        },
+        {
+          "event_ms": 61.80000001192093,
+          "observer_upper_ms": 857.4000000059605,
+          "callback_max_ms": 55.099999994039536
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 67.7000000178814,
+          "observer_upper_ms": 213.80000001192093,
+          "callback_max_ms": 29.80000001192093
+        },
+        {
+          "event_ms": 59.099999994039536,
+          "observer_upper_ms": 195.90000000596046,
+          "callback_max_ms": 27.900000005960464
+        },
+        {
+          "event_ms": 70,
+          "observer_upper_ms": 213.7000000178814,
+          "callback_max_ms": 34
+        },
+        {
+          "event_ms": 68.80000001192093,
+          "observer_upper_ms": 209.5,
+          "callback_max_ms": 35.29999998211861
+        },
+        {
+          "event_ms": 58.19999998807907,
+          "observer_upper_ms": 202,
+          "callback_max_ms": 30.700000017881393
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 239.40000000596046,
+          "observer_upper_ms": 245.80000001192093,
+          "callback_max_ms": 4.200000017881393
+        },
+        {
+          "event_ms": 237.90000000596046,
+          "observer_upper_ms": 244.2000000178814,
+          "callback_max_ms": 6.199999988079071
+        },
+        {
+          "event_ms": 238.5,
+          "observer_upper_ms": 246.09999999403954,
+          "callback_max_ms": 4.5999999940395355
+        },
+        {
+          "event_ms": 227,
+          "observer_upper_ms": 234.7000000178814,
+          "callback_max_ms": 3.5999999940395355
+        },
+        {
+          "event_ms": 241.2000000178814,
+          "observer_upper_ms": 248.5,
+          "callback_max_ms": 6.5
+        }
+      ],
+      "drag": [
+        {
+          "observed_ms": 1776.7000000178814,
+          "first_preview_ms": 686.8000000119209,
+          "commit_observed_ms": 1626.9000000059605,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 5,
+            "objects": 12,
+            "allocated_meshes": 8,
+            "generation": 25,
+            "labels": 2
+          },
+          "owned_refs": 8,
+          "release_at": 1578.1000000238419
+        },
+        {
+          "observed_ms": 1517.5,
+          "first_preview_ms": 618,
+          "commit_observed_ms": 1393.0999999940395,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 5,
+            "objects": 12,
+            "allocated_meshes": 8,
+            "generation": 25,
+            "labels": 2
+          },
+          "owned_refs": 8,
+          "release_at": 1354.199999988079
+        },
+        {
+          "observed_ms": 1629.2000000178814,
+          "first_preview_ms": 632.2000000178814,
+          "commit_observed_ms": 1507.5,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 5,
+            "objects": 12,
+            "allocated_meshes": 8,
+            "generation": 25,
+            "labels": 2
+          },
+          "owned_refs": 8,
+          "release_at": 1472.300000011921
+        },
+        {
+          "observed_ms": 1415.0999999940395,
+          "first_preview_ms": 608.2000000178814,
+          "commit_observed_ms": 1343.5999999940395,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 5,
+            "objects": 12,
+            "allocated_meshes": 8,
+            "generation": 25,
+            "labels": 2
+          },
+          "owned_refs": 8,
+          "release_at": 1318.0999999940395
+        },
+        {
+          "observed_ms": 1335.0999999940395,
+          "first_preview_ms": 517.7999999821186,
+          "commit_observed_ms": 1214.5,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 5,
+            "objects": 12,
+            "allocated_meshes": 8,
+            "generation": 25,
+            "labels": 2
+          },
+          "owned_refs": 8,
+          "release_at": 1175.7999999821186
+        }
+      ],
+      "runtime": {
+        "terrain_meshes": 12,
+        "struts": 2,
+        "replay": 0,
+        "sprites": 7,
+        "decoration": 1,
+        "generation": 24,
+        "vehicle": 4,
+        "terrain_buffer_bytes": 451872,
+        "labels": 1
+      },
+      "edited_frames": {
+        "n": 335,
+        "p50": 7.799999982118607,
+        "p95": 52.400000005960464,
+        "p99": 63.400000005960464,
+        "max": 71.59999999403954
+      },
+      "imports": [
+        {
+          "ready_ms": 80.2000000178814,
+          "callback_max_ms": 14.5,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 9.0000629425049,
+            "build_ms": 3.9999485015869,
+            "generation": 8,
+            "switch_ms": 69.000005722046
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 9.0000629425049,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 8,
+            "resident": {
+              "visible": 1,
+              "update_ms": 6.0000419616699,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87722181266795,
+              6.7999998480082,
+              4.5227780666326
+            ],
+            "generation": 8,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 8,
+            "owned": 1,
+            "released": 7
+          },
+          "webgl_buffers": {
+            "created": 259,
+            "deleted": 193,
+            "live": 66,
+            "bytes": 768968
+          }
+        },
+        {
+          "ready_ms": 65.09999999403954,
+          "callback_max_ms": 15.299999982118607,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 6.9999694824219,
+            "generation": 9,
+            "switch_ms": 53.999900817871
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 6.9999694824219,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 9,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.86904935801664,
+              6.7999998480082,
+              4.530950521284
+            ],
+            "generation": 9,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 9,
+            "owned": 1,
+            "released": 8
+          },
+          "webgl_buffers": {
+            "created": 289,
+            "deleted": 221,
+            "live": 68,
+            "bytes": 769048
+          }
+        },
+        {
+          "ready_ms": 55.400000005960464,
+          "callback_max_ms": 12.800000011920929,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 6.9999694824219,
+            "build_ms": 3.9999485015869,
+            "generation": 10,
+            "switch_ms": 50.999879837036
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 6.9999694824219,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 10,
+            "resident": {
+              "visible": 1,
+              "update_ms": 4.9998760223389,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87438413572943,
+              6.7999998480082,
+              4.5256157435712
+            ],
+            "generation": 10,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 10,
+            "owned": 1,
+            "released": 9
+          },
+          "webgl_buffers": {
+            "created": 319,
+            "deleted": 249,
+            "live": 70,
+            "bytes": 769128
+          }
+        },
+        {
+          "ready_ms": 51.599999994039536,
+          "callback_max_ms": 11.699999988079071,
+          "lua": {
+            "parse_ms": 2.000093460083,
+            "decorate_ms": 6.0000419616699,
+            "build_ms": 4.000186920166,
+            "generation": 11,
+            "switch_ms": 47.000169754028
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 6.0000419616699,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 11,
+            "resident": {
+              "visible": 1,
+              "update_ms": 4.000186920166,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.88525861668754,
+              6.7999998480082,
+              4.5147412626131
+            ],
+            "generation": 11,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 11,
+            "owned": 1,
+            "released": 10
+          },
+          "webgl_buffers": {
+            "created": 349,
+            "deleted": 277,
+            "live": 72,
+            "bytes": 769208
+          }
+        },
+        {
+          "ready_ms": 56.29999998211861,
+          "callback_max_ms": 13.300000011920929,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 8.0001354217529,
+            "build_ms": 3.000020980835,
+            "generation": 12,
+            "switch_ms": 51.000118255615
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 8.0001354217529,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 12,
+            "resident": {
+              "visible": 1,
+              "update_ms": 5.000114440918,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.88133680281035,
+              6.7999998480082,
+              4.5186630764902
+            ],
+            "generation": 12,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 12,
+            "owned": 1,
+            "released": 11
+          },
+          "webgl_buffers": {
+            "created": 379,
+            "deleted": 305,
+            "live": 74,
+            "bytes": 769288
+          }
+        },
+        {
+          "ready_ms": 54.70000001788139,
+          "callback_max_ms": 14.300000011920929,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 9.9999904632568,
+            "build_ms": 3.000020980835,
+            "generation": 13,
+            "switch_ms": 50.000190734863
+          },
+          "counts": {
+            "shapes": 696,
+            "sprites": 1,
+            "labels": 1,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -20,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 0,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 1,
+              "vertices": 12552,
+              "cpu_estimate": 7687744,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 78,
+              "physics_vertices": 698,
+              "largest_chain": 1,
+              "labels": 1
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-long-curves",
+            "build_ms": 9.9999904632568,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 1,
+            "version": 1,
+            "generation": 13,
+            "resident": {
+              "visible": 1,
+              "update_ms": 7.000207901001,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 1
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87690610832931,
+              6.7999998480082,
+              4.5230937709713
+            ],
+            "generation": 13,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 13,
+            "owned": 1,
+            "released": 12
+          },
+          "webgl_buffers": {
+            "created": 409,
+            "deleted": 333,
+            "live": 76,
+            "bytes": 769368
+          }
+        }
+      ],
+      "drive": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": true,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 7.7208423614502,
+          "projection_y": 0.003037037095055,
+          "speed": 674.77935791016,
+          "world_loads": 13,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0,
+          "spawn_x": 2,
+          "decor_sprites": 1,
+          "terrain_shapes": 696,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-long-curves",
+          "station_brake_distance": 0,
+          "pitch": 0.20225891470909,
+          "first_tick_omega": 0,
+          "sequence": 30,
+          "command": {
+            "throttle": 1,
+            "allow_reverse": false,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.0017083333805203,
+          "velocity_x": 665.07434082031,
+          "station_name": "Custom: P0 long-curves",
+          "contact1": true,
+          "fps": 54.067970702414,
+          "decor_labels": 1,
+          "station_note": "",
+          "frame_ms": 18.495238253048,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": 37.851669031121,
+          "snapshot": "s12",
+          "session_generation": 13,
+          "finish_count": 0,
+          "station_top_speed": 6.957140957777,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 5.1381244659424,
+          "custom": true,
+          "speed_mps": 6.7477934282766,
+          "audio_pitch": 2.0906190109253,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "wasm_bytes": 268435456,
+        "world_summary": {
+          "bytes": [
+            780248,
+            781304
+          ],
+          "lua_kib": [
+            2935.5224609375,
+            6610.716796875
+          ]
+        }
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 5409588
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 14557184
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 55.400000005960464,
+          "p95": 65.09999999403954,
+          "p99": 65.09999999403954,
+          "max": 65.09999999403954
+        },
+        "interval_ms": {
+          "n": 356,
+          "p50": 16.69999998807907,
+          "p95": 17.299999982118607,
+          "p99": 25.80000001192093,
+          "max": 33.39999997615814
+        },
+        "callback_ms": {
+          "n": 357,
+          "p50": 2,
+          "p95": 5.5999999940395355,
+          "p99": 8.5,
+          "max": 21.69999998807907
+        },
+        "physics_ms": {
+          "n": 357,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.2
+        },
+        "webgl_calls": {
+          "n": 357,
+          "p50": 22,
+          "p95": 22,
+          "p99": 22,
+          "max": 22
+        },
+        "over25": 4
+      }
+    },
+    {
+      "id": "mixed",
+      "source_bytes": 4009,
+      "export_bytes": 28423,
+      "anchors": 14,
+      "objects": 30,
+      "segments": 696,
+      "chain_vertices": 698,
+      "chains": 2,
+      "hulls": 12,
+      "hull_vertices": 48,
+      "labels": 6,
+      "geometry": {
+        "view": {
+          "meshes": 12,
+          "allocated_mesh_bytes": 83160,
+          "simplified": false,
+          "mesh_bytes": 451872,
+          "sprites": 53,
+          "objects": 30,
+          "allocated_meshes": 2,
+          "generation": 26,
+          "labels": 8
+        },
+        "overlay": {
+          "bounds": 0,
+          "lines": 0,
+          "dropped": 0,
+          "spacing": 1,
+          "nodes": 628,
+          "handles": 3,
+          "max_nodes": 640,
+          "grid": 75
+        },
+        "observed_doc_sha256": "24d94b6bd9b18b7245936bcf071075734c879028caf99645149fcdef96ff18eb"
+      },
+      "edit_to_play": [
+        {
+          "event_ms": 55.60000002384186,
+          "observer_upper_ms": 839.2000000178814,
+          "callback_max_ms": 50
+        },
+        {
+          "event_ms": 38.20000001788139,
+          "observer_upper_ms": 826.5999999940395,
+          "callback_max_ms": 52.5
+        },
+        {
+          "event_ms": 40.10000002384186,
+          "observer_upper_ms": 810.1000000238419,
+          "callback_max_ms": 54.5
+        },
+        {
+          "event_ms": 57.29999998211861,
+          "observer_upper_ms": 837.0999999940395,
+          "callback_max_ms": 52.099999994039536
+        },
+        {
+          "event_ms": 67.09999999403954,
+          "observer_upper_ms": 843.8000000119209,
+          "callback_max_ms": 53.19999998807907
+        }
+      ],
+      "play_to_edit": [
+        {
+          "event_ms": 55.30000001192093,
+          "observer_upper_ms": 169.19999998807907,
+          "callback_max_ms": 27
+        },
+        {
+          "event_ms": 57.30000001192093,
+          "observer_upper_ms": 171,
+          "callback_max_ms": 27.100000023841858
+        },
+        {
+          "event_ms": 57.099999994039536,
+          "observer_upper_ms": 198.7999999821186,
+          "callback_max_ms": 26.599999994039536
+        },
+        {
+          "event_ms": 62.20000001788139,
+          "observer_upper_ms": 193.80000001192093,
+          "callback_max_ms": 27.80000001192093
+        },
+        {
+          "event_ms": 63.39999997615814,
+          "observer_upper_ms": 205.2999999821186,
+          "callback_max_ms": 28.80000001192093
+        }
+      ],
+      "retry": [
+        {
+          "event_ms": 241.2000000178814,
+          "observer_upper_ms": 247.10000002384186,
+          "callback_max_ms": 6.700000017881393
+        },
+        {
+          "event_ms": 238,
+          "observer_upper_ms": 244.09999999403954,
+          "callback_max_ms": 6
+        },
+        {
+          "event_ms": 256.69999998807907,
+          "observer_upper_ms": 262.5,
+          "callback_max_ms": 6.9000000059604645
+        },
+        {
+          "event_ms": 239.90000000596046,
+          "observer_upper_ms": 246.09999999403954,
+          "callback_max_ms": 3.800000011920929
+        },
+        {
+          "event_ms": 237.40000000596046,
+          "observer_upper_ms": 246.7000000178814,
+          "callback_max_ms": 3.9000000059604645
+        }
+      ],
+      "drag": [
+        {
+          "observed_ms": 1459.300000011921,
+          "first_preview_ms": 537.7000000178814,
+          "commit_observed_ms": 1342.800000011921,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 53,
+            "objects": 30,
+            "allocated_meshes": 8,
+            "generation": 36,
+            "labels": 8
+          },
+          "owned_refs": 8,
+          "release_at": 1304.800000011921
+        },
+        {
+          "observed_ms": 1217.0999999940395,
+          "first_preview_ms": 396.19999998807907,
+          "commit_observed_ms": 1136.0999999940395,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 53,
+            "objects": 30,
+            "allocated_meshes": 8,
+            "generation": 36,
+            "labels": 8
+          },
+          "owned_refs": 8,
+          "release_at": 1099.5
+        },
+        {
+          "observed_ms": 1215.0999999940395,
+          "first_preview_ms": 422.7999999821186,
+          "commit_observed_ms": 1143.5,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 53,
+            "objects": 30,
+            "allocated_meshes": 8,
+            "generation": 36,
+            "labels": 8
+          },
+          "owned_refs": 8,
+          "release_at": 1118
+        },
+        {
+          "observed_ms": 1197.800000011921,
+          "first_preview_ms": 414.90000000596046,
+          "commit_observed_ms": 1095.0999999940395,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 53,
+            "objects": 30,
+            "allocated_meshes": 8,
+            "generation": 36,
+            "labels": 8
+          },
+          "owned_refs": 8,
+          "release_at": 1056.4000000059605
+        },
+        {
+          "observed_ms": 961.8000000119209,
+          "first_preview_ms": 356.90000000596046,
+          "commit_observed_ms": 891.5,
+          "view": {
+            "meshes": 12,
+            "allocated_mesh_bytes": 296136,
+            "simplified": false,
+            "mesh_bytes": 453168,
+            "sprites": 53,
+            "objects": 30,
+            "allocated_meshes": 8,
+            "generation": 36,
+            "labels": 8
+          },
+          "owned_refs": 8,
+          "release_at": 863.3000000119209
+        }
+      ],
+      "runtime": {
+        "terrain_meshes": 12,
+        "struts": 2,
+        "replay": 0,
+        "sprites": 55,
+        "decoration": 49,
+        "generation": 35,
+        "vehicle": 4,
+        "terrain_buffer_bytes": 451872,
+        "labels": 7
+      },
+      "edited_frames": {
+        "n": 281,
+        "p50": 7.299999982118607,
+        "p95": 48.5,
+        "p99": 57.10000002384186,
+        "max": 97.90000000596046
+      },
+      "imports": [
+        {
+          "ready_ms": 58.79999998211861,
+          "callback_max_ms": 14.5,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 7.9998970031738,
+            "build_ms": 5.000114440918,
+            "generation": 14,
+            "switch_ms": 46.999931335449
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 7.9998970031738,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 14,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87753766959449,
+              6.7999998480082,
+              4.5224622097061
+            ],
+            "generation": 14,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 1.0001659393311,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 15,
+            "owned": 1,
+            "released": 14
+          },
+          "webgl_buffers": {
+            "created": 440,
+            "deleted": 362,
+            "live": 78,
+            "bytes": 767432
+          }
+        },
+        {
+          "ready_ms": 69.40000000596046,
+          "callback_max_ms": 22.5,
+          "lua": {
+            "parse_ms": 4.000186920166,
+            "decorate_ms": 14.999866485596,
+            "build_ms": 5.000114440918,
+            "generation": 15,
+            "switch_ms": 62.999963760376
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 14.999866485596,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 15,
+            "resident": {
+              "visible": 1,
+              "update_ms": 4.9998760223389,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.84620344177924,
+              6.7999998480082,
+              4.5537964375214
+            ],
+            "generation": 15,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 1.0001659393311,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 16,
+            "owned": 1,
+            "released": 15
+          },
+          "webgl_buffers": {
+            "created": 470,
+            "deleted": 390,
+            "live": 80,
+            "bytes": 767512
+          }
+        },
+        {
+          "ready_ms": 59.5,
+          "callback_max_ms": 14.5,
+          "lua": {
+            "parse_ms": 6.0000419616699,
+            "decorate_ms": 7.9998970031738,
+            "build_ms": 3.9999485015869,
+            "generation": 16,
+            "switch_ms": 53.000211715698
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 7.9998970031738,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 16,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87659040399066,
+              6.7999998480082,
+              4.5234094753099
+            ],
+            "generation": 16,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 17,
+            "owned": 1,
+            "released": 16
+          },
+          "webgl_buffers": {
+            "created": 500,
+            "deleted": 418,
+            "live": 82,
+            "bytes": 767592
+          }
+        },
+        {
+          "ready_ms": 72.30000001192093,
+          "callback_max_ms": 13.599999994039536,
+          "lua": {
+            "parse_ms": 3.9999485015869,
+            "decorate_ms": 7.9998970031738,
+            "build_ms": 3.9999485015869,
+            "generation": 17,
+            "switch_ms": 65.999984741211
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 6.9999694824219,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 17,
+            "resident": {
+              "visible": 1,
+              "update_ms": 3.9999485015869,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.879435099972,
+              6.7999998480082,
+              4.5205647793286
+            ],
+            "generation": 17,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 18,
+            "owned": 1,
+            "released": 17
+          },
+          "webgl_buffers": {
+            "created": 530,
+            "deleted": 446,
+            "live": 84,
+            "bytes": 767672
+          }
+        },
+        {
+          "ready_ms": 61.900000005960464,
+          "callback_max_ms": 18.700000017881393,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 10.999917984009,
+            "build_ms": 6.0000419616699,
+            "generation": 18,
+            "switch_ms": 52.999973297119
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 10.999917984009,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 18,
+            "resident": {
+              "visible": 1,
+              "update_ms": 6.0000419616699,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.86499158833195,
+              6.7999998480082,
+              4.5350082909686
+            ],
+            "generation": 18,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 19,
+            "owned": 1,
+            "released": 18
+          },
+          "webgl_buffers": {
+            "created": 560,
+            "deleted": 474,
+            "live": 86,
+            "bytes": 767752
+          }
+        },
+        {
+          "ready_ms": 61.5,
+          "callback_max_ms": 15.199999988079071,
+          "lua": {
+            "parse_ms": 3.000020980835,
+            "decorate_ms": 9.0000629425049,
+            "build_ms": 4.9998760223389,
+            "generation": 19,
+            "switch_ms": 52.000045776367
+          },
+          "counts": {
+            "shapes": 708,
+            "sprites": 49,
+            "labels": 7,
+            "meshes": 12,
+            "buffer_bytes": 451872
+          },
+          "mesh": {
+            "projection": [
+              0.18,
+              0.55
+            ],
+            "intervals": 64,
+            "lower_extent": -26,
+            "budget": {
+              "cached_max": 2,
+              "sections": 12,
+              "largest_segments": 390,
+              "segments": 696,
+              "allocated_max": 12,
+              "physics_chains": 2,
+              "mesh_peak": 24,
+              "hull_vertices": 48,
+              "replacement_payload": 903744,
+              "visible_max": 12,
+              "sprites": 49,
+              "vertices": 12552,
+              "cpu_estimate": 7712320,
+              "engine_pool_ceiling": 8080560,
+              "payload": 451872,
+              "instances": 132,
+              "physics_vertices": 746,
+              "largest_chain": 1,
+              "labels": 7
+            },
+            "triangles": 4184,
+            "buffer_bytes": 451872,
+            "mesh_gameobjects": 1,
+            "station": "p0-mixed",
+            "build_ms": 8.0001354217529,
+            "chunks": 12,
+            "vertices": 12552,
+            "decoration_sprites": 49,
+            "version": 1,
+            "generation": 19,
+            "resident": {
+              "visible": 1,
+              "update_ms": 6.0000419616699,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 1,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            },
+            "depth": 0.9,
+            "allocated_bytes": 41688,
+            "labels": 7
+          },
+          "residency": {
+            "view": [
+              -2.7999999374151,
+              -0.87218351322002,
+              6.7999998480082,
+              4.5278163660806
+            ],
+            "generation": 19,
+            "high_water": 1,
+            "mode": "play",
+            "counts": {
+              "visible": 1,
+              "update_ms": 0,
+              "released": 0,
+              "allocated": 1,
+              "uploaded": 0,
+              "reassigned": 0,
+              "cached": 0,
+              "bytes": 41688,
+              "queued": 0,
+              "enabled": 1
+            }
+          },
+          "lifecycle": {
+            "created": 20,
+            "owned": 1,
+            "released": 19
+          },
+          "webgl_buffers": {
+            "created": 590,
+            "deleted": 502,
+            "live": 88,
+            "bytes": 767832
+          }
+        }
+      ],
+      "drive": {
+        "telemetry": {
+          "preset_refused": false,
+          "audio_started": true,
+          "custom_snapshots": 1,
+          "first_tick_speed": -1.0619898820555e-08,
+          "head_contact": false,
+          "travel1": 7.7257595062256,
+          "projection_y": 0.003037037095055,
+          "speed": 674.72735595703,
+          "world_loads": 19,
+          "spawn_y": 2,
+          "time_scaled_ticks": 0,
+          "preset": "a",
+          "physics_ms": 0.10000000149012,
+          "spawn_x": 2,
+          "decor_sprites": 49,
+          "terrain_shapes": 708,
+          "crash_enabled": false,
+          "section_index": 0,
+          "reset_count": 0,
+          "station": "p0-mixed",
+          "station_brake_distance": 0,
+          "pitch": 0.20398493111134,
+          "first_tick_omega": 0,
+          "sequence": 31,
+          "command": {
+            "throttle": 1,
+            "allow_reverse": false,
+            "brake_reverse": 0,
+            "lean": 0
+          },
+          "modified": false,
+          "projection_x": 0.0017083333805203,
+          "velocity_x": 664.85668945312,
+          "station_name": "Custom: P0 mixed",
+          "contact1": true,
+          "fps": 59.880239278741,
+          "decor_labels": 7,
+          "station_note": "",
+          "frame_ms": 16.700000067552,
+          "ui_captured": false,
+          "section_count": 0,
+          "contact2": true,
+          "finish_time": 0,
+          "station_distance": 39.093939511166,
+          "snapshot": "s18",
+          "session_generation": 19,
+          "finish_count": 0,
+          "station_top_speed": 6.9568882722358,
+          "start_speed": 0,
+          "time_factor": 1,
+          "finish_done": false,
+          "travel2": 5.1179065704346,
+          "custom": true,
+          "speed_mps": 6.747273408757,
+          "audio_pitch": 2.0906939411163,
+          "station_brake_stopped": false,
+          "audio_muted": false,
+          "finish": true
+        },
+        "wasm_bytes": 268435456,
+        "world_summary": {
+          "bytes": [
+            784904,
+            785960
+          ],
+          "lua_kib": [
+            3005.4619140625,
+            6493.5439453125
+          ]
+        }
+      },
+      "js_heap_metrics": [
+        {
+          "name": "JSHeapUsedSize",
+          "value": 5844392
+        },
+        {
+          "name": "JSHeapTotalSize",
+          "value": 14557184
+        }
+      ],
+      "summary": {
+        "import_ms": {
+          "n": 5,
+          "p50": 61.900000005960464,
+          "p95": 72.30000001192093,
+          "p99": 72.30000001192093,
+          "max": 72.30000001192093
+        },
+        "interval_ms": {
+          "n": 359,
+          "p50": 16.69999998807907,
+          "p95": 17,
+          "p99": 17.5,
+          "max": 33.5
+        },
+        "callback_ms": {
+          "n": 360,
+          "p50": 2.0999999940395355,
+          "p95": 5.5,
+          "p99": 8.799999982118607,
+          "max": 9.800000011920929
+        },
+        "physics_ms": {
+          "n": 360,
+          "p50": 0.1,
+          "p95": 0.1,
+          "p99": 0.2,
+          "max": 0.3
+        },
+        "webgl_calls": {
+          "n": 360,
+          "p50": 22,
+          "p95": 22,
+          "p99": 22,
+          "max": 22
+        },
+        "over25": 1
+      }
+    }
+  ],
+  "errors": [],
+  "protocol": {
+    "repeats": 5,
+    "warmup_ms": 1000,
+    "sample_ms": 6000,
+    "viewport": [
+      1280,
+      720
+    ],
+    "dpr": 1
+  },
+  "unmeasured": [
+    "phone",
+    "isolated sampler CPU",
+    "GPU time",
+    "total process/GPU memory",
+    "engine-wide GameObject pool census"
+  ],
+  "browser": "156.0.8078.4",
+  "identity": {
+    "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "cross_origin_isolated": false,
+    "clock_step_ms": 0.09999999403953552,
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "dpr": 1,
+      "highDpi": true,
+      "bufferWidth": 1280,
+      "bufferHeight": 720
+    }
+  },
+  "rejected": {
+    "id": "long-over-budget",
+    "source_bytes": 2558,
+    "errors": [],
+    "view": {
+      "meshes": 17,
+      "allocated_mesh_bytes": 83160,
+      "simplified": false,
+      "mesh_bytes": 659232,
+      "sprites": 5,
+      "objects": 12,
+      "allocated_meshes": 2,
+      "generation": 3,
+      "labels": 2
+    },
+    "source_saved": true,
+    "paths": {
+      "o3": [
+        [
+          254,
+          0
+        ],
+        [
+          278,
+          0
+        ]
+      ],
+      "o11": [
+        [
+          393,
+          0
+        ],
+        [
+          393.49688884342,
+          -0.0433936096205
+        ],
+        [
+          393.99377768683,
+          -0.087155760860102
+        ],
+        [
+          394.49066653025,
+          -0.13128161382908
+        ],
+        [
+          394.98755537366,
+          -0.17576632863771
+        ],
+        [
+          395.48444421708,
+          -0.22060506539628
+        ],
+        [
+          395.98133306049,
+          -0.26579298421505
+        ],
+        [
+          396.47822190391,
+          -0.3113252452043
+        ],
+        [
+          396.97511074732,
+          -0.35719700847432
+        ],
+        [
+          397.47199959074,
+          -0.40340343413537
+        ],
+        [
+          397.96888843415,
+          -0.44993968229773
+        ],
+        [
+          398.46577727757,
+          -0.49680091307168
+        ],
+        [
+          398.96266612098,
+          -0.5439822865675
+        ],
+        [
+          399.4595549644,
+          -0.59147896289546
+        ],
+        [
+          399.95644380781,
+          -0.63928610216583
+        ],
+        [
+          400.45333265123,
+          -0.6873988644889
+        ],
+        [
+          400.95022149464,
+          -0.73581240997494
+        ],
+        [
+          401.44711033806,
+          -0.78452189873423
+        ],
+        [
+          401.94399918148,
+          -0.83352249087704
+        ],
+        [
+          402.44088802489,
+          -0.88280934651365
+        ],
+        [
+          402.93777686831,
+          -0.93237762575433
+        ],
+        [
+          403.43466571172,
+          -0.98222248870937
+        ],
+        [
+          403.93155455514,
+          -1.032339095489
+        ],
+        [
+          404.42844339855,
+          -1.0827226062036
+        ],
+        [
+          404.92533224197,
+          -1.1333681809634
+        ],
+        [
+          405.42222108538,
+          -1.1842709798786
+        ],
+        [
+          405.9191099288,
+          -1.2354261630595
+        ],
+        [
+          406.41599877221,
+          -1.2868288906165
+        ],
+        [
+          406.91288761563,
+          -1.3384743226597
+        ],
+        [
+          407.40977645904,
+          -1.3903576192995
+        ],
+        [
+          407.90666530246,
+          -1.4424739406462
+        ],
+        [
+          408.40355414587,
+          -1.4948184468099
+        ],
+        [
+          408.90044298929,
+          -1.5473862979011
+        ],
+        [
+          409.39733183271,
+          -1.6001726540299
+        ],
+        [
+          409.89422067612,
+          -1.6531726753067
+        ],
+        [
+          410.39110951954,
+          -1.7063815218417
+        ],
+        [
+          410.88799836295,
+          -1.7597943537452
+        ],
+        [
+          411.38488720637,
+          -1.8134063311274
+        ],
+        [
+          411.88177604978,
+          -1.8672126140987
+        ],
+        [
+          412.3786648932,
+          -1.9212083627694
+        ],
+        [
+          412.87555373661,
+          -1.9753887372496
+        ],
+        [
+          413.37244258003,
+          -2.0297488976497
+        ],
+        [
+          413.86933142344,
+          -2.08428400408
+        ],
+        [
+          414.36622026686,
+          -2.1389892166507
+        ],
+        [
+          414.86310911027,
+          -2.1938596954721
+        ],
+        [
+          415.35999795369,
+          -2.2488906006545
+        ],
+        [
+          415.8568867971,
+          -2.3040770923082
+        ],
+        [
+          416.35377564052,
+          -2.3594143305434
+        ],
+        [
+          416.85066448393,
+          -2.4148974754704
+        ],
+        [
+          417.34755332735,
+          -2.4705216871995
+        ],
+        [
+          417.84288939313,
+          -2.5261076672988
+        ],
+        [
+          418.33822545891,
+          -2.5818242295652
+        ],
+        [
+          418.83356152469,
+          -2.6376665793413
+        ],
+        [
+          419.32889759047,
+          -2.6936299219697
+        ],
+        [
+          419.82423365625,
+          -2.7497094627929
+        ],
+        [
+          420.31956972203,
+          -2.8059004071537
+        ],
+        [
+          420.81490578781,
+          -2.8621979603946
+        ],
+        [
+          421.31024185359,
+          -2.9185973278581
+        ],
+        [
+          421.80557791937,
+          -2.9750937148869
+        ],
+        [
+          422.30091398515,
+          -3.0316823268236
+        ],
+        [
+          422.79625005093,
+          -3.0883583690107
+        ],
+        [
+          423.29158611671,
+          -3.1451170467909
+        ],
+        [
+          423.78692218249,
+          -3.2019535655068
+        ],
+        [
+          424.28225824827,
+          -3.258863130501
+        ],
+        [
+          424.77759431404,
+          -3.315840947116
+        ],
+        [
+          425.27293037982,
+          -3.3728822206944
+        ],
+        [
+          425.7682664456,
+          -3.4299821565789
+        ],
+        [
+          426.26360251138,
+          -3.4871359601121
+        ],
+        [
+          426.75893857716,
+          -3.5443388366365
+        ],
+        [
+          427.25427464294,
+          -3.6015859914947
+        ],
+        [
+          427.74961070872,
+          -3.6588726300294
+        ],
+        [
+          428.2449467745,
+          -3.7161939575831
+        ],
+        [
+          428.74028284028,
+          -3.7735451794984
+        ],
+        [
+          429.23561890606,
+          -3.830921501118
+        ],
+        [
+          429.73095497184,
+          -3.8883181277844
+        ],
+        [
+          430.22629103762,
+          -3.9457302648402
+        ],
+        [
+          430.7216271034,
+          -4.003153117628
+        ],
+        [
+          431.21696316918,
+          -4.0605818914905
+        ],
+        [
+          431.71229923496,
+          -4.1180117917701
+        ],
+        [
+          432.20763530074,
+          -4.1754380238096
+        ],
+        [
+          432.70297136652,
+          -4.2328557929514
+        ],
+        [
+          433.1983074323,
+          -4.2902603045383
+        ],
+        [
+          433.69364349808,
+          -4.3476467639127
+        ],
+        [
+          434.18897956386,
+          -4.4050103764174
+        ],
+        [
+          434.68431562964,
+          -4.4623463473948
+        ],
+        [
+          435.17965169542,
+          -4.5196498821876
+        ],
+        [
+          435.6749877612,
+          -4.5769161861385
+        ],
+        [
+          436.17032382698,
+          -4.6341404645898
+        ],
+        [
+          436.66565989276,
+          -4.6913179228844
+        ],
+        [
+          437.16099595854,
+          -4.7484437663647
+        ],
+        [
+          437.65633202432,
+          -4.8055132003734
+        ],
+        [
+          438.15166809009,
+          -4.8625214302531
+        ],
+        [
+          438.64700415587,
+          -4.9194636613463
+        ],
+        [
+          439.14234022165,
+          -4.9763350989957
+        ],
+        [
+          439.63767628743,
+          -5.0331309485438
+        ],
+        [
+          440.13301235321,
+          -5.0898464153333
+        ],
+        [
+          440.62834841899,
+          -5.1464767047068
+        ],
+        [
+          441.12368448477,
+          -5.2030170220068
+        ],
+        [
+          441.61902055055,
+          -5.2594625725759
+        ],
+        [
+          442.11435661633,
+          -5.3158085617567
+        ],
+        [
+          442.60969268211,
+          -5.3720501948919
+        ],
+        [
+          443.10502874789,
+          -5.4281826773241
+        ],
+        [
+          443.60036481367,
+          -5.4842012143957
+        ],
+        [
+          444.09570087945,
+          -5.5401010114495
+        ],
+        [
+          444.59103694523,
+          -5.595877273828
+        ],
+        [
+          445.08637301101,
+          -5.6515252068738
+        ],
+        [
+          445.58170907679,
+          -5.7070400159296
+        ],
+        [
+          446.07704514257,
+          -5.7624169063378
+        ],
+        [
+          446.57238120835,
+          -5.8176510834412
+        ],
+        [
+          447.06771727413,
+          -5.8727377525822
+        ],
+        [
+          447.56305333991,
+          -5.9276721191036
+        ],
+        [
+          448.05838940569,
+          -5.9824493883478
+        ],
+        [
+          448.55372547147,
+          -6.0370647656576
+        ],
+        [
+          449.04906153725,
+          -6.0915134563754
+        ],
+        [
+          449.54439760303,
+          -6.1457906658439
+        ],
+        [
+          450.03973366881,
+          -6.1998915994057
+        ],
+        [
+          450.39072014635,
+          -6.2381172486519
+        ],
+        [
+          450.74208755861,
+          -6.2762916143544
+        ],
+        [
+          451.2378045591,
+          -6.3299877014517
+        ],
+        [
+          451.7335215596,
+          -6.3834908246791
+        ],
+        [
+          452.2292385601,
+          -6.4367961783087
+        ],
+        [
+          452.7249555606,
+          -6.4898989566127
+        ],
+        [
+          453.2206725611,
+          -6.5427943538633
+        ],
+        [
+          453.71638956159,
+          -6.5954775643328
+        ],
+        [
+          454.21210656209,
+          -6.6479437822933
+        ],
+        [
+          454.70782356259,
+          -6.700188202017
+        ],
+        [
+          455.20354056309,
+          -6.752206017776
+        ],
+        [
+          455.70081153538,
+          -6.8041543947802
+        ],
+        [
+          456.19808250766,
+          -6.8558650579089
+        ],
+        [
+          456.69535347995,
+          -6.9073331560976
+        ],
+        [
+          457.19262445224,
+          -6.9585538382816
+        ],
+        [
+          457.68989542452,
+          -7.0095222533965
+        ],
+        [
+          458.18716639681,
+          -7.0602335503776
+        ],
+        [
+          458.6844373691,
+          -7.1106828781605
+        ],
+        [
+          459.18170834138,
+          -7.1608653856805
+        ],
+        [
+          459.67897931367,
+          -7.210776221873
+        ],
+        [
+          460.17625028596,
+          -7.2604105356736
+        ],
+        [
+          460.67352125824,
+          -7.3097634760176
+        ],
+        [
+          461.17079223053,
+          -7.3588301918406
+        ],
+        [
+          461.66806320282,
+          -7.4076058320778
+        ],
+        [
+          462.1653341751,
+          -7.4560855456648
+        ],
+        [
+          462.66260514739,
+          -7.5042644815371
+        ],
+        [
+          463.15987611967,
+          -7.5521377886299
+        ],
+        [
+          463.65714709196,
+          -7.5997006158789
+        ],
+        [
+          464.15441806425,
+          -7.6469481122193
+        ],
+        [
+          464.65168903653,
+          -7.6938754265868
+        ],
+        [
+          465.14896000882,
+          -7.7404777079166
+        ],
+        [
+          465.64623098111,
+          -7.7867501051442
+        ],
+        [
+          466.14350195339,
+          -7.8326877672051
+        ],
+        [
+          466.64077292568,
+          -7.8782858430347
+        ],
+        [
+          467.13804389797,
+          -7.9235394815684
+        ],
+        [
+          467.63531487025,
+          -7.9684438317417
+        ],
+        [
+          468.13258584254,
+          -8.0129940424901
+        ],
+        [
+          468.62985681483,
+          -8.0571852627488
+        ],
+        [
+          469.12712778711,
+          -8.1010126414535
+        ],
+        [
+          469.6243987594,
+          -8.1444713275395
+        ],
+        [
+          470.12166973169,
+          -8.1875564699423
+        ],
+        [
+          470.61894070397,
+          -8.2302632175972
+        ],
+        [
+          471.11621167626,
+          -8.2725867194398
+        ],
+        [
+          471.61348264855,
+          -8.3145221244055
+        ],
+        [
+          472.11075362083,
+          -8.3560645814297
+        ],
+        [
+          472.60802459312,
+          -8.3972092394478
+        ],
+        [
+          473.10529556541,
+          -8.4379512473953
+        ],
+        [
+          473.60256653769,
+          -8.4782857542077
+        ],
+        [
+          474.09983750998,
+          -8.5182079088203
+        ],
+        [
+          474.59710848227,
+          -8.5577128601686
+        ],
+        [
+          475.09437945455,
+          -8.596795757188
+        ],
+        [
+          475.59165042684,
+          -8.6354517488141
+        ],
+        [
+          476.08892139913,
+          -8.6736759839821
+        ],
+        [
+          476.58619237141,
+          -8.7114636116276
+        ],
+        [
+          477.0834633437,
+          -8.748809780686
+        ],
+        [
+          477.58073431599,
+          -8.7857096400927
+        ],
+        [
+          478.07800528827,
+          -8.8221583387831
+        ],
+        [
+          478.57527626056,
+          -8.8581510256928
+        ],
+        [
+          479.07254723285,
+          -8.8936828497571
+        ],
+        [
+          479.56981820513,
+          -8.9287489599114
+        ],
+        [
+          480.06708917742,
+          -8.9633445050913
+        ],
+        [
+          480.56436014971,
+          -8.9974646342321
+        ],
+        [
+          481.06318996517,
+          -9.0312091901599
+        ],
+        [
+          481.56201978063,
+          -9.0644655663564
+        ],
+        [
+          482.06084959609,
+          -9.0972288659927
+        ],
+        [
+          482.55967941155,
+          -9.1294941922397
+        ],
+        [
+          483.058509227,
+          -9.1612566482685
+        ],
+        [
+          483.55733904246,
+          -9.1925113372499
+        ],
+        [
+          484.05616885792,
+          -9.223253362355
+        ],
+        [
+          484.55499867338,
+          -9.2534778267548
+        ],
+        [
+          485.05382848884,
+          -9.2831798336202
+        ],
+        [
+          485.5526583043,
+          -9.3123544861222
+        ],
+        [
+          486.05148811976,
+          -9.3409968874318
+        ],
+        [
+          486.55031793522,
+          -9.3691021407199
+        ],
+        [
+          487.04914775068,
+          -9.3966653491576
+        ],
+        [
+          487.54797756614,
+          -9.4236816159158
+        ],
+        [
+          488.0468073816,
+          -9.4501460441655
+        ],
+        [
+          488.54563719706,
+          -9.4760537370776
+        ],
+        [
+          489.04446701252,
+          -9.5013997978232
+        ],
+        [
+          489.54329682798,
+          -9.5261793295732
+        ],
+        [
+          490.04212664344,
+          -9.5503874354987
+        ],
+        [
+          490.5409564589,
+          -9.5740192187705
+        ],
+        [
+          491.03978627436,
+          -9.5970697825597
+        ],
+        [
+          491.53861608982,
+          -9.6195342300372
+        ],
+        [
+          492.03744590528,
+          -9.641407664374
+        ],
+        [
+          492.53627572074,
+          -9.6626851887411
+        ],
+        [
+          493.0351055362,
+          -9.6833619063095
+        ],
+        [
+          493.53393535166,
+          -9.7034329202501
+        ],
+        [
+          494.03276516712,
+          -9.722893333734
+        ],
+        [
+          494.53159498258,
+          -9.741738249932
+        ],
+        [
+          495.03042479804,
+          -9.7599627720153
+        ],
+        [
+          495.5292546135,
+          -9.7775620031547
+        ],
+        [
+          496.02808442896,
+          -9.7945310465212
+        ],
+        [
+          496.52691424442,
+          -9.8108650052858
+        ],
+        [
+          497.02574405988,
+          -9.8265589826195
+        ],
+        [
+          497.52457387534,
+          -9.8416080816933
+        ],
+        [
+          498.0234036908,
+          -9.8560074056782
+        ],
+        [
+          498.52223350626,
+          -9.869752057745
+        ],
+        [
+          499.02106332172,
+          -9.8828371410649
+        ],
+        [
+          499.51989313718,
+          -9.8952577588088
+        ],
+        [
+          500.01872295264,
+          -9.9070090141476
+        ],
+        [
+          500.5175527681,
+          -9.9180860102523
+        ],
+        [
+          501.01638258356,
+          -9.9284838502939
+        ],
+        [
+          501.51521239902,
+          -9.9381976374435
+        ],
+        [
+          502.01404221448,
+          -9.9472224748718
+        ],
+        [
+          502.51287202994,
+          -9.9555534657501
+        ],
+        [
+          503.0117018454,
+          -9.9631857132491
+        ],
+        [
+          503.51053166086,
+          -9.97011432054
+        ],
+        [
+          504.00936147632,
+          -9.9763343907936
+        ],
+        [
+          504.50819129178,
+          -9.981841027181
+        ],
+        [
+          505.00702110724,
+          -9.9866293328732
+        ],
+        [
+          505.5058509227,
+          -9.990694411041
+        ],
+        [
+          506.00468073816,
+          -9.9940313648555
+        ],
+        [
+          506.50351055362,
+          -9.9966352974877
+        ],
+        [
+          507.00234036908,
+          -9.9985013121085
+        ],
+        [
+          507.50117018454,
+          -9.999624511889
+        ],
+        [
+          508,
+          -10
+        ],
+        [
+          508.49882981546,
+          -9.999624511889
+        ],
+        [
+          508.99765963092,
+          -9.9985013121085
+        ],
+        [
+          509.49648944638,
+          -9.9966352974877
+        ],
+        [
+          509.99531926184,
+          -9.9940313648555
+        ],
+        [
+          510.4941490773,
+          -9.990694411041
+        ],
+        [
+          510.99297889276,
+          -9.9866293328732
+        ],
+        [
+          511.49180870822,
+          -9.981841027181
+        ],
+        [
+          511.99063852368,
+          -9.9763343907936
+        ],
+        [
+          512.48946833914,
+          -9.97011432054
+        ],
+        [
+          512.9882981546,
+          -9.9631857132491
+        ],
+        [
+          513.48712797006,
+          -9.9555534657501
+        ],
+        [
+          513.98595778552,
+          -9.9472224748718
+        ],
+        [
+          514.48478760098,
+          -9.9381976374435
+        ],
+        [
+          514.98361741644,
+          -9.9284838502939
+        ],
+        [
+          515.4824472319,
+          -9.9180860102523
+        ],
+        [
+          515.98127704736,
+          -9.9070090141476
+        ],
+        [
+          516.48010686282,
+          -9.8952577588088
+        ],
+        [
+          516.97893667828,
+          -9.8828371410649
+        ],
+        [
+          517.47776649374,
+          -9.869752057745
+        ],
+        [
+          517.9765963092,
+          -9.8560074056782
+        ],
+        [
+          518.47542612466,
+          -9.8416080816933
+        ],
+        [
+          518.97425594012,
+          -9.8265589826195
+        ],
+        [
+          519.47308575558,
+          -9.8108650052858
+        ],
+        [
+          519.97191557104,
+          -9.7945310465212
+        ],
+        [
+          520.4707453865,
+          -9.7775620031547
+        ],
+        [
+          520.96957520196,
+          -9.7599627720153
+        ],
+        [
+          521.46840501742,
+          -9.741738249932
+        ],
+        [
+          521.96723483288,
+          -9.722893333734
+        ],
+        [
+          522.46606464834,
+          -9.7034329202501
+        ],
+        [
+          522.9648944638,
+          -9.6833619063095
+        ],
+        [
+          523.46372427926,
+          -9.6626851887411
+        ],
+        [
+          523.96255409472,
+          -9.641407664374
+        ],
+        [
+          524.46138391018,
+          -9.6195342300372
+        ],
+        [
+          524.96021372564,
+          -9.5970697825597
+        ],
+        [
+          525.4590435411,
+          -9.5740192187705
+        ],
+        [
+          525.95787335656,
+          -9.5503874354987
+        ],
+        [
+          526.45670317202,
+          -9.5261793295732
+        ],
+        [
+          526.95553298748,
+          -9.5013997978232
+        ],
+        [
+          527.45436280294,
+          -9.4760537370776
+        ],
+        [
+          527.9531926184,
+          -9.4501460441655
+        ],
+        [
+          528.45202243386,
+          -9.4236816159158
+        ],
+        [
+          528.95085224932,
+          -9.3966653491576
+        ],
+        [
+          529.44968206478,
+          -9.3691021407199
+        ],
+        [
+          529.94851188024,
+          -9.3409968874318
+        ],
+        [
+          530.4473416957,
+          -9.3123544861222
+        ],
+        [
+          530.94617151116,
+          -9.2831798336202
+        ],
+        [
+          531.44500132662,
+          -9.2534778267548
+        ],
+        [
+          531.94383114208,
+          -9.223253362355
+        ],
+        [
+          532.44266095754,
+          -9.1925113372499
+        ],
+        [
+          532.941490773,
+          -9.1612566482685
+        ],
+        [
+          533.44032058845,
+          -9.1294941922397
+        ],
+        [
+          533.93915040391,
+          -9.0972288659927
+        ],
+        [
+          534.43798021937,
+          -9.0644655663564
+        ],
+        [
+          534.93681003483,
+          -9.0312091901599
+        ],
+        [
+          535.43563985029,
+          -8.9974646342321
+        ],
+        [
+          535.93291082258,
+          -8.9633445050913
+        ],
+        [
+          536.43018179487,
+          -8.9287489599114
+        ],
+        [
+          536.92745276715,
+          -8.8936828497571
+        ],
+        [
+          537.42472373944,
+          -8.8581510256928
+        ],
+        [
+          537.92199471173,
+          -8.8221583387831
+        ],
+        [
+          538.41926568401,
+          -8.7857096400927
+        ],
+        [
+          538.9165366563,
+          -8.748809780686
+        ],
+        [
+          539.41380762859,
+          -8.7114636116276
+        ],
+        [
+          539.91107860087,
+          -8.6736759839821
+        ],
+        [
+          540.40834957316,
+          -8.6354517488141
+        ],
+        [
+          540.90562054545,
+          -8.596795757188
+        ],
+        [
+          541.40289151773,
+          -8.5577128601686
+        ],
+        [
+          541.90016249002,
+          -8.5182079088203
+        ],
+        [
+          542.39743346231,
+          -8.4782857542077
+        ],
+        [
+          542.89470443459,
+          -8.4379512473953
+        ],
+        [
+          543.39197540688,
+          -8.3972092394478
+        ],
+        [
+          543.88924637917,
+          -8.3560645814297
+        ],
+        [
+          544.38651735145,
+          -8.3145221244055
+        ],
+        [
+          544.88378832374,
+          -8.2725867194398
+        ],
+        [
+          545.38105929603,
+          -8.2302632175972
+        ],
+        [
+          545.87833026831,
+          -8.1875564699423
+        ],
+        [
+          546.3756012406,
+          -8.1444713275395
+        ],
+        [
+          546.87287221289,
+          -8.1010126414535
+        ],
+        [
+          547.37014318517,
+          -8.0571852627488
+        ],
+        [
+          547.86741415746,
+          -8.0129940424901
+        ],
+        [
+          548.36468512975,
+          -7.9684438317417
+        ],
+        [
+          548.86195610203,
+          -7.9235394815684
+        ],
+        [
+          549.35922707432,
+          -7.8782858430347
+        ],
+        [
+          549.85649804661,
+          -7.8326877672051
+        ],
+        [
+          550.35376901889,
+          -7.7867501051442
+        ],
+        [
+          550.85103999118,
+          -7.7404777079166
+        ],
+        [
+          551.34831096347,
+          -7.6938754265868
+        ],
+        [
+          551.84558193575,
+          -7.6469481122193
+        ],
+        [
+          552.34285290804,
+          -7.5997006158789
+        ],
+        [
+          552.84012388033,
+          -7.5521377886299
+        ],
+        [
+          553.33739485261,
+          -7.5042644815371
+        ],
+        [
+          553.8346658249,
+          -7.4560855456648
+        ],
+        [
+          554.33193679718,
+          -7.4076058320778
+        ],
+        [
+          554.82920776947,
+          -7.3588301918406
+        ],
+        [
+          555.32647874176,
+          -7.3097634760176
+        ],
+        [
+          555.82374971404,
+          -7.2604105356736
+        ],
+        [
+          556.32102068633,
+          -7.210776221873
+        ],
+        [
+          556.81829165862,
+          -7.1608653856805
+        ],
+        [
+          557.3155626309,
+          -7.1106828781605
+        ],
+        [
+          557.81283360319,
+          -7.0602335503776
+        ],
+        [
+          558.31010457548,
+          -7.0095222533965
+        ],
+        [
+          558.80737554776,
+          -6.9585538382816
+        ],
+        [
+          559.30464652005,
+          -6.9073331560976
+        ],
+        [
+          559.80191749234,
+          -6.8558650579089
+        ],
+        [
+          560.29918846462,
+          -6.8041543947802
+        ],
+        [
+          560.79645943691,
+          -6.752206017776
+        ],
+        [
+          561.29217643741,
+          -6.700188202017
+        ],
+        [
+          561.78789343791,
+          -6.6479437822933
+        ],
+        [
+          562.28361043841,
+          -6.5954775643328
+        ],
+        [
+          562.7793274389,
+          -6.5427943538633
+        ],
+        [
+          563.2750444394,
+          -6.4898989566127
+        ],
+        [
+          563.7707614399,
+          -6.4367961783087
+        ],
+        [
+          564.2664784404,
+          -6.3834908246791
+        ],
+        [
+          564.7621954409,
+          -6.3299877014517
+        ],
+        [
+          565.25791244139,
+          -6.2762916143544
+        ],
+        [
+          565.60927985365,
+          -6.2381172486519
+        ],
+        [
+          565.96026633119,
+          -6.1998915994057
+        ],
+        [
+          566.45560239697,
+          -6.1457906658439
+        ],
+        [
+          566.95093846275,
+          -6.0915134563754
+        ],
+        [
+          567.44627452853,
+          -6.0370647656576
+        ],
+        [
+          567.94161059431,
+          -5.9824493883478
+        ],
+        [
+          568.43694666009,
+          -5.9276721191036
+        ],
+        [
+          568.93228272587,
+          -5.8727377525822
+        ],
+        [
+          569.42761879165,
+          -5.8176510834412
+        ],
+        [
+          569.92295485743,
+          -5.7624169063378
+        ],
+        [
+          570.41829092321,
+          -5.7070400159296
+        ],
+        [
+          570.91362698899,
+          -5.6515252068738
+        ],
+        [
+          571.40896305477,
+          -5.595877273828
+        ],
+        [
+          571.90429912055,
+          -5.5401010114495
+        ],
+        [
+          572.39963518633,
+          -5.4842012143957
+        ],
+        [
+          572.89497125211,
+          -5.4281826773241
+        ],
+        [
+          573.39030731789,
+          -5.3720501948919
+        ],
+        [
+          573.88564338367,
+          -5.3158085617567
+        ],
+        [
+          574.38097944945,
+          -5.2594625725759
+        ],
+        [
+          574.87631551523,
+          -5.2030170220068
+        ],
+        [
+          575.37165158101,
+          -5.1464767047068
+        ],
+        [
+          575.86698764679,
+          -5.0898464153333
+        ],
+        [
+          576.36232371257,
+          -5.0331309485438
+        ],
+        [
+          576.85765977835,
+          -4.9763350989957
+        ],
+        [
+          577.35299584413,
+          -4.9194636613463
+        ],
+        [
+          577.84833190991,
+          -4.8625214302531
+        ],
+        [
+          578.34366797568,
+          -4.8055132003734
+        ],
+        [
+          578.83900404146,
+          -4.7484437663647
+        ],
+        [
+          579.33434010724,
+          -4.6913179228844
+        ],
+        [
+          579.82967617302,
+          -4.6341404645898
+        ],
+        [
+          580.3250122388,
+          -4.5769161861384
+        ],
+        [
+          580.82034830458,
+          -4.5196498821876
+        ],
+        [
+          581.31568437036,
+          -4.4623463473948
+        ],
+        [
+          581.81102043614,
+          -4.4050103764174
+        ],
+        [
+          582.30635650192,
+          -4.3476467639127
+        ],
+        [
+          582.8016925677,
+          -4.2902603045383
+        ],
+        [
+          583.29702863348,
+          -4.2328557929514
+        ],
+        [
+          583.79236469926,
+          -4.1754380238096
+        ],
+        [
+          584.28770076504,
+          -4.1180117917701
+        ],
+        [
+          584.78303683082,
+          -4.0605818914905
+        ],
+        [
+          585.2783728966,
+          -4.003153117628
+        ],
+        [
+          585.77370896238,
+          -3.9457302648402
+        ],
+        [
+          586.26904502816,
+          -3.8883181277844
+        ],
+        [
+          586.76438109394,
+          -3.830921501118
+        ],
+        [
+          587.25971715972,
+          -3.7735451794984
+        ],
+        [
+          587.7550532255,
+          -3.7161939575831
+        ],
+        [
+          588.25038929128,
+          -3.6588726300294
+        ],
+        [
+          588.74572535706,
+          -3.6015859914947
+        ],
+        [
+          589.24106142284,
+          -3.5443388366365
+        ],
+        [
+          589.73639748862,
+          -3.4871359601121
+        ],
+        [
+          590.2317335544,
+          -3.4299821565789
+        ],
+        [
+          590.72706962018,
+          -3.3728822206944
+        ],
+        [
+          591.22240568596,
+          -3.315840947116
+        ],
+        [
+          591.71774175173,
+          -3.258863130501
+        ],
+        [
+          592.21307781751,
+          -3.2019535655068
+        ],
+        [
+          592.70841388329,
+          -3.1451170467909
+        ],
+        [
+          593.20374994907,
+          -3.0883583690107
+        ],
+        [
+          593.69908601485,
+          -3.0316823268236
+        ],
+        [
+          594.19442208063,
+          -2.9750937148869
+        ],
+        [
+          594.68975814641,
+          -2.9185973278581
+        ],
+        [
+          595.18509421219,
+          -2.8621979603945
+        ],
+        [
+          595.68043027797,
+          -2.8059004071537
+        ],
+        [
+          596.17576634375,
+          -2.7497094627929
+        ],
+        [
+          596.67110240953,
+          -2.6936299219697
+        ],
+        [
+          597.16643847531,
+          -2.6376665793413
+        ],
+        [
+          597.66177454109,
+          -2.5818242295652
+        ],
+        [
+          598.15711060687,
+          -2.5261076672988
+        ],
+        [
+          598.65244667265,
+          -2.4705216871995
+        ],
+        [
+          599.14933551607,
+          -2.4148974754704
+        ],
+        [
+          599.64622435948,
+          -2.3594143305434
+        ],
+        [
+          600.1431132029,
+          -2.3040770923082
+        ],
+        [
+          600.64000204631,
+          -2.2488906006545
+        ],
+        [
+          601.13689088973,
+          -2.1938596954721
+        ],
+        [
+          601.63377973314,
+          -2.1389892166507
+        ],
+        [
+          602.13066857656,
+          -2.08428400408
+        ],
+        [
+          602.62755741997,
+          -2.0297488976497
+        ],
+        [
+          603.12444626339,
+          -1.9753887372496
+        ],
+        [
+          603.6213351068,
+          -1.9212083627694
+        ],
+        [
+          604.11822395022,
+          -1.8672126140987
+        ],
+        [
+          604.61511279363,
+          -1.8134063311274
+        ],
+        [
+          605.11200163705,
+          -1.7597943537452
+        ],
+        [
+          605.60889048046,
+          -1.7063815218417
+        ],
+        [
+          606.10577932388,
+          -1.6531726753067
+        ],
+        [
+          606.60266816729,
+          -1.6001726540299
+        ],
+        [
+          607.09955701071,
+          -1.5473862979011
+        ],
+        [
+          607.59644585413,
+          -1.4948184468099
+        ],
+        [
+          608.09333469754,
+          -1.4424739406462
+        ],
+        [
+          608.59022354096,
+          -1.3903576192995
+        ],
+        [
+          609.08711238437,
+          -1.3384743226597
+        ],
+        [
+          609.58400122779,
+          -1.2868288906165
+        ],
+        [
+          610.0808900712,
+          -1.2354261630595
+        ],
+        [
+          610.57777891462,
+          -1.1842709798786
+        ],
+        [
+          611.07466775803,
+          -1.1333681809634
+        ],
+        [
+          611.57155660145,
+          -1.0827226062036
+        ],
+        [
+          612.06844544486,
+          -1.032339095489
+        ],
+        [
+          612.56533428828,
+          -0.98222248870937
+        ],
+        [
+          613.06222313169,
+          -0.93237762575434
+        ],
+        [
+          613.55911197511,
+          -0.88280934651365
+        ],
+        [
+          614.05600081852,
+          -0.83352249087704
+        ],
+        [
+          614.55288966194,
+          -0.78452189873423
+        ],
+        [
+          615.04977850535,
+          -0.73581240997494
+        ],
+        [
+          615.54666734877,
+          -0.6873988644889
+        ],
+        [
+          616.04355619219,
+          -0.63928610216583
+        ],
+        [
+          616.5404450356,
+          -0.59147896289545
+        ],
+        [
+          617.03733387902,
+          -0.5439822865675
+        ],
+        [
+          617.53422272243,
+          -0.49680091307168
+        ],
+        [
+          618.03111156585,
+          -0.44993968229773
+        ],
+        [
+          618.52800040926,
+          -0.40340343413537
+        ],
+        [
+          619.02488925268,
+          -0.35719700847432
+        ],
+        [
+          619.52177809609,
+          -0.3113252452043
+        ],
+        [
+          620.01866693951,
+          -0.26579298421505
+        ],
+        [
+          620.51555578292,
+          -0.22060506539628
+        ],
+        [
+          621.01244462634,
+          -0.17576632863772
+        ],
+        [
+          621.50933346975,
+          -0.13128161382908
+        ],
+        [
+          622.00622231317,
+          -0.087155760860101
+        ],
+        [
+          622.50311115658,
+          -0.0433936096205
+        ],
+        [
+          623,
+          0
+        ]
+      ],
+      "o9": [
+        [
+          366,
+          0
+        ],
+        [
+          374,
+          4
+        ]
+      ],
+      "o8": [
+        [
+          342,
+          0
+        ],
+        [
+          366,
+          0
+        ]
+      ],
+      "o6": [
+        [
+          310,
+          20
+        ],
+        [
+          310.46969399805,
+          20.167861465703
+        ],
+        [
+          310.93351682112,
+          20.352053804129
+        ],
+        [
+          311.39299130522,
+          20.547104081522
+        ],
+        [
+          311.8495940738,
+          20.747999240893
+        ],
+        [
+          312.30619684237,
+          20.950636485998
+        ],
+        [
+          312.76279961095,
+          21.149727187664
+        ],
+        [
+          313.08585528156,
+          21.285562420665
+        ],
+        [
+          313.41188851402,
+          21.416260638109
+        ],
+        [
+          313.88089868066,
+          21.589156770602
+        ],
+        [
+          314.35584568484,
+          21.740792855336
+        ],
+        [
+          314.8129375385,
+          21.858919470239
+        ],
+        [
+          315.23385665554,
+          21.938944444229
+        ],
+        [
+          315.62712415174,
+          21.985031542003
+        ],
+        [
+          316,
+          22
+        ],
+        [
+          316.37287584826,
+          21.985031542003
+        ],
+        [
+          316.76614334446,
+          21.938944444229
+        ],
+        [
+          317.1870624615,
+          21.858919470239
+        ],
+        [
+          317.64415431516,
+          21.740792855336
+        ],
+        [
+          318.11910131934,
+          21.589156770602
+        ],
+        [
+          318.58811148598,
+          21.416260638109
+        ],
+        [
+          318.91414471844,
+          21.285562420665
+        ],
+        [
+          319.23720038905,
+          21.149727187664
+        ],
+        [
+          319.69380315763,
+          20.950636485998
+        ],
+        [
+          320.1504059262,
+          20.747999240893
+        ],
+        [
+          320.60700869478,
+          20.547104081522
+        ],
+        [
+          321.06648317888,
+          20.352053804129
+        ],
+        [
+          321.53030600195,
+          20.167861465703
+        ],
+        [
+          322,
+          20
+        ]
+      ],
+      "o7": [
+        [
+          322,
+          20
+        ],
+        [
+          342,
+          0
+        ]
+      ],
+      "o4": [
+        [
+          278,
+          0
+        ],
+        [
+          278.26913693059,
+          0.29111573200542
+        ],
+        [
+          278.58558308725,
+          0.67757439761022
+        ],
+        [
+          278.8891736188,
+          1.0746049610193
+        ],
+        [
+          279.18896926871,
+          1.4734314720232
+        ],
+        [
+          279.4946203024,
+          1.8682705717758
+        ],
+        [
+          279.80862898155,
+          2.241644532123
+        ],
+        [
+          279.85108543676,
+          2.2885049501509
+        ],
+        [
+          280.10187044903,
+          2.5427382340627
+        ],
+        [
+          280.31876559478,
+          2.7257406209057
+        ],
+        [
+          280.51156127989,
+          2.853899298861
+        ],
+        [
+          280.6865814763,
+          2.9379333825131
+        ],
+        [
+          280.84775115357,
+          2.9849389796521
+        ],
+        [
+          281,
+          3
+        ],
+        [
+          281.15224884643,
+          2.9849389796521
+        ],
+        [
+          281.3134185237,
+          2.9379333825131
+        ],
+        [
+          281.48843872011,
+          2.853899298861
+        ],
+        [
+          281.68123440522,
+          2.7257406209057
+        ],
+        [
+          281.89812955097,
+          2.5427382340627
+        ],
+        [
+          282.14891456324,
+          2.2885049501509
+        ],
+        [
+          282.19137101845,
+          2.241644532123
+        ],
+        [
+          282.5053796976,
+          1.8682705717758
+        ],
+        [
+          282.81103073129,
+          1.4734314720232
+        ],
+        [
+          283.1108263812,
+          1.0746049610193
+        ],
+        [
+          283.41441691275,
+          0.67757439761022
+        ],
+        [
+          283.73086306941,
+          0.29111573200542
+        ],
+        [
+          284,
+          0
+        ],
+        [
+          284.26913693059,
+          -0.29111573200542
+        ],
+        [
+          284.58558308725,
+          -0.67757439761022
+        ],
+        [
+          284.8891736188,
+          -1.0746049610193
+        ],
+        [
+          285.18896926871,
+          -1.4734314720232
+        ],
+        [
+          285.4946203024,
+          -1.8682705717758
+        ],
+        [
+          285.80862898155,
+          -2.241644532123
+        ],
+        [
+          285.85108543676,
+          -2.2885049501509
+        ],
+        [
+          286.10187044903,
+          -2.5427382340627
+        ],
+        [
+          286.31876559478,
+          -2.7257406209057
+        ],
+        [
+          286.51156127989,
+          -2.853899298861
+        ],
+        [
+          286.6865814763,
+          -2.9379333825131
+        ],
+        [
+          286.84775115357,
+          -2.9849389796521
+        ],
+        [
+          287,
+          -3
+        ],
+        [
+          287.15224884643,
+          -2.9849389796521
+        ],
+        [
+          287.3134185237,
+          -2.9379333825131
+        ],
+        [
+          287.48843872011,
+          -2.853899298861
+        ],
+        [
+          287.68123440522,
+          -2.7257406209057
+        ],
+        [
+          287.89812955097,
+          -2.5427382340627
+        ],
+        [
+          288.14891456324,
+          -2.2885049501509
+        ],
+        [
+          288.19137101845,
+          -2.241644532123
+        ],
+        [
+          288.5053796976,
+          -1.8682705717758
+        ],
+        [
+          288.81103073129,
+          -1.4734314720232
+        ],
+        [
+          289.1108263812,
+          -1.0746049610193
+        ],
+        [
+          289.41441691275,
+          -0.67757439761022
+        ],
+        [
+          289.73086306941,
+          -0.29111573200542
+        ],
+        [
+          290,
+          0
+        ]
+      ],
+      "o5": [
+        [
+          290,
+          0
+        ],
+        [
+          310,
+          20
+        ]
+      ],
+      "o12": [
+        [
+          623,
+          0
+        ],
+        [
+          660,
+          0
+        ]
+      ],
+      "o1": [
+        [
+          0,
+          0
+        ],
+        [
+          24,
+          0
+        ]
+      ],
+      "o10": [
+        [
+          381,
+          2
+        ],
+        [
+          393,
+          0
+        ]
+      ],
+      "o2": [
+        [
+          24,
+          0
+        ],
+        [
+          24.496888843415,
+          0.0433936096205
+        ],
+        [
+          24.993777686831,
+          0.087155760860102
+        ],
+        [
+          25.490666530246,
+          0.13128161382908
+        ],
+        [
+          25.987555373661,
+          0.17576632863771
+        ],
+        [
+          26.484444217077,
+          0.22060506539628
+        ],
+        [
+          26.981333060492,
+          0.26579298421505
+        ],
+        [
+          27.478221903907,
+          0.3113252452043
+        ],
+        [
+          27.975110747322,
+          0.35719700847432
+        ],
+        [
+          28.471999590738,
+          0.40340343413537
+        ],
+        [
+          28.968888434153,
+          0.44993968229773
+        ],
+        [
+          29.465777277568,
+          0.49680091307168
+        ],
+        [
+          29.962666120984,
+          0.5439822865675
+        ],
+        [
+          30.459554964399,
+          0.59147896289546
+        ],
+        [
+          30.956443807814,
+          0.63928610216583
+        ],
+        [
+          31.45333265123,
+          0.6873988644889
+        ],
+        [
+          31.950221494645,
+          0.73581240997494
+        ],
+        [
+          32.44711033806,
+          0.78452189873423
+        ],
+        [
+          32.943999181476,
+          0.83352249087704
+        ],
+        [
+          33.440888024891,
+          0.88280934651365
+        ],
+        [
+          33.937776868306,
+          0.93237762575433
+        ],
+        [
+          34.434665711722,
+          0.98222248870937
+        ],
+        [
+          34.931554555137,
+          1.032339095489
+        ],
+        [
+          35.428443398552,
+          1.0827226062036
+        ],
+        [
+          35.925332241967,
+          1.1333681809634
+        ],
+        [
+          36.422221085383,
+          1.1842709798786
+        ],
+        [
+          36.919109928798,
+          1.2354261630595
+        ],
+        [
+          37.415998772213,
+          1.2868288906165
+        ],
+        [
+          37.912887615629,
+          1.3384743226597
+        ],
+        [
+          38.409776459044,
+          1.3903576192995
+        ],
+        [
+          38.906665302459,
+          1.4424739406462
+        ],
+        [
+          39.403554145875,
+          1.4948184468099
+        ],
+        [
+          39.90044298929,
+          1.5473862979011
+        ],
+        [
+          40.397331832705,
+          1.6001726540299
+        ],
+        [
+          40.894220676121,
+          1.6531726753067
+        ],
+        [
+          41.391109519536,
+          1.7063815218417
+        ],
+        [
+          41.887998362951,
+          1.7597943537452
+        ],
+        [
+          42.384887206366,
+          1.8134063311274
+        ],
+        [
+          42.881776049782,
+          1.8672126140987
+        ],
+        [
+          43.378664893197,
+          1.9212083627694
+        ],
+        [
+          43.875553736612,
+          1.9753887372496
+        ],
+        [
+          44.372442580028,
+          2.0297488976497
+        ],
+        [
+          44.869331423443,
+          2.08428400408
+        ],
+        [
+          45.366220266858,
+          2.1389892166507
+        ],
+        [
+          45.863109110274,
+          2.1938596954721
+        ],
+        [
+          46.359997953689,
+          2.2488906006545
+        ],
+        [
+          46.856886797104,
+          2.3040770923082
+        ],
+        [
+          47.35377564052,
+          2.3594143305434
+        ],
+        [
+          47.850664483935,
+          2.4148974754704
+        ],
+        [
+          48.34755332735,
+          2.4705216871995
+        ],
+        [
+          48.84288939313,
+          2.5261076672988
+        ],
+        [
+          49.338225458909,
+          2.5818242295652
+        ],
+        [
+          49.833561524689,
+          2.6376665793413
+        ],
+        [
+          50.328897590469,
+          2.6936299219697
+        ],
+        [
+          50.824233656248,
+          2.7497094627929
+        ],
+        [
+          51.319569722028,
+          2.8059004071537
+        ],
+        [
+          51.814905787808,
+          2.8621979603946
+        ],
+        [
+          52.310241853587,
+          2.9185973278581
+        ],
+        [
+          52.805577919367,
+          2.9750937148869
+        ],
+        [
+          53.300913985147,
+          3.0316823268236
+        ],
+        [
+          53.796250050926,
+          3.0883583690107
+        ],
+        [
+          54.291586116706,
+          3.1451170467909
+        ],
+        [
+          54.786922182485,
+          3.2019535655068
+        ],
+        [
+          55.282258248265,
+          3.258863130501
+        ],
+        [
+          55.777594314045,
+          3.315840947116
+        ],
+        [
+          56.272930379824,
+          3.3728822206944
+        ],
+        [
+          56.768266445604,
+          3.4299821565789
+        ],
+        [
+          57.263602511384,
+          3.4871359601121
+        ],
+        [
+          57.758938577163,
+          3.5443388366365
+        ],
+        [
+          58.254274642943,
+          3.6015859914947
+        ],
+        [
+          58.749610708723,
+          3.6588726300294
+        ],
+        [
+          59.244946774502,
+          3.7161939575831
+        ],
+        [
+          59.740282840282,
+          3.7735451794984
+        ],
+        [
+          60.235618906061,
+          3.830921501118
+        ],
+        [
+          60.730954971841,
+          3.8883181277844
+        ],
+        [
+          61.226291037621,
+          3.9457302648402
+        ],
+        [
+          61.7216271034,
+          4.003153117628
+        ],
+        [
+          62.21696316918,
+          4.0605818914905
+        ],
+        [
+          62.71229923496,
+          4.1180117917701
+        ],
+        [
+          63.207635300739,
+          4.1754380238096
+        ],
+        [
+          63.702971366519,
+          4.2328557929514
+        ],
+        [
+          64.198307432299,
+          4.2902603045383
+        ],
+        [
+          64.693643498078,
+          4.3476467639127
+        ],
+        [
+          65.188979563858,
+          4.4050103764174
+        ],
+        [
+          65.684315629637,
+          4.4623463473948
+        ],
+        [
+          66.179651695417,
+          4.5196498821876
+        ],
+        [
+          66.674987761197,
+          4.5769161861385
+        ],
+        [
+          67.170323826976,
+          4.6341404645898
+        ],
+        [
+          67.665659892756,
+          4.6913179228844
+        ],
+        [
+          68.160995958536,
+          4.7484437663647
+        ],
+        [
+          68.656332024315,
+          4.8055132003734
+        ],
+        [
+          69.151668090095,
+          4.8625214302531
+        ],
+        [
+          69.647004155874,
+          4.9194636613463
+        ],
+        [
+          70.142340221654,
+          4.9763350989957
+        ],
+        [
+          70.637676287434,
+          5.0331309485438
+        ],
+        [
+          71.133012353213,
+          5.0898464153333
+        ],
+        [
+          71.628348418993,
+          5.1464767047068
+        ],
+        [
+          72.123684484773,
+          5.2030170220068
+        ],
+        [
+          72.619020550552,
+          5.2594625725759
+        ],
+        [
+          73.114356616332,
+          5.3158085617567
+        ],
+        [
+          73.609692682112,
+          5.3720501948919
+        ],
+        [
+          74.105028747891,
+          5.4281826773241
+        ],
+        [
+          74.600364813671,
+          5.4842012143957
+        ],
+        [
+          75.09570087945,
+          5.5401010114495
+        ],
+        [
+          75.59103694523,
+          5.595877273828
+        ],
+        [
+          76.08637301101,
+          5.6515252068738
+        ],
+        [
+          76.581709076789,
+          5.7070400159296
+        ],
+        [
+          77.077045142569,
+          5.7624169063378
+        ],
+        [
+          77.572381208349,
+          5.8176510834412
+        ],
+        [
+          78.067717274128,
+          5.8727377525822
+        ],
+        [
+          78.563053339908,
+          5.9276721191036
+        ],
+        [
+          79.058389405688,
+          5.9824493883478
+        ],
+        [
+          79.553725471467,
+          6.0370647656576
+        ],
+        [
+          80.049061537247,
+          6.0915134563754
+        ],
+        [
+          80.544397603026,
+          6.1457906658439
+        ],
+        [
+          81.039733668806,
+          6.1998915994057
+        ],
+        [
+          81.390720146347,
+          6.2381172486519
+        ],
+        [
+          81.742087558606,
+          6.2762916143544
+        ],
+        [
+          82.237804559104,
+          6.3299877014517
+        ],
+        [
+          82.733521559602,
+          6.3834908246791
+        ],
+        [
+          83.2292385601,
+          6.4367961783087
+        ],
+        [
+          83.724955560598,
+          6.4898989566127
+        ],
+        [
+          84.220672561097,
+          6.5427943538633
+        ],
+        [
+          84.716389561595,
+          6.5954775643328
+        ],
+        [
+          85.212106562093,
+          6.6479437822933
+        ],
+        [
+          85.707823562591,
+          6.700188202017
+        ],
+        [
+          86.203540563089,
+          6.752206017776
+        ],
+        [
+          86.700811535376,
+          6.8041543947802
+        ],
+        [
+          87.198082507663,
+          6.8558650579089
+        ],
+        [
+          87.695353479949,
+          6.9073331560976
+        ],
+        [
+          88.192624452236,
+          6.9585538382816
+        ],
+        [
+          88.689895424522,
+          7.0095222533965
+        ],
+        [
+          89.187166396809,
+          7.0602335503776
+        ],
+        [
+          89.684437369096,
+          7.1106828781605
+        ],
+        [
+          90.181708341382,
+          7.1608653856805
+        ],
+        [
+          90.678979313669,
+          7.210776221873
+        ],
+        [
+          91.176250285955,
+          7.2604105356736
+        ],
+        [
+          91.673521258242,
+          7.3097634760176
+        ],
+        [
+          92.170792230528,
+          7.3588301918406
+        ],
+        [
+          92.668063202815,
+          7.4076058320778
+        ],
+        [
+          93.165334175102,
+          7.4560855456648
+        ],
+        [
+          93.662605147388,
+          7.5042644815371
+        ],
+        [
+          94.159876119675,
+          7.5521377886299
+        ],
+        [
+          94.657147091961,
+          7.5997006158789
+        ],
+        [
+          95.154418064248,
+          7.6469481122193
+        ],
+        [
+          95.651689036535,
+          7.6938754265868
+        ],
+        [
+          96.148960008821,
+          7.7404777079166
+        ],
+        [
+          96.646230981108,
+          7.7867501051442
+        ],
+        [
+          97.143501953394,
+          7.8326877672051
+        ],
+        [
+          97.640772925681,
+          7.8782858430347
+        ],
+        [
+          98.138043897968,
+          7.9235394815684
+        ],
+        [
+          98.635314870254,
+          7.9684438317417
+        ],
+        [
+          99.132585842541,
+          8.0129940424901
+        ],
+        [
+          99.629856814827,
+          8.0571852627488
+        ],
+        [
+          100.12712778711,
+          8.1010126414535
+        ],
+        [
+          100.6243987594,
+          8.1444713275395
+        ],
+        [
+          101.12166973169,
+          8.1875564699423
+        ],
+        [
+          101.61894070397,
+          8.2302632175972
+        ],
+        [
+          102.11621167626,
+          8.2725867194398
+        ],
+        [
+          102.61348264855,
+          8.3145221244055
+        ],
+        [
+          103.11075362083,
+          8.3560645814297
+        ],
+        [
+          103.60802459312,
+          8.3972092394478
+        ],
+        [
+          104.10529556541,
+          8.4379512473953
+        ],
+        [
+          104.60256653769,
+          8.4782857542077
+        ],
+        [
+          105.09983750998,
+          8.5182079088203
+        ],
+        [
+          105.59710848227,
+          8.5577128601686
+        ],
+        [
+          106.09437945455,
+          8.596795757188
+        ],
+        [
+          106.59165042684,
+          8.6354517488141
+        ],
+        [
+          107.08892139913,
+          8.6736759839821
+        ],
+        [
+          107.58619237141,
+          8.7114636116276
+        ],
+        [
+          108.0834633437,
+          8.748809780686
+        ],
+        [
+          108.58073431599,
+          8.7857096400927
+        ],
+        [
+          109.07800528827,
+          8.8221583387831
+        ],
+        [
+          109.57527626056,
+          8.8581510256928
+        ],
+        [
+          110.07254723285,
+          8.8936828497571
+        ],
+        [
+          110.56981820513,
+          8.9287489599114
+        ],
+        [
+          111.06708917742,
+          8.9633445050913
+        ],
+        [
+          111.56436014971,
+          8.9974646342321
+        ],
+        [
+          112.06318996517,
+          9.0312091901599
+        ],
+        [
+          112.56201978063,
+          9.0644655663564
+        ],
+        [
+          113.06084959609,
+          9.0972288659927
+        ],
+        [
+          113.55967941155,
+          9.1294941922397
+        ],
+        [
+          114.058509227,
+          9.1612566482685
+        ],
+        [
+          114.55733904246,
+          9.1925113372499
+        ],
+        [
+          115.05616885792,
+          9.223253362355
+        ],
+        [
+          115.55499867338,
+          9.2534778267548
+        ],
+        [
+          116.05382848884,
+          9.2831798336202
+        ],
+        [
+          116.5526583043,
+          9.3123544861222
+        ],
+        [
+          117.05148811976,
+          9.3409968874318
+        ],
+        [
+          117.55031793522,
+          9.3691021407199
+        ],
+        [
+          118.04914775068,
+          9.3966653491576
+        ],
+        [
+          118.54797756614,
+          9.4236816159158
+        ],
+        [
+          119.0468073816,
+          9.4501460441655
+        ],
+        [
+          119.54563719706,
+          9.4760537370776
+        ],
+        [
+          120.04446701252,
+          9.5013997978232
+        ],
+        [
+          120.54329682798,
+          9.5261793295732
+        ],
+        [
+          121.04212664344,
+          9.5503874354987
+        ],
+        [
+          121.5409564589,
+          9.5740192187705
+        ],
+        [
+          122.03978627436,
+          9.5970697825597
+        ],
+        [
+          122.53861608982,
+          9.6195342300372
+        ],
+        [
+          123.03744590528,
+          9.641407664374
+        ],
+        [
+          123.53627572074,
+          9.6626851887411
+        ],
+        [
+          124.0351055362,
+          9.6833619063095
+        ],
+        [
+          124.53393535166,
+          9.7034329202501
+        ],
+        [
+          125.03276516712,
+          9.722893333734
+        ],
+        [
+          125.53159498258,
+          9.741738249932
+        ],
+        [
+          126.03042479804,
+          9.7599627720153
+        ],
+        [
+          126.5292546135,
+          9.7775620031547
+        ],
+        [
+          127.02808442896,
+          9.7945310465212
+        ],
+        [
+          127.52691424442,
+          9.8108650052858
+        ],
+        [
+          128.02574405988,
+          9.8265589826195
+        ],
+        [
+          128.52457387534,
+          9.8416080816933
+        ],
+        [
+          129.0234036908,
+          9.8560074056782
+        ],
+        [
+          129.52223350626,
+          9.869752057745
+        ],
+        [
+          130.02106332172,
+          9.8828371410649
+        ],
+        [
+          130.51989313718,
+          9.8952577588088
+        ],
+        [
+          131.01872295264,
+          9.9070090141476
+        ],
+        [
+          131.5175527681,
+          9.9180860102523
+        ],
+        [
+          132.01638258356,
+          9.9284838502939
+        ],
+        [
+          132.51521239902,
+          9.9381976374435
+        ],
+        [
+          133.01404221448,
+          9.9472224748718
+        ],
+        [
+          133.51287202994,
+          9.9555534657501
+        ],
+        [
+          134.0117018454,
+          9.9631857132491
+        ],
+        [
+          134.51053166086,
+          9.97011432054
+        ],
+        [
+          135.00936147632,
+          9.9763343907936
+        ],
+        [
+          135.50819129178,
+          9.981841027181
+        ],
+        [
+          136.00702110724,
+          9.9866293328732
+        ],
+        [
+          136.5058509227,
+          9.990694411041
+        ],
+        [
+          137.00468073816,
+          9.9940313648555
+        ],
+        [
+          137.50351055362,
+          9.9966352974877
+        ],
+        [
+          138.00234036908,
+          9.9985013121085
+        ],
+        [
+          138.50117018454,
+          9.999624511889
+        ],
+        [
+          139,
+          10
+        ],
+        [
+          139.49882981546,
+          9.999624511889
+        ],
+        [
+          139.99765963092,
+          9.9985013121085
+        ],
+        [
+          140.49648944638,
+          9.9966352974877
+        ],
+        [
+          140.99531926184,
+          9.9940313648555
+        ],
+        [
+          141.4941490773,
+          9.990694411041
+        ],
+        [
+          141.99297889276,
+          9.9866293328732
+        ],
+        [
+          142.49180870822,
+          9.981841027181
+        ],
+        [
+          142.99063852368,
+          9.9763343907936
+        ],
+        [
+          143.48946833914,
+          9.97011432054
+        ],
+        [
+          143.9882981546,
+          9.9631857132491
+        ],
+        [
+          144.48712797006,
+          9.9555534657501
+        ],
+        [
+          144.98595778552,
+          9.9472224748718
+        ],
+        [
+          145.48478760098,
+          9.9381976374435
+        ],
+        [
+          145.98361741644,
+          9.9284838502939
+        ],
+        [
+          146.4824472319,
+          9.9180860102523
+        ],
+        [
+          146.98127704736,
+          9.9070090141476
+        ],
+        [
+          147.48010686282,
+          9.8952577588088
+        ],
+        [
+          147.97893667828,
+          9.8828371410649
+        ],
+        [
+          148.47776649374,
+          9.869752057745
+        ],
+        [
+          148.9765963092,
+          9.8560074056782
+        ],
+        [
+          149.47542612466,
+          9.8416080816933
+        ],
+        [
+          149.97425594012,
+          9.8265589826195
+        ],
+        [
+          150.47308575558,
+          9.8108650052858
+        ],
+        [
+          150.97191557104,
+          9.7945310465212
+        ],
+        [
+          151.4707453865,
+          9.7775620031547
+        ],
+        [
+          151.96957520196,
+          9.7599627720153
+        ],
+        [
+          152.46840501742,
+          9.741738249932
+        ],
+        [
+          152.96723483288,
+          9.722893333734
+        ],
+        [
+          153.46606464834,
+          9.7034329202501
+        ],
+        [
+          153.9648944638,
+          9.6833619063095
+        ],
+        [
+          154.46372427926,
+          9.6626851887411
+        ],
+        [
+          154.96255409472,
+          9.641407664374
+        ],
+        [
+          155.46138391018,
+          9.6195342300372
+        ],
+        [
+          155.96021372564,
+          9.5970697825597
+        ],
+        [
+          156.4590435411,
+          9.5740192187705
+        ],
+        [
+          156.95787335656,
+          9.5503874354987
+        ],
+        [
+          157.45670317202,
+          9.5261793295732
+        ],
+        [
+          157.95553298748,
+          9.5013997978232
+        ],
+        [
+          158.45436280294,
+          9.4760537370776
+        ],
+        [
+          158.9531926184,
+          9.4501460441655
+        ],
+        [
+          159.45202243386,
+          9.4236816159158
+        ],
+        [
+          159.95085224932,
+          9.3966653491576
+        ],
+        [
+          160.44968206478,
+          9.3691021407199
+        ],
+        [
+          160.94851188024,
+          9.3409968874318
+        ],
+        [
+          161.4473416957,
+          9.3123544861222
+        ],
+        [
+          161.94617151116,
+          9.2831798336202
+        ],
+        [
+          162.44500132662,
+          9.2534778267548
+        ],
+        [
+          162.94383114208,
+          9.223253362355
+        ],
+        [
+          163.44266095754,
+          9.1925113372499
+        ],
+        [
+          163.941490773,
+          9.1612566482685
+        ],
+        [
+          164.44032058845,
+          9.1294941922397
+        ],
+        [
+          164.93915040391,
+          9.0972288659927
+        ],
+        [
+          165.43798021937,
+          9.0644655663564
+        ],
+        [
+          165.93681003483,
+          9.0312091901599
+        ],
+        [
+          166.43563985029,
+          8.9974646342321
+        ],
+        [
+          166.93291082258,
+          8.9633445050913
+        ],
+        [
+          167.43018179487,
+          8.9287489599114
+        ],
+        [
+          167.92745276715,
+          8.8936828497571
+        ],
+        [
+          168.42472373944,
+          8.8581510256928
+        ],
+        [
+          168.92199471173,
+          8.8221583387831
+        ],
+        [
+          169.41926568401,
+          8.7857096400927
+        ],
+        [
+          169.9165366563,
+          8.748809780686
+        ],
+        [
+          170.41380762859,
+          8.7114636116276
+        ],
+        [
+          170.91107860087,
+          8.6736759839821
+        ],
+        [
+          171.40834957316,
+          8.6354517488141
+        ],
+        [
+          171.90562054545,
+          8.596795757188
+        ],
+        [
+          172.40289151773,
+          8.5577128601686
+        ],
+        [
+          172.90016249002,
+          8.5182079088203
+        ],
+        [
+          173.39743346231,
+          8.4782857542077
+        ],
+        [
+          173.89470443459,
+          8.4379512473953
+        ],
+        [
+          174.39197540688,
+          8.3972092394478
+        ],
+        [
+          174.88924637917,
+          8.3560645814297
+        ],
+        [
+          175.38651735145,
+          8.3145221244055
+        ],
+        [
+          175.88378832374,
+          8.2725867194398
+        ],
+        [
+          176.38105929603,
+          8.2302632175972
+        ],
+        [
+          176.87833026831,
+          8.1875564699423
+        ],
+        [
+          177.3756012406,
+          8.1444713275395
+        ],
+        [
+          177.87287221289,
+          8.1010126414535
+        ],
+        [
+          178.37014318517,
+          8.0571852627488
+        ],
+        [
+          178.86741415746,
+          8.0129940424901
+        ],
+        [
+          179.36468512975,
+          7.9684438317417
+        ],
+        [
+          179.86195610203,
+          7.9235394815684
+        ],
+        [
+          180.35922707432,
+          7.8782858430347
+        ],
+        [
+          180.85649804661,
+          7.8326877672051
+        ],
+        [
+          181.35376901889,
+          7.7867501051442
+        ],
+        [
+          181.85103999118,
+          7.7404777079166
+        ],
+        [
+          182.34831096347,
+          7.6938754265868
+        ],
+        [
+          182.84558193575,
+          7.6469481122193
+        ],
+        [
+          183.34285290804,
+          7.5997006158789
+        ],
+        [
+          183.84012388033,
+          7.5521377886299
+        ],
+        [
+          184.33739485261,
+          7.5042644815371
+        ],
+        [
+          184.8346658249,
+          7.4560855456648
+        ],
+        [
+          185.33193679718,
+          7.4076058320778
+        ],
+        [
+          185.82920776947,
+          7.3588301918406
+        ],
+        [
+          186.32647874176,
+          7.3097634760176
+        ],
+        [
+          186.82374971404,
+          7.2604105356736
+        ],
+        [
+          187.32102068633,
+          7.210776221873
+        ],
+        [
+          187.81829165862,
+          7.1608653856805
+        ],
+        [
+          188.3155626309,
+          7.1106828781605
+        ],
+        [
+          188.81283360319,
+          7.0602335503776
+        ],
+        [
+          189.31010457548,
+          7.0095222533965
+        ],
+        [
+          189.80737554776,
+          6.9585538382816
+        ],
+        [
+          190.30464652005,
+          6.9073331560976
+        ],
+        [
+          190.80191749234,
+          6.8558650579089
+        ],
+        [
+          191.29918846462,
+          6.8041543947802
+        ],
+        [
+          191.79645943691,
+          6.752206017776
+        ],
+        [
+          192.29217643741,
+          6.700188202017
+        ],
+        [
+          192.78789343791,
+          6.6479437822933
+        ],
+        [
+          193.28361043841,
+          6.5954775643328
+        ],
+        [
+          193.7793274389,
+          6.5427943538633
+        ],
+        [
+          194.2750444394,
+          6.4898989566127
+        ],
+        [
+          194.7707614399,
+          6.4367961783087
+        ],
+        [
+          195.2664784404,
+          6.3834908246791
+        ],
+        [
+          195.7621954409,
+          6.3299877014517
+        ],
+        [
+          196.25791244139,
+          6.2762916143544
+        ],
+        [
+          196.60927985365,
+          6.2381172486519
+        ],
+        [
+          196.96026633119,
+          6.1998915994057
+        ],
+        [
+          197.45560239697,
+          6.1457906658439
+        ],
+        [
+          197.95093846275,
+          6.0915134563754
+        ],
+        [
+          198.44627452853,
+          6.0370647656576
+        ],
+        [
+          198.94161059431,
+          5.9824493883478
+        ],
+        [
+          199.43694666009,
+          5.9276721191036
+        ],
+        [
+          199.93228272587,
+          5.8727377525822
+        ],
+        [
+          200.42761879165,
+          5.8176510834412
+        ],
+        [
+          200.92295485743,
+          5.7624169063378
+        ],
+        [
+          201.41829092321,
+          5.7070400159296
+        ],
+        [
+          201.91362698899,
+          5.6515252068738
+        ],
+        [
+          202.40896305477,
+          5.595877273828
+        ],
+        [
+          202.90429912055,
+          5.5401010114495
+        ],
+        [
+          203.39963518633,
+          5.4842012143957
+        ],
+        [
+          203.89497125211,
+          5.4281826773241
+        ],
+        [
+          204.39030731789,
+          5.3720501948919
+        ],
+        [
+          204.88564338367,
+          5.3158085617567
+        ],
+        [
+          205.38097944945,
+          5.2594625725759
+        ],
+        [
+          205.87631551523,
+          5.2030170220068
+        ],
+        [
+          206.37165158101,
+          5.1464767047068
+        ],
+        [
+          206.86698764679,
+          5.0898464153333
+        ],
+        [
+          207.36232371257,
+          5.0331309485438
+        ],
+        [
+          207.85765977835,
+          4.9763350989957
+        ],
+        [
+          208.35299584413,
+          4.9194636613463
+        ],
+        [
+          208.84833190991,
+          4.8625214302531
+        ],
+        [
+          209.34366797568,
+          4.8055132003734
+        ],
+        [
+          209.83900404146,
+          4.7484437663647
+        ],
+        [
+          210.33434010724,
+          4.6913179228844
+        ],
+        [
+          210.82967617302,
+          4.6341404645898
+        ],
+        [
+          211.3250122388,
+          4.5769161861384
+        ],
+        [
+          211.82034830458,
+          4.5196498821876
+        ],
+        [
+          212.31568437036,
+          4.4623463473948
+        ],
+        [
+          212.81102043614,
+          4.4050103764174
+        ],
+        [
+          213.30635650192,
+          4.3476467639127
+        ],
+        [
+          213.8016925677,
+          4.2902603045383
+        ],
+        [
+          214.29702863348,
+          4.2328557929514
+        ],
+        [
+          214.79236469926,
+          4.1754380238096
+        ],
+        [
+          215.28770076504,
+          4.1180117917701
+        ],
+        [
+          215.78303683082,
+          4.0605818914905
+        ],
+        [
+          216.2783728966,
+          4.003153117628
+        ],
+        [
+          216.77370896238,
+          3.9457302648402
+        ],
+        [
+          217.26904502816,
+          3.8883181277844
+        ],
+        [
+          217.76438109394,
+          3.830921501118
+        ],
+        [
+          218.25971715972,
+          3.7735451794984
+        ],
+        [
+          218.7550532255,
+          3.7161939575831
+        ],
+        [
+          219.25038929128,
+          3.6588726300294
+        ],
+        [
+          219.74572535706,
+          3.6015859914947
+        ],
+        [
+          220.24106142284,
+          3.5443388366365
+        ],
+        [
+          220.73639748862,
+          3.4871359601121
+        ],
+        [
+          221.2317335544,
+          3.4299821565789
+        ],
+        [
+          221.72706962018,
+          3.3728822206944
+        ],
+        [
+          222.22240568596,
+          3.315840947116
+        ],
+        [
+          222.71774175173,
+          3.258863130501
+        ],
+        [
+          223.21307781751,
+          3.2019535655068
+        ],
+        [
+          223.70841388329,
+          3.1451170467909
+        ],
+        [
+          224.20374994907,
+          3.0883583690107
+        ],
+        [
+          224.69908601485,
+          3.0316823268236
+        ],
+        [
+          225.19442208063,
+          2.9750937148869
+        ],
+        [
+          225.68975814641,
+          2.9185973278581
+        ],
+        [
+          226.18509421219,
+          2.8621979603945
+        ],
+        [
+          226.68043027797,
+          2.8059004071537
+        ],
+        [
+          227.17576634375,
+          2.7497094627929
+        ],
+        [
+          227.67110240953,
+          2.6936299219697
+        ],
+        [
+          228.16643847531,
+          2.6376665793413
+        ],
+        [
+          228.66177454109,
+          2.5818242295652
+        ],
+        [
+          229.15711060687,
+          2.5261076672988
+        ],
+        [
+          229.65244667265,
+          2.4705216871995
+        ],
+        [
+          230.14933551607,
+          2.4148974754704
+        ],
+        [
+          230.64622435948,
+          2.3594143305434
+        ],
+        [
+          231.1431132029,
+          2.3040770923082
+        ],
+        [
+          231.64000204631,
+          2.2488906006545
+        ],
+        [
+          232.13689088973,
+          2.1938596954721
+        ],
+        [
+          232.63377973314,
+          2.1389892166507
+        ],
+        [
+          233.13066857656,
+          2.08428400408
+        ],
+        [
+          233.62755741997,
+          2.0297488976497
+        ],
+        [
+          234.12444626339,
+          1.9753887372496
+        ],
+        [
+          234.6213351068,
+          1.9212083627694
+        ],
+        [
+          235.11822395022,
+          1.8672126140987
+        ],
+        [
+          235.61511279363,
+          1.8134063311274
+        ],
+        [
+          236.11200163705,
+          1.7597943537452
+        ],
+        [
+          236.60889048046,
+          1.7063815218417
+        ],
+        [
+          237.10577932388,
+          1.6531726753067
+        ],
+        [
+          237.60266816729,
+          1.6001726540299
+        ],
+        [
+          238.09955701071,
+          1.5473862979011
+        ],
+        [
+          238.59644585413,
+          1.4948184468099
+        ],
+        [
+          239.09333469754,
+          1.4424739406462
+        ],
+        [
+          239.59022354096,
+          1.3903576192995
+        ],
+        [
+          240.08711238437,
+          1.3384743226597
+        ],
+        [
+          240.58400122779,
+          1.2868288906165
+        ],
+        [
+          241.0808900712,
+          1.2354261630595
+        ],
+        [
+          241.57777891462,
+          1.1842709798786
+        ],
+        [
+          242.07466775803,
+          1.1333681809634
+        ],
+        [
+          242.57155660145,
+          1.0827226062036
+        ],
+        [
+          243.06844544486,
+          1.032339095489
+        ],
+        [
+          243.56533428828,
+          0.98222248870937
+        ],
+        [
+          244.06222313169,
+          0.93237762575434
+        ],
+        [
+          244.55911197511,
+          0.88280934651365
+        ],
+        [
+          245.05600081852,
+          0.83352249087704
+        ],
+        [
+          245.55288966194,
+          0.78452189873423
+        ],
+        [
+          246.04977850536,
+          0.73581240997494
+        ],
+        [
+          246.54666734877,
+          0.6873988644889
+        ],
+        [
+          247.04355619219,
+          0.63928610216583
+        ],
+        [
+          247.5404450356,
+          0.59147896289545
+        ],
+        [
+          248.03733387902,
+          0.5439822865675
+        ],
+        [
+          248.53422272243,
+          0.49680091307168
+        ],
+        [
+          249.03111156585,
+          0.44993968229773
+        ],
+        [
+          249.52800040926,
+          0.40340343413537
+        ],
+        [
+          250.02488925268,
+          0.35719700847432
+        ],
+        [
+          250.52177809609,
+          0.3113252452043
+        ],
+        [
+          251.01866693951,
+          0.26579298421505
+        ],
+        [
+          251.51555578292,
+          0.22060506539628
+        ],
+        [
+          252.01244462634,
+          0.17576632863772
+        ],
+        [
+          252.50933346975,
+          0.13128161382908
+        ],
+        [
+          253.00622231317,
+          0.087155760860101
+        ],
+        [
+          253.50311115658,
+          0.0433936096205
+        ],
+        [
+          254,
+          0
+        ]
+      ]
+    },
+    "now_admitted": true
+  },
+  "camera": [
+    {
+      "id": "descent",
+      "source_fixture": "long-curves.json",
+      "spawn": [
+        244,
+        18.9
+      ],
+      "start_speed": 5,
+      "input": "ArrowUp",
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": 5.0000004985928,
+        "head_contact": false,
+        "travel1": 2.2777786254883,
+        "projection_y": 0.0030830118339509,
+        "speed": 1120.5653076172,
+        "world_loads": 20,
+        "spawn_y": 18.9,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0.10000000149012,
+        "spawn_x": 244,
+        "decor_sprites": 1,
+        "terrain_shapes": 696,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-long-curves",
+        "station_brake_distance": 0,
+        "pitch": -1.0063121318817,
+        "first_tick_omega": -22.72727394104,
+        "sequence": 5,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0017341941129416,
+        "velocity_x": 775.61328125,
+        "station_name": "Custom: P0 long-curves",
+        "contact1": true,
+        "fps": 59.816562111688,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.717777897914,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": 6.6043498673062,
+        "snapshot": "s19",
+        "session_generation": 20,
+        "finish_count": 0,
+        "station_top_speed": 7.6356388674161,
+        "start_speed": 5,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 19.989310264587,
+        "custom": true,
+        "speed_mps": 11.205652825706,
+        "audio_pitch": 2.2,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      }
+    },
+    {
+      "id": "jump",
+      "source_fixture": "long-curves.json",
+      "spawn": [
+        282,
+        0.9
+      ],
+      "start_speed": 7,
+      "input": "ArrowUp",
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": 7.0000010642409,
+        "head_contact": false,
+        "travel1": -0.1416015625,
+        "projection_y": 0.003347092308104,
+        "speed": 460.38497924805,
+        "world_loads": 21,
+        "spawn_y": 0.9,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0.10000000149012,
+        "spawn_x": 282,
+        "decor_sprites": 1,
+        "terrain_shapes": 696,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-long-curves",
+        "station_brake_distance": 0,
+        "pitch": -0.59319478273392,
+        "first_tick_omega": -31.818181991577,
+        "sequence": 12,
+        "command": {
+          "throttle": 1,
+          "allow_reverse": false,
+          "brake_reverse": 0,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.0018827392486855,
+        "velocity_x": 346.62615966797,
+        "station_name": "Custom: P0 long-curves",
+        "contact1": false,
+        "fps": 59.880239278741,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.700000067552,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": false,
+        "finish_time": 0,
+        "station_distance": 13.487688707835,
+        "snapshot": "s20",
+        "session_generation": 21,
+        "finish_count": 0,
+        "station_top_speed": 7.0000010642409,
+        "start_speed": 7,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": -0.14054679870605,
+        "custom": true,
+        "speed_mps": 4.6038496895764,
+        "audio_pitch": 2.1854787445068,
+        "station_brake_stopped": false,
+        "audio_muted": false,
+        "finish": true
+      }
+    },
+    {
+      "id": "reverse",
+      "source_fixture": "long-curves.json",
+      "spawn": [
+        12,
+        0.9
+      ],
+      "start_speed": 0,
+      "input": "ArrowDown",
+      "telemetry": {
+        "preset_refused": false,
+        "audio_started": true,
+        "custom_snapshots": 1,
+        "first_tick_speed": -1.0602206875265e-08,
+        "head_contact": false,
+        "travel1": 3.9686222076416,
+        "projection_y": 0.003590770997107,
+        "speed": 162.69853210449,
+        "world_loads": 22,
+        "spawn_y": 0.9,
+        "time_scaled_ticks": 0,
+        "preset": "a",
+        "physics_ms": 0,
+        "spawn_x": 12,
+        "decor_sprites": 1,
+        "terrain_shapes": 696,
+        "crash_enabled": false,
+        "section_index": 0,
+        "reset_count": 0,
+        "station": "p0-long-curves",
+        "station_brake_distance": 0,
+        "pitch": -0.054169941693544,
+        "first_tick_omega": 0,
+        "sequence": 6,
+        "command": {
+          "throttle": 0,
+          "allow_reverse": true,
+          "brake_reverse": 1,
+          "lean": 0
+        },
+        "modified": false,
+        "projection_x": 0.002019808627665,
+        "velocity_x": -162.69625854492,
+        "station_name": "Custom: P0 long-curves",
+        "contact1": true,
+        "fps": 59.880239278741,
+        "decor_labels": 1,
+        "station_note": "",
+        "frame_ms": 16.700000067552,
+        "ui_captured": false,
+        "section_count": 0,
+        "contact2": true,
+        "finish_time": 0,
+        "station_distance": -0.42070948733294,
+        "snapshot": "s21",
+        "session_generation": 22,
+        "finish_count": 0,
+        "station_top_speed": 1.5746761732993,
+        "start_speed": 0,
+        "time_factor": 1,
+        "finish_done": false,
+        "travel2": 8.9580192565918,
+        "custom": true,
+        "speed_mps": 1.626985284679,
+        "audio_pitch": 0.99602290153503,
+        "station_brake_stopped": true,
+        "audio_muted": false,
+        "finish": true
+      }
+    }
+  ],
+  "raw_sha256": "87a8d16d136bf2677e854f51798550e6bcfd07fda26d741869648d30c215b543",
+  "observer_sha256": "0c2b354dd81b469d713ed75185e569216b1b37876e944852582cf03cd57c45c0",
+  "source_note": "Runtime 9709453; later commits add tooling, fixtures and evidence only."
+}

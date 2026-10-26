@@ -305,7 +305,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   done('le4_document_opens');
 
   // 11. Budgets with prefabs (R7, R16): 255 objects (64 Platforms, 95 Gaps with pit and 95 Ramps in one run,
-  // one 200-point line) exceed the 800 render objects. Play is blocked with the reason and nothing changes;
+  // one 1650-point line) exceed the 800 render objects. Play is blocked with the reason and nothing changes;
   // the edit world still draws every segment. Without the line the prefab course plays.
   const objects=[],connections=[];let x=0,y=0,n=0;
   for(let i=0;i<95;i++){
@@ -314,7 +314,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   for(let i=1;i<n;i++)connections.push({from:'o'+i,to:'o'+(i+1)});
   for(let i=0;i<64;i++)objects.push({id:'o'+(++n),type:'prefab',kind:'platform',at:[i*6,40],params:{width:4,height:1}});
-  objects.push({id:'o'+(++n),type:'line',points:Array.from({length:200},(_,i)=>[i*0.5,-8+(i%2)*0.2])});
+  objects.push({id:'o'+(++n),type:'line',points:Array.from({length:1650},(_,i)=>[i*0.5,-8+(i%2)*0.2])});
   const budgetDoc={schema:1,units:'metres',id:'prefab-budget',name:'Prefab budget',editor:{editor_version:3,compiler_version:3,revision:1,next_id:n+1,objects,connections,start:{position:[1,1.2],speed:0}}};
   await saved();
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:100000,text,now:true};},JSON.stringify(budgetDoc));
@@ -324,18 +324,18 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(e.id,'prefab-budget');assert.equal(e.objects,255);
   await hover([21,5.2]);for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
   const big=await doc();
-  assert.ok(e.errors.some(m=>m.includes('800')),JSON.stringify(e.errors));assert.equal(e.view.simplified,false);
-  assert.equal(e.view.sprites,95*4+64*4+199+4);
+  assert.ok(e.errors.some(m=>m.includes('Resource budget')),JSON.stringify(e.errors));assert.equal(e.view.simplified,true);
+  assert.ok(e.view.sprites<=1024,'bounded line fallback for resource-rejected draft');
   await key('e');await page.waitForFunction(()=>window.riderEditor.message.includes('Play blocked'));
   e=await ed();assert.equal(e.mode,'edit');assert.equal(shape(await doc()),shape(big));
   const blocked={message:e.message,sprites:e.view.sprites,gui_nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
   // Blocked Play now selects the budget source. Clear its point-picking state before selecting
   // the whole line to remove it; the unchanged budget and geometry assertions still apply.
-  await page.waitForTimeout(1100);await key('Escape');await key('Home');
-  await at([30,-8]);await page.waitForFunction(n=>window.riderEditor.selection==='o'+n,n);
+  await page.waitForTimeout(1100);await key('Escape');await key('Home');await key('s');
+  await button('object_select_o'+n);await page.waitForFunction(n=>window.riderEditor.selection==='o'+n,n);
   const r4=e.revision;await key('Delete');e=await revision(r4+1);assert.equal(e.objects,254);assert.equal(e.problem,'');
   // Zoom into the Gap before picking it: Fit at 380 m makes neighbouring source points share pixels.
-  await hover([25,0]);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
+  await key('Home');await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,[25,0]);await hover([25,0]);for(let i=0;i<12;i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
   // A selected Gap shows its handles and fields within the GUI node budget.
   await at([25,-0.5]);await page.waitForFunction(()=>window.riderEditor.selection==='o13');e=await ed();
   assert.deepEqual(e.handles.map(h=>h.name),['end','floor']);assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));

@@ -257,7 +257,7 @@ function M.validate(doc)
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
-    if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Missing or too many editor objects" end
+    if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
     if e.editor_version>=4 then
         local s=e.sampling
         if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then
@@ -304,7 +304,7 @@ function M.validate(doc)
             total=total+#list
         else return nil,"Unknown object type in "..o.id end
     end
-    if total>M.MAX_TOTAL_POINTS then return nil,"Too many points in the document" end
+    if total>M.MAX_TOTAL_POINTS then return nil,"Source point limit is 8192; remove objects/anchors or split the document" end
     local s=e.start
     if type(s)~="table" or not point(s.position) or not finite(s.speed) or math.abs(s.speed)>30 then return nil,"Invalid START" end
     if e.finish~=nil and (type(e.finish)~="table" or not point(e.finish.position) or (e.finish.direction~=1 and e.finish.direction~=-1)) then return nil,"Invalid FINISH" end

@@ -55,6 +55,8 @@ function cases(){
   ['segments',level('seg-200','LE1b 400 m, 200 segments',{length:400,segments:200})],
   ['segments',level('seg-400','LE1b 400 m, 400 segments',{length:400,segments:400})],
   ['segments',level('seg-800','LE1b 400 m, 800 segments (render budget)',{length:400,segments:800})],
+  ['segments',level('seg-1100','P5 formerly rejected 1100 segments',{length:400,segments:1100})],
+  ['resources',level('seg-1521','P5 CPU envelope boundary',{length:760,segments:1521})],
   ['chains',level('chains-32','LE1b 400 m, 32 chains x 25 segments',{length:400,segments:800,chains:32})],
   ['hulls',level('hulls-16','LE1b 400 m, 100 segments + 16 box hulls',{length:400,segments:100,hullCount:16})],
   ['hulls',level('hulls-32','LE1b 400 m, 100 segments + 32 box hulls',{length:400,segments:100,hullCount:32})],
@@ -63,7 +65,8 @@ function cases(){
   ['corner',level('corner-99km-800','LE1b 99 km, 800 segments',{length:LONG,segments:800})],
  ].map(([dimension,d])=>({dimension,id:d.id,expect:'accepted',level:d,objects:objects(d),length_m:d.bounds[1],segments:d.chains.reduce((n,c)=>n+c.length-1,0),chains:d.chains.length,hulls:(d.hulls||[]).length}));
  const long=level('reject-length-100km','Rejected: 100 km',{length:100000,segments:100});
- const tooMany=level('reject-render-801','Rejected: 801 render objects',{length:400,segments:801});
+ const tooMany=level('reject-mesh-payload','Rejected: Fit vertex payload',{length:900,segments:1650});
+ const cpu=level('reject-cpu','Rejected: CPU working envelope',{length:760,segments:1522});
  const chain=level('reject-chain-2049','Rejected: 2049-point chain',{length:400,segments:2048});
  const chains=level('reject-chains-33','Rejected: 33 chains',{length:400,segments:33,chains:33});
  const hull65=level('reject-hulls-65','Rejected: 65 hulls',{length:400,segments:100,hullCount:65});
@@ -71,7 +74,8 @@ function cases(){
  const big=level('reject-text-256k','Rejected: text above 256 KiB',{length:400,segments:100});big.notes='x'.repeat(256*1024);
  const rejected=[
   ['length',long,'Non-finite bounds'],
-  ['segments',tooMany,'Station render budget exceeds 800 objects: 801 drawn (801 terrain segments)'],
+  ['segments',tooMany,'Resource budget: terrain vertex payload bytes at Fit needs 1069632; limit 1048576. Shorten or simplify chain 1 (1650 segments); keep sampling accuracy.'],
+  ['memory',cpu,'Resource budget: estimated CPU working bytes needs 16786048; limit 16777216. Reduce terrain/content; save separate courses. Shorten or simplify chain 1 (1522 segments); keep sampling accuracy.'],
   ['segments',chain,'Invalid chain length'],
   ['chains',chains,'Missing/too many chains'],
   ['hulls',hull65,'Invalid hulls'],
@@ -82,7 +86,7 @@ function cases(){
  return [...accepted,...rejected];
 }
 const text=d=>JSON.stringify(d);
-// The committed phone samples are the largest accepted length and complexity levels.
+// Retained historical phone samples; added P5 desktop cases are not phone evidence.
 const PHONE=['seg-800','len-99km'];
 module.exports={cases,text,objects,surface,PHONE};
 if(require.main===module){

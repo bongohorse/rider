@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "source_sha": "05a163ecfd405e8c1638288290aa34244961f6c1",
+  "course": "mixed-over-budget",
+  "errors": [],
+  "before": {
+    "revision": 13,
+    "speed": 0
+  },
+  "edited": {
+    "revision": 14,
+    "speed": 1
+  },
+  "restored": {
+    "revision": 14,
+    "speed": 1
+  },
+  "play_retry": {
+    "terrain_shapes": 1028,
+    "generation": 2,
+    "world_loads": 2,
+    "reset_before": 0,
+    "reset_after": 1
+  },
+  "raw_sha256": "3660dead310f09daead94abf7fa304f477a1c8629058ccbd22f70527d354de46"
+}

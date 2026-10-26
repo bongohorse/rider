@@ -19,7 +19,7 @@ test('accepted levels stay inside the unchanged validator limits', () => {
     const [x0, x1, y0, y1] = d.bounds;
     assert.ok([x0, x1, y0, y1].every(finite) && x0 < d.spawn[0] && d.spawn[0] < x1 && y0 < d.spawn[1] && d.spawn[1] < y1, id);
     assert.ok(Math.abs(d.spawn[0]) <= 500 && Math.abs(d.spawn[1]) <= 500, id + ': provisional start limit');
-    assert.ok(d.chains.length <= 32 && objects(d) <= 800 && Buffer.byteLength(text(d)) <= 256 * 1024, id);
+    assert.ok(d.chains.length <= 32 && objects(d) <= 1521 && Buffer.byteLength(text(d)) <= 256 * 1024, id);
     assert.equal(d.kind, undefined);
     for (const chain of d.chains) {
       assert.ok(chain.length >= 2 && chain.length <= 2048, id);
@@ -50,13 +50,14 @@ test('length and complexity vary independently with at least three accepted step
   assert.equal(new Set(segments.map(c => c.segments)).size, segments.length);
   assert.equal(new Set(hulls.map(c => c.length_m + '/' + c.segments)).size, 1);
   assert.equal(new Set(hulls.map(c => c.objects)).size, hulls.length);
-  assert.equal(Math.max(...accepted.map(c => c.objects)), 800);
+  assert.equal(Math.max(...accepted.map(c => c.objects)), 1521);
 });
 
 test('each rejected case breaks exactly the named limit', () => {
   const rejected = Object.fromEntries(all.filter(c => c.expect === 'rejected').map(c => [c.id, c]));
   assert.equal(rejected['reject-length-100km'].level.bounds[1], 100000);
-  assert.equal(objects(rejected['reject-render-801'].level), 801);
+  assert.equal(objects(rejected['reject-mesh-payload'].level), 1650);
+  assert.equal(objects(rejected['reject-cpu'].level), 1522);
   assert.equal(rejected['reject-chain-2049'].level.chains[0].length, 2049);
   assert.equal(rejected['reject-chains-33'].level.chains.length, 33);
   assert.equal(rejected['reject-hulls-65'].level.hulls.length, 65);

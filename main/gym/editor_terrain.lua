@@ -22,11 +22,26 @@ local function matches(entry,p,i)
     for j,q in ipairs(entry.points) do if q[1]~=p[i+j-1][1] or q[2]~=p[i+j-1][2] then return false end end
     return true
 end
--- Preview admission uses the still-active legacy estimate, not a replacement budget scheme.
-function M.admitted(e)
-    local units=0
-    for _,o in ipairs(e.objects) do units=units+doc.drawn(o)+(o.type=="label" and 1 or 0) end
-    return units+(e.finish and 2 or 0)<=800
+-- Source-only estimate, using the same connected runs as the compiler. Invalid drafts stay editable.
+function M.admitted(e,compiled_budget)
+    if compiled_budget then
+        -- Reuse the existing live validation result; a drag's actual plan is guarded below.
+        return require("main.gym.terrain_budget").preview(compiled_budget.sections,compiled_budget.vertices,
+            compiled_budget.sprites-(e.finish and 1 or 0),compiled_budget.labels-(e.finish and 1 or 0))
+    end
+    local sections,vertices,sprites,labels=0,0,0,0
+    local pieces=doc.pieces(e)
+    for _,run in ipairs(doc.runs(e)) do
+        for _,c in ipairs(doc.run_chains(e,run,pieces)) do
+            local n=#c.points-1
+            sections=sections+math.ceil(n/geometry.INTERVALS);vertices=vertices+n*18+12
+        end
+    end
+    for _,o in ipairs(e.objects) do
+        if doc.outline(o) then sprites=sprites+#doc.outline(o)
+        elseif o.type=="label" then labels=labels+1 end
+    end
+    return require("main.gym.terrain_budget").preview(sections,vertices,sprites,labels)
 end
 function M.plan(e,previews,selected,hover,old)
     local effective={objects={},connections=e.connections,start=e.start,finish=e.finish}
@@ -81,7 +96,11 @@ function M.plan(e,previews,selected,hover,old)
         end
     end
     -- Safe fallback for still-invalid drafts; configured engine capacity is not raised.
-    if #plans>64 then return nil,"Mesh preview exceeds safe replacement capacity; line preview retained." end
+    local vertices=0
+    for _,p in ipairs(plans) do vertices=vertices+(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0) end
+    if not require("main.gym.terrain_budget").preview(#plans,vertices,0,0) then
+        return nil,"Mesh preview exceeds component or Fit payload budget; shorten terrain. Line preview retained."
+    end
     return plans
 end
 function M.create() return {entries={},serial=0,updates=0,uploads=0} end

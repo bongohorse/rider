@@ -1,0 +1,4 @@
+six-anchor baseline_kib=189.9 compile_kib=783.9 two_edit_generations_kib=5348.2 delta_kib=5158.4 cpu_envelope_bytes=7349504
+long-curves baseline_kib=256.1 compile_kib=773.3 two_edit_generations_kib=5178.0 delta_kib=4921.9 cpu_envelope_bytes=7687744
+mixed baseline_kib=260.5 compile_kib=847.8 two_edit_generations_kib=6474.7 delta_kib=6214.2 cpu_envelope_bytes=7712320
+long-over-budget baseline_kib=260.6 compile_kib=820.6 two_edit_generations_kib=7687.7 delta_kib=7427.1 cpu_envelope_bytes=11215424
