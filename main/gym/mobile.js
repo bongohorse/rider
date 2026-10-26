@@ -19,8 +19,8 @@
     api.clear();pending.clear=true;lastFrame=undefined;
     if(trial){trial=null;api.recording=false;status.textContent='Capture cancelled: '+reason;}
   };
-  window.addEventListener('blur',()=>abort('focus lost'));
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)abort('page hidden');});
+  window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden');}});
   window.addEventListener('resize',()=>abort('viewport changed; restart capture'));
   function summary(values){
     const sorted=[...values].sort((a,b)=>a-b);
