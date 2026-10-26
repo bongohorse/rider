@@ -40,3 +40,12 @@ session.scope('level');assert(session.change('width',1.3));assert(session.previe
 local anchor=E.doc.editor.objects[2].anchors[2];anchor['out'][2]=anchor['out'][2]+1;E.doc.editor.revision=E.doc.editor.revision+1
 session.tick();assert(E.look_preview.objects[2].anchors[2]['out'][2]==anchor['out'][2]);assert(E.look_preview.road_look.params.width==1.3 and E.doc.editor.road_look.params.width==.9)
 print('PASS retained look preview rebases onto geometry edits without applying its settings')
+
+E.mode='play';session.play_open(73);assert(session.session.open)
+assert(session.change('width',1.6));session.session.last=nil;session.tick()
+local running=session.live(73);assert(running and running.editor.road_look.params.width==1.6)
+assert(not session.live(74) and E.doc.editor.road_look.params.width==.9)
+session.close();assert(session.live(73)==running and not session.session.open)
+assert(session.apply());assert(E.doc.editor.road_look.params.width==1.6 and session.live(73).editor.road_look.params.width==1.6)
+E.opened=2;assert(not session.live(73))
+print('PASS Gym preview shares the session, retains Close/Apply and is bound to document/world generation')

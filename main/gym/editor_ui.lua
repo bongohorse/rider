@@ -1,3 +1,4 @@
+local socket=require 'socket'
 -- Editor A1b: fixed-size desktop chrome. A fixed pool is reused between the inspector and every
 -- modal/list; disabling a node never frees its budget. Coordinates here are canvas pixels, top-left.
 local M={BOXES=128,TEXTS=128}
@@ -130,18 +131,9 @@ local function wrap(t,width,size)
     return out
 end
 -- Preserve the existing driving-mode entry hint/message using the same text pool.
-function M.play(u,k,message)
-    M.hide(u);M.size(u)
-    local n=u.texts[1]
-    gui.set_enabled(n,true);gui.set_text(n,'Edit level [E]');gui.set_color(n,C.secondary)
-    gui.set_screen_position(n,vmath.vector3(16*u.scale,53*u.scale,0))
-    local scale=12/14*u.scale/k;gui.set_scale(n,vmath.vector3(scale,scale,1))
-    if message and message~='' then
-        local value=shorten(message,u.w-32,14);local m=u.texts[2]
-        gui.set_enabled(m,true);gui.set_text(m,value);gui.set_color(m,C.error)
-        gui.set_screen_position(m,vmath.vector3(math.max(16,(u.w-#value*8)/2)*u.scale,(u.h-94)*u.scale,0))
-        scale=u.scale/k;gui.set_scale(m,vmath.vector3(scale,scale,1))
-    end
+function M.play(u,k,message,session,legacy,status)
+    M.render(u,{play=true,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,
+        look_legacy=legacy,status=status or '',modal=session and session.open and 'terrain_look' or nil})
 end
 function M.scrollbar_hit(u)
     if not u.pointer then return false end
@@ -235,7 +227,11 @@ function M.render(u,d)
     local modal=d.modal
     if modal then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
-    if not modal then
+    if d.play and not modal then
+        text(16,h-40,'Edit level [E]',C.secondary,12)
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Change Terrain Look live in this run; Apply saves to the level.')
+        if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
+    elseif not modal then
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
         local title_width=math.min(280,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
@@ -424,7 +420,7 @@ function M.render(u,d)
             text(mx+16,my+24,'Terrain Look',C.active,18)
             button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
             button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
-            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or 'Level defaults; manual section looks stay intact.') or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
+            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
             local top,bottom=my+104,my+mh-104
             local height=5*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
             for i,spec in ipairs(require('main.terrain_perspective.projection').CONTROLS) do
@@ -507,7 +503,7 @@ function M.render(u,d)
             button('warnings',mx+mw-148,my+mh-48,128,'Close [Esc]')
         end
     end
-    if not modal and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
+    if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
     end

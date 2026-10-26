@@ -13,6 +13,8 @@ local EDITOR="main:/editor#gui"
 local time_scale=require "main.gym.time_scale"
 local OWNER="gym:/owner#script"
 local function switch(self,request)
+    local session=require('main.gym.editor_look').session
+    if session then session.open=false;session.play_generation=nil;session.play_level=nil end
     self.station,self.speed=request.id,request.speed or ""
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
     self.edit,self.play=request.edit,request.play
@@ -57,6 +59,8 @@ end
 -- otherwise this level (R2) or a template copy of the built-in station (R3). A replaced document
 -- stays one Undo step away.
 local function open_current(self)
+    local session=require('main.gym.editor_look').session
+    if editor.doc and session and session.instance==editor.opened and session.play_generation==self.generation then return true end
     local saved=editor.saved_draft()
     local notice
     if saved and saved.unsupported then
@@ -285,6 +289,11 @@ function on_message(self,id,data,sender)
     -- Only the acknowledgement of the newest request applies: an older one may predate a later pause or resume.
     elseif id==hash("time_ready") and data.generation==self.generation and data.seq==self.time.seq and not self.loading and editor.mode=="play" then
         time_scale.apply(self.time,"#world")
+    elseif id==hash("terrain_look_open") and not self.loading and editor.mode=="play" then
+        local ok,err=open_current(self)
+        if ok and not editor.conflict then
+            require("main.gym.editor_look").play_open(self.generation)
+        else editor.message=err or "Resolve the source conflict in the Editor before changing Terrain Look." end
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)
         if ok then enter_edit(self) else editor.message=err end

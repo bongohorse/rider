@@ -1900,9 +1900,13 @@ local function canvas_release(self)
     end
 end
 function on_input(self,action_id,action)
-    if editor.mode~="edit" then
+    if editor.mode~="edit" and not (terrain_look.session and terrain_look.session.open) then
         -- An open report or import panel keeps its input; E does not leave it behind.
         local panel=html5 and html5.run("!!(window.riderFeedback?.visible||window.riderCustom?.visible)")=="true"
+        editor_ui.pointer(self.ui,action)
+        if not panel and action_id==hash('ui_pointer') and action.pressed and hit(self,action)=='terrain_look' then
+            msg.post(LOADER,'terrain_look_open');return true
+        end
         if action_id==hash("editor_toggle") and action.pressed and not panel then
             editor.message=""
             msg.post(LOADER,"editor_enter")
@@ -2770,6 +2774,12 @@ function update(self,dt)
     end
     if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
     editor.sync()
+    terrain_look.tick()
+    local look_open=editor.mode=='play' and terrain_look.session and terrain_look.session.open or false
+    if self.look_capture~=look_open then
+        self.look_capture=look_open;msg.post('gym:/owner#script','terrain_look_capture',{active=look_open})
+    end
+    if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
     if edit_mode then
         editor_ui.size(self.ui)
         if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
@@ -2803,7 +2813,11 @@ function update(self,dt)
         local a,b=gui.get_screen_position(self.overlay.probe0),gui.get_screen_position(self.overlay.probe1)
         self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
         if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui)
-        else editor_ui.play(self.ui,self.overlay.k,editor.message) end
+        else
+            editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session,
+                editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status)
+            self.buttons=self.ui.buttons
+        end
     end
     -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
     -- change or every 0.25 s, so the published state costs the driven world little.

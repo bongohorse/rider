@@ -30,6 +30,7 @@ function M.sync()
 end
 function M.scope(value)
  local s=M.sync();s.scope=value;s.ids=editor.selected_ids();s.params=look.params(editor.doc);s.clear=nil;s.error=nil;s.dirty=false;editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1
+ s.pending=true
  s.mixed=false
  if value=='selected' then local values=look.values(editor.doc.editor)
   local first
@@ -78,7 +79,7 @@ function M.preview()
  -- Invalid geometry drafts remain editable; valid courses must pass actual selected-layout admission.
  local compiled,blocked=doc.compile(wrapper)
  if not compiled and blocked and blocked:find('Resource budget:',1,true) then s.error_detail=blocked;s.error=(blocked:match('^[^%.]+%.') or blocked)..' Shorten/simplify terrain or split the course.';return nil end
- s.error=nil;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
+ s.error=nil;s.play_level=compiled;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
 end
 function M.change(k,value)
  local s=M.sync();local r=projection.RANGES[k]
@@ -103,7 +104,15 @@ function M.apply()
 end
 function M.tick()
  local s=M.sync();if not s then return end
- if editor.mode=='edit' and s.pending and (not s.last or socket.gettime()-s.last>=.1) then s.last=socket.gettime();M.preview() end
+ if s.pending and (not s.last or socket.gettime()-s.last>=.1) then s.last=socket.gettime();M.preview() end
+end
+-- The loader binds this same session to one running world without entering Edit.
+function M.play_open(generation)
+ local s=M.sync();s.play_generation=generation;M.open()
+end
+function M.live(generation)
+ local s=M.session
+ if s and s.instance==editor.opened and s.play_generation==generation then return s.play_level end
 end
 function M.confirm()
  local s=M.sync();local f=s.field;if not f then return true end
