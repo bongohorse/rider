@@ -11,6 +11,12 @@ local function same(a,b)
  return true
 end
 assert(not budget.COMPARISON)
+local preset=require('main.terrain_perspective.projection').DEFAULT
+assert(preset.version==1 and preset.mode=='perspective' and preset.width==.9 and preset.perspective==.35 and preset.angle==math.atan(.55)*180/math.pi and preset.side==64 and preset.shading==1,'Changing perspective-v1 requires a new profile ID')
+for _,bad in ipairs({false,true,1,{},'future'}) do
+ local valid,why=profile.validate({editor={road_profile=bad}})
+ assert(not valid and why:find('Unsupported road profile'))
+end
 for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
  local original=dofile(arg[1]..'/'..name..'-source.lua')
  local legacy=assert(doc.compile(original));assert(not profile.enabled(legacy))

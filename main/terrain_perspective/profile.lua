@@ -3,7 +3,8 @@ local M={ID='perspective-v1'}
 function M.id(d)
     if type(d)~='table' then return nil end
     local e=type(d.editor)=='table' and d.editor or d
-    return e.road_profile or d._road_profile
+    if e.road_profile~=nil then return e.road_profile end
+    return d._road_profile
 end
 function M.enabled(d) return M.id(d)==M.ID end
 function M.validate(d)
