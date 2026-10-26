@@ -128,6 +128,8 @@ local function show_silhouette(o,list,p,s,color)
     end
 end
 function init(self)
+    -- Terrain Look is also available over the driving HUD; keep its native scene on top.
+    gui.set_render_order(1)
     self.overlay=overlay.init()
     self.buttons,self.held={},{}
     self.ghost,self.last_ghost=silhouette(self),silhouette(self)
