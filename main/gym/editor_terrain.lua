@@ -51,6 +51,8 @@ function M.plan(e,previews,selected,hover,old)
         effective.objects[i]=shown
         styles_by[o.id]=o.hidden and -1 or selected[o.id] and 1 or hover==o.id and 2 or 0
     end
+    local look=require "main.terrain_perspective.look"
+    local baked=look.has_sections(e);local values=baked and look.values(e)
     local lower=doc.bounds(effective)[3]
     local pieces=doc.pieces(effective)
     local candidates={}
@@ -66,6 +68,7 @@ function M.plan(e,previews,selected,hover,old)
                 local first=raw[reverse and #raw or 1]
                 if previous then arc=arc+math.sqrt((previous[1]-first[1])^2+(previous[2]-first[2])^2) end
                 local prep=geometry.prepare(raw,lower,arc);arc,previous=prep.arc,prep.p[#prep.p]
+                local looks=baked and look.samples(chain,values)
                 local styles={}
                 for i=1,#raw-1 do styles[i]=styles_by[chain.owner[reverse and #raw-i+1 or i+1]] end
                 -- Match old whole sections by exact source samples, independent of shifted sample indices.
@@ -85,11 +88,12 @@ function M.plan(e,previews,selected,hover,old)
                         if last-i<32 and anchors[last] then last=math.min(i+96,last+#anchors[last].points-1) end
                     end
                     local sig=signature(prep,i,last,styles)
+                    if looks then for j=i,last do for _,k in ipairs(look.LOCAL) do sig[#sig+1]=looks[j][k] end end end
                     local points={};for k=i,last do points[#points+1]={prep.p[k][1],prep.p[k][2]} end
                     if entry then used[entry]=true end
                     local color={};for k=i,last-1 do color[#color+1]=styles[k] or 0 end
                     plans[#plans+1]={entry=entry,prep=prep,first=i,last=last,signature=sig,color=color,points=points,styles=styles,
-                        changed=not entry or not same(entry.signature,sig),restyled=not entry or not same(entry.color or {},color),phase=prep.u[i],lower=lower}
+                        looks=looks,changed=not entry or not same(entry.signature,sig),restyled=not entry or not same(entry.color or {},color),phase=prep.u[i],lower=lower}
                     i=last
                 end
             end
@@ -106,14 +110,14 @@ end
 function M.create(e)
     local projected=require('main.terrain_perspective.runtime').enabled(e)
     if not projected and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
-    return {entries={},serial=0,updates=0,uploads=0,perspective=projected}
+    return {entries={},serial=0,updates=0,uploads=0,perspective=projected,params=require("main.terrain_perspective.look").params(e),baked=require("main.terrain_perspective.look").has_sections(e)}
 end
 local function materialize(state,entry,generation,result)
     local mesh=require "main.gym.terrain_mesh"
     local p=entry.plan
     local rebuilt=entry.dirty or not entry.resource
     if rebuilt then
-        local c=state.perspective and require("main.terrain_perspective.projection").section(p.prep,p.first,p.last,tostring(entry.key),p.styles) or geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
+        local c=state.perspective and require("main.terrain_perspective.projection").section(p.prep,p.first,p.last,tostring(entry.key),p.styles,p.looks) or geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
         if not entry.resource then state.resource_serial=(state.resource_serial or 0)+1 end
         mesh.upload(entry,c,"/editor_terrain/g"..generation.."-slot"..state.resource_serial..".bufferc")
         result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
@@ -142,6 +146,7 @@ function M.resident(state,generation,view,result)
 end
 function M.update(state,e,previews,selected,hover,generation,view)
     local mesh=require "main.gym.terrain_mesh"
+    state.params=require("main.terrain_perspective.look").params(e);state.baked=require("main.terrain_perspective.look").has_sections(e)
     local plans,err=M.plan(e,previews,selected,hover,state.entries)
     if not plans then return nil,err end
     local retained,retired={},{}

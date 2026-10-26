@@ -75,8 +75,10 @@ function M.drop(entry,delete_object)
 end
 function M.build(self,d)
     local started=socket.gettime()
-    local state={perspective=require("main.terrain_perspective.runtime").enabled(d)};self.terrain_mesh=state
+    local look=require "main.terrain_perspective.look"
+    local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d)};self.terrain_mesh=state
     local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats=entries,stats
+    local mapping=look.mapping(d);if mapping then for _,e in ipairs(entries) do e.looks=mapping[e.chain] end end
     if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
     M.update(self)
     -- Only the decoration copy omits terrain strokes; the physical station stays untouched.
@@ -110,7 +112,7 @@ function M.update(self)
     local perspective=require "main.terrain_perspective.runtime"
     if state.perspective then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
     local r=residency.update(state,state.entries,view,function(e)
-        local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key) or geometry.section(e.prep,e.first,e.last,e.key)
+        local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key,nil,e.looks) or geometry.section(e.prep,e.first,e.last,e.key)
         state.uploads=(state.uploads or 0)+1
         if not e.resource then state.serial=(state.serial or 0)+1 end
         M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")

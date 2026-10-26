@@ -8,6 +8,7 @@ local prefab=require "main.gym.editor_prefab"
 local snap_lib=require "main.gym.editor_snap"
 local overlay=require "main.gym.editor_overlay"
 local editor_ui=require "main.gym.editor_ui"
+local terrain_look=require "main.gym.editor_look"
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
 local socket=require "socket"
@@ -1291,6 +1292,7 @@ local function on_button(self,name)
                 if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
             end
         end
+    elseif name=="terrain_look" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
@@ -1368,6 +1370,7 @@ local function vertex_state()
     return {inner=v.index>1 and v.index<#path(o),joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
 end
 local function offered_buttons(self)
+    if terrain_look.session and terrain_look.session.open then return self.ui.visible end
     -- The R1 choice is modal: nothing else is offered until it is made; so is the help overlay (LE6b).
     if editor.conflict then return {"conflict_source","conflict_lines"} end
     if self.help_open then return {"help_close"} end
@@ -1907,7 +1910,7 @@ function on_input(self,action_id,action)
         end
         return false
     end
-    if self.focus_lost then self.focus_lost=false;self.ui.scroll_drag=nil;cancel(self) end
+    if self.focus_lost then if terrain_look.session then terrain_look.session.drag=nil end;self.focus_lost=false;self.ui.scroll_drag=nil;cancel(self) end
     -- An open Import/Export panel keeps all input: canvas clicks and keys never edit behind it.
     if self.panel_open then
         if action_id==hash("ui_pointer") and action.pressed then editor.message="Close the Import/Export panel first." end
@@ -1921,12 +1924,53 @@ function on_input(self,action_id,action)
         end
     end
     editor_ui.pointer(self.ui,action)
-    if not self.help_open and not self.open_dialog and not self.warnings_open and not editor.conflict then
+    if not (terrain_look.session and terrain_look.session.open) and not self.help_open and not self.open_dialog and not self.warnings_open and not editor.conflict then
         if self.field and action_id==hash("ui_pointer") and action.pressed and editor_ui.scrollbar_hit(self.ui) then
             confirm_name(self)
             if self.field then return true end -- invalid pending input retains focus
         end
         if not self.field and editor_ui.scrollbar_input(self.ui,action_id,action) then return true end
+    end
+    local ls=terrain_look.session
+    if ls and ls.open then
+        local controls=require('main.terrain_perspective.projection').CONTROLS
+        local ranges=require('main.terrain_perspective.projection').RANGES
+        local function slider(key)
+            if ls.scope=='selected' and (key=='perspective' or key=='angle') then return end
+            local r=self.ui.rects['look_slider_'..key];local p=self.ui.pointer
+            if r and p then local range=ranges[key];local step
+                for _,v in ipairs(controls) do if v.key==key then step=v.step end end
+                local value=range[1]+math.max(0,math.min(1,(p[1]-r.x)/r.w))*(range[2]-range[1])
+                terrain_look.change(key,math.max(range[1],math.min(range[2],math.floor(value/step+.5)*step)))
+            end
+        end
+        if action_id==hash('editor_text') and action.text and ls.field then
+            local f=ls.field;local t=action.text:gsub('[^0-9eE+%.%-]','')
+            if f.all and t~='' then f.text='';f.all=false end
+            if #f.text+#t<=16 then f.text=f.text..t end
+        elseif action_id==hash('editor_delete') and (action.pressed or action.repeated) and ls.field then
+            ls.field.text=ls.field.all and '' or ls.field.text:sub(1,-2);ls.field.all=false
+        elseif self.held.ctrl and action_id==hash('editor_select_all') and action.pressed and ls.field then ls.field.all=true
+        elseif action_id==hash('editor_play') and action.pressed then terrain_look.confirm()
+        elseif action_id==hash('editor_cancel') and action.pressed then
+            if ls.field then ls.field=nil else terrain_look.close();cancel(self) end
+        elseif (action_id==hash('editor_zoom_in') or action_id==hash('editor_zoom_out')) and action.pressed then
+            self.ui.look_scroll=math.max(0,math.min(self.ui.look_max or 0,(self.ui.look_scroll or 0)+(action_id==hash('editor_zoom_in') and -44 or 44)))
+        elseif action_id==hash('ui_pointer') and action.pressed then
+            local name=hit(self,action)
+            if name=='look_close' then terrain_look.confirm();terrain_look.close();cancel(self)
+            elseif terrain_look.confirm() then
+                if name=='look_scope_level' then terrain_look.scope('level')
+                elseif name=='look_scope_selected' then terrain_look.scope('selected')
+                elseif name=='look_apply' then terrain_look.apply()
+                elseif name=='look_reset' then terrain_look.reset()
+                elseif name and name:match('^look_value_') then local key=name:sub(12)
+                    if not (ls.scope=='selected' and (key=='perspective' or key=='angle')) then ls.field={key=key,text=tostring(ls.params[key]),all=true} end
+                elseif name and name:match('^look_slider_') then ls.drag=name:sub(13);slider(ls.drag) end
+            end
+        elseif action_id==hash('ui_pointer') and action.released then ls.drag=nil
+        elseif (action_id==nil or action_id==hash('ui_pointer')) and ls.drag then slider(ls.drag) end
+        return true
     end
     -- The help overlay (LE6b) is modal: it takes every key and click; [H], [Esc], Close or a click
     -- outside the panel closes it. Nothing behind it is edited or driven.
@@ -2475,6 +2519,7 @@ end
 -- Editor A1b adapter: business state and existing actions remain here; the renderer only draws
 -- bounded pools. Templates have logical identities, never one permanent GUI allocation per station.
 local function render_ui(self)
+    terrain_look.tick()
     local vh=select(2,window.get_size())/(self.ui.scale or 1)
     self.version_per=math.max(1,math.min(6,math.floor((math.min(620,vh-64)-244)/48)))
     local e=editor.doc.editor
@@ -2609,7 +2654,7 @@ local function render_ui(self)
         name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
         field=f and {key=f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
-        modal=editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
+        look=terrain_look.session,modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
         version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,
         version_name=f and f.snapshot and f.text,version_error=self.version_list_error or editor.version_error,
         version_message=f and f.snapshot and f.error or editor.message,version_status=editor.status,
@@ -2687,7 +2732,7 @@ local function publish(self)
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
         overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
-        visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,object_scroll=self.ui.object_scroll or 0,object_max_scroll=self.ui.object_max_scroll or 0,object_query=self.ui.object_query or "",objects_collapsed=self.ui.objects_collapsed or false,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},hidden_objects=editor.hidden_objects or {},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
+        look=terrain_look.session,visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,object_scroll=self.ui.object_scroll or 0,object_max_scroll=self.ui.object_max_scroll or 0,object_query=self.ui.object_query or "",objects_collapsed=self.ui.objects_collapsed or false,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},hidden_objects=editor.hidden_objects or {},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         versions=self.version_rows or {},versions_open=self.open_dialog and self.version_dialog or false,versions_busy=editor.versions.busy(),version_error=editor.version_error or false,
         clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
@@ -2778,6 +2823,7 @@ function on_message(self,id,data)
         if data.mode~=self.mode then
             self.mode=data.mode
             cancel(self);self.open_dialog,self.warnings_open,self.drawing,self.field,self.help_open=false,false,nil,nil,false
+            if data.mode~="edit" then terrain_look.close();editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1 end
         end
         -- Back on top of the input stack for this mode.
         msg.post(".","acquire_input_focus")

@@ -86,15 +86,15 @@ local function publish(self,elapsed)
     end
 end
 local function admitted(self)
-    if self.admission_doc~=editor.doc or self.admission_shape~=editor.shape_version then
-        self.admission_doc,self.admission_shape=editor.doc,editor.shape_version
-        self.admission_ok=terrain.admitted(editor.doc.editor,editor.render_budget)
+    if self.admission_doc~=editor.doc or self.admission_shape~=editor.shape_version or self.admission_look~=(editor.look_epoch or 0) then
+        self.admission_doc,self.admission_shape,self.admission_look=editor.doc,editor.shape_version,editor.look_epoch or 0
+        self.admission_ok=terrain.admitted(editor.look_preview or editor.doc.editor,editor.look_preview and nil or editor.render_budget)
     end
     return self.admission_ok
 end
 function M.build(self)
     if not admitted(self) then lines.build(self);self.view.line_mode=true;return end
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(editor.doc.editor),opened=editor.opened}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,records={},label_text={},hidden={},mesh=terrain.create(editor.look_preview or editor.doc.editor),opened=editor.opened}
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
     v.start=lines.start_marker(v,editor.doc.editor.start.position)
@@ -108,9 +108,9 @@ function M.final(self,remove_objects)
     self.view=nil
 end
 function M.refresh(self,force)
-    local v=self.view;local e=editor.doc.editor;local now=socket.gettime()
+    local v=self.view;local e=editor.doc.editor;local terrain_e=editor.look_preview or e;local look_epoch=editor.look_epoch or 0;local now=socket.gettime()
     local live=editor.label_preview and editor.label_preview.id.."\0"..editor.label_preview.text or ""
-    local dirty=force or v.shape~=editor.shape_version or v.drawn~=editor.view_version or v.label_preview~=live
+    local dirty=force or v.shape~=editor.shape_version or v.drawn~=editor.view_version or v.label_preview~=live or v.look_epoch~=look_epoch
     if not dirty then return end
     if not force and editor.preview_objects and v.updated and now-v.updated<.033 then return end
     local style={}
@@ -118,17 +118,19 @@ function M.refresh(self,force)
         if doc.terrain(o) then style[#style+1]=o.id..(o.hidden and "h" or "v")..(editor.selected[o.id] and "s" or "n")..(editor.hover_object==o.id and "o" or "n") end
     end
     local style_key=table.concat(style,"|")
-    local mesh_dirty=force or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
+    local wanted=require("main.terrain_perspective.runtime").enabled(terrain_e)
+    if v.mesh.perspective~=wanted then terrain.final(v.mesh,true);v.mesh=terrain.create(terrain_e);force=true end
+    local mesh_dirty=force or v.look_epoch~=look_epoch or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
     local started=socket.gettime()
     local ok,result,err=true,true,nil
-    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation,residency.viewport(editor.camera)) end
+    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,terrain_e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation,residency.viewport(editor.camera)) end
     if not ok then err="Mesh preview unavailable: "..tostring(result);result=nil end
     if not result then
         print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return
     end
     objects(v,e);markers(v,e)
     v.shape,v.drawn,v.label_preview,v.updated=editor.shape_version,editor.view_version,live,now
-    v.mesh_revision,v.style_key=e.revision,style_key
+    v.mesh_revision,v.style_key,v.look_epoch=e.revision,style_key,look_epoch
     counts(self);if mesh_dirty then publish(self,(socket.gettime()-started)*1000) end
     return mesh_dirty
 end

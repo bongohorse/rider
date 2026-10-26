@@ -152,6 +152,7 @@ local function from_station(d,id,name)
     local e={editor_version=M.EDITOR_VERSION,compiler_version=M.COMPILER_VERSION,revision=0,next_id=1,objects={},connections={},
         sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
     if require('main.terrain_perspective.profile').enabled(d) then e.road_profile=require('main.terrain_perspective.profile').ID end
+    if require('main.terrain_perspective.look').authored(d) then e.road_profile='authored-v1';e.road_look=copy(d.editor.road_look) end
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -172,6 +173,7 @@ function M.template(d)
     local name=d.name.." copy"
     if #name>64 then name=d.name:sub(1,59).." copy" end
     local note=d.seesaw and "Template copy without the seesaw: it is a dynamic station object that the editor cannot hold yet. Drive it in the station itself."
+    if require("main.terrain_perspective.look").authored(d) then return {schema=1,units="metres",id="my-"..d.id,name=name,editor=copy(d.editor)},note end
     return from_station(d,"my-"..d.id,name),note
 end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
@@ -267,6 +269,8 @@ function M.validate(doc)
             return nil,"Unsupported sampling settings "..(type(s)=="table" and tostring(s.tolerance).."/"..tostring(s.max_segment) or "(missing)"),true
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
+    local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
+    if not look_ok then return nil,look_err,look_unknown end
     local ids,total={},0
     for _,o in ipairs(e.objects) do
         if type(o)~="table" or type(o.id)~="string" then return nil,"Invalid editor object" end

@@ -133,7 +133,7 @@ function M.describe(d)
         for first=1,#prep.p-1,M.INTERVALS do
             local last=math.min(first+M.INTERVALS,#prep.p)
             local vertices=(last-first)*18+(first==1 and 6 or 0)+(last==#prep.p and 6 or 0)
-            entries[#entries+1]={prep=prep,first=first,last=last,key="run"..chain_index.."-"..first.."-"..last,bounds=M.extent(prep,first,last),vertices=vertices,bytes=vertices*36,dirty=true}
+            entries[#entries+1]={chain=chain_index,prep=prep,first=first,last=last,key="run"..chain_index.."-"..first.."-"..last,bounds=M.extent(prep,first,last),vertices=vertices,bytes=vertices*36,dirty=true}
             total=total+vertices
         end
     end

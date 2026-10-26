@@ -410,14 +410,43 @@ function M.render(u,d)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
+        button('terrain_look',560,h-56,132,'Terrain Look',false,'Terrain Look: level or selected terrain sections')
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12);text(428,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
     else
-        box(0,0,w,h,C.canvas)
+        if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-32);mx=w-mw-16;my=16 end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
-        if modal=='help' then
+        if modal=='terrain_look' then
+            local s=d.look
+            text(mx+16,my+24,'Terrain Look',C.active,18)
+            button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
+            button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
+            text(mx+16,my+88,s.scope=='level' and 'Level defaults; manual section looks stay intact.' or ('Selected source sections: '..#(s.ids or {})),C.secondary,12,mw-32)
+            local top,bottom=my+104,my+mh-104
+            local height=5*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
+            for i,spec in ipairs(require('main.terrain_perspective.projection').CONTROLS) do
+                local y=top+(i-1)*44-u.look_scroll;local key=spec.key
+                if y>=top and y+40<=bottom then
+                    local disabled=s.scope=='selected' and (key=='perspective' or key=='angle')
+                    local value=s.field and s.field.key==key and (s.field.text..'_') or string.format('%.4g',s.params[key])
+                    text(mx+16,y+10,spec.label,disabled and C.secondary or C.text,12,268)
+                    button('look_value_'..key,mx+300,y,100,value,false,'Numeric '..spec.label,24,disabled)
+                    local r=require('main.terrain_perspective.projection').RANGES[key];local x=mx+16;local width=mw-36
+                    local track=box(x,y+30,width,8,C.border);u.buttons['look_slider_'..key]={box=track};u.visible[#u.visible+1]='look_slider_'..key
+                    u.rects['look_slider_'..key]={x=x,y=y+24,w=width,h=18}
+                    local fraction=(s.params[key]-r[1])/(r[2]-r[1]);box(x+fraction*(width-8),y+26,8,16,disabled and C.secondary or C.active)
+                end
+            end
+            text(mx+16,my+mh-86,'Perspective / angle are always level-wide. Scroll for controls.',C.secondary,12,mw-32)
+            local note=s.error or (s.dirty and 'Preview only; Apply saves one Undo action.' or ('Applied settings: '..d.status))
+            paragraph(mx+16,my+mh-68,note,mw-32,s.error and C.error or C.secondary,12,{my+mh-84,my+mh-36})
+            button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset preview; Apply to store. Selected reset restores inheritance.',28)
+            button('look_apply',mx+120,my+mh-36,92,'Apply',true,'Store this scope as one Undo action',28)
+            button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
+        elseif modal=='help' then
             u.help_panel=panel
             for col,lines in ipairs(d.help) do
                 local x=mx+20+(col-1)*mw/2
