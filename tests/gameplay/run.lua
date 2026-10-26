@@ -14,3 +14,8 @@ run.reset(r,true);run.pause(r,true);assert(r.state=='paused');run.pause(r,false)
 local function score(group) local t=run.new(1);local id=run.reset(t,true);run.start(t,id);for frame=1,60/group do for i=1,group do run.tick(t,1/60) end end;return run.finish(t,id).time end
 assert(score(1)==score(2))
 print('PASS run ready/start/pause/finish/failure/retry/stale IDs/unrounded clock/30 vs 60 render grouping')
+
+local scale=require 'main.gym.time_scale';local t=scale.new()
+assert(scale.control(t,'suspend') and t.paused);assert(not scale.control(t,'suspend') and t.paused)
+assert(scale.control(t,'pause') and not t.paused)
+print('PASS repeated background notifications pause idempotently; explicit resume required')

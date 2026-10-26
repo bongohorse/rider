@@ -21,7 +21,10 @@ function M.apply(t,proxy,edit)
 end
 -- One control request: "pause" toggles, "step" cycles 1.0 -> 0.5 -> 0.25 -> 1.0 (pause is kept).
 function M.control(t,action)
-    if action=="pause" then t.paused=not t.paused
+    if action=="suspend" then
+        if t.paused then return false end
+        t.paused=true
+    elseif action=="pause" then t.paused=not t.paused
     elseif action=="step" then t.index=t.index%#M.STEPS+1
     else return false end
     return true

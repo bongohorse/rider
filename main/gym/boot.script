@@ -279,7 +279,7 @@ function on_message(self,id,data,sender)
     -- A20 pause/slow motion: play worlds only. Pausing stops ticks at once; any running factor is set only after
     -- the controller acknowledged (time_ready) and cleared its input, so no tick runs with input from before.
     elseif id==hash("run_focus_lost") and self.station=="first-run" and not self.loading and editor.mode=="play" then
-        if not self.time.paused then msg.post("#script","time_control",{action="pause"}) end
+        msg.post("#script","time_control",{action="suspend"})
     elseif id==hash("time_control") and not self.loading and editor.mode=="play" then
         if time_scale.control(self.time,data.action) then
             self.time.seq=self.time.seq+1
