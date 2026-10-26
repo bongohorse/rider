@@ -29,7 +29,7 @@ function M.prepare(state,camera)
         e.bounds=projection.bounds(e.base_bounds,camera,M.params)
     end
 end
-function M.apply(state)
+function M.apply(state,set_bounds)
     local p,c=M.params,state.look_camera
     local a=p.mode=='perspective' and p.perspective/projection.FOCAL or 0
     local scale=sys.get_config_number('physics.scale',.01)
@@ -61,13 +61,15 @@ function M.apply(state)
         if fresh or e.look_b1~=b[1] or e.look_b2~=b[2] or e.look_b3~=b[3] or e.look_b4~=b[4] then
             g.bounds={b[1]-g.origin[1],b[2]-g.origin[2],0,b[3]-g.origin[1],b[4]-g.origin[2],0}
             -- Metadata does not increment the pinned buffer content version.
-            require('main.gym.terrain_mesh').bounds(resource.get_buffer(e.resource),g)
+            set_bounds(resource.get_buffer(e.resource),g)
             e.look_b1,e.look_b2,e.look_b3,e.look_b4=b[1],b[2],b[3],b[4]
             state.aabb_writes=(state.aabb_writes or 0)+1
         end
     end end
     if html5 and sys.get_engine_info().is_debug then
-        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
+        local entries={}
+        for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,bytes=e.geometry and e.geometry.bytes or 0} end
+        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
     end
 end
 return M

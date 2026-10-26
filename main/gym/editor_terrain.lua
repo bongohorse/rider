@@ -119,7 +119,7 @@ local function materialize(state,entry,generation,result)
     local c=entry.geometry
     local scale=sys.get_config_number("physics.scale",0.01)
     go.set(msg.url(nil,entry.object,"mesh"),"editor_params",vmath.vector4(p.phase,(p.lower-c.origin[2])/scale,geometry.DEPTH/scale,1))
-    if c.body=="filled" then c.bounds[2]=p.lower-c.origin[2];mesh.bounds(resource.get_buffer(entry.resource),c) end
+    if c.body=="filled" and not c.perspective then c.bounds[2]=p.lower-c.origin[2];mesh.bounds(resource.get_buffer(entry.resource),c) end
     result.uniforms=result.uniforms+1
     entry.restyle=nil
 end
@@ -129,7 +129,7 @@ function M.resident(state,generation,view,result)
     local perspective=require "main.terrain_perspective.runtime"
     if perspective.enabled() then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
     local r=residency.update(state,state.entries,view,function(entry) materialize(state,entry,generation,result) end,function(entry) mesh.drop(entry,true) end)
-    if perspective.enabled() then perspective.apply(state) end
+    if perspective.enabled() then perspective.apply(state,mesh.bounds) end
     if state.last_geometry then
         state.last_geometry.allocated,state.last_geometry.allocated_bytes=r.allocated,r.bytes
     end

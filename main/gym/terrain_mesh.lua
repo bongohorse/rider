@@ -46,6 +46,7 @@ function M.upload(entry,c,path)
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2),entry.object) end
     entry.geometry=c
+    if c.perspective then entry.look_object=nil end
     publish()
 end
 -- Selection/visibility changes write colors in place; positions and resource identity stay retained.
@@ -113,7 +114,7 @@ function M.update(self)
         if not e.resource then state.serial=(state.serial or 0)+1 end
         M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")
     end,function(e) M.drop(e,true) end)
-    if perspective.enabled() then perspective.apply(state) end
+    if perspective.enabled() then perspective.apply(state,M.bounds) end
     state.stats.mesh_gameobjects,state.stats.allocated_bytes=r.allocated,r.bytes
     state.stats.resident=r
     r.update_ms=(socket.gettime()-started)*1000

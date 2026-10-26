@@ -21,14 +21,16 @@ void main() {
         if(look_data.z>0.5) p.y=max(look_origin.z,look_data.y-look_shape.z)/s;
         else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
     }
+    float perspective_w=1.0;
     if(depth>0.0) {
     vec2 world=p.xy*s+look_origin.xy;
     // One central projection for the entire rigid shallow body. z=0 is exactly invariant.
+    perspective_w=1.0+look_shape.y*depth;
     vec2 projected=look_camera.xy+(world-look_camera.xy+depth*look_camera.zw)/(1.0+look_shape.y*depth);
     p.xy=(projected-look_origin.xy)/s;
     }
     p.z=0.0; // preserve accepted terrain/sprite layering; no gameplay camera or 3D physics
-    gl_Position=world_view_proj*vec4(p,1.0);
+    gl_Position=(world_view_proj*vec4(p,1.0))*perspective_w;
     var_color=vec4(mix(vec3(0.46,0.61,0.51),color.rgb,look_shape.w),color.a);
     var_uv=texcoord0+vec2(editor_params.x,0.0);
 }
