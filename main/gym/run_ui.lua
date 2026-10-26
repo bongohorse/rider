@@ -28,6 +28,10 @@ function M.show(t,r)
  gui.set_text(t.result,r.state=='failed' and (r.reason=='head' and 'Head contact' or 'Outside the course') or string.format('Finished!  %.2f s',r.time))
  gui.set_text(t.detail,not r.official and 'Practice - official best unchanged' or r.new_best and (saved and 'New personal best - saved' or r.save) or (r.best>0 and string.format('Personal best %.2f s',r.best) or r.save))
 end
+function M.geometry(t)
+ local function point(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
+ return {retry=point(t.retry),entry=point(t.entry),heading=gui.get_text(t.clock),best=gui.get_text(t.best),result=gui.get_text(t.result),detail=gui.get_text(t.detail)}
+end
 function M.input(t,id,action,owner)
  if id~=hash('ui_pointer') or not action.pressed then return false end
  if not t.data and gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','select_station',{id='first-run',preset='a'});return true end

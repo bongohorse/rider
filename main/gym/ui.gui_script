@@ -168,7 +168,7 @@ function on_message(self,id,data,sender)
     if id==hash("run_state") then
         if data.generation<(self.session_generation or 1) then return end
         run_ui.show(self.run_ui,data)
-        if html5 then html5.run("window.riderRun="..json.encode(data)) end
+        if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
         return
     elseif id==hash("station_loading") then run_ui.show(self.run_ui,nil);if html5 then html5.run("window.riderRun=null") end end
     if id==hash("station_loading") then
