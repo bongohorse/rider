@@ -80,3 +80,18 @@ print('PASS authored two-sided curl/ribbon bounds; original physics domain retai
 local runtime=require 'main.terrain_perspective.runtime';local base={0,-10,30,1};local state={baked=true,params=proj.validate(proj.DEFAULT),entries={{base_bounds=base,geometry={max_width=.25},dirty=true}}}
 runtime.prepare(state,{0,0});assert(same(state.entries[1].bounds,proj.bounds(base,{0,0},state.params,2)),'Dirty cached narrow style underbounds a wider pending style')
 print('PASS dirty/cached authored bounds cover full permitted width before upload')
+
+-- R1: supported sources can disagree with their cached compiled geometry. Never map local
+-- styles onto different samples, but keep import/recovery and stale-source opening reachable.
+local recover=dofile(arg[1]..'/long-curves-source.lua')
+recover.editor.road_profile=look.ID;recover.editor.road_look={version=1,params=proj.validate(proj.DEFAULT)}
+recover.editor.objects[2].road_look={version=1,width=1.4,side=5,shading=.6}
+local cached=assert(doc.compile(recover));assert(look.mapping(cached))
+for _,o in ipairs(cached.editor.objects) do if o.type=='curve' then o.anchors[2].p[2]=o.anchors[2].p[2]+1;break end end
+assert(require('main.gym.station_data').validate(cached));assert(not look.mapping(cached))
+local opened,note,conflict=doc.open_level(cached);assert(opened and conflict and conflict.lines)
+assert(look.mapping(assert(doc.compile(opened))))
+cached.editor.revision=cached.editor.revision+1
+assert(require('main.gym.station_data').validate(cached));opened,note,conflict=doc.open_level(cached)
+assert(opened and not conflict);assert(look.mapping(assert(doc.compile(opened))))
+print('PASS authored mismatch import/conflict and stale-source recovery without unsafe style mapping')

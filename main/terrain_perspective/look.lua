@@ -55,17 +55,20 @@ function M.validate_station(d)
  local ok,err,unsupported=doc.validate({schema=d.schema,units=d.units,id=d.id,name=d.name,editor=d.editor})
  if not ok then return nil,err,unsupported end
  if not M.has_sections(d) then return true end
+ -- Cached geometry remains playable under R1. Only matching source may supply local styles;
+ -- mismatches fall back to level defaults until the existing editor recovery recompiles them.
+ cache[d]=nil
  local e=d.editor;local values=M.values(e);local maps={};local index=0
  for _,run in ipairs(doc.runs(e)) do for _,c in ipairs(doc.run_chains(e,run)) do
   index=index+1;local raw=d.chains[index]
-  if not raw or #raw~=#c.points then return nil,'Terrain Look section mapping differs from compiled terrain; open the source and recompile.' end
+  if not raw or #raw~=#c.points then return true end
   local reverse=raw[1][1]>raw[#raw][1];local other=c.points[1][1]>c.points[#c.points][1]
   for j=1,#raw do local a,b=raw[reverse and #raw-j+1 or j],c.points[other and #raw-j+1 or j]
-   if math.abs(a[1]-b[1])>1e-6 or math.abs(a[2]-b[2])>1e-6 then return nil,'Terrain Look source differs from compiled terrain; open the source and recompile.' end
+   if math.abs(a[1]-b[1])>1e-6 or math.abs(a[2]-b[2])>1e-6 then return true end
   end
   maps[index]=M.samples(c,values)
  end end
- if index~=#d.chains then return nil,'Terrain Look chain mapping differs; open source and recompile.' end
+ if index~=#d.chains then return true end
  cache[d]=maps;return true
 end
 function M.mapping(d) return cache[d] end
