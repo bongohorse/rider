@@ -17,7 +17,7 @@ module.exports=async function(h){
  const source=await doc();assert.equal(source.editor_version,8);
  await button('export');await page.waitForSelector('#rider-export-text');const exported=JSON.parse(await page.locator('#rider-export-text').inputValue());
  assert.deepEqual(exported.medal_times,source.medal_times);assert.deepEqual(exported.editor.medal_times,source.medal_times);
- await page.getByRole('button',{name:'Close export',exact:true}).click();
+ await page.getByRole('button',{name:'Close export',exact:true}).click();await page.locator('canvas').focus();await page.waitForTimeout(1100);
  await importText(JSON.stringify(exported),'medal-roundtrip.json');await key('Escape');await settle();
  assert.deepEqual((await doc()).medal_times,source.medal_times);assert.equal((await ed()).conflict,false);
  await page.screenshot({path:path.join(out,'medal-editor.png')});
