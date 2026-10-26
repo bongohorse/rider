@@ -14,7 +14,7 @@ local downhill=assert(R.prepare(course({{{10,-4},{3,0},{0,4}}},{0,4},10)))
 near(downhill.length,5+math.sqrt(65));near(R.position(downhill,1.5,2),2.5)
 local gap=assert(R.prepare(course({{{10,0},{0,0}},{{30,0},{20,0}}},{2,0},28)))
 near(gap.length,26);assert(gap.gaps==1);local s,err,air=R.position(gap,15,4);near(s,13);assert(not err and air)
-near(R.position(gap,-10,0),0);near(R.position(gap,40,0),26);assert(not R.position(gap,15,50))
+assert(not R.position(gap,0/0,0));near(R.position(gap,-10,0),0);near(R.position(gap,40,0),26);assert(not R.position(gap,15,50))
 local bads={
  course({{{0,0},{10,0},{5,5},{15,5}}},{0,0},15),
  course({{{0,0},{10,0}},{{5,3},{15,3}}},{0,0},15),

@@ -90,6 +90,7 @@ function M.prepare(d)
     return r
 end
 function M.position(r,x,y)
+    if not finite(x) or not finite(y) then return nil,'Vehicle position unavailable' end
     local s,d,gap=project(r,x,y,r.start,r.finish)
     if not s or d>M.MAX_OFFSET^2 then return nil,'Vehicle off route (>20 m)' end
     return math.max(0,math.min(r.length,s-r.start)),nil,gap==true
