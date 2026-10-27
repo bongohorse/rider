@@ -21,7 +21,7 @@ assert(require('main.gym.terrain_budget').measure(level).sprites==1)
 print('PASS swept multipart pickups, once-per-ID/reverse/pause/reset; stable source IDs, move/duplicate/compile/import, version and sprite budget')
 
 local many={version=1,items={}}
-for i=1,D.MAX do many.items[i]={id='coin-'..i,position={0,1}} end
+for i=1,D.MAX do many.items[i]={id='coin-'..i,position={0,0}} end
 assert(D.validate(many));local dense=C.new(many);C.observe(dense,parts(0),true);assert(dense.count==D.MAX)
 many.items[D.MAX+1]={id='too-many',position={0,1}};assert(not D.validate(many))
 assert(not D.validate({version=1,items={unexpected={id='a',position={0,0}}}}))
