@@ -194,7 +194,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
+        local field=name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -441,7 +441,11 @@ function M.render(u,d)
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
         button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Terrain Look: level or selected terrain sections. * means preview values need Apply.')
-        text(268,h-40,'Grid '..d.grid..' [G]',C.active,12);text(428,h-40,string.format('Zoom %.0f%%',d.zoom*100),C.secondary,12)
+        text(268,h-40,'Grid '..d.grid..' [G]',C.active,12)
+        button('zoom_out',404,h-56,32,'-',false,'Zoom out to the previous step (minimum 1%).')
+        if d.zoom_edit then box(442,h-58,76,36,d.zoom_error and C.error or C.active) end
+        button('zoom_value',444,h-56,72,d.zoom_edit and d.zoom_text..'_' or d.zoom_text..'%',false,d.zoom_error or 'Zoom 1-400%: type a value; Enter applies, Esc cancels. 100% = camera multiplier 1; window AUTO_FIT still applies.')
+        button('zoom_in',524,h-56,32,'+',false,'Zoom in to the next step (maximum 400%).')
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
     else
