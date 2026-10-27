@@ -14,7 +14,7 @@ module.exports=async function(h){
  await key('y',['Control']);await revision(rev+6);assert.equal((await doc()).medal_times.bronze,45.5);
  await button('clear_medals');await revision(rev+7);assert.equal((await doc()).medal_times,undefined);
  await key('z',['Control']);await revision(rev+8);assert.equal((await doc()).medal_times.bronze,45.5);
- const source=await doc();assert.equal(source.editor_version,8);
+ const source=await doc();assert.equal(source.editor_version,9);
  await button('export');await page.waitForSelector('#rider-export-text');const exported=JSON.parse(await page.locator('#rider-export-text').inputValue());
  assert.deepEqual(exported.medal_times,source.medal_times);assert.deepEqual(exported.editor.medal_times,source.medal_times);
  await page.getByRole('button',{name:'Close export',exact:true}).click();await page.locator('canvas').focus();await page.waitForTimeout(1100);

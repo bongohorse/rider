@@ -7,6 +7,7 @@ local residency=require "main.gym.terrain_residency"
 local socket=require "socket"
 local M={}
 local SELECTED,HOVER=vmath.vector4(1,0.7765,0.4275,1),vmath.vector4(0.8353,0.9529,0.9137,1)
+local COIN_TINT=vmath.vector4(1,1,1,1)
 local START,BLOCKED=vmath.vector4(.4,.75,1,1),vmath.vector4(1,.35,.3,1)
 local function copy(p) local t={};for i,q in ipairs(p) do t[i]={q[1],q[2]} end;return t end
 local function changed(a,b)
@@ -15,8 +16,8 @@ local function changed(a,b)
 end
 local function remove(v,r)
     local dead={};for _,id in ipairs(r.ids) do dead[id]=true;go.delete(id) end
-    for _,key in ipairs({"gos","line_ids","label_ids"}) do
-        local t={};for _,id in ipairs(v[key]) do if not dead[id] then t[#t+1]=id end end;v[key]=t
+    for _,key in ipairs({"gos","line_ids","label_ids","coin_ids"}) do
+        local t={};for _,id in ipairs(v[key] or {}) do if not dead[id] then t[#t+1]=id end end;v[key]=t
     end
     v.sprites,v.labels=v.sprites-r.sprites,v.labels-r.labels
 end
@@ -37,7 +38,8 @@ local function objects(v,e)
             elseif not r.terrain then r.ids=lines.draw(v,shown);r.sprites=#r.ids end
             v.records[id]=r;v.zoom=nil
         elseif changed(r.points,pts) then
-            if o.type=="label" then go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),r.ids[1])
+            if o.type=='coin' then require('main.gym.coin_visual').position(r.ids[1],pts[1])
+            elseif o.type=="label" then go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),r.ids[1])
             elseif not r.terrain then for i,go_id in ipairs(r.ids) do lines.place_line(go_id,pts[i],pts[i%#pts+1],scale) end end
             r.points=copy(pts)
         end
@@ -54,7 +56,7 @@ local function objects(v,e)
         end
         v.hidden[id]=hidden
         if o.type~="label" and not r.terrain then
-            local colour=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or require("main.gym.stations").TERRAIN_TINT
+            local colour=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.gym.stations").TERRAIN_TINT
             if r.tint~=colour then lines.tint(r.ids,colour);r.tint=colour end
         end
     end

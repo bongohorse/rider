@@ -62,7 +62,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.goto(base+'?station=straight');
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
-  assert.equal(e.id,'my-straight');let d=await doc();assert.equal(d.editor_version,8);assert.deepEqual(d.connections,[]);
+  assert.equal(e.id,'my-straight');let d=await doc();assert.equal(d.editor_version,9);assert.deepEqual(d.connections,[]);
   assert.ok(line(d,'o1').points[0][0]<line(d,'o1').points[1][0],'template lines run left to right');
   await at([10,0.8]);await page.waitForFunction(()=>window.riderEditor.selection==='o1');
   await key('Delete');e=await revision(1);assert.equal(e.objects,0);assert.ok(e.errors[0].includes('No terrain'),e.errors[0]);

@@ -13,6 +13,8 @@ function M.new()
  t.card=layout.box(vmath.vector3(480,300,0),vmath.vector3(440,220,0),'centre');gui.set_color(t.card,vmath.vector4(.04,.12,.16,.96))
  t.result=text(480,374,'',1,'centre');t.detail=text(480,338,'',.6,'centre')
  t.medal=text(480,302,'',.8,'centre');t.next=text(480,272,'',.6,'centre')
+ t.coinhud=text(480,415,'',.6,'top');t.coins=text(480,248,'',.6,'centre')
+ gui.set_visible(t.coinhud,false);gui.set_visible(t.coins,false)
  t.retry=layout.box(vmath.vector3(480,222,0),vmath.vector3(190,32,0),'centre');gui.set_color(t.retry,vmath.vector4(.12,.4,.36,1))
  t.retry_label=text(480,222,'Retry [R]',.75,'centre')
  M.show(t,nil);return t
@@ -34,9 +36,20 @@ function M.show(t,r,touch)
  gui.set_text(t.next,r.state=='finished' and r.has_medals and r.official and next_text or '')
  gui.set_text(t.detail,not r.official and 'Practice - official best unchanged' or r.new_best and (saved and 'New personal best - saved' or r.save) or (r.best>0 and string.format('Personal best %.2f s',r.best) or r.save))
 end
+function M.show_coins(t,c,b,touch,flash)
+ local enabled=c and c.total>0
+ gui.set_visible(t.coinhud,enabled and not touch and not (t.data and (t.data.state=='finished' or t.data.state=='failed')) or false)
+ local r=t.data;local finished=r and r.state=='finished'
+ gui.set_visible(t.coins,enabled and finished or false)
+ if not enabled then return end
+ local total=b and b.total or 0;local status=b and b.status or 'Checking storage'
+ local suffix=status=='saved' and '' or ' | '..status
+ gui.set_text(t.coinhud,string.format('Coins %d/%d%s | Bank %d%s%s',c.count,c.total,flash and ('  +'..flash) or '',total,c.practice and ' | Practice' or '',suffix))
+ gui.set_text(t.coins,c.practice and string.format('Coins %d/%d - practice, not banked',c.count,c.total) or string.format('Coins %d/%d | Bank %d - %s',c.count,c.total,total,status))
+end
 function M.geometry(t)
  local function point(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
- return {retry=point(t.retry),entry=point(t.entry),heading=gui.get_text(t.clock),best=gui.get_text(t.best),result=gui.get_text(t.result),detail=gui.get_text(t.detail),medal=gui.get_text(t.medal),next=gui.get_text(t.next)}
+ return {retry=point(t.retry),entry=point(t.entry),heading=gui.get_text(t.clock),best=gui.get_text(t.best),result=gui.get_text(t.result),detail=gui.get_text(t.detail),medal=gui.get_text(t.medal),next=gui.get_text(t.next),coins=gui.get_text(t.coins),coin_hud=gui.get_text(t.coinhud)}
 end
 function M.input(t,id,action,owner)
  if id~=hash('ui_pointer') or not action.pressed then return false end

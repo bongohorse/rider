@@ -17,7 +17,7 @@ function M.measure(d)
     end
     for _,h in ipairs(d.hulls or {}) do r.hull_vertices=r.hull_vertices+#h.vertices end
     r.physics_vertices=r.physics_vertices+r.hull_vertices
-    r.sprites=r.hull_vertices+(d.finish and 1 or 0)+(d.seesaw and 1 or 0)
+    r.sprites=#(d.coins and d.coins.items or {})+r.hull_vertices+(d.finish and 1 or 0)+(d.seesaw and 1 or 0)
     r.labels=r.labels+(d.finish and 1 or 0)
     if d.markers then
         local m=d.markers

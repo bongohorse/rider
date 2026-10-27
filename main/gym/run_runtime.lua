@@ -40,6 +40,7 @@ function M.finish(self)
     local result=run.finish(self.race,self.race.id)
     if result then
         result.medal=result.official and medals.award(self.station.medal_times,result.time) or 0
+        require('main.gym.coin_runtime').finish(self,result)
         self.race.new_best=best.offer(self.personal,result)
     end
 end

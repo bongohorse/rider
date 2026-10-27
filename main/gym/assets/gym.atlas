@@ -17,3 +17,5 @@ animations {
   id: "wheel"
   images { image: "/main/gym/assets/car_wheel.png" }
 }
+
+images { image: "/main/gym/assets/coin.png" }

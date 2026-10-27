@@ -247,6 +247,7 @@ function M.render(u,d)
         button('undo',16,56,32,'Undo',false,'Undo [Ctrl+Z]')
         button('redo',56,56,32,'Redo',false,'Redo [Ctrl+Y]')
         button('play',96,56,40,'Play',true,'Play from START [E]')
+        button('tool_coin',152,56,76,'Coin',d.tool=='coin','Place ordinary coins. Select [S] to move, copy or delete.')
         local lw=u.tools and 40 or 184
         local tools_end=u.tools and 160 or u.prefabs and 280 or 508
         local objects_top=u.prefabs and 280 or 508

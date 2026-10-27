@@ -89,6 +89,7 @@ local function reset(self)
     self.reset_count = self.reset_count+1
     self.last_reset_reason = request.reason
     race.ready(self)
+    require('main.gym.coin_runtime').reset(self)
     progress.reset(self)
     self.resetting = false
     self.check_reset_pose = self.testcase=="a3"
@@ -124,7 +125,7 @@ local function check_finish(self,state)
     race.finish(self)
     self.finish_done,self.finish_count,self.finish_time=true,(self.finish_count or 0)+1,self.attempt_time
     print("GYM_FINISH "..json.encode({count=self.finish_count,time=self.attempt_time,speed=feel.metres(state.vx)}))
-    msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time,time_scaled=self.time_scaled_ticks>0})
+    msg.post("main:/loader#ui","finish_reached",{time=self.attempt_time,time_scaled=self.time_scaled_ticks>0,has_coins=self.coins~=nil,coins=self.coins and self.coins.count or 0})
 end
 local function emit(self, event, data)
     data = data or {}
@@ -299,6 +300,7 @@ end
 function update(self, dt)
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
+    require('main.gym.coin_runtime').update(self)
     race.update(self,dt)
     progress.update(self,dt)
     if self.placement_report then
@@ -351,6 +353,7 @@ function update(self, dt)
         start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         race.ready(self)
+        require('main.gym.coin_runtime').reset(self)
         progress.reset(self)
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
@@ -538,6 +541,7 @@ function fixed_update(self, dt)
             if self.sensor_skip==0 and self.crash_enabled and rider.contact(self.vehicle) then race.failed(self,"head") end
             self.attempt_time=self.race.elapsed
         else self.attempt_time=(self.attempt_time or 0)+dt end
+        require('main.gym.coin_runtime').observe(self,state)
         check_finish(self,state)
         progress.observe(self,state)
         if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5d" then

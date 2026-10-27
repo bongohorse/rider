@@ -34,6 +34,8 @@ function M.validate(d)
     if type(b)~="table" or #b~=4 then return nil,"Missing safety bounds" end
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
+    local coin_ok,coin_err,coin_unknown=require('main.gym.coin_data').validate(d.coins,b)
+    if not coin_ok then return nil,coin_err,coin_unknown end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
     -- Structural geometry counts; rendering and physics admission are checked independently below.
     local objects,segments,edges,labels,seesaws=0,0,0,0,0

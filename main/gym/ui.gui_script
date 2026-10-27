@@ -167,6 +167,12 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
+    if id==hash('coin_state') then
+        if data.generation<(self.session_generation or 1) then return end
+        local old=self.coin_data
+        if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        self.coin_data=data;if data.feedback>0 then self.coin_flash=.5;self.coin_flash_amount=data.feedback end;return
+    elseif id==hash('coin_bank_state') then self.coin_bank_data=data;return end
     if id==hash("course_progress") then
         if data.generation<(self.session_generation or 1) then return end
         local old=self.progress_ui.data
@@ -180,7 +186,7 @@ function on_message(self,id,data,sender)
         run_ui.show(self.run_ui,data,mobile.enabled())
         if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
         return
-    elseif id==hash("station_loading") then run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
+    elseif id==hash("station_loading") then self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
         self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
@@ -279,7 +285,7 @@ function on_message(self,id,data,sender)
         if html5 then html5.run("window.riderMobile?.setReplay?.("..json.encode(data.text)..")") end
     elseif id==hash("finish_reached") then
         self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
-        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or ""))
+        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or "")..(data.has_coins and (" | Coins "..data.coins..(self.run_ui.data and "" or " (practice)")) or ""))
         if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
     elseif id==hash("retry_done") then
         self.toast_time=1.5;gui.set_visible(self.reason,not mobile.enabled())
@@ -341,6 +347,16 @@ function update(self,dt)
         gui.set_visible(self.station_next,false);gui.set_visible(self.station_next_label,false)
         local terminal=self.run_ui.data.state=='finished' or self.run_ui.data.state=='failed'
         if terminal then gui.set_visible(self.time_buttons.pause.box,false);gui.set_visible(self.time_buttons.pause.label,false) end
+    end
+    self.coin_flash=math.max(0,(self.coin_flash or 0)-dt)
+    run_ui.show_coins(self.run_ui,self.coin_data,self.coin_bank_data,enabled,self.coin_flash>0 and (self.coin_flash_amount or 1) or false)
+    if html5 then
+        local c,b=self.coin_data,self.coin_bank_data
+        local published=c and {count=c.count,total=c.total,practice=c.practice,finished=c.finished,flash=self.coin_flash>0 and (self.coin_flash_amount or 1) or 0,bank=b and b.total or 0,save=b and b.status or 'Checking storage'} or nil
+        local encoded=json.encode(published)
+        if encoded~=self.coin_published then
+            self.coin_published=encoded;html5.run('window.riderCoins='..encoded..';window.riderRunUI='..json.encode(run_ui.geometry(self.run_ui)))
+        end
     end
     if self.progress_ui.data and self.progress_ui.data.enabled then gui.set_visible(self.time_line,false) end
     local compact=mobile.compact()
