@@ -14,8 +14,12 @@ function M.available(e,ids)
 end
 function M.plan(e,ids,height)
     local h,err=M.height(height);if not h then return nil,err end
-    local errors=doc.problems(e)
-    if errors[1] then return nil,'Fix track errors before Drop to Track: '..errors[1] end
+    local geometry=false
+    for _,o in ipairs(e.objects) do if doc.terrain(o) or doc.outline(o) then geometry=true;break end end
+    if geometry then
+        local errors=doc.problems(e)
+        if errors[1] then return nil,'Fix track errors before Drop to Track: '..errors[1] end
+    end
     local chosen={};for _,id in ipairs(ids) do chosen[id]=true end
     local p={moves={},locked=0,unsupported=0,no_surface=0,unchanged=0}
     for _,o in ipairs(e.objects) do if chosen[o.id] then

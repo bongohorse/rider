@@ -13,6 +13,7 @@ for _,h in ipairs({'abc',-1,101,math.huge,0/0}) do assert(not A.height(h));asser
 assert(A.height(0)==0 and A.height(100)==100)
 local stale=D.copy(original);stale.objects[4].locked=true;assert(not A.apply(stale,plan));assert(stale.objects[3].position[2]==10,'plan partially applied before lock refusal')
 local changed=D.copy(original);changed.objects[4].position[1]=7;assert(not A.apply(changed,plan));assert(changed.objects[3].position[2]==10)
+local empty=D.blank('empty-drop','Empty drop').editor;empty.objects={{id='o1',type='coin',pickup_id='empty-coin',position={0,5}}};local miss=assert(A.plan(empty,{'o1'},.7));assert(miss.no_surface==1 and #miss.moves==0)
 local backwards=D.copy(original);backwards.objects[1].points={{30,0},{20,5},{10,0},{-5,0}};assert(#assert(A.plan(backwards,ids,.7)).moves==4)
 local invalid=D.copy(original);invalid.objects[1].points={{0,0},{10,0},{5,0}};assert(not A.plan(invalid,ids,.7))
 for _,kind in ipairs({'gap','kicker','wave'}) do
