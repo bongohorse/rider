@@ -8,7 +8,8 @@ function M.height(text)
     return n
 end
 function M.available(e,ids)
-    for _,id in ipairs(ids) do local o=edit.find(e,id);if o and o.type=='coin' then return true end end
+    local selected={};for _,id in ipairs(ids) do selected[id]=true end
+    for _,o in ipairs(e.objects) do if selected[o.id] and o.type=='coin' then return true end end
     return false
 end
 function M.plan(e,ids,height)
