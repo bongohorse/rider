@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),pointer=req
 module.exports=async function(h){
  const {page,ed,key,button,snapshot,unchanged,settle,canvas,out,cases,measurements}=h;
  const before=await snapshot(),centre=e=>[(e.usable.x0+e.usable.x1-2*e.screen.ox)/(2*e.screen.ppm_x),(e.usable.y0+e.usable.y1-2*e.screen.oy)/(2*e.screen.ppm_y)];
- async function value(text,finish='Enter'){await button('zoom_value');await key('Backspace');if(text)await page.keyboard.type(text,{delay:10});await key(finish);return settle();}
+ async function value(text,finish='Enter'){await button('zoom_value');await key('Backspace');if(text)await page.keyboard.type(text,{delay:10});await page.waitForFunction(text=>window.riderEditor.field===text,text,{timeout:5000});await key(finish);return settle();}
  let anchor=centre(await ed()),e=await value('100');assert.equal(e.camera.zoom,1);assert.equal(e.field,false);assert.equal(e.mode,'edit');
  for(let i=0;i<2;i++)assert.ok(Math.abs(centre(e)[i]-anchor[i])<.002,'percentage entry moved workspace centre');
  await button('zoom_out');assert.equal((await ed()).camera.zoom,.75);await button('zoom_in');assert.equal((await ed()).camera.zoom,1);
