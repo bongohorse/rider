@@ -9,7 +9,6 @@ local stations=require "main.gym.stations"
 local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
-local COIN_TINT=vmath.vector4(1,1,1,1)
 local HOVER=vmath.vector4(0.8353,0.9529,0.9137,1)
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).

@@ -14,6 +14,9 @@ function M.observe(self,state)
     local c=self.coins;if not c then return end
     local feel=require 'main.gym.feel'
     local parts={{feel.metres(state.x),feel.metres(state.y),radius=.65}}
+    local head=require 'main.gym.rider'
+    local offset=feel.metres(head.center_y)
+    parts[#parts+1]={parts[1][1]-math.sin(state.angle)*offset,parts[1][2]+math.cos(state.angle)*offset,radius=feel.metres(head.radius)}
     for _,body in ipairs(self.vehicle.wheels) do local p=b2d.body.get_position(body);parts[#parts+1]={feel.metres(p.x),feel.metres(p.y),radius=.22} end
     local active=self.race and self.race.state=='running' or not self.race and not self.finish_done and not self.paused
     local found=coins.observe(c,parts,active)
