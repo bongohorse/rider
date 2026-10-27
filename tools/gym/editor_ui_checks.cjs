@@ -133,7 +133,7 @@ module.exports=async function uiChecks(h){
  await hi.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.ui.rects.play);
  const high=await hi.evaluate(()=>({state:window.riderEditor,canvas:document.querySelector('canvas').width,css:document.querySelector('canvas').clientWidth}));
  assert.equal(high.canvas/high.css,2);assert.equal(high.state.ui.scale,2);
- assert.equal(high.state.ui.rects.play.x,96);assert.equal(high.state.ui.rects.play.h,32);
+ assert.equal(high.state.ui.rects.play.x,high.css/2+20);assert.equal(high.state.ui.rects.play.h,32);
  assert.equal(high.state.usable.x0,432);assert.equal(high.state.usable.x1,1936);assert.equal(high.state.overlay.nodes,628);
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};
