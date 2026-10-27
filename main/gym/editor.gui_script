@@ -9,6 +9,7 @@ local snap_lib=require "main.gym.editor_snap"
 local overlay=require "main.gym.editor_overlay"
 local editor_ui=require "main.gym.editor_ui"
 local zoom_policy=require "main.gym.editor_zoom"
+local track_align=require "main.gym.editor_track_align"
 local terrain_look=require "main.gym.editor_look"
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
@@ -510,6 +511,7 @@ local function zoom(self,factor) set_zoom(self,editor.camera.zoom*factor,self.cu
 -- After another document became current: dialogs close, and an unfinished piece (which belongs to the
 -- previous document) is discarded with its gesture state.
 local function opened(self)
+    self.track_height=track_align.DEFAULT
     self.open_dialog,self.field,self.confirm_delete,self.place=false,nil,nil,nil
     if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
     cancel(self);self.snapped=nil
@@ -1031,6 +1033,11 @@ local function drop_char(t)
     return t:sub(1,math.max(0,i-1))
 end
 local function confirm_name(self,closing)
+    if self.field.track then
+        local f=self.field;local height,err=track_align.height(f.text)
+        if not height then f.error=err;editor.message=err;if closing then self.field=nil end;return end
+        self.track_height=height;self.field=nil;editor.message='Height ready; Drop to Track applies it to the selection.';return
+    end
     if self.field.zoom then
         local f=self.field;local z,err=zoom_policy.parse(f.text)
         if not z then
@@ -1229,6 +1236,12 @@ end
 -- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
 local function step_focused(self,name)
     local f=self.field
+    if f.track and (name=='inc_track_height' or name=='dec_track_height') then
+        local height,err=track_align.height(f.text)
+        if height then height,err=track_align.height(height+(name=='inc_track_height' and 1 or -1)*.1*(self.held.shift and 10 or self.held.alt and .1 or 1)) end
+        if not height then f.error=err;editor.message=err;return true end
+        self.track_height=height;self.field=nil;editor.message='Height ready; Drop to Track applies it to the selection.';return true
+    end
     if f.zoom and (name=='zoom_in' or name=='zoom_out') then
         local z,err=zoom_policy.parse(f.text)
         if not z then f.error=err;editor.message=err;return true end
@@ -1270,6 +1283,18 @@ local function step_focused(self,name)
     return false
 end
 local function on_button(self,name)
+    if name=='track_height' then
+        self.ui.reveal=name;self.field={track=true,text=number_text(self.track_height or track_align.DEFAULT),all=true};return
+    elseif name=='inc_track_height' or name=='dec_track_height' then
+        local h,err=track_align.height((self.track_height or track_align.DEFAULT)+(name=='inc_track_height' and 1 or -1)*.1*(self.held.shift and 10 or self.held.alt and .1 or 1))
+        if h then self.track_height=h;editor.message='Height ready; Drop to Track applies it to the selection.' else editor.message=err end
+        return
+    elseif name=='drop_to_track' then
+        local plan,err=track_align.plan(editor.doc.editor,editor.selected_ids(),self.track_height or track_align.DEFAULT)
+        if not plan then editor.message=err;return end
+        if #plan.moves==0 or editor.commit(function(e) return track_align.apply(e,plan) end,true) then editor.message=track_align.summary(plan) end
+        return
+    end
     if name=='zoom_value' then
         self.field={zoom=true,text=zoom_policy.text(editor.camera.zoom),all=true};return
     elseif name=='zoom_in' or name=='zoom_out' then
@@ -2067,8 +2092,8 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            local limit=(f.param or f.speed or f.medal or f.zoom) and 16 or 64
-            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+            local limit=(f.param or f.speed or f.medal or f.zoom or f.track) and 16 or 64
+            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom or f.track) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_cycle") and action.pressed then
@@ -2088,7 +2113,7 @@ function on_input(self,action_id,action)
                 elseif medal then
                     local order={'gold','silver','bronze'};local i=medal=='gold' and 1 or medal=='silver' and 2 or 3
                     on_button(self,'medal_'..order[(i-1+(self.held.shift and -1 or 1))%3+1])
-                elseif not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
+                elseif not f.track and not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
                     on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
                 end
             end
@@ -2096,7 +2121,7 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
         elseif action_id==hash("ui_pointer") and action.pressed then
             local name=hit(self,action)
-            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out") then
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track") then
                 if not step_focused(self,name) then
                     confirm_name(self)
                     if not self.field then on_button(self,name) end
@@ -2731,14 +2756,15 @@ local function render_ui(self)
     end
     local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
         object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
-        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and f.text or editor.doc.name,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and f.text or editor.doc.name,
         status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
         medal_times=e.medal_times,medal_field=f and f.medal,medal_text=f and f.medal and f.text,medal_error=f and f.medal and f.error,
         description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
         readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
-        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        track_alignment=track_align.available(e,editor.selected_ids()),track_height=f and f.track and (f.all and '['..f.text..']' or f.text..'_') or number_text(self.track_height or track_align.DEFAULT),track_error=f and f.track and f.error,
         zoom_text=f and f.zoom and f.text or zoom_policy.text(editor.camera.zoom),zoom_edit=f and f.zoom,zoom_error=f and f.zoom and f.error,
-        field=f and {key=f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        field=f and {key=f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
         look=terrain_look.session,look_legacy=not require("main.terrain_perspective.profile").enabled({editor=e}),modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
         version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,
@@ -2810,7 +2836,7 @@ local function publish(self)
     for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
     local o=self.overlay
     html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
-        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,camera=editor.camera,screen=editor.map(),
+        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,camera=editor.camera,screen=editor.map(),
         id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
         start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,
         redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,open_dialog=self.open_dialog or false,

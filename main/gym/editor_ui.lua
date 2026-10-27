@@ -194,7 +194,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
+        local field=name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -401,6 +401,11 @@ function M.render(u,d)
                     if f.error then y=paragraph(rx+16,y-8,f.error,248,C.error,12,clip)+8 end
                 elseif f.choices then row(f.name,f.label..': '..f.value,nil,nil,nil,'Cycle '..f.label)
                 else row(f.name,f.label,f.unit,f.value,f.error) end
+            end
+            if d.track_alignment then
+                y=paragraph(rx+16,y,'Track alignment',248,C.secondary,14,clip)+8
+                row('track_height','Height','m',d.track_height,d.track_error)
+                row('drop_to_track','Drop to Track',nil,nil,nil,'Project selected coins vertically onto the first driving surface below. Height is measured from the coin centre; locked/no-hit/unsupported elements stay unchanged. One Undo action.')
             end
             if d.object_name~=nil then row('object_name','Object name','',d.object_name,d.object_name_error) end
             if d.level then row('rename','Name','',''..d.name,d.name_error);row('speed','START speed','m/s',d.speed,d.speed_error);row('test_speed','Test start speed','m/s',d.test_speed)
