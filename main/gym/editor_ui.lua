@@ -39,6 +39,16 @@ local ICONS={
  view_test={{12,3,19,6},{19,6,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,6},{5,6,12,3},{12,6,12,12},{12,12,17,15}},
  view_ghost={{3,16,5,8},{5,8,18,8},{18,8,22,16},{22,16,3,16},{6,16,6,20},{6,20,9,20},{9,20,9,16},{16,16,16,20},{16,20,19,20},{19,20,19,16}},
 }
+local THUMBS={flat={{0,12,42,12}},ramp={{0,20,42,0}},step={{0,20,20,20},{20,20,20,0},{20,0,42,0}},
+            gap={{0,4,12,4},{30,4,42,4}},kicker={{0,20,16,0},{30,12,42,12}},
+            platform={{0,20,0,0},{0,0,42,0},{42,0,42,20},{42,20,0,20}},
+            wave={{0,12,7,1},{7,1,14,1},{14,1,28,22},{28,22,35,22},{35,22,42,12}}}
+-- Reuse the icon masks for prefab previews: one pooled quad per thumbnail, not one per edge.
+for kind,paths in pairs(THUMBS) do
+    local lines={}
+    for _,p in ipairs(paths) do lines[#lines+1]={p[1]*.5+1,p[2]*.5+6,p[3]*.5+1,p[4]*.5+6} end
+    ICONS['thumb_'..kind]=lines
+end
 local function inside(r,x,y) return x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
 function M.init()
     -- Three tiny code-native UI masks, uploaded once. Direct textures avoid sampling adjacent
@@ -213,16 +223,9 @@ function M.render(u,d)
         return y
     end
     local function thumb(kind,x,y)
-        local shapes={flat={{0,12,42,12}},ramp={{0,20,42,0}},step={{0,20,20,20},{20,20,20,0},{20,0,42,0}},
-            gap={{0,4,12,4},{30,4,42,4}},kicker={{0,20,16,0},{30,12,42,12}},
-            platform={{0,20,0,0},{0,0,42,0},{42,0,42,20},{42,20,0,20}},
-            wave={{0,12,7,1},{7,1,14,1},{14,1,28,22},{28,22,35,22},{35,22,42,12}}}
-        for _,p in ipairs(shapes[kind] or {}) do
-            local dx,dy=(p[3]-p[1])*.85,(p[4]-p[2])*.85
-            local length=math.sqrt(dx*dx+dy*dy)
-            local n=box(x+(p[1]+p[3])*.425-length/2,y+(p[2]+p[4])*.425-1,length,2,kind==d.prefab_kind and C.selected or C.secondary)
-            gui.set_euler(n,vmath.vector3(0,0,-math.deg(math.atan2(dy,dx))))
-        end
+        if not THUMBS[kind] then return end
+        local n=box(x-2,y-10,42,42,kind==d.prefab_kind and C.selected or C.secondary)
+        gui.set_texture(n,'editor_icon_thumb_'..kind)
     end
     u.hover,u.tip=nil,nil
     local modal=d.modal
