@@ -171,7 +171,7 @@ local function setup(self)
         msg.post("main:/loader#script","gym_ready",{ok=false,generation=self.session_generation})
         return
     end
-    if self.station.id=="first-run" and not self.station.custom then self.crash_enabled=true end
+    if (self.station.id=="first-run" or self.station.medal_times) and not self.station.custom then self.crash_enabled=true end
     stations.configure(self.station)
     -- A failed build leaves a vehicle-less error world; the next load replaces it entirely.
     local built,err=pcall(function()

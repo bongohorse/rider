@@ -183,7 +183,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_')
+        local field=name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -379,6 +379,15 @@ function M.render(u,d)
             end
             if d.object_name~=nil then row('object_name','Object name','',d.object_name,d.object_name_error) end
             if d.level then row('rename','Name','',''..d.name,d.name_error);row('speed','START speed','m/s',d.speed,d.speed_error);row('test_speed','Test start speed','m/s',d.test_speed)
+                row('collapse_medals',u.medals and 'MEDAL TARGETS  v' or 'MEDAL TARGETS  >',nil,nil,nil,'Edit Gold / Silver / Bronze. First edit enables 26 / 30 / 40 s defaults; editor starts remain practice.')
+                if u.medals then
+                for _,key in ipairs({'gold','silver','bronze'}) do
+                    local label=key:sub(1,1):upper()..key:sub(2)..' target'
+                    local value=d.medal_field==key and d.medal_text or d.medal_times and tostring(d.medal_times[key]) or '--'
+                    row('medal_'..key,label,'s',value,d.medal_field==key and d.medal_error)
+                end
+                if d.medal_times then row('clear_medals','Remove medal targets') end
+                end
             elseif d.start_selected then row('speed','START speed','m/s',d.speed,d.speed_error) end
             for i,v in ipairs(d.actions) do
                 if v.name=='mirror_left' and d.actions[i+1] and d.actions[i+1].name=='mirror_right' then

@@ -17,7 +17,7 @@ async function reveal(page,name){
   return;
  }
 
- if(!/^(param_\d|[di][en]c_|mirror_|convert$|delete$|smooth|corner_all$|paste$|split$|connect$|disconnect$|direction$|object_name$|rename$|plus$|minus$)/.test(name))return;
+ if(!/^(medal_|collapse_medals$|clear_medals$|param_\d|[di][en]c_|mirror_|convert$|delete$|smooth|corner_all$|paste$|split$|connect$|disconnect$|direction$|object_name$|rename$|plus$|minus$)/.test(name))return;
  let e=await page.evaluate(()=>window.riderEditor);
  if(e?.visible.includes(name)||!e?.ui?.max_scroll||e.open_dialog||e.help_open||e.warnings_open)return;
  const r=e.ui.rects.collapse_properties;if(!r)return;

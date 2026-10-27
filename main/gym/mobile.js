@@ -38,7 +38,7 @@
     api.setRun?.(run);
     if(enabled&&run){
       const label=run.state==='ready'?'Drive to start':run.state==='paused'?'Paused':run.state==='failed'?'Attempt ended':run.state==='finished'?'Finished':'First run';
-      hud.textContent=`${label} · ${run.time.toFixed(2)} s · Best ${run.best>0?run.best.toFixed(2)+' s':'--'} · ${run.official?'Official':'Practice'}${run.save==='saved'?'':' · '+run.save}`;
+      hud.textContent=`${label} · ${run.time.toFixed(2)} s · Best ${run.best>0?run.best.toFixed(2)+' s':'--'} · ${run.official?'Official':'Practice'}${run.has_medals?' · Saved '+['None','Bronze','Silver','Gold'][run.highest_medal]:''}${run.save==='saved'?'':' · '+run.save}`;
     }else if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;

@@ -20,6 +20,9 @@ end
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
     if type(d)~="table" or d.schema~=1 or d.units~="metres" then return nil,"Unsupported station schema/units" end
+    local medals_ok,medals_err,medals_unknown=require('main.gym.medals').validate(d.medal_times)
+    if not medals_ok then return nil,medals_err,medals_unknown end
+    if d.race_revision~=nil and (type(d.race_revision)~='number' or d.race_revision<1 or d.race_revision>1000000 or d.race_revision%1~=0) then return nil,'Invalid race revision' end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(d)
     if not profile_ok then return nil,profile_err,true end
     if type(d.id)~="string" or not d.id:match("^[a-z][a-z0-9%-]*$") or type(d.name)~="string" then return nil,"Invalid station identity" end

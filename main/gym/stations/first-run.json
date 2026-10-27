@@ -1360,14 +1360,14 @@
     "checkpoints": {},
     "editor": {
         "compiled_revision": 1,
-        "compiler_version": 7,
+        "compiler_version": 8,
         "connections": [
             {
                 "from": "o2",
                 "to": "o1"
             }
         ],
-        "editor_version": 7,
+        "editor_version": 8,
         "finish": {
             "direction": 1,
             "position": [
@@ -1502,6 +1502,12 @@
                 1.7
             ],
             "speed": 0
+        },
+        "medal_times": {
+            "version": 1,
+            "gold": 26,
+            "silver": 30,
+            "bronze": 40
         }
     },
     "finish": {
@@ -1536,5 +1542,12 @@
         1.7
     ],
     "start_speed": 0,
-    "units": "metres"
+    "units": "metres",
+    "medal_times": {
+        "version": 1,
+        "gold": 26,
+        "silver": 30,
+        "bronze": 40
+    },
+    "race_revision": 1
 }

@@ -180,4 +180,5 @@ module.exports=async function uiChecks(h){
   const live=await page.evaluate(()=>window.riderEditorRuntime);assert.equal(live.sprites,6);assert.equal(live.terrain_meshes,13);assert.equal(live.terrain_buffer_bytes,518832);assert.ok(live.labels<=1024);
  }
  await key('e');await edit();measurements.editor_a_budget=counts;cases.push('a1b_maximum_level_and_switch_budgets');
+ await require('../gameplay/check_medal_editor.cjs')(h);
 };

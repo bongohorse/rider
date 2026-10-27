@@ -13,7 +13,7 @@ local sample=require "main.gym.editor_sample"
 -- Version 7 adds optional name/hidden/locked source metadata; compilation ignores it.
 -- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
-local M={EDITOR_VERSION=7,COMPILER_VERSION=7}
+local M={EDITOR_VERSION=8,COMPILER_VERSION=8}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -153,6 +153,7 @@ local function from_station(d,id,name)
         sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
     if require('main.terrain_perspective.profile').enabled(d) then e.road_profile=require('main.terrain_perspective.profile').ID end
     if require('main.terrain_perspective.look').authored(d) then e.road_profile='authored-v1';e.road_look=copy(d.editor.road_look) end
+    e.medal_times=copy(d.medal_times)
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -207,9 +208,9 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times"}
 local function compiled(d)
-    local t={spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -258,7 +259,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -269,6 +270,9 @@ function M.validate(doc)
             return nil,"Unsupported sampling settings "..(type(s)=="table" and tostring(s.tolerance).."/"..tostring(s.max_segment) or "(missing)"),true
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
+    if e.medal_times~=nil and e.editor_version<8 then return nil,'Medal targets require editor/compiler version 8',true end
+    local medal_ok,medal_err,medal_unknown=require('main.gym.medals').validate(e.medal_times)
+    if not medal_ok then return nil,medal_err,medal_unknown end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
     local ids,total={},0
@@ -344,7 +348,7 @@ function M.validate(doc)
         for _,o in ipairs(e.objects) do if o.type=="curve" then e.compiled_revision=nil end end
         e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
     end
-    e.editor_version,e.compiler_version=7,7
+    e.editor_version,e.compiler_version=M.EDITOR_VERSION,M.COMPILER_VERSION
     return doc
 end
 
@@ -646,6 +650,7 @@ function M.compile(doc,test,errors)
         local f=e.finish.position
         d.finish={position={f[1],f[2]},line={{f[1],f[2]-M.FINISH_BELOW},{f[1],f[2]+M.FINISH_ABOVE}},direction={e.finish.direction,0}}
     end
+    d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)
     if not valid then return nil,err end
