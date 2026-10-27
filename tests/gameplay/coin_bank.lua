@@ -23,3 +23,7 @@ for _,bad in ipairs({'bad',{}, {format=1,seq=2,text=json.encode({version=999,tot
 end
 files[z]=nil;assert(not B.new().blocked)
 print('PASS bank repeated legitimate finishes, duplicate/practice/stale rejection, queued sync, reopen, immutable write retries, failed sync and protected alternate slots')
+
+state='syncing';local checking=B.new();B.poll(checking,.1);assert(checking.checking and checking.status=='Checking coin storage')
+state='saved';B.poll(checking,.1);assert(not checking.checking and checking.status=='saved')
+print('PASS initial coin storage acknowledgement clears the checking presentation')

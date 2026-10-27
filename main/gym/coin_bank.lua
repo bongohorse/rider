@@ -54,7 +54,7 @@ function M.poll(t,dt)
     local state=custom.sync_state()
     if t.checking then
         if state=='syncing' then t.status='Checking coin storage';return end
-        t.checking=false
+        t.checking=false;t.status='saved'
         if state~='saved' then t.blocked=true;t.status='Coins not saved';return end
     end
     local p=t.pending
