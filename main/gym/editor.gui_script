@@ -1100,7 +1100,7 @@ local function preview_auto(self,reroll)
     editor.auto_range,editor.auto_remove=plan.range,plan.remove;editor.touch()
     -- Keep the alternative input coupled, without changing the last-edited driver.
     if c.driver=='count' then c.spacing=math.max(.75,math.min(100000,plan.spacing)) else c.count=math.min(10000,plan.desired) end
-    editor.message=string.format('Preview: %d / %d new coins; %d removals. Cyan diamonds = additions; red coins = removals. Apply or Esc.',plan.possible,plan.desired,plan.removed)
+    editor.message=string.format('Preview: %d / %d new coins; %d removals. Cyan diamonds = additions; red coins = removals. Apply or Esc.',plan.possible,plan.desired,plan.removed)..(plan.warning and ' Skipped: '..plan.warning or '')
 end
 local function apply_auto(self)
     local p=self.auto_plan

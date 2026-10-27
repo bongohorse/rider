@@ -35,7 +35,7 @@ d=level();for i=1,128 do coin(d,{40+i,.7},true)end;c=A.defaults();p=assert(A.pre
 -- No buried circles: high terrain/hulls block proposals, leaving manual jump arcs alone.
 d=level({{0,0},{20,0}});d.editor.objects[2]={id='o2',type='hull',vertices={{3,0},{8,0},{8,4},{3,4}}};d.editor.next_id=3;c=A.defaults();c.count=16;p=assert(A.preview(d,c,{}));assert(p.possible<16);for _,q in ipairs(p.positions)do assert(q[1]<2.75 or q[1]>8.25)end
 for _,pts in ipairs({{{0,0},{0,3},{3,3}},{{0,0},{4,0},{2,2}}})do assert(not A.preview(level(pts),c,{}))end
-d=level({{0,0},{4,0}});d.editor.objects[2]={id='o2',type='line',points={{0,0},{4,0}}};d.editor.next_id=3;p=assert(A.preview(d,c,{}));assert(p.possible==0)
+d=level({{0,0},{4,0}});d.editor.objects[2]={id='o2',type='line',points={{0,0},{4,0}}};d.editor.next_id=3;local unsupported,reason=A.preview(d,c,{});assert(not unsupported and reason:find('Ambiguous'))
 for k,v in pairs({count=1.5,spacing=.1,randomness=101,height=-1})do assert(not A.value(k,v))end;assert(not A.value('count',math.huge));assert(not A.value('height',0/0))
 -- A structurally valid draft can fail playable admission: preview must leave it completely intact.
 d=level();d.editor.start.position={600,3};before=D.copy(d);local bad,err=A.preview(d,A.defaults(),{});assert(not bad and err);assert(A.equal(d,before))

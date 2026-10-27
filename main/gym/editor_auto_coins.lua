@@ -104,7 +104,7 @@ function M.preview(d,c,ids)
         local n=s.b-s.a-M.MIN_SPACING
         if n>EPS then usable[#usable+1]={route=s.route,a=s.a+M.MIN_SPACING/2,length=n,offset=total};total=total+n end
     end
-    local clear=geometry(e,scope)
+    local clear=geometry(e,scope);local route_warning
     local function distribute(n)
         local result,targets={},{};local seed=c.seed
         local function random() seed=seed*16807%2147483647;return seed/2147483647 end
@@ -123,7 +123,8 @@ function M.preview(d,c,ids)
                     if safe then for _,q in ipairs(old) do if distance2(p,q)<M.MIN_SPACING^2-EPS then safe=false;break end end end
                     if safe then for _,q in ipairs(result) do if distance2(p,q)<M.MIN_SPACING^2-EPS then safe=false;break end end end
                     -- A unique floor reference is required for immediate Along track adjustment.
-                    local b=safe and R.bind(e,{id='preview',position=p},scope.routes,nil,floor)
+                    local b,reason
+                    if safe then b,reason=R.bind(e,{id='preview',position=p},scope.routes,nil,floor);if not b then route_warning=reason end end
                     if safe and b and b.route==span.route.id then result[#result+1]=p;targets[#targets+1]={floor[1],floor[2]};break end
                 end
             end
@@ -131,6 +132,7 @@ function M.preview(d,c,ids)
         return result,targets
     end
     local positions,targets=distribute(cap)
+    if #positions==0 and route_warning then return nil,route_warning end
     local staged,newids=stage(d,positions,remove)
     if not staged then
         -- Resource admission can be tighter than the coin/object caps. Reduce the plan, never bypass it.
@@ -142,7 +144,7 @@ function M.preview(d,c,ids)
         staged,newids,positions,targets=best,bestids,bestp,bestt
     end
     local attached={};for i,id in ipairs(newids) do attached[id]=targets[i] end
-    return {base=D.copy(d),objects=staged.editor.objects,next_id=staged.editor.next_id,ids=newids,positions=positions,targets=attached,remove=remove,removed=removed,range=scope.map,desired=desired,possible=#positions,spacing=spacing,density=density,seed=c.seed}
+    return {base=D.copy(d),objects=staged.editor.objects,next_id=staged.editor.next_id,ids=newids,positions=positions,targets=attached,remove=remove,removed=removed,range=scope.map,desired=desired,possible=#positions,warning=route_warning,spacing=spacing,density=density,seed=c.seed}
 end
 function M.apply(d,plan)
     if not plan or not M.equal(d,plan.base) then return nil,'Coin preview is stale. Preview again before Apply.' end

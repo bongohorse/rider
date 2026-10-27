@@ -397,6 +397,7 @@ function M.render(u,d)
                 end;y=y+44
                 local summary=a.plan and string.format('%d / %d new; %d removed. Seed %d',a.plan.possible,a.plan.desired,a.plan.removed,c.seed) or 'Preview required after settings or source changes.'
                 y=paragraph(rx+16,y,summary,248,C.secondary,12,clip)+8
+                if a.plan and a.plan.warning then y=paragraph(rx+16,y,a.plan.warning,248,C.error,12,clip)+8 end
                 if a.density then y=paragraph(rx+16,y,string.format('Desired %d; %.2f coins/m. Driver: %s',a.desired,a.density,c.driver),248,C.secondary,12,clip)+8 end
                 for _,v in ipairs({{'count','Count','#'},{'spacing','Spacing','m'},{'randomness','Randomness','%'},{'height','Height','m'}}) do
                     local key,label,unit=v[1],v[2],v[3]
