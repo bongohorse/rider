@@ -207,4 +207,5 @@ module.exports=async function uiChecks(h){
  await require('../gameplay/check_coin_editor.cjs')(h);
  await require('../gameplay/check_drop_editor.cjs')(h);
  await require('../gameplay/check_along_editor.cjs')(h);
+ await require('../gameplay/check_auto_editor.cjs')(h);
 };
