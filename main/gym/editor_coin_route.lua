@@ -15,13 +15,14 @@ local function route(id,raw)
     return r
 end
 function M.prepare(e)
-    local list,by_id,count={},{},0;local pieces=doc.pieces(e)
+    local list,by_id,count={},{},0;local exceeded=false;local limit_error='Track adjustment supports at most 2048 source segments.';local pieces=doc.pieces(e)
     local function add(id,pts)
         if #pts<2 then return end
+        if exceeded or count+#pts-1>M.MAX_SEGMENTS then exceeded=true;return end
         local r=route(id,pts);list[#list+1]=r;by_id[id]=r;count=count+#r.segments
     end
     for _,run in ipairs(doc.runs(e)) do
-        for i,c in ipairs(doc.run_chains(e,run,pieces)) do add('terrain:'..run[1]..':'..i,c.points) end
+        for i,c in ipairs(doc.run_chains(e,run,pieces)) do add('terrain:'..run[1]..':'..i,c.points);if exceeded then return nil,limit_error end end
     end
     for _,o in ipairs(e.objects) do
         local outline=doc.outline(o)
@@ -31,13 +32,12 @@ function M.prepare(e)
             table.sort(edges,function(a,b)return a[1][1]<b[1][1]end)
             local pts={};local part=1
             for _,edge in ipairs(edges) do
-                if #pts>0 and not same(pts[#pts],edge[1]) then add('hull:'..o.id..':'..part,pts);part=part+1;pts={} end
+                if #pts>0 and not same(pts[#pts],edge[1]) then add('hull:'..o.id..':'..part,pts);if exceeded then return nil,limit_error end;part=part+1;pts={} end
                 if #pts==0 then pts[1]=edge[1] end;pts[#pts+1]=edge[2]
             end
-            add('hull:'..o.id..':'..part,pts)
+            add('hull:'..o.id..':'..part,pts);if exceeded then return nil,limit_error end
         end
     end
-    if count>M.MAX_SEGMENTS then return nil,'Track adjustment supports at most 2048 source segments.' end
     return {list=list,by_id=by_id}
 end
 function M.at_x(r,x)
