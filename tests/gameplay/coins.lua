@@ -29,3 +29,10 @@ local exotic=E.copy(d);exotic.editor.objects[2].pickup_id='coin-o4';exotic.edito
 local fresh=edit.paste(exotic.editor,edit.copy(exotic.editor,{'o2'}),{1,0});assert(fresh[1]=='o4' and exotic.editor.objects[#exotic.editor.objects].pickup_id=='coin-o4-2')
 local prior=E.copy(level);prior.schema=1;local valid,reason,unknown=require('main.gym.station_data').validate(prior);assert(not valid and unknown)
 print('PASS 128 pickup cap/dense list, imported-ID collision allocation and old runtime schema gate')
+
+local styled=E.copy(d);styled.editor.road_profile='authored-v1';styled.editor.road_look={version=1,params=E.copy(require('main.terrain_perspective.projection').DEFAULT)}
+styled.editor.objects[1].road_look={version=1,width=.9,side=8,shading=1}
+local styled_level=assert(E.compile(styled));assert(styled.schema==1 and styled_level.schema==2)
+assert(require('main.gym.station_data').validate(styled_level));assert(require('main.terrain_perspective.look').mapping(styled_level))
+assert(not E.compare(styled,styled_level));assert(styled_level.coins.items[1].id=='pickup-original')
+print('PASS authored Terrain Look and local styles on coin-bearing schema-2 stations retain schema-1 source validation')

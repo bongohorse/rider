@@ -52,7 +52,8 @@ function M.validate_station(d)
  if not M.authored(d) then return true end
  local doc=M.document
  if not doc then return nil,'Terrain Look requires supported editor source validation; open the source in the editor.' end
- local ok,err,unsupported=doc.validate({schema=d.schema,units=d.units,id=d.id,name=d.name,editor=d.editor})
+ -- Source wrappers remain schema 1; coin-bearing compiled stations use schema 2.
+ local ok,err,unsupported=doc.validate({schema=1,units=d.units,id=d.id,name=d.name,editor=d.editor})
  if not ok then return nil,err,unsupported end
  if not M.has_sections(d) then return true end
  -- Cached geometry remains playable under R1. Only matching source may supply local styles;
