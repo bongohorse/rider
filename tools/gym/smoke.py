@@ -126,7 +126,7 @@ if args.case=='ea2':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':
     report=json.loads((out/'polish-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==16
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==17
     assert 'g3_medal_fields_validation_undo_and_roundtrip' in report['cases']
     assert 'g4_coin_authoring_stable_ids_undo_and_reload' in report['cases']
     print(json.dumps(report));raise SystemExit(0)
