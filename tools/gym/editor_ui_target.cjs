@@ -2,7 +2,7 @@
 // inject state or relax an assertion: a missing/inapplicable control still fails in the caller.
 const pointer=require('./pointer.cjs');
 async function reveal(page,name){
- if(/^(object_(?!name$)|collapse_objects|kind_|collapse_prefabs)/.test(name)){
+ if(/^(object_(?!name$)|collapse_objects|kind_|collapse_prefabs|collapse_gameplay|collapse_tool_category|tool_)/.test(name)){
   let e=await page.evaluate(()=>window.riderEditor);
   if(e?.visible.includes(name)||e?.open_dialog||e?.help_open||e?.warnings_open)return;
   if(e?.ui?.tools_collapsed)return;

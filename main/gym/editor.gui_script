@@ -1262,7 +1262,7 @@ local function on_button(self,name)
         editor.commit(function(e) local o=edit.find(e,id);if o then if eye then o.hidden=not o.hidden else o.locked=not o.locked end end end,true)
         editor.vertex,editor.vertex2,editor.anchor,editor.points=nil,nil,nil,{};return
     end
-    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" then
+    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" or name=="collapse_gameplay" or name=="collapse_tool_category" then
         local key=name:sub(10);self.ui[key]=not self.ui[key];return
     elseif name:match('^medal_') then
         local key=name:sub(7);local times=editor.doc.editor.medal_times or require('main.gym.medals').defaults()

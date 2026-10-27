@@ -29,6 +29,7 @@ local ICONS={
  tool_prefab={{3,7,12,3},{12,3,21,7},{21,7,21,18},{21,18,12,22},{12,22,3,18},{3,18,3,7},{3,7,12,12},{12,12,21,7},{12,12,12,22}},
  tool_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
  tool_finish={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12},{10,3,10,12},{15,3,15,12},{5,7,20,7}},
+ tool_coin={{12,2,19,5},{19,5,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,5},{5,5,12,2},{12,7,12,17}},
  tool_label={{3,5,21,5},{12,5,12,21},{7,21,17,21}},
  tool_pan={{3,12,21,12},{12,3,12,21},{3,12,7,8},{3,12,7,16},{21,12,17,8},{21,12,17,16},{12,3,8,7},{12,3,16,7},{12,21,8,17},{12,21,16,17}},
  view_fit={{3,9,3,3},{3,3,9,3},{15,3,21,3},{21,3,21,9},{21,15,21,21},{21,21,15,21},{9,21,3,21},{3,21,3,15}},
@@ -244,20 +245,22 @@ function M.render(u,d)
         button('warnings',w-104,8,48,d.blocking and ('! '..d.error_count) or d.warning_count>0 and ('! '..d.warning_count) or 'OK',false,d.diagnostics..': show problems and their sources')
         button('view_help',w-48,8,32,'?',false,'Help [H]')
         button('versions',w-352,8,80,'Versions',false,'Restore saved versions / named snapshots')
-        button('undo',16,56,32,'Undo',false,'Undo [Ctrl+Z]')
-        button('redo',56,56,32,'Redo',false,'Redo [Ctrl+Y]')
-        button('play',96,56,40,'Play',true,'Play from START [E]')
-        button('tool_coin',152,56,76,'Coin',d.tool=='coin','Place ordinary coins. Select [S] to move, copy or delete.')
+        local commands=(w-120)/2
+        button('undo',commands,56,32,'Undo',false,'Undo [Ctrl+Z]')
+        button('redo',commands+40,56,32,'Redo',false,'Redo [Ctrl+Y]')
+        button('play',commands+80,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
-        local tools_end=u.tools and 160 or u.prefabs and 280 or 508
-        local objects_top=u.prefabs and 280 or 508
+        local gameplay_top=152+(u.tool_category and 0 or 80)
+        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 64)
+        local objects_top=prefabs_top+40+(u.prefabs and 0 or math.ceil(#d.kinds/2)*56+8)
+        local tools_end=u.tools and 160 or objects_top
         local object_rows=math.min(4,math.max(1,#d.objects))
         local object_height=u.objects_collapsed and 40 or 80+object_rows*36+24
         if not u.tools then tools_end=objects_top+object_height+12 end
         tools_end=math.min(h-80,tools_end)
         u.tools_rect={x=16,y=104,w=lw,h=math.max(56,tools_end-104)}
         box(16,104,lw,u.tools_rect.h,C.panel)
-        button('collapse_tools',u.tools and 20 or 28,112,u.tools and 32 or 160,u.tools and '>' or 'TOOLS  <',false,'Collapse or expand Tools')
+        button('collapse_tools',u.tools and 20 or 16,u.tools and 112 or 56,32,u.tools and '>' or '<',false,'Collapse or expand the whole tool palette')
         local function scrollbar(key,x,top,bottom,content)
             local height=math.max(24,bottom-top);local maximum=math.max(0,content-height)
             local value=math.max(0,math.min(maximum,u[key] or 0));u[key]=value
@@ -269,19 +272,37 @@ function M.render(u,d)
             u.scrollbars[key]={x=x-3,y=top,w=14,h=height,knob=knob,maximum=maximum}
         end
         if not u.tools then
-            local labels={'Select [S]','Draw [D]','Curve [C]','Prefab [P]','START','FINISH','Label [L]','Pan'}
-            local top,bottom=152,tools_end-12
+            local top,bottom=112,tools_end-12
             scrollbar('tool_scroll',190,top,bottom,objects_top+object_height-top)
             local function shown(y,bh) return y>=top and y+bh<=bottom end
-            for i,tool in ipairs(d.tools) do
-                local x,y=28+(i-1)%4*40,152+math.floor((i-1)/4)*40-u.tool_scroll
-                if shown(y,32) then button('tool_'..tool[1],x,y,32,labels[i],d.tool==tool[1],labels[i]) end
+            local ty=112-u.tool_scroll
+            if shown(ty,32) then button('collapse_tool_category',28,ty,152,u.tool_category and 'TOOLS  >' or 'TOOLS  v',false,'Collapse or expand Tools') end
+            if not u.tool_category then
+                local i=0
+                for _,tool in ipairs(d.tools) do
+                    if tool[1]~='start' and tool[1]~='finish' then
+                        local x,y=28+i%4*40,152+math.floor(i/4)*40-u.tool_scroll
+                        if shown(y,32) then button('tool_'..tool[1],x,y,32,tool[2],d.tool==tool[1],tool[2]) end
+                        i=i+1
+                    end
+                end
             end
-            local py=236-u.tool_scroll
+            local gy=gameplay_top-u.tool_scroll
+            if shown(gy,32) then button('collapse_gameplay',28,gy,152,u.gameplay and 'GAMEPLAY  >' or 'GAMEPLAY  v',false,'Collapse or expand Gameplay') end
+            if not u.gameplay then
+                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'}}) do
+                    local x,y=28+(i-1)*52,gameplay_top+40-u.tool_scroll
+                    if shown(y,52) then
+                        button('tool_'..tool[1],x,y,48,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
+                        text(x+4,y+44,tool[2],d.tool==tool[1] and C.active or C.secondary,12)
+                    end
+                end
+            end
+            local py=prefabs_top-u.tool_scroll
             if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end
             if not u.prefabs then
                 for i,kind in ipairs(d.kinds) do
-                    local x,y=28+(i-1)%2*80,276+math.floor((i-1)/2)*56-u.tool_scroll
+                    local x,y=28+(i-1)%2*80,prefabs_top+40+math.floor((i-1)/2)*56-u.tool_scroll
                     if shown(y,52) then
                         button('kind_'..kind,x,y,72,'',false,tostring(i)..': '..d.full_names[kind]..' — click to place; Esc cancels',52)
                         thumb(kind,x+16,y+5);text(x+8,y+42,shorten(d.names[kind],56,12),kind==d.prefab_kind and C.selected or C.text,12)

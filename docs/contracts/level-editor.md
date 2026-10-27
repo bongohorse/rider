@@ -80,8 +80,8 @@ A start speed is an explicit option. Invalid positions (inside geometry, no surf
 ## Screen layout (desktop, Defold GUI)
 - **Coin size (#302):** visible coins keep their factory world size at every editor zoom. Invisible picking may retain a larger screen-space minimum; selection/hover uses existing tint/handles, never an enlarged coin sprite. This is a view-only correction: source, pickup radius, storage and Play are unchanged.
 
-- **Header:** level name and persistence status on one line; New · Open (my levels / templates) · Import · Export icons, problems and Help on the right. **Command row:** compact Undo · Redo · **Play [E]** icons on the left; no redundant Edit mode label (Claudio feedback to A1b, #171).
-- **Left tool palette:** Select (S) · Draw (D) · Curve (C) · Prefab (P) · START · FINISH · Label (L, LE6b) · Pan
+- **Header:** level name and persistence status on one line; New · Open (my levels / templates) · Import · Export icons, problems and Help on the right. **Command row:** compact Undo · Redo · **Play [E]** icons together at the horizontal centre; no redundant Edit mode label (Claudio feedback to A1b, #171).
+- **Left palette (#303):** independently collapsible Tools → Gameplay → Prefabs → Objects. Tools contains Select (S), Draw (D), Curve (C), Prefab (P), Label (L) and Pan; Gameplay contains Start, Finish and Coin. Prefabs retains its library; Objects remains the placed-object browser. The whole palette can still collapse separately, and the existing bounded scroll area keeps categories and controls accessible in short/narrow windows.
 - **Right panel:** properties of the selection (numeric fields: x, y, angle, length, height…), or level properties (name, start speed) when nothing is selected
 - **Bottom status:** View row (Fit, Centre, START, Last test, Bounds; LE6a; Ghost, Help; LE6b) · cursor x/y in metres · active snaps · zoom; the warning count (click to list) sits in the top bar
 
