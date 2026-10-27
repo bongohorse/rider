@@ -9,6 +9,7 @@ local stations=require "main.gym.stations"
 local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
+local COIN_TINT=vmath.vector4(1,1,1,1)
 local HOVER=vmath.vector4(0.8353,0.9529,0.9137,1)
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).
@@ -83,6 +84,7 @@ local function draw(v,o,k)
     if o.type=='coin' then
         local id=require('main.gym.coin_visual').create(o.position)
         v.gos[#v.gos+1]=id;v.coin_ids=v.coin_ids or {};v.coin_ids[#v.coin_ids+1]=id
+        v.coin_sources=v.coin_sources or {};v.coin_sources[o.id]=true
         v.sprites=v.sprites+1;v.zoom=nil;return {id},{}
     end
     local closed=doc_lib.outline(o)
@@ -277,7 +279,7 @@ function M.update(self)
         v.drawn=editor.view_version
         -- Only objects whose highlight changed are re-tinted (hover changes on mouse moves).
         for id,ids in pairs(v.objects) do
-            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or stations.TERRAIN_TINT
+            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or stations.TERRAIN_TINT
             if v.tints[id]~=state then v.tints[id]=state;tint(ids,state) end
         end
         local blocked=doc_lib.blocked(e,start)
