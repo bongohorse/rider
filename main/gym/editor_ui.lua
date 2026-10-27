@@ -444,7 +444,7 @@ function M.render(u,d)
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12)
         button('zoom_out',404,h-56,32,'-',false,'Zoom out to the previous step (minimum 1%).')
         if d.zoom_edit then box(442,h-58,76,36,d.zoom_error and C.error or C.active) end
-        button('zoom_value',444,h-56,72,d.zoom_edit and d.zoom_text..'_' or d.zoom_text..'%',false,d.zoom_error or 'Zoom 1-400%: type a value; Enter applies, Esc cancels. 100% = camera multiplier 1; window AUTO_FIT still applies.')
+        button('zoom_value',444,h-56,72,d.zoom_edit and d.zoom_text..'_' or d.zoom_text..'%',false,d.zoom_error or 'Zoom 1-400%: type a value; Enter applies, Esc cancels. 100% = standard view scale; the visible area depends on the window.')
         button('zoom_in',524,h-56,32,'+',false,'Zoom in to the next step (maximum 400%).')
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         text(w-312,h-12,d.cursor_text,C.secondary,12,296)
