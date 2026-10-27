@@ -41,7 +41,7 @@ function M.scope(e,c,ids)
 end
 function M.metrics(scope,c)
     local n=c.driver=='spacing' and math.max(1,math.floor(scope.length/c.spacing)) or c.count
-    return n,scope.length/n,n/scope.length
+    return n,c.driver=='spacing' and c.spacing or scope.length/n,n/scope.length
 end
 local function in_scope(scope,b)
     if not b then return false end

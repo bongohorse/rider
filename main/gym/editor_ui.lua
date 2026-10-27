@@ -398,7 +398,7 @@ function M.render(u,d)
                 local summary=a.plan and string.format('%d / %d new; %d removed. Seed %d',a.plan.possible,a.plan.desired,a.plan.removed,c.seed) or 'Preview required after settings or source changes.'
                 y=paragraph(rx+16,y,summary,248,C.secondary,12,clip)+8
                 if a.density then y=paragraph(rx+16,y,string.format('Desired %d; %.2f coins/m. Driver: %s',a.desired,a.density,c.driver),248,C.secondary,12,clip)+8 end
-                for _,v in ipairs({{'count','Count','coins'},{'spacing','Spacing','m'},{'randomness','Randomness','%'},{'height','Height','m'}}) do
+                for _,v in ipairs({{'count','Count','#'},{'spacing','Spacing','m'},{'randomness','Randomness','%'},{'height','Height','m'}}) do
                     local key,label,unit=v[1],v[2],v[3]
                     local value=key=='count' and (a.desired or c.count) or key=='spacing' and (a.spacing or c.spacing) or c[key]
                     row('auto_'..key,label,unit,a.field==key and a.text..'_' or string.format('%.4g',value),a.field==key and a.error)

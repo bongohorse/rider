@@ -1400,7 +1400,10 @@ local function on_button(self,name)
     if name:match('^auto_') or name:match('^[di][en]c_auto_') then
         local c=auto_context(self);local key=name:match('^auto_(count)$') or name:match('^auto_(spacing)$') or name:match('^auto_(randomness)$') or name:match('^auto_(height)$')
         local stepkey=name:match('^[di][en]c_auto_(%a+)$')
-        if key then self.ui.reveal=name;self.field={auto=key,text=number_text(c[key]),all=true}
+        if key then
+            local value=c[key]
+            if key=='count' or key=='spacing' then local scope=auto_coins.scope(editor.doc.editor,c,editor.selected_ids());if scope then local n,sp=auto_coins.metrics(scope,c);value=key=='count' and n or sp end end
+            self.ui.reveal=name;self.field={auto=key,text=number_text(value),all=true}
         elseif stepkey then
             local step=stepkey=='count' and 1 or stepkey=='randomness' and 5 or stepkey=='height' and .1 or .25
             set_auto(self,stepkey,c[stepkey]+(name:sub(1,1)=='d' and -step or step))
@@ -2252,7 +2255,7 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
         elseif action_id==hash("ui_pointer") and action.pressed then
             local name=hit(self,action)
-            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track") then
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track" or name:match("^auto_")) then
                 if not step_focused(self,name) then
                     confirm_name(self)
                     if not self.field then on_button(self,name) end
