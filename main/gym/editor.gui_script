@@ -1110,6 +1110,7 @@ local function apply_auto(self)
     if not ok then clear_auto(self);return end
     editor.selected={};for _,id in ipairs(p.ids) do editor.selected[id]=true end
     editor.selection=p.ids[#p.ids];editor.vertex,editor.vertex2,editor.vertices=nil,nil,{}
+    if self.track_opened~=editor.opened then self.track_session=nil end -- never inherit another document's temporary routes
     self.track_opened=editor.opened;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
     track_align.attach(editor.doc.editor,self.track_session,p.targets);self.track_cache=nil
     clear_auto(self);editor.tool='select';self.ui.scroll=0;editor.touch()
