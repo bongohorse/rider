@@ -26,7 +26,7 @@ local function readable(v,zoom)
     v.zoom=zoom
     local width,size=math.max(0.5,1/zoom)/2,math.max(1,0.5/zoom)
     for _,id in ipairs(v.line_ids) do if go.exists(id) then go.set(id,"scale.y",width) end end
-    for _,id in ipairs(v.coin_ids or {}) do if go.exists(id) then go.set_scale(vmath.vector3(size,size,1),id) end end
+    -- Coins retain factory world size. Only invisible picking may grow when zooming out.
     for _,id in ipairs(v.label_ids) do if go.exists(id) then go.set_scale(vmath.vector3(size,size,1),id) end end
 end
 -- Sprite budget (R7, LE3b): the source validator allows more points than the sprite and game-object pools can draw

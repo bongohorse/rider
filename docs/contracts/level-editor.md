@@ -78,6 +78,8 @@ A start speed is an explicit option. Invalid positions (inside geometry, no surf
 **R18 Tool scope and usability.** Keep the in-game Defold/Lua/GUI direction and the small HTML file helper. The editor research in #118 is not approval for Qt/Electron, a universal editor, plugins, multiplayer editing or a framework rewrite. Test the actual build → drive → change → Undo → save → reopen workflow with Claudio. Good navigation, readable controls/units, clear selection, cancellable previews and actionable warnings take precedence over a larger asset library. Reusable custom templates later need an explicit independent-copy versus linked-instance policy; no implicit retroactive changes to old courses.
 
 ## Screen layout (desktop, Defold GUI)
+- **Coin size (#302):** visible coins keep their factory world size at every editor zoom. Invisible picking may retain a larger screen-space minimum; selection/hover uses existing tint/handles, never an enlarged coin sprite. This is a view-only correction: source, pickup radius, storage and Play are unchanged.
+
 - **Header:** level name and persistence status on one line; New · Open (my levels / templates) · Import · Export icons, problems and Help on the right. **Command row:** compact Undo · Redo · **Play [E]** icons on the left; no redundant Edit mode label (Claudio feedback to A1b, #171).
 - **Left tool palette:** Select (S) · Draw (D) · Curve (C) · Prefab (P) · START · FINISH · Label (L, LE6b) · Pan
 - **Right panel:** properties of the selection (numeric fields: x, y, angle, length, height…), or level properties (name, start speed) when nothing is selected
