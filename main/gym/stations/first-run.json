@@ -1617,7 +1617,7 @@
     "name": "First run",
     "run_in": 0,
     "run_out": 0,
-    "schema": 1,
+    "schema": 2,
     "spawn": [
         2,
         1.7

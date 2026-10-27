@@ -39,13 +39,13 @@ end
 function M.show_coins(t,c,b,touch,flash)
  local enabled=c and c.total>0
  gui.set_visible(t.coinhud,enabled and not touch and not (t.data and (t.data.state=='finished' or t.data.state=='failed')) or false)
- local r=t.data;local finished=r and r.state=='finished'
+ local r=t.data;local finished=r and (r.state=='finished' or r.state=='failed')
  gui.set_visible(t.coins,enabled and finished or false)
  if not enabled then return end
  local total=b and b.total or 0;local status=b and b.status or 'Checking storage'
  local suffix=status=='saved' and '' or ' | '..status
  gui.set_text(t.coinhud,string.format('Coins %d/%d%s | Bank %d%s%s',c.count,c.total,flash and ('  +'..flash) or '',total,c.practice and ' | Practice' or '',suffix))
- gui.set_text(t.coins,c.practice and string.format('Coins %d/%d - practice, not banked',c.count,c.total) or string.format('Coins %d/%d | Bank %d - %s',c.count,c.total,total,status))
+ gui.set_text(t.coins,r and r.state=='failed' and string.format('Coins %d/%d - lost (no finish)',c.count,c.total) or c.practice and string.format('Coins %d/%d - practice, not banked',c.count,c.total) or string.format('Coins %d/%d | Bank %d - %s',c.count,c.total,total,status))
 end
 function M.geometry(t)
  local function point(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end

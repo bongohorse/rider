@@ -1,4 +1,4 @@
--- Version 1: world metres, converted once at the engine boundary by stations.lua.
+-- Versions 1 (legacy) and 2 (ordinary coins): world metres, converted once at the engine boundary by stations.lua.
 -- Pure validation: no engine calls, no partially constructed terrain on failure.
 local M={}
 local TEXT_LIMIT=64
@@ -19,7 +19,8 @@ end
 -- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
-    if type(d)~="table" or d.schema~=1 or d.units~="metres" then return nil,"Unsupported station schema/units" end
+    if type(d)~="table" or (d.schema~=1 and d.schema~=2) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
+    if d.coins~=nil and d.schema~=2 then return nil,"Ordinary coins require station schema 2",true end
     local medals_ok,medals_err,medals_unknown=require('main.gym.medals').validate(d.medal_times)
     if not medals_ok then return nil,medals_err,medals_unknown end
     if d.race_revision~=nil and (type(d.race_revision)~='number' or d.race_revision<1 or d.race_revision>1000000 or d.race_revision%1~=0) then return nil,'Invalid race revision' end

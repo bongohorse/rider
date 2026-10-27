@@ -11,7 +11,7 @@ C.observe(c,parts(15),false);C.observe(c,parts(15),true);assert(c.count==0,'Rese
 C.observe(c,parts(5),false);assert(c.count==0);C.observe(c,parts(5),true);assert(c.count==1)
 local E=require 'main.gym.editor_doc';local edit=require 'main.gym.editor_edit'
 local d=E.blank('coin-test','Coin test');local e=d.editor;e.objects={{id='o1',type='line',points={{-10,0},{50,0}}},{id='o2',type='coin',pickup_id='pickup-original',position={5,1}}};e.next_id=3;e.start.position={0,2}
-assert(E.validate(d));local level=assert(E.compile(d));assert(level.coins.items[1].id=='pickup-original');assert(not E.compare(d,level))
+assert(E.validate(d));local level=assert(E.compile(d));assert(level.schema==2 and level.coins.items[1].id=='pickup-original');assert(not E.compare(d,level))
 edit.translate(e,{'o2'},{2,3});assert(e.objects[2].position[1]==7 and e.objects[2].pickup_id=='pickup-original')
 local copied=edit.paste(e,edit.copy(e,{'o2'}),{2,0});assert(#copied==1 and e.objects[3].pickup_id~='pickup-original');assert(E.validate(d))
 local round=E.open_level(assert(E.compile(d)));assert(round.editor.objects[2].pickup_id=='pickup-original')

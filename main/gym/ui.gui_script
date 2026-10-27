@@ -171,6 +171,7 @@ function on_message(self,id,data,sender)
         if data.generation<(self.session_generation or 1) then return end
         local old=self.coin_data
         if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        if not old or old.generation~=data.generation or old.attempt~=data.attempt then self.coin_flash=0 end
         self.coin_data=data;if data.feedback>0 then self.coin_flash=.5;self.coin_flash_amount=data.feedback end;return
     elseif id==hash('coin_bank_state') then self.coin_bank_data=data;return end
     if id==hash("course_progress") then
