@@ -8,6 +8,7 @@ local prefab=require "main.gym.editor_prefab"
 local snap_lib=require "main.gym.editor_snap"
 local overlay=require "main.gym.editor_overlay"
 local editor_ui=require "main.gym.editor_ui"
+local zoom_policy=require "main.gym.editor_zoom"
 local terrain_look=require "main.gym.editor_look"
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
@@ -19,7 +20,7 @@ local LOADER="main:/loader#script"
 local PICK_PX,SNAP_PX,HANDLE_PX,DOUBLE_S,DOUBLE_PX=10,12,9,0.4,4
 -- Editor zoom range (LE6: down to 0.01, about 650 m across the canvas, so Fit level shows long courses;
 -- it was 0.05, about 130 m).
-local MIN_ZOOM,MAX_ZOOM=0.01,4
+local MIN_ZOOM,MAX_ZOOM=zoom_policy.MIN,zoom_policy.MAX
 local ui=1
 local C={param=vmath.vector4(1,0.45,0.85,1),vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=editor_ui.c.connected,
     selected=editor_ui.c.selected,hover=editor_ui.c.hover,connect=editor_ui.c.connected,
@@ -53,6 +54,7 @@ local HELP_LEFT={
     "Mouse",
     "  Click selects or places; drag moves (one Undo step)",
     "  Wheel zooms; Middle drag or [Space]+drag pans",
+    "  Zoom: - / editable % / + (1 to 400 percent)",
     "  Shift+click adds or removes; drag on empty space: box",
     "  [Tab] picks the next item under the cursor",
     "  Double-click a selected line or curve: insert a point",
@@ -492,12 +494,19 @@ local function test_start(self)
     if not pos then editor.message="Test start refused: "..err..".";return end
     play(self,{position=pos,speed=editor.test_speed,mode=mode})
 end
-local function zoom(self,factor)
-    local c,p=editor.camera,self.cursor
-    local z=math.max(MIN_ZOOM,math.min(MAX_ZOOM,c.zoom*factor))
+local function set_zoom(self,z,p)
+    local c=editor.camera
+    z=math.max(MIN_ZOOM,math.min(MAX_ZOOM,z))
+    if not p then
+        local m,u=map(),editor_ui.usable(self.ui)
+        if m and m.ppm_x~=0 and m.ppm_y~=0 then
+            p={((u.x0+u.x1)/2-m.ox)/m.ppm_x,((u.y0+u.y1)/2-m.oy)/m.ppm_y}
+        end
+    end
     if p then c.x,c.y=p[1]-(p[1]-c.x)*c.zoom/z,p[2]-(p[2]-c.y)*c.zoom/z end
     c.zoom=z
 end
+local function zoom(self,factor) set_zoom(self,editor.camera.zoom*factor,self.cursor) end
 -- After another document became current: dialogs close, and an unfinished piece (which belongs to the
 -- previous document) is discarded with its gesture state.
 local function opened(self)
@@ -1022,6 +1031,15 @@ local function drop_char(t)
     return t:sub(1,math.max(0,i-1))
 end
 local function confirm_name(self,closing)
+    if self.field.zoom then
+        local f=self.field;local z,err=zoom_policy.parse(f.text)
+        if not z then
+            f.error=err;editor.message=err
+            if closing then self.field=nil end
+            return
+        end
+        set_zoom(self,z);self.field=nil;editor.message='';return
+    end
     if self.field.medal then
         local f=self.field
         local times,err=require('main.gym.medals').set(editor.doc.editor.medal_times,f.medal,f.text)
@@ -1211,6 +1229,11 @@ end
 -- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
 local function step_focused(self,name)
     local f=self.field
+    if f.zoom and (name=='zoom_in' or name=='zoom_out') then
+        local z,err=zoom_policy.parse(f.text)
+        if not z then f.error=err;editor.message=err;return true end
+        set_zoom(self,zoom_policy.step(z,name=='zoom_in' and 1 or -1));self.field=nil;editor.message='';return true
+    end
     local index=tonumber(name:match("^[di][en]c_param_(%d)$"))
     if f.param and index then
         local o=find(f.id)
@@ -1247,6 +1270,11 @@ local function step_focused(self,name)
     return false
 end
 local function on_button(self,name)
+    if name=='zoom_value' then
+        self.field={zoom=true,text=zoom_policy.text(editor.camera.zoom),all=true};return
+    elseif name=='zoom_in' or name=='zoom_out' then
+        set_zoom(self,zoom_policy.step(editor.camera.zoom,name=='zoom_in' and 1 or -1));editor.message='';return
+    end
     if name=="collapse_objects" then self.ui.objects_collapsed=not self.ui.objects_collapsed;return
     elseif name=="object_search" then
         self.field={search=true,text=self.ui.object_query or "",all=true};return
@@ -2039,8 +2067,8 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            local limit=(f.param or f.speed or f.medal) and 16 or 64
-            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+            local limit=(f.param or f.speed or f.medal or f.zoom) and 16 or 64
+            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_cycle") and action.pressed then
@@ -2060,7 +2088,7 @@ function on_input(self,action_id,action)
                 elseif medal then
                     local order={'gold','silver','bronze'};local i=medal=='gold' and 1 or medal=='silver' and 2 or 3
                     on_button(self,'medal_'..order[(i-1+(self.held.shift and -1 or 1))%3+1])
-                elseif not f.snapshot and not f.object and not f.search and (speed or not f.label) then
+                elseif not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
                     on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
                 end
             end
@@ -2068,7 +2096,7 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
         elseif action_id==hash("ui_pointer") and action.pressed then
             local name=hit(self,action)
-            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus") then
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out") then
                 if not step_focused(self,name) then
                     confirm_name(self)
                     if not self.field then on_button(self,name) end
@@ -2703,13 +2731,14 @@ local function render_ui(self)
     end
     local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
         object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
-        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and f.text or editor.doc.name,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and f.text or editor.doc.name,
         status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
         medal_times=e.medal_times,medal_field=f and f.medal,medal_text=f and f.medal and f.text,medal_error=f and f.medal and f.error,
         description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
         readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
-        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
-        field=f and {key=f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        zoom_text=f and f.zoom and f.text or zoom_policy.text(editor.camera.zoom),zoom_edit=f and f.zoom,zoom_error=f and f.zoom and f.error,
+        field=f and {key=f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
         look=terrain_look.session,look_legacy=not require("main.terrain_perspective.profile").enabled({editor=e}),modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
         version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,
