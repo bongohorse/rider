@@ -17,6 +17,27 @@ module.exports=async function uiChecks(h){
  async function field(name,value){await button(name);await page.waitForFunction(()=>window.riderEditor.field!==false);await page.keyboard.type(String(value),{delay:20});await key('Enter');}
  async function panelWheel(delta){const e=await ed(),c=await canvas((e.ui.rects.collapse_properties.x+140)*e.ui.scale,400*e.ui.scale);await page.mouse.move(c.x,c.y);await page.mouse.wheel(0,delta);await pointer.frames(page);}
  let e=await importText(JSON.stringify(base),'ea1-ui.json');await key('Home');
+ // Independent palette categories and centered command group are view-only at all supported sizes.
+ const categoryBefore=await snapshot();
+ for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
+  await page.setViewportSize(size);await pointer.frames(page);await button('collapse_prefabs');
+  let state=await ed(),r=state.ui.rects;
+  for(const name of ['collapse_tool_category','collapse_gameplay','collapse_prefabs','collapse_objects','tool_coin'])await require('./editor_ui_target.cjs').reveal(page,name);
+  // Collapse Prefabs makes all four headings reachable together without scrolling in the desktop view.
+  if(size.width===1280){r=(await ed()).ui.rects;assert.ok(r.collapse_tool_category.y<r.collapse_gameplay.y&&r.collapse_gameplay.y<r.collapse_prefabs.y&&r.collapse_prefabs.y<r.collapse_objects.y);}
+  await button('collapse_tool_category');state=await ed();assert.ok(!state.visible.includes('tool_select'));assert.ok(state.visible.includes('tool_coin'));
+  await button('collapse_gameplay');state=await ed();assert.ok(!state.visible.includes('tool_coin')&&!state.visible.includes('tool_start')&&!state.visible.includes('tool_finish'));
+  await button('collapse_tool_category');await button('tool_select');assert.equal((await ed()).tool,'select');
+  await button('collapse_gameplay');await button('tool_coin');assert.equal((await ed()).tool,'coin');
+  state=await ed();r=state.ui.rects;assert.ok(r.tool_coin.y>r.collapse_gameplay.y&&r.tool_coin.y+r.tool_coin.h<r.collapse_prefabs.y);
+  assert.equal(r.undo.y,r.redo.y);assert.equal(r.redo.y,r.play.y);assert.equal(r.undo.x+r.play.x+r.play.w,size.width/state.ui.scale);
+  assert.ok(r.tool_coin.y!==r.play.y);assert.equal(state.overlay.nodes,628);await unchanged(categoryBefore,'category collapse/tool choice/viewport');
+  await page.screenshot({path:path.join(out,`editor-categories-${size.width}x${size.height}.png`)});
+  await button('collapse_prefabs');
+ }
+ await page.setViewportSize({width:1280,height:720});await key('s');await key('Home');
+ cases.push('coin_editor_categories_independent_and_centered_commands');
+
  const bad=structuredClone(base);bad.id='ea1-error';bad.name='Invalid line';
  bad.editor.connections=[];bad.editor.next_id=3;
  bad.editor.objects=[{id:'o1',type:'line',points:[[0,0],[30,0]]},{id:'o2',type:'line',points:[[40,0],[50,0],[44,0]]}];
@@ -56,7 +77,7 @@ module.exports=async function uiChecks(h){
  await seekScrollbar('scroll',false);e=await settle();assert.equal(e.ui.scroll,0);
  await unchanged(viewBefore,'scrollbar drag/wheel and resize');
  await page.screenshot({path:path.join(out,'editor-a-scrollbars-1280x480.png')});
- await page.setViewportSize({width:1280,height:720});await button('collapse_objects');e=await settle();
+ await page.setViewportSize({width:1280,height:720});await button('collapse_objects');await button('collapse_gameplay');e=await settle();
  assert.ok(e.ui.tools_panel.y+e.ui.tools_panel.h<600,'Tools panel has empty solid background');
  assert.ok(e.ui.properties_panel.y+e.ui.properties_panel.h<600,'Properties panel has empty solid background');
  assert.equal(e.ui.tool_max_scroll,0);assert.equal(e.ui.max_scroll,0);
@@ -65,7 +86,7 @@ module.exports=async function uiChecks(h){
  await key('d');await pointer.tap(page,{x:1100,y:560});await pointer.tap(page,{x:1160,y:600});await key('Enter');
  await revision(freeRevision+1);assert.equal((await doc()).objects.length,freeBefore.objects.length+1,'short sidebar still captures canvas input below it');
  await key('z',['Control']);await revision(freeRevision+2);assert.equal(shape(await doc()),shape(freeBefore));
- await key('Escape');
+ await key('Escape');await button('collapse_gameplay');
  measurements.editor_a_feedback={error:'red button, automatic source flash, direct Play banner, fix/Undo',scroll:'both panels: wheel + draggable scrollbar, constant control size'};
  cases.push('a1b_feedback_errors_and_scroll');
  const layouts={};
@@ -73,7 +94,8 @@ module.exports=async function uiChecks(h){
   await page.setViewportSize(size);await pointer.frames(page);await key('Home');await key('Escape');await key('p');await key('2');await hover([6,3]);e=await settle();
   assert.equal(e.prefab_kind,'ramp');assert.equal(e.tool,'prefab');
   assert.equal(e.ui.rects.new.y,8);assert.equal(e.ui.rects.new.x,size.width-264);
-  assert.equal(e.ui.rects.play.y,56);assert.equal(e.ui.rects.play.x,96);
+  assert.equal(e.ui.rects.play.y,56);assert.equal(e.ui.rects.play.x,size.width/2+20);
+  assert.equal(e.ui.rects.undo.x,size.width/2-60);assert.equal(e.ui.rects.redo.x,size.width/2-20);
   assert.equal(e.ui.scale,1);assert.equal(e.usable.x1-e.usable.x0,size.width-528);
   const nodes=e.overlay.nodes;assert.ok(nodes<=640);assert.equal(nodes,628);
   const pageTools=await page.locator('#page-tools').boundingBox();
@@ -111,7 +133,7 @@ module.exports=async function uiChecks(h){
  await hi.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.ui.rects.play);
  const high=await hi.evaluate(()=>({state:window.riderEditor,canvas:document.querySelector('canvas').width,css:document.querySelector('canvas').clientWidth}));
  assert.equal(high.canvas/high.css,2);assert.equal(high.state.ui.scale,2);
- assert.equal(high.state.ui.rects.play.x,96);assert.equal(high.state.ui.rects.play.h,32);
+ assert.equal(high.state.ui.rects.play.x,high.css/2+20);assert.equal(high.state.ui.rects.play.h,32);
  assert.equal(high.state.usable.x0,432);assert.equal(high.state.usable.x1,1936);assert.equal(high.state.overlay.nodes,628);
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};
