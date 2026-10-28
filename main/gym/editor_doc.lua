@@ -597,9 +597,12 @@ function M.blocked(e,p)
     for _,o in ipairs(e.objects) do local v=M.outline(o);if v and inside_hull(v,p) then return o end end
 end
 -- Highest terrain/hull edge directly below p (R10 "start on surface").
-function M.surface(e,p)
+-- top_only additionally excludes hull undersides for editor pickup projection.
+function M.surface(e,p,top_only)
     local best
-    each_segment(e,function(a,b)
+    each_segment(e,function(a,b,o)
+        -- CCW hull outward normals point up only on edges travelling to the left.
+        if top_only and M.outline(o) and b[1]>=a[1] then return end
         local lo,hi=math.min(a[1],b[1]),math.max(a[1],b[1])
         if hi-lo<1e-9 or p[1]<lo or p[1]>hi then return end
         local y=a[2]+(b[2]-a[2])*(p[1]-a[1])/(b[1]-a[1])
