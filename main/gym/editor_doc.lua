@@ -13,7 +13,7 @@ local sample=require "main.gym.editor_sample"
 -- Version 7 adds optional name/hidden/locked source metadata; compilation ignores it.
 -- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
-local M={EDITOR_VERSION=8,COMPILER_VERSION=8}
+local M={EDITOR_VERSION=9,COMPILER_VERSION=9}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -35,6 +35,12 @@ local function copy(v)
     local t={};for k,x in pairs(v) do t[k]=copy(x) end;return t
 end
 M.copy=copy
+function M.pickup_id(e,id)
+    local base='coin-'..id;local key=base;local n=1
+    local used={};for _,o in ipairs(e.objects) do if o.type=='coin' then used[o.pickup_id]=true end end
+    while used[key] do n=n+1;key=base..'-'..n end
+    return key
+end
 local function points(list) local out={};for i,p in ipairs(list) do out[i]={p[1],p[2]} end;return out end
 local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
 -- Connected ends coincide (R4); the editor makes them exactly equal, JSON keeps them equal (a prefab's
@@ -109,6 +115,7 @@ end
 -- Line sprites an object draws in a compiled level (render budget, R7): one per segment or outline edge.
 function M.drawn(o)
     local outline=M.outline(o)
+    if o.type=='coin' then return 1 end
     if outline then return #outline end
     local n=0
     for _,part in ipairs(M.parts(o)) do n=n+#part-1 end
@@ -161,6 +168,7 @@ local function from_station(d,id,name)
         e.objects[#e.objects+1]={id=new_id(e),type="line",points=list}
     end
     for _,h in ipairs(d.hulls or {}) do e.objects[#e.objects+1]={id=new_id(e),type="hull",vertices=points(h.vertices)} end
+    for _,c in ipairs(d.coins and d.coins.items or {}) do e.objects[#e.objects+1]={id=new_id(e),type='coin',pickup_id=c.id,position=copy(c.position)} end
     for _,l in ipairs(d.labels or {}) do e.objects[#e.objects+1]={id=new_id(e),type="label",position={l.position[1],l.position[2]},text=l.text} end
     if type(d.finish)=="table" and point(d.finish.position) and type(d.finish.direction)=="table" then
         e.finish={position={d.finish.position[1],d.finish.position[2]},direction=d.finish.direction[1]<0 and -1 or 1}
@@ -208,9 +216,9 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins"}
 local function compiled(d)
-    local t={medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -259,7 +267,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -275,7 +283,7 @@ function M.validate(doc)
     if not medal_ok then return nil,medal_err,medal_unknown end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
-    local ids,total={},0
+    local ids,total,pickups,coin_count={},0,{},0
     for _,o in ipairs(e.objects) do
         if type(o)~="table" or type(o.id)~="string" then return nil,"Invalid editor object" end
         local n=tonumber(o.id:match("^o(%d+)$"))
@@ -286,7 +294,13 @@ function M.validate(doc)
         if (o.hidden~=nil and type(o.hidden)~="boolean") or (o.locked~=nil and type(o.locked)~="boolean") then return nil,"Invalid visibility/lock: "..o.id end
         if e.editor_version<7 and (o.name~=nil or o.hidden~=nil or o.locked~=nil) then return nil,"Object metadata needs editor version 7: "..o.id end
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
-        if o.type=="label" then
+        if o.type=='coin' then
+            if e.editor_version<9 then return nil,'Ordinary coins require editor/compiler version 9',true end
+            local cd=require 'main.gym.coin_data'
+            if not point(o.position) or not cd.id(o.pickup_id) or pickups[o.pickup_id] then return nil,'Invalid/duplicate coin pickup ID: '..o.id end
+            pickups[o.pickup_id]=true;coin_count=coin_count+1
+            if coin_count>cd.MAX then return nil,'Ordinary coin limit is '..cd.MAX end
+        elseif o.type=="label" then
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
         elseif o.type=="prefab" then
             if e.editor_version<3 then return nil,"Prefab "..o.id.." needs editor version 3" end
@@ -601,7 +615,7 @@ local function extent(e)
     local function add(x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
     -- Both ends of every edge: an open line's last point is no edge's start.
     each_segment(e,function(a,b) add(a[1],a[2]);add(b[1],b[2]) end)
-    for _,o in ipairs(e.objects) do if o.type=="label" then add(o.position[1],o.position[2]) end end
+    for _,o in ipairs(e.objects) do if o.type=='label' or o.type=='coin' then add(o.position[1],o.position[2]);if o.type=='coin' then add(o.position[1]-.25,o.position[2]-.25);add(o.position[1]+.25,o.position[2]+.25) end end end
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
     if e.finish then local f=e.finish.position;add(f[1],f[2]-M.FINISH_BELOW);add(f[1],f[2]+M.FINISH_ABOVE) end
@@ -644,12 +658,14 @@ function M.compile(doc,test,errors)
     for _,o in ipairs(e.objects) do
         local outline=M.outline(o)
         if outline then d.hulls[#d.hulls+1]={vertices=points(outline)}
+        elseif o.type=='coin' then d.coins=d.coins or {version=1,items={}};d.coins.items[#d.coins.items+1]={id=o.pickup_id,position=copy(o.position)}
         elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
     end
     if e.finish then
         local f=e.finish.position
         d.finish={position={f[1],f[2]},line={{f[1],f[2]-M.FINISH_BELOW},{f[1],f[2]+M.FINISH_ABOVE}},direction={e.finish.direction,0}}
     end
+    if d.coins then d.schema=2 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)

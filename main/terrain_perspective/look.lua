@@ -15,7 +15,7 @@ function M.has_sections(d)
 end
 function M.validate(e)
  if e.road_profile~=M.ID then return true end
- if (e.editor_version~=7 and e.editor_version~=8) or e.compiler_version~=e.editor_version then return nil,'Authored Terrain Look requires supported editor/compiler version 7 or 8 source; keep the original file.',true end
+ if (e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9) or e.compiler_version~=e.editor_version then return nil,'Authored Terrain Look requires supported editor/compiler version 7, 8 or 9 source; keep the original file.',true end
  local l=e.road_look
  if type(l)~='table' or l.version~=1 then return nil,'Unsupported Terrain Look version; keep the original file.',true end
  for k in pairs(l) do if k~='version' and k~='params' then return nil,'Unsupported Terrain Look field '..tostring(k),true end end
@@ -52,7 +52,8 @@ function M.validate_station(d)
  if not M.authored(d) then return true end
  local doc=M.document
  if not doc then return nil,'Terrain Look requires supported editor source validation; open the source in the editor.' end
- local ok,err,unsupported=doc.validate({schema=d.schema,units=d.units,id=d.id,name=d.name,editor=d.editor})
+ -- Source wrappers remain schema 1; coin-bearing compiled stations use schema 2.
+ local ok,err,unsupported=doc.validate({schema=1,units=d.units,id=d.id,name=d.name,editor=d.editor})
  if not ok then return nil,err,unsupported end
  if not M.has_sections(d) then return true end
  -- Cached geometry remains playable under R1. Only matching source may supply local styles;

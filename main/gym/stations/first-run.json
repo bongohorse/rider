@@ -1360,14 +1360,14 @@
     "checkpoints": {},
     "editor": {
         "compiled_revision": 1,
-        "compiler_version": 8,
+        "compiler_version": 9,
         "connections": [
             {
                 "from": "o2",
                 "to": "o1"
             }
         ],
-        "editor_version": 8,
+        "editor_version": 9,
         "finish": {
             "direction": 1,
             "position": [
@@ -1375,7 +1375,7 @@
                 1.5
             ]
         },
-        "next_id": 3,
+        "next_id": 12,
         "objects": [
             {
                 "anchors": [
@@ -1488,6 +1488,87 @@
                     ]
                 ],
                 "type": "line"
+            },
+            {
+                "id": "o3",
+                "type": "coin",
+                "pickup_id": "coin-o3",
+                "position": [
+                    12,
+                    0.7228861939073835
+                ]
+            },
+            {
+                "id": "o4",
+                "type": "coin",
+                "pickup_id": "coin-o4",
+                "position": [
+                    25,
+                    1.6203681082550714
+                ]
+            },
+            {
+                "id": "o5",
+                "type": "coin",
+                "pickup_id": "coin-o5",
+                "position": [
+                    40,
+                    2.690964759987767
+                ]
+            },
+            {
+                "id": "o6",
+                "type": "coin",
+                "pickup_id": "coin-o6",
+                "position": [
+                    60,
+                    1.0391426915693287
+                ]
+            },
+            {
+                "id": "o7",
+                "type": "coin",
+                "pickup_id": "coin-o7",
+                "position": [
+                    80,
+                    -0.1412175704475065
+                ]
+            },
+            {
+                "id": "o8",
+                "type": "coin",
+                "pickup_id": "coin-o8",
+                "position": [
+                    100,
+                    2.502326806433019
+                ]
+            },
+            {
+                "id": "o9",
+                "type": "coin",
+                "pickup_id": "coin-o9",
+                "position": [
+                    120,
+                    2.662921383236008
+                ]
+            },
+            {
+                "id": "o10",
+                "type": "coin",
+                "pickup_id": "coin-o10",
+                "position": [
+                    140,
+                    0.7549057915577493
+                ]
+            },
+            {
+                "id": "o11",
+                "type": "coin",
+                "pickup_id": "coin-o11",
+                "position": [
+                    155,
+                    1.001534038559036
+                ]
             }
         ],
         "revision": 1,
@@ -1536,7 +1617,7 @@
     "name": "First run",
     "run_in": 0,
     "run_out": 0,
-    "schema": 1,
+    "schema": 2,
     "spawn": [
         2,
         1.7
@@ -1549,5 +1630,73 @@
         "silver": 30,
         "bronze": 40
     },
-    "race_revision": 1
+    "race_revision": 1,
+    "coins": {
+        "version": 1,
+        "items": [
+            {
+                "id": "coin-o3",
+                "position": [
+                    12,
+                    0.7228861939073835
+                ]
+            },
+            {
+                "id": "coin-o4",
+                "position": [
+                    25,
+                    1.6203681082550714
+                ]
+            },
+            {
+                "id": "coin-o5",
+                "position": [
+                    40,
+                    2.690964759987767
+                ]
+            },
+            {
+                "id": "coin-o6",
+                "position": [
+                    60,
+                    1.0391426915693287
+                ]
+            },
+            {
+                "id": "coin-o7",
+                "position": [
+                    80,
+                    -0.1412175704475065
+                ]
+            },
+            {
+                "id": "coin-o8",
+                "position": [
+                    100,
+                    2.502326806433019
+                ]
+            },
+            {
+                "id": "coin-o9",
+                "position": [
+                    120,
+                    2.662921383236008
+                ]
+            },
+            {
+                "id": "coin-o10",
+                "position": [
+                    140,
+                    0.7549057915577493
+                ]
+            },
+            {
+                "id": "coin-o11",
+                "position": [
+                    155,
+                    1.001534038559036
+                ]
+            }
+        ]
+    }
 }

@@ -8,7 +8,7 @@ M.find=find
 local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
 local function shift(p,d) p[1],p[2]=p[1]+d[1],p[2]+d[2] end
 local function translate_object(o,d)
-    if o.type=="label" then shift(o.position,d)
+    if (o.type=="label" or o.type=="coin") then shift(o.position,d)
     elseif o.type=="prefab" then shift(o.at,d)
     elseif o.type=="curve" then for _,a in ipairs(o.anchors) do shift(a.p,d) end
     else for _,p in ipairs(o.type=="line" and o.points or o.vertices) do shift(p,d) end end
@@ -280,6 +280,7 @@ function M.paste(e,clip,d)
         local n=doc_lib.copy(o)
         n.hidden,n.locked=nil,nil
         n.id=new_id(e);map[o.id]=n.id
+        if n.type=='coin' then n.pickup_id=doc_lib.pickup_id(e,n.id) end
         translate_object(n,d)
         e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
     end
@@ -340,7 +341,7 @@ function M.mirror(e,ids,side)
         local n=doc_lib.copy(o)
         if o.type=="line" then n.points=reflect(o.points)
         elseif o.type=="hull" then n.vertices=reflect(o.vertices) -- reversed order keeps it counter-clockwise
-        elseif o.type=="label" then n.position={c2-o.position[1],o.position[2]}
+        elseif o.type=="label" or o.type=="coin" then n.position={c2-o.position[1],o.position[2]}
         elseif o.type=="curve" then n=M.mirror_curve(o,c2)
         else n=prefab.mirror(o,c2) end
         n.name=o.name;n.road_look=doc_lib.copy(o.road_look)

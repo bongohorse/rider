@@ -5,7 +5,7 @@
   const enabled=forced==='1'||(forced!=='0'&&navigator.maxTouchPoints>0);
   const pointers=new Map(),pending={};
   const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false};
-  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes;
+  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes,coinHud;
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
@@ -42,6 +42,10 @@
     }else if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
+    }
+    if(enabled&&coinHud){
+      const c=window.riderCoins;coinHud.hidden=!c;
+      if(c)coinHud.textContent=`Coins ${c.count}/${c.total}${c.flash?' · +'+c.flash:''} · Bank ${c.bank}${c.practice?' · Practice':''}${c.save==='saved'?'':' · '+c.save}`;
     }
     if(enabled&&progressNodes){
       const p=window.riderProgress,n=progressNodes;
@@ -171,7 +175,8 @@
   const start=document.createElement('span'),finish=document.createElement('span'),value=document.createElement('span'),reason=document.createElement('span');start.textContent='Start';finish.textContent='Finish';
   const track=document.createElement('div'),car=document.createElement('div');track.className='progress-track';car.className='progress-car';track.append(car);
   progress.append(start,track,finish,value,reason);progressNodes={root:progress,start,finish,value,reason,track,car};
-  readout.append(hud,progress,status,tiltHud,replayHud);root.append(readout);
+  coinHud=document.createElement('div');coinHud.className='coin-count';coinHud.hidden=true;
+  readout.append(hud,coinHud,progress,status,tiltHud,replayHud);root.append(readout);
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;

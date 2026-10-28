@@ -9,6 +9,7 @@ local stations=require "main.gym.stations"
 local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
+local COIN_TINT=vmath.vector4(1,1,1,1)
 local HOVER=vmath.vector4(0.8353,0.9529,0.9137,1)
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).
@@ -25,6 +26,7 @@ local function readable(v,zoom)
     v.zoom=zoom
     local width,size=math.max(0.5,1/zoom)/2,math.max(1,0.5/zoom)
     for _,id in ipairs(v.line_ids) do if go.exists(id) then go.set(id,"scale.y",width) end end
+    for _,id in ipairs(v.coin_ids or {}) do if go.exists(id) then go.set_scale(vmath.vector3(size,size,1),id) end end
     for _,id in ipairs(v.label_ids) do if go.exists(id) then go.set_scale(vmath.vector3(size,size,1),id) end end
 end
 -- Sprite budget (R7, LE3b): the source validator allows more points than the sprite and game-object pools can draw
@@ -40,6 +42,7 @@ end
 -- sprite more than its share, which the limit reserves.
 local RESERVE,WORLD_OBJECTS=12,4
 local function segments(o)
+    if o.type=='coin' then return 1,1 end
     local closed=doc_lib.outline(o)
     if closed then return #closed,1 end
     local c,parts=0,doc_lib.parts(o)
@@ -78,6 +81,12 @@ end
 -- Sprites for an object: a closed outline (hull, Platform) or each open part (line, terrain prefab),
 -- k sprites shared out by segments, at least one per part.
 local function draw(v,o,k)
+    if o.type=='coin' then
+        local id=require('main.gym.coin_visual').create(o.position)
+        v.gos[#v.gos+1]=id;v.coin_ids=v.coin_ids or {};v.coin_ids[#v.coin_ids+1]=id
+        v.coin_sources=v.coin_sources or {};v.coin_sources[o.id]=true
+        v.sprites=v.sprites+1;v.zoom=nil;return {id},{}
+    end
     local closed=doc_lib.outline(o)
     if closed then return outline(v,closed,true,k) end
     local parts=doc_lib.parts(o)
@@ -144,7 +153,8 @@ local function refresh(v,e)
     for _,o in ipairs(e.objects) do
         local pts=editor.shape(o)
         if changed(pts,v.shapes[o.id]) then
-            if o.type=="label" then
+            if o.type=='coin' then require('main.gym.coin_visual').position(v.objects[o.id][1],pts[1])
+            elseif o.type=="label" then
                 go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
             else
                 local closed=editor.outline(o)
@@ -174,7 +184,7 @@ end
 local function signature(e)
     local t={}
     for _,o in ipairs(e.objects) do
-        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or (o.type=="prefab" or o.type=="curve") and (o.kind or "curve")..(o.params and o.params.facing or "")..#doc_lib.path(o) or #(o.points or o.vertices))
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or (o.type=="prefab" or o.type=="curve") and (o.kind or "curve")..(o.params and o.params.facing or "")..#doc_lib.path(o) or o.type=="coin" and 1 or #(o.points or o.vertices))
     end
     return table.concat(t,"|")
 end
@@ -269,7 +279,7 @@ function M.update(self)
         v.drawn=editor.view_version
         -- Only objects whose highlight changed are re-tinted (hover changes on mouse moves).
         for id,ids in pairs(v.objects) do
-            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or stations.TERRAIN_TINT
+            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or stations.TERRAIN_TINT
             if v.tints[id]~=state then v.tints[id]=state;tint(ids,state) end
         end
         local blocked=doc_lib.blocked(e,start)

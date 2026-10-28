@@ -175,6 +175,7 @@ function init(self)
     local case=sys.get_config_string("rider.gym_test","")
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
+    self.coin_bank=require('main.gym.coin_bank').new()
     self.world_loads,self.generation=0,1
     self.time=time_scale.new()
     self.loading,self.deadline=true,0
@@ -214,6 +215,12 @@ function init(self)
     msg.post("#world","load")
 end
 function update(self,dt)
+    local bank=self.coin_bank
+    require('main.gym.coin_bank').poll(bank,dt)
+    local coin_key=tostring(bank.total)..'|'..bank.status
+    if coin_key~=self.coin_bank_key then
+        self.coin_bank_key=coin_key;msg.post('#ui','coin_bank_state',{total=bank.total,status=bank.status})
+    end
     if self.look_comparison then require("main.terrain_perspective.runtime").poll() end
     if self.loading then
         self.deadline=self.deadline+dt
@@ -272,6 +279,14 @@ function update(self,dt)
     end
 end
 function on_message(self,id,data,sender)
+    if id==hash('coin_finish') then
+        if data.generation==self.generation and not self.edit and sender==msg.url(OWNER) then
+            local bank=require 'main.gym.coin_bank'
+            bank.generation(self.coin_bank,self.generation)
+            bank.offer(self.coin_bank,data.generation,data.attempt,data.amount,data.official)
+        end
+        return
+    end
     if sys.get_config_int("rider.terrain_compare",0)==1 and (id==hash("editor_enter") or id==hash("editor_play") or id==hash("editor_reload") or id==hash("select_station")) then
         msg.post("#ui","custom_status",{text="Use the terrain comparison controls; editor and saved levels are unchanged."})
         return
