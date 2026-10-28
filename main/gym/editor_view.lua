@@ -56,7 +56,7 @@ local function objects(v,e)
         end
         v.hidden[id]=hidden
         if o.type~="label" and not r.terrain then
-            local colour=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.gym.stations").TERRAIN_TINT
+            local colour=editor.auto_remove and editor.auto_remove[id] and vmath.vector4(1,.25,.25,1) or editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.gym.stations").TERRAIN_TINT
             if r.tint~=colour then lines.tint(r.ids,colour);r.tint=colour end
         end
     end
@@ -118,7 +118,7 @@ function M.refresh(self,force)
     if not force and editor.preview_objects and v.updated and now-v.updated<.033 then return end
     local style={}
     for _,o in ipairs(e.objects) do
-        if doc.terrain(o) then style[#style+1]=o.id..(o.hidden and "h" or "v")..(editor.selected[o.id] and "s" or "n")..(editor.hover_object==o.id and "o" or "n") end
+        if doc.terrain(o) then style[#style+1]=o.id..(o.hidden and "h" or "v")..((editor.auto_range or editor.selected)[o.id] and "s" or "n")..(editor.hover_object==o.id and "o" or "n") end
     end
     local style_key=table.concat(style,"|")
     local wanted=require("main.terrain_perspective.runtime").enabled({editor=terrain_e})
@@ -129,7 +129,7 @@ function M.refresh(self,force)
     local mesh_dirty=force or v.look_epoch~=look_epoch or v.shape~=editor.shape_version or v.mesh_revision~=e.revision or v.style_key~=style_key
     local started=socket.gettime()
     local ok,result,err=true,true,nil
-    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,terrain_e,editor.preview_objects,editor.selected,editor.hover_object,self.session_generation,residency.viewport(editor.camera)) end
+    if mesh_dirty then ok,result,err=pcall(terrain.update,v.mesh,terrain_e,editor.preview_objects,editor.auto_range or editor.selected,editor.hover_object,self.session_generation,residency.viewport(editor.camera)) end
     if not ok then err="Mesh preview unavailable: "..tostring(result);result=nil end
     if not result then
         print("EDITOR_MESH_FALLBACK "..tostring(err));M.final(self,true);self.editor_rebuild=true;self.editor_fallback=err;return

@@ -10,6 +10,7 @@ local overlay=require "main.gym.editor_overlay"
 local editor_ui=require "main.gym.editor_ui"
 local zoom_policy=require "main.gym.editor_zoom"
 local track_align=require "main.gym.editor_track_align"
+local auto_coins=require "main.gym.editor_auto_coins"
 local terrain_look=require "main.gym.editor_look"
 local stations=require "main.gym.stations"
 local custom=require "main.gym.custom"
@@ -154,7 +155,12 @@ function init(self)
 end
 -- Held commands, gestures and previews never survive a mode change or focus loss (R15). A polyline
 -- being drawn keeps its placed points on focus loss; a mode change ends it (see play).
+local function clear_auto(self)
+    self.auto_plan=nil
+    if editor.auto_range or editor.auto_remove then editor.auto_range,editor.auto_remove=nil,nil;editor.touch() end
+end
 local function cancel(self)
+    clear_auto(self)
     self.drag,self.pan,self.box,self.held,self.pending=nil,nil,nil,{},nil
     if editor.preview then editor.preview=nil;editor.touch() end
     if editor.preview_objects then editor.set_preview(nil) end
@@ -1071,7 +1077,58 @@ local function drop_track(self,height)
     self.track_height=height;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
     track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan)
 end
+local function auto_context(self)
+    if self.auto_opened~=editor.opened then
+        clear_auto(self);self.auto_opened=editor.opened;self.auto_settings=auto_coins.defaults()
+    end
+    return self.auto_settings
+end
+local function auto_value(self,key)
+    local c=auto_context(self)
+    if key=='count' or key=='spacing' then
+        local scope=auto_coins.scope(editor.doc.editor,c,editor.selected_ids())
+        if scope then local n,sp=auto_coins.metrics(scope,c);return key=='count' and n or sp end
+    end
+    return c[key]
+end
+local function set_auto(self,key,value)
+    local n,err=auto_coins.value(key,value)
+    if not n then editor.message=err;return nil,err end
+    local c=auto_context(self);c[key]=n
+    if key=='count' or key=='spacing' then c.driver=key end
+    clear_auto(self);return true
+end
+local function preview_auto(self,reroll)
+    local c=auto_context(self)
+    if reroll then c.seed=c.seed%2147483646+1 end
+    clear_auto(self)
+    local plan,err=auto_coins.preview(editor.doc,c,editor.selected_ids())
+    if not plan then editor.message=err;return end
+    self.auto_plan=plan;self.auto_revision=editor.doc.editor.revision;self.auto_selection=table.concat(editor.selected_ids(),',')
+    editor.auto_range,editor.auto_remove=plan.range,plan.remove;editor.touch()
+    -- Keep the alternative input coupled, without changing the last-edited driver.
+    if c.driver=='count' then c.spacing=math.max(.75,math.min(100000,plan.spacing)) else c.count=math.min(10000,plan.desired) end
+    editor.message=string.format('Preview: %d / %d new coins; %d removals. Cyan diamonds = additions; red coins = removals. Apply or Esc.',plan.possible,plan.desired,plan.removed)..(plan.warning and ' Skipped: '..plan.warning or '')
+end
+local function apply_auto(self)
+    local p=self.auto_plan
+    if not p then editor.message='Preview first; Apply only accepts the visible preview.';return end
+    if #p.ids==0 and p.removed==0 then editor.message='No coin changes to apply.';return end
+    local ok=editor.commit(function(_,d)return auto_coins.apply(d,p)end,true)
+    if not ok then clear_auto(self);return end
+    editor.selected={};for _,id in ipairs(p.ids) do editor.selected[id]=true end
+    editor.selection=p.ids[#p.ids];editor.vertex,editor.vertex2,editor.vertices=nil,nil,{}
+    if self.track_opened~=editor.opened then self.track_session=nil end -- never inherit another document's temporary routes
+    self.track_opened=editor.opened;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
+    track_align.attach(editor.doc.editor,self.track_session,p.targets);self.track_cache=nil
+    clear_auto(self);editor.tool='select';self.ui.scroll=0;editor.touch()
+    editor.message=string.format('Applied %d new coins; %d removed. Selection retained: adjust Height / Along track or drag. One Undo.',#p.ids,p.removed)
+end
 local function confirm_name(self,closing)
+    if self.field.auto then
+        local f=self.field;local ok,err=set_auto(self,f.auto,f.text)
+        if ok then self.field=nil elseif closing then self.field=nil else f.error=err end;return
+    end
     if self.field.along then
         local f=self.field;local delta,err=track_align.distance(f.text)
         if delta then local ok;ok,err=adjust_track(self,delta);if ok then self.field=nil;return end end
@@ -1283,6 +1340,12 @@ end
 -- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
 local function step_focused(self,name)
     local f=self.field
+    local ak=name:match('^[di][en]c_auto_(%a+)$')
+    if f.auto and ak==f.auto then
+        local n=tonumber(f.text);local step=ak=='count' and 1 or ak=='randomness' and 5 or ak=='height' and .1 or .25
+        local ok,err=set_auto(self,ak,n and n+(name:sub(1,1)=='d' and -step or step) or f.text)
+        if ok then self.field=nil else f.error=err end;return true
+    end
     if f.track and name=='drop_to_track' then
         local height,err=track_align.height(f.text)
         if not height then f.error=err;editor.message=err;return true end
@@ -1343,6 +1406,21 @@ local function step_focused(self,name)
     return false
 end
 local function on_button(self,name)
+    if name:match('^auto_') or name:match('^[di][en]c_auto_') then
+        local c=auto_context(self);local key=name:match('^auto_(count)$') or name:match('^auto_(spacing)$') or name:match('^auto_(randomness)$') or name:match('^auto_(height)$')
+        local stepkey=name:match('^[di][en]c_auto_(%a+)$')
+        if key then
+            self.ui.reveal=name;self.field={auto=key,text=number_text(auto_value(self,key)),all=true}
+        elseif stepkey then
+            local step=stepkey=='count' and 1 or stepkey=='randomness' and 5 or stepkey=='height' and .1 or .25
+            set_auto(self,stepkey,auto_value(self,stepkey)+(name:sub(1,1)=='d' and -step or step))
+        elseif name=='auto_range' then c.range=c.range=='whole' and 'selected' or 'whole';clear_auto(self)
+        elseif name=='auto_replace' then c.replace=not c.replace;clear_auto(self)
+        elseif name=='auto_preview' then preview_auto(self,false)
+        elseif name=='auto_reroll' then preview_auto(self,true)
+        elseif name=='auto_apply' then apply_auto(self) end
+        return
+    end
     if name=='along_track' then
         self.ui.reveal=name;self.field={along=true,text='0',all=true};return
     elseif name=='inc_along_track' or name=='dec_along_track' then
@@ -2155,8 +2233,8 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            local limit=(f.param or f.speed or f.medal or f.zoom or f.track or f.along) and 16 or 64
-            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom or f.track or f.along) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+            local limit=(f.param or f.speed or f.medal or f.zoom or f.track or f.along or f.auto) and 16 or 64
+            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom or f.track or f.along or f.auto) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_cycle") and action.pressed then
@@ -2176,7 +2254,7 @@ function on_input(self,action_id,action)
                 elseif medal then
                     local order={'gold','silver','bronze'};local i=medal=='gold' and 1 or medal=='silver' and 2 or 3
                     on_button(self,'medal_'..order[(i-1+(self.held.shift and -1 or 1))%3+1])
-                elseif not f.along and not f.track and not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
+                elseif not f.auto and not f.along and not f.track and not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
                     on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
                 end
             end
@@ -2184,7 +2262,7 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
         elseif action_id==hash("ui_pointer") and action.pressed then
             local name=hit(self,action)
-            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track") then
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track" or name:match("^auto_")) then
                 if not step_focused(self,name) then
                     confirm_name(self)
                     if not self.field then on_button(self,name) end
@@ -2289,6 +2367,7 @@ function on_input(self,action_id,action)
         -- 1-7 pick the prefab type (the game's station keys are editor input while editing).
         editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
     elseif action_id==hash("editor_cancel") then
+        if self.auto_plan then clear_auto(self);editor.message="Coin preview cancelled.";return true end
         -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
         if self.drag or self.pan or self.box then cancel(self)
         elseif self.drawing then self.drawing=nil;editor.touch()
@@ -2536,6 +2615,11 @@ local function draw_overlay(self)
     overlay.grid(o,s,w,h,self.held.alt and snap_lib.FINE or snap_lib.GRID)
     local function visible(q) return q[1]>=-20 and q[1]<=w+20 and q[2]>=-20 and q[2]<=h+20 end
     local function handle(p,color,size,diamond) local q=to_px(p,s);if visible(q) then overlay.handle(o,q,color,size or HANDLE_PX,diamond) end end
+    if self.auto_plan then
+        for _,p in ipairs(self.auto_plan.positions) do handle(p,C.connect,7,true) end
+        overlay.snap(o,nil);gui.set_enabled(o.readout,false);self.readout_text='Coin preview: cyan additions, red removals'
+        show_silhouette(o,self.ghost,nil);show_silhouette(o,self.last_ghost,nil);overlay.finish(o);return
+    end
     local hover=editor.hover
     local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
     local hover_point=hovered and editor.shape(hovered)[hover.index]
@@ -2822,16 +2906,16 @@ local function render_ui(self)
     end
     local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
         object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
-        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and f.text or editor.doc.name,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and not f.auto and f.text or editor.doc.name,
         status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
         medal_times=e.medal_times,medal_field=f and f.medal,medal_text=f and f.medal and f.text,medal_error=f and f.medal and f.error,
         description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
         readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
-        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and not f.auto and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
         track_alignment=has_track,track_height=f and f.track and (f.all and f.text~='' and '['..f.text..']' or f.text..'_') or track_active and (tc.mixed and 'Mixed' or number_text(tc.height)) or number_text(self.track_height or track_align.DEFAULT),track_error=f and f.track and f.error,
         along_text=f and f.along and f.text..'_' or '0',along_error=f and f.along and f.error or tc and tc.error,
         zoom_text=f and f.zoom and f.text or zoom_policy.text(editor.camera.zoom),zoom_edit=f and f.zoom,zoom_error=f and f.zoom and f.error,
-        field=f and {key=f.along and "along_track" or f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        field=f and {key=f.auto and "auto_"..f.auto or f.along and "along_track" or f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
         look=terrain_look.session,look_legacy=not require("main.terrain_perspective.profile").enabled({editor=e}),modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
         version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,
@@ -2841,6 +2925,17 @@ local function render_ui(self)
         dialog_message=editor.message,library_title=self.library_error and "My levels: "..self.library_error or "My levels ("..#list..", newest first)",library_rows=library_rows,template_rows=template_rows,problems=problems,
         page=page,tpl_page=self.tpl_page or 0,warn_page=self.warn_page or 0,library_more=(page+1)*ROWS<#list,template_more=((self.tpl_page or 0)+1)*TEMPLATE_ROWS<#self.templates,warning_more=((self.warn_page or 0)+1)*WARN_ROWS<#rows}
     for _,kind in ipairs(prefab.ORDER) do d.full_names[kind]=prefab.name(kind);d.names[kind]=kind=="kicker" and "Kicker" or kind=="wave" and "Wave" or kind=="gap" and "Gap" or prefab.name(kind) end
+    if editor.tool=='coin' then
+        local c=auto_context(self);local scope
+        local scopekey=tostring(editor.opened)..':'..e.revision..':'..c.range..':'..table.concat(editor.selected_ids(),',')
+        if self.auto_scope_key~=scopekey then self.auto_scope_key=scopekey;self.auto_scope=auto_coins.scope(e,c,editor.selected_ids()) end
+        scope=self.auto_scope
+        local n,sp,density
+        if scope then n,sp,density=auto_coins.metrics(scope,c) end
+        d.auto={settings=c,plan=self.auto_plan,field=f and f.auto,text=f and f.text,error=f and f.auto and f.error,desired=n,spacing=sp,density=density}
+        d.description='Auto Add Coins\nClick on the course places a single coin. Preview a row here; Apply selects it for adjustment.'
+        d.fields,d.actions={},{};d.object_name=nil;d.level=false;d.start_selected=false;d.track_alignment=false
+    end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
     if self.buttons.inc_test_speed then self.buttons.plus=self.buttons.inc_test_speed;self.buttons.minus=self.buttons.dec_test_speed
@@ -2903,7 +2998,7 @@ local function publish(self)
     for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
     local o=self.overlay
     html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
-        message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,track_bound=self.track_cache and self.track_cache.active and not self.track_cache.error or false,track_mixed=self.track_cache and self.track_cache.active and not self.track_cache.error and self.track_cache.mixed or false,along_error=self.track_cache and self.track_cache.error or false,camera=editor.camera,screen=editor.map(),
+        auto_preview=self.auto_plan and {positions=self.auto_plan.positions,removed=self.auto_plan.removed,desired=self.auto_plan.desired,possible=self.auto_plan.possible,seed=self.auto_plan.seed} or false,auto_settings=self.auto_settings or false,message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,track_bound=self.track_cache and self.track_cache.active and not self.track_cache.error or false,track_mixed=self.track_cache and self.track_cache.active and not self.track_cache.error and self.track_cache.mixed or false,along_error=self.track_cache and self.track_cache.error or false,camera=editor.camera,screen=editor.map(),
         id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
         start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,
         redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,open_dialog=self.open_dialog or false,
@@ -2975,6 +3070,8 @@ function update(self,dt)
             else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
             self.place=editor.tool=="prefab" and self.cursor and placement(self,self.cursor) or nil
         end
+        auto_context(self)
+        if self.auto_plan and (editor.tool~='coin' or self.auto_revision~=e.revision or self.auto_selection~=table.concat(editor.selected_ids(),',')) then clear_auto(self) end
         draw_overlay(self)
         render_ui(self)
         self.overlay_shown=true

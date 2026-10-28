@@ -279,7 +279,7 @@ function M.update(self)
         v.drawn=editor.view_version
         -- Only objects whose highlight changed are re-tinted (hover changes on mouse moves).
         for id,ids in pairs(v.objects) do
-            local state=editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or stations.TERRAIN_TINT
+            local state=editor.auto_remove and editor.auto_remove[id] and BLOCKED_TINT or (editor.auto_range or editor.selected)[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or stations.TERRAIN_TINT
             if v.tints[id]~=state then v.tints[id]=state;tint(ids,state) end
         end
         local blocked=doc_lib.blocked(e,start)

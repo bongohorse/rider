@@ -194,7 +194,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
+        local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -387,6 +387,26 @@ function M.render(u,d)
             y=paragraph(rx+16,y,title or '',248,d.selection~='' and C.selected or C.text,18,clip)
             if rest~='' then y=paragraph(rx+16,y,rest,248,C.secondary,14,clip) end
             y=y+16
+            if d.auto then
+                local a=d.auto;local c=a.settings
+                row('auto_range','Range: '..(c.range=='whole' and 'Whole track' or 'Selected terrain'),nil,nil,nil,'Selected terrain uses the whole pieces selected with [S] before choosing Coin. Gaps stay empty; hulls and jump arcs are manual.')
+                if y>=clip[1] and y+32<=clip[2] then
+                    button('auto_preview',rx+16,y,80,'Preview',false,'Preview without changing the document')
+                    button('auto_reroll',rx+100,y,80,'Re-roll',false,'Change seed and regenerate preview')
+                    button('auto_apply',rx+184,y,80,'Apply',false,'Apply exactly the visible preview as one Undo action',nil,not a.plan)
+                end;y=y+44
+                local summary=a.plan and string.format('%d / %d new; %d removed. Seed %d',a.plan.possible,a.plan.desired,a.plan.removed,c.seed) or 'Preview required after settings or source changes.'
+                y=paragraph(rx+16,y,summary,248,C.secondary,12,clip)+8
+                if a.plan and a.plan.warning then y=paragraph(rx+16,y,a.plan.warning,248,C.error,12,clip)+8 end
+                if a.density then y=paragraph(rx+16,y,string.format('Desired %d; %.2f coins/m. Driver: %s',a.desired,a.density,c.driver),248,C.secondary,12,clip)+8 end
+                for _,v in ipairs({{'count','Count','#'},{'spacing','Spacing','m'},{'randomness','Randomness','%'},{'height','Height','m'}}) do
+                    local key,label,unit=v[1],v[2],v[3]
+                    local value=key=='count' and (a.desired or c.count) or key=='spacing' and (a.spacing or c.spacing) or c[key]
+                    row('auto_'..key,label,unit,a.field==key and a.text..'_' or string.format('%.4g',value),a.field==key and a.error)
+                end
+                row('auto_replace',c.replace and 'Replace coins in range: ON' or 'Replace coins in range: OFF',nil,nil,nil,'Default adds. ON previews removal of unlocked coins over the chosen terrain; locked coins remain and constrain spacing.')
+                y=paragraph(rx+16,y,'Min centre distance 0.75 m. Height is vertical from coin centre. Cyan diamonds: additions; red coins: removals. Apply selects new coins for Height / Along track.',248,C.secondary,12,clip)+8
+            end
             for _,f in ipairs(d.fields) do
                 if f.choices and f.ramp then
                     if y>=clip[1] and y+48<=clip[2] then

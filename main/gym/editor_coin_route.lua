@@ -2,7 +2,7 @@
 local doc=require 'main.gym.editor_doc'
 local M={MAX_SEGMENTS=2048};local EPS=1e-7
 local function same(a,b) return math.abs(a[1]-b[1])<EPS and math.abs(a[2]-b[2])<EPS end
-local function route(id,raw)
+local function route(id,raw,owners)
     local r={id=id,points={},segments={},length=0,valid=true}
     local reverse=raw[1][1]>raw[#raw][1]
     for i=1,#raw do local p=raw[reverse and #raw-i+1 or i];r.points[i]={p[1],p[2]} end
@@ -10,19 +10,19 @@ local function route(id,raw)
         local a,b=r.points[i-1],r.points[i];local dx,dy=b[1]-a[1],b[2]-a[2]
         if dx<=EPS then r.valid=false end -- an x value must identify exactly one route height
         local length=math.sqrt(dx*dx+dy*dy)
-        r.segments[#r.segments+1]={a=a,b=b,s=r.length,length=length};r.length=r.length+length
+        r.segments[#r.segments+1]={a=a,b=b,s=r.length,length=length,owner=owners and owners[reverse and #raw-i+2 or i]};r.length=r.length+length
     end
     return r
 end
 function M.prepare(e)
     local list,by_id,count={},{},0;local exceeded=false;local limit_error='Track adjustment supports at most 2048 source segments.';local pieces=doc.pieces(e)
-    local function add(id,pts)
+    local function add(id,pts,owners)
         if #pts<2 then return end
         if exceeded or count+#pts-1>M.MAX_SEGMENTS then exceeded=true;return end
-        local r=route(id,pts);list[#list+1]=r;by_id[id]=r;count=count+#r.segments
+        local r=route(id,pts,owners);list[#list+1]=r;by_id[id]=r;count=count+#r.segments
     end
     for _,run in ipairs(doc.runs(e)) do
-        for i,c in ipairs(doc.run_chains(e,run,pieces)) do add('terrain:'..run[1]..':'..i,c.points);if exceeded then return nil,limit_error end end
+        for i,c in ipairs(doc.run_chains(e,run,pieces)) do add('terrain:'..run[1]..':'..i,c.points,c.owner);if exceeded then return nil,limit_error end end
     end
     for _,o in ipairs(e.objects) do
         local outline=doc.outline(o)
