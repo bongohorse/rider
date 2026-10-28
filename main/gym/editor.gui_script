@@ -1083,6 +1083,14 @@ local function auto_context(self)
     end
     return self.auto_settings
 end
+local function auto_value(self,key)
+    local c=auto_context(self)
+    if key=='count' or key=='spacing' then
+        local scope=auto_coins.scope(editor.doc.editor,c,editor.selected_ids())
+        if scope then local n,sp=auto_coins.metrics(scope,c);return key=='count' and n or sp end
+    end
+    return c[key]
+end
 local function set_auto(self,key,value)
     local n,err=auto_coins.value(key,value)
     if not n then editor.message=err;return nil,err end
@@ -1402,12 +1410,10 @@ local function on_button(self,name)
         local c=auto_context(self);local key=name:match('^auto_(count)$') or name:match('^auto_(spacing)$') or name:match('^auto_(randomness)$') or name:match('^auto_(height)$')
         local stepkey=name:match('^[di][en]c_auto_(%a+)$')
         if key then
-            local value=c[key]
-            if key=='count' or key=='spacing' then local scope=auto_coins.scope(editor.doc.editor,c,editor.selected_ids());if scope then local n,sp=auto_coins.metrics(scope,c);value=key=='count' and n or sp end end
-            self.ui.reveal=name;self.field={auto=key,text=number_text(value),all=true}
+            self.ui.reveal=name;self.field={auto=key,text=number_text(auto_value(self,key)),all=true}
         elseif stepkey then
             local step=stepkey=='count' and 1 or stepkey=='randomness' and 5 or stepkey=='height' and .1 or .25
-            set_auto(self,stepkey,c[stepkey]+(name:sub(1,1)=='d' and -step or step))
+            set_auto(self,stepkey,auto_value(self,stepkey)+(name:sub(1,1)=='d' and -step or step))
         elseif name=='auto_range' then c.range=c.range=='whole' and 'selected' or 'whole';clear_auto(self)
         elseif name=='auto_replace' then c.replace=not c.replace;clear_auto(self)
         elseif name=='auto_preview' then preview_auto(self,false)
