@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import urllib.request
+from urllib.parse import urlsplit
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +22,25 @@ JDK_BUILD = 'Temurin-' + LOCK['jdk']['build']
 
 def approved_java(output):
     return re.search(re.escape(JDK_BUILD) + r"(?=[\s)])", output) is not None
+
+
+def build_server():
+    """An explicit local override never silently falls back to the public server."""
+    value = os.environ.get('RIDER_BUILD_SERVER')
+    if value is None:
+        return LOCK['engine']['extender']
+    try:
+        parsed = urlsplit(value)
+        valid = (not any(c.isspace() for c in value)
+                 and parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost', '::1')
+                 and parsed.port is not None and 0 < parsed.port < 65536
+                 and not parsed.username and not parsed.password
+                 and parsed.path in ('', '/') and not parsed.query and not parsed.fragment)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError('BLOCKED: RIDER_BUILD_SERVER must be an HTTP loopback URL with an explicit port')
+    return value.rstrip('/')
 
 
 def bob_jar():
@@ -340,6 +360,7 @@ def verify_engines(platform, output, root, started, bob, invalidations=()):
 
 
 def build(platform, output, settings=None, variant=None):
+    server = build_server()
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     java = shutil.which('java')
@@ -350,12 +371,12 @@ def build(platform, output, settings=None, variant=None):
         raise RuntimeError(f'BLOCKED: approved JDK is {JDK_BUILD}; selector must resolve to the locked build')
     bob = bob_jar()
     command = [java, '-jar', str(bob), '--platform', platform, '--variant', variant or ('debug' if platform == 'wasm-web' else 'headless'),
-               '--archive', '--bundle-output', str(output)]
+               '--archive', '--bundle-output', str(output), '--build-server', server]
     if settings:
         command += ['--settings', str(Path(settings).resolve())]
     command += ['resolve', 'build', 'bundle']
     (output / 'toolchain.json').write_text(json.dumps({'java': version.stdout + version.stderr,
-        'bob_sha256': BOB_SHA256, 'platform': platform, 'variant': variant or ('debug' if platform == 'wasm-web' else 'headless')}, indent=2))
+        'bob_sha256': BOB_SHA256, 'build_server': server, 'platform': platform, 'variant': variant or ('debug' if platform == 'wasm-web' else 'headless')}, indent=2))
     # This build's bundle and copied logs only; a reused output never mixes builds.
     for stale in [output / project_title(ROOT), output / 'extender']:
         if stale.exists():
