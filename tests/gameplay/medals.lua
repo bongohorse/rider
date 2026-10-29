@@ -19,10 +19,10 @@ course.race_revision=2;assert(M.key(course)~=key);course.custom=true;assert(not 
 local D=require 'main.gym.editor_doc'
 local d=D.blank('medal-test','Medal test');d.editor.objects={{id='o1',type='line',points={{-10,0},{50,0}}}};d.editor.next_id=2;d.editor.start.position={0,2};d.editor.finish={position={40,0},direction=1}
 assert(D.validate(d));d.editor.medal_times=t
-local compiled=assert(D.compile(d));assert(compiled.medal_times.gold==26 and compiled.editor.editor_version==9)
+local compiled=assert(D.compile(d));assert(compiled.medal_times.gold==26 and compiled.editor.editor_version==10)
 assert(not D.compare(d,compiled));compiled.medal_times.gold=25;assert(D.compare(d,compiled):find('medal_times.gold',1,true))
 local reopened=D.open_level(assert(D.compile(d)));assert(reopened.editor.medal_times.bronze==40)
 local legacy=D.copy(d);legacy.editor.medal_times=nil;legacy.editor.editor_version=7;legacy.editor.compiler_version=7
-assert(D.validate(legacy) and legacy.editor.editor_version==9 and legacy.editor.medal_times==nil)
+assert(D.validate(legacy) and legacy.editor.editor_version==10 and legacy.editor.medal_times==nil)
 local future=D.copy(d);future.editor.medal_times.version=999;local valid,why,protected=D.validate(future);assert(not valid and protected)
 print('PASS medal exact boundaries/highest/slow completion/next/invalid/edit/cosmetic/revision/source compile and version protection')

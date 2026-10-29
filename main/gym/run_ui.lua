@@ -13,7 +13,7 @@ function M.new()
  t.card=layout.box(vmath.vector3(480,300,0),vmath.vector3(440,220,0),'centre');gui.set_color(t.card,vmath.vector4(.04,.12,.16,.96))
  t.result=text(480,374,'',1,'centre');t.detail=text(480,338,'',.6,'centre')
  t.medal=text(480,302,'',.8,'centre');t.next=text(480,272,'',.6,'centre')
- t.coinhud=text(480,415,'',.6,'top');t.coins=text(480,248,'',.6,'centre')
+ t.coinhud=text(480,415,'',.6,'top');t.coins=text(480,253,'',.52,'centre')
  gui.set_visible(t.coinhud,false);gui.set_visible(t.coins,false)
  t.retry=layout.box(vmath.vector3(480,222,0),vmath.vector3(190,32,0),'centre');gui.set_color(t.retry,vmath.vector4(.12,.4,.36,1))
  t.retry_label=text(480,222,'Retry [R]',.75,'centre')
@@ -37,7 +37,7 @@ function M.show(t,r,touch)
  gui.set_text(t.detail,not r.official and 'Practice - official best unchanged' or r.new_best and (saved and 'New personal best - saved' or r.save) or (r.best>0 and string.format('Personal best %.2f s',r.best) or r.save))
 end
 function M.show_coins(t,c,b,touch,flash)
- local enabled=c and c.total>0
+ local enabled=c and (c.total>0 or (c.gem_total or 0)>0)
  gui.set_visible(t.coinhud,enabled and not touch and not (t.data and (t.data.state=='finished' or t.data.state=='failed')) or false)
  local r=t.data;local finished=r and (r.state=='finished' or r.state=='failed')
  gui.set_visible(t.coins,enabled and finished or false)
@@ -46,6 +46,11 @@ function M.show_coins(t,c,b,touch,flash)
  local suffix=status=='saved' and '' or ' | '..status
  gui.set_text(t.coinhud,string.format('Coins %d/%d%s | Bank %d%s%s',c.count,c.total,flash and ('  +'..flash) or '',total,c.practice and ' | Practice' or '',suffix))
  gui.set_text(t.coins,r and r.state=='failed' and string.format('Coins %d/%d - lost (no finish)',c.count,c.total) or c.practice and string.format('Coins %d/%d - practice, not banked',c.count,c.total) or string.format('Coins %d/%d | Bank %d - %s',c.count,c.total,total,status))
+ if (c.gem_total or 0)>0 then
+  local gems=string.format('Gems %d/%d | Earned %d/%d | Gem bank %d',c.gems,c.gem_total,b and b.course_gems or 0,c.gem_total,b and b.gems or 0)
+  gui.set_text(t.coinhud,gui.get_text(t.coinhud)..' | '..gems)
+  gui.set_text(t.coins,gui.get_text(t.coins)..'\n'..gems)
+ end
 end
 function M.geometry(t)
  local function point(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end

@@ -266,7 +266,7 @@ local function candidates(p)
     end
     for _,o in ipairs(e.objects) do
         local d,segment
-        if o.type=='coin' then d=math.max(0,dist(p,o.position)-.25*math.max(1,.5/editor.camera.zoom))
+        if o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.gym.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
         elseif o.type=="label" then
             -- The drawn text's box (LE6b): editor_view scales labels by max(1, 0.5 / zoom); the builtin
             -- font is about 7.9 x 14 units per character at scale 1 (1 unit = 1 cm).
@@ -1615,7 +1615,7 @@ local function offered_buttons(self)
         if page>0 then list[#list+1]="warn_prev" end
         if (page+1)*WARN_ROWS<#rows then list[#list+1]="warn_next" end
     end
-    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","warnings"}) do list[#list+1]=name end
+    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","warnings"}) do list[#list+1]=name end
     for _,v in ipairs(VIEW) do list[#list+1]=v[1] end
     if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
@@ -1818,10 +1818,10 @@ local function canvas_press(self,action)
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
-    if editor.tool=='coin' then
+    if editor.tool=='coin' or editor.tool=='gem' then
         local q=snap(self,p);local id
         if editor.commit(function(e)
-            id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
+            id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',kind=editor.tool=='gem' and 'gem' or nil,pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
         end,true) then editor.select(id) end
         return
     end
@@ -2444,7 +2444,7 @@ local function describe(self)
                 one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
         elseif o.type=='coin' then
-            lines={'Ordinary coin '..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
+            lines={(o.kind=='gem' and 'Wonder Gem ' or 'Gold coin ')..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
         elseif o.type=="hull" then
             local b=empty_box()
             for _,q in ipairs(o.vertices) do grow(b,q[1],q[2]) end
@@ -2491,6 +2491,8 @@ local function describe(self)
         end
     elseif editor.tool=="prefab" then
         lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-7 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
+    elseif editor.tool=='gem' then
+        lines={'Wonder Gem','Click to place a purple Wonder Gem.','Each new gem is worth +1 on official finish.','Select [S] to move / copy / delete.','Retry restores pickups; practice is unbanked.'}
     elseif editor.tool=='coin' then
         lines={'Coin','Click to place an ordinary coin.','Select [S] to move / copy / delete.','Retry restores collected coins.','Only official finishes bank coins.'}
     elseif editor.tool=="label" then
@@ -2997,7 +2999,8 @@ local function publish(self)
     for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
     for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
     local o=self.overlay
-    html5.run("window.riderEditor="..json.encode({mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
+    local gold,gems=require('main.gym.coin_data').counts(e and e.objects)
+    html5.run("window.riderEditor="..json.encode({gold_count=gold,gem_count=gems,mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
         auto_preview=self.auto_plan and {positions=self.auto_plan.positions,removed=self.auto_plan.removed,desired=self.auto_plan.desired,possible=self.auto_plan.possible,seed=self.auto_plan.seed} or false,auto_settings=self.auto_settings or false,message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,track_bound=self.track_cache and self.track_cache.active and not self.track_cache.error or false,track_mixed=self.track_cache and self.track_cache.active and not self.track_cache.error and self.track_cache.mixed or false,along_error=self.track_cache and self.track_cache.error or false,camera=editor.camera,screen=editor.map(),
         id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
         start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,

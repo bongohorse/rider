@@ -27,3 +27,18 @@ print('PASS bank repeated legitimate finishes, duplicate/practice/stale rejectio
 state='syncing';local checking=B.new();B.poll(checking,.1);assert(checking.checking and checking.status=='Checking coin storage')
 state='saved';B.poll(checking,.1);assert(not checking.checking and checking.status=='saved')
 print('PASS initial coin storage acknowledgement clears the checking presentation')
+
+-- Version-1 balance migration and one-time per-course/pickup gem claims, in the same atomic bank.
+files={};state='saved';fail=false;local gem=B.new();B.generation(gem,1)
+assert(B.offer(gem,1,1,2,true,{'first-run/gem-a','first-run/gem-b'}));assert(gem.total==0 and gem.gems==0)
+state='syncing';B.poll(gem,.1);assert(gem.gems==0);assert(not B.offer(gem,1,1,2,true,{'first-run/gem-c'}))
+state='saved';B.poll(gem,.1);assert(gem.total==2 and gem.gems==2 and B.new().gems==2)
+assert(B.offer(gem,1,2,2,true,{'first-run/gem-a'}));B.poll(gem,.1);assert(gem.total==4 and gem.gems==2)
+assert(not B.offer(gem,1,3,0,false,{'first-run/gem-c'}));assert(gem.desired_gems==2)
+assert(B.offer(gem,1,4,0,true,{'first-run/gem-c','second-run/gem-a'}));B.poll(gem,.1);assert(gem.gems==4 and B.new().gems==4)
+fail=true;assert(B.offer(gem,1,5,1,true,{'first-run/gem-d'}));assert(gem.pending.gems==5 and gem.gems==4)
+fail=false;B.poll(gem,1);B.poll(gem,.1);assert(gem.gems==5 and gem.total==5)
+assert(B.offer(gem,1,6,0,true,{'first-run/gem-e'}));state='failed';B.poll(gem,.1);assert(gem.gems==5 and gem.blocked)
+state='saved';files={};files[a]={format=1,seq=1,text=json.encode({version=1,total=123,serial=7})};local legacy=B.new();assert(legacy.total==123 and legacy.gems==0);B.generation(legacy,1);assert(B.offer(legacy,1,1,0,true,{'first-run/gem-a'}));B.poll(legacy,.1);assert(B.new().total==123 and B.new().gems==1)
+assert(not B.parse(json.encode({version=2,total=1,serial=1,gems=2,claims={['first-run/gem-a']=true}})))
+print('PASS finish-only atomic gold/gem bank, repeated gems do not recredit, per-course IDs, practice, failure, retry/reopen and v1 migration')

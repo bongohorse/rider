@@ -218,7 +218,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // An unsupported My levels slot is refused and stays unchanged.
   const unknown=JSON.parse(text);unknown.editor.editor_version=99;unknown.editor.compiler_version=99;
   e=await importText(JSON.stringify(unknown),'unknown.json');assert.ok(e.message.includes('unsupported editor'),e.message);
-  d=await doc();assert.equal(d.editor_version,9);assert.equal(d.connections.length,0);assert.equal(d.objects.length,2);
+  d=await doc();assert.equal(d.editor_version,10);assert.equal(d.connections.length,0);assert.equal(d.objects.length,2);
   e=await saved();
   const raw=JSON.stringify({schema:1,units:'metres',id:'my-ramps',name:'Ramps short copy 2',editor:{editor_version:99,compiler_version:99,revision:1,next_id:1,objects:[],start:{position:[0,1],speed:0}}});
   await page.evaluate(([key,text])=>{window.riderDebugDraft={key,slot:1,seq:999,text,now:true};},[ramps.key,raw]);

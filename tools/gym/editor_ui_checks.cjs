@@ -68,7 +68,7 @@ module.exports=async function uiChecks(h){
   await page.mouse.move(r.x+r.w/2,bottom?r.y+r.h-1:r.y+1,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
  }
  await page.mouse.move(100,250);
- for(let i=0;i<4;i++){await page.mouse.wheel(0,120);await pointer.frames(page);}
+ for(let i=0;i<12&&!(await ed()).visible.includes('kind_wave');i++){await page.mouse.wheel(0,120);await pointer.frames(page);}
  e=await settle();
  assert.ok(e.ui.tool_scroll>0);assert.ok(e.visible.includes('kind_wave'),'last prefab is unreachable');
  await seekScrollbar('tool_scroll',false);e=await settle();assert.equal(e.ui.tool_scroll,0);assert.ok(e.visible.includes('tool_select'));
@@ -208,4 +208,5 @@ module.exports=async function uiChecks(h){
  await require('../gameplay/check_drop_editor.cjs')(h);
  await require('../gameplay/check_along_editor.cjs')(h);
  await require('../gameplay/check_auto_editor.cjs')(h);
+ await require('../gameplay/check_gem_editor.cjs')(h);
 };

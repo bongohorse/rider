@@ -353,7 +353,7 @@ function update(self,dt)
     run_ui.show_coins(self.run_ui,self.coin_data,self.coin_bank_data,enabled,self.coin_flash>0 and (self.coin_flash_amount or 1) or false)
     if html5 then
         local c,b=self.coin_data,self.coin_bank_data
-        local published=c and {count=c.count,total=c.total,practice=c.practice,finished=c.finished,flash=self.coin_flash>0 and (self.coin_flash_amount or 1) or 0,bank=b and b.total or 0,save=b and b.status or 'Checking storage'} or nil
+        local published=c and {count=c.count,total=c.total,practice=c.practice,finished=c.finished,flash=self.coin_flash>0 and (self.coin_flash_amount or 1) or 0,gems=c.gems,gem_total=c.gem_total,gem_bank=b and b.gems or 0,gem_earned=b and b.course_gems or 0,bank=b and b.total or 0,save=b and b.status or 'Checking storage'} or nil
         local encoded=json.encode(published)
         if encoded~=self.coin_published then
             self.coin_published=encoded;html5.run('window.riderCoins='..encoded..';window.riderRunUI='..json.encode(run_ui.geometry(self.run_ui)))

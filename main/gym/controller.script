@@ -300,7 +300,7 @@ end
 function update(self, dt)
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
-    require('main.gym.coin_runtime').update(self)
+    require('main.gym.coin_runtime').update(self,dt)
     race.update(self,dt)
     progress.update(self,dt)
     if self.placement_report then

@@ -82,7 +82,7 @@ end
 -- k sprites shared out by segments, at least one per part.
 local function draw(v,o,k)
     if o.type=='coin' then
-        local id=require('main.gym.coin_visual').create(o.position)
+        local id=require('main.gym.coin_visual').create(o.position,o.kind)
         v.gos[#v.gos+1]=id;v.coin_ids=v.coin_ids or {};v.coin_ids[#v.coin_ids+1]=id
         v.coin_sources=v.coin_sources or {};v.coin_sources[o.id]=true
         v.sprites=v.sprites+1;v.zoom=nil;return {id},{}
