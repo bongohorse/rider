@@ -1,6 +1,6 @@
 # Local Rider development with T3 Code
 
-Preparation for [#315](https://github.com/bongohorse/rider/issues/315). This runbook supplies host activation steps; it does not claim that Claudio's PC or Oracle server has been configured. Keep GitHub's current-head `required` and review before merging.
+Local development runbook for [#315](https://github.com/bongohorse/rider/issues/315), including the [verified WSL host acceptance](#verified-wsl-host-2026-10-29). Oracle remains unconfigured and unverified. Keep GitHub's current-head `required` and independent review before merging.
 
 **Contents:** [Target setup](#target-setup) · [Install and connect T3 Code](#install-and-connect-t3-code) · [Provision local Extender](#provision-local-extender) · [Daily commands](#daily-commands) · [Cache and worktree rules](#cache-and-worktree-rules) · [Agent handoff](#agent-handoff) · [Host acceptance](#host-acceptance) · [Rollback](#rollback) · [Sources and maintenance](#sources-and-maintenance)
 
@@ -150,6 +150,40 @@ Record progress in STATUS.md and evidence in the implementation PR. Host observa
 5. Stop the local Extender and use an empty-cache worktree: build must fail or block with no public-server retry. For an **offline** claim, additionally pre-provision every artifact/metadata/dependency and repeat with external egress blocked; allow loopback. A local server URL alone does not establish offline operation.
 6. Exercise T3 disconnect/reconnect and safe host restart, then optionally enable its background service. Record Oracle separately if used: current resource inventory, native tool availability and emulation overhead; no automatic equivalence to WSL evidence.
 
+### Verified WSL host (2026-10-29)
+
+This is a historical host-acceptance record, not a claim of current-head CI or another machine's compatibility. Claudio authorized installation, accepted the release drive test ("ja funktioniert alles") and confirmed the subsequent restart ("Neustart erfolgt"). Runtime suites tested preparation source `82260b556c667adfa4675ae65141468aa0b62804`; the post-restart fresh Gym build tested `f7a6a1c47f6801b62d221c88b004642606fd232b`. Intervening commits changed only STATUS.md. Later documentation commits do not retrospectively change these build identities.
+
+Host: Ubuntu 26.04.1, WSL2 Linux x86-64, checkout `/home/mega/rider`. T3 v0.1.5's running desktop-managed WSL runtime matches the checksum-verified release binary; Codex authentication was present. Python 3.14.8, Node 24.21.0, Pillow 13.0.0, Playwright 1.64.1, Chromium 156.0.8078.4, exact Temurin 25.0.4.1+1 and Bob SHA-256 all matched the existing pins. No toolchain pin changed.
+
+Docker Engine 29.1.3 and Compose 2.40.3 were installed from Ubuntu packages. The Docker daemon is enabled; ordinary user access works after reconnection. The host-owned configuration is `/home/mega/rider-tools/extender-compose.json`, project `rider-extender`, with only frontend and web services, `linux/amd64`, `unless-stopped`, read-only JAR/config mounts and persistent per-service `/var/extender` volumes. Only the frontend publishes `127.0.0.1:9000:9000`; the builder has no host-published port. Google Cloud CLI 591.0.0 was used with interactive login to provision Defold's Artifact Registry images; Gemini CLI/API is not involved. No credentials belong in this checkout or evidence.
+
+| Component | Verified immutable identity |
+| --- | --- |
+| Extender 2.16.4 source | `bf92ac1461003e946364b84ba31053ea6dbb45fe` |
+| Extender JAR SHA-256 | `533295ca72dad7324aa9e808d9bdc33363d0aaadd3c1de4991e12f320607c03d` |
+| Manifest Merge Tool 1.4.1 JAR SHA-256 | `1667ea00010c8688a1980e0edcf9a17c0ea1bc27dd368695cdd5b00ccd5b267f` |
+| `extender-base-env` image digest | `sha256:823a737f6030da79134d4f5c49a19607cf706493387f598f435f4c56e7e02d05` |
+| `extender-emsdk-406-env` image digest | `sha256:1e69a51607d52674f65ede2b1eb5b374cd1430293278e123abc79b2bf2f90a90` |
+
+Images are under `europe-west1-docker.pkg.dev/extender-426409/extender-public-registry/`. The JAR hashes match the published GitHub release asset digests ([Extender](https://github.com/defold/extender/releases/tag/extender-v2.16.4), [manifest merger](https://github.com/defold/extender/releases/tag/manifestmergetool-v1.4.1)). The unchanged engine mapping selects `emsdk-406` for both WebAssembly variants; local builder logs record SDK download and successful checksum verification for engine `a81dbb0478e8b73931dc2d671563204f6ac0ef82`.
+
+Executed results:
+
+- Fast check PASS: bootstrap, 144 Python tests and 79 Node CI/mobile tests; 7915 ms.
+- Empty-engine-cache HTML5 debug build PASS, 46858 ms. Bob logs show both build requests to loopback; local frontend/builder logs confirm execution. Both `engines.json` architectures PASS. Subsequent warm game build PASS, 17164 ms.
+- Gym `le6` all 21 real-input cases PASS, 265182 ms including its bundle build. G1 HTML5 all 32 cases PASS, 109900 ms: both scale/render configurations, isolated pthread and normal players `wasm-web`, including Box2D 3.1.0 assertions.
+- Separate-worktree HTML5 release build PASS, 30860 ms. Full release-preview regression PASS: all 11 groups (desktop, phone emulation, touch, injected tilt and seven stations), plus ordinary run/progress/mobile gameplay checks. Local package ID `20261029-1` is not a GitHub Actions run. Claudio's release drive acceptance is recorded above.
+- Actual unchanged Gym reuse PASS; an uncommitted Lua comment caused a new bundle and successful Gym run. Stale-source and output-tamper rejection PASS; original source and output bytes restored.
+- With Extender stopped and another empty engine cache, the build failed as expected at the loopback cache query with connection refusal. The retained build log contains only the loopback endpoint, with no observed public retry. Extender was restarted and health returned UP. This is not an offline-network test.
+- After the confirmed restart, fresh WSL uptime was observed; T3 reconnected to the same clean checkout, Docker and both pinned containers started automatically, loopback health was UP, exact doctor parity remained MATCH, and `gym --case a1 --fresh` built a new game bundle and passed its browser case. This fresh game bundle does not claim an empty engine cache.
+
+Raw JSON/JUnit/logs/screenshots remain in ignored host artifacts: `/home/mega/rider/artifacts/local/host-acceptance/` (consolidated metadata), `host-post-restart-gym/`, and `/home/mega/rider-tools/acceptance-{debug,physics,release,no-server}/artifacts/local/`. See PR #316 for the published acceptance summary; these are local evidence paths, not publicly hosted artifacts. No binaries or credentials were committed.
+
+Normal daily commands above use the checkout venv. The verified host Extender can be started explicitly with `docker compose -p rider-extender -f ~/rider-tools/extender-compose.json up -d --pull never` and stopped with the same command prefix followed by `stop`. The host shell sets `RIDER_BUILD_SERVER=http://127.0.0.1:9000` for legacy wrappers too. The static release preview is a separate, temporary loopback process; it must be restarted after a host restart, unlike the Extender containers.
+
+Not established by this acceptance: offline operation, physical-device/touch/sensor observations, local Android/native builds or Oracle ARM64 support. No Oracle changes were made. Current-head required CI, independent review and explicit merge authorization remain separate gates.
+
 ## Rollback
 
 Stop the foreground T3 process, or stop its service using the selected version's documented service commands if one was installed. Keep the Rider working tree, worktrees and local commits. Reopen the same checkout in the existing editor. Stop only the `rider-extender` Compose project; keep its verified cache for later use. Remove `RIDER_BUILD_SERVER` from that shell only when deliberately returning to the legacy public-server path. No GitHub configuration needs restoring; no CI policy was changed. Keep the previous T3 release directory when testing an update.
@@ -157,5 +191,5 @@ Stop the foreground T3 process, or stop its service using the selected version's
 ## Sources and maintenance
 
 - [T3 v0.1.5 release/checksums](https://github.com/pingdotgg/t3code/releases/tag/v0.1.5), [installation](https://github.com/pingdotgg/t3code/blob/v0.1.5/docs/user/install.md), [remote access](https://github.com/pingdotgg/t3code/blob/v0.1.5/docs/user/remote-access.md), [MIT license](https://github.com/pingdotgg/t3code/blob/v0.1.5/LICENSE). Upgrade deliberately, verify archive hash, record provider compatibility and repeat connection/checkout/agent-command checks. Remove this optional dependency by reverting to the existing editor/CLI workflow.
-- [Defold local Extender](https://defold.com/manuals/extender-local-setup/) documents the loopback Bob `--build-server` option, profiles and provisioning. [Engine-pinned SDK mapping](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/share/platform.sdks.json) fixes Rider's required builder families. The current upstream Extender release inspected during preparation was [2.16.4](https://github.com/defold/extender/releases/tag/extender-v2.16.4); it is **not** a runtime-approved Rider server pin. [Its Compose source](https://github.com/defold/extender/blob/extender-v2.16.4/server/docker/docker-compose.yml) shows the floating images/published-port defaults requiring host preparation. Capture licenses/provenance and immutable identities for the selected server/images on the host before acceptance.
+- [Defold local Extender](https://defold.com/manuals/extender-local-setup/) documents the loopback Bob `--build-server` option, profiles and provisioning. [Engine-pinned SDK mapping](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/share/platform.sdks.json) fixes Rider's required builder families. The current upstream Extender release inspected during preparation was [2.16.4](https://github.com/defold/extender/releases/tag/extender-v2.16.4); the WSL acceptance below records the tested host identities, without changing the game toolchain lock. [Its Compose source](https://github.com/defold/extender/blob/extender-v2.16.4/server/docker/docker-compose.yml) shows the floating images/published-port defaults requiring host preparation. Capture licenses/provenance and immutable identities for the selected server/images on the host before acceptance.
 - Keep [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md), the engine guards and [automation contract](contracts/automation.md). No new physics API or simulation path is introduced. No dependency upgrade, new public endpoint, nightly-only required coverage or guaranteed timing/credit reduction follows from this preparation.
