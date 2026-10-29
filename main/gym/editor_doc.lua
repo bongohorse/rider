@@ -13,6 +13,7 @@ local sample=require "main.gym.editor_sample"
 -- Version 7 adds optional name/hidden/locked source metadata; compilation ignores it.
 -- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
+-- Version 10 adds optional gem kinds to existing coin objects; compiled gems require schema 3.
 local M={EDITOR_VERSION=10,COMPILER_VERSION=10}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
@@ -300,7 +301,7 @@ function M.validate(doc)
             local cd=require 'main.gym.coin_data'
             if not point(o.position) or not cd.id(o.pickup_id) or pickups[o.pickup_id] then return nil,'Invalid/duplicate coin pickup ID: '..o.id end
             pickups[o.pickup_id]=true;coin_count=coin_count+1
-            if coin_count>cd.MAX then return nil,'Ordinary coin limit is '..cd.MAX end
+            if coin_count>cd.MAX then return nil,'Combined coin pickup limit is '..cd.MAX end
         elseif o.type=="label" then
             if not point(o.position) or type(o.text)~="string" or #o.text>64 then return nil,"Invalid label "..o.id end
         elseif o.type=="prefab" then

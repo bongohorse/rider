@@ -1,4 +1,4 @@
--- Loader-owned, single-tab ordinary-coin bank. Store absolute totals, never replay a delta on retry.
+-- Loader-owned, single-tab gold/gem bank. Store absolute totals, never replay a delta on retry.
 local custom=require 'main.gym.custom'
 local M={LIMIT=2147483647,MAX_CLAIMS=4096}
 local function copy(t) local r={};for k,v in pairs(t or {}) do r[k]=v end;return r end
