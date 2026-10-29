@@ -57,7 +57,9 @@ Remove `build/` and `.internal/` before a debug bundle if the checkout produced 
 
 ## Local environment (WSL, VS Code)
 
-Development runs in WSL2 Ubuntu (`~/rider`) with Windows VS Code and the **Rider** profile ([`profiles/Rider.code-profile`](../profiles/Rider.code-profile), [`.vscode/settings.json`](../.vscode/settings.json): dark petrol window chrome, built-in AI chat disabled). AI CLIs (Codex, Claude) run in WSL terminals; no editor extensions are required.
+The prepared T3 Code workflow, local Extender provisioning, fast/focused commands and activation/rollback checklist are in [LOCAL_T3_SETUP.md](LOCAL_T3_SETUP.md). Host activation is separate from repository preparation. `python tools/local.py check` runs fast checks; `python tools/local.py gym --case le6` uses an explicit loopback Extender and only reuses a source-verified debug bundle. Existing commands opt into loopback builds with `RIDER_BUILD_SERVER=http://127.0.0.1:9000`; absent that override, CI/legacy commands retain the locked public server. No CI coverage or merge gate is changed.
+
+The existing editor remains available: development runs in WSL2 Ubuntu (`~/rider`) with Windows VS Code and the **Rider** profile ([`profiles/Rider.code-profile`](../profiles/Rider.code-profile), [`.vscode/settings.json`](../.vscode/settings.json): dark petrol window chrome, built-in AI chat disabled). AI CLIs (Codex, Claude) run in WSL terminals; no editor extensions are required.
 
 1. Install VS Code and its WSL extension (`ms-vscode-remote.remote-wsl`) on Windows. Import `profiles/Rider.code-profile` via **Profiles: Import Profile...** before using `--profile Rider` (an unknown name silently creates an empty profile).
 2. In WSL: `cd ~/rider && code --new-window --profile Rider .`. The optional `tools/open-rider.ps1` launcher (`-Distro <name>`) lives inside the Linux checkout.
