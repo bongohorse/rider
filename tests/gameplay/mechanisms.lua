@@ -31,3 +31,8 @@ assert(L.event(m,{generation=m.generation,source='plate-a',event='active',active
 assert(L.event(m,{generation=m.generation,source='plate-b',event='active',active=true,serial=1}));assert(m.gates['gate-b'].open)
 assert(L.event(m,{generation=m.generation,source='plate-a',event='active',active=false,serial=2}));assert(m.gates['gate-a'].open and not m.gates['gate-b'].open and m.gates['gate-c'].open)
 multi.links[#multi.links+1]=clone(multi.links[1]);assert(not D.validate(multi));print('PASS 2 plates / 3 gates with 6 distinct links, ANY/ALL input rules and duplicate link protection')
+
+local unsupported=clone(spec);unsupported.plates[1].mode='future-mode';local _,_,protected=D.validate(unsupported);assert(protected)
+unsupported=clone(spec);unsupported.gates[1].condition='future-rule';local _,_,protected=D.validate(unsupported);assert(protected)
+unsupported=clone(spec);unsupported.links[1].action='future-action';local _,_,protected=D.validate(unsupported);assert(protected)
+print('PASS unknown modes, gate rules and typed actions remain protected future semantics')

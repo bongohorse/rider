@@ -607,7 +607,7 @@ end
 function M.blocked(e,p)
     local box={p[1]+M.VEHICLE[1],p[1]+M.VEHICLE[2],p[2]+M.VEHICLE[3],p[2]+M.VEHICLE[4]}
     for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do
-        local w,h=kind=='crates' and (o.angle and .85 or .6) or kind=='plates' and (o.width or 3)/2 or .3,kind=='crates' and (o.angle and .85 or .6) or kind=='plates' and .05 or 1.5
+        local w,h=kind=='crates' and (.6*(math.abs(math.cos(o.angle or 0))+math.abs(math.sin(o.angle or 0)))) or kind=='plates' and (o.width or 3)/2 or .3,kind=='crates' and (.6*(math.abs(math.cos(o.angle or 0))+math.abs(math.sin(o.angle or 0)))) or kind=='plates' and .05 or 1.5
         local y=o.position[2]+(kind=='gates' and o.initial_open and o.travel or 0)
         if o.position[1]+w>box[1] and o.position[1]-w<box[2] and y+h>box[3] and y-h<box[4] then return {type=kind=='crates' and 'crate' or kind=='plates' and 'plate' or 'gate',id=o.id} end
     end end
