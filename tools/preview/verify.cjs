@@ -175,6 +175,7 @@ async function main(){
     }
     if(plan.includes('desktop')&&mode!=='deployment'){
       await require('../gameplay/check_run.cjs')(browser,url,sha,out);
+      await require('../gameplay/check_gem_release.cjs')(browser,url,sha,out);
       await require('../gameplay/check_progress.cjs')(browser,url,sha,out);
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment')await require('../gameplay/check_mobile.cjs')(browser,url,sha,out);
