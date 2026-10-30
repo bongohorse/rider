@@ -281,7 +281,7 @@ function M.validate(doc)
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
-    if type(e.objects)~="table" or #e.objects+require('main.gym.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
+    if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
     if e.editor_version>=4 then
         local s=e.sampling
         if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then
@@ -291,6 +291,7 @@ function M.validate(doc)
     if e.mechanisms~=nil and e.editor_version<12 then return nil,'Mechanisms need editor/compiler 12',true end
     local mech_ok,mech_err,mech_unknown=require('main.gym.mechanism_data').validate(e.mechanisms)
     if not mech_ok then return nil,mech_err,mech_unknown end
+    if #e.objects+require('main.gym.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,'Source object limit is 256; remove objects or split the document' end
     if e.fuel~=nil and e.editor_version<11 then return nil,'Fuel needs editor/compiler 11',true end
     local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(e.fuel)
     if not fuel_ok then return nil,fuel_err,fuel_unknown end

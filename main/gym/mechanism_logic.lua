@@ -25,6 +25,7 @@ function M.tick(s,dt,occupants,blocked,positions)
  assert(type(dt)=='number' and dt>0 and dt<1)
  for _,p in ipairs(s.spec.plates) do
   local r=s.plates[p.id];local n=0;for _,id in ipairs(p.actors) do if (occupants[p.id] or {})[id] then n=n+1 end end;r.count=n
+  if (p.mode or 'hold')=='pulse' and r.pulse>0 then r.pulse=math.max(0,r.pulse-dt);if r.pulse<=1e-9 then r.pulse=0;r.active=false end end
   local candidate=n>0
   if candidate~=r.candidate then r.candidate=candidate;r.age=0 end
   r.age=r.age+dt
@@ -35,7 +36,6 @@ function M.tick(s,dt,occupants,blocked,positions)
    elseif mode=='toggle' and candidate then r.active=not r.active
    elseif mode=='pulse' and candidate then r.active=true;r.pulse=p.pulse_seconds or 4;r.emit=true end
   end
-  if (p.mode or 'hold')=='pulse' and r.pulse>0 then r.pulse=math.max(0,r.pulse-dt);if r.pulse==0 then r.active=false end end
   if r.published~=r.active or r.emit then
    r.emit=nil;r.published=r.active;r.serial=r.serial+1;M.event(s,{generation=s.generation,source=p.id,event='active',active=r.active,serial=r.serial})
   end

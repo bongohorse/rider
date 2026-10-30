@@ -43,7 +43,7 @@
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
-    if(enabled&&mechanismHud){const m=window.riderMechanisms;mechanismHud.hidden=!m;if(m)mechanismHud.textContent='Plates '+m.plates.filter(p=>p.active).length+'/'+m.plates.length+' active · Gate '+(m.gates[0]?.state||'none');}
+    if(enabled&&mechanismHud){const m=window.riderMechanisms;mechanismHud.hidden=!m;if(m)mechanismHud.textContent='Plates '+m.plates.filter(p=>p.active).length+'/'+m.plates.length+' active · Gate '+(m.gates[0]?.state||'none')+(m.plates.some(p=>p.mode==='pulse'&&p.pressed&&!p.active)?' · Release to rearm':'');}
     if(enabled&&fuelHud){const f=window.riderFuel;fuelHud.hidden=!f;fuelBar.hidden=!f;if(f){fuelHud.textContent=f.text+' · Refills '+f.collected;fuelBar.value=f.amount;fuelBar.style.accentColor=f.low?'#ffac40':'#59d4a5';} }
     if(enabled&&coinHud){
       const c=window.riderCoins;coinHud.hidden=!c;
