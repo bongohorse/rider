@@ -118,6 +118,8 @@ The earlier generated art is retained as geometry regression fixtures and is no 
 
 ## Stations
 
+Official gameplay progression uses a separate three-course catalogue (First run, Rolling Hills, Ridge Run). Levels shows terrain previews, saved records/medals/gems and completion-based locks; Next Level follows an acknowledged official finish. The measurement station order is unchanged. See [G7 rules and verification](../../docs/GAMEPLAY_G7_REPORT.md).
+
 - `stations/*.json` (schema 1) in world metres: id and name (at most 64 bytes each, as are section ids and names; they travel in every telemetry message), spawn [x, y], `start_speed` (-30..30 m/s), run-in/run-out, safety bounds, right-to-left chain polylines, optional convex CCW hulls (3–8 vertices), `labels` and `sections` (id, spawn, start speed, mode, measurement extents). The whole file validates before terrain creation; unknown ids fall back visibly; bad files fail without replacing the world. Keep segments at least 1 cm.
 - `stations.lua` owns selection, data, terrain, markers and unit conversion; the controller starts and retries the vehicle. Start translates all three bodies with the authored speed and matches wheel spin.
 - Switching serializes disable/final/unload → `proxy_unloaded` → load → `proxy_loaded` → init → `gym_ready` (15 s failure diagnostic). Preset identity survives; modified sliders reset.

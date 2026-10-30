@@ -1,0 +1,38 @@
+// Ordinary release controls and menu actions; no injected scoring/physics state.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),pointer=require('../gym/pointer.cjs');
+module.exports=async function(browser,base,sha,out,{touch=false}={}){
+ const context=await browser.newContext(touch?{viewport:{width:1080,height:486},isMobile:true,hasTouch:true}:{viewport:{width:1280,height:720}});
+ let p;const checks=[],errors=[],report={source_sha:sha,status:'INCOMPLETE',real_device:'NOT RUN',touch,checks,errors};fs.mkdirSync(out,{recursive:true});
+ const levels=()=>p.evaluate(()=>window.riderLevels),run=()=>p.evaluate(()=>window.riderRun);
+ async function open(id='first-run'){p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});await p.goto(new URL(`index.html?station=${id}&touch=${touch?1:0}`,base).href);await p.waitForFunction(()=>window.riderRun?.state==='ready'&&window.riderLevels?.status==='saved'&&window.riderTelemetry?.sequence>2);assert.equal(await p.evaluate(()=>window.riderBuild),sha);}
+ async function click(locator){await locator[touch?'tap':'click']();}
+ async function key(k){await p.locator('canvas').focus();await p.keyboard.down(k);await pointer.frames(p,{n:4});await p.keyboard.up(k);await pointer.frames(p,{n:4});}
+ async function menu(){await click(p.locator('#rider-level-actions').getByRole('button',{name:'Levels',exact:true}));await p.waitForFunction(()=>window.riderLevels.open);}
+ async function play(id){await click(p.locator(`[data-course="${id}"] button`));await p.waitForFunction(id=>window.riderLevels.station===id&&!window.riderLevels.loading&&!window.riderLevels.open&&window.riderRun?.state==='ready'&&window.riderTelemetry?.station===id,id);}
+ async function drive(){
+  const cdp=touch?await context.newCDPSession(p):null;
+  if(touch){const b=await p.locator('[data-command="throttle"]').boundingBox();assert(b);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:b.x+b.width/2,y:b.y+b.height/2,id:1}]});}
+  else{await p.locator('canvas').focus();await p.keyboard.down('ArrowUp');}
+  await p.waitForFunction(()=>['finished','failed'].includes(window.riderRun?.state),null,{timeout:45000});
+  if(touch){await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();}else await p.keyboard.up('ArrowUp');
+  assert.equal((await run()).state,'finished');
+ }
+ try{
+  await open('ridge-run');assert.equal((await levels()).station,'first-run','locked direct URL refused by loader');
+  let v=await levels();assert.deepEqual(v.courses.map(c=>c.unlocked),[true,false,false]);checks.push({name:'fresh-save-locks-and-direct-url-admission'});
+  await menu();assert.equal(await p.locator('#rider-levels article').count(),3);assert.equal(await p.locator('[data-course="rolling-hills"] button').isDisabled(),true);
+  for(const size of touch?[{width:390,height:844},{width:1080,height:486}]:[{width:1280,height:480},{width:1280,height:720}]){await p.setViewportSize(size);const b=await p.locator('#rider-levels').boundingBox();assert.ok(b.x>=0&&b.y>=0&&b.width<=size.width&&b.height<=size.height);await p.screenshot({path:path.join(out,`levels-${size.width}.png`)});}
+  await click(p.getByRole('button',{name:'Back',exact:true}));await p.waitForFunction(()=>!window.riderLevels.open&&window.riderRun.state==='ready');
+  if(!touch){await key('c');await key('c');assert.equal((await run()).official,false);await drive();assert.equal((await levels()).courses[0].completed,false);assert.equal((await levels()).courses[1].unlocked,false);checks.push({name:'practice-finish-cannot-unlock'});await key('r');await p.waitForFunction(()=>window.riderRun.state==='ready');}
+  await p.locator('canvas').focus();await p.keyboard.down('ArrowUp');await p.waitForFunction(()=>window.riderRun.time>.3);await p.keyboard.up('ArrowUp');await menu();await p.waitForFunction(()=>window.riderRun.state==='paused');const frozen=await p.evaluate(()=>({time:window.riderRun.time,fuel:window.riderFuel.amount}));await p.waitForTimeout(350);assert.deepEqual(await p.evaluate(()=>({time:window.riderRun.time,fuel:window.riderFuel.amount})),frozen);await click(p.getByRole('button',{name:'Back',exact:true}));await p.waitForFunction(()=>!window.riderLevels.open&&document.getElementById('rider-levels').hidden&&window.riderRun.state==='running');checks.push({name:'menu-freezes-run-and-fuel-safe-resume'});
+  if(touch){const a=await p.locator('#rider-level-actions').boundingBox();for(const zone of await p.locator('[data-command]').all()){const z=await zone.boundingBox();assert.ok(a.x+a.width<=z.x||z.x+z.width<=a.x||a.y+a.height<=z.y||z.y+z.height<=a.y,'level actions must not overlap driving controls');}}
+  await drive();await p.waitForFunction(()=>window.riderLevels.courses[0].completed&&window.riderLevels.courses[1].unlocked&&window.riderLevels.next_enabled&&window.riderLevels.status==='saved'&&window.riderCoins.save==='saved'&&window.riderLevels.courses[0].best>0&&window.riderLevels.courses[0].gems>0&&window.riderLevels.courses[0].gems===window.riderCoins.gem_earned);
+  const first=(await levels()).courses[0];assert(first.best>0&&first.medal>0&&first.gems>0);await p.screenshot({path:path.join(out,'levels-finish.png')});checks.push({name:'official-finish-unlocks-with-best-medal-gems',course:first});
+  await click(p.locator('#rider-level-actions').getByRole('button',{name:'Next Level',exact:true}));await p.waitForFunction(()=>window.riderLevels.station==='rolling-hills'&&!window.riderLevels.loading&&window.riderRun?.state==='ready'&&window.riderTelemetry?.station==='rolling-hills');assert.equal((await run()).official,true);await drive();await p.waitForFunction(()=>window.riderLevels.courses[1].completed&&window.riderLevels.courses[2].unlocked&&window.riderLevels.next_enabled);checks.push({name:'next-level-real-loader-switch-and-second-unlock',run:await run()});
+  await click(p.locator('#rider-level-actions').getByRole('button',{name:'Next Level',exact:true}));await p.waitForFunction(()=>window.riderLevels.station==='ridge-run'&&!window.riderLevels.loading&&window.riderRun?.state==='ready'&&window.riderTelemetry?.station==='ridge-run');await drive();await p.waitForFunction(()=>window.riderLevels.courses[2].completed&&window.riderLevels.status==='saved');assert.equal((await levels()).next_enabled,false);checks.push({name:'last-course-completes-without-next-target'});
+  await menu();await p.screenshot({path:path.join(out,'levels-all-complete.png')});await p.close();await open('rolling-hills');await p.waitForFunction(()=>window.riderLevels.station==='rolling-hills'&&window.riderRun?.state==='ready');v=await levels();assert(v.courses.every(c=>c.completed&&c.unlocked));checks.push({name:'close-reopen-retains-completion-unlocks-and-unlocked-url',courses:v.courses});
+  await menu();await play('first-run');assert.equal((await run()).official,true);assert.deepEqual(errors,[]);report.status='PASS';return report;
+ }catch(e){report.status='FAIL';report.failure=e.stack;report.levels=await levels().catch(()=>null);report.run=await run().catch(()=>null);await p?.screenshot({path:path.join(out,'levels-failure.png')}).catch(()=>{});throw e;}
+ finally{fs.writeFileSync(path.join(out,'levels-results.json'),JSON.stringify(report,null,2));await context.close();}
+};
+if(require.main===module){const {chromium}=require('playwright');const [base,sha,out,mode]=process.argv.slice(2);(async()=>{const b=await chromium.launch();try{console.log(JSON.stringify(await module.exports(b,base,sha,out,{touch:mode==='touch'})));}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});}

@@ -39,6 +39,7 @@ function M.finish(self)
     if not self.race then return end
     local result=run.finish(self.race,self.race.id)
     if result then
+        msg.post('main:/loader#script','level_finish',{generation=self.session_generation,official=result.official,attempt=self.race.attempt})
         result.medal=result.official and medals.award(self.station.medal_times,result.time) or 0
         require('main.gym.coin_runtime').finish(self,result)
         self.race.new_best=best.offer(self.personal,result)
@@ -59,6 +60,6 @@ function M.update(self,dt)
     local medal=r.result and r.result.medal or 0
     local next_name,next_time=medals.next(self.station.medal_times,medal)
     msg.post('main:/loader#ui','run_state',{generation=self.session_generation,id=r.id,state=r.state,time=r.result and r.result.time or r.elapsed,
-        official=r.official,has_medals=self.station.medal_times~=nil,medal=medal,highest_medal=self.personal.medal or 0,next_medal=next_name,next_time=next_time,best=self.personal.best or 0,save=self.personal.status,new_best=r.new_best or false,reason=r.reason or '',practice=r.practice_reason or ''})
+        course_name=self.station.name,official=r.official,has_medals=self.station.medal_times~=nil,medal=medal,highest_medal=self.personal.medal or 0,next_medal=next_name,next_time=next_time,best=self.personal.best or 0,save=self.personal.status,new_best=r.new_best or false,reason=r.reason or '',practice=r.practice_reason or ''})
 end
 return M
