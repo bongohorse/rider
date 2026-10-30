@@ -13,6 +13,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
 | Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
+| Level selection (#320) | [Durable completion, course selection and Next Level](GAMEPLAY_G7_REPORT.md) |
 | Fuel (#318) | [Configurable tank, shared refills and recovery](GAMEPLAY_G6_REPORT.md) |
 | Wonder Gems (#314) | [Multiple special pickups, finish banking and feedback](GAMEPLAY_G5_REPORT.md) |
 | Ordinary coins (#300) | [Authoring, collection and durable banking](GAMEPLAY_G4_REPORT.md) |
