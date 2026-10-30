@@ -417,7 +417,7 @@ function update(self, dt)
             sample.command=self.last_command or {}
             sample.speed_mps=feel.metres(sample.speed)
             sample.reset_count=self.reset_count
-            sample.ui_captured=self.ui_captured or self.look_captured or false
+            sample.ui_captured=self.ui_captured or self.look_captured or self.levels_captured or false
             local projection=camera.get_projection("/camera#camera")
             sample.projection_x,sample.projection_y=projection.m00,projection.m11
             sample.audio_started,sample.audio_muted,sample.audio_pitch=self.audio_started or false,self.audio_muted or false,self.audio_pitch or 0
@@ -475,7 +475,7 @@ function update(self, dt)
     if self.time_probe then self.time_probe.update(self) end
 end
 local function command(self)
-    if self.ui_captured or self.look_captured then return {throttle=0,brake_reverse=0,lean=0,allow_reverse=false} end
+    if self.ui_captured or self.look_captured or self.levels_captured then return {throttle=0,brake_reverse=0,lean=0,allow_reverse=false} end
     local brake = self.mobile.brake or self.held[hash("brake_down")] or self.held[hash("brake_s")]
     local throttle = self.mobile.throttle or self.held[hash("throttle_up")] or self.held[hash("throttle_w")]
     local left=self.mobile.left or self.held[hash("lean_left")]
@@ -487,7 +487,7 @@ end
 function on_input(self, action_id, action)
     if action.pressed then audio.start(self) end
     if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
-    if self.ui_captured or self.look_captured or self.edit then return end
+    if self.ui_captured or self.look_captured or self.levels_captured or self.edit then return end
     for i,id in ipairs(stations.ids) do
         if action_id==hash("station_"..i) then
             if action.pressed then msg.post("main:/loader#script","select_station",{id=id,preset=self.preset}) end
@@ -670,6 +670,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then race.practice(self,"Live tuning");self.pending_tuning=data
     elseif id==hash("terrain_look_capture") then self.look_captured=data.active;self.held={};self.mobile={};mobile.clear()
+    elseif id==hash("levels_capture") then self.levels_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("graph_shown") and data.generation==self.history.generation then
         self.graph_peaks=self.graph_peaks or {};self.graph_peaks[data.series]=data.peak

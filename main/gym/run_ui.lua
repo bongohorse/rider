@@ -8,7 +8,7 @@ end
 function M.new()
  local t={}
  t.entry=layout.box(vmath.vector3(270,356,0),vmath.vector3(110,26,0),'left_top')
- gui.set_color(t.entry,vmath.vector4(.12,.3,.3,1));t.entry_label=text(270,356,'First run',.6,'left_top')
+ gui.set_color(t.entry,vmath.vector4(.12,.3,.3,1));t.entry_label=text(270,356,'Levels',.6,'left_top')
  t.clock=text(480,510,'',.9,'top');t.best=text(480,484,'',.6,'top')
  t.card=layout.box(vmath.vector3(480,300,0),vmath.vector3(440,220,0),'centre');gui.set_color(t.card,vmath.vector4(.04,.12,.16,.96))
  t.result=text(480,374,'',1,'centre');t.detail=text(480,338,'',.6,'centre')
@@ -22,13 +22,19 @@ function M.new()
  for _,n in ipairs({t.fueltext,t.fuelbg,t.fuelfill}) do gui.set_visible(n,false) end
  t.retry=layout.box(vmath.vector3(480,222,0),vmath.vector3(190,32,0),'centre');gui.set_color(t.retry,vmath.vector4(.12,.4,.36,1))
  t.retry_label=text(480,222,'Retry [R]',.75,'centre')
+ t.levelnext=layout.box(vmath.vector3(590,180,0),vmath.vector3(180,32,0),'centre');gui.set_color(t.levelnext,vmath.vector4(.12,.4,.36,1))
+ t.levelnext_label=text(590,180,'Next Level',.7,'centre')
+ t.levelback=layout.box(vmath.vector3(370,180,0),vmath.vector3(180,32,0),'centre');gui.set_color(t.levelback,vmath.vector4(.12,.3,.3,1));t.levelback_label=text(370,180,'Levels',.7,'centre')
  M.show(t,nil);return t
 end
 function M.show(t,r,touch)
  t.data=r;local active=r~=nil;local done=active and (r.state=='finished' or r.state=='failed')
  for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch) end
  for _,n in ipairs({t.card,t.result,t.detail,t.medal,t.next,t.retry,t.retry_label}) do gui.set_visible(n,done or false) end
- gui.set_visible(t.entry,not active);gui.set_visible(t.entry_label,not active)
+ gui.set_visible(t.entry,not touch);gui.set_visible(t.entry_label,not touch)
+ local v=require('main.gym.levels_runtime').view
+ for _,n in ipairs({t.levelback,t.levelback_label}) do gui.set_visible(n,done or false) end
+ for _,n in ipairs({t.levelnext,t.levelnext_label}) do gui.set_visible(n,done and v.next_enabled or false) end
  gui.set_text(t.retry_label,touch and "Retry" or "Retry [R]")
  if not r then return end
  local state=r.state=='ready' and 'Drive to start' or r.state=='paused' and 'Paused - Resume to drive' or r.state=='failed' and 'Attempt ended' or r.state=='finished' and 'Finished' or 'First run'
@@ -74,8 +80,12 @@ function M.geometry(t)
 end
 function M.input(t,id,action,owner)
  if id~=hash('ui_pointer') or not action.pressed then return false end
- if not t.data and gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','select_station',{id='first-run',preset='a'});return true end
+ if gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end
  local r=t.data
+ if r and (r.state=='finished' or r.state=='failed') then
+  if gui.pick_node(t.levelback,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end
+  if require('main.gym.levels_runtime').view.next_enabled and gui.pick_node(t.levelnext,action.x,action.y) then msg.post('main:/loader#script','level_next');return true end
+ end
  if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.retry,action.x,action.y) then msg.post(owner,'run_retry',{id=r.id});return true end
  if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.card,action.x,action.y) then return true end
  return false

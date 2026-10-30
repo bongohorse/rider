@@ -39,6 +39,7 @@ function M.finish(self)
     if not self.race then return end
     local result=run.finish(self.race,self.race.id)
     if result then
+        msg.post('main:/loader#script','level_finish',{generation=self.session_generation,official=result.official,attempt=self.race.attempt})
         result.medal=result.official and medals.award(self.station.medal_times,result.time) or 0
         require('main.gym.coin_runtime').finish(self,result)
         self.race.new_best=best.offer(self.personal,result)
