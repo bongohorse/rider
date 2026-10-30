@@ -5,7 +5,7 @@
   const enabled=forced==='1'||(forced!=='0'&&navigator.maxTouchPoints>0);
   const pointers=new Map(),pending={};
   const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false};
-  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes,coinHud,fuelHud,fuelBar;
+  let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes,coinHud,fuelHud,fuelBar,mechanismHud;
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
@@ -43,6 +43,7 @@
       lastSequence=data.sequence;
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
+    if(enabled&&mechanismHud){const m=window.riderMechanisms;mechanismHud.hidden=!m;if(m)mechanismHud.textContent='Plates '+m.plates.filter(p=>p.active).length+'/'+m.plates.length+' active · Gate '+(m.gates[0]?.state||'none')+(m.plates.some(p=>p.mode==='pulse'&&p.pressed&&!p.active)?' · Release to rearm':'');}
     if(enabled&&fuelHud){const f=window.riderFuel;fuelHud.hidden=!f;fuelBar.hidden=!f;if(f){fuelHud.textContent=f.text+' · Refills '+f.collected;fuelBar.value=f.amount;fuelBar.style.accentColor=f.low?'#ffac40':'#59d4a5';} }
     if(enabled&&coinHud){
       const c=window.riderCoins;coinHud.hidden=!c;
@@ -176,6 +177,7 @@
   const start=document.createElement('span'),finish=document.createElement('span'),value=document.createElement('span'),reason=document.createElement('span');start.textContent='Start';finish.textContent='Finish';
   const track=document.createElement('div'),car=document.createElement('div');track.className='progress-track';car.className='progress-car';track.append(car);
   progress.append(start,track,finish,value,reason);progressNodes={root:progress,start,finish,value,reason,track,car};
+  mechanismHud=document.createElement('div');mechanismHud.className='mechanism-status';mechanismHud.hidden=true;readout.append(mechanismHud);
   coinHud=document.createElement('div');coinHud.className='coin-count';coinHud.hidden=true;
   fuelHud=document.createElement('div');fuelHud.className='fuel-count';fuelHud.hidden=true;
   fuelBar=document.createElement('progress');fuelBar.className='fuel-bar';fuelBar.max=100;fuelBar.hidden=true;fuelBar.setAttribute('aria-label','Fuel');fuelBar.style.cssText='width:100%;height:6px';

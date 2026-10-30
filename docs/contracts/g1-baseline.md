@@ -29,6 +29,9 @@ Engine candidate: Defold 1.14.0 (`a81dbb0478e8b73931dc2d671563204f6ac0ef82`), in
 | `b2d.joint.destroy(joint)` | Explicit removal, only while valid | 50 explicit-reset cases |
 | `b2d.joint.create_revolute(a,b,definition)` (A19d) | Anchors in engine units, multiplied by scale; `reference_angle`, `lower_angle`/`upper_angle` in radians, unscaled; `max_motor_torque` would be scaled (unused). `collide_connected=true`: the static terrain body holds every chain | `a19d` seesaw (terrain ↔ plank), recreated on every reset; source `Joint_CreateRevolute` |
 | `b2d.joint.get_joint_angle(joint)` (A19d) | Revolute only; radians (plank angle minus terrain angle minus reference) | `a19d` seesaw limit and tip/settle observation |
+| `b2d.joint.create_prismatic`, motor speed/force, translation (O1) | Anchors/translations and linear speed cross engine-unit scale; motor force binding multiplies by scale, so source500 N passes500/scale | [O1 HTML5 release tests](../OBJECTS_O1_REPORT.md), guided gate movement/reset, no native/Android claim |
+| `b2d.body.get_mass_data` / `set_mass_data`, shape friction/restitution (O1) | Mass kg, centre engine units, inertia raw SI; dimensionless material coefficients | O1 configured25 kg crate, rotated reset and release driving |
+| `b2d.shape.get_sensor_overlaps` (O1) | Borrowed shape handles; deduplicate by actor ID before debounce/signals | O1 multi-body vehicle occupancy, all3 plate modes and two plates/three gates |
 | `b2d.body.get_mass(body)` (A19d) | kg, unscaled; equals the collision object's mass | `a19d` plank mass check (20 kg) |
 
 The fixture speaks engine units at the binding boundary; it does not additionally scale coordinates/velocities. Configured gravity is -981 engine units/s². Two runs use scale 0.01 and 0.02. Force, body torque and impulse are not used by this fixture; their binding conversions are listed in the [physics contract](physics.md#units).

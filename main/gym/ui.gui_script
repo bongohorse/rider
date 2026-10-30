@@ -156,6 +156,7 @@ function init(self)
     self.run_ui=run_ui.new()
     self.progress_ui=progress_ui.new()
     self.levels_ui=levels_ui.new()
+    self.mechanism_text=layout.text(vmath.vector3(480,50,0),'','bottom');gui.set_font(self.mechanism_text,'default');gui.set_scale(self.mechanism_text,vmath.vector3(.75,.75,1));gui.set_visible(self.mechanism_text,false)
 end
 local function fps_color(fps)
     return fps>=55 and vmath.vector4(0.3,0.9,0.6,1) or fps>=30 and vmath.vector4(1,0.65,0.2,1) or vmath.vector4(1,0.25,0.25,1)
@@ -169,6 +170,7 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
+    if id==hash('mechanism_state') then if data.generation<(self.session_generation or 1) then return end;self.mechanism_status=data.text;gui.set_text(self.mechanism_text,data.text);gui.set_visible(self.mechanism_text,not mobile.enabled());return end
     if id==hash('fuel_state') then
         if data.generation<(self.session_generation or 1) then return end
         local old=self.fuel_data
@@ -200,6 +202,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("station_loading") then self.fuel_data=nil;self.fuel_flash=0;self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
+        self.mechanism_status=nil;gui.set_visible(self.mechanism_text,false);if html5 then html5.run('window.riderMechanisms=null') end
         self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
         if html5 then html5.run("window.riderStationError=null;window.riderCustomStatus=null") end
         cancel_drag(self);gui.set_text(self.station,"Loading station...");gui.set_color(self.station,vmath.vector4(1,1,1,1))

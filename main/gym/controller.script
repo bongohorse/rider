@@ -9,6 +9,7 @@ local audio=require "main.gym.audio"
 local vehicle = require "main.gym.vehicle"
 -- A19d seesaw: per-session dynamic obstacle owned here (see seesaw.lua for its lifecycle).
 local seesaw = require "main.gym.seesaw"
+local mechanisms=require "main.gym.mechanisms"
 local socket = require "socket"
 local rider = require "main.gym.rider"
 local feel = require "main.gym.feel"
@@ -73,12 +74,13 @@ local function reset(self)
     replay.before_reset(self)
     vehicle.reset(self.vehicle)
     if self.seesaw then seesaw.reset(self.seesaw) end
+    if self.mechanisms then mechanisms.reset(self.mechanisms) end
     stations.restart(self)
     -- This tick becomes tick 1 of a new recording/replay ("record"/"replay"); any other reset ends them.
     replay.on_reset(self,request.reason)
     assert(b2d.body.is_valid(self.terrain), "Terrain invalid after retry")
     local shapes = b2d.body.get_shapes(self.terrain)
-    assert(#shapes==#self.segments+#(self.station.hulls or {}), "Retry changed station topology")
+    assert(#shapes==#self.segments+#(self.station.hulls or {})+(self.mechanisms and self.mechanisms.terrain_sensors or 0), "Retry changed station topology")
     for _,shape in ipairs(self.segments) do
         assert(b2d.shape.is_valid(shape.shape_id) and b2d.shape.are_sensor_events_enabled(shape.shape_id),"Retry lost chain/sensor handle")
     end
@@ -148,6 +150,7 @@ local function fail_placement(self,err)
     print("GYM_PLACE_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
     if self.vehicle then vehicle.remove(self.vehicle) end
     if self.seesaw then seesaw.remove(self.seesaw);self.seesaw=nil end
+    if self.mechanisms then mechanisms.remove(self.mechanisms);self.mechanisms=nil end
     msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station")..": the vehicle could not be placed ("..tostring(err).."). Import another level [I]."})
     self.station,self.segments,self.chain,self.vehicle=nil,nil,nil,nil
     self.target=hash("/focus")
@@ -208,6 +211,7 @@ local function setup(self)
         local spawned,spawn_err=pcall(function()
             self.vehicle = vehicle.spawn()
             if self.station.seesaw then self.seesaw=seesaw.spawn(self.station.seesaw) end
+            if self.station.mechanisms then self.mechanisms=mechanisms.spawn(self.station.mechanisms) end
         end)
         if not spawned then fail_placement(self,spawn_err);return end
     else msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation}) end
@@ -303,6 +307,16 @@ function update(self, dt)
     require('main.gym.coin_runtime').update(self,dt)
     race.update(self,dt)
     progress.update(self,dt)
+    local mechanism_clock=socket.gettime()
+    if self.mechanisms and self.mechanisms.ready and mechanism_clock-(self.mechanism_poll or 0)>=.1 then
+        self.mechanism_poll=mechanism_clock;self.mechanism_seq=(self.mechanism_seq or 0)+1
+        local state=mechanisms.state(self.mechanisms);state.session_generation=self.session_generation;state.sequence=self.mechanism_seq
+        local world=b2d.body.get_world(self.terrain);local c,p=b2d.world.get_counters(world),b2d.world.get_profile(world)
+        state.world={bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count,contacts=c.contact_count,bytes=c.byte_count,step_ms=p.step,sensors_ms=p.sensors}
+        if html5 then html5.run('window.riderMechanisms='..json.encode(state)) end
+        local plate,gate=state.plates[1],state.gates[1]
+        msg.post('main:/loader#ui','mechanism_state',{generation=self.session_generation,text=string.format('Plate %s | Gate %s',plate and (plate.active and 'ON' or plate.mode=='pulse' and plate.pressed and 'release to rearm' or 'OFF') or 'none',gate and gate.state or 'none')})
+    end
     if self.placement_report then
         self.placement_report=self.placement_report-1
         if self.placement_report==0 then
@@ -343,10 +357,12 @@ function update(self, dt)
         local placed,err=pcall(function()
             vehicle.attach(self.vehicle)
             if self.seesaw then seesaw.attach(self.seesaw,self.terrain) end
+            if self.mechanisms then mechanisms.attach(self.mechanisms,self.terrain,self.vehicle) end
             -- Factories can receive an engine step before attach. Use Retry's
             -- canonical pose before the very first authored speed start too.
             vehicle.reset(self.vehicle)
             if self.seesaw then seesaw.reset(self.seesaw) end
+            if self.mechanisms then mechanisms.reset(self.mechanisms) end
             stations.restart(self)
         end)
         if not placed then fail_placement(self,err);return end
@@ -613,6 +629,7 @@ function fixed_update(self, dt)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         require('main.gym.fuel_runtime').command(self,self.last_command,dt)
+        if self.mechanisms then mechanisms.fixed(self.mechanisms,dt,not self.finish_done and not (self.race and require('main.gym.run').terminal(self.race))) end
         vehicle.apply(self.vehicle,self.last_command,dt)
         if self.fuel then self.fuel.power=self.vehicle.powered_input or 0 end
         rider.sample(self.vehicle,self.last_command)
@@ -633,7 +650,7 @@ function final(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
-    self.seesaw = nil
+    self.seesaw = nil;self.mechanisms=nil
 end
 function on_message(self,id,data,sender)
     if id==hash("configure_station") and not self.ready and data.edit then

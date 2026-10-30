@@ -16,8 +16,11 @@ function M.measure(d)
         if n>r.largest_segments then r.largest_chain,r.largest_segments=i,n end
     end
     for _,h in ipairs(d.hulls or {}) do r.hull_vertices=r.hull_vertices+#h.vertices end
-    r.physics_vertices=r.physics_vertices+r.hull_vertices
+    local mech=require('main.gym.mechanism_data').cost(d.mechanisms)
+    r.mechanism_bodies=mech.bodies;r.mechanism_shapes=mech.shapes;r.mechanism_joints=mech.joints
+    r.physics_vertices=r.physics_vertices+r.hull_vertices+mech.vertices
     r.sprites=#(d.coins and d.coins.items or {})+r.hull_vertices+(d.finish and 1 or 0)+(d.seesaw and 1 or 0)
+    if d.mechanisms then r.sprites=r.sprites+math.max(mech.sprites,4*#d.mechanisms.crates+4*#d.mechanisms.plates+5*#d.mechanisms.gates) end
     r.labels=r.labels+(d.finish and 1 or 0)
     if d.markers then
         local m=d.markers

@@ -77,7 +77,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
     {id:'o3',type:'line',points:[[20,rise],[35,rise]]},{id:'o4',type:'label',text:'A marker',position:[8,3]}]}};
   await page.goto(base+'?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
-  e=await importText(JSON.stringify(fixture),'ea2.json');await settle();assert.equal((await doc()).editor_version,11);
+  e=await importText(JSON.stringify(fixture),'ea2.json');await settle();assert.equal((await doc()).editor_version,12);
   await button('collapse_prefabs');await button('object_select_o2');e=await settle();assert.equal(e.selection,'o2');
   let before=await snapshot();await button('view_centre');await unchanged(before,'list selection centre');
   await button('object_name');await type('Main ramp');await key('Enter');e=await settle();
@@ -99,7 +99,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('object_eye_o4');e=await settle();assert.equal(e.hidden_objects.o4,true);await page.screenshot({path:path.join(out,'objects-hidden-ramp-label.png')});
   // Hide changes neither compiled terrain nor labels. Export uses the normal user file flow.
   const exportFile=async()=>{const download=page.waitForEvent('download');await button('export');const f=await download;const data=JSON.parse(fs.readFileSync(await f.path(),'utf8'));await page.getByRole('button',{name:'Close export',exact:true}).click();await page.locator('canvas').focus();await refocused();return data;};
-  const saved=await exportFile();assert.equal(saved.editor.editor_version,11);assert.ok(saved.labels.some(l=>l.text==='A marker'));
+  const saved=await exportFile();assert.equal(saved.editor.editor_version,12);assert.ok(saved.labels.some(l=>l.text==='A marker'));
   assert.ok(saved.chains.flat().some(p=>Math.abs(p[0]-20)<1e-6&&Math.abs(p[1]-rise)<1e-6));
   assert.equal(saved.editor.objects.find(o=>o.id==='o2').hidden,true);
   await button('object_eye_o2');await button('object_eye_o4');
