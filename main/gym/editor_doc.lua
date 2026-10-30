@@ -45,7 +45,13 @@ function M.pickup_id(e,id)
     return key
 end
 local function points(list) local out={};for i,p in ipairs(list) do out[i]={p[1],p[2]} end;return out end
-local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
+local function new_id(e)
+    while true do
+        local id='o'..e.next_id;e.next_id=e.next_id+1;local used=false
+        for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do if o.id==id then used=true end end end
+        if not used then return id end
+    end
+end
 -- Connected ends coincide (R4); the editor makes them exactly equal, JSON keeps them equal (a prefab's
 -- derived exit within this tolerance).
 M.JOINT=1e-6
@@ -275,7 +281,7 @@ function M.validate(doc)
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
-    if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
+    if type(e.objects)~="table" or #e.objects+require('main.gym.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
     if e.editor_version>=4 then
         local s=e.sampling
         if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then
@@ -344,6 +350,7 @@ function M.validate(doc)
             total=total+#list
         else return nil,"Unknown object type in "..o.id end
     end
+    for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do if ids[o.id] then return nil,'Duplicate source/mechanism id '..o.id end end end
     if total>M.MAX_TOTAL_POINTS then return nil,"Source point limit is 8192; remove objects/anchors or split the document" end
     local s=e.start
     if type(s)~="table" or not point(s.position) or not finite(s.speed) or math.abs(s.speed)>30 then return nil,"Invalid START" end

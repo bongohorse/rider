@@ -15,7 +15,7 @@ module.exports=async function(h){
  await key('z',['Control']);await revision(rev+5);assert.equal(coins(await doc())[1].pickup_id,copyId);
  await key('y',['Control']);await revision(rev+6);assert.equal(coins(await doc()).length,1);
  await key('z',['Control']);await revision(rev+7);all=coins(await doc());
- await button('export');await page.waitForSelector('#rider-export-text');const saved=JSON.parse(await page.locator('#rider-export-text').inputValue());assert.equal(saved.schema,2);assert.equal(saved.editor.editor_version,11);assert.deepEqual(saved.coins.items,all.map(o=>({id:o.pickup_id,position:o.position})));
+ await button('export');await page.waitForSelector('#rider-export-text');const saved=JSON.parse(await page.locator('#rider-export-text').inputValue());assert.equal(saved.schema,2);assert.equal(saved.editor.editor_version,12);assert.deepEqual(saved.coins.items,all.map(o=>({id:o.pickup_id,position:o.position})));
  await page.getByRole('button',{name:'Close export',exact:true}).click();await page.locator('canvas').focus();await page.waitForTimeout(1100);
  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved');
  const reload=new URL(page.url());reload.search='?station=custom';await page.goto(reload.href);await edit();assert.deepEqual(coins(await doc()),all);

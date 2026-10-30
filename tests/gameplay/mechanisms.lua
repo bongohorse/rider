@@ -36,3 +36,7 @@ local unsupported=clone(spec);unsupported.plates[1].mode='future-mode';local _,_
 unsupported=clone(spec);unsupported.gates[1].condition='future-rule';local _,_,protected=D.validate(unsupported);assert(protected)
 unsupported=clone(spec);unsupported.links[1].action='future-action';local _,_,protected=D.validate(unsupported);assert(protected)
 print('PASS unknown modes, gate rules and typed actions remain protected future semantics')
+
+local raw=clone(compiled);raw.editor=nil;raw.mechanisms.crates[1].id='o1';local recovered=E.open_level(raw);assert(recovered.editor.objects[1].id~='o1' and recovered.editor.mechanisms.crates[1].id=='o1');assert(E.validate(recovered));assert(E.compile(recovered))
+local budget=E.blank('source-cap','Source cap');budget.editor.objects={};for i=1,256 do budget.editor.objects[i]={id='o'..i,type='label',position={i,0},text='x'}end;budget.editor.next_id=257;assert(E.validate(budget));budget.editor.mechanisms=clone(spec);local valid,why=E.validate(budget);assert(not valid and why:find('256',1,true))
+print('PASS station recovery avoids source/actor ID collisions and retains combined 256 source-object cap')
