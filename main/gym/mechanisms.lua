@@ -58,10 +58,12 @@ function M.attach(s,terrain,vehicle)
   assert(math.abs(b2d.body.get_mass(o.body)-mass)<.01,'Crate mass differs from settings')
  end
  for _,o in ipairs(s.plates) do o.sensor=rect(o.body,0,.25,(o.spec.width or 3)/2,.3) end
- local carrier=s.plates[1]
+ local carrier=s.plates[1];local origin=carrier and carrier.spec.position or {b2d.body.get_position(terrain).x*scale(),b2d.body.get_position(terrain).y*scale()}
+ s.terrain_sensors=0;s.terrain_guards={}
  for _,o in ipairs(s.gates) do
   b2d.body.set_gravity_scale(o.body,0)
-  o.guard=rect(carrier.body,o.spec.position[1]-carrier.spec.position[1],o.spec.position[2]+o.spec.travel/2-carrier.spec.position[2],data.GUARD,(data.GATE_HEIGHT+o.spec.travel)/2+.15)
+  o.guard=rect(carrier and carrier.body or terrain,o.spec.position[1]-origin[1],o.spec.position[2]+o.spec.travel/2-origin[2],data.GUARD,(data.GATE_HEIGHT+o.spec.travel)/2+.15)
+  if not carrier then s.terrain_sensors=s.terrain_sensors+1;s.terrain_guards[#s.terrain_guards+1]=o.guard end
  end
  s.ready=true
 end
@@ -110,6 +112,11 @@ function M.state(s)
  return {generation=s.logic.generation,ticks=s.ticks,events=s.logic.events,plates=plates,gates=gates,crates=crates,overlaps=s.overlaps,peak_overlaps=s.peak_overlaps,cost=data.cost(s.spec)}
 end
 function M.remove(s)
+ if s.terrain and b2d.body.is_valid(s.terrain) then
+  for _,guard in ipairs(s.terrain_guards or {}) do
+   for index,shape in ipairs(b2d.body.get_shapes(s.terrain)) do if shape.shape_id==guard then b2d.body.destroy_shape(s.terrain,index);break end end
+  end
+ end
  for _,id in ipairs(s.decor or {}) do go.delete(id) end
  for _,id in ipairs(s.all or {}) do go.delete(id) end
  s.objects={};s.all={};s.decor={};s.crates={};s.plates={};s.gates={};s.vehicle=nil;s.terrain=nil;s.ready=false

@@ -33,7 +33,6 @@ function M.validate(d,bounds)
    if kind=='gates' and (not finite(v.travel) or v.travel<3.5 or v.travel>6 or not finite(v.speed) or v.speed<.25 or v.speed>2) then return nil,'Gate travel must be 3.5-6 m; speed 0.25-2 m/s' end
   end
  end
- if #d.plates==0 and (#d.gates>0 or #d.crates>0) then return nil,'Mechanisms need an occupancy plate' end
  for _,v in ipairs(d.plates) do
   if not dense(v.actors,M.MAX+1) or #v.actors==0 then return nil,'Plate needs explicit accepted actor IDs' end
   local seen={};for _,actor in ipairs(v.actors) do if (actor~='vehicle' and ids[actor]~='crates') or seen[actor] then return nil,'Unknown/duplicate plate actor' end;seen[actor]=true end
@@ -46,7 +45,6 @@ function M.validate(d,bounds)
   if ids[v.from]~='plates' or ids[v.to]~='gates' or v.event~='active' or v.action~='open' or pairs_seen[v.from..'/'..v.to] then return nil,'Link must connect a distinct plate active output to a gate open input' end
   targets[v.to]=true;pairs_seen[v.from..'/'..v.to]=true
  end
- for _,g in ipairs(d.gates) do if not targets[g.id] then return nil,'Gate '..g.id..' needs a plate link' end end
  if bounds then for _,b in ipairs(M.extents(d)) do if b[1]<=bounds[1] or b[2]>=bounds[2] or b[3]<=bounds[3] or b[4]>=bounds[4] then return nil,'Mechanism or gate travel exceeds safety bounds' end end end
  return true
 end
