@@ -45,22 +45,26 @@ function M.create(parse)
         table.sort(list,function(a,b) if a.time~=b.time then return a.time>b.time end;return a.id>b.id end)
         return list,err
     end
+    local function append_paths(paths,store)
+        for _,path in ipairs(store.paths()) do paths[#paths+1]=path end
+    end
     function H.bytes()
         local idx,err=H.index();if not idx then return nil,err end
-        local n=index.bytes()
-        for _,v in ipairs(idx.entries) do n=n+version(v.id).bytes() end
-        for _,id in ipairs(idx.garbage) do n=n+version(id).bytes() end
-        return n
+        local paths=index.paths()
+        for _,v in ipairs(idx.entries) do append_paths(paths,version(v.id)) end
+        for _,id in ipairs(idx.garbage) do append_paths(paths,version(id)) end
+        return custom.file_bytes(paths)
     end
     local function write_index(next)
         local text=json.encode(next,{encode_empty_table_as_object=false})
         -- Account for both index slots at the larger of old/new size during a transaction.
-        local bytes,seen=0,{}
+        local paths,seen={},{}
         -- Count the union, including an orphan recovered into the next garbage registry.
         for _,idx in ipairs({cached,next}) do
-            for _,v in ipairs(idx.entries) do if not seen[v.id] then seen[v.id]=true;bytes=bytes+version(v.id).bytes() end end
-            for _,id in ipairs(idx.garbage) do if not seen[id] then seen[id]=true;bytes=bytes+version(id).bytes() end end
+            for _,v in ipairs(idx.entries) do if not seen[v.id] then seen[v.id]=true;append_paths(paths,version(v.id)) end end
+            for _,id in ipairs(idx.garbage) do if not seen[id] then seen[id]=true;append_paths(paths,version(id)) end end
         end
+        local bytes=custom.file_bytes(paths)
         if bytes+math.max(index.bytes(),2*index.cost(text))>M.CAP then return nil,"Version storage is full (16 MiB); delete named versions" end
         local ok,err=index.save(text)
         if not ok then return nil,err end

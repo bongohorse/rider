@@ -62,7 +62,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function named(name,confirm='Enter'){await versions();await button('snapshot');await page.keyboard.type(name,{delay:30});await key(confirm);await saved();return (await versions()).find(v=>v.named&&v.name===name);}
   async function restore(id){await versions();let e=await ed(),i=e.versions.findIndex(v=>v.id===id);assert.ok(i>=0);while(i>=6){await button('versions_next');i-=6;}await button('restore_'+(i+1));await page.waitForTimeout(200);}
   let token=0;
-  async function request(r){r={...r,token:++token};await page.evaluate(r=>{window.riderVersionResult=null;window.riderVersionRequest=r;},r);await page.waitForFunction(t=>window.riderVersionResult?.token===t,r.token);return page.evaluate(()=>window.riderVersionResult);}
+  async function request(r){const started=Date.now();r={...r,token:++token};await page.evaluate(r=>{window.riderVersionResult=null;window.riderVersionRequest=r;},r);await page.waitForFunction(t=>window.riderVersionResult?.token===t,r.token);measurements.longestRequestMs=Math.max(measurements.longestRequestMs||0,Date.now()-started);return page.evaluate(()=>window.riderVersionResult);}
   const files=()=>page.evaluate(()=>Object.fromEntries(FS.readdir('/data/.rider').filter(n=>/^custom-version/.test(n)).map(n=>[n,Array.from(FS.readFile('/data/.rider/'+n))])));
   const rise=8*Math.tan(10*Math.PI/180);
   const fixture={schema:1,units:'metres',id:'ea2-objects',name:'Object browser practice',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,60,-20,40],chains:[[[30,0],[0,0]]],hulls:[],labels:[],checkpoints:[],
@@ -154,7 +154,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
   // Independent keys represent other saved levels; global pruning may remove only automatic entries.
   for(let i=0;i<35;i++){
-   if(i%10===0)console.log('global cap auto '+i);
+   if(i%10===0)console.log('global cap auto '+i+' '+JSON.stringify({requestMs:measurements.longestRequestMs,waitMs:measurements.longestVersionWaitMs}));
    // The first full-cap admission must handle many tiny old versions within the same 30 s bound,
    // even when each real IndexedDB acknowledgement takes an extra second.
    if(i===34)await page.evaluate(()=>{const sync=FS.syncfs;window.restoreSlowSync=()=>FS.syncfs=sync;FS.syncfs=function(populate,cb){return sync.call(this,populate,populate?cb:(...args)=>setTimeout(()=>cb(...args),1000));};});
@@ -165,7 +165,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.equal(report.entries.filter(v=>v.named).length,10);assert.equal(report.entries.filter(v=>!v.named).length,0,'global oldest-first pruning must reclaim the older small automatic versions');
   const over=await request({op:'add',key:199,name:'Too large',pad:262145});assert.equal(over.ok,false);assert.match(over.error,/256 KiB/);
   let refusal;
-  for(let i=0;i<40;i++){if(i%10===0)console.log('global cap named '+i);const r=await request({op:'add',key:200+i,named:true,name:'Large named '+i,pad:240000});if(!r.ok){refusal=r;break;}await idle();}
+  for(let i=0;i<40;i++){if(i%10===0)console.log('global cap named '+i+' '+JSON.stringify({requestMs:measurements.longestRequestMs,waitMs:measurements.longestVersionWaitMs}));const r=await request({op:'add',key:200+i,named:true,name:'Large named '+i,pad:240000});if(!r.ok){refusal=r;break;}await idle();}
   assert.ok(refusal);assert.match(refusal.error,/full|16 MiB/);report=await request({op:'measure'});assert.ok(report.bytes<=16*1024*1024);measurements.namedCapBytes=report.bytes;
   // The normal level can still autosave while the history is full.
   await request({op:'clock',seconds:301});
