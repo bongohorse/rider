@@ -1,5 +1,5 @@
 -- O1: bounded typed crate/plate/gate data. Metres, seconds and SI motor force at the source boundary.
-local M={MAX=8,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
+local M={MAX=8,MAX_LINKS=32,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
 local function finite(n) return type(n)=='number' and n==n and math.abs(n)<100000 end
 local function point(p) return type(p)=='table' and #p==2 and finite(p[1]) and finite(p[2]) end
 local function dense(t,max) if type(t)~='table' or #t>max then return false end;for k in pairs(t) do if type(k)~='number' or k%1~=0 or k<1 or k>#t then return false end end;return true end
@@ -22,8 +22,10 @@ function M.validate(d,bounds)
   for _,v in ipairs(d[kind]) do
    if type(v)~='table' or not id(v.id) or ids[v.id] or not point(v.position) then return nil,'Invalid/duplicate mechanism ID or position' end
    ids[v.id]=kind
-   local allowed={id=true,position=true};if kind=='crates' then allowed.mass=true;allowed.friction=true;allowed.restitution=true elseif kind=='plates' then allowed.actors=true;allowed.mode=true;allowed.pulse_seconds=true;allowed.initial_on=true elseif kind=='gates' then allowed.travel=true;allowed.speed=true;allowed.initial_open=true end
+   local allowed={id=true,position=true};if kind=='crates' then allowed.angle=true;allowed.mass=true;allowed.friction=true;allowed.restitution=true elseif kind=='plates' then allowed.actors=true;allowed.mode=true;allowed.pulse_seconds=true;allowed.initial_on=true elseif kind=='gates' then allowed.travel=true;allowed.speed=true;allowed.initial_open=true;allowed.condition=true end
    local supported,why,future=fields(v,allowed);if not supported then return nil,why,future end
+   if kind=='crates' and v.angle~=nil and (not finite(v.angle) or math.abs(v.angle)>math.pi) then return nil,'Crate angle must be between -pi and pi radians' end
+   if kind=='gates' and v.condition~=nil and v.condition~='any' and v.condition~='all' then return nil,'Gate input rule must be any or all' end
    if kind=='crates' and ((v.mass~=nil and (not finite(v.mass) or v.mass<1 or v.mass>40)) or (v.friction~=nil and (not finite(v.friction) or v.friction<0 or v.friction>1.5)) or (v.restitution~=nil and (not finite(v.restitution) or v.restitution<0 or v.restitution>.5))) then return nil,'Crate mass 1-40 kg, friction 0-1.5 and restitution 0-0.5 required' end
    if kind=='plates' and ((v.mode~=nil and v.mode~='pulse' and v.mode~='toggle' and v.mode~='hold') or (v.pulse_seconds~=nil and (not finite(v.pulse_seconds) or v.pulse_seconds<.1 or v.pulse_seconds>30)) or (v.initial_on~=nil and type(v.initial_on)~='boolean')) then return nil,'Plate mode must be pulse, toggle or hold; pulse duration 0.1-30 s' end
    if kind=='gates' and v.initial_open~=nil and type(v.initial_open)~='boolean' then return nil,'Gate initial_open must be boolean' end
@@ -35,13 +37,13 @@ function M.validate(d,bounds)
   if not dense(v.actors,M.MAX+1) or #v.actors==0 then return nil,'Plate needs explicit accepted actor IDs' end
   local seen={};for _,actor in ipairs(v.actors) do if (actor~='vehicle' and ids[actor]~='crates') or seen[actor] then return nil,'Unknown/duplicate plate actor' end;seen[actor]=true end
  end
- if not dense(d.links,M.MAX) then return nil,'At most '..M.MAX..' plate-to-gate links' end
- local targets={}
+ if not dense(d.links,M.MAX_LINKS) then return nil,'At most '..M.MAX_LINKS..' plate-to-gate links' end
+ local targets,pairs_seen={},{}
  for _,v in ipairs(d.links) do
   if type(v)~='table' then return nil,'Invalid mechanism link' end
   local supported,why,future=fields(v,{from=true,event=true,to=true,action=true});if not supported then return nil,why,future end
-  if ids[v.from]~='plates' or ids[v.to]~='gates' or v.event~='occupied' or v.action~='open' or targets[v.to] then return nil,'Link must connect one plate occupied event to one gate open action' end
-  targets[v.to]=true
+  if ids[v.from]~='plates' or ids[v.to]~='gates' or v.event~='active' or v.action~='open' or pairs_seen[v.from..'/'..v.to] then return nil,'Link must connect a distinct plate active output to a gate open input' end
+  targets[v.to]=true;pairs_seen[v.from..'/'..v.to]=true
  end
  for _,g in ipairs(d.gates) do if not targets[g.id] then return nil,'Gate '..g.id..' needs a plate link' end end
  if bounds then for _,b in ipairs(M.extents(d)) do if b[1]<=bounds[1] or b[2]>=bounds[2] or b[3]<=bounds[3] or b[4]>=bounds[4] then return nil,'Mechanism or gate travel exceeds safety bounds' end end end

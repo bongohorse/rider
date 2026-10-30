@@ -1,17 +1,24 @@
 -- Typed occupancy events and motor decisions; never integrates physics or owns another clock.
 local M={PRESS=.08,RELEASE=.15}
+local function combine(gate,condition)
+ local any,all=false,true
+ for _,active in pairs(gate.inputs) do any=any or active;all=all and active end
+ return condition=='all' and all or condition~='all' and any
+end
 function M.new(spec)
  local s={spec=spec,generation=0};M.reset(s);return s
 end
 function M.reset(s)
  s.generation=s.generation+1;s.plates={};s.gates={};s.events=0;s.last_serial={}
  for _,p in ipairs(s.spec.plates) do s.plates[p.id]={pressed=false,candidate=false,age=0,serial=0,count=0,published=false,active=p.mode=='toggle' and p.initial_on==true or false,pulse=0} end
- for _,g in ipairs(s.spec.gates) do s.gates[g.id]={open=g.initial_open==true,speed=0,state=g.initial_open and 'open' or 'closed',blocked=false} end
+ for _,g in ipairs(s.spec.gates) do s.gates[g.id]={open=g.initial_open==true,speed=0,state=g.initial_open and 'open' or 'closed',blocked=false,inputs={},condition=g.condition or 'any'} end
+ for _,l in ipairs(s.spec.links) do s.gates[l.to].inputs[l.from]=s.plates[l.from].active end
+ for _,g in pairs(s.gates) do if next(g.inputs) then g.open=combine(g,g.condition) end end
 end
 function M.event(s,e)
- if e.generation~=s.generation or not s.plates[e.source] or e.event~='occupied' or type(e.active)~='boolean' or type(e.serial)~='number' or e.serial<1 or e.serial%1~=0 or e.serial<=(s.last_serial[e.source] or 0) then return false end
+ if e.generation~=s.generation or not s.plates[e.source] or e.event~='active' or type(e.active)~='boolean' or type(e.serial)~='number' or e.serial<1 or e.serial%1~=0 or e.serial<=(s.last_serial[e.source] or 0) then return false end
  s.last_serial[e.source]=e.serial;s.events=s.events+1
- for _,l in ipairs(s.spec.links) do if l.from==e.source then s.gates[l.to].open=e.active end end
+ for _,l in ipairs(s.spec.links) do if l.from==e.source then local g=s.gates[l.to];g.inputs[e.source]=e.active;g.open=combine(g,g.condition) end end
  return true
 end
 function M.tick(s,dt,occupants,blocked,positions)
@@ -30,7 +37,7 @@ function M.tick(s,dt,occupants,blocked,positions)
   end
   if (p.mode or 'hold')=='pulse' and r.pulse>0 then r.pulse=math.max(0,r.pulse-dt);if r.pulse==0 then r.active=false end end
   if r.published~=r.active or r.emit then
-   r.emit=nil;r.published=r.active;r.serial=r.serial+1;M.event(s,{generation=s.generation,source=p.id,event='occupied',active=r.active,serial=r.serial})
+   r.emit=nil;r.published=r.active;r.serial=r.serial+1;M.event(s,{generation=s.generation,source=p.id,event='active',active=r.active,serial=r.serial})
   end
  end
  for _,g in ipairs(s.spec.gates) do

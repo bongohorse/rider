@@ -103,7 +103,7 @@
     "links": [
       {
         "from": "plate-a",
-        "event": "occupied",
+        "event": "active",
         "to": "gate-a",
         "action": "open"
       }

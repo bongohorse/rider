@@ -20,7 +20,7 @@ function M.spawn(spec)
   for _,kind in ipairs({'crates','plates','gates'}) do
    local singular=kind=='crates' and 'crate' or kind=='plates' and 'plate' or 'gate'
    for _,v in ipairs(spec[kind]) do
-    local o={spec=v};o.id=factory.create('#mechanism_'..singular,at(v.position));s.all[#s.all+1]=o.id;s.objects[v.id]=o;s[kind][#s[kind]+1]=o;tint(o.id,colors[singular])
+    local o={spec=v};o.id=factory.create('#mechanism_'..singular,at(v.position),vmath.quat_rotation_z(v.angle or 0));s.all[#s.all+1]=o.id;s.objects[v.id]=o;s[kind][#s[kind]+1]=o;tint(o.id,colors[singular])
     if singular=='crate' then
      line(s.decor,{-.53,-.53},{.53,.53},.08,{.95,.72,.35},o.id);line(s.decor,{-.53,.53},{.53,-.53},.08,{.95,.72,.35},o.id)
     elseif singular=='gate' then
@@ -68,7 +68,7 @@ function M.reset(s)
  for _,id in ipairs(s.all) do local o;for _,v in pairs(s.objects) do if v.id==id then o=v;break end end
   b2d.body.set_active(o.body,false)
   local position={o.spec.position[1],o.spec.position[2]+(o.spec.travel and o.spec.initial_open and o.spec.travel or 0)}
-  go.set_position(at(position),o.id);go.set_rotation(vmath.quat(),o.id);b2d.body.set_transform(o.body,at(position,0),0)
+  go.set_position(at(position),o.id);go.set_rotation(vmath.quat_rotation_z(o.spec.angle or 0),o.id);b2d.body.set_transform(o.body,at(position,0),o.spec.angle or 0)
   b2d.body.set_linear_velocity(o.body,vmath.vector3());b2d.body.set_angular_velocity(o.body,0);b2d.body.set_active(o.body,true)
  end
  for _,o in ipairs(s.crates) do b2d.body.set_awake(o.body,false);b2d.body.set_awake(o.body,true) end
