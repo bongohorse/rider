@@ -1,7 +1,7 @@
 -- O1: bounded typed crate/plate/gate data. Metres, seconds and SI motor force at the source boundary.
-local M={MAX=8,MAX_LINKS=32,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
+local M={MAX=8,MAX_LINKS=32,MAX_COORD=600,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
 local function finite(n) return type(n)=='number' and n==n and math.abs(n)<100000 end
-local function point(p) return type(p)=='table' and #p==2 and finite(p[1]) and finite(p[2]) end
+local function point(p) return type(p)=='table' and #p==2 and finite(p[1]) and finite(p[2]) and math.abs(p[1])<=M.MAX_COORD and math.abs(p[2])<=M.MAX_COORD end
 local function dense(t,max) if type(t)~='table' or #t>max then return false end;for k in pairs(t) do if type(k)~='number' or k%1~=0 or k<1 or k>#t then return false end end;return true end
 local function fields(t,allowed) for k in pairs(t) do if not allowed[k] then return nil,'Unsupported mechanism field '..tostring(k),true end end;return true end
 local function id(v) return type(v)=='string' and #v<=64 and v:match('^[a-z][a-z0-9%-]*$') and v~='vehicle' end
@@ -20,7 +20,7 @@ function M.validate(d,bounds)
  for _,kind in ipairs({'crates','plates','gates'}) do
   if not dense(d[kind],M.MAX) then return nil,'Mechanisms allow at most '..M.MAX..' '..kind end
   for _,v in ipairs(d[kind]) do
-   if type(v)~='table' or not id(v.id) or ids[v.id] or not point(v.position) then return nil,'Invalid/duplicate mechanism ID or position' end
+   if type(v)~='table' or not id(v.id) or ids[v.id] or not point(v.position) then return nil,'Invalid/duplicate mechanism ID or position (within 600 m)' end
    ids[v.id]=kind
    local allowed={id=true,position=true};if kind=='crates' then allowed.angle=true;allowed.mass=true;allowed.friction=true;allowed.restitution=true elseif kind=='plates' then allowed.width=true;allowed.actors=true;allowed.mode=true;allowed.pulse_seconds=true;allowed.initial_on=true elseif kind=='gates' then allowed.travel=true;allowed.speed=true;allowed.initial_open=true;allowed.condition=true end
    local supported,why,future=fields(v,allowed);if not supported then return nil,why,future end
@@ -30,7 +30,7 @@ function M.validate(d,bounds)
    if kind=='plates' and v.width~=nil and (not finite(v.width) or v.width<1 or v.width>8) then return nil,'Plate width must be 1-8 m' end
    if kind=='plates' and ((v.mode~=nil and v.mode~='pulse' and v.mode~='toggle' and v.mode~='hold') or (v.pulse_seconds~=nil and (not finite(v.pulse_seconds) or v.pulse_seconds<.1 or v.pulse_seconds>30)) or (v.initial_on~=nil and type(v.initial_on)~='boolean')) then return nil,'Plate mode must be pulse, toggle or hold; pulse duration 0.1-30 s' end
    if kind=='gates' and v.initial_open~=nil and type(v.initial_open)~='boolean' then return nil,'Gate initial_open must be boolean' end
-   if kind=='gates' and (not finite(v.travel) or v.travel<3.5 or v.travel>6 or not finite(v.speed) or v.speed<.25 or v.speed>2) then return nil,'Gate travel must be 3.5-6 m; speed 0.25-2 m/s' end
+   if kind=='gates' and (not finite(v.travel) or v.travel<3.5 or v.travel>6 or v.position[2]+v.travel>M.MAX_COORD or not finite(v.speed) or v.speed<.25 or v.speed>2) then return nil,'Gate travel must be 3.5-6 m; speed 0.25-2 m/s' end
   end
  end
  for _,v in ipairs(d.plates) do

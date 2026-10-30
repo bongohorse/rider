@@ -307,10 +307,10 @@ function update(self, dt)
     require('main.gym.coin_runtime').update(self,dt)
     race.update(self,dt)
     progress.update(self,dt)
-    self.mechanism_poll=(self.mechanism_poll or 0)+dt
-    if self.mechanisms and self.mechanisms.ready and self.mechanism_poll>=.1 then
-        self.mechanism_poll=0
-        local state=mechanisms.state(self.mechanisms);state.session_generation=self.session_generation
+    local mechanism_clock=socket.gettime()
+    if self.mechanisms and self.mechanisms.ready and mechanism_clock-(self.mechanism_poll or 0)>=.1 then
+        self.mechanism_poll=mechanism_clock;self.mechanism_seq=(self.mechanism_seq or 0)+1
+        local state=mechanisms.state(self.mechanisms);state.session_generation=self.session_generation;state.sequence=self.mechanism_seq
         local world=b2d.body.get_world(self.terrain);local c,p=b2d.world.get_counters(world),b2d.world.get_profile(world)
         state.world={bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count,contacts=c.contact_count,bytes=c.byte_count,step_ms=p.step,sensors_ms=p.sensors}
         if html5 then html5.run('window.riderMechanisms='..json.encode(state)) end

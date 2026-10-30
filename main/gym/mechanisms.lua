@@ -73,7 +73,11 @@ function M.reset(s)
   b2d.body.set_active(o.body,false)
   local position={o.spec.position[1],o.spec.position[2]+(o.spec.travel and o.spec.initial_open and o.spec.travel or 0)}
   go.set_position(at(position),o.id);go.set_rotation(vmath.quat_rotation_z(o.spec.angle or 0),o.id);b2d.body.set_transform(o.body,at(position,0),o.spec.angle or 0)
-  b2d.body.set_linear_velocity(o.body,vmath.vector3());b2d.body.set_angular_velocity(o.body,0);b2d.body.set_active(o.body,true)
+  b2d.body.set_linear_velocity(o.body,vmath.vector3());b2d.body.set_angular_velocity(o.body,0)
+  local p=b2d.body.get_position(o.body);local expected=at(position,0)
+  assert(math.abs(p.x-expected.x)<.01 and math.abs(p.y-expected.y)<.01 and math.abs(b2d.body.get_angle(o.body)-(o.spec.angle or 0))<.005,'Noncanonical mechanism reset pose')
+  assert(vmath.length(b2d.body.get_linear_velocity(o.body))<.001 and math.abs(b2d.body.get_angular_velocity(o.body))<.001,'Mechanism reset retained velocity')
+  b2d.body.set_active(o.body,true)
  end
  for _,o in ipairs(s.crates) do b2d.body.set_awake(o.body,false);b2d.body.set_awake(o.body,true) end
  for _,o in ipairs(s.gates) do b2d.body.set_awake(o.body,false);b2d.body.set_awake(o.body,true);joint(s,o) end
@@ -108,7 +112,7 @@ function M.state(s)
  local plates,gates,crates={},{},{}
  for _,o in ipairs(s.plates) do local r=s.logic.plates[o.spec.id];plates[#plates+1]={id=o.spec.id,pressed=r.pressed,active=r.active,mode=o.spec.mode or 'hold',count=r.count,serial=r.serial};tint(o.id,r.active and colors.active or colors.plate) end
  for _,o in ipairs(s.gates) do local r=s.logic.gates[o.spec.id];gates[#gates+1]={id=o.spec.id,state=r.state,open=r.open,blocked=r.blocked,height=b2d.joint.get_joint_translation(o.joint)*scale(),speed=r.speed,joints=#b2d.body.get_joints(o.body)};tint(o.id,r.blocked and colors.blocked or r.open and colors.active or colors.gate) end
- for _,o in ipairs(s.crates) do local p,v=b2d.body.get_position(o.body),b2d.body.get_linear_velocity(o.body);crates[#crates+1]={id=o.spec.id,x=p.x*scale(),y=p.y*scale(),angle=b2d.body.get_angle(o.body),vx=v.x*scale(),vy=v.y*scale()} end
+ for _,o in ipairs(s.crates) do local p,v=b2d.body.get_position(o.body),b2d.body.get_linear_velocity(o.body);crates[#crates+1]={id=o.spec.id,x=p.x*scale(),y=p.y*scale(),angle=b2d.body.get_angle(o.body),vx=v.x*scale(),vy=v.y*scale(),mass=b2d.body.get_mass(o.body)} end
  return {generation=s.logic.generation,ticks=s.ticks,events=s.logic.events,plates=plates,gates=gates,crates=crates,overlaps=s.overlaps,peak_overlaps=s.peak_overlaps,cost=data.cost(s.spec)}
 end
 function M.remove(s)
