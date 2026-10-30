@@ -42,6 +42,19 @@ function M.retain(keep)
     for id in pairs(snapshots) do if not keep[id] then snapshots[id]=nil end end
 end
 function M.count() local n=0;for _ in pairs(snapshots) do n=n+1 end;return n end
+-- Exact physical metadata across a complete set of slots, in one HTML5 bridge call.
+-- Missing/unstatable files retain the prior native/io fallback; never return a partial sum.
+function M.file_bytes(paths)
+    -- HTML5 metadata avoids read-only closes that the pinned loader turns into full syncs.
+    -- Keep native io and the existing io fallback when a slot is missing/unstatable.
+    if html5 then
+        local n=tonumber(html5.run("window.riderCustom.fileBytes("..json.encode(paths)..")"))
+        if n then return n end
+    end
+    local n=0
+    for _,path in ipairs(paths) do local f=io.open(path,"rb");if f then n=n+f:seek("end");f:close() end end
+    return n
+end
 -- parse(text) -> doc | nil, error, unsupported. An unsupported slot (unknown editor version) is never
 -- overwritten: its original text stays as it is (contract R1).
 local function store(slots,parse)
@@ -125,19 +138,12 @@ local function store(slots,parse)
         protection=nil
         sys.save(sys.get_save_file(APP,slots[i]),{format=1,seq=seq,text=text,time=time})
     end
-    function S.bytes()
+    function S.paths()
         local paths={}
         for _,name in ipairs(slots) do paths[#paths+1]=sys.get_save_file(APP,name) end
-        -- HTML5 metadata avoids read-only closes that the pinned loader turns into full syncs.
-        -- Keep native io and the existing io fallback when a slot is missing/unstatable.
-        if html5 then
-            local n=tonumber(html5.run("window.riderCustom.fileBytes("..json.encode(paths)..")"))
-            if n then return n end
-        end
-        local n=0
-        for _,path in ipairs(paths) do local f=io.open(path,"rb");if f then n=n+f:seek("end");f:close() end end
-        return n
+        return paths
     end
+    function S.bytes() return M.file_bytes(S.paths()) end
     -- Exact pinned serializer size, including the slot wrapper; no temporary save is needed.
     function S.cost(text)
         return #sys.serialize({format=1,seq=1,text=text,time=os.time()})

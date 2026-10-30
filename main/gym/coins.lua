@@ -15,7 +15,7 @@ function M.observe(c,parts,active)
     for _,coin in ipairs(c.items) do if not c.taken[coin.id] then
         for i,p in ipairs(parts) do
             if near(coin.position,before[i] or p,p,data.radius(coin)+p.radius) then
-                c.taken[coin.id]=true;if coin.kind=='gem' then c.gems=c.gems+1 else c.count=c.count+1 end;collected[#collected+1]=coin.id;break
+                c.taken[coin.id]=true;if coin.kind=='gem' then c.gems=c.gems+1 elseif coin.kind~='fuel' then c.count=c.count+1 end;collected[#collected+1]=coin.id;break
             end
         end
     end end

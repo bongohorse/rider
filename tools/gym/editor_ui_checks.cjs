@@ -209,4 +209,5 @@ module.exports=async function uiChecks(h){
  await require('../gameplay/check_along_editor.cjs')(h);
  await require('../gameplay/check_auto_editor.cjs')(h);
  await require('../gameplay/check_gem_editor.cjs')(h);
+ await require('../gameplay/check_fuel_editor.cjs')(h);
 };

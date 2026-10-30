@@ -536,6 +536,7 @@ function fixed_update(self, dt)
         local state = vehicle.state(self.vehicle)
         if self.scenario then self.scenario.check_pose(self,state) end
         race.observe(self,dt)
+        require('main.gym.fuel_runtime').observe(self)
         if self.race then
             if stations.outside(self.station,state) then race.failed(self,"bounds") end
             if self.sensor_skip==0 and self.crash_enabled and rider.contact(self.vehicle) then race.failed(self,"head") end
@@ -611,7 +612,9 @@ function fixed_update(self, dt)
         self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
+        require('main.gym.fuel_runtime').command(self,self.last_command,dt)
         vehicle.apply(self.vehicle,self.last_command,dt)
+        if self.fuel then self.fuel.power=self.vehicle.powered_input or 0 end
         rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
         stations.observe(self,vehicle.state(self.vehicle),dt,sample)

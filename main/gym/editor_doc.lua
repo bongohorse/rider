@@ -14,7 +14,8 @@ local sample=require "main.gym.editor_sample"
 -- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
 -- Version 10 adds optional gem kinds to existing coin objects; compiled gems require schema 3.
-local M={EDITOR_VERSION=10,COMPILER_VERSION=10}
+-- Version 11 adds course-wide fuel rules and shared-refill canisters; compiled fuel uses schema 4.
+local M={EDITOR_VERSION=11,COMPILER_VERSION=11}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -125,7 +126,7 @@ end
 function M.entry(o) return o.type=="line" and o.points[1] or o.type=="curve" and o.anchors[1].p or o.at end
 function M.exit(o) local p=M.path(o);return p[#p] end
 -- Display name for messages: "Line o3", "Ramp o5".
-function M.label(o) if o.name and o.name~="" then return o.name.." ("..o.id..")" end;return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
+function M.label(o) if o.name and o.name~="" then return o.name.." ("..o.id..")" end;if o.type=="coin" and o.kind=="fuel" then return "Fuel canister "..o.id end;return o.type=="prefab" and prefab.name(o.kind).." "..o.id or (o.type:sub(1,1):upper()..o.type:sub(2)).." "..o.id end
 
 -- A2 protection at the document boundary, including indirect connected-run edits. Visibility and
 -- unlocking remain available on locked objects; their source/name and incident connections are protected.
@@ -161,7 +162,7 @@ local function from_station(d,id,name)
         sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
     if require('main.terrain_perspective.profile').enabled(d) then e.road_profile=require('main.terrain_perspective.profile').ID end
     if require('main.terrain_perspective.look').authored(d) then e.road_profile='authored-v1';e.road_look=copy(d.editor.road_look) end
-    e.medal_times=copy(d.medal_times)
+    e.medal_times=copy(d.medal_times);e.fuel=copy(d.fuel)
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -217,9 +218,9 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel"}
 local function compiled(d)
-    local t={coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -268,7 +269,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -279,6 +280,9 @@ function M.validate(doc)
             return nil,"Unsupported sampling settings "..(type(s)=="table" and tostring(s.tolerance).."/"..tostring(s.max_segment) or "(missing)"),true
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
+    if e.fuel~=nil and e.editor_version<11 then return nil,'Fuel needs editor/compiler 11',true end
+    local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(e.fuel)
+    if not fuel_ok then return nil,fuel_err,fuel_unknown end
     if e.medal_times~=nil and e.editor_version<8 then return nil,'Medal targets require editor/compiler version 8',true end
     local medal_ok,medal_err,medal_unknown=require('main.gym.medals').validate(e.medal_times)
     if not medal_ok then return nil,medal_err,medal_unknown end
@@ -297,7 +301,11 @@ function M.validate(doc)
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
         if o.type=='coin' then
             if e.editor_version<9 then return nil,'Ordinary coins require editor/compiler version 9',true end
-            if o.kind~=nil and (e.editor_version<10 or o.kind~='gem') then return nil,'Unsupported pickup kind/version',true end
+            if o.kind~=nil and not (o.kind=='gem' and e.editor_version>=10 or o.kind=='fuel' and e.editor_version>=11) then return nil,'Unsupported pickup kind/version',true end
+            if o.kind=='fuel' then
+                if not e.fuel then return nil,'Canisters need fuel settings' end
+            end
+            if o.content~=nil then return nil,'Canister refill is configured once for the course',true end
             local cd=require 'main.gym.coin_data'
             if not point(o.position) or not cd.id(o.pickup_id) or pickups[o.pickup_id] then return nil,'Invalid/duplicate coin pickup ID: '..o.id end
             pickups[o.pickup_id]=true;coin_count=coin_count+1
@@ -663,7 +671,7 @@ function M.compile(doc,test,errors)
     for _,o in ipairs(e.objects) do
         local outline=M.outline(o)
         if outline then d.hulls[#d.hulls+1]={vertices=points(outline)}
-        elseif o.type=='coin' then d.coins=d.coins or {version=1,items={}};d.coins.items[#d.coins.items+1]={id=o.pickup_id,position=copy(o.position),kind=o.kind};if o.kind=='gem' then d.coins.version=2 end
+        elseif o.type=='coin' then d.coins=d.coins or {version=1,items={}};d.coins.items[#d.coins.items+1]={id=o.pickup_id,position=copy(o.position),kind=o.kind};if o.kind=='fuel' then d.coins.version=3 elseif o.kind=='gem' then d.coins.version=math.max(2,d.coins.version) end
         elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
     end
     if e.finish then
@@ -671,6 +679,7 @@ function M.compile(doc,test,errors)
         d.finish={position={f[1],f[2]},line={{f[1],f[2]-M.FINISH_BELOW},{f[1],f[2]+M.FINISH_ABOVE}},direction={e.finish.direction,0}}
     end
     if d.coins then d.schema=d.coins.version==2 and 3 or 2 end
+    d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version==3 then d.schema=4 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)

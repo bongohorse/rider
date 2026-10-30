@@ -130,7 +130,7 @@ const TOL=0.005,SEG=0.5;
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   await button('new');await page.waitForFunction(()=>window.riderEditor.id==='my-level-1');e=await saved();
-  let d=await doc();assert.equal(d.editor_version,10,'current document format');
+  let d=await doc();assert.equal(d.editor_version,11,'current document format');
   await frame();
   const zig=[[4,0],[8,3],[12,0],[16,3],[20,0],[24,3]];
   await key('d');let r=(await ed()).revision;for(const p of zig)await at(p);await key('Enter');e=await revision(r+1);
