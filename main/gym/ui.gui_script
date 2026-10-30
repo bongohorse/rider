@@ -381,6 +381,7 @@ function update(self,dt)
     self.compact=compact
     local open=mobile.enabled() and not compact or self.tuning_open
     if open~=self.panel_open then
+        if html5 then html5.run("document.body.classList.toggle('rider-tuning',"..tostring(open)..")") end
         if not open then cancel_drag(self) end
         self.panel_open=open
         for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open) end

@@ -3,7 +3,7 @@
  if (window.riderLevelMenu) return;
  const request=(action,id)=>{window.riderMobile?.clear();window.riderLevelsRequest={action,id};};
  const style=document.createElement('style');style.textContent=`
- #rider-levels[hidden],#rider-level-actions[hidden]{display:none!important}
+ body.rider-tuning #rider-level-actions,#rider-levels[hidden],#rider-level-actions[hidden]{display:none!important}
  #rider-levels{position:fixed;inset:0;z-index:1200;background:#07171f;color:#edf9f4;font:16px system-ui;overflow:auto;padding:24px max(18px,env(safe-area-inset-left));box-sizing:border-box;touch-action:pan-y}
  #rider-levels .level-heading{max-width:1000px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
  #rider-levels h1{font-size:26px;margin:6px 0}#rider-levels .level-status{max-width:1000px;margin:8px auto 20px;color:#9ec8c7}
