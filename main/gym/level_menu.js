@@ -38,7 +38,8 @@
     card.append(info);const play=document.createElement('button');play.textContent=c.unlocked?'Play '+c.name:'Locked';play.disabled=!c.unlocked||view.loading;play.onclick=()=>request('play',c.id);card.append(play);grid.append(card);
    }
   }
-  if(view.open&&!wasOpen){window.riderMobile?.clear();close.focus();}wasOpen=view.open;
+  if(view.open&&!wasOpen){window.riderMobile?.clear();close.focus();}
+  if(!view.open&&wasOpen)document.querySelector('canvas')?.focus();wasOpen=view.open;
  }};
  root.addEventListener('keydown',e=>{if(e.key==='Escape'){request('close');e.preventDefault();}if(e.key==='Tab'){const buttons=[...root.querySelectorAll('button:not(:disabled)')],first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}}});
 })();

@@ -19,6 +19,7 @@ files[a]={format=1,seq=1,text=json.encode({version=1,completed={['first-run']=tr
 for _,bad in ipairs({'bad',{}, {format=1,seq=2,text=json.encode({version=999,completed={}})}, {format=1,seq=2,text=json.encode({version=1,completed={['first-run']=false}})}})do
  files[b]=bad;local guarded=P.new();assert(guarded.blocked and guarded.completed['first-run']);assert(not P.offer(guarded,'rolling-hills',true));P.poll(guarded);assert(files[b]==bad)
 end
+state='syncing';local protected=P.new();assert(protected.blocked and not protected.checking,'protected storage must not leave the known catalogue in endless checking');state='saved'
 files={};p=P.new();P.poll(p);fail=true;assert(P.offer(p,'first-run',true));P.poll(p);assert(p.blocked and not p.completed['first-run'])
 files={};fail=false;state='syncing';p=P.new();P.poll(p);assert(p.checking);P.legacy(p,'first-run',{best=30,status='Checking storage'});assert(not p.desired['first-run']);state='saved';P.poll(p);assert(not p.checking)
 assert(not P.parse(json.encode({version=1,completed={},future=true})))

@@ -178,6 +178,7 @@ async function main(){
       await require('../gameplay/check_gem_release.cjs')(browser,url,sha,out);
       await require('../gameplay/check_fuel_release.cjs')(browser,url,sha,out);
       await require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels'));
+      await require('../gameplay/check_level_storage.cjs')(browser,url,sha,path.join(out,'level-storage'));
       await require('../gameplay/check_progress.cjs')(browser,url,sha,out);
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment'){

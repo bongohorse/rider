@@ -60,6 +60,6 @@ function M.update(self,dt)
     local medal=r.result and r.result.medal or 0
     local next_name,next_time=medals.next(self.station.medal_times,medal)
     msg.post('main:/loader#ui','run_state',{generation=self.session_generation,id=r.id,state=r.state,time=r.result and r.result.time or r.elapsed,
-        official=r.official,has_medals=self.station.medal_times~=nil,medal=medal,highest_medal=self.personal.medal or 0,next_medal=next_name,next_time=next_time,best=self.personal.best or 0,save=self.personal.status,new_best=r.new_best or false,reason=r.reason or '',practice=r.practice_reason or ''})
+        course_name=self.station.name,official=r.official,has_medals=self.station.medal_times~=nil,medal=medal,highest_medal=self.personal.medal or 0,next_medal=next_name,next_time=next_time,best=self.personal.best or 0,save=self.personal.status,new_best=r.new_best or false,reason=r.reason or '',practice=r.practice_reason or ''})
 end
 return M

@@ -37,7 +37,7 @@ function M.show(t,r,touch)
  for _,n in ipairs({t.levelnext,t.levelnext_label}) do gui.set_visible(n,done and v.next_enabled or false) end
  gui.set_text(t.retry_label,touch and "Retry" or "Retry [R]")
  if not r then return end
- local state=r.state=='ready' and 'Drive to start' or r.state=='paused' and 'Paused - Resume to drive' or r.state=='failed' and 'Attempt ended' or r.state=='finished' and 'Finished' or 'First run'
+ local state=r.state=='ready' and 'Drive to start' or r.state=='paused' and 'Paused - Resume to drive' or r.state=='failed' and 'Attempt ended' or r.state=='finished' and 'Finished' or r.course_name or 'Run'
  gui.set_text(t.clock,string.format('%s  %.2f s',state,r.time))
  local saved=r.save=='saved';local suffix=not saved and (' | '..r.save) or ''
  gui.set_text(t.best,(r.best>0 and string.format('Best %.2f s',r.best) or 'Best --')..(r.has_medals and (' | '..medals.names[(r.highest_medal or 0)+1]) or '')..(r.official and ' | Official' or ' | Practice')..suffix)

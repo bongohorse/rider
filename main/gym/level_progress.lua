@@ -26,7 +26,7 @@ function M.new()
   if not ok or exists and not valid then bad=true end
   if valid then for id in pairs(slot.doc.completed) do completed[id]=true end end
  end
- return {store=store,completed=completed,desired=copy(completed),blocked=bad or false,checking=custom.sync_state()~='saved',status=bad and 'Progress protected' or 'Checking progress storage'}
+ return {store=store,completed=completed,desired=copy(completed),blocked=bad or false,checking=not bad and custom.sync_state()~='saved',status=bad and 'Progress protected' or 'Checking progress storage'}
 end
 function M.offer(t,id,official)
  if not official or t.blocked or not catalog.unlocked(t.completed,id) or t.desired[id] then return false end

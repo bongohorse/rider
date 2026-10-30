@@ -37,7 +37,7 @@
     const run=window.riderRun;
     api.setRun?.(run);
     if(enabled&&run){
-      const label=run.state==='ready'?'Drive to start':run.state==='paused'?'Paused':run.state==='failed'?'Attempt ended':run.state==='finished'?'Finished':'First run';
+      const label=run.state==='ready'?'Drive to start':run.state==='paused'?'Paused':run.state==='failed'?'Attempt ended':run.state==='finished'?'Finished':run.course_name||'Run';
       hud.textContent=`${label} · ${run.time.toFixed(2)} s · Best ${run.best>0?run.best.toFixed(2)+' s':'--'} · ${run.official?'Official':'Practice'}${run.has_medals?' · Saved '+['None','Bronze','Silver','Gold'][run.highest_medal]:''}${run.save==='saved'?'':' · '+run.save}`;
     }else if(enabled&&data&&data.sequence!==lastSequence){
       lastSequence=data.sequence;
