@@ -1,0 +1,112 @@
+{
+  "schema": 5,
+  "units": "metres",
+  "id": "objects-demo",
+  "name": "Crate, plate and gate",
+  "spawn": [
+    2,
+    1.7
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    48,
+    -10,
+    20
+  ],
+  "chains": [
+    [
+      [
+        40,
+        0
+      ],
+      [
+        -6,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [
+    {
+      "position": [
+        7,
+        3.6
+      ],
+      "text": "Push the crate onto the plate"
+    },
+    {
+      "position": [
+        21,
+        8.5
+      ],
+      "text": "Gate pauses when its path is occupied"
+    }
+  ],
+  "checkpoints": [],
+  "finish": {
+    "position": [
+      34,
+      0
+    ],
+    "line": [
+      [
+        34,
+        -2
+      ],
+      [
+        34,
+        6
+      ]
+    ],
+    "direction": [
+      1,
+      0
+    ]
+  },
+  "mechanisms": {
+    "version": 1,
+    "crates": [
+      {
+        "id": "crate-a",
+        "position": [
+          6,
+          0.65
+        ]
+      }
+    ],
+    "plates": [
+      {
+        "id": "plate-a",
+        "position": [
+          10,
+          0.05
+        ],
+        "actors": [
+          "crate-a"
+        ]
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-a",
+        "position": [
+          16,
+          1.5
+        ],
+        "travel": 4.5,
+        "speed": 1.8
+      }
+    ],
+    "links": [
+      {
+        "from": "plate-a",
+        "event": "occupied",
+        "to": "gate-a",
+        "action": "open"
+      }
+    ]
+  }
+}

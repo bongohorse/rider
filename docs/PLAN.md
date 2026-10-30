@@ -26,6 +26,8 @@ Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built
 
 ## Roadmap
 
+**Product priority (Claudio, 2026-10-30):** after accepted gameplay G7, build the bounded interactive-object slice (#280 runtime, then #281 editor authoring, with existing per-task acceptance stops), then start graphics and atmosphere under #121. Defer the playable introduction until mechanics, content and their adjustments have settled near the end. This is not implementation GO for the full object catalogue or the entire graphics epic; scope each following task from accepted results.
+
 | Milestone | Goal | Issues |
 | --- | --- | --- |
 | M1 – It drives | Gym, buggy, in-world reset, HTML5 preview | [#16](https://github.com/bongohorse/rider/issues/16)–[#19](https://github.com/bongohorse/rider/issues/19) |

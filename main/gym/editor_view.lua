@@ -100,6 +100,8 @@ function M.build(self)
     v.mesh.resource_serial=self.mesh_serial or 0
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
+    local mechanism_preview=require('main.gym.mechanisms').preview(editor.doc.editor.mechanisms)
+    lines.count(v,mechanism_preview,false)
     v.start=lines.start_marker(v,editor.doc.editor.start.position)
     M.refresh(self,true)
 end

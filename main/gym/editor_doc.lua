@@ -15,7 +15,8 @@ local sample=require "main.gym.editor_sample"
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
 -- Version 10 adds optional gem kinds to existing coin objects; compiled gems require schema 3.
 -- Version 11 adds course-wide fuel rules and shared-refill canisters; compiled fuel uses schema 4.
-local M={EDITOR_VERSION=11,COMPILER_VERSION=11}
+-- Version 12 preserves validated O1 mechanism data read-only through source, compilation and storage.
+local M={EDITOR_VERSION=12,COMPILER_VERSION=12}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -162,7 +163,7 @@ local function from_station(d,id,name)
         sampling=copy(M.SAMPLING),start={position={d.spawn[1],d.spawn[2]},speed=d.start_speed or 0}}
     if require('main.terrain_perspective.profile').enabled(d) then e.road_profile=require('main.terrain_perspective.profile').ID end
     if require('main.terrain_perspective.look').authored(d) then e.road_profile='authored-v1';e.road_look=copy(d.editor.road_look) end
-    e.medal_times=copy(d.medal_times);e.fuel=copy(d.fuel)
+    e.medal_times=copy(d.medal_times);e.fuel=copy(d.fuel);e.mechanisms=copy(d.mechanisms)
     for _,chain in ipairs(d.chains or {}) do
         -- Logical order runs left to right ("downstream" = right, LE3); the compiler orients chains.
         local list=points(chain)
@@ -218,9 +219,9 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms"}
 local function compiled(d)
-    local t={fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={mechanisms=d.mechanisms,fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -269,7 +270,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -280,6 +281,9 @@ function M.validate(doc)
             return nil,"Unsupported sampling settings "..(type(s)=="table" and tostring(s.tolerance).."/"..tostring(s.max_segment) or "(missing)"),true
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
+    if e.mechanisms~=nil and e.editor_version<12 then return nil,'Mechanisms need editor/compiler 12',true end
+    local mech_ok,mech_err,mech_unknown=require('main.gym.mechanism_data').validate(e.mechanisms)
+    if not mech_ok then return nil,mech_err,mech_unknown end
     if e.fuel~=nil and e.editor_version<11 then return nil,'Fuel needs editor/compiler 11',true end
     local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(e.fuel)
     if not fuel_ok then return nil,fuel_err,fuel_unknown end
@@ -601,6 +605,10 @@ end
 -- Clearance for the complete upright vehicle (R10): no terrain edge in its box, not inside a hull.
 function M.blocked(e,p)
     local box={p[1]+M.VEHICLE[1],p[1]+M.VEHICLE[2],p[2]+M.VEHICLE[3],p[2]+M.VEHICLE[4]}
+    for _,kind in ipairs({'crates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do
+        local w,h=kind=='crates' and .6 or .3,kind=='crates' and .6 or 1.5
+        if o.position[1]+w>box[1] and o.position[1]-w<box[2] and o.position[2]+h>box[3] and o.position[2]-h<box[4] then return {type=kind=='crates' and 'crate' or 'gate',id=o.id} end
+    end end
     local hit
     each_segment(e,function(a,b,o) if not hit and segment_box(a,b,box) then hit=o end end)
     if hit then return hit end
@@ -629,6 +637,7 @@ local function extent(e)
     -- Both ends of every edge: an open line's last point is no edge's start.
     each_segment(e,function(a,b) add(a[1],a[2]);add(b[1],b[2]) end)
     for _,o in ipairs(e.objects) do if o.type=='label' or o.type=='coin' then add(o.position[1],o.position[2]);if o.type=='coin' then local r=require('main.gym.coin_data').radius(o);add(o.position[1]-r,o.position[2]-r);add(o.position[1]+r,o.position[2]+r) end end end
+    for _,r in ipairs(require('main.gym.mechanism_data').extents(e.mechanisms)) do add(r[1],r[3]);add(r[2],r[4]) end
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
     if e.finish then local f=e.finish.position;add(f[1],f[2]-M.FINISH_BELOW);add(f[1],f[2]+M.FINISH_ABOVE) end
@@ -680,6 +689,7 @@ function M.compile(doc,test,errors)
     end
     if d.coins then d.schema=d.coins.version==2 and 3 or 2 end
     d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version==3 then d.schema=4 end
+    d.mechanisms=copy(e.mechanisms);if d.mechanisms then d.schema=5 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)
