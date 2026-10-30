@@ -1,7 +1,9 @@
 local fuel=require 'main.gym.fuel'
 local M={}
 function M.reset(self)
-    self.fuel=fuel.new(self.station and self.station.fuel);self.fuel_step=nil;self.fuel_publish=nil
+    self.fuel=fuel.new(self.station and self.station.fuel);self.fuel_attempt=(self.fuel_attempt or 0)+1
+    if self.fuel and not self.race and (self.station.start_speed or 0)~=0 then self.fuel.started=true end
+    self.fuel_step=nil;self.fuel_publish=nil
 end
 function M.observe(self)
     local t=self.fuel
@@ -16,7 +18,7 @@ function M.command(self,cmd,dt)
 end
 function M.update(self)
     local t=self.fuel;if not t then return end
-    local d=t and {generation=self.session_generation,amount=t.amount,start=t.config.start,time=t.config.time,drive=t.config.drive,warning=t.config.warning,
+    local d=t and {generation=self.session_generation,attempt=self.fuel_attempt,amount=t.amount,start=t.config.start,time=t.config.time,drive=t.config.drive,warning=t.config.warning,refill=t.config.refill,
         collected=t.collected,feedback=t.feedback,empty=t.amount<=0,low=t.amount<=t.config.warning,text=fuel.label(t),power=t.power} or {generation=self.session_generation,disabled=true}
     local encoded=json.encode(d)
     if encoded~=self.fuel_publish then self.fuel_publish=encoded;msg.post('main:/loader#ui','fuel_state',d) end

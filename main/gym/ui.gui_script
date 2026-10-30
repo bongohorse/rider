@@ -169,7 +169,10 @@ end
 function on_message(self,id,data,sender)
     if id==hash('fuel_state') then
         if data.generation<(self.session_generation or 1) then return end
-        if self.fuel_data and data.collected>self.fuel_data.collected then self.fuel_flash=.8;self.fuel_gain=data.feedback end
+        local old=self.fuel_data
+        if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        if not old or old.generation~=data.generation or old.attempt~=data.attempt then self.fuel_flash=0
+        elseif data.collected>old.collected then self.fuel_flash=.8;self.fuel_gain=data.feedback end
         self.fuel_data=data;return
     end
     if id==hash('coin_state') then
