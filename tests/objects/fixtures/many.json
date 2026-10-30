@@ -1,0 +1,171 @@
+{
+  "schema": 5,
+  "units": "metres",
+  "id": "objects-many",
+  "name": "Two plates three gates",
+  "spawn": [
+    2,
+    1.7
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    82,
+    -10,
+    20
+  ],
+  "chains": [
+    [
+      [
+        74,
+        0
+      ],
+      [
+        -6,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [
+    {
+      "position": [
+        7,
+        3.6
+      ],
+      "text": "Push the crate onto the plate"
+    },
+    {
+      "position": [
+        21,
+        8.5
+      ],
+      "text": "Gate pauses when its path is occupied"
+    }
+  ],
+  "checkpoints": [],
+  "finish": {
+    "position": [
+      64,
+      0
+    ],
+    "line": [
+      [
+        64,
+        -2
+      ],
+      [
+        64,
+        6
+      ]
+    ],
+    "direction": [
+      1,
+      0
+    ]
+  },
+  "mechanisms": {
+    "version": 1,
+    "crates": [
+      {
+        "id": "crate-a",
+        "position": [
+          4.5,
+          0.65
+        ]
+      }
+    ],
+    "plates": [
+      {
+        "id": "plate-a",
+        "position": [
+          10,
+          -0.05
+        ],
+        "actors": [
+          "crate-a"
+        ],
+        "width": 8,
+        "mode": "hold"
+      },
+      {
+        "id": "plate-b",
+        "position": [
+          12,
+          -0.05
+        ],
+        "actors": [
+          "vehicle"
+        ],
+        "width": 8,
+        "mode": "hold"
+      }
+    ],
+    "gates": [
+      {
+        "id": "gate-a",
+        "position": [
+          30,
+          1.5
+        ],
+        "travel": 4.5,
+        "speed": 1.8,
+        "condition": "any"
+      },
+      {
+        "id": "gate-b",
+        "position": [
+          36,
+          1.5
+        ],
+        "travel": 4.5,
+        "speed": 1.8,
+        "condition": "all"
+      },
+      {
+        "id": "gate-c",
+        "position": [
+          42,
+          1.5
+        ],
+        "travel": 4.5,
+        "speed": 1.8,
+        "condition": "any"
+      }
+    ],
+    "links": [
+      {
+        "from": "plate-a",
+        "event": "active",
+        "to": "gate-a",
+        "action": "open"
+      },
+      {
+        "from": "plate-b",
+        "event": "active",
+        "to": "gate-a",
+        "action": "open"
+      },
+      {
+        "from": "plate-a",
+        "event": "active",
+        "to": "gate-b",
+        "action": "open"
+      },
+      {
+        "from": "plate-b",
+        "event": "active",
+        "to": "gate-b",
+        "action": "open"
+      },
+      {
+        "from": "plate-b",
+        "event": "active",
+        "to": "gate-c",
+        "action": "open"
+      }
+    ]
+  }
+}

@@ -97,7 +97,7 @@ local function overlaps(s,sensor)
  end
  return found
 end
-function M.stop(s) for _,o in ipairs(s.gates) do b2d.joint.set_motor_speed(o.joint,0) end end
+function M.stop(s) for _,o in ipairs(s.gates) do b2d.joint.set_motor_speed(o.joint,0);local r=s.logic.gates[o.spec.id];if r.speed~=0 then r.state='stopped' end;r.speed=0 end end
 function M.fixed(s,dt,active)
  if not active then M.stop(s);return end
  if s.skip>0 then s.skip=s.skip-1;return end

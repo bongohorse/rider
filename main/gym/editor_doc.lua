@@ -186,6 +186,7 @@ function M.template(d)
     if #name>64 then name=d.name:sub(1,59).." copy" end
     local note=d.seesaw and "Template copy without the seesaw: it is a dynamic station object that the editor cannot hold yet. Drive it in the station itself."
     if require("main.terrain_perspective.look").authored(d) then return {schema=1,units="metres",id="my-"..d.id,name=name,editor=copy(d.editor)},note end
+    if d.mechanisms then note=(note and note..' ' or '')..'Mechanisms are preserved read-only in this runtime preview.' end
     return from_station(d,"my-"..d.id,name),note
 end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
@@ -203,7 +204,7 @@ end
 -- * an unsupported or invalid block: never recompiled; the compiled geometry opens as an editable line
 --   copy with a note. The file and its unknown data stay unchanged.
 function M.open_level(d)
-    if d.editor==nil then return from_station(d,d.id,d.name) end
+    if d.editor==nil then return from_station(d,d.id,d.name),d.mechanisms and 'Mechanisms are preserved read-only in this runtime preview.' or nil end
     local doc={schema=1,units="metres",id=d.id,name=d.name,editor=copy(d.editor)}
     local ok,err,unsupported=M.validate(doc)
     if not ok then
@@ -605,9 +606,10 @@ end
 -- Clearance for the complete upright vehicle (R10): no terrain edge in its box, not inside a hull.
 function M.blocked(e,p)
     local box={p[1]+M.VEHICLE[1],p[1]+M.VEHICLE[2],p[2]+M.VEHICLE[3],p[2]+M.VEHICLE[4]}
-    for _,kind in ipairs({'crates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do
-        local w,h=kind=='crates' and .6 or .3,kind=='crates' and .6 or 1.5
-        if o.position[1]+w>box[1] and o.position[1]-w<box[2] and o.position[2]+h>box[3] and o.position[2]-h<box[4] then return {type=kind=='crates' and 'crate' or 'gate',id=o.id} end
+    for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do
+        local w,h=kind=='crates' and (o.angle and .85 or .6) or kind=='plates' and (o.width or 3)/2 or .3,kind=='crates' and (o.angle and .85 or .6) or kind=='plates' and .05 or 1.5
+        local y=o.position[2]+(kind=='gates' and o.initial_open and o.travel or 0)
+        if o.position[1]+w>box[1] and o.position[1]-w<box[2] and y+h>box[3] and y-h<box[4] then return {type=kind=='crates' and 'crate' or kind=='plates' and 'plate' or 'gate',id=o.id} end
     end end
     local hit
     each_segment(e,function(a,b,o) if not hit and segment_box(a,b,box) then hit=o end end)
