@@ -24,7 +24,7 @@ All selection commands use the existing loader unload/load/configure path and cl
 
 ## Verification and stop
 
-Evidence with exact runtime heads, checks and limitations is tracked in STATUS.md and the linked PR. Production tests cover completion acknowledgement, sequential admission, duplicates/practice, legacy adoption, reopen and protected/failing storage. Ordinary release tests drive the three-course chain, read the menu, reopen progress and select courses through actual UI; touch emulation uses Chromium touch input and is not physical-device evidence. Existing gameplay/editor/physics checks remain required.
+Evidence with exact runtime heads, checks and limitations is tracked in STATUS.md and [PR #321](https://github.com/bongohorse/rider/pull/321). Production tests cover completion acknowledgement, sequential admission, duplicates/practice, legacy adoption, reopen and protected/failing storage. Ordinary release tests drive the three-course chain, read the menu, reopen progress and select courses through actual UI; touch emulation uses Chromium touch input and is not physical-device evidence. Existing gameplay/editor/physics checks remain required.
 
 No new Defold API or physics ownership mechanism is introduced. Reuse the pinned 1.14.0 proxy time-step/input acknowledgement described in the [physics contract](contracts/physics.md#pause-slow-motion-and-live-tuning), alternating sys.save/sys.load slots and the current GUI layout/picking/line helpers. Existing engine/API references are in [engine references](ENGINE_REFERENCES.md). No new dependency, pool or tick owner.
 
