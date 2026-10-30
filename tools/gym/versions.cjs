@@ -153,6 +153,12 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   for(let i=namedCount;i<10;i++){const r=await request({op:'add',named:true,name:'Named '+i});assert.equal(r.ok,true,r.error);await idle();}
   const full=await request({op:'add',named:true,name:'Eleventh'});assert.equal(full.ok,false);assert.match(full.error,/10 named/);
   // Independent keys represent other saved levels; global pruning may remove only automatic entries.
+  // This phase stresses storage, not fill rate. Keep every real write/ack and cap assertion,
+  // using the already-supported narrow viewport on software-rendered CI hosts. Restore the
+  // desktop viewport before ordinary controls/deletion and the unchanged layout matrix.
+  const capacityView=page.viewportSize(),capacitySource=shape(await doc()),capacityRevision=(await ed()).revision;
+  await page.setViewportSize({width:844,height:390});await pointer.frames(page);
+  measurements.capacityViewport={width:844,height:390};
   for(let i=0;i<35;i++){
    if(i%10===0)console.log('global cap auto '+i+' '+JSON.stringify({requestMs:measurements.longestRequestMs,waitMs:measurements.longestVersionWaitMs}));
    // The first full-cap admission must handle many tiny old versions within the same 30 s bound,
@@ -167,6 +173,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   let refusal;
   for(let i=0;i<40;i++){if(i%10===0)console.log('global cap named '+i+' '+JSON.stringify({requestMs:measurements.longestRequestMs,waitMs:measurements.longestVersionWaitMs}));const r=await request({op:'add',key:200+i,named:true,name:'Large named '+i,pad:240000});if(!r.ok){refusal=r;break;}await idle();}
   assert.ok(refusal);assert.match(refusal.error,/full|16 MiB/);report=await request({op:'measure'});assert.ok(report.bytes<=16*1024*1024);measurements.namedCapBytes=report.bytes;
+  await page.setViewportSize(capacityView);await pointer.frames(page);
+  assert.equal(shape(await doc()),capacitySource,'capacity-phase resizing must preserve authored source');
+  assert.equal((await ed()).revision,capacityRevision,'capacity-phase resizing must be view-only');
   // The normal level can still autosave while the history is full.
   await request({op:'clock',seconds:301});
   await button('rename');await page.keyboard.type('Level saves at cap',{delay:60});await key('Enter');await saved();assert.equal((await ed()).name,'Level saves at cap');
