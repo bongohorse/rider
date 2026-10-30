@@ -14,6 +14,7 @@
  #rider-levels button,#rider-level-actions button{font:600 15px system-ui;min-height:44px;padding:10px 18px;border:1px solid #65bfa7;border-radius:9px;background:#235b50;color:#fff;cursor:pointer}
  #rider-levels article button{margin:0 16px 16px}#rider-levels button:disabled,#rider-level-actions button:disabled{background:#263d43;border-color:#46616a;color:#abc2c8;cursor:default}
  #rider-level-actions{position:fixed;right:12px;bottom:60px;z-index:450;display:flex;gap:8px}
+ #rider-level-actions.touch-driving{bottom:calc(clamp(64px,18vh,100px) + max(8px,env(safe-area-inset-bottom)) + 12px)}
  @media(max-width:650px){#rider-levels .level-grid{grid-template-columns:1fr}#rider-levels{padding-top:12px}#rider-levels h1{font-size:22px}#rider-levels svg{height:80px}#rider-level-actions{bottom:150px;right:8px}#rider-level-actions button{font-size:13px;padding:8px 12px}}
  `;document.head.append(style);
  const root=document.createElement('section');root.id='rider-levels';root.hidden=true;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','Choose a level');
@@ -23,6 +24,7 @@
  const actions=document.createElement('div');actions.id='rider-level-actions';const open=document.createElement('button');open.textContent='Levels';open.onclick=()=>request('open');const next=document.createElement('button');next.textContent='Next Level';next.hidden=true;next.onclick=()=>request('next');actions.append(open,next);document.body.append(root,actions);
  let signature='',wasOpen=false;
  const api=window.riderLevelMenu={render(view){
+  actions.classList.toggle('touch-driving',!!window.riderMobile?.enabled);
   root.hidden=!view.open;actions.hidden=view.open||view.loading||!!window.riderEditing;
   next.hidden=!view.next_enabled;status.textContent=view.status==='saved'?'Finish a level to unlock the next. Medals and Wonder Gems are optional.':view.status;
   const key=JSON.stringify([view.courses,view.loading]);
