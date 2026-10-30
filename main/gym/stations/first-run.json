@@ -1360,14 +1360,14 @@
     "checkpoints": {},
     "editor": {
         "compiled_revision": 1,
-        "compiler_version": 10,
+        "compiler_version": 11,
         "connections": [
             {
                 "from": "o2",
                 "to": "o1"
             }
         ],
-        "editor_version": 10,
+        "editor_version": 11,
         "finish": {
             "direction": 1,
             "position": [
@@ -1375,7 +1375,7 @@
                 1.5
             ]
         },
-        "next_id": 14,
+        "next_id": 16,
         "objects": [
             {
                 "anchors": [
@@ -1589,6 +1589,26 @@
                     120,
                     3.762921383236008
                 ]
+            },
+            {
+                "id": "o14",
+                "type": "coin",
+                "kind": "fuel",
+                "pickup_id": "fuel-first-1",
+                "position": [
+                    50,
+                    2.2775516586418734
+                ]
+            },
+            {
+                "id": "o15",
+                "type": "coin",
+                "kind": "fuel",
+                "pickup_id": "fuel-first-2",
+                "position": [
+                    110,
+                    3.207941864703905
+                ]
             }
         ],
         "revision": 1,
@@ -1609,6 +1629,15 @@
             "gold": 26,
             "silver": 30,
             "bronze": 40
+        },
+        "fuel": {
+            "version": 1,
+            "enabled": true,
+            "start": 60,
+            "time": 1,
+            "drive": 2,
+            "warning": 20,
+            "refill": 35
         }
     },
     "finish": {
@@ -1637,7 +1666,7 @@
     "name": "First run",
     "run_in": 0,
     "run_out": 0,
-    "schema": 3,
+    "schema": 4,
     "spawn": [
         2,
         1.7
@@ -1650,9 +1679,9 @@
         "silver": 30,
         "bronze": 40
     },
-    "race_revision": 1,
+    "race_revision": 2,
     "coins": {
-        "version": 2,
+        "version": 3,
         "items": [
             {
                 "id": "coin-o3",
@@ -1732,7 +1761,32 @@
                     120,
                     3.762921383236008
                 ]
+            },
+            {
+                "id": "fuel-first-1",
+                "kind": "fuel",
+                "position": [
+                    50,
+                    2.2775516586418734
+                ]
+            },
+            {
+                "id": "fuel-first-2",
+                "kind": "fuel",
+                "position": [
+                    110,
+                    3.207941864703905
+                ]
             }
         ]
+    },
+    "fuel": {
+        "version": 1,
+        "enabled": true,
+        "start": 60,
+        "time": 1,
+        "drive": 2,
+        "warning": 20,
+        "refill": 35
     }
 }

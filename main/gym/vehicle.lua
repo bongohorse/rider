@@ -94,15 +94,16 @@ function M.apply(v,command,dt)
         v.applied_hz,v.applied_damping=c.spring_hz,c.damping
     end
     local brake = command.brake_reverse > 0
-    local drive = command.throttle > 0 and not brake
+    local drive = command.throttle > 0 and not brake and not command.fuel_empty
     local speed=b2d.body.get_linear_velocity(v.chassis).x
-    if brake and command.allow_reverse then
+    if brake and command.allow_reverse and not command.fuel_empty then
         if not v.reversing and math.abs(speed)<c.reverse_threshold then
             v.reverse_time=(v.reverse_time or 0)+dt
             v.reversing=v.reverse_time>=c.reverse_delay
         end
     else v.reverse_time,v.reversing=0,false end
-    local reverse=brake and command.allow_reverse and v.reversing
+    local reverse=brake and command.allow_reverse and v.reversing and not command.fuel_empty
+    v.powered_input=drive and command.throttle or reverse and command.brake_reverse or 0
     local grounded=false
     for _,wheel in ipairs(v.wheels) do
         if #b2d.body.get_contact_data(wheel)>0 then grounded=true end

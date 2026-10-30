@@ -36,6 +36,8 @@ end
 function M.key(station)
     if not station or station.custom or not station.finish then return nil end
     local rev=station.race_revision or 1
-    return station.id..'-course'..rev..'-rules1-buggy-a-crash'
+    local key=station.id..'-course'..rev..'-rules1-buggy-a-crash'
+    if station.fuel and station.fuel.enabled then local f=station.fuel;key=key..string.format('-fuel-%.17g-%.17g-%.17g-%.17g',f.start,f.time,f.drive,f.refill) end
+    return key
 end
 return M

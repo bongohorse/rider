@@ -95,7 +95,7 @@ function M.preview(d,c,ids)
     for _,o in ipairs(e.objects) do if o.type=='coin' then
         totalcoins=totalcoins+1
         local b=R.bind(e,o,scope.routes)
-        if o.kind~='gem' and c.replace and not o.locked and in_scope(scope,b) then remove[o.id]=true;removed=removed+1 else old[#old+1]=o.position end
+        if o.kind==nil and c.replace and not o.locked and in_scope(scope,b) then remove[o.id]=true;removed=removed+1 else old[#old+1]=o.position end
     end end
     local cap=math.max(0,math.min(desired,128-totalcoins+removed,D.MAX_OBJECTS-#e.objects+removed))
     -- At most 128 cells x 9 probes, regardless of requested count or track length.

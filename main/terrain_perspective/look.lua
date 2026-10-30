@@ -15,7 +15,7 @@ function M.has_sections(d)
 end
 function M.validate(e)
  if e.road_profile~=M.ID then return true end
- if (e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10) or e.compiler_version~=e.editor_version then return nil,'Authored Terrain Look requires supported editor/compiler version 7, 8, 9 or 10 source; keep the original file.',true end
+ if (e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11) or e.compiler_version~=e.editor_version then return nil,'Authored Terrain Look requires supported editor/compiler version 7, 8, 9, 10 or 11 source; keep the original file.',true end
  local l=e.road_look
  if type(l)~='table' or l.version~=1 then return nil,'Unsupported Terrain Look version; keep the original file.',true end
  for k in pairs(l) do if k~='version' and k~='params' then return nil,'Unsupported Terrain Look field '..tostring(k),true end end

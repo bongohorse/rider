@@ -167,6 +167,11 @@ local function toggle_help(self)
 
 end
 function on_message(self,id,data,sender)
+    if id==hash('fuel_state') then
+        if data.generation<(self.session_generation or 1) then return end
+        if self.fuel_data and data.collected>self.fuel_data.collected then self.fuel_flash=.8;self.fuel_gain=data.feedback end
+        self.fuel_data=data;return
+    end
     if id==hash('coin_state') then
         if data.generation<(self.session_generation or 1) then return end
         local old=self.coin_data
@@ -187,7 +192,7 @@ function on_message(self,id,data,sender)
         run_ui.show(self.run_ui,data,mobile.enabled())
         if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
         return
-    elseif id==hash("station_loading") then self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
+    elseif id==hash("station_loading") then self.fuel_data=nil;self.fuel_flash=0;self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
         self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
@@ -348,6 +353,12 @@ function update(self,dt)
         gui.set_visible(self.station_next,false);gui.set_visible(self.station_next_label,false)
         local terminal=self.run_ui.data.state=='finished' or self.run_ui.data.state=='failed'
         if terminal then gui.set_visible(self.time_buttons.pause.box,false);gui.set_visible(self.time_buttons.pause.label,false) end
+    end
+    self.fuel_flash=math.max(0,(self.fuel_flash or 0)-dt)
+    run_ui.show_fuel(self.run_ui,self.fuel_data,enabled,self.fuel_flash>0 and self.fuel_gain or nil)
+    if html5 then
+        local d=self.fuel_data;local encoded=json.encode(d)
+        if self.fuel_published~=encoded then self.fuel_published=encoded;html5.run('window.riderFuel='..encoded) end
     end
     self.coin_flash=math.max(0,(self.coin_flash or 0)-dt)
     run_ui.show_coins(self.run_ui,self.coin_data,self.coin_bank_data,enabled,self.coin_flash>0 and (self.coin_flash_amount or 1) or false)

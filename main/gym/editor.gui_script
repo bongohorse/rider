@@ -1151,6 +1151,15 @@ local function confirm_name(self,closing)
         end
         set_zoom(self,z);self.field=nil;editor.message='';return
     end
+    if self.field.fuel then
+        local f=self.field;local policy=require 'main.gym.fuel';local n,err=policy.value(f.fuel,f.text)
+        if not n then f.error=err;editor.message=err;if closing then remember_error(self,'fuel_'..f.fuel,err);self.field=nil end;return end
+        self.field=nil;self.ui_error=nil
+        editor.commit(function(e)
+            e.fuel=e.fuel or policy.defaults();e.fuel[f.fuel]=n
+        end)
+        return
+    end
     if self.field.medal then
         local f=self.field
         local times,err=require('main.gym.medals').set(editor.doc.editor.medal_times,f.medal,f.text)
@@ -1383,6 +1392,13 @@ local function step_focused(self,name)
     end
     local which=(name=="inc_speed" or name=="dec_speed") and "start" or
         (name=="inc_test_speed" or name=="dec_test_speed" or name=="plus" or name=="minus") and "test"
+    local fk=name:match('^[di][en]c_fuel_(%a+)$')
+    if fk and f.fuel==fk then
+        local policy=require 'main.gym.fuel';local n,err=policy.value(fk,f.text)
+        if not n then f.error=err;return true end
+        local step=policy.fields[fk][3]*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        f.text=number_text(n+(name:sub(1,1)=='d' and -step or step));confirm_name(self);return true
+    end
     local medal=name:match('^[di][en]c_medal_(%a+)$')
     if medal and f.medal==medal then
         local value=tonumber(f.text)
@@ -1456,8 +1472,18 @@ local function on_button(self,name)
         editor.commit(function(e) local o=edit.find(e,id);if o then if eye then o.hidden=not o.hidden else o.locked=not o.locked end end end,true)
         editor.vertex,editor.vertex2,editor.anchor,editor.points=nil,nil,nil,{};return
     end
-    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" or name=="collapse_gameplay" or name=="collapse_tool_category" then
+    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" or name=="collapse_fuel" or name=="collapse_gameplay" or name=="collapse_tool_category" then
         local key=name:sub(10);self.ui[key]=not self.ui[key];return
+    elseif name=='fuel_enabled' then
+        editor.commit(function(e) if not e.fuel then e.fuel=require('main.gym.fuel').defaults() else e.fuel.enabled=not e.fuel.enabled end end);return
+    elseif name:match('^fuel_') or name:match('^[di][en]c_fuel_') then
+        local key=name:match('fuel_(%a+)$');local policy=require 'main.gym.fuel';local c=editor.doc.editor.fuel or policy.defaults()
+        if not policy.fields[key] then return end
+        local value=c[key]
+        local sign=name:match('^dec_') and -1 or name:match('^inc_') and 1 or 0
+        local step=policy.fields[key][3]*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        self.ui.reveal='fuel_'..key;self.field={fuel=key,text=number_text(value+sign*step),all=true}
+        if sign~=0 then confirm_name(self) end;return
     elseif name:match('^medal_') then
         local key=name:sub(7);local times=editor.doc.editor.medal_times or require('main.gym.medals').defaults()
         self.ui.reveal=name;self.field={medal=key,text=number_text(times[key]),all=true};return
@@ -1615,7 +1641,7 @@ local function offered_buttons(self)
         if page>0 then list[#list+1]="warn_prev" end
         if (page+1)*WARN_ROWS<#rows then list[#list+1]="warn_next" end
     end
-    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","warnings"}) do list[#list+1]=name end
+    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","tool_fuel","warnings"}) do list[#list+1]=name end
     for _,v in ipairs(VIEW) do list[#list+1]=v[1] end
     if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
@@ -1818,10 +1844,11 @@ local function canvas_press(self,action)
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
-    if editor.tool=='coin' or editor.tool=='gem' then
+    if editor.tool=='coin' or editor.tool=='gem' or editor.tool=='fuel' then
         local q=snap(self,p);local id
         if editor.commit(function(e)
-            id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',kind=editor.tool=='gem' and 'gem' or nil,pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
+            if editor.tool=='fuel' and not e.fuel then e.fuel=require('main.gym.fuel').defaults() end
+            id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',kind=editor.tool~='coin' and editor.tool or nil,pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
         end,true) then editor.select(id) end
         return
     end
@@ -2233,12 +2260,12 @@ function on_input(self,action_id,action)
         elseif action_id==hash("editor_text") and action.text then
             local t=action.text:gsub("[%z\1-\31\127]","")
             if f.all and t~="" then f.text,f.all="",false end
-            local limit=(f.param or f.speed or f.medal or f.zoom or f.track or f.along or f.auto) and 16 or 64
-            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.speed or f.zoom or f.track or f.along or f.auto) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+            local limit=(f.param or f.speed or f.medal or f.fuel or f.zoom or f.track or f.along or f.auto) and 16 or 64
+            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.fuel or f.speed or f.zoom or f.track or f.along or f.auto) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
         elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
             f.text=f.all and "" or drop_char(f.text);f.all=false
         elseif action_id==hash("editor_cycle") and action.pressed then
-            local old=f.param;local speed=f.speed;local medal=f.medal
+            local old=f.param;local speed=f.speed;local medal=f.medal;local fuel=f.fuel
             confirm_name(self)
             if not self.field then
                 local o=editor.selection and find(editor.selection)
@@ -2251,6 +2278,9 @@ function on_input(self,action_id,action)
                             if not list[next].choices then param_click(self,next);break end
                         end
                     end
+                elseif fuel then
+                    local order={'start','time','drive','warning','refill'};local i=1;for j,k in ipairs(order) do if k==fuel then i=j end end
+                    on_button(self,'fuel_'..order[(i-1+(self.held.shift and -1 or 1))%#order+1])
                 elseif medal then
                     local order={'gold','silver','bronze'};local i=medal=='gold' and 1 or medal=='silver' and 2 or 3
                     on_button(self,'medal_'..order[(i-1+(self.held.shift and -1 or 1))%3+1])
@@ -2444,7 +2474,7 @@ local function describe(self)
                 one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
         elseif o.type=='coin' then
-            lines={(o.kind=='gem' and 'Wonder Gem ' or 'Gold coin ')..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
+            lines={(o.kind=='fuel' and 'Fuel canister ' or o.kind=='gem' and 'Wonder Gem ' or 'Gold coin ')..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
         elseif o.type=="hull" then
             local b=empty_box()
             for _,q in ipairs(o.vertices) do grow(b,q[1],q[2]) end
@@ -2491,6 +2521,8 @@ local function describe(self)
         end
     elseif editor.tool=="prefab" then
         lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-7 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
+    elseif editor.tool=='fuel' then
+        lines={'Fuel canister','Click to place; all use the level refill value.','FUEL in Level Properties sets refill percentage points.','Collected even when full. Retry restores it.'}
     elseif editor.tool=='gem' then
         lines={'Wonder Gem','Click to place a purple Wonder Gem.','Each new gem is worth +1 on official finish.','Select [S] to move / copy / delete.','Retry restores pickups; practice is unbanked.'}
     elseif editor.tool=='coin' then
@@ -2908,16 +2940,17 @@ local function render_ui(self)
     end
     local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
         object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
-        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and not f.auto and f.text or editor.doc.name,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.fuel and not f.zoom and not f.track and not f.along and not f.auto and f.text or editor.doc.name,
         status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
+        fuel=e.fuel,fuel_field=f and f.fuel,fuel_text=f and f.fuel and f.text,fuel_error=f and f.fuel and f.error,
         medal_times=e.medal_times,medal_field=f and f.medal,medal_text=f and f.medal and f.text,medal_error=f and f.medal and f.error,
         description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
         readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
-        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.zoom and not f.track and not f.along and not f.auto and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.fuel and not f.zoom and not f.track and not f.along and not f.auto and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
         track_alignment=has_track,track_height=f and f.track and (f.all and f.text~='' and '['..f.text..']' or f.text..'_') or track_active and (tc.mixed and 'Mixed' or number_text(tc.height)) or number_text(self.track_height or track_align.DEFAULT),track_error=f and f.track and f.error,
         along_text=f and f.along and f.text..'_' or '0',along_error=f and f.along and f.error or tc and tc.error,
         zoom_text=f and f.zoom and f.text or zoom_policy.text(editor.camera.zoom),zoom_edit=f and f.zoom,zoom_error=f and f.zoom and f.error,
-        field=f and {key=f.auto and "auto_"..f.auto or f.along and "along_track" or f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        field=f and {key=f.fuel and "fuel_"..f.fuel or f.auto and "auto_"..f.auto or f.along and "along_track" or f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
         on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
         look=terrain_look.session,look_legacy=not require("main.terrain_perspective.profile").enabled({editor=e}),modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
         version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,

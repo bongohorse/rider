@@ -13,6 +13,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
 | Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
+| Fuel (#318) | [Configurable tank, shared refills and recovery](GAMEPLAY_G6_REPORT.md) |
 | Wonder Gems (#314) | [Multiple special pickups, finish banking and feedback](GAMEPLAY_G5_REPORT.md) |
 | Ordinary coins (#300) | [Authoring, collection and durable banking](GAMEPLAY_G4_REPORT.md) |
 | Medal times (#298) | [Scoring, authoring, revisions and checks](GAMEPLAY_G3_REPORT.md) |
@@ -59,6 +60,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/automation.md](contracts/automation.md) | Test CLI, runner protocol, release boundary | Interfaces · Test CLI and results · Engine/runner protocol · Release boundary |
 | [contracts/bridge.md](contracts/bridge.md) | Native Automation Bridge | Setup and commands · Tested behavior · Limits and license · Network boundary · Network test procedure |
 | [TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | #292 normal Play/Edit, legacy compatibility and evidence | Scope and settings · Compatibility · Verification · Resources and timings · Reproduction · Limits and stop point |
+| [GAMEPLAY_G6_REPORT.md](GAMEPLAY_G6_REPORT.md) | Configurable tank, shared refills, cutoff and recovery (#318) | Rules and authoring · Tick and vehicle boundary · Compatibility and records · Verification and stop |
 | [GAMEPLAY_G5_REPORT.md](GAMEPLAY_G5_REPORT.md) | Multiple special pickups, finish-only claims and bounded feedback (#314) | Behavior and authoring · Settlement and compatibility · Presentation and resources · Verification and stop |
 | [GAMEPLAY_G4_REPORT.md](GAMEPLAY_G4_REPORT.md) | #300 ordinary pickup authoring, per-attempt collection and finish-only banking | Behavior and authoring · Authority and banking · Resources and compatibility · Verification · Preview and engine evidence |
 | [GAMEPLAY_G3_REPORT.md](GAMEPLAY_G3_REPORT.md) | #298 authored target times, highest medal and next target | Behavior and authoring · Competition and revision policy · Verification · Preview and stop point · Engine evidence |

@@ -15,6 +15,11 @@ function M.new()
  t.medal=text(480,302,'',.8,'centre');t.next=text(480,272,'',.6,'centre')
  t.coinhud=text(480,415,'',.6,'top');t.coins=text(480,253,'',.52,'centre')
  gui.set_visible(t.coinhud,false);gui.set_visible(t.coins,false)
+ t.fueltext=text(480,355,'',.6,'top')
+ t.fuelbg=layout.box(vmath.vector3(480,340,0),vmath.vector3(200,6,0),'top')
+ t.fuelfill=layout.box(vmath.vector3(480,340,0),vmath.vector3(200,6,0),'top')
+ gui.set_color(t.fuelbg,vmath.vector4(.16,.23,.25,1))
+ for _,n in ipairs({t.fueltext,t.fuelbg,t.fuelfill}) do gui.set_visible(n,false) end
  t.retry=layout.box(vmath.vector3(480,222,0),vmath.vector3(190,32,0),'centre');gui.set_color(t.retry,vmath.vector4(.12,.4,.36,1))
  t.retry_label=text(480,222,'Retry [R]',.75,'centre')
  M.show(t,nil);return t
@@ -51,6 +56,17 @@ function M.show_coins(t,c,b,touch,flash)
   gui.set_text(t.coinhud,gui.get_text(t.coinhud)..' | '..gems)
   gui.set_text(t.coins,gui.get_text(t.coins)..'\n'..gems)
  end
+end
+function M.show_fuel(t,d,touch,gain)
+ local terminal=t.data and (t.data.state=='finished' or t.data.state=='failed')
+ local shown=d and not touch and not terminal or false
+ for _,n in ipairs({t.fueltext,t.fuelbg,t.fuelfill}) do gui.set_visible(n,shown) end
+ if not d then return end
+ local colour=d.low and vmath.vector4(1,.65,.25,1) or vmath.vector4(.35,.85,.65,1)
+ gui.set_color(t.fueltext,colour);gui.set_color(t.fuelfill,colour)
+ gui.set_text(t.fueltext,d.text..(gain and string.format(' | Refill +%.1f%%',gain) or ''))
+ local width=math.max(.01,200*d.amount/100)
+ layout.position(t.fuelfill,vmath.vector3(380+width/2,340,0));gui.set_size(t.fuelfill,vmath.vector3(width,6,0))
 end
 function M.geometry(t)
  local function point(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end

@@ -19,9 +19,15 @@ end
 -- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
-    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
-    if d.coins~=nil and d.schema~=2 and d.schema~=3 then return nil,"Ordinary coins require station schema 2",true end
-    if d.coins and d.coins.version==2 and d.schema~=3 then return nil,'Wonder Gems require station schema 3',true end
+    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
+    if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 then return nil,"Ordinary coins require station schema 2",true end
+    if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 then return nil,'Wonder Gems require station schema 3',true end
+    if d.fuel~=nil or d.coins and d.coins.version==3 then
+        if d.schema~=4 then return nil,'Fuel requires station schema 4',true end
+        if d.coins and d.coins.version==3 and not d.fuel then return nil,'Canisters require fuel settings' end
+    end
+    local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(d.fuel)
+    if not fuel_ok then return nil,fuel_err,fuel_unknown end
     local medals_ok,medals_err,medals_unknown=require('main.gym.medals').validate(d.medal_times)
     if not medals_ok then return nil,medals_err,medals_unknown end
     if d.race_revision~=nil and (type(d.race_revision)~='number' or d.race_revision<1 or d.race_revision>1000000 or d.race_revision%1~=0) then return nil,'Invalid race revision' end

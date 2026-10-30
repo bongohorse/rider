@@ -29,6 +29,7 @@ local ICONS={
  tool_prefab={{3,7,12,3},{12,3,21,7},{21,7,21,18},{21,18,12,22},{12,22,3,18},{3,18,3,7},{3,7,12,12},{12,12,21,7},{12,12,12,22}},
  tool_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
  tool_finish={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12},{10,3,10,12},{15,3,15,12},{5,7,20,7}},
+ tool_fuel={{6,4,16,4},{16,4,20,8},{20,8,20,22},{20,22,4,22},{4,22,4,8},{4,8,6,4},{7,12,17,12},{7,12,17,20},{17,12,7,20}},
  tool_gem={{12,1,22,10},{22,10,12,23},{12,23,2,10},{2,10,12,1},{2,10,22,10}},
  tool_coin={{12,2,19,5},{19,5,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,5},{5,5,12,2},{12,7,12,17}},
  tool_label={{3,5,21,5},{12,5,12,21},{7,21,17,21}},
@@ -195,7 +196,7 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_')
+        local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_') or name:match('^fuel_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
@@ -294,7 +295,7 @@ function M.render(u,d)
             local gy=gameplay_top-u.tool_scroll
             if shown(gy,32) then button('collapse_gameplay',28,gy,152,u.gameplay and 'GAMEPLAY  >' or 'GAMEPLAY  v',false,'Collapse or expand Gameplay') end
             if not u.gameplay then
-                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'}}) do
+                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'},{'fuel','Fuel'}}) do
                     local x,y=28+(i-1)%3*52,gameplay_top+40+math.floor((i-1)/3)*56-u.tool_scroll
                     if shown(y,52) then
                         button('tool_'..tool[1],x,y,48,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
@@ -436,6 +437,14 @@ function M.render(u,d)
             end
             if d.object_name~=nil then row('object_name','Object name','',d.object_name,d.object_name_error) end
             if d.level then row('rename','Name','',''..d.name,d.name_error);row('speed','START speed','m/s',d.speed,d.speed_error);row('test_speed','Test start speed','m/s',d.test_speed)
+                row('collapse_fuel',u.fuel and 'FUEL  v' or 'FUEL  >',nil,nil,nil,'Configure starting tank and additive time / powered-input consumption.')
+                if u.fuel then
+                    local c=d.fuel or require('main.gym.fuel').defaults()
+                    row('fuel_enabled',d.fuel and d.fuel.enabled and 'Fuel: ON' or 'Fuel: OFF',nil,nil,nil,'Enable / disable fuel for this course; keeps authored values.')
+                    for _,f in ipairs({{'start','Starting tank','%'},{'time','Time consumption','%/s'},{'drive','Powered consumption','%/s'},{'warning','Low warning','%'},{'refill','All canisters refill','%'}}) do
+                        row('fuel_'..f[1],f[2],f[3],d.fuel_field==f[1] and d.fuel_text or tostring(c[f[1]]),d.fuel_field==f[1] and d.fuel_error)
+                    end
+                end
                 row('collapse_medals',u.medals and 'MEDAL TARGETS  v' or 'MEDAL TARGETS  >',nil,nil,nil,'Edit Gold / Silver / Bronze. First edit enables 26 / 30 / 40 s defaults; editor starts remain practice.')
                 if u.medals then
                 for _,key in ipairs({'gold','silver','bronze'}) do
