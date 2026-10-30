@@ -29,6 +29,7 @@ local ICONS={
  tool_prefab={{3,7,12,3},{12,3,21,7},{21,7,21,18},{21,18,12,22},{12,22,3,18},{3,18,3,7},{3,7,12,12},{12,12,21,7},{12,12,12,22}},
  tool_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
  tool_finish={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12},{10,3,10,12},{15,3,15,12},{5,7,20,7}},
+ tool_gem={{12,1,22,10},{22,10,12,23},{12,23,2,10},{2,10,12,1},{2,10,22,10}},
  tool_coin={{12,2,19,5},{19,5,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,5},{5,5,12,2},{12,7,12,17}},
  tool_label={{3,5,21,5},{12,5,12,21},{7,21,17,21}},
  tool_pan={{3,12,21,12},{12,3,12,21},{3,12,7,8},{3,12,7,16},{21,12,17,8},{21,12,17,16},{12,3,8,7},{12,3,16,7},{12,21,8,17},{12,21,16,17}},
@@ -254,7 +255,7 @@ function M.render(u,d)
         button('play',commands+80,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
         local gameplay_top=152+(u.tool_category and 0 or 80)
-        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 64)
+        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 144)
         local objects_top=prefabs_top+40+(u.prefabs and 0 or math.ceil(#d.kinds/2)*56+8)
         local tools_end=u.tools and 160 or objects_top
         local object_rows=math.min(4,math.max(1,#d.objects))
@@ -293,13 +294,17 @@ function M.render(u,d)
             local gy=gameplay_top-u.tool_scroll
             if shown(gy,32) then button('collapse_gameplay',28,gy,152,u.gameplay and 'GAMEPLAY  >' or 'GAMEPLAY  v',false,'Collapse or expand Gameplay') end
             if not u.gameplay then
-                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'}}) do
-                    local x,y=28+(i-1)*52,gameplay_top+40-u.tool_scroll
+                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'}}) do
+                    local x,y=28+(i-1)%3*52,gameplay_top+40+math.floor((i-1)/3)*56-u.tool_scroll
                     if shown(y,52) then
                         button('tool_'..tool[1],x,y,48,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
                         text(x+4,y+44,tool[2],d.tool==tool[1] and C.active or C.secondary,12)
                     end
                 end
+            end
+            if not u.gameplay then
+                local cy=gameplay_top+160-u.tool_scroll
+                if shown(cy,20) then local gold,gems=require('main.gym.coin_data').counts(require('main.gym.editor').doc.editor.objects);text(28,cy,string.format('Gold %d  |  Gems %d',gold,gems),C.secondary,12) end
             end
             local py=prefabs_top-u.tool_scroll
             if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end

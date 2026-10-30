@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
-  <title>Rider ordinary coin</title>
-  <circle cx="25" cy="25" r="24" fill="#bb7d27"/>
-  <circle cx="25" cy="25" r="21" fill="#ffe09a"/>
-  <circle cx="25" cy="25" r="17" fill="#e8ac45"/>
-  <rect x="22" y="13" width="6" height="24" fill="#fff0bf"/>
+<title>Rider gold coin; original faceted pickup</title>
+<ellipse cx="25.0" cy="25.5" rx="22.0" ry="23.5" fill="#743b13"/>
+<ellipse cx="25.0" cy="23.5" rx="22.0" ry="22.5" fill="#e48a12"/>
+<ellipse cx="25.0" cy="22.5" rx="20.0" ry="20.5" fill="#fff09a"/>
+<ellipse cx="25.0" cy="23.5" rx="18.0" ry="18.5" fill="#ffca36"/>
+<ellipse cx="25.0" cy="23.5" rx="15.0" ry="15.5" fill="#d98a13"/>
+<ellipse cx="25.0" cy="23.0" rx="14.0" ry="14.0" fill="#ffdf58"/>
+<polygon points="25,12 34,23 30,23 30,33 20,33 20,23 16,23" fill="#b86b16"/>
+<polygon points="25,11 32,21 28,21 28,30 22,30 22,21 18,21" fill="#fff3ad"/>
+<polygon points="13,5 15,10 20,12 15,14 13,19 11,14 6,12 11,10" fill="#fffbe5"/>
 </svg>

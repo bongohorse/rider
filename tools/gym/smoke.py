@@ -126,7 +126,8 @@ if args.case=='ea2':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':
     report=json.loads((out/'polish-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==21
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==22
+    assert 'g5_multiple_gems_gold_counts_copy_undo_and_durable_roundtrip' in report['cases']
     assert 'g3_medal_fields_validation_undo_and_roundtrip' in report['cases']
     assert 'along_track_shared_arc_height_mixed_invalidation_and_reload' in report['cases']
     assert 'auto_coins_deterministic_preview_replace_exact_apply_undo_and_reload' in report['cases']

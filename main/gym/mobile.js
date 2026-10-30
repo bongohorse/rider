@@ -45,7 +45,7 @@
     }
     if(enabled&&coinHud){
       const c=window.riderCoins;coinHud.hidden=!c;
-      if(c)coinHud.textContent=`Coins ${c.count}/${c.total}${c.flash?' · +'+c.flash:''} · Bank ${c.bank}${c.practice?' · Practice':''}${c.save==='saved'?'':' · '+c.save}`;
+      if(c)coinHud.textContent=`Coins ${c.count}/${c.total}${c.flash?' · +'+c.flash:''} · Bank ${c.bank}${c.gem_total?' · Gems '+c.gems+'/'+c.gem_total+' · Earned '+c.gem_earned+'/'+c.gem_total+' · Gem bank '+c.gem_bank:''}${c.practice?' · Practice':''}${c.save==='saved'?'':' · '+c.save}`;
     }
     if(enabled&&progressNodes){
       const p=window.riderProgress,n=progressNodes;

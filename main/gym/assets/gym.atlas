@@ -19,3 +19,4 @@ animations {
 }
 
 images { image: "/main/gym/assets/coin.png" }
+images { image: "/main/gym/assets/wonder-gem.png" }

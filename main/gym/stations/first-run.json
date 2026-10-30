@@ -1360,14 +1360,14 @@
     "checkpoints": {},
     "editor": {
         "compiled_revision": 1,
-        "compiler_version": 9,
+        "compiler_version": 10,
         "connections": [
             {
                 "from": "o2",
                 "to": "o1"
             }
         ],
-        "editor_version": 9,
+        "editor_version": 10,
         "finish": {
             "direction": 1,
             "position": [
@@ -1375,7 +1375,7 @@
                 1.5
             ]
         },
-        "next_id": 12,
+        "next_id": 14,
         "objects": [
             {
                 "anchors": [
@@ -1569,6 +1569,26 @@
                     155,
                     1.001534038559036
                 ]
+            },
+            {
+                "id": "o12",
+                "type": "coin",
+                "kind": "gem",
+                "pickup_id": "gem-first-1",
+                "position": [
+                    60,
+                    1.3891426915693286
+                ]
+            },
+            {
+                "id": "o13",
+                "type": "coin",
+                "kind": "gem",
+                "pickup_id": "gem-first-2",
+                "position": [
+                    120,
+                    3.762921383236008
+                ]
             }
         ],
         "revision": 1,
@@ -1617,7 +1637,7 @@
     "name": "First run",
     "run_in": 0,
     "run_out": 0,
-    "schema": 2,
+    "schema": 3,
     "spawn": [
         2,
         1.7
@@ -1632,7 +1652,7 @@
     },
     "race_revision": 1,
     "coins": {
-        "version": 1,
+        "version": 2,
         "items": [
             {
                 "id": "coin-o3",
@@ -1695,6 +1715,22 @@
                 "position": [
                     155,
                     1.001534038559036
+                ]
+            },
+            {
+                "id": "gem-first-1",
+                "kind": "gem",
+                "position": [
+                    60,
+                    1.3891426915693286
+                ]
+            },
+            {
+                "id": "gem-first-2",
+                "kind": "gem",
+                "position": [
+                    120,
+                    3.762921383236008
                 ]
             }
         ]

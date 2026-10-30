@@ -217,9 +217,11 @@ end
 function update(self,dt)
     local bank=self.coin_bank
     require('main.gym.coin_bank').poll(bank,dt)
-    local coin_key=tostring(bank.total)..'|'..bank.status
+    local coin_key=tostring(bank.total)..'|'..bank.gems..'|'..bank.status..'|'..tostring(self.station)
     if coin_key~=self.coin_bank_key then
-        self.coin_bank_key=coin_key;msg.post('#ui','coin_bank_state',{total=bank.total,status=bank.status})
+        local level=self.station~='custom' and stations.resource(self.station)
+        local earned=0;for _,p in ipairs(level and level.coins and level.coins.items or {}) do if p.kind=='gem' and bank.claims[level.id..'/'..p.id] then earned=earned+1 end end
+        self.coin_bank_key=coin_key;msg.post('#ui','coin_bank_state',{total=bank.total,gems=bank.gems,course_gems=earned,status=bank.status})
     end
     if self.look_comparison then require("main.terrain_perspective.runtime").poll() end
     if self.loading then
@@ -283,7 +285,14 @@ function on_message(self,id,data,sender)
         if data.generation==self.generation and not self.edit and sender==msg.url(OWNER) then
             local bank=require 'main.gym.coin_bank'
             bank.generation(self.coin_bank,self.generation)
-            bank.offer(self.coin_bank,data.generation,data.attempt,data.amount,data.official)
+            local claims={}
+            -- Decode a bounded bitmap against trusted shipped source, never caller-supplied reward IDs.
+            local level=self.station~='custom' and stations.resource(self.station)
+            local items=level and level.coins and level.coins.items or {}
+            local bitmap=data.gems or ''
+            local valid=type(bitmap)=='string' and #bitmap==#items and not bitmap:find('[^01]')
+            if valid then for i,p in ipairs(items) do if p.kind=='gem' and bitmap:sub(i,i)=='1' then claims[#claims+1]=level.id..'/'..p.id end end end
+            bank.offer(self.coin_bank,data.generation,data.attempt,data.amount,data.official and valid,claims)
         end
         return
     end

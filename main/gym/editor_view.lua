@@ -29,9 +29,9 @@ local function objects(v,e)
         local shown=editor.preview_objects and editor.preview_objects[id] or o
         local pts=editor.shape(o)
         local r=v.records[id]
-        if r and (r.type~=o.type or r.terrain~=doc.terrain(o) or #r.points~=#pts) then remove(v,r);r=nil end
+        if r and (r.type~=o.type or r.kind~=o.kind or r.terrain~=doc.terrain(o) or #r.points~=#pts) then remove(v,r);r=nil end
         if not r then
-            r={ids={},sprites=0,labels=0,type=o.type,terrain=doc.terrain(o),points=copy(pts)}
+            r={ids={},sprites=0,labels=0,type=o.type,kind=o.kind,terrain=doc.terrain(o),points=copy(pts)}
             if o.type=="label" then
                 local label_id=require("main.gym.stations").marker(o.position,o.text)
                 lines.count(v,{label_id},true);r.ids={label_id};r.labels=1
