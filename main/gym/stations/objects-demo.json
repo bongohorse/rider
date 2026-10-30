@@ -82,11 +82,13 @@
         "id": "plate-a",
         "position": [
           10,
-          0.05
+          -0.05
         ],
         "actors": [
           "crate-a"
-        ]
+        ],
+        "width": 8,
+        "mode": "hold"
       }
     ],
     "gates": [

@@ -20,7 +20,9 @@ function M.spawn(spec)
   for _,kind in ipairs({'crates','plates','gates'}) do
    local singular=kind=='crates' and 'crate' or kind=='plates' and 'plate' or 'gate'
    for _,v in ipairs(spec[kind]) do
-    local o={spec=v};o.id=factory.create('#mechanism_'..singular,at(v.position),vmath.quat_rotation_z(v.angle or 0));s.all[#s.all+1]=o.id;s.objects[v.id]=o;s[kind][#s[kind]+1]=o;tint(o.id,colors[singular])
+    local o={spec=v};o.id=factory.create('#mechanism_'..singular,at(v.position),vmath.quat_rotation_z(v.angle or 0));s.all[#s.all+1]=o.id;s.objects[v.id]=o;
+    if singular=='plate' then go.set_scale(vmath.vector3((v.width or 3)/3,1,1),o.id) end
+    s[kind][#s[kind]+1]=o;tint(o.id,colors[singular])
     if singular=='crate' then
      line(s.decor,{-.53,-.53},{.53,.53},.08,{.95,.72,.35},o.id);line(s.decor,{-.53,.53},{.53,-.53},.08,{.95,.72,.35},o.id)
     elseif singular=='gate' then
@@ -55,7 +57,7 @@ function M.attach(s,terrain,vehicle)
   for _,shape in ipairs(b2d.body.get_shapes(o.body)) do b2d.shape.set_friction(shape.shape_id,o.spec.friction or .5);b2d.shape.set_restitution(shape.shape_id,o.spec.restitution or 0) end
   assert(math.abs(b2d.body.get_mass(o.body)-mass)<.01,'Crate mass differs from settings')
  end
- for _,o in ipairs(s.plates) do o.sensor=rect(o.body,0,.25,data.PLATE_HALF,.3) end
+ for _,o in ipairs(s.plates) do o.sensor=rect(o.body,0,.25,(o.spec.width or 3)/2,.3) end
  local carrier=s.plates[1]
  for _,o in ipairs(s.gates) do
   b2d.body.set_gravity_scale(o.body,0)
@@ -102,7 +104,7 @@ function M.fixed(s,dt,active)
 end
 function M.state(s)
  local plates,gates,crates={},{},{}
- for _,o in ipairs(s.plates) do local r=s.logic.plates[o.spec.id];plates[#plates+1]={id=o.spec.id,pressed=r.pressed,active=r.active,mode=o.spec.mode or 'hold',count=r.count,serial=r.serial};tint(o.id,r.pressed and colors.active or colors.plate) end
+ for _,o in ipairs(s.plates) do local r=s.logic.plates[o.spec.id];plates[#plates+1]={id=o.spec.id,pressed=r.pressed,active=r.active,mode=o.spec.mode or 'hold',count=r.count,serial=r.serial};tint(o.id,r.active and colors.active or colors.plate) end
  for _,o in ipairs(s.gates) do local r=s.logic.gates[o.spec.id];gates[#gates+1]={id=o.spec.id,state=r.state,open=r.open,blocked=r.blocked,height=b2d.joint.get_joint_translation(o.joint)*scale(),speed=r.speed,joints=#b2d.body.get_joints(o.body)};tint(o.id,r.blocked and colors.blocked or r.open and colors.active or colors.gate) end
  for _,o in ipairs(s.crates) do local p,v=b2d.body.get_position(o.body),b2d.body.get_linear_velocity(o.body);crates[#crates+1]={id=o.spec.id,x=p.x*scale(),y=p.y*scale(),angle=b2d.body.get_angle(o.body),vx=v.x*scale(),vy=v.y*scale()} end
  return {generation=s.logic.generation,ticks=s.ticks,events=s.logic.events,plates=plates,gates=gates,crates=crates,overlaps=s.overlaps,peak_overlaps=s.peak_overlaps,cost=data.cost(s.spec)}
@@ -110,14 +112,15 @@ end
 function M.remove(s)
  for _,id in ipairs(s.decor or {}) do go.delete(id) end
  for _,id in ipairs(s.all or {}) do go.delete(id) end
- s.objects={};s.all={};s.decor={};s.ready=false
+ s.objects={};s.all={};s.decor={};s.crates={};s.plates={};s.gates={};s.vehicle=nil;s.terrain=nil;s.ready=false
 end
 -- Read-only source extents in Edit; no bodies, sensors, actions or timers.
 function M.preview(spec)
  local ids={};if not spec then return ids end
  for _,kind in ipairs({'crates','plates','gates'}) do for _,v in ipairs(spec[kind]) do
-  local w,h=kind=='crates' and .6 or kind=='plates' and 1.5 or .3,kind=='crates' and .6 or kind=='plates' and .05 or 1.5
+  local w,h=kind=='crates' and .6 or kind=='plates' and (v.width or 3)/2 or .3,kind=='crates' and .6 or kind=='plates' and .05 or 1.5
   local x,y=v.position[1],v.position[2];local pts={{x-w,y-h},{x+w,y-h},{x+w,y+h},{x-w,y+h}}
+  if kind=='crates' and v.angle then local c,sn=math.cos(v.angle),math.sin(v.angle);for _,p in ipairs(pts) do local a,b=p[1]-x,p[2]-y;p[1]=x+a*c-b*sn;p[2]=y+a*sn+b*c end end
   for i,p in ipairs(pts) do line(ids,p,pts[i%4+1],.05,{.7,.85,.6}) end
   if kind=='gates' then line(ids,{x,y+h},{x,y+h+v.travel},.04,{.4,.7,1}) end
  end end

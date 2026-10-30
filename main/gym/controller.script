@@ -315,7 +315,7 @@ function update(self, dt)
         state.world={bodies=c.body_count,joints=c.joint_count,shapes=c.shape_count,contacts=c.contact_count,bytes=c.byte_count,step_ms=p.step,sensors_ms=p.sensors}
         if html5 then html5.run('window.riderMechanisms='..json.encode(state)) end
         local plate,gate=state.plates[1],state.gates[1]
-        msg.post('main:/loader#ui','mechanism_state',{text=string.format('Plate %s | Gate %s',plate and plate.pressed and 'ACTIVE' or 'ready',gate and gate.state or 'none')})
+        msg.post('main:/loader#ui','mechanism_state',{generation=self.session_generation,text=string.format('Plate %s | Gate %s',plate and plate.active and 'ACTIVE' or 'ready',gate and gate.state or 'none')})
     end
     if self.placement_report then
         self.placement_report=self.placement_report-1
