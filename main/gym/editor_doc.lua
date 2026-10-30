@@ -14,6 +14,7 @@ local sample=require "main.gym.editor_sample"
 -- Versions 1-6 open upgraded. Version 6 geometry compiles unchanged; older curves are resampled by
 -- compiler 6 (their older compiled data is then out of date, not a conflict).
 -- Version 10 adds optional gem kinds to existing coin objects; compiled gems require schema 3.
+-- Version 11 adds course-wide fuel rules and shared-refill canisters; compiled fuel uses schema 4.
 local M={EDITOR_VERSION=11,COMPILER_VERSION=11}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.

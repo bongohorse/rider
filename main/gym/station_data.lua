@@ -1,4 +1,4 @@
--- Versions 1 (legacy), 2 (gold coins) and 3 (Wonder Gems): world metres, converted once at the engine boundary by stations.lua.
+-- Versions 1 (legacy), 2 (gold coins), 3 (Wonder Gems) and 4 (fuel rules/canisters): world metres, converted once at the engine boundary by stations.lua.
 -- Pure validation: no engine calls, no partially constructed terrain on failure.
 local M={}
 local TEXT_LIMIT=64
