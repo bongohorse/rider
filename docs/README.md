@@ -29,7 +29,6 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Device evidence, phone testing | [platform matrix](PLATFORM_MATRIX.md), [phone trial](MOBILE_TRIAL.md) |
 | Status values and reporting | [evidence policy](contracts/evidence.md) |
 | Unscheduled ideas (do not implement) | [ideas](ideas/README.md) |
-| Past session reports (German, for Claudio) | [reports](reports/README.md) |
 
 ## All documents
 
@@ -75,6 +74,5 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints |
 | [main/gym/README.md](../main/gym/README.md) | Gym implementation and test protocols | See its Contents line |
 | [ideas/](ideas/README.md) | Unscheduled ideas | Roadmap waves · Vehicle builder |
-| [reports/](reports/README.md) | Session reports for Claudio (German) | Studio report · Day report · Preset comparison (2026-10-20) |
 
 Superseded gate records (G0–G3), the v1.4.1 masterplan and the VS Code migration dossier were removed on 2026-10-18; they remain in [git history](https://github.com/bongohorse/rider/tree/764cc01dc94d56448921191405c7f5c601ba42b6/docs/history).
