@@ -322,7 +322,10 @@
   for(const type of ['keydown','keyup'])window.addEventListener(type,e=>{
     if(api.blocked){e.preventDefault();e.stopImmediatePropagation();}
   },true);
-  window.addEventListener('orientationchange',syncOrientation);
-  screen.orientation?.addEventListener?.('change',syncOrientation);
+  // Landscape 90↔270 can keep the same viewport dimensions: still release
+  // pointers and tilt so the opposite side never inherits held controls.
+  const orientationChanged=()=>{abort('orientation changed');syncOrientation();};
+  window.addEventListener('orientationchange',orientationChanged);
+  screen.orientation?.addEventListener?.('change',orientationChanged);
   syncOrientation();
 })();
