@@ -147,6 +147,8 @@ jobs:
           node-version: '24.21.0'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify split LE6 Gym report identity and exact case inventory
+        run: node --test tests/ci/test_polish_merge.cjs
       - run: npm run renovate:validate
       - name: Real dependency extraction scan
         env:
