@@ -68,6 +68,11 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(self.saved()['status'], 'FAIL')
         self.assertEqual(self.saved()['ticks_per_frame'], [1.0, 1.0])
 
+    def test_artifact_write_failure_does_not_hide_original_probe_failure(self):
+        self.reports[1]['cases']['units']['fall_30'] = 124.975
+        with self.assertRaisesRegex(RuntimeError, 'Changed-scale probe mismatch.*comparison artifact write failed'):
+            compare_reports(self.output / 'missing-directory', self.reports, 'sha', 'wasm-web')
+
     def test_missing_frame_ratio_is_not_a_false_pass(self):
         self.reports[1]['cases']['fixed_ticks']['frames'] = 0
         with self.assertRaisesRegex(RuntimeError, 'Render/physics rates not separated'):
