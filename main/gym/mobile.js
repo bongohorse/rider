@@ -271,7 +271,7 @@
   root.addEventListener('pointerdown',e=>{
     // A held drive pointer must not hide the secondary action before a second pointer can select it.
     // The selected action is responsible for cancelling held input (e.g. Import).
-    if(!overflow.hidden&&!overflow.contains(e.target)&&e.target!==moreButton&&!zones.contains(e.target))closeOverflow();
+    if(!overflow.hidden&&!overflow.contains(e.target)&&!moreButton.contains(e.target)&&!zones.contains(e.target))closeOverflow();
   },true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverflow();});
   root.append(toolbar);
