@@ -53,8 +53,8 @@ module.exports=async function check(browser,base,sha,out){
    const menu=page.locator('#rider-mobile .toolbar-more');
    await menu.waitFor({state:'visible'});
    assert.equal(await menu.locator('button').count(),12,'all existing secondary actions retained');
-   assert.equal(await menu.getByRole('button',{name:'Next section',includeHidden:true}).count(),1);
-   assert.equal(await menu.getByRole('button',{name:'Next section',includeHidden:true}).isHidden(),true);
+   assert.equal(await menu.locator('button').filter({hasText:'Next section'}).count(),1);
+   assert.equal(await menu.locator('button').filter({hasText:'Next section'}).isHidden(),true);
    const qualityLabel=await page.evaluate(()=>document.getElementById('quality')?.textContent||'High DPI');
    assert.equal(await menu.getByRole('button',{name:qualityLabel,exact:true}).count(),1,'quality action missing');
    const open=await checkHudGeometry(page,viewport,true);
