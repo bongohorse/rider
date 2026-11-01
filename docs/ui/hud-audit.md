@@ -1,0 +1,49 @@
+# Driving HUD and result-screen audit (#342)
+
+**Contents:** [Scope and evidence](#scope-and-evidence) · [Ownership and state](#ownership-and-state) · [Prioritized follow-ups](#prioritized-follow-ups) · [Reproduction and gates](#reproduction-and-gates)
+
+## Scope and evidence
+
+Source reviewed: `main` **`81eac0a450ec55d752be3103ef89201ac64fa4e6`** (2026-11-01). This is a source and **historical screenshot** audit, **not a current-head engine or browser run**. No UI geometry, visual overlap, phone performance or physical touch is claimed as verified on this SHA.
+
+| Viewport, input, state | Evidence | What is / is not established |
+| --- | --- | --- |
+| 1280×720 landscape, `touch=0`, driving/ready | Current [run test](../../tools/gameplay/check_run.cjs) creates `run-ready.png` with real keyboard input; current-head **NOT RUN** | Native run HUD and desktop pointer paths exist; current readable size and bounds **not measured** |
+| 1280×720 landscape, `touch=0`, finished | [Historical desktop screenshot](../gameplay-g1/desktop-finished.png), artifact source `8f614763d177efe2dca634cf89b53b2fa4e2f3a0` | A centered native result card and separate telemetry were **visible historically**; not proof of current rendering |
+| 1080×486 landscape, `touch=1`, ready/driving | [Historical touch-ready screenshot](../gameplay-g1/phone-ready.png), same historical source SHA; [touch runner](../../tools/gameplay/check_mobile.cjs) uses synthetic Chromium touch | A two-row DOM toolbar, top-right status and bottom drive zones were **visible historically**; current-head geometry **NOT RUN** |
+| 1080×486 landscape, `touch=1`, finished | [Historical touch-finished screenshot](../gameplay-g1/phone-finished.png), same SHA; [historical touch JSON](../gameplay-g1/phone.json) says PASS, real_device NOT RUN | Both toolbar Retry and native-card Retry were **visible historically**; later UI additions need a new capture |
+| 960×540 landscape, `touch=1`, ready + finished | Proposed extra comparison for compact 16:9 landscape; **NOT RUN** | No assertion about toolbar/readout overlap or clipping |
+| Physical Android landscape, safe-area/notch and real multi-touch | **NOT RUN** | No device usability, safe-inset or responsiveness acceptance |
+
+The historical screenshots predate several gameplay additions; they must not be relabeled as screenshots of the audited main SHA. Existing [G7 report](../GAMEPLAY_G7_REPORT.md) and [level-selection test](../../tools/gameplay/check_levels.cjs) establish a narrower synthetic-touch overlap check for **level actions versus drive zones**, not complete HUD/toolbar/result geometry. [Mobile trial](../MOBILE_TRIAL.md) is a manual procedure, not completed phone evidence.
+
+## Ownership and state
+
+- **Native Defold GUI:** [`ui.gui_script`](../../main/gym/ui.gui_script) creates station/diagnostic metrics, tuning controls and the [`run_ui.lua`](../../main/gym/run_ui.lua) run HUD/result card; [`progress_ui.lua`](../../main/gym/progress_ui.lua) owns native progress. [`layout.lua`](../../main/gym/layout.lua) uses a 960×540 authored space with anchored roots, uniform panel scaling and a text-readability floor. `gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)` is set at UI initialization. Desktop uses the native clock/best/coin/fuel surfaces; the result card, Retry and Levels/Next Level buttons are native on both input modes.
+- **HTML5 touch DOM:** [`mobile.js`](../../main/gym/mobile.js) creates `#rider-mobile` toolbar, readout, progress, fuel/coins, touch zones and toast. `touch=1` forces it; `touch=0` disables it. Its DOM readout replaces several native running labels in touch mode; native metrics remain visible. The [`level_menu.js`](../../main/gym/level_menu.js) DOM overlay is separate, hides its floating actions during tuning and has its own safe-area handling.
+- **Input ownership:** touch zone `pointerdown`/capture/release is translated by [`mobile.lua`](../../main/gym/mobile.lua) into normalized commands for the existing owner, not a second physics loop. DOM toolbar clicks clear held touch commands; native GUI `run_ui.input` routes Retry to the run owner and Levels/Next Level to the loader. Editor mode disables native driving roots; tuning hides touch zones and readout. Terminal run states show the native result card, hide native running fuel and disable the touch toolbar Pause; canonical Retry remains available.
+- **Time invariant:** [`game.project`](../../game.project) has display update frequency 60, fixed update frequency **60 Hz**, physics fixed timestep enabled and four Box2D solver substeps. This UI audit changes none of those settings, owner callbacks or world state.
+
+## Prioritized follow-ups
+
+These are **source-backed usability risks**, not confirmed current-head bugs. They require independent, small implementation GOs after geometry measurement.
+
+1. **P1 — Crowded touch toolbar and undersized secondary targets.** [`mobile.js`](../../main/gym/mobile.js) sets toolbar buttons to **32 px minimum height** (general buttons are 44 px), places many actions in a wrapping flex row and fixes the readout at `top:100px`. Historical 1080×486 screenshots show two rows already. The toolbar/readout bounds are not jointly asserted by the current touch tests. **Minimal reversible follow-up:** prioritize Retry/Pause/Tuning and move less-frequent actions to a discoverable secondary group, with a shared measured toolbar/readout layout; do not just increase heights without checking the extra wrap. **Acceptance:** at 1280×720 desktop, 1080×486 and 960×540 synthetic touch, and a narrow/portrait fallback, all visible actionable touch targets are at least 44×44 CSS px, remain inside the safe area and do not intersect readout, level actions or drive zones; Retry, pause/resume, Tuning, Import, Layout mirror, tilt and simultaneous drive/lean still work through real input. **Risk:** changing toolbar focus, held-pointer cancellation, tuning and accessibility; keep existing `check_mobile.cjs`, `tools/preview/mobile.cjs` and `check_levels.cjs` behavior assertions.
+
+2. **P2 — Competing information and Retry actions in compact touch mode.** [`ui.gui_script`](../../main/gym/ui.gui_script) keeps the speed/suspension/FPS native metric group in view while [`mobile.js`](../../main/gym/mobile.js) also shows a DOM readout; [`run_ui.lua`](../../main/gym/run_ui.lua) shows native Retry on terminal states while the DOM toolbar also exposes Retry. Both Retry controls appear in the historical finished screenshot. **Minimal reversible follow-up:** define one primary compact touch Retry affordance and separate essential driving status from optional diagnostics, preserving the existing canonical reset route and access to diagnostics via Tuning. **Acceptance:** in ready/running/paused/finished/failed states, essential time/best, fuel, coins/gems and progress remain available without duplicated primary actions; after finish exactly one visually primary Retry is offered, and it still resets the same world with held input cleared. Verify both desktop and synthetic touch. **Risk:** accidentally hiding important fuel/progress or breaking native Android's result controls; do not simply remove native Retry globally.
+
+3. **P2 — Fixed result-card text capacity is not covered by geometry assertions.** [`run_ui.lua`](../../main/gym/run_ui.lua) positions a **440×220 authored-unit** card, a fixed `coins` text node and separate medal/next/Retry labels. Coin and Wonder Gem status can be multiline; storage-error and practice strings have variable lengths. Current release tests assert **text content**, not that all these nodes fit at 960×540/1080×486 or on a native phone. **Minimal reversible follow-up:** measure rendered node/text bounds in finished/failed, practice, unsaved-best and gems-present states; only then adjust card spacing/wrapping or a bounded responsive layout, preserving visible controls and source strings. **Acceptance:** no clipped/overlapping text or action targets at the two landscape sizes, including longest existing status strings; saved-best/medal/gem semantics and real-pointer Retry/Levels/Next Level tests remain unchanged. **Risk:** changing native GUI hit targets and Android scaling; avoid touching the level editor or physics.
+
+## Reproduction and gates
+
+Use a **verified current-head release HTML5 bundle** and its normal local preview server (see [TOOLING.md](../TOOLING.md) and [release verifier](../../tools/preview/verify.cjs)). Do not reuse old screenshots as a PASS. With `<base-url>` serving the correct build and `<full-main-sha>` matching `window.riderBuild`:
+
+```bash
+node tools/gameplay/check_run.cjs '<base-url>' '<full-main-sha>' artifacts/ui/desktop
+node tools/gameplay/check_mobile.cjs '<base-url>' '<full-main-sha>' artifacts/ui/touch
+node tools/gameplay/check_levels.cjs '<base-url>' '<full-main-sha>' artifacts/ui/levels touch
+```
+
+Those commands are **NOT RUN in this audit**; a running release bundle, verified build identity and Chromium are prerequisites. In a follow-up targeted real-input test, capture ready/running/finished at 1280×720 desktop and 1080×486 plus 960×540 synthetic touch. Use `getBoundingClientRect()` on every visible toolbar button, readout, level action and drive zone; capture native result text bounds through supported debug GUI geometry, not invented CSS coordinates. Assert zero clipped/overlapping interactive elements, source SHA, state and touch mode; attach screenshots and JSON measurements. Explicitly check safe-area offsets on an actual device before phone acceptance.
+
+**Stop:** this issue authorizes **documentation/audit only**. Follow-up UI code needs its own Director-scoped issue/GO, independent QA, exact-current-head `required` CI and maintainer visual/physical-phone acceptance. Do not modify Codex-owned #281, editor #331, camera #337, FPS #340, fixed physics or the required test gate.
