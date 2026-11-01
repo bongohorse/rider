@@ -16,7 +16,8 @@ function verify(report,expected){
   assert.equal(report.config_identity,expected.config_identity);
   assert.ok(report.config_identity.length>0);
   assert.equal(report.physics_hz,60);
-  assert.equal(report.render_fps,60);
+  assert.equal(report.configured_update_frequency_hz,60);
+  assert.equal(report.render_fps,undefined,'configured update rate is not observed FPS');
   assert.equal(report.physics_scale,0.01);
   assert.equal(report.time_factor,1);
   assert.equal(report.scaled_ticks,0);
