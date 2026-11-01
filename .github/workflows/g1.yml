@@ -327,6 +327,9 @@ jobs:
       - name: Verify pause and slow motion against engine and wall time at every station
         if: contains(format(' {0} ', matrix.cases), ' a20 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/pause --case a20
+      - name: Measure FPS356 real Defold fixed-tick baseline
+        if: contains(format(' {0} ', matrix.cases), ' a20 ')
+        run: node tools/gym/fps356.cjs artifacts/g1/fps356 "$GITHUB_SHA" "fps356-${{ github.run_id }}-${{ github.run_attempt }}" fps356 artifacts/g1/gym-bundle
       - name: Verify editor multi-point selection, bulk corner/smooth and prefab conversion
         if: contains(format(' {0} ', matrix.cases), ' le5d ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/points --case le5d
