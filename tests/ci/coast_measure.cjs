@@ -11,7 +11,7 @@ function fixture(){
       ticks:1,seconds:1/60,distance_m:0.1,start_fixed_tick:100+i*100,boundary_crossed:false};
   });
   return {status:'PASS',error:false,source_sha:sha,run_id,station:'straight',
-    preset:'a',modified:false,config_identity,physics_hz:60,render_fps:60,
+    preset:'a',modified:false,config_identity,physics_hz:60,configured_update_frequency_hz:60,
     physics_scale:0.01,time_factor:1,scaled_ticks:0,runs,completed:3,
     repeat_delta_m:0,repeat_delta_s:0};
 }
@@ -43,8 +43,21 @@ test('rejects foreign source, time scaling, missing run and changed command',()=
     r=>{r.config_identity='other';},
     r=>{r.scaled_ticks=1;},
     r=>{r.physics_hz=30;},
+    r=>{r.configured_update_frequency_hz=30;},
+    r=>{r.render_fps=60;},
     r=>{r.runs[1].commands[0][3]=true;},
     r=>{r.completed=2;},
     r=>{r.status='FAIL';r.error='timeout';}
   ]){const r=fixture();mutate(r);assert.throws(()=>verify(r,expected));}
+});
+
+test('observer reuses genuine loaded-contact predicate and does not claim measured render FPS',()=>{
+  const fs=require('node:fs'),path=require('node:path');
+  const observer=fs.readFileSync(path.join(__dirname,'../../main/gym/coast_measure.lua'),'utf8');
+  assert.match(observer,/require "main\.gym\.seam_metrics"/);
+  assert.match(observer,/seam_metrics\.supported\(v\.wheels\[1\]\)/);
+  assert.match(observer,/seam_metrics\.supported\(v\.wheels\[2\]\)/);
+  assert.doesNotMatch(observer,/get_contact_data/);
+  assert.match(observer,/configured_update_frequency_hz=sys\.get_config_int/);
+  assert.doesNotMatch(observer,/render_fps=/);
 });
