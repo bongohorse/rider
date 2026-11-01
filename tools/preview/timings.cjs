@@ -8,7 +8,7 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
   let status='RUNNING',lastActiveCase=null,topError=null;
   function elapsed(from){return Math.max(0,Number(clock()-from)/1e6);}
   function begin(name,details={}){
-    if(status!=='RUNNING')throw Error('Cannot time after finish');
+    if(status!=='RUNNING'&&status!=='FAIL')throw Error('Cannot time after finish');
     const record={name,details,status:'RUNNING',elapsed_ms:null};
     const entry={record,started:clock()};
     cases.push(record);stack.push(entry);
