@@ -19,12 +19,12 @@ const server=http.createServer((req,res)=>{
  fs.createReadStream(file).pipe(res);
 });
 (async()=>{
- let browser;
+ let browser,page;
+ const errors=[];
  try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   browser=await chromium.launch();
-  const page=await browser.newPage({viewport:{width:1280,height:720}});
-  const errors=[];
+  page=await browser.newPage({viewport:{width:1280,height:720}});
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   await configure(page,runId,'fps356');
@@ -43,6 +43,13 @@ const server=http.createServer((req,res)=>{
    await page.waitForFunction(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key,{timeout:10000});
    return page.evaluate(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).find(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key);
   }
+  // Defold samples input on frames: hold until the real game acknowledges it,
+  // then release. A short keyboard.press() pulse can be lost (engine pitfall #5).
+  async function holdUntil(key,until,arg){
+   await page.keyboard.down(key);
+   try{await page.waitForFunction(until,arg,{timeout:30000});}
+   finally{await page.keyboard.up(key);}
+  }
   // Actual keyboard input through Defold input bindings, not DOM/game-state injection.
   await page.keyboard.down('ArrowUp');
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1);
@@ -50,8 +57,7 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===0);
   const running=await measure(10,'running');
   const beforePause=await snapshot();
-  await page.keyboard.press('Space');
-  await page.waitForFunction(()=>window.riderTimeState?.paused===true);
+  await holdUntil('Space',on=>window.riderTime?.paused===on&&window.riderTimeState?.paused===on,true);
   const loaderStart=await page.evaluate(()=>({...window.riderTimeState}));
   const pauseMarker=await transition(true,beforePause.sequence);
   // A factor-zero world may stop update() entirely. Loader UI state comes from
@@ -60,8 +66,7 @@ const server=http.createServer((req,res)=>{
   await page.waitForTimeout(2400);
   const pausedEnd=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
   assert.equal(pausedEnd.loader.paused,true,'Loader unexpectedly resumed during pause window');
-  await page.keyboard.press('Space');
-  await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+  await holdUntil('Space',on=>window.riderTime?.paused===on&&window.riderTimeState?.paused===on,false);
   const resumeMarker=await transition(false,pauseMarker.sequence,pauseMarker.time_seq+1);
   // The loader applies factor one only after the controller acknowledges
   // resume. Equal real boundary counters prove zero fixed ticks while paused.
@@ -69,8 +74,7 @@ const server=http.createServer((req,res)=>{
    loaderStart,loaderEnd:pausedEnd.loader,wallStartMs,wallEndMs:pausedEnd.wallMs,minSeconds:2
   });
   const before=(await snapshot()).reset_count;
-  await page.keyboard.press('r');
-  await page.waitForFunction(n=>window.riderFps356World?.reset_count===n+1,before);
+  await holdUntil('r',n=>window.riderFps356World?.reset_count===n+1,before);
   const retry=await measure(10,'running');
   assert.equal(errors.length,0,'Defold browser errors: '+errors.join('; '));
   const report={status:'BASELINE_ONLY',source_sha:sha,build_source_fingerprint:metadata.source_fingerprint,run_id:runId,
@@ -81,6 +85,25 @@ const server=http.createServer((req,res)=>{
    reason:'Loader boot.script currently owned by #359 PR #365; runtime setter and full Stage-A matrix deferred'};
   fs.writeFileSync(path.join(out,'fps356-baseline.json'),JSON.stringify(report,null,2)+'\n');
   console.log('FPS356 baseline engine callbacks/fixed ticks verified; no presented FPS claim');
+ }catch(e){
+  // Always preserve actionable real-engine failure evidence in the existing
+  // Gym artifact directory; never turn a failed physics check into a pass.
+  const diagnostic={source_sha:sha,run_id:runId,error:String(e),browser_errors:errors.slice(-20),state:null};
+  if(page){
+   diagnostic.state=await page.evaluate(()=>({
+    ready:window.riderReady??null,
+    time:window.riderTime??null,
+    loader_time:window.riderTimeState??null,
+    world:window.riderFps356World??null,
+    transitions:(window.riderFps356Transitions||[]).slice(-16),
+    command:window.riderTelemetry?.command??null
+   })).catch(err=>({capture_error:String(err)}));
+   try{await page.screenshot({path:path.join(out,'fps356-failed.png'),timeout:5000});}
+   catch(err){diagnostic.screenshot_error=String(err);}
+  }
+  fs.writeFileSync(path.join(out,'fps356-failed-state.json'),JSON.stringify(diagnostic,null,2)+'\\n');
+  console.error('FPS356_FAIL_STATE '+JSON.stringify(diagnostic));
+  throw e;
  }finally{
   if(browser)await browser.close();
   await new Promise(r=>server.close(r));
