@@ -1,4 +1,4 @@
-// #356 Stage-A standalone REAL Defold debug Gym baseline (not wired into CI dispatcher yet).
+// #356 Stage-A REAL Defold debug Gym startup 0/30/60 matrix; no game defaults changed.
 // Run after a verified tools/gym/bundle.py debug HTML5 build. No DOM writes to game state.
 'use strict';
 const {configure}=require('./launch.cjs');
@@ -19,98 +19,142 @@ const server=http.createServer((req,res)=>{
  fs.createReadStream(file).pipe(res);
 });
 (async()=>{
- let browser,page;
- const errors=[];
+ let browser,page,activeRate=null,activeRunId=null;
+ const errors=[],matrix=[];
  try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   browser=await chromium.launch();
-  page=await browser.newPage({viewport:{width:1280,height:720}});
-  page.on('pageerror',e=>errors.push(e.message));
-  page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
-  await configure(page,runId,'fps356');
-  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
-  await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderFps356World?.fixed_ticks>30&&window.riderFps356World?.vehicle_ready,{sha,runId},{timeout:30000});
-  const snapshot=()=>page.evaluate(()=>({...window.riderFps356World}));
-  async function measure(seconds,phase){
-   const a=await snapshot();
-   await page.waitForTimeout(seconds*1000+400);
-   await page.waitForFunction(seq=>window.riderFps356World?.sequence>seq,a.sequence);
-   const b=await snapshot();
-   return compare(a,b,{phase,minSeconds:seconds});
+  // browser.newPage creates a new isolated browser context on every iteration.
+  // All three starts use the SAME verified debug bundle and source fingerprint.
+  for(const rate of [0,30,60]){
+   activeRate=rate;
+   activeRunId=runId+'-hz'+rate;
+   errors.length=0;
+   page=await browser.newPage({viewport:{width:1280,height:720}});
+   page.on('pageerror',e=>{if(errors.length<20)errors.push(e.message);});
+   page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text())&&errors.length<20)errors.push(m.text());});
+   // Inject a supported Defold ENGINE STARTUP config before engine-start.
+   // This is not sys.set_update_frequency and does not change game.project.
+   await configure(page,activeRunId,'fps356',rate);
+   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
+   await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
+    window.riderReady?.run_id===runId&&window.riderFps356World?.fixed_ticks>30&&
+    window.riderFps356World?.vehicle_ready,{sha,runId:activeRunId},{timeout:30000});
+   const snapshot=()=>page.evaluate(()=>({...window.riderFps356World}));
+   const initial=await snapshot();
+   assert.equal(initial.source_sha,sha,'World snapshot does not match debug build');
+   assert.equal(initial.run_id,activeRunId,'World snapshot does not match fresh page');
+   assert.equal(initial.reset_count,0,'New page inherited a Retry');
+   async function measure(seconds,phase){
+    const a=await snapshot();
+    await page.waitForTimeout(seconds*1000+400);
+    await page.waitForFunction(seq=>window.riderFps356World?.sequence>seq,a.sequence);
+    const b=await snapshot();
+    return compare(a,b,{phase,minSeconds:seconds});
+   }
+   async function transition(paused,afterSequence,expectedTimeSeq=null){
+    const key={paused,afterSequence,expectedTimeSeq};
+    await page.waitForFunction(({paused,afterSequence,expectedTimeSeq})=>
+     (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===paused&&
+      s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),
+     key,{timeout:10000});
+    return page.evaluate(({paused,afterSequence,expectedTimeSeq})=>
+     (window.riderFps356Transitions||[]).find(s=>s.event==='time_state'&&s.paused===paused&&
+      s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key);
+   }
+   // Defold samples input on frames: hold until genuine game acknowledgment.
+   async function holdUntil(key,until,arg){
+    await page.keyboard.down(key);
+    try{await page.waitForFunction(until,arg,{timeout:30000});}
+    finally{await page.keyboard.up(key);}
+   }
+   // Real Defold keyboard bindings, never DOM/game-state mutation.
+   await page.keyboard.down('ArrowUp');
+   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1);
+   await page.keyboard.up('ArrowUp');
+   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===0);
+   const running=await measure(10,'running');
+   const beforePause=await snapshot();
+   await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
+    (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
+    {on:true,seq:beforePause.sequence});
+   const loaderStart=await page.evaluate(()=>({...window.riderTimeState}));
+   const pauseMarker=await transition(true,beforePause.sequence);
+   // Factor-zero worlds may stop update(): measure independent wall time and
+   // compare genuine world pause/resume boundaries, with exactly ZERO fixed ticks.
+   const wallStartMs=await page.evaluate(()=>performance.now());
+   await page.waitForTimeout(2400);
+   const pausedEnd=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
+   assert.equal(pausedEnd.loader.paused,true,'Loader unexpectedly resumed during pause window');
+   await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
+    (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
+    {on:false,seq:pauseMarker.sequence});
+   const resumeMarker=await transition(false,pauseMarker.sequence,pauseMarker.time_seq+1);
+   const paused=comparePause(pauseMarker,resumeMarker,{
+    loaderStart,loaderEnd:pausedEnd.loader,wallStartMs,wallEndMs:pausedEnd.wallMs,minSeconds:2
+   });
+   const before=(await snapshot()).reset_count;
+   await holdUntil('r',n=>window.riderFps356World?.reset_count===n+1,before);
+   const retry=await measure(10,'running');
+   assert.equal(retry.reset_count,before+1,'Retry identity did not advance');
+   assert.equal(errors.length,0,'Defold browser errors: '+errors.join('; '));
+   const report={
+    status:'STARTUP_RATE_MEASURED',source_sha:sha,
+    build_source_fingerprint:metadata.source_fingerprint,run_id:activeRunId,
+    matrix_run_id:runId,platform:'debug-html5-chromium',
+    default_project_update_hz:60,startup_requested_hz:rate,
+    startup_engine_argument:'--config=display.update_frequency='+rate,
+    requested_runtime_hz:'NOT_SET',
+    measurements:{running,paused,retry},
+    browser_raf_callback_hz:null,presented_fps:null,
+    not_run:['runtime_sys_set_update_frequency','background_foreground','replay_identity','Android_device','confirmed_presented_frames'],
+    reason:'HTML5 may ignore requested update cap; Defold world update callbacks are NOT delivered/presented FPS'
+   };
+   matrix.push(report);
+   fs.writeFileSync(path.join(out,'fps356-hz'+rate+'.json'),JSON.stringify(report,null,2)+'\n');
+   if(rate===60)fs.writeFileSync(path.join(out,'fps356-baseline.json'),JSON.stringify(report,null,2)+'\n');
+   console.log('FPS356_RATE '+JSON.stringify({
+    startup_requested_hz:rate,source_sha:sha,run_id:activeRunId,
+    running_fixed_wall_hz:running.fixed_tick_wall_hz,
+    running_update_callback_hz:running.world_update_callback_hz,
+    paused_fixed_ticks:paused.fixed_ticks_during_pause,
+    retry_fixed_wall_hz:retry.fixed_tick_wall_hz,
+    retry_update_callback_hz:retry.world_update_callback_hz,
+    presented_fps:null
+   }));
+   await page.close();
+   page=null;
   }
-  async function transition(paused,afterSequence,expectedTimeSeq=null){
-   const key={paused,afterSequence,expectedTimeSeq};
-   await page.waitForFunction(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key,{timeout:10000});
-   return page.evaluate(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).find(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key);
-  }
-  // Defold samples input on frames: hold until the real game acknowledges it,
-  // then release. A short keyboard.press() pulse can be lost (engine pitfall #5).
-  async function holdUntil(key,until,arg){
-   await page.keyboard.down(key);
-   try{await page.waitForFunction(until,arg,{timeout:30000});}
-   finally{await page.keyboard.up(key);}
-  }
-  // Actual keyboard input through Defold input bindings, not DOM/game-state injection.
-  await page.keyboard.down('ArrowUp');
-  await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1);
-  await page.keyboard.up('ArrowUp');
-  await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===0);
-  const running=await measure(10,'running');
-  const beforePause=await snapshot();
-  // fps356 does not expose the A20-only window.riderTime object. Confirm
-  // both the loader state and a NEW real controller boundary event.
-  await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
-   (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
-   {on:true,seq:beforePause.sequence});
-  const loaderStart=await page.evaluate(()=>({...window.riderTimeState}));
-  const pauseMarker=await transition(true,beforePause.sequence);
-  // A factor-zero world may stop update() entirely. Loader UI state comes from
-  // boot.script; wall time is independent. No paused-world heartbeat is assumed.
-  const wallStartMs=await page.evaluate(()=>performance.now());
-  await page.waitForTimeout(2400);
-  const pausedEnd=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
-  assert.equal(pausedEnd.loader.paused,true,'Loader unexpectedly resumed during pause window');
-  await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
-   (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
-   {on:false,seq:pauseMarker.sequence});
-  const resumeMarker=await transition(false,pauseMarker.sequence,pauseMarker.time_seq+1);
-  // The loader applies factor one only after the controller acknowledges
-  // resume. Equal real boundary counters prove zero fixed ticks while paused.
-  const paused=comparePause(pauseMarker,resumeMarker,{
-   loaderStart,loaderEnd:pausedEnd.loader,wallStartMs,wallEndMs:pausedEnd.wallMs,minSeconds:2
-  });
-  const before=(await snapshot()).reset_count;
-  await holdUntil('r',n=>window.riderFps356World?.reset_count===n+1,before);
-  const retry=await measure(10,'running');
-  assert.equal(errors.length,0,'Defold browser errors: '+errors.join('; '));
-  const report={status:'BASELINE_ONLY',source_sha:sha,build_source_fingerprint:metadata.source_fingerprint,run_id:runId,
-   platform:'debug-html5-chromium',configured_update_hz:60,requested_runtime_hz:'NOT_SET',
-   measurements:{running,paused,retry},
-   browser_raf_callback_hz:null,presented_fps:null,
-   not_run:['runtime_request_0_30_60','background_foreground','replay_identity','Android_device','confirmed_presented_frames'],
-   reason:'Loader boot.script currently owned by #359 PR #365; runtime setter and full Stage-A matrix deferred'};
-  fs.writeFileSync(path.join(out,'fps356-baseline.json'),JSON.stringify(report,null,2)+'\n');
-  console.log('FPS356 baseline engine callbacks/fixed ticks verified; no presented FPS claim');
+  assert.deepEqual(matrix.map(m=>m.startup_requested_hz),[0,30,60],'Incomplete startup matrix');
+  assert(matrix.every(m=>m.source_sha===sha&&m.build_source_fingerprint===metadata.source_fingerprint),
+   'Startup matrix mixed engine sources');
+  fs.writeFileSync(path.join(out,'fps356-startup-matrix.json'),JSON.stringify({
+   status:'STARTUP_MATRIX_VERIFIED',source_sha:sha,
+   build_source_fingerprint:metadata.source_fingerprint,matrix_run_id:runId,
+   platform:'debug-html5-chromium',startup_requested_hz:[0,30,60],
+   physics_fixed_hz:60,presented_fps:null,results:matrix
+  },null,2)+'\n');
+  console.log('FPS356 startup 0/30/60 real Defold callback/fixed-tick matrix PASS; presented FPS UNKNOWN');
  }catch(e){
-  // Always preserve actionable real-engine failure evidence in the existing
-  // Gym artifact directory; never turn a failed physics check into a pass.
-  const diagnostic={source_sha:sha,run_id:runId,error:String(e),browser_errors:errors.slice(-20),state:null};
+  // Fail closed. Preserve source, request and genuine game state for exact CI diagnostics.
+  const diagnostic={source_sha:sha,matrix_run_id:runId,run_id:activeRunId,
+   startup_requested_hz:activeRate,error:String(e),browser_errors:errors.slice(-20),
+   completed_rates:matrix.map(m=>m.startup_requested_hz),state:null};
   if(page){
    diagnostic.state=await page.evaluate(()=>({
-    ready:window.riderReady??null,
-    time:window.riderTime??null,
-    loader_time:window.riderTimeState??null,
-    world:window.riderFps356World??null,
+    ready:window.riderReady??null,time:window.riderTime??null,
+    loader_time:window.riderTimeState??null,world:window.riderFps356World??null,
     transitions:(window.riderFps356Transitions||[]).slice(-16),
     command:window.riderTelemetry?.command??null
    })).catch(err=>({capture_error:String(err)}));
-   try{await page.screenshot({path:path.join(out,'fps356-failed.png'),timeout:5000});}
+   try{await page.screenshot({path:path.join(out,'fps356-failed-hz'+activeRate+'.png'),timeout:5000});}
    catch(err){diagnostic.screenshot_error=String(err);}
   }
-  fs.writeFileSync(path.join(out,'fps356-failed-state.json'),JSON.stringify(diagnostic,null,2)+'\\n');
+  fs.writeFileSync(path.join(out,'fps356-failed-hz'+activeRate+'.json'),JSON.stringify(diagnostic,null,2)+'\n');
   console.error('FPS356_FAIL_STATE '+JSON.stringify(diagnostic));
   throw e;
  }finally{
+  if(page)await page.close();
   if(browser)await browser.close();
   await new Promise(r=>server.close(r));
  }
