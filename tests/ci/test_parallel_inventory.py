@@ -65,11 +65,22 @@ class ParallelInventory(unittest.TestCase):
     def test_release_groups_gate_deployment(self):
         workflow = yaml.load((ROOT / '.github/workflows/preview.yml').read_text(), Loader=yaml.BaseLoader)
         verify = workflow['jobs']['verify']
-        self.assertEqual(verify['strategy']['matrix']['group'], ['desktop', 'phone', 'touch', 'stations'])
+        self.assertEqual(verify['strategy']['matrix']['group'], ['desktop-layout', 'desktop-gameplay', 'phone', 'touch', 'stations'])
         self.assertEqual(verify['needs'], 'build')
         self.assertEqual(verify['strategy']['fail-fast'], 'false')
         run = next(step['run'] for step in verify['steps'] if 'tools/preview/verify.cjs' in step.get('run', ''))
         self.assertTrue(run.endswith('${{ matrix.group }}'))
+        self.assertEqual(next(s['if'] for s in verify['steps'] if 'deployment deployment' in s.get('run', '')), "matrix.group == 'desktop-layout'")
+        gate = workflow['jobs']['verify-gate']
+        self.assertEqual(gate['needs'], ['build', 'verify'])
+        self.assertEqual(gate['timeout-minutes'], '5')
+        download = next(s for s in gate['steps'] if 'download-artifact@' in s.get('uses', ''))
+        self.assertEqual(download['with']['pattern'], 'preview-verification-*-${{ github.run_id }}-${{ github.run_attempt }}')
+        self.assertTrue(any('verify_artifacts.py' in s.get('run', '') for s in gate['steps']))
+        plan = (ROOT / 'tools/preview/verification-plan.cjs').read_text()
+        self.assertIn("'desktop-layout': ['desktop']", plan)
+        self.assertIn("'desktop-gameplay': ['desktop-gameplay']", plan)
+        self.assertIn("if(plan.includes('desktop-gameplay')", (ROOT / 'tools/preview/verify.cjs').read_text())
         ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
         self.assertIn('preview', ci['jobs']['required']['needs'])
         self.assertIn('physics', ci['jobs']['required']['needs'])

@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [desktop, phone, touch, stations]
+        group: [desktop-layout, desktop-gameplay, phone, touch, stations]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -84,13 +84,16 @@ jobs:
         with:
           name: preview-site-${{ github.run_id }}-${{ github.run_attempt }}
           path: _site/
+      - name: Validate release verification plan and timing observer
+        if: matrix.group == 'desktop-layout'
+        run: node --test tests/preview/verification-plan.test.cjs tests/preview/timings.test.cjs
       - name: Verify release loader and gym on desktop and phone viewport
         env:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
         run: node tools/preview/verify.cjs _site "$SOURCE_SHA" "$BUILD_ID" artifacts/preview/verification/${{ matrix.group }} ${{ matrix.group }}
       - name: Exercise public-deployment check against the packaged release
-        if: matrix.group == 'desktop'
+        if: matrix.group == 'desktop-layout'
         env:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
@@ -101,3 +104,22 @@ jobs:
           name: preview-verification-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/preview/verification/
           retention-days: 14
+
+  verify-gate:
+    name: Release verification artifact and coverage gate
+    needs: [build, verify]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: preview-verification-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/preview/gate/
+      - name: Reject missing, duplicate, failed or mismatched release evidence
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: python3 tools/preview/verify_artifacts.py artifacts/preview/gate "$SOURCE_SHA" "$BUILD_ID"
