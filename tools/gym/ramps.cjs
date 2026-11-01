@@ -95,10 +95,23 @@ const P=require('./preset.cjs').fromArgv(process.argv);
    globalThis.window.riderStationReport.section='down-30';
    assert.equal(C.cameraReady({...ready,station:'ramps-long'}),true,'Authored ramp readiness rejected');
   }finally{if(priorWindow===undefined)delete globalThis.window;else globalThis.window=priorWindow;}
-  const synthetic=Array.from({length:40},(_,i)=>({tick:i+1,resets:0,generation:1,x:i,y:-i,vx:100,vy:-50}));
+  const synthetic=Array.from({length:40},(_,i)=>({tick:i+1,resets:0,generation:1,x:i,y:-i,vx:100,vy:-50,rear:true,front:true}));
   const loaded=synthetic.filter(s=>s.tick>=10&&s.tick<=18).map(s=>({tick:s.tick}));
   const exact=()=>C.comparePhysics(synthetic,synthetic.map(s=>({...s})),{downhillA:loaded,downhillB:loaded});
   assert.equal(exact().matched_ticks,9,'Measured downhill ticks were not compared');
+  // A real wheel can momentarily lose support between two valid downhill samples.
+  // Do not silently omit that fixed tick: compare its physics/contact state in A and B.
+  const gapTrace=synthetic.map(s=>s.tick===14?{...s,rear:false,front:false}:s);
+  const gapLoaded=loaded.filter(s=>s.tick!==14);
+  const gapResult=C.comparePhysics(gapTrace,gapTrace.map(s=>({...s})),{downhillA:gapLoaded,downhillB:gapLoaded});
+  assert.equal(gapResult.matched_ticks,9,'A contact gap discarded a real fixed tick');
+  assert.equal(gapResult.dual_supported_ticks,8,'False dual-wheel support in contact gap');
+  assert.equal(gapResult.compared_contact_gap_ticks,1,'Unloaded contact gap was not accounted for');
+  assert.throws(()=>C.comparePhysics(gapTrace,synthetic,{downhillA:gapLoaded,downhillB:gapLoaded}),
+   /wheel-support mismatch/,'A/B contact divergence was accepted');
+  assert.throws(()=>C.comparePhysics(gapTrace,gapTrace.filter(s=>s.tick!==14),
+   {downhillA:gapLoaded,downhillB:gapLoaded}),/Missing\/unmatched fixed tick/,
+   'A missing fixed tick inside a contact gap was silently discarded');
   const without=(tick)=>synthetic.filter(s=>s.tick!==tick);
   assert.throws(()=>C.comparePhysics(synthetic,without(14),{downhillA:loaded,downhillB:loaded}),/Missing\/unmatched fixed tick/);
   assert.throws(()=>C.comparePhysics(synthetic,synthetic.map(s=>s.tick===14?{...s,resets:1}:s),{downhillA:loaded,downhillB:loaded}),/reset\/generation mismatch/);
@@ -171,7 +184,9 @@ const P=require('./preset.cjs').fromArgv(process.argv);
     throw e;
    }finally{await p.close();}
   }
-  for(const viewport of [{width:1280,height:720},{width:720,height:1280}]){
+  // Landscape-only gameplay: desktop baseline plus compact mobile-landscape viewport.
+  // Browser emulation is not a physical-phone acceptance test.
+  for(const viewport of [{width:1280,height:720},{width:1080,height:486}]){
    const a=await cameraTrial('a',viewport),b=await cameraTrial('b',viewport);
    const equal=C.comparePhysics(a.physicsTrace,b.physicsTrace,{downhillA:a.validPhysics,downhillB:b.validPhysics});
    const name=viewport.width+'x'+viewport.height;
