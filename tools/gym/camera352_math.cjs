@@ -69,6 +69,24 @@ function comparePhysics(a,b,{downhillA,downhillB}={}){
   'No measured dual-supported downhill window in both A/B');
  function index(trace,label){
   const result=new Map();
+  // Live traces carry both the vehicle-ready tick (canonical comparison key)
+  // and the raw engine tick (which may start one step earlier on another page).
+  // Reject missing steps or an inconsistent epoch; synthetic negative controls
+  // without engine_tick still exercise the strict legacy tick comparator.
+  const hasEngineTick=trace.some(s=>s.engine_tick!==undefined);
+  if(hasEngineTick){
+   assert(trace[0].tick===1,label+': missing first vehicle-ready fixed step');
+   let previous=null;
+   for(const s of trace){
+    assert(Number.isSafeInteger(s.engine_tick)&&s.engine_tick>=s.tick,
+     label+': invalid global engine tick/vehicle epoch');
+    if(previous&&s.resets===previous.resets&&s.generation===previous.generation){
+     assert(s.tick===previous.tick+1&&s.engine_tick===previous.engine_tick+1,
+      label+': noncontinuous vehicle-ready fixed tick epoch');
+    }
+    previous=s;
+   }
+  }
   for(const s of trace){
    assert(Number.isSafeInteger(s.tick)&&s.tick>=0&&Number.isSafeInteger(s.resets)&&Number.isSafeInteger(s.generation),
     label+': invalid fixed tick/reset identity');
@@ -82,6 +100,18 @@ function comparePhysics(a,b,{downhillA,downhillB}={}){
   return result;
  }
  const byA=index(a,'A'),byB=index(b,'B');
+ const epochA=a.some(s=>s.engine_tick!==undefined),epochB=b.some(s=>s.engine_tick!==undefined);
+ assert(epochA===epochB,'Camera A/B mixed vehicle-ready tick epochs');
+ if(epochA){
+  const firstA=byA.get(1),firstB=byB.get(1);
+  assert(firstA&&firstB,'Missing first vehicle-ready A/B anchor');
+  assert(firstA.resets===firstB.resets&&firstA.generation===firstB.generation,
+   'Initial vehicle-ready reset/generation mismatch');
+  assert(firstA.rear===firstB.rear&&firstA.front===firstB.front,
+   'Initial vehicle-ready wheel-support mismatch');
+  const startDiff=Math.max(...['x','y','vx','vy'].map(k=>Math.abs(firstA[k]-firstB[k])));
+  assert(startDiff<0.5,'Initial vehicle-ready physics state mismatch: '+startDiff);
+ }
  const validA=downhill?new Set(downhillA.map(s=>s.tick)):null;
  const validB=downhill?new Set(downhillB.map(s=>s.tick)):null;
  const ticksA=[...byA.keys()],ticksB=[...byB.keys()];
