@@ -27,4 +27,20 @@ function M.sample(self,target,velocity,position,projection,dt)
     -- Bound browser memory; runners copy full observations before the next page navigation.
     html5.run("(function(s){var a=window.riderCamera352Trace||(window.riderCamera352Trace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(s)..")")
 end
+-- Read-only completed-state observation once per Defold-owned fixed_update. Render
+-- frames may skip fixed ticks; physics identity must not depend on render cadence.
+function M.fixed(self,state,dt)
+    assert(sys.get_engine_info().is_debug and html5,"camera352 fixed trace requires debug HTML5")
+    local velocity=b2d.body.get_linear_velocity(self.vehicle.chassis)
+    local section=self.station.sections and self.station.sections[self.station.section_index]
+    local sample={
+        source_sha=sys.get_config_string("rider.source_sha","development"),
+        mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
+        tick=self.fixed_ticks,resets=self.reset_count,generation=self.generation,dt=dt,
+        x=state.x,y=state.y,vx=velocity.x,vy=velocity.y,
+        rear=contacts.supported(self.vehicle.wheels[1]),
+        front=contacts.supported(self.vehicle.wheels[2])
+    }
+    html5.run("(function(s){var a=window.riderCamera352PhysicsTrace||(window.riderCamera352PhysicsTrace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(sample)..")")
+end
 return M
