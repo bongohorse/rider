@@ -16,9 +16,9 @@ local function sample(self,tick)
     local s=vehicle.state(v)
     local a,b=contact(v)
     -- Compact trace: [completed ticks, chassis x (m), chassis vx (m/s), rear contact, front contact,
-    -- rear omega (rad/s), front omega (rad/s)]. Read before the next command, after prior engine step.
+    -- rear omega (rad/s), front omega (rad/s), chassis y (m)]. Read before the next command.
     return {tick,feel.metres(s.x),feel.metres(s.vx),a,b,
-        b2d.body.get_angular_velocity(v.wheels[1]),b2d.body.get_angular_velocity(v.wheels[2])}
+        b2d.body.get_angular_velocity(v.wheels[1]),b2d.body.get_angular_velocity(v.wheels[2]),feel.metres(s.y)}
 end
 local function finish(self,status,reason)
     local s=self.coast_measure_state
@@ -88,6 +88,7 @@ local function finish_run(self)
     r.seconds=r.ticks/60
     r.distance_m=last[2]-r.start[2]
     r.stop=last
+    r.boundary_crossed=false -- stations.outside is checked before every sample; crossing fails the run
     if r.ticks<1 or r.distance_m<0 then return fail(self,"invalid stop interval/distance") end
     s.runs[#s.runs+1]=r
     s.current=nil
