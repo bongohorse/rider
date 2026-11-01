@@ -1,7 +1,7 @@
 # Future feature roadmap (ideas, not approved work)
 
 Status: **worked out** — idea backlog, **not** approved work. Entry gates below are proposals; scheduling still requires Claudio's explicit approval and an issue with a milestone.
-Owner of priorities: Claudio. Last revised: 2026-10-18.
+Owner of priorities: project maintainer. Last reviewed: 2026-10-31. Delivered features are identified explicitly; proposals are not implementation authorization.
 
 **Contents:** [How to read this](#how-to-read-this) · [Guiding rules](#guiding-rules) · [Overview](#overview) · [Wave 0 – Core loop (move into the current plan)](#wave-0--core-loop-move-into-the-current-plan) · [Wave 1 – Identity: surfaces, obstacles, feel](#wave-1--identity-surfaces-obstacles-feel) · [Wave 2 – Content tooling: track editor](#wave-2--content-tooling-track-editor) · [Wave 3 – Atmosphere: light and weather](#wave-3--atmosphere-light-and-weather) · [Wave 4 – Second vehicle and customisation](#wave-4--second-vehicle-and-customisation) · [Wave 5 – Modes and replay value](#wave-5--modes-and-replay-value) · [Wave 6 – Online and community (needs a backend decision)](#wave-6--online-and-community-needs-a-backend-decision) · [Experiments (timeboxed spikes, no commitment)](#experiments-timeboxed-spikes-no-commitment) · [Open decisions](#open-decisions)
 
@@ -25,9 +25,9 @@ Owner of priorities: Claudio. Last revised: 2026-10-18.
 
 | Wave | Theme | Entry gate |
 |---|---|---|
-| 0 | Core loop proposals for Phases B/C | Claudio's scope decision; existing plan remains authoritative |
+| 0 | Core loop: G1–G7 shipped; checkpoints/fault rules and other additions remain proposals | [Gameplay epic #262](https://github.com/bongohorse/rider/issues/262) remains open for outstanding end-to-end acceptance |
 | 1 | Identity: surfaces, reactive obstacles, feel | Phase B fun acceptance passed |
-| 2 | Content tooling: track editor | 2a **scheduled** as the Level Editor milestone ([#118](https://github.com/bongohorse/rider/issues/118)); 2b open |
+| 2 | Content tooling: editor foundation delivered; player-facing tools still proposed | [Level Editor #118](https://github.com/bongohorse/rider/issues/118) and [Editor A #167](https://github.com/bongohorse/rider/issues/167) closed; [Editor B #168](https://github.com/bongohorse/rider/issues/168), [C #169](https://github.com/bongohorse/rider/issues/169) open |
 | 3 | Atmosphere: light and weather | Phase D art style chosen; frame budget measured with real art |
 | 4 | Second vehicle and customisation | Wave 1 surfaces done; buggy feel signed off |
 | 5 | More modes and replay value | Enough tracks (≥ 15) to support modes |
@@ -38,12 +38,12 @@ Owner of priorities: Claudio. Last revised: 2026-10-18.
 
 ## Wave 0 – Core loop (move into the current plan)
 
-These were listed as "future", but they *are* the game loop of a Trials/TrackMania-style game. Recommendation: consider them for Phase B/C. The current plan includes elapsed time and best time, but starts the first challenge without checkpoints; checkpoints are a later trial only if full restarts hinder learning. Medals, a personal-best ghost, fault rules and section practice remain proposals until explicitly scheduled.
+**Current delivery (2026-10-31):** authoritative timer, result/Retry, best times, route progress, editable Gold/Silver/Bronze targets, ordinary coins, multiple Wonder Gems, fuel/refills and durable level selection/progression are implemented through [#279](https://github.com/bongohorse/rider/issues/279), [#296](https://github.com/bongohorse/rider/issues/296), [#298](https://github.com/bongohorse/rider/issues/298), [#300](https://github.com/bongohorse/rider/issues/300), [#314](https://github.com/bongohorse/rider/issues/314), [#318](https://github.com/bongohorse/rider/issues/318) and [#320](https://github.com/bongohorse/rider/issues/320). The existing A21 record/replay is not automatically a durable *personal-best* transform ghost. Checkpoints, fault-based results and section practice remain proposals, not shipped features. Device acceptance and additional content remain separate.
 
 | Feature | Idea | Approach | Cost | Proposed plan slot |
 |---|---|---|---|---|
-| Time trial + best time | Every track has a timer and a stored personal best | Local save file | S | Phase B |
-| Medals | Bronze / silver / gold / author time | Author time = designer's own best run; medal thresholds derived from it | S | Phase B |
+| Time trial + best time | **Delivered #279**: timer, finish/result, Retry and saved best | Simulation-clock run owner and persistence | Done | G1 |
+| Medals | **Delivered #298**: authored Bronze/Silver/Gold targets and durable medal | Authored target times, not automatic author-time derivation | Done | G3 |
 | Ghost of personal best | Race against your own best run | Record transforms per tick (not re-simulation; avoids cross-device determinism issues). Reuses A21 | S | Phase B |
 | Checkpoints + instant respawn | Trials' core: respawn at last checkpoint in under a second | In-world reset (D9) to a checkpoint state | S | Phase B |
 | Fault counter | Count respawns; medals require low faults | Part of result screen | S | Phase B |
@@ -69,13 +69,13 @@ Note: rolling resistance and tangent speed from Box2D 3.1 are not reachable from
 
 | Feature | Idea | Approach | Cost |
 |---|---|---|---|
-| Crates and stacks | Push, topple, carry | Dynamic boxes; per-track body budget | S |
+| Crates and stacks | Runtime crate in [#280](https://github.com/bongohorse/rider/issues/280) (PR #322 in review); stacks/carry remain proposals | Dynamic boxes; per-track body budget | S |
 | Boulders | Rolling rocks, chase sequences ("escape the boulder") | Dynamic circle, high mass; scripted release trigger | S |
 | Seesaws, bridges | Tilting planks, swinging/collapsing bridges | Revolute joints; chains of planks with revolute joints; breakable via joint force check (`get_reaction_force`, *verified* in bindings) | M |
 | Moving platforms, pistons | Timing obstacles | Kinematic bodies on scripted paths | S |
 | Springs / launch pads | Catapult the vehicle | Impulse on sensor contact | S |
 | Conveyor belts | Push or slow the vehicle | Force on bodies in a sensor zone (tangent speed not exposed, see above) | S |
-| Switches, doors | Pressure plate opens a gate | Sensor + simple event wiring in track data | M |
+| Switches, doors | [#280](https://github.com/bongohorse/rider/issues/280) runtime in PR #322; editor placement/visible links pending [#281](https://github.com/bongohorse/rider/issues/281) | Typed plate → gate signals with bounded authoring | M |
 | Breakables | Planks, glass, crates break under load | Swap intact body for pre-cut pieces above an impulse threshold | M |
 | Chain reactions | Ball triggers weight, weight moves bridge | Emerges from the items above; needs no extra system | – |
 
@@ -95,7 +95,7 @@ Note: rolling resistance and tangent speed from Box2D 3.1 are not reachable from
 
 ## Wave 2 – Content tooling: track editor
 
-**Status:** step 2a (dev editor) is scheduled as the Level Editor milestone ([epic #118](https://github.com/bongohorse/rider/issues/118), [contract](../contracts/level-editor.md)); the contract supersedes the 2a rows below. Step 2b remains an idea.
+**Status (2026-10-31):** step 2a (dev editor) is **delivered** ([epic #118](https://github.com/bongohorse/rider/issues/118), [contract](../contracts/level-editor.md)); Editor A usability and version recovery are also delivered ([#167](https://github.com/bongohorse/rider/issues/167)). The 2a rows below describe original ideas, not pending work. More construction/testing belongs to open [#168](https://github.com/bongohorse/rider/issues/168)/[#169](https://github.com/bongohorse/rider/issues/169). The broader 2b player editor remains a proposal.
 
 The editor is a long-term flagship feature. Build it in two steps that share code and the track format.
 
