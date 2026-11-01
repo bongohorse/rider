@@ -2,7 +2,7 @@
 // Run after a verified tools/gym/bundle.py debug HTML5 build. No DOM writes to game state.
 'use strict';
 const {configure}=require('./launch.cjs');
-const {compare}=require('./fps356_verify.cjs');
+const {compare,comparePause}=require('./fps356_verify.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const [output,sha,runId,testcase,bundle]=process.argv.slice(2);
@@ -38,17 +38,36 @@ const server=http.createServer((req,res)=>{
    const b=await snapshot();
    return compare(a,b,{phase,minSeconds:seconds});
   }
+  async function transition(paused,afterSequence,expectedTimeSeq=null){
+   const key={paused,afterSequence,expectedTimeSeq};
+   await page.waitForFunction(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key,{timeout:10000});
+   return page.evaluate(({paused,afterSequence,expectedTimeSeq})=>(window.riderFps356Transitions||[]).find(s=>s.event==='time_state'&&s.paused===paused&&s.sequence>afterSequence&&(expectedTimeSeq===null||s.time_seq===expectedTimeSeq)),key);
+  }
   // Actual keyboard input through Defold input bindings, not DOM/game-state injection.
   await page.keyboard.down('ArrowUp');
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1);
   await page.keyboard.up('ArrowUp');
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===0);
   const running=await measure(10,'running');
+  const beforePause=await snapshot();
   await page.keyboard.press('Space');
-  await page.waitForFunction(()=>window.riderTimeState?.paused===true&&window.riderFps356World?.paused===true);
-  const paused=await measure(2,'paused');
+  await page.waitForFunction(()=>window.riderTimeState?.paused===true);
+  const loaderStart=await page.evaluate(()=>({...window.riderTimeState}));
+  const pauseMarker=await transition(true,beforePause.sequence);
+  // A factor-zero world may stop update() entirely. Loader UI state comes from
+  // boot.script; wall time is independent. No paused-world heartbeat is assumed.
+  const wallStartMs=await page.evaluate(()=>performance.now());
+  await page.waitForTimeout(2400);
+  const pausedEnd=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
+  assert.equal(pausedEnd.loader.paused,true,'Loader unexpectedly resumed during pause window');
   await page.keyboard.press('Space');
-  await page.waitForFunction(()=>window.riderTimeState?.paused===false&&window.riderFps356World?.paused===false);
+  await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+  const resumeMarker=await transition(false,pauseMarker.sequence,pauseMarker.time_seq+1);
+  // The loader applies factor one only after the controller acknowledges
+  // resume. Equal real boundary counters prove zero fixed ticks while paused.
+  const paused=comparePause(pauseMarker,resumeMarker,{
+   loaderStart,loaderEnd:pausedEnd.loader,wallStartMs,wallEndMs:pausedEnd.wallMs,minSeconds:2
+  });
   const before=(await snapshot()).reset_count;
   await page.keyboard.press('r');
   await page.waitForFunction(n=>window.riderFps356World?.reset_count===n+1,before);
