@@ -183,7 +183,9 @@
   button('Fullscreen',overflow,()=>document.getElementById('fullscreen')?.click());
   toolbar.append(overflow);
   root.addEventListener('pointerdown',e=>{
-    if(!overflow.hidden&&!overflow.contains(e.target)&&e.target!==moreButton)closeOverflow();
+    // A held drive pointer must not hide the secondary action before a second pointer can select it.
+    // The selected action is responsible for cancelling held input (e.g. Import).
+    if(!overflow.hidden&&!overflow.contains(e.target)&&e.target!==moreButton&&!zones.contains(e.target))closeOverflow();
   },true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverflow();});
   root.append(toolbar);
