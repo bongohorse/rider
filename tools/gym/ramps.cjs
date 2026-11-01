@@ -107,6 +107,8 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   assert.throws(()=>C.comparePhysics(synthetic,synthetic,{downhillA:loaded,downhillB:loaded.map(s=>({tick:s.tick+10}))}),/Missing dual-supported downhill/);
   assert.throws(()=>C.comparePhysics(synthetic,synthetic.concat({...synthetic[13],x:999}),{downhillA:loaded,downhillB:loaded}),/conflicting duplicate/);
   assert.throws(()=>C.comparePhysics(synthetic,without(14)),/Missing\/unmatched fixed tick/);
+  // Render snapshots can skip fixed ticks; A/B physics must use the separate
+  // once-per-Defold-fixed-tick read-only probe instead.
   const cameraCases={};
   async function cameraTrial(mode,viewport,station='ramps-long'){
    const label=station+'-'+mode+'-'+viewport.width+'x'+viewport.height;
@@ -124,11 +126,21 @@ const P=require('./preset.cjs').fromArgv(process.argv);
     const trace=await p.evaluate(()=>window.riderCamera352Trace.slice());
     assert(trace.length>=140&&trace.every(s=>s.source_sha===sha&&s.mode===mode&&s.station===station),label+': missing live source/section identity');
     assert(trace.every(s=>Number.isFinite(s.m00)&&s.m00>0&&Number.isFinite(s.m11)&&s.m11>0),label+': invalid live projection');
+    const physicsTrace=await p.evaluate(()=>window.riderCamera352PhysicsTrace?.slice()||[]);
+    assert(physicsTrace.length>=25&&physicsTrace.every(s=>s.source_sha===sha&&s.mode===mode&&s.station===station),
+     label+': missing genuine fixed-owner tick trace');
+    const scale=trace[0].scale;
+    assert(Math.abs(scale-0.01)<1e-7,label+': unexpected world scale');
+    const validPhysics=station==='ramps-long'?physicsTrace.filter(s=>s.section==='down-30'&&s.rear&&s.front&&
+     s.x*scale>=slope.a.x&&s.x*scale<=slope.b.x&&s.vx*scale>0.2&&s.vy*scale< -0.1):[];
+    if(station==='ramps-long')assert(validPhysics.length>=5,label+': INCONCLUSIVE: no real fixed-tick dual-supported downhill window');
     const measured=station==='ramps-long'?trace.map(s=>C.measure(s,canvas,slope)):[];
     const valid=measured.filter(s=>s.on_slope&&s.vx>0.2&&s.vy<-0.1&&s.loaded);
     if(station==='ramps-long')assert(valid.length>=5,label+': INCONCLUSIVE: no loaded real downhill velocity samples on authored 30-degree slope');
     const summary={label,mode,station,viewport,canvas,source_sha:sha,first_projection:{m00:trace[0].m00,m11:trace[0].m11},
      frames:trace.length,ticks:[trace[0].tick,trace.at(-1).tick],valid_downhill:valid.length,
+     fixed_ticks:physicsTrace.length,fixed_window:[physicsTrace[0].tick,physicsTrace.at(-1).tick],
+     valid_fixed_downhill:validPhysics.length,
      mean_screen_y_px:valid.length?valid.reduce((a,s)=>a+s.screen_y_px,0)/valid.length:null,
      min_bottom_margin_px:valid.length?Math.min(...valid.map(s=>s.bottom_margin_px)):null,
      mean_visible_slope_m:valid.length?valid.reduce((a,s)=>a+s.visible_slope_m,0)/valid.length:null,
@@ -137,7 +149,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
      viewport_truncated:valid.filter(s=>s.viewport_truncated).length,
      max_descent_u:Math.max(...trace.map(s=>s.descent))};
     if(station==='straight')assert(summary.max_descent_u<5,'Flat-road candidate introduced downhill lead');
-    cameraCases[label]={summary,trace,measured,valid};
+    cameraCases[label]={summary,trace,measured,valid,physicsTrace,validPhysics};
     fs.writeFileSync(path.join(out,'camera352-'+label+'.json'),JSON.stringify(cameraCases[label],null,2));
     await p.screenshot({path:path.join(out,'camera352-'+label+'.png')});
     if(station==='ramps-long'&&mode==='b'&&viewport.width===1280){
@@ -161,13 +173,13 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   }
   for(const viewport of [{width:1280,height:720},{width:720,height:1280}]){
    const a=await cameraTrial('a',viewport),b=await cameraTrial('b',viewport);
-   const equal=C.comparePhysics(a.trace,b.trace,{downhillA:a.valid,downhillB:b.valid});
+   const equal=C.comparePhysics(a.physicsTrace,b.physicsTrace,{downhillA:a.validPhysics,downhillB:b.validPhysics});
    const name=viewport.width+'x'+viewport.height;
    cameraCases['physics-'+name]={equal};
   }
   const flatA=await cameraTrial('a',{width:1280,height:720},'straight');
   const flatB=await cameraTrial('b',{width:1280,height:720},'straight');
-  cameraCases['flat-physics']={equal:C.comparePhysics(flatA.trace,flatB.trace)};
+  cameraCases['flat-physics']={equal:C.comparePhysics(flatA.physicsTrace,flatB.physicsTrace)};
   const cameraReport={source_sha:sha,run_id:runId,status:'PASS',protocol:'Actual Defold fixed-owner a16 neutral 1 m/s downhill, debug HTML5 render-only camera A/B, measured orthographic matrix and canvas, authored slope clipped to viewport. Phone drive and jump/reverse camera acceptance NOT RUN.',
    cases:Object.fromEntries(Object.entries(cameraCases).map(([key,v])=>[key,v.summary||v])),
    human_drive:'REQUIRED BEFORE CAMERA DEFAULT MERGE'};
