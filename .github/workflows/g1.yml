@@ -242,7 +242,7 @@ jobs:
           - group: regress
             cases: 'a22'
           - group: controls
-            cases: 'a3 a6 coast a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
+            cases: 'a3 a6 coast coast345 a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -384,6 +384,9 @@ jobs:
       - name: Coasting and brake-tap regression
         if: contains(format(' {0} ', matrix.cases), ' coast ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/coast --case coast
+      - name: Measure stock-A 5 m/s grounded coast twice and full brake on real fixed Gym ticks
+        if: contains(format(' {0} ', matrix.cases), ' coast345 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/coast-measure --case coast345
       - name: Verify bounded visual rider reaction
         if: contains(format(' {0} ', matrix.cases), ' a15a ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/rider --case a15a
