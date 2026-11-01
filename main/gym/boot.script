@@ -358,7 +358,8 @@ function on_message(self,id,data,sender)
         self.run_terminal=nil;self.level_finished=nil
         self.time.paused=false;self.time.seq=self.time.seq+1
         msg.post(OWNER,"time_state",time_scale.state(self.time,self.generation));msg.post("#ui","time_state",time_scale.state(self.time))
-    elseif id==hash("run_focus_lost") and catalog.index(self.station)~=nil and not self.loading and editor.mode=="play" then
+    -- Background/orientation suspension applies to every playable Gym station, not just shipped courses.
+    elseif id==hash("run_focus_lost") and not self.loading and editor.mode=="play" then
         msg.post("#script","time_control",{action="suspend"})
     elseif id==hash("time_control") and not self.loading and editor.mode=="play" and not self.run_terminal then
         if time_scale.control(self.time,data.action) then
