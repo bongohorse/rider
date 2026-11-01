@@ -131,7 +131,7 @@ function M.before(self,dt)
         local q=sample(self,n)
         r.trace[#r.trace+1]=q
         s.last_tick=self.fixed_ticks
-        if not (q[4] or q[5]) then return fail(self,"lost all wheel contact at tick "..n) end
+        if not (q[4] and q[5]) then return fail(self,"lost dual-wheel support at tick "..n) end
         if math.abs(q[3])<0.1 then finish_run(self)
         elseif n>=M.CAP then fail(self,"no stop below 0.1 m/s within "..M.CAP.." ticks")
         elseif q[3]<-0.1 then fail(self,"unexpected reversal") end
