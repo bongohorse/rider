@@ -58,10 +58,16 @@ function M.fixed(self,state,dt)
     assert(sys.get_engine_info().is_debug and html5,"camera352 fixed trace requires debug HTML5")
     local velocity=b2d.body.get_linear_velocity(self.vehicle.chassis)
     local section=self.station.sections and self.station.sections[self.station.section_index]
+    -- The global fixed tick also counts steps before vehicle.attach marks the body ready.
+    -- Independent A/B pages can attach on different global ticks despite identical
+    -- first vehicle states. Compare the actual vehicle-ready fixed-step epoch instead;
+    -- retain the global engine tick separately for diagnostics (never step Box2D here).
+    self.camera352_vehicle_tick=(self.camera352_vehicle_tick or 0)+1
     local sample={
         source_sha=sys.get_config_string("rider.source_sha","development"),
         mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
-        tick=self.fixed_ticks,resets=self.reset_count,generation=self.generation,dt=dt,
+        tick=self.camera352_vehicle_tick,engine_tick=self.fixed_ticks,
+        resets=self.reset_count,generation=self.generation,dt=dt,
         x=state.x,y=state.y,vx=velocity.x,vy=velocity.y,
         rear=contacts.supported(self.vehicle.wheels[1]),
         front=contacts.supported(self.vehicle.wheels[2])
