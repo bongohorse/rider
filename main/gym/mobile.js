@@ -303,7 +303,7 @@
   rotate.id='rider-mobile-rotate';rotate.hidden=true;rotate.tabIndex=-1;
   rotate.setAttribute('role','alert');rotate.setAttribute('aria-live','assertive');
   rotate.textContent='Rotate your device — Rider is landscape only';
-  document.body.append(rotate);
+  (document.getElementById('app-container')||document.body).append(rotate);
   function syncOrientation(){
     const portrait=window.innerHeight>window.innerWidth;
     if(portrait===api.blocked)return;
