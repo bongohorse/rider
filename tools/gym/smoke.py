@@ -76,7 +76,7 @@ else:
     bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
     if not args.bundle:build_bundle(bundle,sha)
     verify_bundle(bundle,sha)
-    runner='versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    runner='coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else []),*(['--record'] if args.record else [])],cwd=ROOT,start_new_session=True,env=env)
@@ -114,6 +114,10 @@ if args.case=='a22':
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and report['mode']==('record' if args.record else 'check')
     assert len(report['cases'])==(8 if args.record else 7)
     print(json.dumps({k:report[k] for k in ('status','cases','limits')}));raise SystemExit(0)
+if args.case=='coast345':
+    report=json.loads((out/'coast-measure-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and report['completed']==3
+    print(json.dumps({k:report[k] for k in ('status','source_sha','repeat_delta_m','repeat_delta_s')}));raise SystemExit(0)
 if args.case=='le2':
     report=json.loads((out/'editor-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==19
