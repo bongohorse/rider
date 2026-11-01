@@ -57,7 +57,11 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===0);
   const running=await measure(10,'running');
   const beforePause=await snapshot();
-  await holdUntil('Space',on=>window.riderTime?.paused===on&&window.riderTimeState?.paused===on,true);
+  // fps356 does not expose the A20-only window.riderTime object. Confirm
+  // both the loader state and a NEW real controller boundary event.
+  await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
+   (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
+   {on:true,seq:beforePause.sequence});
   const loaderStart=await page.evaluate(()=>({...window.riderTimeState}));
   const pauseMarker=await transition(true,beforePause.sequence);
   // A factor-zero world may stop update() entirely. Loader UI state comes from
@@ -66,7 +70,9 @@ const server=http.createServer((req,res)=>{
   await page.waitForTimeout(2400);
   const pausedEnd=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
   assert.equal(pausedEnd.loader.paused,true,'Loader unexpectedly resumed during pause window');
-  await holdUntil('Space',on=>window.riderTime?.paused===on&&window.riderTimeState?.paused===on,false);
+  await holdUntil('Space',({on,seq})=>window.riderTimeState?.paused===on&&
+   (window.riderFps356Transitions||[]).some(t=>t.event==='time_state'&&t.paused===on&&t.sequence>seq),
+   {on:false,seq:pauseMarker.sequence});
   const resumeMarker=await transition(false,pauseMarker.sequence,pauseMarker.time_seq+1);
   // The loader applies factor one only after the controller acknowledges
   // resume. Equal real boundary counters prove zero fixed ticks while paused.
