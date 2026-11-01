@@ -57,9 +57,10 @@ function cameraReady({sha,runId,station}){
   w.riderTelemetry?.station===station&&w.riderTelemetry.sequence>2&&
   (station!=='ramps-long'||(w.riderStationReport?.station===station&&w.riderStationReport.section==='down-30'));
 }
-// Fail closed: render snapshots are indexed by the Defold-owned fixed tick, never by
-// frame number. Every tick in the actual dual-supported downhill interval must be
-// observed by both A and B; unmatched, missing or reset-discontinuous ticks are errors.
+// Fail closed: the fixed-owner trace, not render snapshots, covers EVERY tick between
+// the first and last real dual-supported downhill observations. Short loss of wheel
+// support is a measured contact gap, not a missing physics tick: compare those ticks
+// too, require identical contact states, and reject any A/B support-window mismatch.
 // A partial early flat overlap cannot substitute for downhill evidence.
 function comparePhysics(a,b,{downhillA,downhillB}={}){
  const downhill=downhillA!==undefined||downhillB!==undefined;
@@ -87,12 +88,24 @@ function comparePhysics(a,b,{downhillA,downhillB}={}){
  const from=downhill?Math.min(...validA,...validB):Math.max(Math.min(...ticksA),Math.min(...ticksB));
  const to=downhill?Math.max(...validA,...validB):Math.min(Math.max(...ticksA),Math.max(...ticksB));
  assert(to>=from&&to-from+1>=(downhill?5:25),'Insufficient continuous fixed-tick A/B window');
- let max=0,firstIdentity=null;
+ let max=0,firstIdentity=null,dualSupportedTicks=0,contactGapTicks=0;
  for(let tick=from;tick<=to;tick++){
   const s=byA.get(tick),other=byB.get(tick);
   assert(s&&other,'Missing/unmatched fixed tick '+tick+' in '+(downhill?'loaded downhill':'flat')+' A/B window');
-  if(downhill)assert(validA.has(tick)&&validB.has(tick),
-   'Missing dual-supported downhill observation at fixed tick '+tick);
+  if(downhill){
+   assert(typeof s.rear==='boolean'&&typeof s.front==='boolean'&&
+    typeof other.rear==='boolean'&&typeof other.front==='boolean',
+    'Missing real wheel-support state at fixed tick '+tick);
+   assert(s.rear===other.rear&&s.front===other.front,
+    'Camera A/B wheel-support mismatch at fixed tick '+tick);
+   assert(validA.has(tick)===validB.has(tick),
+    'Missing dual-supported downhill observation at fixed tick '+tick);
+   if(validA.has(tick)){
+    assert(s.rear&&s.front&&other.rear&&other.front,
+     'Unloaded tick falsely classified as dual-supported at fixed tick '+tick);
+    dualSupportedTicks++;
+   }else contactGapTicks++;
+  }
   assert(s.resets===other.resets&&s.generation===other.generation,
    'Camera A/B reset/generation mismatch at fixed tick '+tick);
   const identity=s.resets+':'+s.generation;
@@ -102,7 +115,9 @@ function comparePhysics(a,b,{downhillA,downhillB}={}){
   assert(difference<0.5,'Camera A/B altered deterministic physics at tick '+tick+': '+difference);
   max=Math.max(max,difference);
  }
+ if(downhill)assert(dualSupportedTicks>=5,'Insufficient real dual-supported downhill ticks');
  return {matched_ticks:to-from+1,window_start_tick:from,window_end_tick:to,
-  continuous:true,downhill_loaded:downhill,max_engine_units:max};
+  continuous:true,downhill_loaded:downhill,dual_supported_ticks:dualSupportedTicks,
+  compared_contact_gap_ticks:contactGapTicks,max_engine_units:max};
 }
 module.exports={slope,clip,measure,cameraReady,comparePhysics};
