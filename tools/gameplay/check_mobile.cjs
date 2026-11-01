@@ -15,7 +15,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
     progress:shown('#rider-mobile .course-progress'),progressTrack:shown('#rider-mobile .progress-track'),progressValue:shown('#rider-mobile .progress-value'),
     coin:shown('#rider-mobile .coin-widget'),fuel:shown('#rider-mobile .fuel-widget'),speed:shown('#rider-mobile .speedometer'),race:shown('#rider-mobile .race-summary'),
     readoutClipped:(()=>{const e=document.querySelector('#rider-mobile .readout');return e.scrollHeight>e.clientHeight+1;})(),
-    buttons:[...toolbar.querySelectorAll('button')].filter(visible).map(e=>({label:e.textContent,rect:box(e)}))};
+    buttons:[...toolbar.children].filter(e=>e.tagName==='BUTTON'&&visible(e)).map(e=>({label:e.getAttribute('aria-label')||e.textContent,rect:box(e)}))};
  });
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
  assert.ok(g.toolbar&&g.readout&&g.zones,'missing mobile HUD geometry');
@@ -102,6 +102,13 @@ module.exports=async function check(browser,base,sha,out){
     const action=menu.getByRole('button',{name:label,exact:true});
     await action.scrollIntoViewIfNeeded();
     assert.equal(await action.isVisible(),true,'secondary touch action inaccessible: '+label);
+    const hit=await action.evaluate(e=>{
+     const r=e.getBoundingClientRect(),m=e.closest('.toolbar-more').getBoundingClientRect();
+     const x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;
+     return {inside:r.left>=m.left-1&&r.right<=m.right+1&&r.top>=m.top-1&&r.bottom<=m.bottom+1,
+       hit:e.contains(document.elementFromPoint(x,y)),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom},menu:{left:m.left,top:m.top,right:m.right,bottom:m.bottom}};
+    });
+    assert.ok(hit.inside&&hit.hit,'secondary action not actually hittable after scroll: '+label+' '+JSON.stringify(hit));
    }
    if(viewport.width===1080)await page.screenshot({path:path.join(out,'mobile-hud-landscape-1080-more.png')});
    await page.getByRole('button',{name:'More',exact:true}).tap();
