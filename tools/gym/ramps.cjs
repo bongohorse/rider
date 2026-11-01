@@ -66,7 +66,12 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   const ctx=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true});const phone=await ctx.newPage();
   phone.on('pageerror',e=>errors.push(e.message));await phone.goto(url+'?station=ramps&touch=1'+P.query);
   await phone.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderStationReport?.section==='5');
-  await phone.getByRole('button',{name:'Next section',exact:true}).click();await phone.waitForFunction(()=>window.riderStationReport.section==='10');
+  const more=phone.getByRole('button',{name:'More',exact:true});
+  await more.tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'true','More must open via real touch');
+  await phone.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'false','Next section must close More');
+  await phone.waitForFunction(()=>window.riderStationReport.section==='10');
   await phone.screenshot({path:path.join(out,'ramps-phone.png')});await ctx.close();
   // #352: same real a16 fixed-owner neutral downhill, debug-only render A/B. The runner
   // reads actual camera.get_projection (not a guessed portrait half-extent) and authored
