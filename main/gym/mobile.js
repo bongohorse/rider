@@ -196,6 +196,7 @@
     #rider-mobile .toolbar-more button{width:100%;height:auto;min-height:44px}
     #rider-mobile .zones button{position:relative;overflow:hidden;border:1px solid #aab4ff;border-radius:18px 18px 14px 14px;background:linear-gradient(180deg,#7b92efed,#4e55b7ee);color:#fffdf2;text-shadow:0 1px 1px #23142e88;box-shadow:0 3px 5px #120e1a70,inset 0 1px 0 #ffffff7d}
     #rider-mobile .zones button:before{content:'';position:absolute;top:4px;left:12px;right:12px;height:4px;border-radius:50%;background:#ffffff55;pointer-events:none}
+    #rider-mobile .zones button[data-command="left"]{background:linear-gradient(180deg,#7b92efed,#4e55b7ee)}
     #rider-mobile .zones button[data-command="right"]{background:linear-gradient(180deg,#8b83e8ef,#5e4fa8f0);border-color:#c2aaff}
     #rider-mobile .zones button[data-command="brake"]{background:linear-gradient(180deg,#f07874f0,#b93f5bf2);border-color:#ffab94}
     #rider-mobile .zones button[data-command="throttle"]{background:linear-gradient(180deg,#a7df57f0,#5d9b3af2);border-color:#d5f68d;color:#192819;text-shadow:none}
