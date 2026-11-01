@@ -236,7 +236,13 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
   for(let i=0;i<6;i++){
    if(await page.evaluate(()=>window.riderTelemetry?.station==='balance'))break;
    const s=await page.evaluate(()=>window.riderTelemetry.station);
-   await page.getByRole('button',{name:'Next station',exact:true}).click();await page.waitForFunction(s=>window.riderTelemetry?.station!==s&&window.riderTelemetry.sequence>2,s);
+   const more=page.getByRole('button',{name:'More',exact:true});
+   assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
+   await more.click();
+   assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real pointer input');
+   await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next station',exact:true}).click();
+   assert.equal(await more.getAttribute('aria-expanded'),'false','Next station closes More');
+   await page.waitForFunction(s=>window.riderTelemetry?.station!==s&&window.riderTelemetry.sequence>2,s);
   }
   await page.waitForFunction(()=>window.riderStationReport?.station==='balance'&&window.riderStationReport.record.elapsed>1.5);
   r=await report();const loads=await page.evaluate(()=>window.riderTelemetry.world_loads);

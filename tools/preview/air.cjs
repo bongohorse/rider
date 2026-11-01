@@ -49,7 +49,12 @@ module.exports=async function air(browser,url,sha,out){
  try{
   const target=new URL(url);target.search='?station=air&section=flat&speed=0&touch=1';await mobile.goto(target.href);
   await mobile.waitForFunction(()=>window.riderStationReport?.station==='air'&&window.riderStationReport.section==='flat'&&window.riderTelemetry?.sequence>2);
-  await mobile.getByRole('button',{name:'Next section',exact:true}).click();await mobile.waitForFunction(()=>window.riderStationReport.section==='low');
+  const more=mobile.getByRole('button',{name:'More',exact:true});
+  assert.equal(await more.getAttribute('aria-expanded'),'false');
+  await more.tap();assert.equal(await more.getAttribute('aria-expanded'),'true');
+  await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'false');
+  await mobile.waitForFunction(()=>window.riderStationReport.section==='low');
   await mobile.screenshot({path:path.join(out,'air-release-phone.png')});cases.push('mobile_emulation_next_section');
  }finally{await phone.close();}
  fs.writeFileSync(path.join(out,'air-release-result.json'),JSON.stringify({source_sha:sha,status:'PASS',cases,realDevice:'NOT RUN'},null,2));

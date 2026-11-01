@@ -10,6 +10,18 @@ module.exports=async function mobile(browser,url,sha,out){
   const pass=name=>{cases.push(name);console.log('MOBILE_CASE '+name);};
   const session=await context.newCDPSession(page);
   const dispatch=(type,points)=>session.send('Input.dispatchTouchEvent',{type,touchPoints:points});
+  const more=()=>page.getByRole('button',{name:'More',exact:true});
+  async function openMore(){
+    const control=more();
+    assert.equal(await control.getAttribute('aria-expanded'),'false','More starts closed');
+    await control.tap();
+    assert.equal(await control.getAttribute('aria-expanded'),'true','More opens with real touch');
+  }
+  async function tapSecondary(label){
+    await openMore();
+    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).tap();
+    assert.equal(await more().getAttribute('aria-expanded'),'false',label+' closes More');
+  }
   const point=async(command,id)=>{
     const box=await page.locator(`[data-command="${command}"]`).boundingBox();
     assert(box&&box.width>=44&&box.height>=44,'Touch zone must be usable');
@@ -58,19 +70,20 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>document.querySelector('#rider-mobile .toast').hidden,null,{timeout:5000});
     pass('retry_toast_clear_and_expires');
     const loads=await page.evaluate(()=>window.riderTelemetry.world_loads);
-    await page.getByRole('button',{name:'Next station',exact:true}).click();
+    await tapSecondary('Next station');
     await page.waitForFunction(n=>window.riderTelemetry.world_loads===n+1,loads);
     await neutral();await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
     assert.equal(await page.locator('#rider-mobile').count(),1);
     pass('station_switch_fresh_input_single_mobile_surface');
     const before=await point('throttle',1);
-    await page.getByRole('button',{name:'Layout A · mirror',exact:true}).click();
+    await tapSecondary('Layout A · mirror');
     await page.waitForFunction(()=>window.riderMobile.mirrored);
     const after=await point('throttle',1);assert(after.x<before.x);
     await dispatch('touchStart',[after,await point('right',2)]);
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1&&window.riderTelemetry.command.lean===-1);
-    await page.setViewportSize({width:486,height:1080});await neutral();await dispatch('touchEnd',[]);
-    await layout();await page.screenshot({path:path.join(out,'mobile-portrait.png')});
+    // Resize within supported mobile landscape, retaining held-input cancellation.
+    await page.setViewportSize({width:960,height:540});await neutral();await dispatch('touchEnd',[]);
+    await layout();await page.screenshot({path:path.join(out,'mobile-compact-landscape.png')});
     await page.setViewportSize({width:1080,height:486});await layout();
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('mirrored_drive_rotation_no_reload');
@@ -93,7 +106,7 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
     await dispatch('touchEnd',[]);await neutral();pass('closing_editor_releases_capture');
     // A real 30-second capture exercises bounded collection and source metadata.
-    await page.getByRole('button',{name:'Measure',exact:true}).click();
+    await tapSecondary('Measure');
     await page.getByRole('combobox').selectOption({label:'60 Hz'});
     await page.getByRole('button',{name:'Record 30 s',exact:true}).click();
     await page.waitForFunction(()=>window.riderMobile.recording===true);
@@ -112,7 +125,7 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>!window.riderMobile.recording);assert.equal(await page.evaluate(()=>window.riderMobile.report),null);
     pass('interrupted_capture_cancelled');
     await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
-    await page.getByRole('button',{name:'Copy report',exact:true}).click();
+    await tapSecondary('Copy report');
     await page.waitForFunction(()=>window.riderFeedback.visible);
     assert((await page.locator('#rider-feedback-text').inputValue()).includes('## Mobile trial'));
     assert((await page.locator('#rider-feedback-text').inputValue()).includes(sha));
@@ -129,7 +142,7 @@ module.exports=async function mobile(browser,url,sha,out){
       await neutral();await layout();
     }
     for(let transition=0;transition<3;transition++){
-      await page.getByRole('button',{name:'Fullscreen',exact:true}).click();
+      await tapSecondary('Fullscreen');
       await page.waitForFunction(()=>document.fullscreenElement!==null);
       await settledViewport();
       await dispatch('touchStart',[await point('throttle',1)]);
@@ -146,13 +159,14 @@ module.exports=async function mobile(browser,url,sha,out){
     // Imports: from a built-in station, with a saved level, and after a reload of ?station=custom
     // (the saved level restores and the panel no longer opens by itself, as on the phone).
     const sample=name=>path.join(__dirname,'../../main/gym/samples',name+'.json');
-    const importButton=()=>page.getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
+    const importButton=()=>page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
     for(const [step,name] of [[0,'rolling-hills'],[1,'kicker-platform'],[2,'rolling-hills']]){
       if(step===2){
         const custom=new URL(url);custom.search='?station=custom&touch=1';
         await page.goto(custom.href);
         await page.waitForFunction(()=>window.riderTelemetry?.station==='kicker-platform'&&window.riderTelemetry.sequence>=2&&!window.riderCustom.visible);
       }
+      await openMore();
       assert.equal(await importButton().count(),1,'One visible touch import entry');
       const box=await importButton().boundingBox();
       assert(box&&box.x>=0&&box.y>=0&&box.x+box.width<=page.viewportSize().width&&box.height>=32,'Touch import entry must be usable');
@@ -165,10 +179,13 @@ module.exports=async function mobile(browser,url,sha,out){
         // the panel clears the held command.
         await dispatch('touchStart',[await point('throttle',1)]);
         await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+        assert.equal(await more().getAttribute('aria-expanded'),'true','Drive-zone touch keeps More open for a second pointer');
+        assert.equal(await importButton().isVisible(),true,'Import stays visible while throttle is held');
         await importButton().click();
         await page.waitForFunction(()=>window.riderCustom.visible&&window.riderTelemetry.ui_captured&&window.riderTelemetry.command.throttle===0);
         await dispatch('touchEnd',[]);
       }
+      assert.equal(await more().getAttribute('aria-expanded'),'false','Import level closes More');
       const panel=await page.locator('#rider-custom-panel').boundingBox();
       assert(panel&&panel.x>=0&&panel.y>=0&&panel.x+panel.width<=page.viewportSize().width+1&&panel.y+panel.height<=page.viewportSize().height+1,'Import panel must fit the viewport');
       await page.locator('#rider-custom-file').setInputFiles(sample(name));
@@ -180,11 +197,14 @@ module.exports=async function mobile(browser,url,sha,out){
     }
     assert((await page.evaluate(()=>window.riderFeedback.text)).includes('- Level load: switch '));
     await page.screenshot({path:path.join(out,'mobile-import.png')});
-    // Portrait: the longer toolbar still shows the entry inside the viewport, above the driving zones.
-    await page.setViewportSize({width:486,height:1080});await neutral();await layout();
-    const portrait=await importButton().boundingBox(),zone=await page.locator('[data-command="throttle"]').boundingBox();
-    assert(portrait&&portrait.x>=0&&portrait.x+portrait.width<=486&&portrait.y+portrait.height<=zone.y,'Portrait import entry must stay usable');
-    await page.screenshot({path:path.join(out,'mobile-import-portrait.png')});
+    // Compact landscape: touch-opened Import stays on screen and above the drive zones.
+    await page.setViewportSize({width:960,height:540});await neutral();await layout();
+    await openMore();
+    const compact=await importButton().boundingBox(),zone=await page.locator('[data-command="throttle"]').boundingBox();
+    assert(compact&&zone&&compact.width>=44&&compact.height>=44&&compact.x>=0&&compact.y>=0&&compact.x+compact.width<=960&&compact.y+compact.height<=zone.y,'Compact landscape import entry must stay usable');
+    await page.screenshot({path:path.join(out,'mobile-import-compact-landscape.png')});
+    await more().tap();
+    assert.equal(await more().getAttribute('aria-expanded'),'false','More closes with real touch');
     await page.setViewportSize({width:1080,height:486});await layout();
     pass('touch_import_entry_with_saved_level');
     if(errors.length)throw Error(errors.join('\n'));
