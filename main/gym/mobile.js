@@ -176,7 +176,11 @@
     #rider-mobile button,#rider-mobile select{border-color:#e3a45c;background:#2b2633ed;color:var(--rider-paper)}
     #rider-mobile button:focus-visible{outline:2px solid var(--rider-gold);outline-offset:2px}
     #rider-mobile .toolbar{top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:auto;flex-wrap:nowrap;justify-content:flex-start;gap:5px}
-    #rider-mobile .toolbar button{width:44px;height:44px;min-width:44px;padding:8px;border-radius:13px;background:#332b34f0}
+    #rider-mobile .toolbar button{width:44px;height:44px;min-width:44px;padding:8px;border:1px solid #a67865;border-radius:12px;background:#493544ee;box-shadow:0 2px 4px #1a14254d}
+    #rider-mobile .toolbar button:nth-child(1){background:#74444a;border-color:#be7770}
+    #rider-mobile .toolbar button:nth-child(2){background:#4b5279;border-color:#8799d1}
+    #rider-mobile .toolbar button:nth-child(3){background:#74502f;border-color:#c28d52}
+    #rider-mobile .toolbar button:nth-child(4){background:#484061;border-color:#9884bb}
     #rider-mobile .toolbar button[disabled]{opacity:.45}
     #rider-mobile .toolbar button[aria-expanded="true"]{background:#86522e}
     #rider-mobile .toolbar button svg{width:22px;height:22px;display:block;margin:auto}
@@ -184,32 +188,32 @@
     #rider-mobile .toolbar-more button{width:100%;height:auto;min-height:44px}
     #rider-mobile .zones button{border-color:#be874e;background:#302934d9}
     #rider-mobile .zones button.held,#rider-mobile button.held{background:#99612f}
-    #rider-mobile .readout{left:max(230px,calc(env(safe-area-inset-left) + 230px));right:auto;width:min(310px,calc(100% - 470px));max-width:none;box-sizing:border-box;background:#2b252cb8;border-radius:9px;font-size:10px;color:#e6d8c4}
+    #rider-mobile .readout{left:max(215px,calc(env(safe-area-inset-left) + 215px));right:auto;width:min(205px,calc(100% - 455px));max-width:none;box-sizing:border-box;background:#2b252c85;border-radius:7px;font-size:9px;color:#e6d8c4;padding:3px 5px}
     #rider-mobile .readout>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #rider-mobile .course-progress{position:absolute;top:max(9px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:clamp(190px,30vw,310px);height:35px;min-width:0;margin:0;gap:6px;font-size:11px;color:var(--rider-paper)}
-    #rider-mobile .course-progress>span:not(.progress-value):not(.progress-reason) svg{width:19px;height:19px;display:block}
-    #rider-mobile .progress-track{height:4px;min-width:20px;background:#6b554a;border-radius:4px}
-    #rider-mobile .progress-car{top:-14px;width:21px;height:21px;background:none;color:var(--rider-gold)}
+    #rider-mobile .course-progress{position:absolute;top:max(9px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:clamp(184px,27vw,275px);height:30px;min-width:0;margin:0;gap:5px;font-size:10px;color:var(--rider-paper)}
+    #rider-mobile .course-progress>span:not(.progress-value):not(.progress-reason) svg{width:16px;height:16px;display:block}
+    #rider-mobile .progress-track{height:3px;min-width:20px;background:#765b4b;border-radius:4px;box-shadow:0 1px 0 #ffc66a7a}
+    #rider-mobile .progress-car{top:-12px;width:17px;height:17px;background:none;color:var(--rider-gold)}
     #rider-mobile .progress-car:before,#rider-mobile .progress-car:after{content:none}
-    #rider-mobile .progress-car svg{width:21px;height:21px}
-    #rider-mobile .progress-value{position:absolute;top:17px;left:50%;transform:translateX(-50%);font-size:10px;font-variant-numeric:tabular-nums;font-weight:700}
-    #rider-mobile .progress-reason{position:absolute;top:23px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px}
-    #rider-mobile .race-summary{position:absolute;top:max(48px,calc(env(safe-area-inset-top) + 39px));left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:#ffe3ac;background:#332a30b8;padding:2px 7px;border-radius:9px}
-    #rider-mobile .coin-widget{position:absolute;top:max(11px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));display:flex;align-items:center;gap:4px;color:var(--rider-gold);background:#2b2633b9;border-radius:12px;padding:4px 8px}
+    #rider-mobile .progress-car svg{width:17px;height:17px}
+    #rider-mobile .progress-value{position:absolute;top:15px;left:50%;transform:translateX(-50%);font-size:10px;font-variant-numeric:tabular-nums;font-weight:700}
+    #rider-mobile .progress-reason{position:absolute;top:20px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px}
+    #rider-mobile .race-summary{position:absolute;top:max(42px,calc(env(safe-area-inset-top) + 33px));left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:#ffe3ac;background:#332a3094;padding:2px 6px;border-radius:7px}
+    #rider-mobile .coin-widget{position:absolute;top:max(11px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));display:flex;align-items:center;gap:4px;color:var(--rider-gold);background:#2b263394;border-radius:10px;padding:3px 7px}
     #rider-mobile .coin-widget svg{width:16px;height:16px}
     #rider-mobile .coin-count{font-size:0}
     #rider-mobile .coin-count:after{content:attr(data-compact);font-size:12px;font-weight:700}
-    #rider-mobile .fuel-widget{position:absolute;top:max(82px,calc(env(safe-area-inset-top) + 75px));left:max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--rider-amber);background:#2b2633b9;padding:7px 5px;border-radius:13px}
-    #rider-mobile .fuel-widget svg{width:19px;height:19px}
+    #rider-mobile .fuel-widget{position:absolute;top:max(78px,calc(env(safe-area-inset-top) + 71px));left:max(10px,env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--rider-amber);background:#2b263394;padding:5px 4px;border-radius:10px}
+    #rider-mobile .fuel-widget svg{width:16px;height:16px}
     #rider-mobile .fuel-count{font-size:0}
     #rider-mobile .fuel-count:after{content:attr(data-compact);font-size:10px}
-    #rider-mobile .fuel-bar{writing-mode:vertical-lr;direction:rtl;width:12px;height:86px;border-radius:6px}
+    #rider-mobile .fuel-bar{writing-mode:vertical-lr;direction:rtl;width:10px;height:70px;border-radius:5px}
     #rider-mobile .fuel-widget.low{color:#ff7558}
-    #rider-mobile .speedometer{position:absolute;bottom:max(9px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:98px;height:98px;box-sizing:border-box;border:3px solid #d58c46;border-radius:50%;background:radial-gradient(circle at 50% 58%,#322933 0 48%,#4c3730 70%,#261f28 100%);box-shadow:0 2px 8px #130e17a6;pointer-events:none;color:var(--rider-paper);text-align:center}
-    #rider-mobile .speed-needle{position:absolute;left:50%;bottom:47%;height:38%;width:3px;border-radius:3px;background:var(--rider-amber);transform-origin:50% 100%;transition:transform .08s linear}
-    #rider-mobile .speed-value{position:absolute;top:50%;left:0;width:100%;font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}
+    #rider-mobile .speedometer{position:absolute;bottom:max(9px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:82px;height:82px;box-sizing:border-box;border:2px solid #c9874a;border-radius:50%;background:radial-gradient(circle at 45% 30%,#48373f,#2c2631 75%);box-shadow:0 2px 5px #130e1766;pointer-events:none;color:var(--rider-paper);text-align:center}
+    #rider-mobile .speed-needle{position:absolute;left:50%;bottom:47%;height:33%;width:2px;border-radius:2px;background:var(--rider-amber);transform-origin:50% 100%;transition:transform .08s linear}
+    #rider-mobile .speed-value{position:absolute;top:48%;left:0;width:100%;font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
     #rider-mobile .speed-unit{position:absolute;top:73%;left:0;width:100%;font-size:9px}
-    #rider-mobile .speed-limit{position:absolute;top:27%;left:0;width:100%;font-size:8px;color:#e3b87e}
+    #rider-mobile .speed-limit{position:absolute;top:24%;left:0;width:100%;font-size:8px;color:#e3b87e}
     #rider-mobile .coin-widget[hidden],#rider-mobile .fuel-widget[hidden],#rider-mobile .speedometer[hidden],#rider-mobile .race-summary[hidden]{display:none}
     #rider-mobile.editing .course-progress,#rider-mobile.editing .race-summary,#rider-mobile.editing .coin-widget,#rider-mobile.editing .fuel-widget,#rider-mobile.editing .speedometer{display:none}
   `;
