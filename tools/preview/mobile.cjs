@@ -104,6 +104,8 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(await page.evaluate(()=>document.elementFromPoint(innerWidth/2,innerHeight/2)?.id),'rider-mobile-rotate','Portrait blocker intercepts touch');
     await dispatch('touchEnd',[]);
     await dispatch('touchStart',[{x:243,y:700,id:8}]);await dispatch('touchEnd',[]);
+    await page.keyboard.press('1');
+    assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),beforePortrait.loads,'Portrait keyboard cannot switch station');
     assert.equal(await page.evaluate(()=>window.riderTimeState.paused),true,'Portrait touch cannot resume gameplay');
     await page.evaluate(()=>{window.__testAngle=180;Object.defineProperty(screen.orientation,'angle',{configurable:true,get:()=>window.__testAngle});window.dispatchEvent(new Event('orientationchange'));});
     assert.equal(await page.evaluate(()=>window.riderMobile.blocked),true,'Portrait at 180 degrees remains blocked');
@@ -119,14 +121,18 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.getByRole('button',{name:'Resume',exact:true}).tap();
     await page.waitForFunction(()=>window.riderTimeState?.paused===false);
     await neutral();
-    for(const viewport of [{width:1080,height:486},{width:896,height:400}]){
+    for(const [viewport,angle] of [[{width:1080,height:486},270],[{width:896,height:400},90]]){
       await page.setViewportSize(viewport);
-      await page.evaluate(()=>{window.__testAngle=270;window.dispatchEvent(new Event('orientationchange'));});
+      await page.evaluate(value=>{window.__testAngle=value;window.dispatchEvent(new Event('orientationchange'));},angle);
       await page.waitForFunction(()=>!window.riderMobile.blocked);
       await layout();
       await dispatch('touchStart',[await point('throttle',1)]);
       await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
-      await dispatch('touchCancel',[]);await neutral();
+      // A 90↔270 flip can leave viewport dimensions unchanged; it must still cancel.
+      await page.evaluate(value=>{window.__testAngle=value;window.dispatchEvent(new Event('orientationchange'));},angle===270?90:270);
+      await neutral();
+      assert.equal(await page.locator('#rider-mobile .zones .held').count(),0);
+      await dispatch('touchEnd',[]);
     }
     const resetAfterOrientation=await page.evaluate(()=>window.riderTelemetry.reset_count);
     await page.getByRole('button',{name:'Retry',exact:true}).tap();
