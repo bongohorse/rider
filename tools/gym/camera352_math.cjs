@@ -49,16 +49,60 @@ function measure(s,canvas,segment){
   projection:{m00:s.m00,m11:s.m11,half_x_m:halfX,half_y_m:halfY},
  };
 }
-function comparePhysics(a,b){
- const byTick=new Map(b.map(s=>[s.tick,s]));
- const matches=[];
- for(const s of a){
-  const other=byTick.get(s.tick);
-  if(other&&s.resets===other.resets)matches.push({tick:s.tick,dx:Math.abs(s.x-other.x),dy:Math.abs(s.y-other.y),dvx:Math.abs(s.vx-other.vx),dvy:Math.abs(s.vy-other.vy)});
- }
- assert(matches.length>=25,'No sufficient matching fixed-owner ticks for A/B');
- const max=Math.max(...matches.flatMap(s=>[s.dx,s.dy,s.dvx,s.dvy]));
- assert(max<0.5,'Camera A/B altered deterministic physics tick trace: '+max);
- return {matched_ticks:matches.length,max_engine_units:max};
+// Used directly by Playwright's browser-side waitForFunction and by the Node negative controls.
+// Straight has no riderStationReport; only special ramps-long carries a section report.
+function cameraReady({sha,runId,station}){
+ const w=globalThis.window||{};
+ return w.riderReady?.source_sha===sha&&w.riderReady?.run_id===runId&&
+  w.riderTelemetry?.station===station&&w.riderTelemetry.sequence>2&&
+  (station!=='ramps-long'||(w.riderStationReport?.station===station&&w.riderStationReport.section==='down-30'));
 }
-module.exports={slope,clip,measure,comparePhysics};
+// Fail closed: render snapshots are indexed by the Defold-owned fixed tick, never by
+// frame number. Every tick in the actual dual-supported downhill interval must be
+// observed by both A and B; unmatched, missing or reset-discontinuous ticks are errors.
+// A partial early flat overlap cannot substitute for downhill evidence.
+function comparePhysics(a,b,{downhillA,downhillB}={}){
+ const downhill=downhillA!==undefined||downhillB!==undefined;
+ assert(Array.isArray(a)&&Array.isArray(b)&&a.length&&b.length,'Empty camera A/B traces');
+ if(downhill)assert(Array.isArray(downhillA)&&Array.isArray(downhillB)&&downhillA.length>=5&&downhillB.length>=5,
+  'No measured dual-supported downhill window in both A/B');
+ function index(trace,label){
+  const result=new Map();
+  for(const s of trace){
+   assert(Number.isSafeInteger(s.tick)&&s.tick>=0&&Number.isSafeInteger(s.resets)&&Number.isSafeInteger(s.generation),
+    label+': invalid fixed tick/reset identity');
+   for(const key of ['x','y','vx','vy'])assert(Number.isFinite(s[key]),label+': invalid '+key);
+   if(result.has(s.tick)){
+    const prior=result.get(s.tick);
+    assert(prior.resets===s.resets&&prior.generation===s.generation&&
+     ['x','y','vx','vy'].every(k=>prior[k]===s[k]),label+': conflicting duplicate fixed tick '+s.tick);
+   }else result.set(s.tick,s);
+  }
+  return result;
+ }
+ const byA=index(a,'A'),byB=index(b,'B');
+ const validA=downhill?new Set(downhillA.map(s=>s.tick)):null;
+ const validB=downhill?new Set(downhillB.map(s=>s.tick)):null;
+ const ticksA=[...byA.keys()],ticksB=[...byB.keys()];
+ const from=downhill?Math.min(...validA,...validB):Math.max(Math.min(...ticksA),Math.min(...ticksB));
+ const to=downhill?Math.max(...validA,...validB):Math.min(Math.max(...ticksA),Math.max(...ticksB));
+ assert(to>=from&&to-from+1>=(downhill?5:25),'Insufficient continuous fixed-tick A/B window');
+ let max=0,firstIdentity=null;
+ for(let tick=from;tick<=to;tick++){
+  const s=byA.get(tick),other=byB.get(tick);
+  assert(s&&other,'Missing/unmatched fixed tick '+tick+' in '+(downhill?'loaded downhill':'flat')+' A/B window');
+  if(downhill)assert(validA.has(tick)&&validB.has(tick),
+   'Missing dual-supported downhill observation at fixed tick '+tick);
+  assert(s.resets===other.resets&&s.generation===other.generation,
+   'Camera A/B reset/generation mismatch at fixed tick '+tick);
+  const identity=s.resets+':'+s.generation;
+  if(firstIdentity===null)firstIdentity=identity;
+  assert(identity===firstIdentity,'Reset/generation discontinuity in measured A/B window at tick '+tick);
+  const difference=Math.max(...['x','y','vx','vy'].map(k=>Math.abs(s[k]-other[k])));
+  assert(difference<0.5,'Camera A/B altered deterministic physics at tick '+tick+': '+difference);
+  max=Math.max(max,difference);
+ }
+ return {matched_ticks:to-from+1,window_start_tick:from,window_end_tick:to,
+  continuous:true,downhill_loaded:downhill,max_engine_units:max};
+}
+module.exports={slope,clip,measure,cameraReady,comparePhysics};
