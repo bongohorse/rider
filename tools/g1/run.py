@@ -140,6 +140,49 @@ def players(directory, run_id, source_sha, config_hash, variant, fps, scale):
     return report
 
 
+def compare_reports(output, reports, source_sha, platform):
+    """Persist both successful and failed cross-configuration G1 comparisons."""
+    first, second = reports
+    cases = [report['cases'] for report in reports]
+    values = [case['units']['fall_30'] for case in cases]
+    delta = abs(values[0] - values[1])
+    threshold = 0.5
+    ratios = []
+    for case in cases:
+        ticks = case.get('fixed_ticks', {})
+        frames = ticks.get('frames')
+        ratios.append(ticks['ticks'] / frames if frames else None)
+
+    configurations = []
+    for report, value, ratio in zip(reports, values, ratios):
+        config = {key: report[key] for key in
+                  ('platform', 'variant', 'scale', 'render_target', 'run_id', 'config_hash')
+                  if key in report}
+        config.update(fall_30=value, ticks_per_frame=ratio)
+        configurations.append(config)
+
+    error = None
+    if delta > threshold:
+        error = (f'Changed-scale probe mismatch > {threshold} engine units: '
+                 f'scale={first["scale"]} fps={first["render_target"]} fall_30={values[0]}, '
+                 f'scale={second["scale"]} fps={second["render_target"]} fall_30={values[1]}, '
+                 f'abs_delta={delta}')
+    elif not (ratios[0] is not None and ratios[1] is not None
+              and 0.8 < ratios[0] < 1.3 and 1.6 < ratios[1] < 2.5):
+        error = f'Render/physics rates not separated: {ratios}'
+
+    comparison = {'status': 'FAIL' if error else 'PASS', 'source_sha': source_sha,
+                  'platform': platform, 'configurations': configurations,
+                  'scale_fall_delta': delta, 'scale_fall_threshold': threshold,
+                  'ticks_per_frame': ratios}
+    if error:
+        comparison['error'] = error
+    Path(output, 'comparison.json').write_text(json.dumps(comparison, indent=2) + '\n')
+    if error:
+        raise RuntimeError(error)
+    return comparison
+
+
 def run(platform, output, variant=None):
     source_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     reports = []
@@ -167,14 +210,7 @@ def run(platform, output, variant=None):
         reports.append(report)
         if platform == 'wasm-web':
             players(directory, run_id, source_sha, config_hash, variant, fps, scale)
-    a, b = (x['cases'] for x in reports)
-    if abs(a['units']['fall_30'] - b['units']['fall_30']) > 0.5:
-        raise RuntimeError('Changed-scale probe mismatch > 0.5 engine units')
-    ratios = [x['fixed_ticks']['ticks'] / x['fixed_ticks']['frames'] for x in (a, b)]
-    if not (0.8 < ratios[0] < 1.3 and 1.6 < ratios[1] < 2.5):
-        raise RuntimeError(f'Render/physics rates not separated: {ratios}')
-    Path(output, 'comparison.json').write_text(json.dumps({'status': 'PASS', 'source_sha': source_sha,
-        'scale_fall_delta': abs(a['units']['fall_30']-b['units']['fall_30']), 'ticks_per_frame': ratios}, indent=2))
+    compare_reports(output, reports, source_sha, platform)
 
 
 if __name__ == '__main__':
