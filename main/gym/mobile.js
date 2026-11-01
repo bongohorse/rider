@@ -127,7 +127,7 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:60px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
+    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:60px;max-width:calc(100% - 16px)}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
