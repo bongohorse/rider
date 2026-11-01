@@ -177,7 +177,12 @@ def compare_reports(output, reports, source_sha, platform):
                   'ticks_per_frame': ratios}
     if error:
         comparison['error'] = error
-    Path(output, 'comparison.json').write_text(json.dumps(comparison, indent=2) + '\n')
+    try:
+        Path(output, 'comparison.json').write_text(json.dumps(comparison, indent=2) + '\n')
+    except OSError as artifact_error:
+        if error:
+            raise RuntimeError(f'{error}; comparison artifact write failed: {artifact_error}') from artifact_error
+        raise
     if error:
         raise RuntimeError(error)
     return comparison
