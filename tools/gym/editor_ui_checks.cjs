@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const path=require('node:path');
 const pointer=require('./pointer.cjs');
 module.exports=async function uiChecks(h){
- const {page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements}=h;
+ const {page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint}=h;
  const close=(a,b)=>Math.abs(a-b)<1e-8;
  const shape=d=>JSON.stringify({objects:d.objects,connections:d.connections,start:d.start,finish:d.finish??null});
  const base={schema:1,units:'metres',id:'ea1-ui',name:'Hillside practice',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,60,-20,40],
@@ -36,7 +36,7 @@ module.exports=async function uiChecks(h){
   await button('collapse_prefabs');
  }
  await page.setViewportSize({width:1280,height:720});await key('s');await key('Home');
- cases.push('coin_editor_categories_independent_and_centered_commands');
+ cases.push('coin_editor_categories_independent_and_centered_commands');checkpoint('coin_editor_categories_independent_and_centered_commands');
 
  const bad=structuredClone(base);bad.id='ea1-error';bad.name='Invalid line';
  bad.editor.connections=[];bad.editor.next_id=3;
@@ -88,7 +88,7 @@ module.exports=async function uiChecks(h){
  await key('z',['Control']);await revision(freeRevision+2);assert.equal(shape(await doc()),shape(freeBefore));
  await key('Escape');await button('collapse_gameplay');
  measurements.editor_a_feedback={error:'red button, automatic source flash, direct Play banner, fix/Undo',scroll:'both panels: wheel + draggable scrollbar, constant control size'};
- cases.push('a1b_feedback_errors_and_scroll');
+ cases.push('a1b_feedback_errors_and_scroll');checkpoint('a1b_feedback_errors_and_scroll');
  const layouts={};
  for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
   await page.setViewportSize(size);await pointer.frames(page);await key('Home');await key('Escape');await key('p');await key('2');await hover([6,3]);e=await settle();
@@ -138,7 +138,7 @@ module.exports=async function uiChecks(h){
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};
  await context.close();await page.bringToFront();await pointer.frames(page);
- measurements.editor_a_layout=layouts;cases.push('a1b_layout_viewports_and_collapse');
+ measurements.editor_a_layout=layouts;cases.push('a1b_layout_viewports_and_collapse');checkpoint('a1b_layout_viewports_and_collapse');
  await page.setViewportSize({width:1280,height:720});await key('Home');await selectRamp();
  const original=await doc(),r0=(await ed()).revision,undo0=(await ed()).undo;
  await button('param_3');await page.keyboard.type('esp',{delay:40});await page.waitForFunction(()=>window.riderEditor.field==='esp');await key('Enter');e=await ed();
@@ -170,7 +170,7 @@ module.exports=async function uiChecks(h){
  await button('speed');await page.keyboard.type('2.5',{delay:40});await page.waitForFunction(()=>window.riderEditor.field==='2.5');
  await button('inc_speed');e=await revision(speedRev+1);assert.equal(e.start.speed,3);assert.equal(e.undo,speedUndo+1);
  await key('z',['Control']);await revision(speedRev+2);assert.equal((await ed()).start.speed,0);
- measurements.editor_a_fields={invalid_preserved:true,shift_length:9,alt_length:9.01,limit_refused:true,pending_step_single_undo:true};cases.push('a1b_numeric_focus_steps_and_connected_run');
+ measurements.editor_a_fields={invalid_preserved:true,shift_length:9,alt_length:9.01,limit_refused:true,pending_step_single_undo:true};cases.push('a1b_numeric_focus_steps_and_connected_run');checkpoint('a1b_numeric_focus_steps_and_connected_run');
  // Seven-field Kicker: scroll stays in the panel; last numeric field remains reachable and focussed.
  const seven=JSON.parse(JSON.stringify(base));seven.id='ea1-seven';seven.name='Seven parameters';seven.editor.objects=seven.editor.objects.slice(0,2);
  seven.editor.objects[1]={id:'o2',type:'prefab',kind:'kicker',at:[10,0],params:{facing:'right',angle:15,lip:1,gap:2,landing:'down',landing_length:6,landing_angle:15}};
@@ -184,7 +184,7 @@ module.exports=async function uiChecks(h){
  await key('e');await key('s');await key('z',['Control']);e=await ed();assert.equal(e.mode,mode);assert.equal(e.tool,tool);assert.equal(e.revision,beforeScroll.revision);
  await page.mouse.wheel(0,120);await key('h');await unchanged(beforeScroll,'modal keys and scroll');
  await page.screenshot({path:path.join(out,'editor-a-seven-parameters.png')});
- measurements.editor_a_scroll={scroll:(await ed()).ui.scroll,gui_nodes:(await ed()).overlay.nodes};cases.push('a1b_scrolling_and_modal_capture');
+ measurements.editor_a_scroll={scroll:(await ed()).ui.scroll,gui_nodes:(await ed()).overlay.nodes};cases.push('a1b_scrolling_and_modal_capture');checkpoint('a1b_scrolling_and_modal_capture');
  // Current component headroom at the unchanged 800 render-object limit, not the old LE1b vehicle.
  const full=JSON.parse(JSON.stringify(base));full.id='ea1-budget';full.name='800 segments';full.editor.connections=[];full.editor.next_id=2;
  full.editor.objects=[{id:'o1',type:'line',points:Array.from({length:801},(_,i)=>[i*.5,0])}];
@@ -201,13 +201,29 @@ module.exports=async function uiChecks(h){
   await key('e');await played('ea1-budget');await page.waitForFunction(()=>window.riderEditorRuntime?.decoration===0&&window.riderEditorRuntime.terrain_meshes===13&&window.riderEditorRuntime.replay===0);
   const live=await page.evaluate(()=>window.riderEditorRuntime);assert.equal(live.sprites,6);assert.equal(live.terrain_meshes,13);assert.equal(live.terrain_buffer_bytes,518832);assert.ok(live.labels<=1024);
  }
- await key('e');await edit();measurements.editor_a_budget=counts;cases.push('a1b_maximum_level_and_switch_budgets');
+ await key('e');await edit();measurements.editor_a_budget=counts;cases.push('a1b_maximum_level_and_switch_budgets');checkpoint('a1b_maximum_level_and_switch_budgets');
+ checkpoint('start:medal_editor');
  await require('../gameplay/check_medal_editor.cjs')(h);
+ checkpoint('done:medal_editor');
+ checkpoint('start:zoom_editor');
  await require('../gameplay/check_zoom_editor.cjs')(h);
+ checkpoint('done:zoom_editor');
+ checkpoint('start:coin_editor');
  await require('../gameplay/check_coin_editor.cjs')(h);
+ checkpoint('done:coin_editor');
+ checkpoint('start:drop_editor');
  await require('../gameplay/check_drop_editor.cjs')(h);
+ checkpoint('done:drop_editor');
+ checkpoint('start:along_editor');
  await require('../gameplay/check_along_editor.cjs')(h);
+ checkpoint('done:along_editor');
+ checkpoint('start:auto_editor');
  await require('../gameplay/check_auto_editor.cjs')(h);
+ checkpoint('done:auto_editor');
+ checkpoint('start:gem_editor');
  await require('../gameplay/check_gem_editor.cjs')(h);
+ checkpoint('done:gem_editor');
+ checkpoint('start:fuel_editor');
  await require('../gameplay/check_fuel_editor.cjs')(h);
+ checkpoint('done:fuel_editor');
 };
