@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {compare}=require('../../tools/gym/fps356_verify.cjs');
+const {compare,comparePause}=require('../../tools/gym/fps356_verify.cjs');
 const STEP=1/60;
 const start=()=>({source_sha:'abc123',run_id:'realrun',generation:1,station:'straight',
   vehicle_ready:true,kind:'world_update_callback_proxy',presented_frames:'UNKNOWN',
@@ -40,3 +40,41 @@ test('reject ticks while paused',()=>{
  const a={...start(),paused:true},b={...end(a),paused:true};
  assert.throws(()=>compare(a,b,{phase:'paused'}),/advanced while paused/);
 });
+
+// A paused proxy may stop update() completely. Use real time_state boundaries.
+
+const pauseCase=()=>{
+  const a={...start(),event:'time_state',sequence:17,time_seq:4,paused:true,time_factor:0};
+  const b={...a,event:'time_state',sequence:18,time_seq:5,paused:false,time_factor:1};
+  return {a,b,opts:{loaderStart:{paused:true,step:1},loaderEnd:{paused:true,step:1},wallStartMs:1000,wallEndMs:3400,minSeconds:2}};
+};
+test('pause boundary accepts zero world update callbacks and frozen fixed ticks',()=>{
+  const {a,b,opts}=pauseCase(),r=comparePause(a,b,opts);
+  assert.equal(r.fixed_ticks_during_pause,0);
+  assert.equal(r.world_update_callback_hz,null);
+  assert.equal(r.elapsed_s,2.4);
+  assert.equal(r.presented_fps,null);
+});
+for(const [name,mutate,reason] of [
+  ['world fixed tick advanced',({b})=>{b.fixed_ticks++;},/Fixed physics advanced while paused/],
+  ['observer fixed tick advanced',({b})=>{b.fixed++;},/Observer fixed ticks advanced while paused/],
+  ['world time advanced',({b})=>{b.world_s+=STEP;},/World time advanced while paused/],
+  ['stale resume event',({b})=>{b.sequence=17;},/Stale world resume event/],
+  ['missing resume boundary',({b})=>{b.event='update';},/Missing world pause\/resume boundary events/],
+  ['missing pause boundary',({a})=>{a.event='update';},/Missing world pause\/resume boundary events/],
+  ['loader time scale changed during pause',({opts})=>{opts.loaderEnd.step=0.5;},/Loader changed time scale/],
+  ['loader not paused at end',({opts})=>{opts.loaderEnd.paused=false;},/Loader did not remain paused/],
+  ['wrong resume sequence',({b})=>{b.time_seq=6;},/World pause\/resume sequence mismatch/],
+  ['wrong source',({b})=>{b.source_sha='bad';},/source_sha/],
+  ['wrong generation',({b})=>{b.generation++;},/generation/],
+  ['pause window too short',({opts})=>{opts.wallEndMs=1100;},/Invalid independent pause wall window/],
+  ['scaled tick',({b})=>{b.scaled_ticks++;},/Scaled physics tick during pause/],
+  ['bad dt',({b})=>{b.bad_fixed_dt++;},/Non-60Hz fixed dt during pause/],
+  ['retry during pause',({b})=>{b.reset_count++;},/Pause crossed Retry/],
+  ['false displayed frames',({b})=>{b.presented_frames=60;},/Misleading presented-frame claim/]
+]){
+  test('pause boundary rejects '+name,()=>{
+    const c=pauseCase();mutate(c);
+    assert.throws(()=>comparePause(c.a,c.b,c.opts),reason);
+  });
+}
