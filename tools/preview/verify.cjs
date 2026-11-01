@@ -179,11 +179,13 @@ async function main(){
       await require('../gameplay/check_fuel_release.cjs')(browser,url,sha,out);
       await require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels'));
       await require('../gameplay/check_level_storage.cjs')(browser,url,sha,path.join(out,'level-storage'));
+      await require('../gameplay/check_objects.cjs')(browser,url,sha,path.join(out,'objects'));
       await require('../gameplay/check_progress.cjs')(browser,url,sha,out);
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment'){
       await require('../gameplay/check_mobile.cjs')(browser,url,sha,out);
       await require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels-touch'),{touch:true});
+      await require('../gameplay/check_objects_mobile.cjs')(browser,url,sha,path.join(out,'objects-touch'));
     }
     if(results.length!==plan.length)throw Error('Incomplete verification group');
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,mode,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));

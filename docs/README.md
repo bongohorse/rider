@@ -13,6 +13,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
 | Road look comparison (#290) | [Contract](contracts/road-look.md), [comparison](TERRAIN_PERSPECTIVE_REPORT.md), [production integration](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) |
+| Interactive objects (#280) | [Crates, plate modes, linked gates and complete Retry](OBJECTS_O1_REPORT.md) |
 | Level selection (#320) | [Durable completion, course selection and Next Level](GAMEPLAY_G7_REPORT.md) |
 | Fuel (#318) | [Configurable tank, shared refills and recovery](GAMEPLAY_G6_REPORT.md) |
 | Wonder Gems (#314) | [Multiple special pickups, finish banking and feedback](GAMEPLAY_G5_REPORT.md) |
@@ -60,6 +61,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [contracts/automation.md](contracts/automation.md) | Test CLI, runner protocol, release boundary | Interfaces · Test CLI and results · Engine/runner protocol · Release boundary |
 | [contracts/bridge.md](contracts/bridge.md) | Native Automation Bridge | Setup and commands · Tested behavior · Limits and license · Network boundary · Network test procedure |
 | [TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md](TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | #292 normal Play/Edit, legacy compatibility and evidence | Scope and settings · Compatibility · Verification · Resources and timings · Reproduction · Limits and stop point |
+| [OBJECTS_O1_REPORT.md](OBJECTS_O1_REPORT.md) | Shared crate/plate/gate runtime (#280) | Scope and next authoring step · Source settings and signals · Physics and units · Lifecycle and ownership · Admission and observed cost · Verification and stop |
 | [GAMEPLAY_G7_REPORT.md](GAMEPLAY_G7_REPORT.md) | Durable completion, level selection and Next Level (#320) | Rules and identity · Storage and ownership · Selection and switching · Verification and stop |
 | [GAMEPLAY_G6_REPORT.md](GAMEPLAY_G6_REPORT.md) | Configurable tank, shared refills, cutoff and recovery (#318) | Rules and authoring · Tick and vehicle boundary · Compatibility and records · Verification and stop |
 | [GAMEPLAY_G5_REPORT.md](GAMEPLAY_G5_REPORT.md) | Multiple special pickups, finish-only claims and bounded feedback (#314) | Behavior and authoring · Settlement and compatibility · Presentation and resources · Verification and stop |

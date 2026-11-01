@@ -1,0 +1,88 @@
+{
+  "schema": 5,
+  "units": "metres",
+  "id": "objects-crate",
+  "name": "Configured crate",
+  "spawn": [
+    2,
+    1.7
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    48,
+    -10,
+    20
+  ],
+  "chains": [
+    [
+      [
+        40,
+        0
+      ],
+      [
+        -6,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [
+    {
+      "position": [
+        7,
+        3.6
+      ],
+      "text": "Push the crate onto the plate"
+    },
+    {
+      "position": [
+        21,
+        8.5
+      ],
+      "text": "Gate pauses when its path is occupied"
+    }
+  ],
+  "checkpoints": [],
+  "finish": {
+    "position": [
+      34,
+      0
+    ],
+    "line": [
+      [
+        34,
+        -2
+      ],
+      [
+        34,
+        6
+      ]
+    ],
+    "direction": [
+      1,
+      0
+    ]
+  },
+  "mechanisms": {
+    "version": 1,
+    "crates": [
+      {
+        "id": "crate-a",
+        "position": [
+          6,
+          1.1
+        ],
+        "mass": 25,
+        "friction": 0.2,
+        "restitution": 0.2,
+        "angle": 0.35
+      }
+    ],
+    "plates": [],
+    "gates": [],
+    "links": []
+  }
+}

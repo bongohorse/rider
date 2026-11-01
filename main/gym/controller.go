@@ -14,3 +14,6 @@ components { id: "ghost_wheel" component: "/main/gym/ghost_wheel.factory" }
 components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory" }
 components { id: "perspective_mesh" component: "/main/terrain_perspective/chunk.factory" }
 components { id: "coin" component: "/main/gym/coin.factory" }
+components { id: "mechanism_crate" component: "/main/gym/mechanism_crate.factory" }
+components { id: "mechanism_plate" component: "/main/gym/mechanism_plate.factory" }
+components { id: "mechanism_gate" component: "/main/gym/mechanism_gate.factory" }

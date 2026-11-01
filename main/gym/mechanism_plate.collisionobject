@@ -1,0 +1,7 @@
+collision_shape: "/main/gym/mechanism_plate.convexshape"
+type: COLLISION_OBJECT_TYPE_STATIC
+mass: 0.0
+friction: 0.8
+restitution: 0.0
+group: "gym"
+mask: "gym"

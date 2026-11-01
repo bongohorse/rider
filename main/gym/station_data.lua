@@ -1,4 +1,4 @@
--- Versions 1 (legacy), 2 (gold coins), 3 (Wonder Gems) and 4 (fuel rules/canisters): world metres, converted once at the engine boundary by stations.lua.
+-- Versions 1 (legacy), 2 (gold coins), 3 (Wonder Gems), 4 (fuel rules/canisters), 5 (mechanisms): world metres, converted once at the engine boundary by stations.lua.
 -- Pure validation: no engine calls, no partially constructed terrain on failure.
 local M={}
 local TEXT_LIMIT=64
@@ -19,13 +19,14 @@ end
 -- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
 function M.validate(d)
-    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
-    if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 then return nil,"Ordinary coins require station schema 2",true end
-    if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 then return nil,'Wonder Gems require station schema 3',true end
+    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
+    if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 then return nil,"Ordinary coins require station schema 2",true end
+    if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 and d.schema~=5 then return nil,'Wonder Gems require station schema 3',true end
     if d.fuel~=nil or d.coins and d.coins.version==3 then
-        if d.schema~=4 then return nil,'Fuel requires station schema 4',true end
+        if d.schema~=4 and d.schema~=5 then return nil,'Fuel requires station schema 4',true end
         if d.coins and d.coins.version==3 and not d.fuel then return nil,'Canisters require fuel settings' end
     end
+    if d.mechanisms~=nil and d.schema~=5 then return nil,'Mechanisms require station schema 5',true end
     local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(d.fuel)
     if not fuel_ok then return nil,fuel_err,fuel_unknown end
     local medals_ok,medals_err,medals_unknown=require('main.gym.medals').validate(d.medal_times)
@@ -42,6 +43,8 @@ function M.validate(d)
     if type(b)~="table" or #b~=4 then return nil,"Missing safety bounds" end
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
+    local mechanisms_ok,mechanisms_err,mechanisms_unknown=require('main.gym.mechanism_data').validate(d.mechanisms,d.bounds)
+    if not mechanisms_ok then return nil,mechanisms_err,mechanisms_unknown end
     local coin_ok,coin_err,coin_unknown=require('main.gym.coin_data').validate(d.coins,b)
     if not coin_ok then return nil,coin_err,coin_unknown end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
