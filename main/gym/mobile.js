@@ -21,7 +21,7 @@
   };
   window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden');}});
-  window.addEventListener('resize',()=>{abort('viewport changed; restart capture');syncOrientation();});
+  window.addEventListener('resize',()=>{abort('viewport changed; restart capture');if(enabled)syncOrientation();});
   function summary(values){
     const sorted=[...values].sort((a,b)=>a-b);
     return {samples:sorted.length,mean:values.reduce((a,b)=>a+b,0)/values.length,
