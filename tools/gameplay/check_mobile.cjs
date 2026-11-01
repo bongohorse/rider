@@ -8,9 +8,11 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   const toolbar=document.querySelector('#rider-mobile .toolbar'),menu=document.querySelector('#rider-mobile .toolbar-more');
   const visible=e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).display!=='none';
   const shown=selector=>{const e=document.querySelector(selector);return e&&visible(e)?box(e):null;};
-  return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
+  return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:shown('#rider-mobile .readout'),
     zones:box(document.querySelector('#rider-mobile .zones')),
     driveButtons:[...document.querySelectorAll('#rider-mobile .zones button')].filter(visible).map(box),
+    driveStyles:[...document.querySelectorAll('#rider-mobile .zones button')].filter(visible).map(e=>({command:e.dataset.command,background:getComputedStyle(e).backgroundImage})),
+    speedTicks:document.querySelectorAll('#rider-mobile .speed-tick').length,
     levelActions:box(document.querySelector('#rider-level-actions')),
     progress:shown('#rider-mobile .course-progress'),progressTrack:shown('#rider-mobile .progress-track'),progressValue:shown('#rider-mobile .progress-value'),
     coin:shown('#rider-mobile .coin-widget'),fuel:shown('#rider-mobile .fuel-widget'),speed:shown('#rider-mobile .speedometer'),race:shown('#rider-mobile .race-summary'),
@@ -18,8 +20,11 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
     buttons:[...toolbar.children].filter(e=>e.tagName==='BUTTON'&&visible(e)).map(e=>({label:e.getAttribute('aria-label')||e.textContent,rect:box(e)}))};
  });
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
- assert.ok(g.toolbar&&g.readout&&g.zones,'missing mobile HUD geometry');
+ assert.ok(g.toolbar&&g.zones,'missing mobile HUD geometry');
  assert.equal(g.driveButtons.length,4,'all four real drive touch targets must be present');
+ assert.equal(new Set(g.driveStyles.map(x=>x.background)).size,4,'four driving actions must use distinct semantic colors');
+ assert.deepEqual(g.driveStyles.map(x=>x.command),['left','right','brake','throttle'],'original four advanced actions must remain');
+ assert.equal(g.speedTicks,9,'compact speedometer must retain nine color ticks');
  assert.ok(!g.speed||g.speed.width<=86&&g.speed.height<=86,'speed dial must stay compact');
  assert.ok(!g.fuel||g.fuel.width<=40,'fuel gauge must stay slim');
  for(const {label,rect} of g.buttons){
@@ -47,17 +52,14 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
  }
  if(moreOpen){
   assert.ok(g.menu,'More must have a visible panel');
+  assert.ok(g.readout,'diagnostics must remain accessible inside More');
+  assert.equal(g.readoutClipped,false,'diagnostics must not clip their own text');
   assert.ok(g.menu.left>=-1&&g.menu.right<=screen.right+1&&g.menu.bottom<=screen.bottom+1,'More outside viewport');
   assert.equal(intersects(g.menu,g.zones),false,'More overlaps drive zones');
   if(g.levelActions)assert.equal(intersects(g.menu,g.levelActions),false,'More overlaps level actions');
  }else{
   assert.equal(g.menu,null,'closed More must not be displayed');
-  assert.ok(g.readout.top>=g.toolbar.bottom+6,'readout must follow actual toolbar bottom');
-  assert.equal(g.readoutClipped,false,'readout text clipped by toolbar/level-action bounds');
-  assert.equal(intersects(g.readout,g.zones),false,'readout overlaps drive zones');
-  if(g.levelActions)assert.equal(intersects(g.readout,g.levelActions),false,'readout overlaps level actions');
-  assert.equal(intersects(g.readout,g.toolbar),false,'readout overlaps toolbar');
-  if(g.race)assert.equal(intersects(g.readout,g.race),false,'readout overlaps race timer');
+  assert.equal(g.readout,null,'diagnostics must not obstruct the playfield while More is closed');
  }
  return g;
 }
