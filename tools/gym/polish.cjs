@@ -10,6 +10,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;
  function find(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
  const web=path.dirname(find(path.resolve(process.argv[6]))),errors=[],logs=[],cases=[],measurements={};
+ // Emit timed checkpoints during the long LE6 cohort. The console stays useful
+ // even if smoke.py reaches its existing 360 s deadline before the JSON report.
+ const startedAt=performance.now();let lastCheckpointAt=startedAt;
+ const checkpoint=(label)=>{
+  const now=performance.now();
+  console.log('RIDER_LE6_CHECKPOINT '+JSON.stringify({
+   label,elapsed_ms:Math.round(now-startedAt),since_previous_ms:Math.round(now-lastCheckpointAt)
+  }));
+  lastCheckpointAt=now;
+ };
  const server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return;}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':'text/html');fs.createReadStream(file).pipe(res);});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{
@@ -89,6 +99,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
      {id:'o4',type:'prefab',kind:'wave',at:[60,0],params:{height:10,wavelength:1,count:50}}]}};
 
   // 1. Located warnings and errors jump to their source by stable id; unlocated ones only show their text.
+  checkpoint('start:le6');
   await page.goto(base+'?station=straight');
   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
@@ -129,7 +140,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('warn_'+(seam+1));e=await settle();
   assert.deepEqual(e.selected.sort(),['o1','o2']);centred(e,[20,0],'seam warning after Undo');
   await unchanged(before,'jump after Undo');
-  cases.push('problems_jump_to_source_after_edit_and_undo');
+  cases.push('problems_jump_to_source_after_edit_and_undo');checkpoint('problems_jump_to_source_after_edit_and_undo');
 
   // 2. Fit level, centre selection (several objects), go to START and to the last launched test start.
   // Esc first closes the warning list, then clears the selection.
@@ -188,7 +199,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('view_test');e=await settle();assert.ok(e.message.startsWith('Last test start: none yet'),e.message);
   await key('z',['Control']);await page.waitForFunction(()=>window.riderEditor.id==='le6-nav');e=await settle();
   assert.deepEqual(e.last_test,launched);
-  cases.push('fit_centre_start_last_test_view_only');
+  cases.push('fit_centre_start_last_test_view_only');checkpoint('fit_centre_start_last_test_view_only');
 
   // 3. The R13 bounds as Play uses them: shown on demand, refreshed by a START move, and equal to the bounds
   // of the compiled level (Play from START).
@@ -213,7 +224,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.deepEqual(level.bounds,shown,'the shown bounds differ from the compiled level');
   await key('e');e=await edit();
   measurements.bounds={shown,compiled:level.bounds};
-  cases.push('bounds_display_matches_compile');
+  cases.push('bounds_display_matches_compile');checkpoint('bounds_display_matches_compile');
 
   // 4. The template list pages (the 12th template no longer sits on Close); the wheel pages it too. The View
   // row stays clear of the page's own buttons at desktop and phone sizes; GUI node budget.
@@ -252,7 +263,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('template_ramps');await page.waitForFunction(()=>window.riderEditor.id==='my-ramps');
   await button('warnings');await button('open');await page.waitForFunction(()=>window.riderEditor.open_dialog);
   await button('template_straight');await page.waitForFunction(()=>window.riderEditor.id==='my-straight');
-  cases.push('template_pages_view_row_budget');
+  cases.push('template_pages_view_row_budget');checkpoint('template_pages_view_row_budget');
 
   // 5. An unlocated message (an empty level) is listed and shown without moving the camera or selecting.
   await button('new');await page.waitForFunction(()=>window.riderEditor.id.startsWith('my-level-'));e=await settle();
@@ -265,7 +276,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.ok(e.message.startsWith('Error: No terrain yet'),e.message);
   await unchanged(before,'unlocated message');
   await page.screenshot({path:path.join(out,'polish-warnings.png')});
-  cases.push('unlocated_message_shown_only');
+  cases.push('unlocated_message_shown_only');checkpoint('unlocated_message_shown_only');
 
   // LE6b. A plain course: one ground line, START at (2, 1).
   const plain={schema:1,units:'metres',id:'le6-labels',name:'LE6 labels',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,50,-10,30],
@@ -358,7 +369,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   assert.deepEqual(label(d,'o2'),{id:'o2',type:'label',position:[3,3],text:''});assert.deepEqual(d.objects[0].points,[[0,0],[40,0]]);
   assert.deepEqual(labels(d).map(o=>o.text).sort(),['','Label']);
   measurements.labels={text_limit:64,compiled:saved.labels};
-  cases.push('labels_place_edit_move_copy_undo_persist');
+  cases.push('labels_place_edit_move_copy_undo_persist');checkpoint('labels_place_edit_move_copy_undo_persist');
 
   // 7. Help: modal (no key or click acts behind it), lists the shipped controls, closes with H, Esc,
   // Close or a click outside.
@@ -383,7 +394,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Escape');e=await settle();assert.equal(e.help_open,false);assert.equal(e.drawing,2,'help changed the piece being drawn');
   await unchanged(before,'help while drawing');
   await key('Escape');e=await settle();assert.equal(e.drawing,0);await key('s');
-  cases.push('help_modal_lists_controls');
+  cases.push('help_modal_lists_controls');checkpoint('help_modal_lists_controls');
 
   // 8. Ghost: where F would start (same rules as F), refused in red with the reason, off over objects,
   // in dialogs and when switched off; F at the ghost starts exactly there.
@@ -405,7 +416,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('f');await played('le6-labels');await key('e');e=await edit();
   assert.deepEqual(e.last_test,ghostAt,'F did not start where the ghost was');
   measurements.ghost={pos:ghostAt};
-  cases.push('ghost_matches_test_start');
+  cases.push('ghost_matches_test_start');checkpoint('ghost_matches_test_start');
 
   // 9. Readouts: dragging START shows its position and a blocking overlap before release; units match.
   const s0=e.start.position;
@@ -420,9 +431,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.gui_le6b={nodes:e.overlay.nodes,max_nodes:e.overlay.max_nodes};
   await hover([16,3]);await page.screenshot({path:path.join(out,'polish-ghost.png')});
   await key('h');await page.screenshot({path:path.join(out,'polish-help.png')});await key('h');
-  cases.push('readouts_start_drag_units');
+  cases.push('readouts_start_drag_units');checkpoint('readouts_start_drag_units');
 
-  await require('./editor_ui_checks.cjs')({page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements});
+  checkpoint('start:editor_ui_checks');
+  await require('./editor_ui_checks.cjs')({page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint});
+  checkpoint('done:editor_ui_checks');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));
