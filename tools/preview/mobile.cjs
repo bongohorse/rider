@@ -176,6 +176,8 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>window.riderMobile.recording);
     await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
     await page.waitForFunction(()=>!window.riderMobile.recording);assert.equal(await page.evaluate(()=>window.riderMobile.report),null);
+    // Focus loss must suspend the actual Defold world, not only cancel browser capture.
+    await page.waitForFunction(()=>window.riderTimeState?.paused===true);
     pass('interrupted_capture_cancelled');
     await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
     await tapSecondary('Copy report');
@@ -185,6 +187,12 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.getByRole('button',{name:'Close',exact:true}).click();
     await page.waitForFunction(()=>!window.riderFeedback.visible&&!window.riderTelemetry.ui_captured);
     pass('mobile_report_fallback');
+    // The new all-play-world focus-loss guard correctly leaves the game paused.
+    // Resume explicitly through real touch before testing drivable fullscreen transitions.
+    assert.equal(await page.evaluate(()=>window.riderTimeState?.paused),true,'Feedback must not auto-resume after focus loss');
+    await page.getByRole('button',{name:'Resume',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+    await neutral();
     assert.equal(await page.locator('#app-container #rider-mobile').count(),1);
     async function settledViewport(){
       // fullscreenElement changes before the asynchronous viewport/input
