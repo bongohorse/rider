@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [desktop-layout, desktop-gameplay, phone, touch, stations]
+        group: [desktop-layout, desktop-gameplay-a, desktop-gameplay-b, phone, touch, stations]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -118,6 +118,8 @@ jobs:
         with:
           pattern: preview-verification-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/preview/gate/
+      - name: Exercise strict artifact-gate negative controls
+        run: python3 -m unittest discover -s tests/preview -p 'test_verify_artifacts.py' -v
       - name: Reject missing, duplicate, failed or mismatched release evidence
         env:
           SOURCE_SHA: ${{ github.sha }}

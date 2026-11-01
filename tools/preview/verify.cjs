@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
-const {verificationPlan,DESKTOP_GAMEPLAY_CHECKS}=require('./verification-plan.cjs');
+const {verificationPlan,GAMEPLAY_SHARDS}=require('./verification-plan.cjs');
 const {createTimings}=require('./timings.cjs');
 const pointer=require('../gym/pointer.cjs');
 // Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
@@ -185,16 +185,17 @@ async function main(){
     for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air']){
       if(plan.includes(name))results.push(await timings.run('preview/'+name,()=>require('./'+name+'.cjs')(browser,url,sha,out)));
     }
-    if(plan.includes('desktop-gameplay')&&mode!=='deployment'){
-      // Each module creates its own normal Playwright page/context. None shares
-      // the desktop layout page, so the two CI groups can run independently.
+    // Both shards are executed in local 'full' mode. CI runs each on a separate
+    // runner with the identical release build and strict artifact-gate union.
+    for(const [shard,checks] of Object.entries(GAMEPLAY_SHARDS)){
+      if(!plan.includes(shard)||mode==='deployment')continue;
       const subdirs={check_levels:'levels',check_level_storage:'level-storage',check_objects:'objects'};
-      for(const check of DESKTOP_GAMEPLAY_CHECKS){
+      for(const check of checks){
         const destination=subdirs[check]?path.join(out,subdirs[check]):out;
         const phase=check==='check_levels'?'check_levels/desktop':check;
         await timings.run('gameplay/'+phase,()=>require('../gameplay/'+check+'.cjs')(browser,url,sha,destination));
       }
-      results.push({name:'desktop-gameplay',status:'PASS',checks:[...DESKTOP_GAMEPLAY_CHECKS]});
+      results.push({name:shard,status:'PASS',checks:[...checks]});
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment'){
       await timings.run('gameplay/check_mobile',()=>require('../gameplay/check_mobile.cjs')(browser,url,sha,out));

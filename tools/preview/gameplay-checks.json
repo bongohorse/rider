@@ -1,0 +1,24 @@
+{
+  "checks": [
+    "check_run",
+    "check_gem_release",
+    "check_fuel_release",
+    "check_levels",
+    "check_level_storage",
+    "check_objects",
+    "check_progress"
+  ],
+  "shards": {
+    "desktop-gameplay-a": [
+      "check_run",
+      "check_progress"
+    ],
+    "desktop-gameplay-b": [
+      "check_gem_release",
+      "check_fuel_release",
+      "check_levels",
+      "check_level_storage",
+      "check_objects"
+    ]
+  }
+}

@@ -7,7 +7,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/preview'))
-from verify_artifacts import verify, GROUP_CASES, GAMEPLAY, GAMEPLAY_TIMINGS, DESKTOP_SIZES, PHONE_SIZES
+from verify_artifacts import verify, GROUP_CASES, GAMEPLAY, GAMEPLAY_SHARDS, gameplay_timing, DESKTOP_SIZES, PHONE_SIZES
 
 SHA = 'a' * 40
 BUILD = '123456-1'
@@ -36,9 +36,9 @@ class ReleaseVerificationGate(unittest.TestCase):
         cases = [{'name': name, 'status': 'PASS'} for name in expected]
         phases = ['browser/launch', 'final-assertions', 'cleanup/global']
         screenshots = []
-        if mode == 'desktop-gameplay':
-            cases[0]['checks'] = list(GAMEPLAY)
-            phases += list(GAMEPLAY_TIMINGS)
+        if mode in GAMEPLAY_SHARDS:
+            cases[0]['checks'] = list(GAMEPLAY_SHARDS[mode])
+            phases += [gameplay_timing(check) for check in GAMEPLAY_SHARDS[mode]]
         if mode in ('desktop-layout', 'phone'):
             name = 'desktop' if mode == 'desktop-layout' else 'phone-emulation'
             sizes = DESKTOP_SIZES if mode == 'desktop-layout' else PHONE_SIZES
@@ -78,7 +78,7 @@ class ReleaseVerificationGate(unittest.TestCase):
 
     def test_missing_group_fails(self):
         import shutil
-        shutil.rmtree(self.path('desktop-gameplay').parent)
+        shutil.rmtree(self.path('desktop-gameplay-b').parent)
         with self.assertRaisesRegex(ValueError, 'group artifacts'):
             verify(self.root, SHA, BUILD)
 
@@ -91,15 +91,15 @@ class ReleaseVerificationGate(unittest.TestCase):
     def test_wrong_source_or_build_fails(self):
         for field, value in [('source_sha', 'b' * 40), ('build_id', '456-1')]:
             with self.subTest(field=field):
-                self.mutate('desktop-gameplay', 'timings.json',
+                self.mutate('desktop-gameplay-b', 'timings.json',
                             lambda x: x.__setitem__(field, value))
                 with self.assertRaisesRegex(ValueError, 'Wrong'):
                     verify(self.root, SHA, BUILD)
-                self.mutate('desktop-gameplay', 'timings.json',
+                self.mutate('desktop-gameplay-b', 'timings.json',
                             lambda x: x.__setitem__(field, SHA if field == 'source_sha' else BUILD))
 
     def test_failed_group_fails(self):
-        self.mutate('desktop-gameplay', 'result.json',
+        self.mutate('desktop-gameplay-b', 'result.json',
                     lambda x: x.__setitem__('status', 'FAIL'))
         with self.assertRaisesRegex(ValueError, 'Failed'):
             verify(self.root, SHA, BUILD)
@@ -110,9 +110,9 @@ class ReleaseVerificationGate(unittest.TestCase):
             verify(self.root, SHA, BUILD)
 
     def test_missing_gameplay_check_fails(self):
-        self.mutate('desktop-gameplay', 'timings.json',
+        self.mutate('desktop-gameplay-b', 'timings.json',
                     lambda x: x['cases'].pop(3))
-        with self.assertRaisesRegex(ValueError, 'Missing desktop gameplay'):
+        with self.assertRaisesRegex(ValueError, 'Missing/duplicate/unexpected gameplay module timing'):
             verify(self.root, SHA, BUILD)
 
     def test_hidpi_layout_cannot_be_dropped(self):
