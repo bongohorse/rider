@@ -30,7 +30,13 @@ module.exports=async function seams(browser,url,sha,out){
  try{
   const target=new URL(url);target.search='?station=seams-chain&speed=5&touch=1';await mobile.goto(target.href);
   await mobile.waitForFunction(()=>window.riderStationReport?.station==='seams-chain'&&window.riderTelemetry?.sequence>2);
-  await mobile.getByRole('button',{name:'Next station',exact:true}).click();await mobile.waitForFunction(()=>window.riderStationReport?.station==='seams-hull');
+  const more=mobile.getByRole('button',{name:'More',exact:true});
+  assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
+  await more.tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real touch');
+  await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next station',exact:true}).tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'false','Next station closes More');
+  await mobile.waitForFunction(()=>window.riderStationReport?.station==='seams-hull');
   await mobile.screenshot({path:path.join(out,'seams-release-phone.png')});cases.push('mobile_emulation_next_station');
  }finally{await phone.close();}
  fs.writeFileSync(path.join(out,'seams-release-result.json'),JSON.stringify({source_sha:sha,status:'PASS',cases,realDevice:'NOT RUN'},null,2));
