@@ -55,7 +55,7 @@ module.exports=async function check(browser,base,sha,out){
    assert.equal(await menu.locator('button').count(),12,'all existing secondary actions retained');
    assert.equal(await menu.locator('button').filter({hasText:'Next section'}).count(),1);
    assert.equal(await menu.locator('button').filter({hasText:'Next section'}).isHidden(),true);
-   const qualityLabel=await page.evaluate(()=>document.getElementById('quality')?.textContent||'High DPI');
+   const qualityLabel=(await page.evaluate(()=>document.getElementById('quality')?.textContent||'High DPI')).trim();
    assert.equal(await menu.getByRole('button',{name:qualityLabel,exact:true}).count(),1,'quality action missing');
    const open=await checkHudGeometry(page,viewport,true);
    for(const label of ['Next station','Speed 1x','Record run','Replay run','Import level','Layout A · mirror','Measure','Tilt','Copy report','Fullscreen']){
