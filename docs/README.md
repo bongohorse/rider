@@ -10,6 +10,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Decisions, roadmap, stop points | [PLAN.md](PLAN.md) |
 | Gameplay intent, open design choices | [GAME_DESIGN.md](GAME_DESIGN.md), [vehicle contract](contracts/vehicle.md) |
 | Buggy handling baseline and A/B experiment plan (#339) | [Feel evidence and protocols](feel/buggy-baseline.md) |
+| Wheel rolling-speed ceiling / fast-rotation review (#114) | [Box2D 3.1.0 findings, solutions and Codex 6.1 handoff](feel/wheel-rotation-cap-114.md) |
 | Physics, units, tick owner, reset | [physics contract](contracts/physics.md), [engine pitfalls](contracts/engine-pitfalls.md); measured API table in [G1 baseline](contracts/g1-baseline.md) |
 | Engine/API changes (Defold, Box2D) | [engine references](ENGINE_REFERENCES.md), [engine pitfalls](contracts/engine-pitfalls.md) |
 | Gym stations, features, test protocols | [gym notes](../main/gym/README.md); seams: [A18 protocol](A18_SEAM_PROTOCOL.md) |
@@ -43,6 +44,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, roadmap | Goal · Decisions · Roadmap · Stop points · Later phases |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Design brief | Core loop and duration · Controls and feel trials · Crash, recovery and checkpoints · Identity and fun acceptance |
 | [feel/buggy-baseline.md](feel/buggy-baseline.md) | Historical vs missing feel evidence, preset A–F, two reproducible protocols (#339) | System and preset inventory · Evidence and gaps · Two reproducible protocols · Candidate hypotheses and stop points · Verification and limitations |
+| [feel/wheel-rotation-cap-114.md](feel/wheel-rotation-cap-114.md) | Pinned 60-Hz wheel rotation cap, upstream/Defold API gap, options, risk and Codex 6.1 test/decision handoff (#114) | Decision summary · Source-backed mechanism · Rider calculations and evidence · Solutions and tradeoffs · Codex 6.1 investigation order · Reproducible test protocol · Acceptance and stop points · References and evidence status |
 | [TOOLING.md](TOOLING.md) | Commands and operations | Prerequisites · Commands · Gym tests · Local environment · Worktrees · CI and required check · Agent CI completion watch · Dependencies and Renovate · Preview deployment · Gemini read-only reviewer setup |
 | [LOCAL_T3_SETUP.md](LOCAL_T3_SETUP.md) | T3/WSL preparation, loopback builds, focused tests and host activation | Target setup · Install and connect T3 Code · Provision local Extender · Daily commands · Cache and worktree rules · Agent handoff · Host acceptance · Rollback · Sources and maintenance |
 | [CI_SPEED_3_REPORT.md](CI_SPEED_3_REPORT.md) | P1 browser setup, EA3 correction and before/after evidence (#264) | Scope and implementation · Measurements · Failures and verification · Decisions and limits |
