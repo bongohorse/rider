@@ -10,6 +10,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
     zones:box(document.querySelector('#rider-mobile .zones')),
     levelActions:box(document.querySelector('#rider-level-actions')),
+    readoutClipped:(()=>{const e=document.querySelector('#rider-mobile .readout');return e.scrollHeight>e.clientHeight+1;})(),
     buttons:[...toolbar.querySelectorAll('button')].filter(visible).map(e=>({label:e.textContent,rect:box(e)}))};
  });
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
@@ -29,6 +30,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
  }else{
   assert.equal(g.menu,null,'closed More must not be displayed');
   assert.ok(g.readout.top>=g.toolbar.bottom+6,'readout must follow actual toolbar bottom');
+  assert.equal(g.readoutClipped,false,'readout text clipped by toolbar/level-action bounds');
   assert.equal(intersects(g.readout,g.zones),false,'readout overlaps drive zones');
   if(g.levelActions)assert.equal(intersects(g.readout,g.levelActions),false,'readout overlaps level actions');
   assert.equal(intersects(g.readout,g.toolbar),false,'readout overlaps toolbar');
