@@ -76,6 +76,37 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   const slope=C.slope(authored,'down-30');
   assert(Math.abs(slope.b.x-slope.a.x-3.464101615)<1e-5);
   assert.deepEqual(C.clip({x:0,y:0},{x:10,y:-10},{left:2,right:8,bottom:-8,top:-2}),{low:0.2,high:0.8});
+  // Focused negative controls run in the real a16 job before the browser A/B probes.
+  // A normal Straight station deliberately has NO riderStationReport.
+  const ready={sha:'source',runId:'run',station:'straight'};
+  const priorWindow=globalThis.window;
+  try{
+   globalThis.window={riderReady:{source_sha:'source',run_id:'run'},
+    riderTelemetry:{station:'straight',sequence:3},riderStationReport:null};
+   assert.equal(C.cameraReady(ready),true,'Straight readiness must not require a special report');
+   assert.equal(C.cameraReady({...ready,sha:'wrong'}),false,'Wrong build identity accepted');
+   assert.equal(C.cameraReady({...ready,station:'ramps-long'}),false,'Wrong station accepted');
+   globalThis.window.riderTelemetry.sequence=2;
+   assert.equal(C.cameraReady(ready),false,'Unready telemetry accepted');
+   globalThis.window.riderTelemetry={station:'ramps-long',sequence:3};
+   assert.equal(C.cameraReady({...ready,station:'ramps-long'}),false,'Missing ramp section accepted');
+   globalThis.window.riderStationReport={station:'ramps-long',section:'down-20'};
+   assert.equal(C.cameraReady({...ready,station:'ramps-long'}),false,'Wrong ramp section accepted');
+   globalThis.window.riderStationReport.section='down-30';
+   assert.equal(C.cameraReady({...ready,station:'ramps-long'}),true,'Authored ramp readiness rejected');
+  }finally{if(priorWindow===undefined)delete globalThis.window;else globalThis.window=priorWindow;}
+  const synthetic=Array.from({length:40},(_,i)=>({tick:i+1,resets:0,generation:1,x:i,y:-i,vx:100,vy:-50}));
+  const loaded=synthetic.filter(s=>s.tick>=10&&s.tick<=18).map(s=>({tick:s.tick}));
+  const exact=()=>C.comparePhysics(synthetic,synthetic.map(s=>({...s})),{downhillA:loaded,downhillB:loaded});
+  assert.equal(exact().matched_ticks,9,'Measured downhill ticks were not compared');
+  const without=(tick)=>synthetic.filter(s=>s.tick!==tick);
+  assert.throws(()=>C.comparePhysics(synthetic,without(14),{downhillA:loaded,downhillB:loaded}),/Missing\/unmatched fixed tick/);
+  assert.throws(()=>C.comparePhysics(synthetic,synthetic.map(s=>s.tick===14?{...s,resets:1}:s),{downhillA:loaded,downhillB:loaded}),/reset\/generation mismatch/);
+  assert.throws(()=>C.comparePhysics(synthetic,synthetic.map(s=>s.tick===14?{...s,x:s.x+2}:s),{downhillA:loaded,downhillB:loaded}),/altered deterministic physics/);
+  assert.throws(()=>C.comparePhysics(synthetic,synthetic,{downhillA:loaded,downhillB:loaded.slice(0,5)}),/Missing dual-supported downhill/);
+  assert.throws(()=>C.comparePhysics(synthetic,synthetic,{downhillA:loaded,downhillB:loaded.map(s=>({tick:s.tick+10}))}),/Missing dual-supported downhill/);
+  assert.throws(()=>C.comparePhysics(synthetic,synthetic.concat({...synthetic[13],x:999}),{downhillA:loaded,downhillB:loaded}),/conflicting duplicate/);
+  assert.throws(()=>C.comparePhysics(synthetic,without(14)),/Missing\/unmatched fixed tick/);
   const cameraCases={};
   async function cameraTrial(mode,viewport,station='ramps-long'){
    const label=station+'-'+mode+'-'+viewport.width+'x'+viewport.height;
@@ -86,7 +117,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
     await configure(p,runId,process.argv[5]);
     const section=station==='ramps-long'?'&section=down-30':'&speed=1';
     await p.goto(url+'?station='+station+section+'&camera352='+mode+P.query);
-    await p.waitForFunction(({sha,runId,station})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station,{sha,runId,station});
+    await p.waitForFunction(C.cameraReady,{sha,runId,station});
     await p.waitForFunction(()=>window.riderCamera352Trace?.length>=140,null,{timeout:20000,polling:50});
     const canvas=await p.evaluate(()=>{const c=document.querySelector('canvas');if(!c)return null;const r=c.getBoundingClientRect();return {width:r.width,height:r.height,buffer_width:c.width,buffer_height:c.height};});
     assert(canvas&&canvas.width>0&&canvas.height>0,label+': no actual canvas dimensions');
@@ -106,7 +137,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
      viewport_truncated:valid.filter(s=>s.viewport_truncated).length,
      max_descent_u:Math.max(...trace.map(s=>s.descent))};
     if(station==='straight')assert(summary.max_descent_u<5,'Flat-road candidate introduced downhill lead');
-    cameraCases[label]={summary,trace,measured};
+    cameraCases[label]={summary,trace,measured,valid};
     fs.writeFileSync(path.join(out,'camera352-'+label+'.json'),JSON.stringify(cameraCases[label],null,2));
     await p.screenshot({path:path.join(out,'camera352-'+label+'.png')});
     if(station==='ramps-long'&&mode==='b'&&viewport.width===1280){
@@ -124,7 +155,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   }
   for(const viewport of [{width:1280,height:720},{width:720,height:1280}]){
    const a=await cameraTrial('a',viewport),b=await cameraTrial('b',viewport);
-   const equal=C.comparePhysics(a.trace,b.trace);
+   const equal=C.comparePhysics(a.trace,b.trace,{downhillA:a.valid,downhillB:b.valid});
    const name=viewport.width+'x'+viewport.height;
    cameraCases['physics-'+name]={equal};
   }
