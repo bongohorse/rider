@@ -63,7 +63,12 @@ def check_group(directory, mode, expected, sha, build_id):
     phases = timings.get('cases')
     require(isinstance(phases, list), f'Missing timing cases in {timing_path}')
     phase_names = [phase.get('name') for phase in phases]
-    require(len(phase_names) == len(set(phase_names)), f'Duplicate timing phase in {timing_path}')
+    # The phone layout deliberately revisits 1080x486 after rotation. Those
+    # two real slider/preset sweeps share phase names and must each run twice.
+    duplicates = {name: count for name, count in Counter(phase_names).items() if count > 1}
+    allowed = ({f'phone-emulation/{kind}/1080x486': 2 for kind in ('sliders', 'presets')}
+               if mode == 'phone' else {})
+    require(duplicates == allowed, f'Missing/duplicate timing phases in {timing_path}: {duplicates}')
     require(all(phase.get('status') == 'PASS' for phase in phases), f'Failed timing phase in {timing_path}')
     require({'browser/launch', 'final-assertions', 'cleanup/global'} <= set(phase_names),
             f'Missing verifier phases in {timing_path}')
