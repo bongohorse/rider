@@ -372,7 +372,8 @@
     const levelActions=document.getElementById('rider-level-actions');
     const levelTop=levelActions?.getClientRects().length?levelActions.getBoundingClientRect().top:Infinity;
     const lowerEdge=Math.min(zonesRect.top,levelTop);
-    const top=Math.ceil(toolbarRect.bottom-rootRect.top+8);
+    const raceBottom=raceSummary&&!raceSummary.hidden?raceSummary.getBoundingClientRect().bottom:toolbarRect.bottom;
+    const top=Math.ceil(Math.max(toolbarRect.bottom,raceBottom)-rootRect.top+8);
     readout.style.top=top+'px';
     measure.style.top=top+'px';
     tiltPanel.style.top=top+'px';
