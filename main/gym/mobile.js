@@ -271,13 +271,16 @@
   // Keep the scrollable More menu above the driving targets even on short landscape screens.
   const positionOverlays=()=>{
     const toolbarRect=toolbar.getBoundingClientRect(),rootRect=root.getBoundingClientRect(),zonesRect=zones.getBoundingClientRect();
+    const levelActions=document.getElementById('rider-level-actions');
+    const levelTop=levelActions?.getClientRects().length?levelActions.getBoundingClientRect().top:Infinity;
+    const lowerEdge=Math.min(zonesRect.top,levelTop);
     const top=Math.ceil(toolbarRect.bottom-rootRect.top+8);
     readout.style.top=top+'px';
     measure.style.top=top+'px';
     tiltPanel.style.top=top+'px';
-    readout.style.maxHeight=Math.max(0,Math.floor(zonesRect.top-rootRect.top-top-8))+'px';
+    readout.style.maxHeight=Math.max(0,Math.floor(lowerEdge-rootRect.top-top-8))+'px';
     readout.style.overflowY='hidden';
-    overflow.style.maxHeight=Math.max(44,Math.floor(zonesRect.top-toolbarRect.bottom-16))+'px';
+    overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
   };
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
   window.addEventListener('resize',positionOverlays);
