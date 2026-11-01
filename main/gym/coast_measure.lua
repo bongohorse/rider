@@ -56,8 +56,9 @@ local function seed(self)
     local v=self.vehicle
     local a,b=contact(v)
     local vx=feel.metres(vehicle.state(v).vx)
-    if not (a and b and math.abs(vx)<0.1) then
-        return fail(self,"unsettled/ungrounded 5 m/s start: contacts="..tostring(a)..","..tostring(b).." vx="..vx)
+    local angle=vehicle.state(v).angle
+    if not (a and b and math.abs(vx)<0.1 and math.abs(angle)<0.1) then
+        return fail(self,"unsettled/ungrounded 5 m/s start: contacts="..tostring(a)..","..tostring(b).." vx="..vx.." angle="..angle)
     end
     for _,body in ipairs({v.chassis,v.wheels[1],v.wheels[2]}) do
         b2d.body.set_linear_velocity(body,vmath.vector3(500,0,0))
@@ -69,7 +70,10 @@ local function seed(self)
     end
     local first=self.coast_measure_state.runs[1]
     if first and (math.abs(first.start[2]-initial[2])>0.02 or
+        math.abs(first.start[8]-initial[8])>0.02 or
         math.abs(first.start[3]-initial[3])>1e-6 or
+        math.abs(first.start[6]-initial[6])>1e-6 or
+        math.abs(first.start[7]-initial[7])>1e-6 or
         first.start[4]~=initial[4] or first.start[5]~=initial[5]) then
         return fail(self,"run starts differ after canonical reset/settle")
     end
