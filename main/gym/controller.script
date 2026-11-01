@@ -295,6 +295,12 @@ function init(self)
         self.regress_state=self.regress.new()
         self.replay_debug=true
     end
+    if self.testcase=="coast345" then
+        assert(sys.get_engine_info().is_debug and html5,"Coast measurement needs debug HTML5")
+        self.coast_measure=require "main.gym.coast_measure"
+        self.coast_measure.bind(emit,request_reset)
+        self.coast_measure_state=self.coast_measure.new()
+    end
     if self.testcase=="a20" then
         assert(sys.get_engine_info().is_debug,"Time probe requires debug engine")
         self.time_probe=require "main.gym.time_probe"
@@ -625,12 +631,14 @@ function fixed_update(self, dt)
                 show_preset(self)
             end
         end
-        self.last_command = replay.command(self,dt) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
+        if self.coast_measure then self.coast_measure.before(self,dt) end
+        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         require('main.gym.fuel_runtime').command(self,self.last_command,dt)
         if self.mechanisms then mechanisms.fixed(self.mechanisms,dt,not self.finish_done and not (self.race and require('main.gym.run').terminal(self.race))) end
         vehicle.apply(self.vehicle,self.last_command,dt)
+        if self.coast_measure then self.coast_measure.after(self) end
         if self.fuel then self.fuel.power=self.vehicle.powered_input or 0 end
         rider.sample(self.vehicle,self.last_command)
         local sample=telemetry.sample(self.vehicle)
