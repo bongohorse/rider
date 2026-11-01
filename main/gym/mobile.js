@@ -200,7 +200,7 @@
     #rider-mobile .zones button[data-command="brake"]{background:linear-gradient(180deg,#f07874f0,#b93f5bf2);border-color:#ffab94}
     #rider-mobile .zones button[data-command="throttle"]{background:linear-gradient(180deg,#a7df57f0,#5d9b3af2);border-color:#d5f68d;color:#192819;text-shadow:none}
     #rider-mobile .zones button.held{filter:brightness(1.17);box-shadow:inset 0 3px 6px #17121a88,0 0 0 2px #ffe4a3aa;transform:translateY(1px)}
-    #rider-mobile .zones button.held,#rider-mobile button.held{background:#99612f}
+    #rider-mobile .toolbar button.held{filter:brightness(1.14)}
     #rider-mobile .toolbar-more .readout{position:static;grid-column:1/-1;width:auto;max-width:none;max-height:none;background:#201c27;border:1px solid #685b68;border-radius:8px;font-size:11px;color:#eee0cd;padding:7px;pointer-events:none}
     #rider-mobile .toolbar-more .readout>div{white-space:normal;overflow-wrap:anywhere}
     #rider-mobile .course-progress{position:absolute;top:max(9px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:clamp(184px,27vw,275px);height:30px;min-width:0;margin:0;gap:5px;font-size:10px;color:var(--rider-paper)}
