@@ -4,12 +4,14 @@ local feel=require "main.gym.feel"
 local vehicle=require "main.gym.vehicle"
 local stations=require "main.gym.stations"
 local replay=require "main.gym.replay"
+local seam_metrics=require "main.gym.seam_metrics"
 local M={SETTLE=90,CAP=1200,ORDER={"coast","brake","coast"}}
 local emit,request_reset
 function M.bind(emitter,resetter) emit,request_reset=emitter,resetter end
 function M.new() return {phase="settle",settle=0,index=1,runs={},last_tick=false} end
 local function contact(v)
-    return #b2d.body.get_contact_data(v.wheels[1])>0,#b2d.body.get_contact_data(v.wheels[2])>0
+    -- Manifolds may contain speculative points; only touching/impulsive contacts count as support.
+    return seam_metrics.supported(v.wheels[1]),seam_metrics.supported(v.wheels[2])
 end
 local function sample(self,tick)
     local v=self.vehicle
@@ -27,7 +29,7 @@ local function finish(self,status,reason)
     local result={status=status,error=reason or false,source_sha=sys.get_config_string("rider.source_sha","development"),
         run_id=self.run_id,station=self.station and self.station.id or false,preset=self.preset,
         modified=self.modified or false,config_identity=replay.identity(),
-        physics_hz=60,render_fps=sys.get_config_int("display.update_frequency",60),
+        physics_hz=60,configured_update_frequency_hz=sys.get_config_int("display.update_frequency",60),
         physics_scale=sys.get_config_number("physics.scale",0.01),time_factor=self.time_factor,
         scaled_ticks=self.time_scaled_ticks,runs=s.runs,completed=#s.runs}
     if status=="PASS" then
