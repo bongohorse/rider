@@ -179,6 +179,8 @@ module.exports=async function mobile(browser,url,sha,out){
         // the panel clears the held command.
         await dispatch('touchStart',[await point('throttle',1)]);
         await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+        assert.equal(await more().getAttribute('aria-expanded'),'true','Drive-zone touch keeps More open for a second pointer');
+        assert.equal(await importButton().isVisible(),true,'Import stays visible while throttle is held');
         await importButton().click();
         await page.waitForFunction(()=>window.riderCustom.visible&&window.riderTelemetry.ui_captured&&window.riderTelemetry.command.throttle===0);
         await dispatch('touchEnd',[]);
