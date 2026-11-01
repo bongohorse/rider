@@ -15,7 +15,8 @@
     path.setAttribute('d',iconPaths[name]);svg.append(path);return svg;
   };
   const setIconLabel=(button,label,name)=>{
-    button.setAttribute('aria-label',label);button.title=label;
+    if(button.getAttribute('aria-label')===label&&button.dataset.icon===name)return;
+    button.dataset.icon=name;button.setAttribute('aria-label',label);button.title=label;
     button.replaceChildren(glyph(name));
   };
 
