@@ -64,13 +64,16 @@ function M.fixed(self,state,dt)
     -- retain the global engine tick separately for diagnostics (never step Box2D here).
     self.camera352_vehicle_tick=(self.camera352_vehicle_tick or 0)+1
     local sample={
-        source_sha=sys.get_config_string("rider.source_sha","development"),
+        source_sha=sys.get_config_string("rider.source_sha","development"),run_id=self.run_id,
         mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
         tick=self.camera352_vehicle_tick,engine_tick=self.fixed_ticks,
         resets=self.reset_count,generation=self.generation,dt=dt,
         x=state.x,y=state.y,vx=velocity.x,vy=velocity.y,
         rear=contacts.supported(self.vehicle.wheels[1]),
-        front=contacts.supported(self.vehicle.wheels[2])
+        front=contacts.supported(self.vehicle.wheels[2]),
+        -- #114: debug-only wheel rolling-cap evidence; same completed Defold fixed tick.
+        rear_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[1]),
+        front_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[2])
     }
     html5.run("(function(s){var a=window.riderCamera352PhysicsTrace||(window.riderCamera352PhysicsTrace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(sample)..")")
 end
