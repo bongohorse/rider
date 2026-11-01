@@ -10,6 +10,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   const shown=selector=>{const e=document.querySelector(selector);return e&&visible(e)?box(e):null;};
   return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
     zones:box(document.querySelector('#rider-mobile .zones')),
+    driveButtons:[...document.querySelectorAll('#rider-mobile .zones button')].filter(visible).map(box),
     levelActions:box(document.querySelector('#rider-level-actions')),
     progress:shown('#rider-mobile .course-progress'),progressTrack:shown('#rider-mobile .progress-track'),progressValue:shown('#rider-mobile .progress-value'),
     coin:shown('#rider-mobile .coin-widget'),fuel:shown('#rider-mobile .fuel-widget'),speed:shown('#rider-mobile .speedometer'),race:shown('#rider-mobile .race-summary'),
@@ -18,6 +19,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
  });
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
  assert.ok(g.toolbar&&g.readout&&g.zones,'missing mobile HUD geometry');
+ assert.equal(g.driveButtons.length,4,'all four real drive touch targets must be present');
  for(const {label,rect} of g.buttons){
   assert.ok(rect.width>=44&&rect.height>=44,'touch target too small: '+label+' '+JSON.stringify(rect));
   assert.ok(rect.left>=screen.left-1&&rect.right<=screen.right+1&&rect.top>=screen.top-1&&rect.bottom<=screen.bottom+1,'offscreen toolbar button: '+label);
@@ -28,7 +30,12 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
  for(const name of ['progress','coin','fuel','speed','race']){
   const rect=g[name];if(!rect)continue;
   assert.ok(rect.left>=screen.left-1&&rect.right<=screen.right+1&&rect.top>=screen.top-1&&rect.bottom<=screen.bottom+1,'HUD element offscreen: '+name+' '+JSON.stringify(rect));
-  assert.equal(intersects(rect,g.zones),false,name+' overlaps drive zones');
+  // The flex .zones wrapper spans the entire screen width; only its actual buttons are touch targets.
+  // The bottom-center speedometer intentionally occupies the empty gap between the two button pairs.
+  if(name==='speed'){
+   for(const [index,drive] of g.driveButtons.entries())
+    assert.equal(intersects(rect,drive),false,name+' overlaps drive button '+index+' '+JSON.stringify({rect,drive}));
+  }else assert.equal(intersects(rect,g.zones),false,name+' overlaps drive zones');
   assert.equal(intersects(rect,g.toolbar),false,name+' overlaps primary toolbar');
   if(g.levelActions)assert.equal(intersects(rect,g.levelActions),false,name+' overlaps level actions');
  }
