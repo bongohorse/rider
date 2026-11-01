@@ -51,7 +51,7 @@ function verify(report,expected){
       for(const n of [1,2,5,6,7])assert.ok(Number.isFinite(q[n]),'nonfinite sample');
       assert.ok(q[1]>=BOUNDS.x0&&q[1]<=BOUNDS.x1&&q[7]>=BOUNDS.y0&&q[7]<=BOUNDS.y1,'crossed Straight bounds');
       assert.equal(typeof q[3],'boolean');assert.equal(typeof q[4],'boolean');
-      assert.ok(q[3]||q[4],'lost all ground contacts');
+      assert.ok(q[3]&&q[4],'lost dual-wheel support');
       if(k>0&&k<r.ticks)assert.ok(Math.abs(q[2])>=0.1,'stopped earlier than recorded');
     }
     assert.ok(Math.abs(r.stop[2])<0.1,'never stopped below 0.1 m/s');
