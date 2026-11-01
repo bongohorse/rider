@@ -309,7 +309,14 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
 
   // 18. Touch toolbar (synthetic clicks, ?touch=1): Record run / Replay run.
   await newPage('?station=gaps&touch=1',{viewport:{width:900,height:500},hasTouch:true});
-  const tap=label=>page.getByRole('button',{name:label,exact:true}).click();
+  const tap=async label=>{
+    const more=page.getByRole('button',{name:'More',exact:true});
+    assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
+    await more.tap();
+    assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real touch');
+    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).tap();
+    assert.equal(await more.getAttribute('aria-expanded'),'false',label+' closes More');
+   };
   await tap('Record run');await wait(()=>window.riderReplay.recording?.active);
   await sleep(1500);
   await tap('Record run');await wait(()=>window.riderReplay.recording&&!window.riderReplay.recording.active);

@@ -14,8 +14,28 @@ module.exports=async function tilt(browser,url,sha,out){
   const session=await context.newCDPSession(page);
   const emit=(beta,gamma)=>page.evaluate(({beta,gamma})=>
     window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta,gamma,alpha:0})),{beta,gamma});
-  const open=async()=>{if(!await page.locator('.tilt-panel').isVisible())await page.getByRole('button',{name:'Tilt',exact:true}).click();};
-  const close=async()=>{if(await page.locator('.tilt-panel').isVisible())await page.getByRole('button',{name:'Tilt',exact:true}).click();};
+  // Tilt is a secondary action. Exercise the same real More touch path as players.
+  const more=()=>page.getByRole('button',{name:'More',exact:true});
+  async function toggleTilt(){
+    const m=more();
+    assert.equal(await m.getAttribute('aria-expanded'),'false','More starts closed');
+    await m.tap();
+    assert.equal(await m.getAttribute('aria-expanded'),'true','More opens with real touch');
+    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Tilt',exact:true}).tap();
+    assert.equal(await m.getAttribute('aria-expanded'),'false','Tilt closes More');
+  }
+  const open=async()=>{if(!await page.locator('.tilt-panel').isVisible()){await toggleTilt();assert.equal(await page.locator('.tilt-panel').isVisible(),true,'Tilt panel opens');}};
+  const close=async()=>{if(await page.locator('.tilt-panel').isVisible()){
+    // Opening More itself dismisses any open Tilt panel; clicking Tilt again
+    // here would accidentally reopen it instead of closing the panel.
+    const m=more();
+    assert.equal(await m.getAttribute('aria-expanded'),'false','More starts closed');
+    await m.tap();
+    assert.equal(await m.getAttribute('aria-expanded'),'true','More opens with real touch');
+    assert.equal(await page.locator('.tilt-panel').isVisible(),false,'More dismisses Tilt panel');
+    await m.tap();
+    assert.equal(await m.getAttribute('aria-expanded'),'false','More closes with real touch');
+  }};
   const neutral=()=>page.waitForFunction(()=>{const c=window.riderTelemetry.command;return c.throttle===0&&c.brake_reverse===0&&c.lean===0;});
   async function touch(command,lean){
     const b=await page.locator(`[data-command="${command}"]`).boundingBox();
@@ -83,7 +103,8 @@ module.exports=async function tilt(browser,url,sha,out){
     await open();await page.getByRole('button',{name:'Invert OFF',exact:true}).click();await close();
     await page.waitForFunction(()=>window.riderTelemetry.command.lean<-.39&&window.riderTelemetry.command.lean>-.42);
     pass('inverted_direction');
-    await page.setViewportSize({width:486,height:1080});await neutral();
+    // Exercise 90-degree sensor-axis normalization without enabling unsupported portrait gameplay.
+    await page.setViewportSize({width:960,height:540});await neutral();
     await page.waitForFunction(()=>window.riderTilt.mode==='calibrate');
     await page.evaluate(()=>{window.__tiltScreenAngle=90;});
     await emit(0,0);await calibrate();await emit(20,0);

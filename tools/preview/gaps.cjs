@@ -27,7 +27,12 @@ module.exports=async function gaps(browser,url,sha,out){
  try{
   const target=new URL(url);target.search='?station=gaps-landing&section=flat&speed=0&touch=1';await mobile.goto(target.href);
   await mobile.waitForFunction(()=>window.riderStationReport?.station==='gaps-landing'&&window.riderTelemetry?.sequence>2);
-  await mobile.getByRole('button',{name:'Next section',exact:true}).click();await mobile.waitForFunction(()=>window.riderStationReport.section==='down');
+  const more=mobile.getByRole('button',{name:'More',exact:true});
+  assert.equal(await more.getAttribute('aria-expanded'),'false');
+  await more.tap();assert.equal(await more.getAttribute('aria-expanded'),'true');
+  await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  assert.equal(await more.getAttribute('aria-expanded'),'false');
+  await mobile.waitForFunction(()=>window.riderStationReport.section==='down');
   await mobile.screenshot({path:path.join(out,'gaps-release-phone.png')});cases.push('mobile_emulation_next_section');
  }finally{await phone.close();}
  fs.writeFileSync(path.join(out,'gaps-release-result.json'),JSON.stringify({source_sha:sha,status:'PASS',cases,realDevice:'NOT RUN'},null,2));
