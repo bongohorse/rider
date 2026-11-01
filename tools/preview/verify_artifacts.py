@@ -8,18 +8,39 @@ from collections import Counter
 from pathlib import Path
 import sys
 
+def validate_gameplay_manifest(manifest):
+    """Reject an incomplete, duplicated, reordered or overlapping shard inventory."""
+    checks = tuple(manifest['checks'])
+    shards = {mode: tuple(items) for mode, items in manifest['shards'].items()}
+    if len(checks) != 7 or len(set(checks)) != len(checks):
+        raise ValueError('Invalid seven-module gameplay inventory')
+    if set(shards) != {'desktop-gameplay-a', 'desktop-gameplay-b'}:
+        raise ValueError('Expected two gameplay shards')
+    assigned = []
+    for mode, items in shards.items():
+        if not items:
+            raise ValueError(f'Empty gameplay shard: {mode}')
+        indices = [checks.index(item) if item in checks else -1 for item in items]
+        if any(index < 0 for index in indices) or indices != sorted(set(indices)):
+            raise ValueError(f'Unknown or reordered gameplay check in {mode}')
+        assigned.extend(items)
+    if Counter(assigned) != Counter(checks):
+        raise ValueError('Missing, duplicated or unexpected gameplay check')
+    return checks, shards
+
+
+GAMEPLAY, GAMEPLAY_SHARDS = validate_gameplay_manifest(
+    json.loads((Path(__file__).parent / 'gameplay-checks.json').read_text(encoding='utf-8')))
 GROUP_CASES = {
     'desktop-layout': ('desktop',),
-    'desktop-gameplay': ('desktop-gameplay',),
+    **{mode: (mode,) for mode in GAMEPLAY_SHARDS},
     'phone': ('phone-emulation',),
     'touch': ('mobile-touch-emulation', 'tilt-injected-orientation'),
     'stations': ('ramps-release', 'steps-release', 'seams-release', 'gaps-release',
                  'balance-release', 'bumps-release', 'air-release'),
 }
-GAMEPLAY = ('check_run', 'check_gem_release', 'check_fuel_release',
-            'check_levels', 'check_level_storage', 'check_objects', 'check_progress')
-GAMEPLAY_TIMINGS = tuple('gameplay/' + ('check_levels/desktop' if x == 'check_levels' else x)
-                         for x in GAMEPLAY)
+def gameplay_timing(check):
+    return 'gameplay/' + ('check_levels/desktop' if check == 'check_levels' else check)
 DESKTOP_SIZES = ((1920, 1080), (2560, 1440), (1280, 720))
 PHONE_SIZES = ((1080, 486), (486, 1080), (896, 400), (1080, 486))
 
@@ -73,9 +94,14 @@ def check_group(directory, mode, expected, sha, build_id):
     require({'browser/launch', 'final-assertions', 'cleanup/global'} <= set(phase_names),
             f'Missing verifier phases in {timing_path}')
 
-    if mode == 'desktop-gameplay':
-        require(cases[0].get('checks') == list(GAMEPLAY), 'Missing/reordered desktop gameplay checks')
-        require(set(GAMEPLAY_TIMINGS) <= set(phase_names), 'Missing desktop gameplay module timing')
+    if mode in GAMEPLAY_SHARDS:
+        expected_checks = GAMEPLAY_SHARDS[mode]
+        require(cases[0].get('checks') == list(expected_checks),
+                f'Missing/reordered gameplay checks in {mode}')
+        actual_modules = Counter(name for name in phase_names if name.startswith('gameplay/'))
+        expected_modules = Counter(gameplay_timing(check) for check in expected_checks)
+        require(actual_modules == expected_modules,
+                f'Missing/duplicate/unexpected gameplay module timing in {mode}: {actual_modules}')
     if mode in ('desktop-layout', 'phone'):
         is_desktop = mode == 'desktop-layout'
         sizes = DESKTOP_SIZES if is_desktop else PHONE_SIZES
@@ -117,6 +143,9 @@ def verify(root, sha, build_id):
         check_group(directory, mode, expected, sha, build_id)
         all_cases.extend(expected)
     require(len(all_cases) == len(set(all_cases)), 'Case assigned to multiple release groups')
+    assigned = [check for items in GAMEPLAY_SHARDS.values() for check in items]
+    require(Counter(assigned) == Counter(GAMEPLAY),
+            'Missing/duplicate desktop gameplay module across release shards')
     deployment = root / f'preview-verification-desktop-layout-{build_id}' / 'deployment'
     check_group(deployment, 'deployment', ('desktop', 'phone-emulation'), sha, build_id)
     check_screenshots(deployment, ['desktop.png', 'phone-emulation.png'])
