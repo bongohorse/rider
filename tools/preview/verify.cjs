@@ -3,7 +3,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
-const {verificationPlan}=require('./verification-plan.cjs');
+const {verificationPlan,DESKTOP_GAMEPLAY_CHECKS}=require('./verification-plan.cjs');
 const {createTimings}=require('./timings.cjs');
 const pointer=require('../gym/pointer.cjs');
 // Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
@@ -185,14 +185,16 @@ async function main(){
     for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air']){
       if(plan.includes(name))results.push(await timings.run('preview/'+name,()=>require('./'+name+'.cjs')(browser,url,sha,out)));
     }
-    if(plan.includes('desktop')&&mode!=='deployment'){
-      await timings.run('gameplay/check_run',()=>require('../gameplay/check_run.cjs')(browser,url,sha,out));
-      await timings.run('gameplay/check_gem_release',()=>require('../gameplay/check_gem_release.cjs')(browser,url,sha,out));
-      await timings.run('gameplay/check_fuel_release',()=>require('../gameplay/check_fuel_release.cjs')(browser,url,sha,out));
-      await timings.run('gameplay/check_levels/desktop',()=>require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels')));
-      await timings.run('gameplay/check_level_storage',()=>require('../gameplay/check_level_storage.cjs')(browser,url,sha,path.join(out,'level-storage')));
-      await timings.run('gameplay/check_objects',()=>require('../gameplay/check_objects.cjs')(browser,url,sha,path.join(out,'objects')));
-      await timings.run('gameplay/check_progress',()=>require('../gameplay/check_progress.cjs')(browser,url,sha,out));
+    if(plan.includes('desktop-gameplay')&&mode!=='deployment'){
+      // Each module creates its own normal Playwright page/context. None shares
+      // the desktop layout page, so the two CI groups can run independently.
+      const subdirs={check_levels:'levels',check_level_storage:'level-storage',check_objects:'objects'};
+      for(const check of DESKTOP_GAMEPLAY_CHECKS){
+        const destination=subdirs[check]?path.join(out,subdirs[check]):out;
+        const phase=check==='check_levels'?'check_levels/desktop':check;
+        await timings.run('gameplay/'+phase,()=>require('../gameplay/'+check+'.cjs')(browser,url,sha,destination));
+      }
+      results.push({name:'desktop-gameplay',status:'PASS',checks:[...DESKTOP_GAMEPLAY_CHECKS]});
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment'){
       await timings.run('gameplay/check_mobile',()=>require('../gameplay/check_mobile.cjs')(browser,url,sha,out));
