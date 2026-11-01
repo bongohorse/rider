@@ -31,6 +31,8 @@ for(const [name,change,reason] of [
   ['false presented frames',b=>{b.presented_frames=60;},/Misleading presented-frame/],
   ['wrong dt extrema',b=>{b.fixed_dt_max=1/30;},/Wrong fixed dt/],
   ['changed generation',b=>{b.generation++;},/generation/],
+  ['stalled fixed ticks despite valid 1/60 dt',b=>{b.fixed=101;b.fixed_ticks=101;b.world_s=start().world_s+STEP;},/wall cadence/],
+  ['fixed ticks running twice as fast',b=>{b.fixed=1420;b.fixed_ticks=1420;b.world_s=start().world_s+1320*STEP;},/wall cadence/],
 ]){
  test('reject '+name,()=>{const a=start(),b=end(a);change(b);assert.throws(()=>compare(a,b),reason);});
 }
