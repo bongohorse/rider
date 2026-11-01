@@ -28,6 +28,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Native Bridge | [bridge contract](contracts/bridge.md) |
 | Setup, build, tests, CI, preview | [TOOLING.md](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md); [CI Speed 3 evidence](CI_SPEED_3_REPORT.md) |
 | Gym CI critical path and coverage (#336) | [Two-run Gym profiling and safe candidates](ci/gym-critical-path-2026-11-01.md) |
+| Render FPS feasibility and fixed-tick protocol (#340) | [Defold 1.14.0 platform audit and measurement plan](ci/fps-feasibility-2026-11-01.md) |
 | Local T3 Code development and Extender | [Setup, commands, host acceptance and rollback](LOCAL_T3_SETUP.md) |
 | Device evidence, phone testing | [platform matrix](PLATFORM_MATRIX.md), [phone trial](MOBILE_TRIAL.md) |
 | Status values and reporting | [evidence policy](contracts/evidence.md) |
@@ -46,6 +47,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | [LOCAL_T3_SETUP.md](LOCAL_T3_SETUP.md) | T3/WSL preparation, loopback builds, focused tests and host activation | Target setup · Install and connect T3 Code · Provision local Extender · Daily commands · Cache and worktree rules · Agent handoff · Host acceptance · Rollback · Sources and maintenance |
 | [CI_SPEED_3_REPORT.md](CI_SPEED_3_REPORT.md) | P1 browser setup, EA3 correction and before/after evidence (#264) | Scope and implementation · Measurements · Failures and verification · Decisions and limits |
 | [ci/gym-critical-path-2026-11-01.md](ci/gym-critical-path-2026-11-01.md) | Two-run Gym critical path, six-group fixture/coverage map and bounded optimization candidates (#336) | Evidence and comparability · Timing and critical path · Six-group regression map · Safe follow-up candidates · Preservation and verification |
+| [ci/fps-feasibility-2026-11-01.md](ci/fps-feasibility-2026-11-01.md) | Defold 1.14.0 frame pacing, HTML5/Android caveats, fixed 60-Hz tick and future measurement gates (#340) | Pinned source and invariant · Platform feasibility · Existing ownership and UI · Future minimal implementation · Reproducible verification · Decision and evidence limits |
 | [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md) | Pinned Defold/Bob/JDK/Bridge and update rules | — |
 | [ENGINE_REFERENCES.md](ENGINE_REFERENCES.md) | Official Defold/Box2D sources | Read only what the task needs · Defold · Box2D · Automation Bridge · Build, platforms and gameplay evidence · Maintenance |
 | [PLATFORM_MATRIX.md](PLATFORM_MATRIX.md) | Evidence per platform and device | — |
