@@ -55,8 +55,10 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto');
       }catch(e){rejectDone(e);}
     });
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
-    const timeout=new Promise((_,reject)=>setTimeout(()=>reject(Error('real fixed-tick measurement timed out')),80000));
-    const event=await Promise.race([finished,timeout]);
+    let timer;
+    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('real fixed-tick measurement timed out')),80000);});
+    let event;
+    try{event=await Promise.race([finished,timeout]);}finally{clearTimeout(timer);}
     assert.equal(event.status,'PASS',JSON.stringify(event.cases));
     const result=await page.evaluate(()=>window.riderCoastMeasureResult||null);
     assert.ok(result,'missing engine-owned per-tick artifact');
