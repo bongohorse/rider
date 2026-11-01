@@ -71,7 +71,9 @@
       if(f){fuelHud.textContent=f.text+' · Refills '+f.collected;
         fuelHud.dataset.compact=Math.round(100*f.amount/Math.max(1,f.start))+'%';
         fuelBar.max=f.start;fuelBar.value=f.amount;fuelWidget.classList.toggle('low',!!f.low);
-        fuelBar.style.accentColor=f.low?'#e65d42':'#f4aa42';
+        const fraction=f.amount/Math.max(1,f.start);
+         fuelWidget.classList.toggle('medium',!f.low&&fraction<.5);
+         fuelBar.style.accentColor=f.low?'#ed655f':fraction<.5?'#ffbe4e':'#94dd49';
       }
     }
     if(enabled&&coinHud){
@@ -185,14 +187,25 @@
     #rider-mobile .toolbar button[aria-expanded="true"]{background:#86522e}
     #rider-mobile .toolbar button svg{width:22px;height:22px;display:block;margin:auto}
     #rider-mobile .toolbar-more{left:0;right:auto;background:#29252cf5;border-color:#b7793e}
+    #rider-mobile .toolbar button{position:relative;overflow:hidden;color:#fff9eb;box-shadow:0 2px 4px #1a14254d,inset 0 1px 0 #ffffff45}
+    #rider-mobile .toolbar button:before{content:'';position:absolute;left:8px;right:8px;top:3px;height:3px;border-radius:100%;background:#ffffff55;pointer-events:none}
+    #rider-mobile .toolbar button:nth-child(1){background:linear-gradient(#ed7777,#ad415c);border-color:#ff9b89}
+    #rider-mobile .toolbar button:nth-child(2){background:linear-gradient(#829af0,#4b5ec1);border-color:#a4b5ff}
+    #rider-mobile .toolbar button:nth-child(3){background:linear-gradient(#f4b95b,#bd7731);border-color:#ffcf7b}
+    #rider-mobile .toolbar button:nth-child(4){background:linear-gradient(#9d83e0,#6853aa);border-color:#baa3ff}
     #rider-mobile .toolbar-more button{width:100%;height:auto;min-height:44px}
-    #rider-mobile .zones button{border-color:#be874e;background:#302934d9}
+    #rider-mobile .zones button{position:relative;overflow:hidden;border:1px solid #aab4ff;border-radius:18px 18px 14px 14px;background:linear-gradient(180deg,#7b92efed,#4e55b7ee);color:#fffdf2;text-shadow:0 1px 1px #23142e88;box-shadow:0 3px 5px #120e1a70,inset 0 1px 0 #ffffff7d}
+    #rider-mobile .zones button:before{content:'';position:absolute;top:4px;left:12px;right:12px;height:4px;border-radius:50%;background:#ffffff55;pointer-events:none}
+    #rider-mobile .zones button[data-command="right"]{background:linear-gradient(180deg,#8b83e8ef,#5e4fa8f0);border-color:#c2aaff}
+    #rider-mobile .zones button[data-command="brake"]{background:linear-gradient(180deg,#f07874f0,#b93f5bf2);border-color:#ffab94}
+    #rider-mobile .zones button[data-command="throttle"]{background:linear-gradient(180deg,#a7df57f0,#5d9b3af2);border-color:#d5f68d;color:#192819;text-shadow:none}
+    #rider-mobile .zones button.held{filter:brightness(1.17);box-shadow:inset 0 3px 6px #17121a88,0 0 0 2px #ffe4a3aa;transform:translateY(1px)}
     #rider-mobile .zones button.held,#rider-mobile button.held{background:#99612f}
-    #rider-mobile .readout{left:max(215px,calc(env(safe-area-inset-left) + 215px));right:auto;width:min(205px,calc(100% - 455px));max-width:none;box-sizing:border-box;background:#2b252c85;border-radius:7px;font-size:9px;color:#e6d8c4;padding:3px 5px}
-    #rider-mobile .readout>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #rider-mobile .toolbar-more .readout{position:static;grid-column:1/-1;width:auto;max-width:none;max-height:none;background:#201c27;border:1px solid #685b68;border-radius:8px;font-size:11px;color:#eee0cd;padding:7px;pointer-events:none}
+    #rider-mobile .toolbar-more .readout>div{white-space:normal;overflow-wrap:anywhere}
     #rider-mobile .course-progress{position:absolute;top:max(9px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:clamp(184px,27vw,275px);height:30px;min-width:0;margin:0;gap:5px;font-size:10px;color:var(--rider-paper)}
     #rider-mobile .course-progress>span:not(.progress-value):not(.progress-reason) svg{width:16px;height:16px;display:block}
-    #rider-mobile .progress-track{height:3px;min-width:20px;background:#765b4b;border-radius:4px;box-shadow:0 1px 0 #ffc66a7a}
+    #rider-mobile .progress-track{height:3px;min-width:20px;background:linear-gradient(90deg,#f8bc5d,#b17ae6);border-radius:4px}
     #rider-mobile .progress-car{top:-12px;width:17px;height:17px;background:none;color:var(--rider-gold)}
     #rider-mobile .progress-car:before,#rider-mobile .progress-car:after{content:none}
     #rider-mobile .progress-car svg{width:17px;height:17px}
@@ -207,9 +220,17 @@
     #rider-mobile .fuel-widget svg{width:16px;height:16px}
     #rider-mobile .fuel-count{font-size:0}
     #rider-mobile .fuel-count:after{content:attr(data-compact);font-size:10px}
-    #rider-mobile .fuel-bar{writing-mode:vertical-lr;direction:rtl;width:10px;height:70px;border-radius:5px}
+    #rider-mobile .fuel-bar{appearance:none;-webkit-appearance:none;writing-mode:vertical-lr;direction:rtl;width:14px;height:70px;border:2px solid #f9cb78;border-radius:8px;overflow:hidden;background:#27212e;box-shadow:inset 0 1px 2px #0d0a14}
+    #rider-mobile .fuel-bar::-webkit-progress-bar{background:#27212e;border-radius:5px}
+    #rider-mobile .fuel-bar::-webkit-progress-value{background:linear-gradient(90deg,#b9ee69,#6fc344);border-radius:5px}
+    #rider-mobile .fuel-widget.medium .fuel-bar::-webkit-progress-value{background:linear-gradient(90deg,#ffe48a,#e9a53b)}
+    #rider-mobile .fuel-widget.low .fuel-bar::-webkit-progress-value{background:linear-gradient(90deg,#ff9980,#e9545d)}
     #rider-mobile .fuel-widget.low{color:#ff7558}
     #rider-mobile .speedometer{position:absolute;bottom:max(9px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:82px;height:82px;box-sizing:border-box;border:2px solid #c9874a;border-radius:50%;background:radial-gradient(circle at 45% 30%,#48373f,#2c2631 75%);box-shadow:0 2px 5px #130e1766;pointer-events:none;color:var(--rider-paper);text-align:center}
+    #rider-mobile .speed-ticks{position:absolute;inset:0;pointer-events:none}
+    #rider-mobile .speed-tick{position:absolute;left:calc(50% - 1.5px);top:calc(50% - 3px);width:3px;height:7px;border-radius:2px;transform:rotate(var(--tick-angle)) translateY(-29px);background:#92dd69}
+    #rider-mobile .speed-tick.warm{background:#ffcb61}
+    #rider-mobile .speed-tick.hot{background:#ff7d76}
     #rider-mobile .speed-needle{position:absolute;left:50%;bottom:47%;height:33%;width:2px;border-radius:2px;background:var(--rider-amber);transform-origin:50% 100%;transition:transform .08s linear}
     #rider-mobile .speed-value{position:absolute;top:48%;left:0;width:100%;font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
     #rider-mobile .speed-unit{position:absolute;top:73%;left:0;width:100%;font-size:9px}
@@ -304,8 +325,11 @@
   speedValue=document.createElement('div');speedValue.className='speed-value';
   speedLimit=document.createElement('div');speedLimit.className='speed-limit';
   const speedUnit=document.createElement('div');speedUnit.className='speed-unit';speedUnit.textContent='km/h';
-  speedometer.append(speedNeedle,speedValue,speedLimit,speedUnit);root.append(speedometer);
-  readout.append(hud,status,tiltHud,replayHud);root.append(readout);
+  const speedTicks=document.createElement('div');speedTicks.className='speed-ticks';
+  for(let i=0;i<9;i++){const tick=document.createElement('i');tick.className='speed-tick'+(i>=7?' hot':i>=5?' warm':'');tick.style.setProperty('--tick-angle',(-110+i*27.5)+'deg');speedTicks.append(tick);}
+  speedometer.append(speedTicks,speedNeedle,speedValue,speedLimit,speedUnit);root.append(speedometer);
+  // Optional developer diagnostics belong to scrollable More, not over the playfield.
+  readout.append(hud,status,tiltHud,replayHud);overflow.append(readout);
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;
@@ -379,11 +403,8 @@
     const lowerEdge=Math.min(zonesRect.top,levelTop);
     const raceBottom=raceSummary&&!raceSummary.hidden?raceSummary.getBoundingClientRect().bottom:toolbarRect.bottom;
     const top=Math.ceil(Math.max(toolbarRect.bottom,raceBottom)-rootRect.top+8);
-    readout.style.top=top+'px';
     measure.style.top=top+'px';
     tiltPanel.style.top=top+'px';
-    readout.style.maxHeight=Math.max(0,Math.floor(lowerEdge-rootRect.top-top-8))+'px';
-    readout.style.overflowY='hidden';
     overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
   };
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
