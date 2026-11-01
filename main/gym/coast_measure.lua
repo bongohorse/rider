@@ -109,12 +109,16 @@ function M.before(self,dt)
     if math.abs(dt*60-1)>1e-4 then return fail(self,"not a 60-Hz owner tick") end
     local err=invariant(self)
     if err then return fail(self,err) end
+    if s.expected_reset_count==nil then s.expected_reset_count=self.reset_count end
     if s.phase=="reset_pending" then
         if self.reset_count~=s.reset_count+1 or self.last_reset_reason~="coast_measure" then
             return fail(self,"expected one canonical Retry before next run")
         end
+        s.expected_reset_count=self.reset_count
         s.phase,s.settle,s.last_tick="settle",0,false
-    elseif self.pending_reset then return fail(self,"unexpected reset during measurement") end
+    elseif self.reset_count~=s.expected_reset_count or self.pending_reset then
+        return fail(self,"unexpected owner reset during measurement")
+    end
     if s.phase=="settle" then
         s.settle=s.settle+1
         if s.settle==M.SETTLE then seed(self) end
