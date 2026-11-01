@@ -74,7 +74,7 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto');
       'Run ID: `'+runId+'`  ',
       'Bundle manifest SHA-256: `'+bundleSha+'`  ',
       'Source fingerprint: `'+manifest.source_fingerprint+'`  ',
-      'Browser: '+report.browser+'; render '+report.render_fps+' FPS; physics '+report.physics_hz+' Hz; time factor 1.0; preset A unchanged.','',
+      'Browser: '+report.browser+'; configured display update frequency '+report.configured_update_frequency_hz+' Hz (actual render FPS NOT MEASURED); physics '+report.physics_hz+' Hz; time factor 1.0; preset A unchanged.','',
       '| Trial | Start speed | Stop distance | Time | Ticks |',
       '| --- | ---: | ---: | ---: | ---: |',
       ...report.runs.map(r=>'| '+r.kind+' | '+r.start[2].toFixed(6)+' m/s | '+r.distance_m.toFixed(6)+' m | '+r.seconds.toFixed(6)+' s | '+r.ticks+' |'),
