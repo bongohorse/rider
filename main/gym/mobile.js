@@ -4,7 +4,7 @@
   const forced=new URLSearchParams(location.search).get('touch');
   const enabled=forced==='1'||(forced!=='0'&&navigator.maxTouchPoints>0);
   const pointers=new Map(),pending={};
-  const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false};
+  const api=window.riderMobile={enabled,mirrored:false,details:false,report:null,recording:false,blocked:false};
   let root,zones,status,hud,tiltHud,tiltPanel,measure,lastFrame,trial,lastSequence,toastNode,progressNodes,coinHud,fuelHud,fuelBar,mechanismHud;
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
@@ -21,14 +21,14 @@
   };
   window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden');}});
-  window.addEventListener('resize',()=>abort('viewport changed; restart capture'));
+  window.addEventListener('resize',()=>{abort('viewport changed; restart capture');syncOrientation();});
   function summary(values){
     const sorted=[...values].sort((a,b)=>a-b);
     return {samples:sorted.length,mean:values.reduce((a,b)=>a+b,0)/values.length,
       p95:sorted[Math.ceil(sorted.length*.95)-1],max:sorted.at(-1)};
   }
   api.snapshot=()=>({source:window.riderBuild,browser:browserIdentity,layout:api.mirrored?'B':'A',
-    viewport:window.riderViewport,recording:api.recording,capture:api.report,
+    viewport:window.riderViewport,recording:api.recording,capture:api.report,blocked:api.blocked,
     tilt:window.riderTilt?.snapshot(),actualDevice:'User must confirm device, refresh mode, feel and visible stutter'});
   api.poll=(dt,physics)=>{
     const now=performance.now(),gap=lastFrame===undefined?null:now-lastFrame;
@@ -87,6 +87,14 @@
         }
       }
     }
+    // Portrait is not a playable mobile mode. Deliver only the one-shot clear/focus-loss
+    // request to the existing Lua loader, never held input or pending gameplay actions.
+    if(api.blocked){
+      const state={throttle:false,brake:false,left:false,right:false,tilt:0,
+        clear:!!pending.clear,background:!!pending.background};
+      for(const key of Object.keys(pending))delete pending[key];
+      return JSON.stringify(state);
+    }
     const held=new Set(pointers.values());
     const state={throttle:held.has('throttle'),brake:held.has('brake'),
       left:held.has('left'),right:held.has('right'),tilt:api.details||tiltPanel?.classList.contains('open')?0:(window.riderTilt?.lean()||0),...pending};
@@ -127,6 +135,8 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
+    #rider-mobile-rotate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:#101820;color:#fff;text-align:center;font:600 20px system-ui;pointer-events:auto;touch-action:none}
+    #rider-mobile-rotate[hidden]{display:none}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
@@ -286,4 +296,33 @@
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
   window.addEventListener('resize',positionOverlays);
   positionOverlays();
+  // The overlay is deliberately outside the HUD so it also blocks canvas/editor taps.
+  // The loader already implements an idempotent 'run_focus_lost' suspend; reuse it
+  // instead of toggling pause or introducing a second physics/time-step owner.
+  const rotate=document.createElement('div');
+  rotate.id='rider-mobile-rotate';rotate.hidden=true;rotate.tabIndex=-1;
+  rotate.setAttribute('role','alert');rotate.setAttribute('aria-live','assertive');
+  rotate.textContent='Rotate your device — Rider is landscape only';
+  document.body.append(rotate);
+  function syncOrientation(){
+    const portrait=window.innerHeight>window.innerWidth;
+    if(portrait===api.blocked)return;
+    api.blocked=portrait;
+    abort(portrait?'portrait orientation':'landscape orientation');
+    // Discard any queued Retry/Replay/station commands from before the transition.
+    for(const key of Object.keys(pending))delete pending[key];
+    pending.clear=true;
+    if(portrait)pending.background=true;
+    rotate.hidden=!portrait;
+    if(portrait){
+      document.activeElement?.blur?.();rotate.focus({preventScroll:true});
+    }else document.querySelector('canvas')?.focus();
+  }
+  // Do not allow keyboard gameplay shortcuts to bypass the portrait touch blocker.
+  for(const type of ['keydown','keyup'])window.addEventListener(type,e=>{
+    if(api.blocked){e.preventDefault();e.stopImmediatePropagation();}
+  },true);
+  window.addEventListener('orientationchange',syncOrientation);
+  screen.orientation?.addEventListener?.('change',syncOrientation);
+  syncOrientation();
 })();
