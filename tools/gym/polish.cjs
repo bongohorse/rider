@@ -98,9 +98,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    // Part 2 starts from an independent, drive-ready editor document; every
    // following module performs its own real UI operations and validations.
    checkpoint('start:le6-part-2');
-  await page.goto(base+'?station=straight');
-  await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
-  await page.locator('canvas').focus();await key('e');await edit();
+   await page.goto(base+'?station=straight');
+   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
+   await page.locator('canvas').focus();await key('e');await edit();
    const h={page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint};
    checkpoint('start:zoom_editor');
    await require('../gameplay/check_zoom_editor.cjs')(h);

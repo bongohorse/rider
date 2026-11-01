@@ -12,7 +12,6 @@ function fixtures(){
   cases:[...cases],measurements:{['sample'+i]:i}
  }));
 }
-const copy=x=>structuredClone(x);
 test('LE6 partitions preserve all 23 distinct cases and measurement identities',()=>{
  const f=fixtures(),m=mergeLe6(f);
  assert.equal(m.status,'PASS');assert.deepEqual(m.parts,['1/2','2/2']);
