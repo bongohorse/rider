@@ -568,6 +568,7 @@ function fixed_update(self, dt)
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
+        if self.camera_probe then self.camera_probe.fixed(self,state,dt) end
         if self.scenario then self.scenario.check_pose(self,state) end
         race.observe(self,dt)
         require('main.gym.fuel_runtime').observe(self)
