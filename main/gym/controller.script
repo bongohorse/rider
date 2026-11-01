@@ -224,6 +224,14 @@ function init(self)
     self.mobile={}
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
+    -- #352: opt-in debug HTML5 A/B; release and all normal Gym runs retain camera A.
+    if sys.get_engine_info().is_debug and html5 then
+        local mode=html5.run("new URLSearchParams(location.search).get('camera352') || ''")
+        if mode=="a" or mode=="b" then
+            self.camera352_mode=mode
+            self.camera_probe=require "main.gym.camera_probe352"
+        end
+    end
     self.test = self.testcase == "a1"
     if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" or self.testcase=="hud" or self.testcase=="a15a" then
         assert(sys.get_engine_info().is_debug, "Gym scenarios require a debug build")
@@ -401,11 +409,15 @@ function update(self, dt)
         -- Half the view height and width from the last projection (orthographic: m11 = 2 / height, m00 = 2 /
         -- width); they include the zoom.
         local projection=camera.get_projection("/camera#camera")
-        local pos,zoom=feel.camera(self.camera_follow,target,b2d.body.get_linear_velocity(self.vehicle.chassis),vehicle.touching(self.vehicle),
-            go.get_position("/camera"),self.camera_zoom,1/projection.m11,dt,1/projection.m00)
+        local velocity=b2d.body.get_linear_velocity(self.vehicle.chassis)
+        local pos,zoom=feel.camera(self.camera_follow,target,velocity,vehicle.touching(self.vehicle),
+            go.get_position("/camera"),self.camera_zoom,1/projection.m11,dt,1/projection.m00,self.camera352_mode)
         go.set_position(pos,"/camera")
         self.camera_zoom=zoom
         go.set("/camera#camera","orthographic_zoom",zoom)
+        if self.camera_probe then
+            self.camera_probe.sample(self,target,velocity,pos,camera.get_projection("/camera#camera"),dt)
+        end
     elseif self.station then
         -- Until the vehicle is ready the view waits where its start will settle, following the focus in x.
         start_camera(self)
