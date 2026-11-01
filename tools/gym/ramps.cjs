@@ -151,6 +151,12 @@ const P=require('./preset.cjs').fromArgv(process.argv);
      summary.retry={resets:after.resets,first_frame_dx_u:after.cx-trace[0].cx,first_frame_dy_u:after.cy-trace[0].cy,descent_u:after.descent};
     }
     return cameraCases[label];
+   }catch(e){
+    const state=await p.evaluate(()=>({ready:window.riderReady,telemetry:window.riderTelemetry,
+     report:window.riderStationReport,trace_frames:window.riderCamera352Trace?.length||0})).catch(()=>null);
+    fs.writeFileSync(path.join(out,'camera352-failed-'+label+'.json'),JSON.stringify({error:String(e),state},null,2));
+    await p.screenshot({path:path.join(out,'camera352-failed-'+label+'.png')}).catch(()=>{});
+    throw e;
    }finally{await p.close();}
   }
   for(const viewport of [{width:1280,height:720},{width:720,height:1280}]){
