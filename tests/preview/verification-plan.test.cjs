@@ -33,7 +33,7 @@ test('reject missing, duplicate, unknown, reordered and overlapping gameplay mod
   assert.equal(validateGameplayShards(ORIGINAL,shards(valid.a,valid.b)),true);
   assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_run'],valid.b)),/Missing/);
   assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_run','check_run','check_progress'],valid.b)),/Unknown or reordered/);
-  assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_run','check_progress'],['check_run',...valid.b])),/Unknown or reordered/);
+  assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_run','check_progress'],['check_run',...valid.b])),/^Missing, duplicated or unexpected gameplay check$/);
   assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_run','check_progress'],['fake',...valid.b])),/Unknown/);
   assert.throws(()=>validateGameplayShards(ORIGINAL,shards(['check_progress','check_run'],valid.b)),/reordered/);
   assert.throws(()=>validateGameplayShards(ORIGINAL,{'desktop-gameplay-a':ORIGINAL}),/two gameplay shards/);
