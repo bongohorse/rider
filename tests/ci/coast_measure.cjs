@@ -44,6 +44,7 @@ test('rejects foreign source, time scaling, missing run and changed command',()=
     r=>{r.config_identity='other';},
     r=>{r.scaled_ticks=1;},
     r=>{r.physics_hz=30;},
+    r=>{r.physics_scale=0.011;},
     r=>{r.configured_update_frequency_hz=30;},
     r=>{r.render_fps=60;},
     r=>{r.runs[1].commands[0][3]=true;},
@@ -61,4 +62,13 @@ test('observer reuses genuine loaded-contact predicate and does not claim measur
   assert.doesNotMatch(observer,/get_contact_data/);
   assert.match(observer,/configured_update_frequency_hz=sys\.get_config_int/);
   assert.doesNotMatch(observer,/render_fps=/);
+});
+
+test('accepts float32 representation of configured physics scale only within narrow tolerance',()=>{
+  const rounded=fixture();rounded.physics_scale=Math.fround(0.01);
+  assert.equal(verify(rounded,expected).completed,3);
+  for(const scale of [0.009,0.011,NaN]){
+    const invalid=fixture();invalid.physics_scale=scale;
+    assert.throws(()=>verify(invalid,expected));
+  }
 });
