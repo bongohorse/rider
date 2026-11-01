@@ -109,6 +109,11 @@ M.follow={
     vertical_deadband=40, -- ignore brief suspension/crest motion below 0.4 m/s
     vertical_full=300, -- sustained 3 m/s vertical motion fully yields to movement direction
     sink_rate=1.5,     -- 1/s: hold the framing through short rises, dips and landings
+    -- #352: opt-in debug A/B only. Never persisted or used by the production camera default.
+    descent_rate=8,    -- 1/s: fast separate downhill signal, not the ground-window filter
+    descent_seconds=0.35, -- seconds of raw downward travel to reserve below the chassis
+    descent_max=120,   -- u: cap extra vertical lead before the existing safe-edge clamp
+    descent_response=4, -- 1/s: additional render-only downward pan responsiveness
     vertical_response_scale=0.6, -- vertical pans ease more slowly than horizontal follow
     settle_speed=20,   -- a realignment ends only below this vertical speed (u/s)
     margin_bottom=100,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
@@ -132,14 +137,14 @@ end
 function M.camera_start(x,y,ground_y,speed,half)
     local f=M.follow
     local dir=speed<0 and -1 or 1
-    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,look=dir*look_ahead(speed,dir)}
+    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,descent=0,look=dir*look_ahead(speed,dir)}
     local cy=s.ground+camera_frame(half)
     if half then cy=M.clamp(cy,y-math.max(half-f.margin_top,half*0.3),y+math.max(half-f.margin_bottom,half*0.3)) end
     return s,vmath.vector3(x+s.look,cy,500)
 end
 -- s: state from camera_start (updated in place); velocity: chassis velocity; grounded: a wheel or the chassis
 -- touches something; half, half_x: the view's current half height and width (nil skips the edge limits).
-function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
+function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experiment)
     local c,f=M.values,M.follow
     -- Dual forward focus: the look-ahead keeps its side until the chassis has travelled focus_switch against
     -- it, so a short roll back does not swing the view. The smoothed speed sets how far it looks. The signed
@@ -173,6 +178,17 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local window=math.max(s.ground+frame,target.y+lift)
     if not grounded then window=math.min(window,target.y+frame+f.snap_window) end
     local y=window+(target.y-window)*weight+look_y+s.vy/vertical_response*weight
+    -- #352: the experiment is explicitly opt-in on a debug HTML5 camera probe. Keep the
+    -- shipped A path byte-equivalent. Only genuine forward downhill travel while touching
+    -- ground requests the extra lead; reverse, stationary, rising and airborne settle to zero.
+    local descent=0
+    if experiment=="b" then
+        local downhill=grounded and velocity.x*s.dir>f.vertical_deadband and velocity.y < -f.vertical_deadband
+        local requested=downhill and math.min((-velocity.y-f.vertical_deadband)*f.descent_seconds,f.descent_max) or 0
+        s.descent=(s.descent or 0)+(requested-(s.descent or 0))*(1-math.exp(-f.descent_rate*dt))
+        descent=s.descent
+        y=y-descent
+    end
     -- Hard edges (a narrow view, the smoothing lag): the chassis never leaves the safe part of the view.
     local function inside(v)
         if not half then return v end
@@ -186,7 +202,8 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x)
     local alpha=1-math.exp(-c.camera_response*dt)
     -- Clamp the final position on both axes: clamping the target would consume the lag compensation.
     local pos=position+(vmath.vector3(x,y,500)-position)*alpha
-    pos.y=position.y+(y-position.y)*(1-math.exp(-vertical_response*dt))
+    local down_response=experiment=="b" and f.descent_response*M.clamp(descent/f.descent_max,0,1) or 0
+    pos.y=position.y+(y-position.y)*(1-math.exp(-(vertical_response+down_response)*dt))
     pos.x,pos.y=inside_x(pos.x),inside(pos.y)
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
     if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(s.ground-target.y)<f.snap_done
