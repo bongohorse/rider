@@ -23,16 +23,19 @@ function compare(a,b,{phase='running',minSeconds=10}={}){
   if(ticks>0){
     assert(Math.abs(b.fixed_dt_min-STEP)<1e-4&&Math.abs(b.fixed_dt_max-STEP)<1e-4,'Wrong fixed dt extrema');
   }
+  const fixedWallHz=ticks/elapsed;
   if(phase==='paused'){
     assert(a.paused&&b.paused,'Pause window not fully paused');
     assert.equal(ticks,0,'Fixed physics advanced while paused');
   }else if(phase==='running'){
     assert(!a.paused&&!b.paused&&a.time_factor===1&&b.time_factor===1,'Running window changed time factor');
-    assert(ticks>0,'No physics ticks while running');
+    // A single valid 1/60 step in a ten-second window is NOT evidence of a running 60-Hz simulation.
+    // Wall-clock throughput is a separate gate from per-tick dt, not proof of displayed frames.
+    assert(fixedWallHz>=54&&fixedWallHz<=66,'Running fixed-tick wall cadence outside 60Hz +/-10%');
   }else throw Error('Unknown phase');
   return {phase,source_sha:a.source_sha,run_id:a.run_id,station:a.station,
     elapsed_s:elapsed,requested_hz:'NOT_SET_BY_PROBE',
-    world_update_callback_hz:updates/elapsed,fixed_tick_wall_hz:ticks/elapsed,
+    world_update_callback_hz:updates/elapsed,fixed_tick_wall_hz:fixedWallHz,
     fixed_dt_s:STEP,world_s:b.world_s-a.world_s,
     browser_raf_callback_hz:null,presented_fps:null,presented_fps_status:'UNKNOWN',
     reset_count:a.reset_count,physics_fixed_dt_valid:true};
