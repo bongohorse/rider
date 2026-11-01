@@ -12,6 +12,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
  const web=path.dirname(find(path.resolve(process.argv[6]))),errors=[],logs=[],cases=[],measurements={};
  // Emit timed checkpoints during the long LE6 cohort. The console stays useful
  // even if smoke.py reaches its existing 360 s deadline before the JSON report.
+ const part=process.env.GYM_PART||null;
+ if(part!==null&&!['1/2','2/2'].includes(part))throw Error('Unknown LE6 part '+part);
  const startedAt=performance.now();let lastCheckpointAt=startedAt;
  const checkpoint=(label)=>{
   const now=performance.now();
@@ -92,6 +94,36 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // object without a location), a line that doubles back (o3 at 50, 0) and two lines that touch without a
   // connection (seam warning, o1/o2 at 20, 0). The compiled fields are a valid older compile (stale: no
   // compiled_revision), so the file imports and opens its source.
+  if(part==='2/2'){
+   // Part 2 starts from an independent, drive-ready editor document; every
+   // following module performs its own real UI operations and validations.
+   checkpoint('start:le6-part-2');
+   await page.goto(base+'?station=straight');
+   await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
+   await page.locator('canvas').focus();await key('e');await edit();
+   const h={page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint};
+   checkpoint('start:zoom_editor');
+   await require('../gameplay/check_zoom_editor.cjs')(h);
+   checkpoint('done:zoom_editor');
+   checkpoint('start:coin_editor');
+   await require('../gameplay/check_coin_editor.cjs')(h);
+   checkpoint('done:coin_editor');
+   checkpoint('start:drop_editor');
+   await require('../gameplay/check_drop_editor.cjs')(h);
+   checkpoint('done:drop_editor');
+   checkpoint('start:along_editor');
+   await require('../gameplay/check_along_editor.cjs')(h);
+   checkpoint('done:along_editor');
+   checkpoint('start:auto_editor');
+   await require('../gameplay/check_auto_editor.cjs')(h);
+   checkpoint('done:auto_editor');
+   checkpoint('start:gem_editor');
+   await require('../gameplay/check_gem_editor.cjs')(h);
+   checkpoint('done:gem_editor');
+   checkpoint('start:fuel_editor');
+   await require('../gameplay/check_fuel_editor.cjs')(h);
+   checkpoint('done:fuel_editor');
+  }else{
   const file={schema:1,units:'metres',id:'le6-nav',name:'LE6 navigation',spawn:[2,1],start_speed:0,run_in:0,run_out:0,bounds:[-10,130,-20,30],
    chains:[[[20,0],[0,0]]],hulls:[],labels:[],checkpoints:[],
    editor:{editor_version:5,compiler_version:5,revision:4,next_id:5,sampling:{tolerance:0.005,max_segment:0.5},connections:[],start:{position:[2,1],speed:0},
@@ -434,10 +466,11 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   cases.push('readouts_start_drag_units');checkpoint('readouts_start_drag_units');
 
   checkpoint('start:editor_ui_checks');
-  await require('./editor_ui_checks.cjs')({page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint});
+  await require('./editor_ui_checks.cjs')({page,ed,doc,key,button,at,hover,importText,settle,snapshot,unchanged,revision,played,edit,canvas,out,cases,measurements,checkpoint,part});
   checkpoint('done:editor_ui_checks');
+  }
   assert.deepEqual(errors,[]);
-  fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
+  fs.writeFileSync(path.join(out,'polish-result.json'),JSON.stringify({source_sha:sha,run_id:runId,part,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));
  }catch(e){
   if(errors.length)console.error('Page errors:\n'+errors.join('\n'));

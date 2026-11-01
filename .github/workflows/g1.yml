@@ -180,7 +180,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # a18, le1b and a19b run in two parts each; gym-reports merges them into the full reports.
+          # a18, le1b, a19b and le6 run in two independent parts; gym-reports validates full inventories.
           - group: seams-1
             cases: 'a18'
             part: '1/2'
@@ -229,8 +229,12 @@ jobs:
             cases: 'ea2'
           - group: versions
             cases: 'ea3'
-          - group: polish
+          - group: polish-1
             cases: 'le6'
+            part: '1/2'
+          - group: polish-2
+            cases: 'le6'
+            part: '2/2'
           - group: struts
             cases: 'cf3'
           - group: replay
@@ -332,9 +336,11 @@ jobs:
       - name: Verify editor version restore, backup, failure and storage limits
         if: contains(format(' {0} ', matrix.cases), ' ea3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/versions --case ea3
-      - name: Verify editor jump-to-problem, navigation, bounds display and paged templates
+      - name: Verify LE6 editor UI and gameplay authoring (independent part)
         if: contains(format(' {0} ', matrix.cases), ' le6 ')
-        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/polish --case le6
+        env:
+          PART: ${{ matrix.part }}
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/polish --case le6 --part "$PART"
       - name: Verify visual suspension struts against the bodies, toggle and identical reports
         if: contains(format(' {0} ', matrix.cases), ' cf3 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/struts --case cf3
@@ -454,6 +460,10 @@ jobs:
         env:
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         run: python tools/gym/smoke.py --case a19b --output artifacts/g1/bumps --merge "artifacts/parts/g1-gym-bumps-1-$RUN/bumps" "artifacts/parts/g1-gym-bumps-2-$RUN/bumps"
+      - name: Validate and merge both LE6 parts into all 23 editor cases
+        env:
+          RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge "artifacts/parts/g1-gym-polish-1-$RUN/polish" "artifacts/parts/g1-gym-polish-2-$RUN/polish"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

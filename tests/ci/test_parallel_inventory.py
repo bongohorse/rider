@@ -6,8 +6,8 @@ import unittest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-# Must match PARTS in tools/gym/smoke.py, seam_report.cjs and sizes_report.cjs.
-SPLIT = {'a18': ['1/2', '2/2'], 'le1b': ['1/2', '2/2'], 'a19b': ['1/2', '2/2']}
+# Must match PARTS in tools/gym/smoke.py and all corresponding report-merger contracts.
+SPLIT = {'a18': ['1/2', '2/2'], 'le1b': ['1/2', '2/2'], 'a19b': ['1/2', '2/2'], 'le6': ['1/2', '2/2']}
 
 
 class ParallelInventory(unittest.TestCase):
@@ -56,7 +56,7 @@ class ParallelInventory(unittest.TestCase):
                 self.assertEqual(set(re.findall(r'-\$RUN/(\w+)"', match.group(2))), {outputs[match.group(1)]})
         download = next(s for s in job['steps'] if s.get('uses', '').startswith('actions/download-artifact@'))
         self.assertEqual(download['with']['pattern'], 'g1-gym-*-[12]-${{ github.run_id }}-${{ github.run_attempt }}')
-        self.assertIn("PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2']}", (ROOT / 'tools/gym/smoke.py').read_text())
+        self.assertIn("PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2'],'le6':['1/2','2/2']}", (ROOT / 'tools/gym/smoke.py').read_text())
         groups = {g['group'] for g in workflow['jobs']['gym']['strategy']['matrix']['include']}
         for dirs in merges.values():
             self.assertEqual(len({name for name, _ in dirs}), 1)
