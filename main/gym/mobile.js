@@ -9,14 +9,14 @@
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
-  api.cancel=()=>{api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}};
+  api.cancel=()=>{api.closeMore?.();api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}};
   api.clear=(preserveTilt=false)=>{
     if(!preserveTilt)window.riderTilt?.pause("Input cleared — calibrate to resume");
     pointers.clear();
     root?.querySelectorAll('[data-command]').forEach(b=>b.classList.remove('held'));
   };
   const abort=reason=>{
-    api.clear();pending.clear=true;lastFrame=undefined;
+    api.closeMore?.();api.clear();pending.clear=true;lastFrame=undefined;
     if(trial){trial=null;api.recording=false;status.textContent='Capture cancelled: '+reason;}
   };
   window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
@@ -98,14 +98,17 @@
   style.textContent=`
     #rider-mobile{position:fixed;inset:0;z-index:1000;pointer-events:none;font:14px system-ui;color:#ecfff8}
     #rider-mobile button,#rider-mobile select{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;min-height:44px;border:1px solid #78cdb9;border-radius:9px;background:#142e38ed;color:#ecfff8;font:inherit;padding:6px 10px}
-    #rider-mobile .toolbar button{min-height:32px;font-size:12px;padding:4px 7px}
+    #rider-mobile .toolbar button{min-height:44px;min-width:44px;font-size:12px;padding:6px 8px}
+    #rider-mobile .toolbar-more{position:absolute;top:calc(100% + 6px);right:0;width:min(340px,calc(100vw - 16px));box-sizing:border-box;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px;border:1px solid #78cdb9;border-radius:10px;background:#10252bf5;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;pointer-events:auto;z-index:2}
+    #rider-mobile .toolbar-more[hidden]{display:none}
+    #rider-mobile .toolbar-more button{width:100%;min-width:0}
     #rider-mobile button.held{background:#277b67}
     #rider-mobile .toolbar{position:absolute;top:max(6px,env(safe-area-inset-top));left:240px;right:max(8px,env(safe-area-inset-right));display:flex;justify-content:flex-end;flex-wrap:wrap;gap:4px;align-items:center}
     #rider-mobile .zones{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));display:flex;justify-content:space-between;gap:24px}
     #rider-mobile .pair{display:flex;gap:8px}
     #rider-mobile .zones button{width:clamp(62px,12vw,130px);height:clamp(64px,18vh,100px);font-weight:bold;background:#142e38ce}
     #rider-mobile .zones button.held{background:#277b67}
-    #rider-mobile .readout{position:absolute;right:10px;top:100px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
+    #rider-mobile .readout{position:absolute;right:10px;top:60px;max-width:calc(100% - 230px);background:#10252bdb;padding:5px;pointer-events:none;font-size:12px}
     #rider-mobile .course-progress{display:flex;align-items:center;gap:8px;min-width:0;width:250px;max-width:100%;margin-top:6px;font-size:12px}
     #rider-mobile .progress-track{height:4px;min-width:24px;flex:1;position:relative;background:#486963}
     #rider-mobile .progress-car{position:absolute;top:-7px;width:14px;height:6px;border-radius:2px;background:#4de6d9;transform:translateX(-50%)}
@@ -119,31 +122,45 @@
     #rider-mobile .tilt-panel{background:#10252bf5;padding:8px;border-radius:8px;max-width:620px}
     #rider-mobile .tilt-panel label{pointer-events:auto;display:flex;align-items:center;gap:8px}
     #rider-mobile .tilt-panel input{pointer-events:auto;min-height:32px;width:110px;touch-action:pan-x}
-    #rider-mobile.editing .toolbar button:not([data-tuning]){display:none}
+    #rider-mobile.editing .toolbar button:not([data-tuning]),#rider-mobile.editing .toolbar-more{display:none}
     #rider-mobile.editing .zones{display:none}
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:160px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
+    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:60px}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
   root=document.createElement('section');root.id='rider-mobile';
   const toolbar=document.createElement('div');toolbar.className='toolbar';
+  const overflow=document.createElement('div');overflow.className='toolbar-more';overflow.id='rider-mobile-more';overflow.hidden=true;
+  const closeOverflow=()=>{overflow.hidden=true;moreButton.setAttribute('aria-expanded','false');};
+  api.closeMore=closeOverflow;
   function button(label,parent,click){
     const b=document.createElement('button');b.type='button';b.textContent=label;
-    if(click)b.addEventListener('click',()=>{api.clear(true);pending.clear=true;click(b);document.querySelector('canvas')?.focus();});
+    if(click)b.addEventListener('click',()=>{api.clear(true);pending.clear=true;if(parent===overflow)closeOverflow();click(b);document.querySelector('canvas')?.focus();});
+    else if(parent===overflow)b.addEventListener('click',closeOverflow);
     b.addEventListener('contextmenu',e=>e.preventDefault());parent.append(b);return b;
   }
+  // Primary controls remain directly touchable; all existing secondary actions live in More.
   button('Retry',toolbar,()=>{pending.retry=true;});
-  button('Next station',toolbar,()=>{
+  const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
+  const tuningButton=button('Tuning',toolbar,()=>api.toggleDetails());tuningButton.dataset.tuning='';
+  const moreButton=button('More',toolbar,()=>{
+    const opening=overflow.hidden;
+    if(opening){measure?.classList.remove('open');tiltPanel?.classList.remove('open');}
+    overflow.hidden=!opening;moreButton.setAttribute('aria-expanded',String(opening));
+  });
+  moreButton.setAttribute('aria-controls',overflow.id);
+  moreButton.setAttribute('aria-haspopup','true');
+  moreButton.setAttribute('aria-expanded','false');
+  button('Next station',overflow,()=>{
     const ids=api.stations||['straight'];const index=ids.indexOf(window.riderTelemetry?.station);
     pending.station=ids[(index+1)%ids.length];
   });
-  api.sectionButton=button('Next section',toolbar,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
+  api.sectionButton=button('Next section',overflow,()=>{pending.next_section=true;});api.sectionButton.hidden=true;
   // A20: the same pause and slow-motion requests as Space and X; the loader owns the time step.
-  const pauseButton=button('Pause',toolbar,()=>{pending.pause=true;});
-  const speedButton=button('Speed 1x',toolbar,()=>{pending.time_step=true;});
+  const speedButton=button('Speed 1x',overflow,()=>{pending.time_step=true;});
   api.setRun=run=>{
     const terminal=run?.state==='finished'||run?.state==='failed';
     pauseButton.disabled=terminal;
@@ -151,21 +168,25 @@
   };
   api.setTime=(paused,step)=>{api.paused=paused;api.setRun(window.riderRun);speedButton.textContent='Speed '+step+'x';};
   // A21: the same record and replay requests as B and G; the Lua tick owner records and replays.
-  button('Record run',toolbar,()=>{pending.record=true;});
-  button('Replay run',toolbar,()=>{pending.replay=true;});
+  button('Record run',overflow,()=>{pending.record=true;});
+  button('Replay run',overflow,()=>{pending.replay=true;});
   // Same LE1a panel as the hidden page button; it keeps focus instead of returning it to the canvas.
-  button('Import level',toolbar).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
-  button('Layout A · mirror',toolbar,b=>{
+  button('Import level',overflow).addEventListener('click',()=>{api.clear(true);pending.clear=true;window.riderCustom?.open();});
+  button('Layout A · mirror',overflow,b=>{
     api.mirrored=!api.mirrored;zones.style.flexDirection=api.mirrored?'row-reverse':'row';
     b.textContent=api.mirrored?'Layout B · mirror':'Layout A · mirror';abort('layout changed');
   });
-  const tuningButton=button('Tuning',toolbar,()=>api.toggleDetails());tuningButton.dataset.tuning='';
   api.toggleDetails=()=>{abort('tuning changed');api.details=!api.details;root.classList.toggle('editing',api.details);tuningButton.textContent=api.details?'Close tuning':'Tuning';};
-  button('Measure',toolbar,()=>{tiltPanel.classList.remove('open');measure.classList.toggle('open');});
-  button('Tilt',toolbar,()=>{measure.classList.remove('open');tiltPanel.classList.toggle('open');});
-  button('Copy report',toolbar,()=>{window.riderFeedback?.copy();});
-  button(document.getElementById('quality')?.textContent||'High DPI',toolbar,()=>document.getElementById('quality')?.click());
-  button('Fullscreen',toolbar,()=>document.getElementById('fullscreen')?.click());
+  button('Measure',overflow,()=>{tiltPanel.classList.remove('open');measure.classList.toggle('open');});
+  button('Tilt',overflow,()=>{measure.classList.remove('open');tiltPanel.classList.toggle('open');});
+  button('Copy report',overflow,()=>{window.riderFeedback?.copy();});
+  button(document.getElementById('quality')?.textContent||'High DPI',overflow,()=>document.getElementById('quality')?.click());
+  button('Fullscreen',overflow,()=>document.getElementById('fullscreen')?.click());
+  toolbar.append(overflow);
+  root.addEventListener('pointerdown',e=>{
+    if(!overflow.hidden&&!overflow.contains(e.target)&&e.target!==moreButton)closeOverflow();
+  },true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverflow();});
   root.append(toolbar);
   const readout=document.createElement('div');readout.className='readout';
   hud=document.createElement('div');hud.textContent='Waiting for vehicle';
@@ -246,4 +267,19 @@
     zones.append(pair);
   }
   root.append(zones);(document.getElementById('app-container')||document.body).append(root);
+  // Follow the *rendered* primary toolbar, including wrapping and safe-area insets.
+  // Keep the scrollable More menu above the driving targets even on short landscape screens.
+  const positionOverlays=()=>{
+    const toolbarRect=toolbar.getBoundingClientRect(),rootRect=root.getBoundingClientRect(),zonesRect=zones.getBoundingClientRect();
+    const top=Math.ceil(toolbarRect.bottom-rootRect.top+8);
+    readout.style.top=top+'px';
+    measure.style.top=top+'px';
+    tiltPanel.style.top=top+'px';
+    readout.style.maxHeight=Math.max(0,Math.floor(zonesRect.top-rootRect.top-top-8))+'px';
+    readout.style.overflowY='hidden';
+    overflow.style.maxHeight=Math.max(44,Math.floor(zonesRect.top-toolbarRect.bottom-16))+'px';
+  };
+  if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
+  window.addEventListener('resize',positionOverlays);
+  positionOverlays();
 })();
