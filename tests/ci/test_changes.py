@@ -15,13 +15,18 @@ class ClassificationTest(unittest.TestCase):
         self.assertTrue(is_docs_only(["main/gym/README.md", "main/README.md"]))
         self.assertTrue(is_docs_only([".github/PULL_REQUEST_TEMPLATE.md"]))
         self.assertTrue(is_docs_only(["main/gym/stations.md"]))
+        self.assertTrue(is_docs_only(["docs/research/evidence/empty.txt"]))
+        self.assertTrue(is_docs_only(["README.md", "docs/README.md", "docs/terrain-p5/native-memory.txt"]))
 
     def test_not_docs_only(self):
         for paths in (
             [], ["main/buggy.script"], ["docs/README.md", "main/buggy.script"],
             [".github/workflows/ci.yml"], ["tools/preview/verify.cjs"],
             ["tools/ci/classify_changes.py"], [".vscode/settings.json"],
-            ["docs/review.json"],
+            ["docs/review.json"], ["docs/terrain-p0/fixture.json"],
+            ["docs/evidence.csv"], ["docs/data.yaml"], ["tools/trace.txt"],
+            ["main/gym/README.txt"], [".github/notes.txt"],
+            ["docs/README.md", "docs/extra.py"],
             ["main/gym/stations/notes.md"], ["main/gym/presets/README.md"],
             ["docs/README.md", "tools/old.script"],  # rename with --no-renames
         ):
@@ -45,6 +50,8 @@ class ClassificationTest(unittest.TestCase):
             missing = Path(tmp) / "missing.project"
             self.assertFalse(is_docs_only(["main/gym/README.md"], missing))
             self.assertTrue(is_docs_only(["docs/README.md"], missing))
+            self.assertTrue(is_docs_only(["docs/log.txt"], missing))
+            self.assertFalse(is_docs_only(["tools/notes.txt"], missing))
 
     def test_git_nul_path_list(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -67,6 +74,10 @@ class ClassificationTest(unittest.TestCase):
         self.assertTrue(is_gym_only(["main/gym/game.script", "docs/TOOLING.md"]))
         self.assertEqual(selection(["main/gym/game.script"])[1], "true")
         self.assertEqual(selection(["docs/README.md"])[0], "true")
+        self.assertEqual(selection(["docs/README.md", "docs/research/evidence/empty.txt"]),
+                         ("true", "false", "docs-text-only"))
+        self.assertEqual(selection(["docs/samples.json"])[0], "false")
+        self.assertEqual(selection(["main/gym/game.script", "docs/evidence.txt"])[1], "true")
         for path in (
             "tools/project.py", ".github/workflows/ci.yml", "game.project",
             "main/physics.appmanifest", "requirements-dev.txt",

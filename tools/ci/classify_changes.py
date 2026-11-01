@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify Git NUL-delimited changed paths, failing closed for everything but Markdown."""
+"""Classify Git NUL-delimited paths; allow only non-runtime Markdown and docs text."""
 import sys
 from pathlib import Path
 
@@ -25,16 +25,22 @@ def is_bundled(path, bundled):
 
 
 def is_docs_only(paths, project=PROJECT):
-    """Markdown is non-runtime unless it lies in a bundled custom resource path."""
+    """Only plain Markdown and docs/*.txt are non-runtime; never admit data fixtures."""
     bundled = bundled_paths(project)
+
+    def safe_doc(path):
+        # Preserve previous Markdown coverage, but text files only under docs/.
+        return path.endswith(".md") or (path.startswith("docs/") and path.endswith(".txt"))
+
     if bundled is None:
-        # Without a readable project file, only root and docs/ Markdown are trusted.
+        # If the project manifest is unreadable, restrict all types to docs/ or root Markdown.
         return bool(paths) and all(
-            path.endswith(".md") and ("/" not in path or path.startswith("docs/"))
+            (path.endswith(".md") and ("/" not in path or path.startswith("docs/")))
+            or (path.startswith("docs/") and path.endswith(".txt"))
             for path in paths
         )
     return bool(paths) and all(
-        path.endswith(".md") and not is_bundled(path, bundled) for path in paths
+        safe_doc(path) and not is_bundled(path, bundled) for path in paths
     )
 
 
@@ -49,7 +55,7 @@ def read_paths(filename):
 
 
 def is_gym_only(paths):
-    """Conservative allowlist: gym paths plus normal Markdown docs only."""
+    """Conservative allowlist: gym paths plus approved non-runtime docs only."""
     return (
         bool(paths)
         and any(path.startswith("main/gym/") for path in paths)
@@ -59,9 +65,9 @@ def is_gym_only(paths):
 
 def selection(paths):
     if is_docs_only(paths):
-        return "true", "false", "markdown-only"
+        return "true", "false", "docs-text-only"
     if is_gym_only(paths):
-        return "false", "true", "gym-and-markdown-only"
+        return "false", "true", "gym-and-docs-only"
     return "false", "false", "unknown-or-shared-change-full"
 
 
