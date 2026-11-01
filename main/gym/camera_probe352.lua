@@ -23,6 +23,31 @@ function M.sample(self,target,velocity,position,projection,dt)
         front=contacts.supported(self.vehicle.wheels[2])
     }
     self.camera352_frames=s.frame
+    -- #352 CI failure triage: the straight B control has a strict 5-u descent
+    -- guard, but its failed artifact only contains final state. Preserve the
+    -- FIRST offending frame and its preceding render history in the already
+    -- captured riderReady failure-state object. Diagnostic only; no camera,
+    -- physics, telemetry, or test threshold changes.
+    if self.station.id=="straight" and self.camera352_mode=="b" then
+        local history=self.camera352_flat_history or {}
+        history[#history+1]={
+            frame=s.frame,tick=s.tick,x=s.x,y=s.y,vx=s.vx,vy=s.vy,
+            rear=s.rear,front=s.front,ground=s.ground,
+            filtered_vy=s.filtered_vy,descent=s.descent,
+            snapping=s.snapping,dir=s.dir
+        }
+        if #history>12 then table.remove(history,1) end
+        self.camera352_flat_history=history
+        if s.descent>=5 and not self.camera352_flat_reported then
+            self.camera352_flat_reported=true
+            local report={source_sha=s.source_sha,mode=s.mode,station=s.station,
+                first_crossing_frame=s.frame,first_crossing_tick=s.tick,
+                threshold_u=5,history=history}
+            -- The existing a16 catch captures riderReady verbatim on failure.
+            html5.run("(function(v){if(window.riderReady)window.riderReady.camera352_flat_peak=v;})("..json.encode(report)..")")
+            print("CAMERA352_FLAT_PEAK "..json.encode(report))
+        end
+    end
     -- This is an HTML5 debug bridge, not a msg.post payload (2048-byte cap).
     -- Bound browser memory; runners copy full observations before the next page navigation.
     html5.run("(function(s){var a=window.riderCamera352Trace||(window.riderCamera352Trace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(s)..")")
