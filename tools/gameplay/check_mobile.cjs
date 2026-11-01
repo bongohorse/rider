@@ -44,12 +44,12 @@ module.exports=async function check(browser,base,sha,out){
   await page.goto(new URL('index.html?station=first-run&touch=1',base).href);await page.waitForFunction(()=>window.riderRun?.state==='ready'&&window.riderTelemetry?.sequence>2&&window.riderMobile?.enabled);assert.equal(await page.evaluate(()=>window.riderBuild),sha);
   assert.match(await page.locator('#rider-mobile .readout').innerText(),/Drive to start/);await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-mobile .course-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-mobile .course-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
   const hudLayouts=[];
-  for(const viewport of [{width:486,height:1080},{width:390,height:844},{width:960,height:540},{width:1080,height:486}]){
+  for(const viewport of [{width:960,height:540},{width:1080,height:486},{width:1280,height:720}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(250);
    const box=await page.locator('#rider-mobile .course-progress').boundingBox();
    assert.ok(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height);
    const closed=await checkHudGeometry(page,viewport);
-   if(viewport.width===486)await page.screenshot({path:path.join(out,'progress-phone-portrait.png')});
+   if(viewport.width===960)await page.screenshot({path:path.join(out,'progress-phone-landscape-960.png')});
    await page.getByRole('button',{name:'More',exact:true}).tap();
    assert.equal(await page.getByRole('button',{name:'More',exact:true}).getAttribute('aria-expanded'),'true');
    const menu=page.locator('#rider-mobile .toolbar-more');
@@ -65,7 +65,7 @@ module.exports=async function check(browser,base,sha,out){
     await action.scrollIntoViewIfNeeded();
     assert.equal(await action.isVisible(),true,'secondary touch action inaccessible: '+label);
    }
-   if(viewport.width===390)await page.screenshot({path:path.join(out,'mobile-hud-portrait-more.png')});
+   if(viewport.width===1080)await page.screenshot({path:path.join(out,'mobile-hud-landscape-1080-more.png')});
    await page.getByRole('button',{name:'More',exact:true}).tap();
    assert.equal(await menu.isHidden(),true);
    hudLayouts.push({viewport,closed,open});

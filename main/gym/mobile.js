@@ -127,7 +127,6 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    @media (orientation:portrait){#rider-mobile .toast{top:196px}#rider-mobile .toolbar{left:220px}#rider-mobile .readout{top:60px;max-width:calc(100% - 16px)}#rider-mobile .measure,#rider-mobile .tilt-panel{top:182px}#rider-mobile .zones{gap:8px}#rider-mobile .pair{gap:4px}#rider-mobile .zones button{width:20vw;font-size:12px}}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
@@ -206,7 +205,7 @@
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;
-    toastNode.style.top=Math.max(toolbar.getBoundingClientRect().bottom+8,matchMedia('(orientation:portrait)').matches?196:56)+'px';
+    toastNode.style.top=Math.max(toolbar.getBoundingClientRect().bottom+8,56)+'px';
     clearTimeout(api.toastTimer);api.toastTimer=setTimeout(()=>{toastNode.hidden=true;},1500);
   };
   measure=document.createElement('div');measure.className='measure';

@@ -192,9 +192,15 @@ const STEP=1/60;
   await button('Pause').click();await page.waitForFunction(()=>window.riderTime.paused&&window.riderTimeState.paused);
   checkPaused(await measure(400),'touch pause');
   await button('Resume').click();await page.waitForFunction(()=>!window.riderTime.paused);
-  await button('Speed 1x').click();await page.waitForFunction(()=>window.riderTime.factor===0.5);
-  await button('Speed 0.5x').click();await page.waitForFunction(()=>window.riderTime.factor===0.25);
-  await button('Speed 0.25x').click();await page.waitForFunction(()=>window.riderTime.factor===1&&Math.abs(window.riderTime.dt-1/60)<1e-6);
+  const speedFromMore=async label=>{
+   const more=button('More');await more.click();
+   assert.equal(await more.getAttribute('aria-expanded'),'true','More must open via real UI input');
+   await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).click();
+   assert.equal(await more.getAttribute('aria-expanded'),'false','Speed selection must close More');
+  };
+  await speedFromMore('Speed 1x');await page.waitForFunction(()=>window.riderTime.factor===0.5);
+  await speedFromMore('Speed 0.5x');await page.waitForFunction(()=>window.riderTime.factor===0.25);
+  await speedFromMore('Speed 0.25x');await page.waitForFunction(()=>window.riderTime.factor===1&&Math.abs(window.riderTime.dt-1/60)<1e-6);
   cases.push('touch_toolbar_synthetic');
 
   measurements.time_log_entries=timeLog.length;
