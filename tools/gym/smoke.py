@@ -11,14 +11,44 @@ sys.path.insert(0,str(ROOT/'tools/g1'))
 from bundle import build_bundle, verify_bundle
 from run import stop
 
+# Authoritative LE6 case inventory: no skipped, duplicated or silently dropped UI checks.
+LE6_EXPECTED={
+    '1/2': [
+        "problems_jump_to_source_after_edit_and_undo",
+        "fit_centre_start_last_test_view_only",
+        "bounds_display_matches_compile",
+        "template_pages_view_row_budget",
+        "unlocated_message_shown_only",
+        "labels_place_edit_move_copy_undo_persist",
+        "help_modal_lists_controls",
+        "ghost_matches_test_start",
+        "readouts_start_drag_units",
+        "coin_editor_categories_independent_and_centered_commands",
+        "a1b_feedback_errors_and_scroll",
+        "a1b_layout_viewports_and_collapse",
+        "a1b_numeric_focus_steps_and_connected_run",
+        "a1b_scrolling_and_modal_capture",
+        "a1b_maximum_level_and_switch_budgets",
+        "g3_medal_fields_validation_undo_and_roundtrip"
+    ],
+    '2/2': [
+        "editor_zoom_entry_steps_anchor_limits_and_source_invariance",
+        "g4_coin_authoring_stable_ids_undo_and_reload",
+        "drop_to_track_selection_height_skips_single_undo_and_reload",
+        "along_track_shared_arc_height_mixed_invalidation_and_reload",
+        "auto_coins_deterministic_preview_replace_exact_apply_undo_and_reload",
+        "g5_multiple_gems_gold_counts_copy_undo_and_durable_roundtrip",
+        "g6_configurable_fuel_canister_empty_full_retry_and_durable_source"
+    ],
+}
 parser=argparse.ArgumentParser()
 parser.add_argument('--output',required=True)
 parser.add_argument('--case',default='a1')
 parser.add_argument('--bundle', help='Reuse a verified shared debug Gym build')
-# CI runs the three longest protocols in parts on separate runners, then merges them into the full report.
-PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2']}
-parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18, le1b or a19b')
-parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18, le1b or a19b')
+# CI runs long protocols in independent parts on separate runners, then merges validated reports.
+PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2'],'le6':['1/2','2/2']}
+parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18, le1b, a19b or le6')
+parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18, le1b, a19b or le6')
 # Car Feel 2 (#200): a measurement station run with another preset; its runner asserts the preset per trial.
 # Without --preset the case is unchanged (preset A, no URL parameter). One entry per station: case -> result file.
 PRESET_CASES={'a16':'ramps-result.json','a17':'steps-result.json','a18':'seams-result.json','a19':'gaps-result.json','a19c':'air-result.json','a19b':'bumps-result.json','a19d':'balance-result.json'}
@@ -126,16 +156,10 @@ if args.case=='ea2':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':
     report=json.loads((out/'polish-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==23
-    assert 'g6_configurable_fuel_canister_empty_full_retry_and_durable_source' in report['cases']
-    assert 'g5_multiple_gems_gold_counts_copy_undo_and_durable_roundtrip' in report['cases']
-    assert 'g3_medal_fields_validation_undo_and_roundtrip' in report['cases']
-    assert 'along_track_shared_arc_height_mixed_invalidation_and_reload' in report['cases']
-    assert 'auto_coins_deterministic_preview_replace_exact_apply_undo_and_reload' in report['cases']
-    assert 'drop_to_track_selection_height_skips_single_undo_and_reload' in report['cases']
-    assert 'editor_zoom_entry_steps_anchor_limits_and_source_invariance' in report['cases']
-    assert 'coin_editor_categories_independent_and_centered_commands' in report['cases']
-    assert 'g4_coin_authoring_stable_ids_undo_and_reload' in report['cases']
+    identity(report)
+    expected=(LE6_EXPECTED['1/2']+LE6_EXPECTED['2/2']) if (args.merge or args.part is None) else LE6_EXPECTED[args.part]
+    assert len(report['cases'])==len(expected) and set(report['cases'])==set(expected), 'LE6 inventory missing, duplicated or unexpected'
+    assert report['status']=='PASS'
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le1a':
     report=json.loads((out/'custom-result.json').read_text())
