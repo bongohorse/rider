@@ -9,6 +9,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   const visible=e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).display!=='none';
   return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
     zones:box(document.querySelector('#rider-mobile .zones')),
+    levelActions:box(document.querySelector('#rider-level-actions')),
     buttons:[...toolbar.querySelectorAll('button')].filter(visible).map(e=>({label:e.textContent,rect:box(e)}))};
  });
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
@@ -17,16 +18,19 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   assert.ok(rect.width>=44&&rect.height>=44,'touch target too small: '+label+' '+JSON.stringify(rect));
   assert.ok(rect.left>=screen.left-1&&rect.right<=screen.right+1&&rect.top>=screen.top-1&&rect.bottom<=screen.bottom+1,'offscreen toolbar button: '+label);
   assert.equal(intersects(rect,g.zones),false,'toolbar overlaps drive zones: '+label);
+  if(g.levelActions)assert.equal(intersects(rect,g.levelActions),false,'toolbar overlaps level actions: '+label);
  }
  assert.ok(g.toolbar.left>=-1&&g.toolbar.right<=screen.right+1,'toolbar outside viewport');
  if(moreOpen){
   assert.ok(g.menu,'More must have a visible panel');
   assert.ok(g.menu.left>=-1&&g.menu.right<=screen.right+1&&g.menu.bottom<=screen.bottom+1,'More outside viewport');
   assert.equal(intersects(g.menu,g.zones),false,'More overlaps drive zones');
+  if(g.levelActions)assert.equal(intersects(g.menu,g.levelActions),false,'More overlaps level actions');
  }else{
   assert.equal(g.menu,null,'closed More must not be displayed');
   assert.ok(g.readout.top>=g.toolbar.bottom+6,'readout must follow actual toolbar bottom');
   assert.equal(intersects(g.readout,g.zones),false,'readout overlaps drive zones');
+  if(g.levelActions)assert.equal(intersects(g.readout,g.levelActions),false,'readout overlaps level actions');
   assert.equal(intersects(g.readout,g.toolbar),false,'readout overlaps toolbar');
  }
  return g;
