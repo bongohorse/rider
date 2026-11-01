@@ -4,6 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {verificationPlan}=require('./verification-plan.cjs');
+const {createTimings}=require('./timings.cjs');
 const pointer=require('../gym/pointer.cjs');
 // Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
 const PRESETS=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/feel.lua'),'utf8'))[1].match(/\w+/g);
@@ -13,7 +14,8 @@ async function main(){
   if(!/^[0-9]+-[0-9]+$/.test(buildId))throw Error('Expected build ID');
   if(!/^[a-f0-9]{40}$/.test(sha))throw Error('Expected full SHA');
   fs.mkdirSync(out,{recursive:true});
-  let server,browser;
+  const timings=createTimings({source_sha:sha,build_id:buildId,mode});
+  let server,browser,caughtError;
   let url=target;
   try{
     if(!/^https:\/\//.test(target)){
@@ -28,7 +30,7 @@ async function main(){
       await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
       url='http://127.0.0.1:'+server.address().port+'/';
     }
-    browser=await chromium.launch(process.env.RIDER_CHROME?{executablePath:process.env.RIDER_CHROME}:{});
+    browser=await timings.run('browser/launch',()=>chromium.launch(process.env.RIDER_CHROME?{executablePath:process.env.RIDER_CHROME}:{}));
     const results=[];
     for(const spec of [{name:'desktop',viewport:{width:1280,height:720},deviceScaleFactor:2},
                        {name:'phone-emulation',viewport:{width:1080,height:486},isMobile:true,hasTouch:true}]){
@@ -39,6 +41,7 @@ async function main(){
       page.on('pageerror',e=>errors.push(e.message));page.on('crash',()=>errors.push('Page crashed'));
       page.on('console',m=>{logs.push(m.text());if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
       const launch=new URL(url);launch.search='?preview-check=1&touch=0';launch.hash='verify';
+      await timings.run(name+'/loader-ready',async()=>{
       await page.goto(launch.href);
       try {
         await page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderBuild===expected,sha,{timeout:60000});
@@ -54,6 +57,7 @@ async function main(){
       await page.waitForFunction(()=>window.riderTelemetry?.sequence>=2,null,{timeout:10000});
       const sequence=await page.evaluate(()=>window.riderTelemetry.sequence);
       await page.waitForFunction(previous=>window.riderTelemetry?.sequence>previous+1,sequence,{timeout:10000});
+      });
       // The exact release files already passed all assertions before deploy.
       // Check the public loader, identity and live controller in both viewports.
       if(mode==='deployment'){
@@ -61,7 +65,7 @@ async function main(){
         fs.writeFileSync(path.join(out,name+'.log'),logs.join('\n'));
         if(errors.length)throw Error(errors.join('\n'));
         results.push({name,status:'PASS',url:page.url(),viewport:spec.viewport});
-        await context.close();
+        await timings.run(name+'/cleanup',()=>context.close());
         continue;
       }
       // A12b: no page chrome/bars; DPR-sized buffer, resize without new world,
@@ -73,6 +77,7 @@ async function main(){
       if(await page.evaluate(()=>window.riderHud.tuning))throw Error('Tuning must be collapsed by default');
       await page.keyboard.down('t');await page.waitForFunction(()=>window.riderHud.tuning);await page.keyboard.up('t');
       for(const viewport of sizes){
+        await timings.run(name+'/sliders/'+viewport.width+'x'+viewport.height,async()=>{
         await page.setViewportSize(viewport);
         await page.waitForFunction(()=>{
           const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
@@ -107,7 +112,9 @@ async function main(){
             await page.waitForFunction(()=>window.riderDragging===false&&window.riderTelemetry.ui_captured===false);
           }
         }
+        });
         // The last registered chip (feel.order) and A, on every layout including phone emulation.
+        await timings.run(name+'/presets/'+viewport.width+'x'+viewport.height,async()=>{
         for(const key of [PRESETS.at(-1),'a']){
           const p=await page.evaluate(k=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=window.riderHud.presets[k];return {x:r.x+p.x/c.width*r.width,y:r.y+(1-p.y/c.height)*r.height};},key);
           await page.mouse.move(p.x,p.y);await page.mouse.down();
@@ -115,10 +122,12 @@ async function main(){
           // Let the sampled release reach the engine before the next preset press (pitfall 5).
           await pointer.frames(page);
         }
+        });
         await page.screenshot({path:path.join(out,`${name}-${viewport.width}x${viewport.height}.png`)});
         console.log(JSON.stringify({layout:name,viewport,sliderPairs:11,status:"PASS"}));
         responsive.push({viewport,status:'PASS',sliders:11});
       }
+      await timings.run(name+'/keyboard-driving',async()=>{
       await page.keyboard.down('t');await page.waitForFunction(()=>!window.riderHud.tuning);await page.keyboard.up('t');
       await page.setViewportSize(name==='desktop'?{width:1920,height:1080}:{width:1080,height:486});
       await page.waitForFunction(()=>window.riderTelemetry.sequence>2);
@@ -141,11 +150,13 @@ async function main(){
       await page.screenshot({path:path.join(out,spec.name+'.png')});
       fs.writeFileSync(path.join(out,spec.name+'.log'),logs.join('\n'));
       if(errors.length)throw Error(errors.join('\n'));
+      });
       results.push({name:spec.name,status:'PASS',url:page.url(),viewport:spec.viewport,responsive});
       // Same scene/viewport in both quality modes. These are CI software-browser
       // observations, not reference-phone performance or a product budget decision.
       const quality=[];
       for(const dpi of ['1','0']){
+        await timings.run(name+'/quality/dpi-'+dpi,async()=>{
         const qualityUrl=new URL(page.url());qualityUrl.searchParams.set('dpi',dpi);
         await page.goto(qualityUrl.href);
         await page.waitForFunction(expected=>window.riderBuild===expected&&window.riderTelemetry?.sequence>=2,sha);
@@ -166,36 +177,57 @@ async function main(){
           return {callbackMeanMs:frames.reduce((a,b)=>a+b,0)/frames.length,callbackSamples:frames.length,engine};
         });
         quality.push({dpi,viewport:await page.evaluate(()=>window.riderViewport),samples});
+        });
       }
       results.at(-1).qualityComparison=quality;
-      await context.close();
+      await timings.run(name+'/cleanup',()=>context.close());
     }
     for(const name of ['mobile','tilt','ramps','steps','seams','gaps','balance','bumps','air']){
-      if(plan.includes(name))results.push(await require('./'+name+'.cjs')(browser,url,sha,out));
+      if(plan.includes(name))results.push(await timings.run('preview/'+name,()=>require('./'+name+'.cjs')(browser,url,sha,out)));
     }
     if(plan.includes('desktop')&&mode!=='deployment'){
-      await require('../gameplay/check_run.cjs')(browser,url,sha,out);
-      await require('../gameplay/check_gem_release.cjs')(browser,url,sha,out);
-      await require('../gameplay/check_fuel_release.cjs')(browser,url,sha,out);
-      await require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels'));
-      await require('../gameplay/check_level_storage.cjs')(browser,url,sha,path.join(out,'level-storage'));
-      await require('../gameplay/check_objects.cjs')(browser,url,sha,path.join(out,'objects'));
-      await require('../gameplay/check_progress.cjs')(browser,url,sha,out);
+      await timings.run('gameplay/check_run',()=>require('../gameplay/check_run.cjs')(browser,url,sha,out));
+      await timings.run('gameplay/check_gem_release',()=>require('../gameplay/check_gem_release.cjs')(browser,url,sha,out));
+      await timings.run('gameplay/check_fuel_release',()=>require('../gameplay/check_fuel_release.cjs')(browser,url,sha,out));
+      await timings.run('gameplay/check_levels/desktop',()=>require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels')));
+      await timings.run('gameplay/check_level_storage',()=>require('../gameplay/check_level_storage.cjs')(browser,url,sha,path.join(out,'level-storage')));
+      await timings.run('gameplay/check_objects',()=>require('../gameplay/check_objects.cjs')(browser,url,sha,path.join(out,'objects')));
+      await timings.run('gameplay/check_progress',()=>require('../gameplay/check_progress.cjs')(browser,url,sha,out));
     }
     if(plan.includes('phone-emulation')&&mode!=='deployment'){
-      await require('../gameplay/check_mobile.cjs')(browser,url,sha,out);
-      await require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels-touch'),{touch:true});
-      await require('../gameplay/check_objects_mobile.cjs')(browser,url,sha,path.join(out,'objects-touch'));
+      await timings.run('gameplay/check_mobile',()=>require('../gameplay/check_mobile.cjs')(browser,url,sha,out));
+      await timings.run('gameplay/check_levels/phone',()=>require('../gameplay/check_levels.cjs')(browser,url,sha,path.join(out,'levels-touch'),{touch:true}));
+      await timings.run('gameplay/check_objects_mobile',()=>require('../gameplay/check_objects_mobile.cjs')(browser,url,sha,path.join(out,'objects-touch')));
     }
+    await timings.run('final-assertions',async()=>{
     if(results.length!==plan.length)throw Error('Incomplete verification group');
     fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({source_sha:sha,build_id:buildId,mode,status:'PASS',browser:browser.version(),real_device:'NOT RUN',cases:results},null,2));
     console.log(JSON.stringify({source_sha:sha,build_id:buildId,status:'PASS',cases:results}));
+    });
   }catch(error){
+    caughtError=error;
+    timings.fail(error);
     if(browser)for(const context of browser.contexts())for(const page of context.pages()){
       await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});
       fs.writeFileSync(path.join(out,'failure-state.json'),JSON.stringify(await page.evaluate(()=>({viewport:window.riderViewport,controls:window.riderControls,telemetry:window.riderTelemetry})).catch(()=>null),null,2));
     }
-    throw error;
-  }finally{if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));}
+  }finally{
+    try {
+      await timings.run('cleanup/global',async()=>{
+        if(browser)await browser.close();
+        if(server)await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+      });
+    }catch(cleanupError){
+      if(!caughtError){caughtError=cleanupError;timings.fail(cleanupError);}
+      else console.error('Secondary cleanup error (original failure preserved):',cleanupError);
+    }
+    timings.finish(caughtError?'FAIL':'PASS');
+    try{timings.write(out);}
+    catch(writeError){
+      if(caughtError)console.error('Could not write timings.json (original failure preserved):',writeError);
+      else throw writeError;
+    }
+    if(caughtError)throw caughtError;
+  }
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
