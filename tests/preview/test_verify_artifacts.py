@@ -71,7 +71,7 @@ class ReleaseArtifactGateTests(unittest.TestCase):
         for mode in gate.GROUP_CASES:
             self.make_group(mode)
         deployment = self.root / f'preview-verification-desktop-layout-{BUILD}' / 'deployment'
-        deployment.mkdir()
+        deployment.mkdir(exist_ok=True)
         for name in ('desktop.png', 'phone-emulation.png'):
             (deployment / name).touch()
         for filename in ('result.json', 'timings.json'):
