@@ -65,7 +65,11 @@ module.exports=async function check(browser,base,sha,out){
   await page.waitForFunction(()=>Number.isFinite(window.riderTelemetry?.speed_mps)&&
     document.querySelector('#rider-mobile .speed-value')?.textContent===String(Math.round(window.riderTelemetry.speed_mps*3.6)));
   assert.equal(await page.locator('#rider-mobile .speedometer').isVisible(),true);
-  assert.equal(await page.locator('#rider-mobile .coin-count').getAttribute('data-compact'),'0');await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-mobile .course-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-mobile .course-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
+  assert.equal(await page.locator('#rider-mobile .coin-count').getAttribute('data-compact'),'0');
+  await page.waitForFunction(()=>window.riderFuel?.start===60&&document.querySelector('#rider-mobile .fuel-bar')?.max===60);
+  assert.equal(await page.locator('#rider-mobile .fuel-widget').isVisible(),true);
+  assert.equal(await page.locator('#rider-mobile .fuel-count').getAttribute('data-compact'),'100%');
+  assert.equal(await page.locator('#rider-mobile .fuel-bar').evaluate(e=>e.value),60);await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-mobile .course-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-mobile .course-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
   const hudLayouts=[];
   for(const viewport of [{width:960,height:540},{width:1080,height:486},{width:1280,height:720}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(250);
