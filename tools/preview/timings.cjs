@@ -16,7 +16,8 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
   }
   function end(entry,outcome='PASS',error){
     if(stack.at(-1)!==entry)throw Error('Timing case nesting mismatch');
-    if(outcome==='FAIL')lastActiveCase=entry.record.name;
+    // The deepest failed case ends first; propagated parent and cleanup failures must not replace it.
+    if(outcome==='FAIL'&&lastActiveCase===null)lastActiveCase=entry.record.name;
     entry.record.elapsed_ms=elapsed(entry.started);
     entry.record.status=outcome;
     if(error)entry.record.error=String(error.message||error);
@@ -28,8 +29,8 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
     catch(error){end(entry,'FAIL',error);throw error;}
   }
   function fail(error){
-    if(stack.length)lastActiveCase=stack.at(-1).record.name;
-    topError=String(error?.message||error);
+    if(stack.length&&lastActiveCase===null)lastActiveCase=stack.at(-1).record.name;
+    if(topError===null)topError=String(error?.message||error);
     status='FAIL';
   }
   function finish(outcome){
