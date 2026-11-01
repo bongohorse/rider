@@ -703,6 +703,12 @@ function on_message(self,id,data,sender)
         race.pause(self,data.paused)
         if data.step~=1 then race.practice(self,"Slow motion") end
         self.paused,self.time_factor=data.paused,data.factor
+        -- #356: publish the loader time_state boundary even when the paused
+        -- world stops update(); never invent a fixed tick or world heartbeat.
+        if self.fps356 then
+            self.fps356_time_seq=data.seq
+            self.fps356.publish(self.fps356_state,self,"time_state")
+        end
         msg.post(sender,"time_ready",{generation=data.generation,seq=data.seq})
     elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("replay_control") and self.paused then self.time_dropped=self.time_dropped+1
