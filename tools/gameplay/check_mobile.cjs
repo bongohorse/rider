@@ -20,6 +20,8 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
  const screen={left:0,top:0,right:viewport.width,bottom:viewport.height};
  assert.ok(g.toolbar&&g.readout&&g.zones,'missing mobile HUD geometry');
  assert.equal(g.driveButtons.length,4,'all four real drive touch targets must be present');
+ assert.ok(!g.speed||g.speed.width<=86&&g.speed.height<=86,'speed dial must stay compact');
+ assert.ok(!g.fuel||g.fuel.width<=40,'fuel gauge must stay slim');
  for(const {label,rect} of g.buttons){
   assert.ok(rect.width>=44&&rect.height>=44,'touch target too small: '+label+' '+JSON.stringify(rect));
   assert.ok(rect.left>=screen.left-1&&rect.right<=screen.right+1&&rect.top>=screen.top-1&&rect.bottom<=screen.bottom+1,'offscreen toolbar button: '+label);
@@ -76,14 +78,16 @@ module.exports=async function check(browser,base,sha,out){
   await page.waitForFunction(()=>window.riderFuel?.start===60&&document.querySelector('#rider-mobile .fuel-bar')?.max===60);
   assert.equal(await page.locator('#rider-mobile .fuel-widget').isVisible(),true);
   assert.equal(await page.locator('#rider-mobile .fuel-count').getAttribute('data-compact'),'100%');
+  assert.equal(await page.locator('#rider-mobile .fuel-widget').evaluate(e=>e.classList.contains('low')),false,'full tank must not show low fuel');
+  assert.doesNotMatch(await page.locator('#rider-mobile .race-summary').innerText(),/awarded/i,'unearned medal must not appear');
   assert.equal(await page.locator('#rider-mobile .fuel-bar').evaluate(e=>e.value),60);await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-mobile .course-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-mobile .course-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
   const hudLayouts=[];
-  for(const viewport of [{width:960,height:540},{width:1080,height:486},{width:1280,height:720}]){
+  for(const viewport of [{width:960,height:540},{width:1080,height:486},{width:896,height:400},{width:1280,height:720}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(250);
    const box=await page.locator('#rider-mobile .course-progress').boundingBox();
    assert.ok(box&&box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height);
    const closed=await checkHudGeometry(page,viewport);
-   if(viewport.width===960)await page.screenshot({path:path.join(out,'progress-phone-landscape-960.png')});
+   if([960,1080,896].includes(viewport.width))await page.screenshot({path:path.join(out,`mobile-hud-built-${viewport.width}x${viewport.height}.png`)});
    await page.getByRole('button',{name:'More',exact:true}).tap();
    assert.equal(await page.getByRole('button',{name:'More',exact:true}).getAttribute('aria-expanded'),'true');
    const menu=page.locator('#rider-mobile .toolbar-more');
