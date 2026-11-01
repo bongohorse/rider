@@ -161,6 +161,9 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
     local x=target.x+s.look+s.vx/c.camera_response
     -- Platform snapping: a grounded chassis further than snap_window from the snapped height starts a
     -- realignment that tracks the ground (long climbs and descents, a landing elsewhere) until it settles.
+    -- Preserve the prior terrain-follow height. Suspension compression can create
+    -- large downward chassis velocity on flat ground, but does not move this window.
+    local prior_ground=s.ground
     if grounded and math.abs(target.y-s.ground)>f.snap_window then s.snapping=true end
     if grounded and s.snapping then
         s.ground=s.ground+(target.y-s.ground)*(1-math.exp(-f.sink_rate*dt))
@@ -183,7 +186,12 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
     -- ground requests the extra lead; reverse, stationary, rising and airborne settle to zero.
     local descent=0
     if experiment=="b" then
-        local downhill=grounded and velocity.x*s.dir>f.vertical_deadband and velocity.y < -f.vertical_deadband
+        -- On a real descent the grounded terrain-follow window moves down too.
+        -- Chassis vy alone falsely interpreted the initial suspension settling
+        -- on Straight as a slope; keep that noise out of opt-in camera B.
+        local terrain_descending=s.snapping and s.ground<prior_ground-0.01
+        local downhill=grounded and terrain_descending and
+            velocity.x*s.dir>f.vertical_deadband and velocity.y < -f.vertical_deadband
         local requested=downhill and math.min((-velocity.y-f.vertical_deadband)*f.descent_seconds,f.descent_max) or 0
         s.descent=(s.descent or 0)+(requested-(s.descent or 0))*(1-math.exp(-f.descent_rate*dt))
         descent=s.descent
