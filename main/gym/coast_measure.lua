@@ -47,7 +47,7 @@ local function invariant(self)
     if self.time_factor~=1 or self.time_scaled_ticks~=0 then return "scaled physics tick" end
     if self.paused then return "paused during measurement" end
     if self.pending_section or self.pending_preset or self.pending_tuning then return "unexpected station/preset/tuning change" end
-    if sys.get_config_number("physics.scale",0.01)~=0.01 then return "unexpected physics scale" end
+    if math.abs(sys.get_config_number("physics.scale",0.01)-0.01)>1e-6 then return "unexpected physics scale" end
     local sha=sys.get_config_string("rider.source_sha","development")
     if #sha~=40 or not sha:match("^[0-9a-f]+$") or self.run_id=="interactive" then return "missing source/run identity" end
     if stations.outside(self.station,vehicle.state(self.vehicle)) then return "outside Straight bounds" end
