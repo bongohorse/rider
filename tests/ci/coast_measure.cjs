@@ -33,7 +33,8 @@ test('rejects nontermination, early stop and nonconsecutive samples',()=>{
     r=>{r.runs[0].ticks=1201;},
     r=>{r.runs[0].trace[1][0]=2;},
     r=>{r.runs[0].commands=[];},
-    r=>{r.runs[0].trace[1][3]=false;r.runs[0].trace[1][4]=false;}
+    r=>{r.runs[0].trace[1][3]=false;},
+    r=>{r.runs[0].trace[1][4]=false;}
   ]){const r=fixture();mutate(r);assert.throws(()=>verify(r,expected));}
 });
 test('rejects foreign source, time scaling, missing run and changed command',()=>{
