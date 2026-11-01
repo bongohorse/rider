@@ -40,4 +40,38 @@ function compare(a,b,{phase='running',minSeconds=10}={}){
     browser_raf_callback_hz:null,presented_fps:null,presented_fps_status:'UNKNOWN',
     reset_count:a.reset_count,physics_fixed_dt_valid:true};
 }
-module.exports={compare};
+
+/* Factor-zero worlds need not emit update callbacks. Compare genuine controller
+ * time_state boundaries, loader-authoritative pause flags and independent wall time. */
+function comparePause(pause,resume,{loaderStart,loaderEnd,wallStartMs,wallEndMs,minSeconds=2}={}){
+  assert(pause&&resume,'Missing Defold observer snapshots');
+  for(const key of ['source_sha','run_id','generation','station']){
+    assert(pause[key]&&resume[key]&&pause[key]===resume[key],key+' changed across measurement');
+  }
+  assert(pause.vehicle_ready===true&&resume.vehicle_ready===true,'Vehicle not drive-ready');
+  assert(pause.kind==='world_update_callback_proxy'&&resume.kind===pause.kind,'Wrong observer type');
+  assert(pause.presented_frames==='UNKNOWN'&&resume.presented_frames==='UNKNOWN','Misleading presented-frame claim');
+  assert(pause.event==='time_state'&&resume.event==='time_state','Missing world pause/resume boundary events');
+  assert(pause.paused===true&&pause.time_factor===0,'World pause boundary not confirmed');
+  assert(resume.paused===false&&resume.time_factor===1,'World resume boundary not confirmed');
+  assert(loaderStart?.paused===true&&loaderEnd?.paused===true,'Loader did not remain paused during window');
+  assert(loaderStart.step===1&&loaderEnd.step===1,'Loader changed time scale during pause');
+  assert(Number.isSafeInteger(pause.time_seq)&&resume.time_seq===pause.time_seq+1,'World pause/resume sequence mismatch');
+  const elapsed=(wallEndMs-wallStartMs)/1000;
+  assert(Number.isFinite(elapsed)&&elapsed>=minSeconds&&elapsed<minSeconds+10,'Invalid independent pause wall window');
+  assert(Number.isSafeInteger(pause.fixed_ticks)&&Number.isSafeInteger(resume.fixed_ticks),'Missing fixed tick counters');
+  assert.equal(resume.fixed_ticks-pause.fixed_ticks,0,'Fixed physics advanced while paused');
+  assert.equal(resume.fixed-pause.fixed,0,'Observer fixed ticks advanced while paused');
+  assert.equal(resume.world_s-pause.world_s,0,'World time advanced while paused');
+  assert.equal(resume.bad_fixed_dt-pause.bad_fixed_dt,0,'Non-60Hz fixed dt during pause');
+  assert.equal(resume.scaled_ticks-pause.scaled_ticks,0,'Scaled physics tick during pause');
+  assert.equal(resume.reset_count,pause.reset_count,'Pause crossed Retry');
+  assert(resume.sequence>pause.sequence,'Stale world resume event');
+  return {phase:'paused',source_sha:pause.source_sha,run_id:pause.run_id,station:pause.station,
+    elapsed_s:elapsed,requested_hz:'NOT_SET_BY_PROBE',
+    world_update_callback_hz:null,fixed_tick_wall_hz:0,fixed_ticks_during_pause:0,
+    fixed_dt_s:STEP,world_s:0,observer:'loader_time_state_world_boundary',
+    browser_raf_callback_hz:null,presented_fps:null,presented_fps_status:'UNKNOWN',
+    reset_count:pause.reset_count,physics_fixed_dt_valid:true};
+}
+module.exports={compare,comparePause};
