@@ -68,6 +68,73 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   await phone.waitForFunction(()=>window.riderTelemetry?.sequence>2&&window.riderStationReport?.section==='5');
   await phone.getByRole('button',{name:'Next section',exact:true}).click();await phone.waitForFunction(()=>window.riderStationReport.section==='10');
   await phone.screenshot({path:path.join(out,'ramps-phone.png')});await ctx.close();
+  // #352: same real a16 fixed-owner neutral downhill, debug-only render A/B. The runner
+  // reads actual camera.get_projection (not a guessed portrait half-extent) and authored
+  // ramps-long chain vertices. This does not weaken the original 25 ramp trials.
+  const C=require('./camera352_math.cjs');
+  const authored=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../main/gym/stations/ramps-long.json'),'utf8'));
+  const slope=C.slope(authored,'down-30');
+  assert(Math.abs(slope.b.x-slope.a.x-3.464101615)<1e-5);
+  assert.deepEqual(C.clip({x:0,y:0},{x:10,y:-10},{left:2,right:8,bottom:-8,top:-2}),{low:0.2,high:0.8});
+  const cameraCases={};
+  async function cameraTrial(mode,viewport,station='ramps-long'){
+   const label=station+'-'+mode+'-'+viewport.width+'x'+viewport.height;
+   const p=await browser.newPage({viewport});
+   p.on('pageerror',e=>errors.push(label+': '+e.message));
+   p.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(label+': '+m.text());});
+   try{
+    await configure(p,runId,process.argv[5]);
+    const section=station==='ramps-long'?'&section=down-30':'&speed=1';
+    await p.goto(url+'?station='+station+section+'&camera352='+mode+P.query);
+    await p.waitForFunction(({sha,runId,station})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&window.riderStationReport?.station===station,{sha,runId,station});
+    await p.waitForFunction(()=>window.riderCamera352Trace?.length>=140,null,{timeout:20000,polling:50});
+    const canvas=await p.evaluate(()=>{const c=document.querySelector('canvas');if(!c)return null;const r=c.getBoundingClientRect();return {width:r.width,height:r.height,buffer_width:c.width,buffer_height:c.height};});
+    assert(canvas&&canvas.width>0&&canvas.height>0,label+': no actual canvas dimensions');
+    const trace=await p.evaluate(()=>window.riderCamera352Trace.slice());
+    assert(trace.length>=140&&trace.every(s=>s.source_sha===sha&&s.mode===mode&&s.station===station),label+': missing live source/section identity');
+    assert(trace.every(s=>Number.isFinite(s.m00)&&s.m00>0&&Number.isFinite(s.m11)&&s.m11>0),label+': invalid live projection');
+    const measured=station==='ramps-long'?trace.map(s=>C.measure(s,canvas,slope)):[];
+    const valid=measured.filter(s=>s.on_slope&&s.vx>0.2&&s.vy<-0.1&&s.loaded);
+    if(station==='ramps-long')assert(valid.length>=5,label+': INCONCLUSIVE: no loaded real downhill velocity samples on authored 30-degree slope');
+    const summary={label,mode,station,viewport,canvas,source_sha:sha,first_projection:{m00:trace[0].m00,m11:trace[0].m11},
+     frames:trace.length,ticks:[trace[0].tick,trace.at(-1).tick],valid_downhill:valid.length,
+     mean_screen_y_px:valid.length?valid.reduce((a,s)=>a+s.screen_y_px,0)/valid.length:null,
+     min_bottom_margin_px:valid.length?Math.min(...valid.map(s=>s.bottom_margin_px)):null,
+     mean_visible_slope_m:valid.length?valid.reduce((a,s)=>a+s.visible_slope_m,0)/valid.length:null,
+     mean_visible_slope_s:valid.length?valid.reduce((a,s)=>a+s.visible_slope_s,0)/valid.length:null,
+     fixture_limited:valid.filter(s=>s.fixture_limited).length,
+     viewport_truncated:valid.filter(s=>s.viewport_truncated).length,
+     max_descent_u:Math.max(...trace.map(s=>s.descent))};
+    if(station==='straight')assert(summary.max_descent_u<5,'Flat-road candidate introduced downhill lead');
+    cameraCases[label]={summary,trace,measured};
+    fs.writeFileSync(path.join(out,'camera352-'+label+'.json'),JSON.stringify(cameraCases[label],null,2));
+    await p.screenshot({path:path.join(out,'camera352-'+label+'.png')});
+    if(station==='ramps-long'&&mode==='b'&&viewport.width===1280){
+     const resetBefore=trace.at(-1).resets;
+     await p.keyboard.down('r');
+     await p.waitForFunction(n=>window.riderCamera352Trace?.some(s=>s.resets>n),resetBefore,{timeout:8000,polling:50});
+     await p.keyboard.up('r');
+     const after=await p.evaluate(n=>window.riderCamera352Trace.find(s=>s.resets>n),resetBefore);
+     assert(after&&after.generation>trace[0].generation,'Retry did not recreate camera state');
+     assert(Math.abs(after.cx-trace[0].cx)<30&&Math.abs(after.cy-trace[0].cy)<30,'Retry camera failed to restore initial framing');
+     summary.retry={resets:after.resets,first_frame_dx_u:after.cx-trace[0].cx,first_frame_dy_u:after.cy-trace[0].cy,descent_u:after.descent};
+    }
+    return cameraCases[label];
+   }finally{await p.close();}
+  }
+  for(const viewport of [{width:1280,height:720},{width:720,height:1280}]){
+   const a=await cameraTrial('a',viewport),b=await cameraTrial('b',viewport);
+   const equal=C.comparePhysics(a.trace,b.trace);
+   const name=viewport.width+'x'+viewport.height;
+   cameraCases['physics-'+name]={equal};
+  }
+  const flatA=await cameraTrial('a',{width:1280,height:720},'straight');
+  const flatB=await cameraTrial('b',{width:1280,height:720},'straight');
+  cameraCases['flat-physics']={equal:C.comparePhysics(flatA.trace,flatB.trace)};
+  const cameraReport={source_sha:sha,run_id:runId,status:'PASS',protocol:'Actual Defold fixed-owner a16 neutral 1 m/s downhill, debug HTML5 render-only camera A/B, measured orthographic matrix and canvas, authored slope clipped to viewport. Phone drive and jump/reverse camera acceptance NOT RUN.',
+   cases:Object.fromEntries(Object.entries(cameraCases).map(([key,v])=>[key,v.summary||v])),
+   human_drive:'REQUIRED BEFORE CAMERA DEFAULT MERGE'};
+  fs.writeFileSync(path.join(out,'camera352-result.json'),JSON.stringify(cameraReport,null,2));
   if(errors.length)throw Error(errors.join('\n'));
   const report={source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',...P.report(),protocol:'Debug normal-owner tick commands, up throttle=1 / brake=0 / lean=0; independent authored 8 m/s starts; 6 s observation. Down neutral from 1 m/s.',results,
    summary:['ramps','ramps-long'].map(station=>({station,highest_climbed_degrees:Math.max(0,...results.filter(r=>r.station===station&&r.status==='CLIMBED').map(r=>r.angle))}))};
