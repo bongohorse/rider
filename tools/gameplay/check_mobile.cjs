@@ -53,7 +53,10 @@ module.exports=async function check(browser,base,sha,out){
    const menu=page.locator('#rider-mobile .toolbar-more');
    await menu.waitFor({state:'visible'});
    assert.equal(await menu.locator('button').count(),12,'all existing secondary actions retained');
+   assert.equal(await menu.getByRole('button',{name:'Next section',includeHidden:true}).count(),1);
    assert.equal(await menu.getByRole('button',{name:'Next section',includeHidden:true}).isHidden(),true);
+   const qualityLabel=await page.evaluate(()=>document.getElementById('quality')?.textContent||'High DPI');
+   assert.equal(await menu.getByRole('button',{name:qualityLabel,exact:true}).count(),1,'quality action missing');
    const open=await checkHudGeometry(page,viewport,true);
    for(const label of ['Next station','Speed 1x','Record run','Replay run','Import level','Layout A · mirror','Measure','Tilt','Copy report','Fullscreen']){
     const action=menu.getByRole('button',{name:label,exact:true});
@@ -78,6 +81,10 @@ module.exports=async function check(browser,base,sha,out){
   await page.getByRole('button',{name:'More',exact:true}).tap();
   assert.equal(await page.locator('#rider-mobile .tilt-panel').isHidden(),true);
   await page.getByRole('button',{name:'More',exact:true}).tap();
+  await page.getByRole('button',{name:'Tuning',exact:true}).tap();
+  assert.equal(await page.locator('#rider-mobile').evaluate(el=>el.classList.contains('editing')),true);
+  await page.getByRole('button',{name:'Close tuning',exact:true}).tap();
+  assert.equal(await page.locator('#rider-mobile').evaluate(el=>el.classList.contains('editing')),false);
   checks.push({name:'touch-toolbar-geometry-and-more',layouts:hudLayouts});
   const g=await page.evaluate(()=>window.riderTelemetry.session_generation);
   const cdp=await context.newCDPSession(page);const box=await page.locator('[data-command="throttle"]').boundingBox();assert(box&&box.width>=44&&box.height>=44);
