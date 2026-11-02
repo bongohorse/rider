@@ -175,10 +175,12 @@ assert(late_worse.best==40 and late_worse.medal==2 and reopen().best==40)
 print('PASS late-restored worse record merges with queued official improvement')
 
 -- Unknown or unreadable files revealed by initial sync must never be overwritten.
-for _,broken in ipairs({'unreadable', {seq=1,text=json.encode({version=999,key=best.KEY,time=1})}}) do
+for _,kind in ipairs({'unreadable', 'future-version'}) do
     local late_guard=reset()
     sync='syncing';late_guard=best.new()
     assert(best.offer(late_guard,{official=true,time=30,medal=2}))
+    local broken=kind=='unreadable' and 'unreadable'
+        or {seq=1,text=json.encode({version=999,key=best.KEY,time=1})}
     files[late_a]=broken
     poll_saved(late_guard)
     assert(late_guard.blocked and attempts==0 and files[late_a]==broken)
