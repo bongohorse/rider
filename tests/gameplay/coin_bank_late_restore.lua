@@ -1,9 +1,9 @@
 -- #393: IndexedDB may populate the coin-bank slots only after coin_bank.new() sampled them.
 -- Production custom.slot_store with injected sys/json; the restore arrives while syncing.
-local files,encoded={},{};local serial=0;local state='saved';local writes=0
+local files,encoded={},{};local serial=0;local state='saved';local writes=0;local fail=false
 sys={get_save_file=function(app,name)return app..'/'..name end,exists=function(p)return files[p]~=nil end,
  get_engine_info=function()return {is_debug=true}end,load=function(p)if files[p]=='bad' then error('bad slot') end;return files[p] or {}end,
- save=function(p,d)writes=writes+1;files[p]=d;return true end}
+ save=function(p,d)writes=writes+1;if fail then error('write failure') end;files[p]=d;return true end}
 json={encode=function(t)serial=serial+1;encoded[tostring(serial)]=t;return tostring(serial)end,decode=function(t)assert(encoded[t],'bad document');return encoded[t]end}
 local custom=require 'main.gym.custom';custom.sync_state=function()return state end
 local B=require 'main.gym.coin_bank'
@@ -56,3 +56,10 @@ print('PASS late corrupt, future-version or invalid peer blocks writes and is pr
 b=fresh();assert(B.offer(b,1,1,2,true));files[A]=restored();state='failed';settle(b)
 assert(b.blocked and writes==0 and B.new().total==100)
 print('PASS failed sync blocks writes and leaves the restored slot untouched')
+
+-- The first write after adoption fails (EIO): the retry keeps the adopted absolute total.
+b=fresh();assert(B.offer(b,1,1,2,true));files[A]=restored();state='saved';fail=true
+B.poll(b,.1);assert(b.pending and b.pending.total==102 and not b.pending.written and b.total==100)
+fail=false;for _=1,4 do B.poll(b,1) end
+assert(b.total==102 and b.gems==1 and not b.pending and B.new().total==102)
+print('PASS failed first write after late adoption retries the adopted total, without loss or recredit')
