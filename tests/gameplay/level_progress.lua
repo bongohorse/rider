@@ -23,4 +23,34 @@ state='syncing';local protected=P.new();assert(protected.blocked and not protect
 files={};p=P.new();P.poll(p);fail=true;assert(P.offer(p,'first-run',true));P.poll(p);assert(p.blocked and not p.completed['first-run'])
 files={};fail=false;state='syncing';p=P.new();P.poll(p);assert(p.checking);P.legacy(p,'first-run',{best=30,status='Checking storage'});assert(not p.desired['first-run']);state='saved';P.poll(p);assert(not p.checking)
 assert(not P.parse(json.encode({version=1,completed={},future=true})))
+-- A valid IndexedDB snapshot may arrive only after new() observed empty memory.
+-- All acknowledged completions must be adopted before a queued finish can be flushed.
+files={};state='syncing';p=P.new();assert(p.checking)
+assert(P.offer(p,'first-run',true))
+local restored_all={['first-run']=true,['rolling-hills']=true,['ridge-run']=true}
+files[a]={format=1,seq=1,text=json.encode({version=1,completed=restored_all})}
+local original=files[a];state='saved';P.poll(p)
+assert(not p.blocked and not p.checking and p.status=='saved' and not p.pending)
+assert(p.completed['first-run'] and p.completed['rolling-hills'] and p.completed['ridge-run'])
+assert(p.desired['first-run'] and p.desired['rolling-hills'] and p.desired['ridge-run'])
+assert(files[a]==original and files[b]==nil,'late restore must not be overwritten')
+assert(P.new().completed['ridge-run'] and not P.offer(p,'ridge-run',true))
+-- A late corrupt/unsupported peer is protected even if another slot is valid.
+for _,bad in ipairs({'bad',{format=1,seq=2,text=json.encode({version=999,completed={}})}}) do
+ files={};state='syncing';local t=P.new();assert(P.offer(t,'first-run',true))
+ files[a]={format=1,seq=1,text=json.encode({version=1,completed=restored_all})}
+ files[b]=bad;state='saved';P.poll(t)
+ assert(t.blocked and not t.pending and t.status=='Progress protected')
+ assert(not P.offer(t,'rolling-hills',true) and files[b]==bad)
+end
+-- Initial sync errors must prevent any new save.
+files={};state='syncing';p=P.new();assert(P.offer(p,'first-run',true))
+state='failed';P.poll(p);assert(p.blocked and p.status=='Progress not saved' and not files[a] and not files[b])
+-- A legitimate late restore may still accept a new *additional* official completion.
+files={};state='syncing';p=P.new()
+files[a]={format=1,seq=1,text=json.encode({version=1,completed={['first-run']=true,['rolling-hills']=true}})}
+state='saved';P.poll(p)
+assert(p.completed['rolling-hills'] and P.offer(p,'ridge-run',true))
+P.poll(p);assert(p.pending and files[b]);P.poll(p)
+assert(p.completed['ridge-run'] and P.new().completed['ridge-run'])
 print('PASS official sequential completion, duplicate/practice/locked rejection, acknowledgement/reopen, legacy adoption, failed write/sync and protected corrupt/future peers')
