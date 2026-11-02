@@ -81,7 +81,13 @@ function M.fixed(self,state,dt)
         resets=self.reset_count,generation=self.generation,dt=dt,
         x=state.x,y=state.y,vx=velocity.x,vy=velocity.y,
         rear=contacts.supported(self.vehicle.wheels[1]),
-        front=contacts.supported(self.vehicle.wheels[2])
+        front=contacts.supported(self.vehicle.wheels[2]),
+        -- #370: read the already-applied previous fixed-owner command and
+        -- reverse latch; do not send input or change the motor/physics owner.
+        throttle=self.last_command and self.last_command.throttle or 0,
+        brake_reverse=self.last_command and self.last_command.brake_reverse or 0,
+        allow_reverse=self.last_command and self.last_command.allow_reverse or false,
+        reverse_engaged=self.vehicle.reversing or false
     }
     html5.run("(function(s){var a=window.riderCamera352PhysicsTrace||(window.riderCamera352PhysicsTrace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(sample)..")")
 end
