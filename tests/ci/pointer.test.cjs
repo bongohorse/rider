@@ -44,7 +44,28 @@ test('click: move, press, acknowledgement, release, then frames; a missing ackno
   assert.deepEqual(page.calls[2].slice(2),[7,{polling:50}]);
   const failing=fakePage({waitFails:true});
   await assert.rejects(pointer.click(failing,{x:1,y:2},{until:()=>false,label:'click s',state:async()=>'play done'}),/^Error: click s: expected state not reached \(page\.waitForFunction: Timeout 30000ms exceeded\.\); play done$/);
-  assert.deepEqual(failing.calls.map(c=>c[0]),['move','down','wait'],'no release before the acknowledgement');
+  assert.deepEqual(failing.calls.map(c=>c[0]),['move','down','wait','up'],
+    'a failed acknowledgement still releases the held mouse');
+});
+
+test('click preserves the acknowledgement failure even when mouse release also fails',async()=>{
+  const page=fakePage({waitFails:true});
+  page.mouse.up=async()=>{page.calls.push(['up']);throw Error('mouse release rejected');};
+  await assert.rejects(
+    pointer.click(page,{x:1,y:2},{until:()=>false,label:'click both',state:async()=>'run still active'}),
+    /^Error: click both: expected state not reached \(page\.waitForFunction: Timeout 30000ms exceeded\.\); run still active; release failed \(mouse release rejected\)$/
+  );
+  assert.deepEqual(page.calls.map(c=>c[0]),['move','down','wait','up']);
+});
+
+test('click reports release failures after a successful acknowledgement',async()=>{
+  const page=fakePage();
+  page.mouse.up=async()=>{page.calls.push(['up']);throw Error('mouse release rejected');};
+  await assert.rejects(
+    pointer.click(page,{x:1,y:2},{until:()=>true,label:'click release'}),
+    /^Error: click release: pointer release failed \(mouse release rejected\)$/
+  );
+  assert.deepEqual(page.calls.map(c=>c[0]),['move','down','wait','up']);
 });
 
 test('tap: frames after the move, the press and the release',async()=>{
