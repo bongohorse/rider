@@ -59,10 +59,10 @@ function analyze(physics,trace,canvas,identity){
   const ahead=Math.max(0,(boundary-x)*direction);
   renders.set(tick,{
    tick,dir:s.dir,vehicle_x_m:x,lead_x_m:cx-x,
-   screen_x_px:(x-cx)*s.scale*s.m00*canvas.width/2,
-   screen_y_px:(s.y-s.cy)*s.scale*s.m11*canvas.height/2,
+   screen_x_px:(x-cx)/half*canvas.width/2,
+   screen_y_px:(s.y-s.cy)*s.m11*canvas.height/2,
    camera_y_m:s.cy*s.scale,vehicle_y_m:s.y*s.scale,
-   bottom_margin_px:canvas.height/2+(s.y-s.cy)*s.scale*s.m11*canvas.height/2,
+   bottom_margin_px:canvas.height/2+(s.y-s.cy)*s.m11*canvas.height/2,
    ahead_m:ahead,ahead_s:Math.abs(s.vx*s.scale)>=.3?ahead/Math.abs(s.vx*s.scale):null,
    m00:s.m00,m11:s.m11,zoom:s.zoom
   });
@@ -89,7 +89,7 @@ function analyze(physics,trace,canvas,identity){
   reverse_after_flip_mean_ahead_m:round(mean(settled.map(s=>s.ahead_m))),
   reverse_after_flip_mean_ahead_s:round(mean(settled.map(s=>s.ahead_s).filter(Number.isFinite))),
   reverse_min_bottom_margin_px:round(Math.min(...phase.map(s=>s.bottom_margin_px))),
-  reverse_max_vertical_camera_lag_m:round(Math.max(...phase.map(s=>Math.abs(s.camera_y_m-s.vehicle_y_m)))),
+  reverse_max_abs_camera_vehicle_y_offset_m:round(Math.max(...phase.map(s=>Math.abs(s.camera_y_m-s.vehicle_y_m)))),
   reverse_camera_y_excursion_m:round(Math.max(...phase.map(s=>Math.abs(s.camera_y_m-firstRender.camera_y_m)))),
   first_projection:{m00:firstRender.m00,m11:firstRender.m11,zoom:firstRender.zoom},
   samples_after_reverse:after.length,
@@ -106,7 +106,19 @@ function negativeControls(){
   tick:s.engine_tick,x:s.x,y:s.y,vx:s.vx,vy:s.vy,cx:s.x+20,cy:200,
   m00:.002,m11:.003,scale:.01,zoom:1,dir:s.tick>=70?-1:1}));
  const id={sha:'sha',mode:'a',viewport:{width:1280,height:720}},canvas={width:1280,height:720};
- assert.equal(analyze(fixed,render,canvas,id).status,'MEASURED');
+ const measured=analyze(fixed,render,canvas,id);
+ assert.equal(measured.status,'MEASURED');
+ // Actual orthographic projection: engine-unit delta times m00/m11, no
+ // second physics.scale factor after converting world positions to metres.
+ assert(Math.abs(measured.samples[0].screen_x_px-(-25.6))<1e-9,
+  'Camera370 reverse screen X must use actual projection');
+ assert(Math.abs(measured.samples[0].screen_y_px-(-32.4))<1e-9,
+  'Camera370 reverse screen Y must use actual projection');
+ assert(Math.abs(measured.samples[0].bottom_margin_px-327.6)<1e-9,
+  'Camera370 reverse bottom margin must use actual projection');
+ assert(Number.isFinite(measured.reverse_max_abs_camera_vehicle_y_offset_m)&&
+  !('reverse_max_vertical_camera_lag_m' in measured),
+  'Absolute vertical offset must not be labeled temporal lag');
  assert.throws(()=>analyze(fixed.map(s=>s.tick===45?{...s,engine_tick:999}:s),render,canvas,id),
   /missing fixed tick/);
  assert.throws(()=>analyze(fixed.map(s=>s.tick===60?{...s,reverse_engaged:false}:s),
