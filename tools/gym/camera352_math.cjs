@@ -150,4 +150,71 @@ function comparePhysics(a,b,{downhillA,downhillB}={}){
   continuous:true,downhill_loaded:downhill,dual_supported_ticks:dualSupportedTicks,
   compared_contact_gap_ticks:contactGapTicks,max_engine_units:max};
 }
-module.exports={slope,clip,measure,cameraReady,comparePhysics};
+function alignedVisibility(a,b){
+ const check=(ok,msg)=>{if(!ok)throw Error('Camera370 aligned visibility: '+msg);};
+ check(a&&b&&a.summary&&b.summary,'missing A/B trial summaries');
+ const sa=a.summary,sb=b.summary;
+ check(sa.mode==='a'&&sb.mode==='b'&&sa.station==='ramps-long'&&sb.station==='ramps-long','expected authored downhill A/B trials');
+ check(sa.source_sha&&sa.source_sha===sb.source_sha,'different A/B source builds');
+ check(sa.viewport.width===sb.viewport.width&&sa.viewport.height===sb.viewport.height,'different A/B viewports');
+ const samples=(trial,mode)=>{
+  const {trace,measured,physicsTrace,summary}=trial;
+  check(Array.isArray(trace)&&Array.isArray(measured)&&trace.length===measured.length&&trace.length>0,'missing or unpaired render frames '+mode);
+  check(Array.isArray(physicsTrace)&&physicsTrace.length>0,'missing fixed-owner trace '+mode);
+  const engineToVehicle=new Map();
+  for(const p of physicsTrace){
+   check(Number.isSafeInteger(p.tick)&&p.tick>=1&&Number.isSafeInteger(p.engine_tick),'missing vehicle-ready/engine tick '+mode);
+   check(!engineToVehicle.has(p.engine_tick),'duplicate fixed-owner engine tick '+mode);
+   check(p.source_sha===summary.source_sha&&p.mode===mode&&p.station==='ramps-long','fixed-owner source/station mismatch '+mode);
+   engineToVehicle.set(p.engine_tick,p.tick);
+  }
+  const byVehicle=new Map();
+  let repeatedRenderTicks=0;
+  for(let i=0;i<trace.length;i++){
+   const s=trace[i],m=measured[i];
+   check(s.tick===m.tick&&s.source_sha===summary.source_sha&&s.mode===mode&&s.station==='ramps-long'&&s.section==='down-30',
+    'render source/section/step mismatch '+mode+' frame '+i);
+   const tick=engineToVehicle.get(s.tick);
+   if(tick===undefined)continue; // Pre-vehicle-ready render frames have no comparable fixed owner.
+   if(!(m.on_slope&&m.loaded&&m.vx>0.2&&m.vy< -0.1))continue;
+   check(Number.isFinite(m.visible_slope_s)&&Number.isFinite(m.bottom_margin_px)&&Number.isFinite(m.screen_y_px),
+    'invalid loaded downhill projection '+mode+' tick '+tick);
+   if(byVehicle.has(tick)){repeatedRenderTicks++;continue;} // First render for this fixed step.
+   byVehicle.set(tick,{tick,engine_tick:s.tick,visible_slope_s:m.visible_slope_s,
+    bottom_margin_px:m.bottom_margin_px,screen_y_px:m.screen_y_px,
+    fixture_limited:!!m.fixture_limited,viewport_truncated:!!m.viewport_truncated});
+  }
+  return {byVehicle,repeatedRenderTicks,valid_render_steps:byVehicle.size};
+ };
+ const A=samples(a,'a'),B=samples(b,'b');
+ const ticks=[...A.byVehicle.keys()].filter(t=>B.byVehicle.has(t)).sort((x,y)=>x-y);
+ const result={status:ticks.length>=5?'MEASURED':'INCONCLUSIVE',source_sha:sa.source_sha,
+  viewport:sa.viewport,paired_vehicle_ticks:ticks.length,first_tick:ticks[0]??null,last_tick:ticks.at(-1)??null,
+  a_valid_render_steps:A.valid_render_steps,b_valid_render_steps:B.valid_render_steps,
+  a_repeated_render_ticks:A.repeatedRenderTicks,b_repeated_render_ticks:B.repeatedRenderTicks,
+  method:'First loaded downhill render per canonical vehicle-ready fixed step; only shared A/B steps; no presented-FPS claim.'};
+ if(ticks.length<5)return {...result,reason:'Fewer than five comparable loaded downhill render steps; no paired improvement claim'};
+ const mean=(values)=>values.reduce((sum,x)=>sum+x,0)/values.length;
+ const pair=ticks.map(t=>{
+  const x=A.byVehicle.get(t),y=B.byVehicle.get(t);
+  return {tick:t,a_visible_s:x.visible_slope_s,b_visible_s:y.visible_slope_s,
+   delta_visible_s:y.visible_slope_s-x.visible_slope_s,
+   a_bottom_px:x.bottom_margin_px,b_bottom_px:y.bottom_margin_px,
+   a_screen_y_px:x.screen_y_px,b_screen_y_px:y.screen_y_px,
+   a_fixture_limited:x.fixture_limited,b_fixture_limited:y.fixture_limited,
+   a_viewport_truncated:x.viewport_truncated,b_viewport_truncated:y.viewport_truncated};
+ });
+ return {...result,mean_a_visible_s:mean(pair.map(p=>p.a_visible_s)),
+  mean_b_visible_s:mean(pair.map(p=>p.b_visible_s)),
+  mean_delta_visible_s:mean(pair.map(p=>p.delta_visible_s)),
+  min_delta_visible_s:Math.min(...pair.map(p=>p.delta_visible_s)),
+  max_delta_visible_s:Math.max(...pair.map(p=>p.delta_visible_s)),
+  mean_a_bottom_px:mean(pair.map(p=>p.a_bottom_px)),
+  mean_b_bottom_px:mean(pair.map(p=>p.b_bottom_px)),
+  a_fixture_limited_ticks:pair.filter(p=>p.a_fixture_limited).length,
+  b_fixture_limited_ticks:pair.filter(p=>p.b_fixture_limited).length,
+  a_viewport_truncated_ticks:pair.filter(p=>p.a_viewport_truncated).length,
+  b_viewport_truncated_ticks:pair.filter(p=>p.b_viewport_truncated).length,
+  paired_samples:pair};
+}
+module.exports={slope,clip,measure,cameraReady,comparePhysics,alignedVisibility};
