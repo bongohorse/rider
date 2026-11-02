@@ -31,8 +31,8 @@ end
 files["main/bridge/**"] = { read_globals = { "automation_bridge" } }
 
 -- Host-side test/check scripts run under Bob's LuaJIT and install Defold API stubs as globals.
--- They also assert on one value of a multi-value result (`local ok, err, unknown = f()`).
-local stub_globals = { "io", "os" }
+-- (and may capture `print`). They also assert on one value of a multi-value result (`local ok, err, unknown = f()`).
+local stub_globals = { "io", "os", "print" }
 for _, name in ipairs(defold) do stub_globals[#stub_globals + 1] = name end
 files["tests/**"] = { globals = stub_globals, unused_secondaries = false }
 files["tools/**"] = { globals = stub_globals, unused_secondaries = false }
