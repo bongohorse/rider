@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run exact-source persistence Lua tests in isolated pinned Defold headless processes.
 
-Stage 1 (#385): intentionally no CI workflow changes and no stubbed Lua CLI.
+Run by the Linux G1 native CI job (#385); see docs/ci/persistence-engine-harness.md.
 """
 import argparse
 import json
@@ -104,9 +104,8 @@ def main():
             report["cases"].append(execute(binaries[0].resolve(), case, sha, report["run_id"],
                                            args.timeout, output))
         report["status"] = "PASS"
-    except (RuntimeError, OSError, subprocess.CalledProcessError,
-            subprocess.TimeoutExpired) as exc:
-        report["error"] = str(exc)
+    except Exception as exc:  # any failure must still leave a FAIL result.json
+        report["error"] = f"{type(exc).__name__}: {exc}"
     (output / "result.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": report["status"], "output": str(output),
                       "source_sha": report.get("source_sha"), "cases": len(report["cases"]),

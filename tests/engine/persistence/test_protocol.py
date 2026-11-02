@@ -85,18 +85,42 @@ class PersistenceProtocolTests(unittest.TestCase):
     def test_runner_cases_match_expected_counts(self):
         script = (ROOT / "tests/engine/persistence/runner.script").read_text(encoding="utf-8")
         cases = re.findall(r'case == "([a-z_]+)" then\n\s+require "tests\.gameplay\.([a-z_]+)"', script)
-        self.assertEqual({c for c, _ in cases}, set(HARNESS.EXPECTED))
+        self.assertEqual(sorted(c for c, _ in cases), sorted(HARNESS.EXPECTED))
         self.assertTrue(all(c == m for c, m in cases))
+        table = re.search(r"local expected = \{([^}]*)\}", script)
+        self.assertIsNotNone(table)
+        parsed = {k: int(v) for k, v in re.findall(r"([a-z_]+) = (\d+)", table.group(1))}
+        self.assertEqual(parsed, HARNESS.EXPECTED)
+
+    def test_expected_counts_match_suite_pass_lines(self):
         for case, count in HARNESS.EXPECTED.items():
-            self.assertIn(f"{case} = {count}", script)
-            self.assertTrue((ROOT / f"tests/gameplay/{case}.lua").is_file(), case)
+            path = ROOT / f"tests/gameplay/{case}.lua"
+            self.assertTrue(path.is_file(), case)
+            lines = re.findall(r"^print\(\s*['\"]PASS ", path.read_text(encoding="utf-8"), re.M)
+            self.assertEqual(len(lines), count, f"{case}: top-level PASS lines vs EXPECTED")
+
+    PRELOAD = re.compile(r"package\.preload\s*(?:\[\s*(['\"])([^'\"]+)\1\s*\]|\.([A-Za-z_]\w*)|(\[[^\]]*\]))\s*=")
 
     def test_suites_do_not_rely_on_package_preload_alone(self):
         for case in HARNESS.EXPECTED:
             source = (ROOT / f"tests/gameplay/{case}.lua").read_text(encoding="utf-8")
-            for name in re.findall(r"package\.preload\['([^']+)'\]\s*=", source):
-                self.assertTrue(f"package.loaded['{name}']" in source,
-                                f"{case}: stubs {name} only via package.preload, which Defold ignores")
+            for match in self.PRELOAD.finditer(source):
+                name = match.group(2) or match.group(3)
+                self.assertIsNotNone(name, f"{case}: dynamic package.preload key cannot be checked")
+                loaded = re.compile(r"package\.loaded\s*(?:\[\s*['\"]" + re.escape(name)
+                                    + r"['\"]\s*\]|\." + re.escape(name) + r")\s*=\s*(?!nil\b)")
+                install = loaded.search(source, match.end())
+                first_require = re.compile(r"\brequire\b").search(source, match.end())
+                self.assertIsNotNone(install, f"{case}: stubs {name} only via package.preload, which Defold ignores")
+                self.assertTrue(first_require is None or install.start() < first_require.start(),
+                                f"{case}: install package.loaded['{name}'] before the next require")
+
+    def test_preload_guard_catches_every_literal_form(self):
+        for stub in ("package.preload['m.x']=f", 'package.preload["m.x"] = f', "package.preload.mx=f"):
+            self.assertIsNotNone(self.PRELOAD.search(stub), stub)
+        dynamic = self.PRELOAD.search("package.preload[name]=f")
+        self.assertIsNotNone(dynamic)
+        self.assertIsNone(dynamic.group(2) or dynamic.group(3))
 
 
 if __name__ == "__main__":
