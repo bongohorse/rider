@@ -1,7 +1,8 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {parseArgs,classify,ORDER}=require('../../tools/gym/fps356_runtime.cjs');
+const {parseArgs,classify,ORDER,TEST_STATION}=require('../../tools/gym/fps356_runtime.cjs');
+const fs=require('node:fs'),path=require('node:path');
 const STEP=1/60;
 const args=['out','sha-123','run-abc','fps356runtime','debug-bundle'];
 const windows=()=>ORDER.map((rate,i)=>({
@@ -50,3 +51,20 @@ for(const [name,mutate,reason] of [
  ['false presented fps',w=>{w[1].measurement.presented_fps=60;},/False presented FPS/],
  ['false request presented fps',w=>{w[1].presented_fps=60;},/False presented FPS/]
 ])test('runtime verifier rejects '+name,()=>{const w=windows();mutate(w);assert.throws(()=>classify(w),reason);});
+
+// Regression: a synthetic Gym-only station cannot trigger the loader's focus suspend.
+// Keep this tied to the actual loader admission condition, not a mock of pause.
+test('background pause selects a campaign course admitted by the real loader',()=>{
+ const root=path.resolve(__dirname,'../..');
+ const catalog=fs.readFileSync(path.join(root,'main/gym/course_catalog.lua'),'utf8');
+ const match=catalog.match(/M=\\{ids=\\{([^}]+)\\}\\}/);
+ assert(match,'Cannot read the actual campaign course IDs');
+ const admitted=[...match[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
+ assert(admitted.includes(TEST_STATION),'Runtime probe station cannot suspend on focus loss');
+ assert.notEqual(TEST_STATION,'straight','Non-campaign Gym station would bypass focus suspend');
+ const loader=fs.readFileSync(path.join(root,'main/gym/boot.script'),'utf8');
+ assert.match(loader,/id==hash\\("run_focus_lost"\\)[^\\n]*catalog\\.index\\(self\\.station\\)~=nil/,
+  'Loader focus admission contract changed; revalidate runtime pause');
+ const runner=fs.readFileSync(path.join(root,'tools/gym/fps356_runtime.cjs'),'utf8');
+ assert.match(runner,/encodeURIComponent\\(TEST_STATION\\)/,'Runner no longer uses the admitted course');
+});
