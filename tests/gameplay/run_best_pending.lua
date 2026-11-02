@@ -92,6 +92,19 @@ assert(t.best==20 and t.medal==3 and attempts==2 and not t.pending)
 assert(reopen().best==20 and reopen().medal==3)
 print('PASS queued best and medal survive in-flight acknowledgement and alternate slot')
 
+-- The queued second write can itself fail; first acknowledgement remains visible.
+local q=reset()
+assert(best.offer(q,{official=true,time=25,medal=1}))
+assert(best.offer(q,{official=true,time=20,medal=3}))
+fail_next=1;poll_saved(q)
+assert(q.best==25 and q.medal==1 and attempts==2 and not q.pending)
+assert(q.desired_best==20 and q.desired_medal==3)
+clock=clock+1;best.poll(q)
+assert(attempts==3 and q.pending==20 and q.best==25)
+poll_saved(q)
+assert(q.best==20 and q.medal==3 and reopen().best==20)
+print('PASS queued second snapshot recovers from its own local write failure')
+
 -- Initial sync verification is not permission to write or discard official offers.
 local checking=reset()
 sync='syncing';checking=best.new()
@@ -102,6 +115,17 @@ best.poll(checking);assert(attempts==0)
 poll_saved(checking);assert(attempts==1 and checking.pending==40 and checking.best==nil)
 poll_saved(checking);assert(checking.best==40 and checking.medal==1)
 print('PASS initial storage checking queues without premature write')
+
+-- Checking an existing saved record also defers newer official results.
+local existing=reset()
+assert(best.offer(existing,{official=true,time=50,medal=1}));poll_saved(existing)
+sync='syncing';local checking_old=best.new()
+assert(checking_old.pending==50 and checking_old.best==50)
+assert(best.offer(checking_old,{official=true,time=45,medal=2}))
+assert(attempts==1 and checking_old.best==50)
+poll_saved(checking_old);assert(attempts==2 and checking_old.pending==45)
+poll_saved(checking_old);assert(checking_old.best==45 and checking_old.medal==2)
+print('PASS initial storage check with an existing record defers the new result')
 
 -- Duplicate, practice, invalid values and medal-only monotonic updates.
 local m=reset()
