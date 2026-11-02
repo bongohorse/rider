@@ -259,8 +259,11 @@ function validateWorkflow(yaml){
  };
  for(const [job,commands] of Object.entries(required)){
   const section=yaml.split('\n  '+job+':\n')[1].split(/\n  [a-z][\w-]*:\n/)[0];
+  // Only active exact YAML run steps count: comments and duplicate commands fail closed.
+  const activeRuns=section.split('\n').filter(line=>line.startsWith('      - run: ')||line.startsWith('        run: '))
+   .map(line=>line.trim().replace(/^-? ?run: /,''));
   for(const command of commands)
-   assert.ok(section.includes('run: '+command),'Missing '+job+' verification: '+command);
+   assert.equal(activeRuns.filter(run=>run===command).length,1,'Missing/duplicate active '+job+' verification: '+command);
  }
  const gym=yaml.split('\n  gym:\n')[1].split('\n  gym-reports:\n')[0];
  const rows=[...gym.matchAll(/^          - group: ([\w-]+)\n            cases: '([^']+)'(?:\n            part: '([^']+)')?/gm)];
