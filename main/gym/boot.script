@@ -184,7 +184,7 @@ function init(self)
     self.time=time_scale.new()
     self.loading,self.deadline=true,0
     local id,speed=stations.query()
-    if sys.get_config_int("rider.terrain_compare",0)==1 and require("main.terrain_compare.entry").initial(self) then
+    if sys.get_config_int("rider.terrain_compare",0)==1 and require("main.terrain_compare.entry").initial(self) then -- luacheck: ignore 542
         -- Isolated P1 build: do not restore or replace the player's saved editor documents.
     elseif id=="custom" then
         self.station,self.speed=id,speed

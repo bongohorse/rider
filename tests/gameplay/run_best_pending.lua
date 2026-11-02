@@ -126,8 +126,8 @@ print('PASS two consecutive local EIOs retain queued official best and medal')
 
 
 -- Initial sync verification is not permission to write or discard official offers.
-local checking=reset()
-sync='syncing';checking=best.new()
+reset()
+sync='syncing';local checking=best.new()
 assert(checking.pending==false)
 assert(best.offer(checking,{official=true,time=40,medal=1}))
 assert(attempts==0 and checking.best==nil)
@@ -149,8 +149,8 @@ print('PASS initial storage check with an existing record defers the new result'
 
 -- IndexedDB may reveal a pre-existing slot only AFTER the initial checking instance.
 -- Reconcile restored records before any queued write, never erase a better survivor.
-local late=reset()
-sync='syncing';late=best.new()
+reset()
+sync='syncing';local late=best.new()
 assert(late.pending==false and late.best==nil)
 assert(best.offer(late,{official=true,time=40,medal=1}))
 local late_a='rider/best-'..best.KEY..'-a'
@@ -164,8 +164,8 @@ assert(attempts==0 and reopen().best==20 and reopen().medal==3)
 print('PASS late-restored superior best and medal survive queued worse offers')
 
 -- A late-restored worse record must be merged with the queued better official result.
-local late_worse=reset()
-sync='syncing';late_worse=best.new()
+reset()
+sync='syncing';local late_worse=best.new()
 assert(best.offer(late_worse,{official=true,time=40,medal=2}))
 files[late_a]={seq=1,text=json.encode({version=2,key=best.KEY,time=50,medal=1})}
 poll_saved(late_worse)
@@ -177,8 +177,8 @@ print('PASS late-restored worse record merges with queued official improvement')
 
 -- Unknown or unreadable files revealed by initial sync must never be overwritten.
 for _,kind in ipairs({'unreadable', 'future-version'}) do
-    local late_guard=reset()
-    sync='syncing';late_guard=best.new()
+    reset()
+    sync='syncing';local late_guard=best.new()
     assert(best.offer(late_guard,{official=true,time=30,medal=2}))
     local broken=kind=='unreadable' and 'unreadable'
         or {seq=1,text=json.encode({version=999,key=best.KEY,time=1})}
@@ -262,7 +262,7 @@ assert(not best.offer(s,{official=true,time=19,medal=3}))
 print('PASS failed sync blocks future writes and never falsely acknowledges')
 
 -- Existing unreadable and unsupported alternate slots stay protected.
-local c=reset();local a='rider/best-'..best.KEY..'-a';local b='rider/best-'..best.KEY..'-b'
+reset();local a='rider/best-'..best.KEY..'-a';local b='rider/best-'..best.KEY..'-b'
 files[a]={seq=1,text=json.encode({version=2,key=best.KEY,time=31,medal=1})}
 for _,broken in ipairs({'unreadable', {seq=2,text=json.encode({version=999,key=best.KEY,time=1})},
     {seq=2,text=json.encode({version=2,key=best.KEY,time=1,medal=99})}}) do

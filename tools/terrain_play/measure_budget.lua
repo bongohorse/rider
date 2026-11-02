@@ -9,7 +9,7 @@ for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
     local source=dofile(arg[1]..'/'..name..'-source.lua')
     local d=assert(doc.compile(source));local descriptors=geom.describe(d)
     local compiled=collectgarbage('count')
-    local generations={}
+    local generations={} -- luacheck: ignore 241 (keeps both generations alive while measuring)
     for g=1,2 do
         local all={};generations[g]=all
         for _,e in ipairs(descriptors) do all[#all+1]=geom.section(e.prep,e.first,e.last,e.key,true) end

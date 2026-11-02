@@ -1,7 +1,7 @@
 -- Production session transactions/guards with the real source compiler, simulated editor owner only.
 local doc=require 'main.gym.editor_doc'
 local look=require 'main.terrain_perspective.look'
-local proj=require 'main.terrain_perspective.projection'
+require 'main.terrain_perspective.projection'
 local function encode(v)
  if type(v)~='table' then return tostring(v) end
  local keys={};for k in pairs(v) do keys[#keys+1]=k end;table.sort(keys,function(a,b)return tostring(a)<tostring(b)end)

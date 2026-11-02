@@ -59,7 +59,7 @@ end
 local function write(t)
     local p=t.pending
     p.tries=p.tries+1
-    local seq,err=t.store.save(p.text)
+    local seq=t.store.save(p.text)
     -- Retry indefinitely but at a capped, sparse rate after the initial quick attempts.
     -- A transient local storage failure must not strand later official rewards.
     if not seq then

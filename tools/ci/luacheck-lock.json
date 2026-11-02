@@ -1,0 +1,14 @@
+{
+  "version": "1.2.0",
+  "source": "https://github.com/lunarmodules/luacheck/releases/tag/v1.2.0",
+  "binaries": {
+    "linux-x86_64": {
+      "url": "https://github.com/lunarmodules/luacheck/releases/download/v1.2.0/luacheck",
+      "sha256": "d68da17fca0697d9e2fb04201f3884abd259fa558b3a449bccaed47f1390defc"
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/lunarmodules/luacheck/releases/download/v1.2.0/luacheck.exe",
+      "sha256": "0f1c69c4d09f1ebb4d8df14c215e4553e2e639bd4cb7bf3c639b0daa6198317b"
+    }
+  }
+}

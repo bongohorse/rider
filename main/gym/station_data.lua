@@ -48,11 +48,11 @@ function M.validate(d)
     local coin_ok,coin_err,coin_unknown=require('main.gym.coin_data').validate(d.coins,b)
     if not coin_ok then return nil,coin_err,coin_unknown end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
-    -- Structural geometry counts; rendering and physics admission are checked independently below.
-    local objects,segments,edges,labels,seesaws=0,0,0,0,0
+    -- Structural geometry count for the empty-terrain check; rendering and physics admission are checked independently below.
+    local objects=0
     for _,chain in ipairs(d.chains) do
         if type(chain)~="table" or #chain<2 or #chain>2048 then return nil,"Invalid chain length" end
-        objects,segments=objects+#chain-1,segments+#chain-1
+        objects=objects+#chain-1
         for i,p in ipairs(chain) do
             if not point(p) then return nil,"Invalid chain point" end
             if i>1 then local q=chain[i-1];if (p[1]-q[1])^2+(p[2]-q[2])^2<0.0001 then return nil,"Chain points too close" end end
@@ -74,7 +74,7 @@ function M.validate(d)
         for _,h in ipairs(d.hulls) do
             if type(h)~="table" or type(h.vertices)~="table" or #h.vertices<3 or #h.vertices>8 then return nil,"Invalid hull vertices" end
             for _,p in ipairs(h.vertices) do if not point(p) then return nil,"Invalid hull point" end end
-            objects,edges=objects+#h.vertices,edges+#h.vertices
+            objects=objects+#h.vertices
             -- Strict convex CCW hull; reject degenerate/self-intersecting input.
             for i,p in ipairs(h.vertices) do
                 local q=h.vertices[i%#h.vertices+1]
@@ -96,7 +96,6 @@ function M.validate(d)
         if type(d.labels)~="table" then return nil,"Invalid labels" end
         for _,label in ipairs(d.labels) do
             if type(label)~="table" or not point(label.position) or type(label.text)~="string" or #label.text>64 then return nil,"Invalid label" end
-            objects,labels=objects+1,labels+1
         end
     end
     -- FINISH (LE2): position, a finish segment and the unit direction it must be crossed in.
@@ -108,9 +107,7 @@ function M.validate(d)
         local length=math.sqrt(lx*lx+ly*ly)
         if length<0.1 or math.abs(math.sqrt(f.direction[1]^2+f.direction[2]^2)-1)>0.001 or math.abs(lx*f.direction[2]-ly*f.direction[1])/length<0.5 then return nil,"Invalid finish line/direction" end
         for _,q in ipairs(f.line) do if q[1]<=b[1] or q[1]>=b[2] or q[2]<=b[3] or q[2]>=b[4] then return nil,"Finish outside bounds" end end
-        objects=objects+2
     end
-    local finish=objects-segments-edges-labels
     -- Reserved for later tasks; v1 levels carry an empty list.
     if d.checkpoints~=nil and (type(d.checkpoints)~="table" or next(d.checkpoints)~=nil) then return nil,"Checkpoints are not supported yet" end
     if (d.kind=="ramps" or d.kind=="steps" or d.kind=="gaps" or d.kind=="balance" or d.kind=="bumps" or d.kind=="air") and not d.sections then return nil,"Missing station sections" end
@@ -172,7 +169,6 @@ function M.validate(d)
         local found
         for _,section in ipairs(d.sections) do if section.id==s.section and section.type=="seesaw" then found=section end end
         if not found or s.pivot[1]<=found.spawn[1] or s.pivot[1]>=found.target_x0 or s.pivot[1]<=b[1] or s.pivot[1]>=b[2] or s.pivot[2]<=b[3] or s.pivot[2]>=b[4] then return nil,"Invalid seesaw position" end
-        objects,seesaws=objects+1,1
     elseif d.kind=="balance" then
         for _,section in ipairs(d.sections) do if section.type=="seesaw" then return nil,"Missing seesaw" end end
     end
@@ -181,9 +177,6 @@ function M.validate(d)
         local m=d.markers
         if not finite(m.from_m) or not finite(m.to_m) or m.to_m<=m.from_m or not finite(m.minor_m) or m.minor_m<=0 or not finite(m.major_m) or m.major_m<m.minor_m or (m.to_m-m.from_m)/m.minor_m>1000 then return nil,"Invalid markers" end
     end
-    local markers=0
-    if d.markers then markers=(d.markers.to_m-d.markers.from_m)/d.markers.minor_m+1+(d.markers.to_m-d.markers.from_m)/d.markers.major_m+1 end
-    objects=objects+markers
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate_station(d)
     if not look_ok then return nil,look_err,look_unknown end
     local resources,err=require("main.gym.terrain_budget").check(d)
