@@ -157,7 +157,8 @@ test('parallel: preserves earliest gameplay failure and waits for the other page
   assert.equal(report.last_active_case,'gameplay/check_run');
   assert.deepEqual(report.cases.map(x=>x.status),['FAIL','FAIL','PASS','PASS']);
   assert.equal(report.cases[1].error,original.message);
-  assert.equal(report.cases[2].elapsed_ms,9);
+  // Second task starts after the first synchronous failure advanced the test clock.
+  assert.equal(report.cases[2].elapsed_ms,7);
 });
 
 test('parallel: rejects missing/duplicate phases before launching any gameplay checks',async()=>{
