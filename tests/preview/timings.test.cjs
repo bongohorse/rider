@@ -120,7 +120,7 @@ test('parallel: independent gameplay phases overlap without violating nested LIF
   const {timings,advance}=observer();const events=[];
   const values=await timings.run('gameplay/two-contexts',()=>timings.parallel([
     {name:'gameplay/check_run',run:async()=>{events.push('run-start');await Promise.resolve();advance(10);events.push('run-end');return 'run report';}},
-    {name:'gameplay/check_levels/desktop',run:async()=>{events.push('levels-start');await Promise.resolve();advance(15);events.push('levels-end');return 'level report';}}
+    {name:'gameplay/check_levels/desktop',run:async()=>{events.push('levels-start');await new Promise(resolve=>setImmediate(resolve));advance(15);events.push('levels-end');return 'level report';}}
   ]));
   timings.finish('PASS');
   assert.deepEqual(values,['run report','level report']);
