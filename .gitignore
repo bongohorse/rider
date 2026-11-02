@@ -16,3 +16,5 @@ __pycache__/
 /Defold/
 
 /automation-bridge-python/
+# Packaged release preview (tools/preview/package.py output; CI/local only)
+/_site/

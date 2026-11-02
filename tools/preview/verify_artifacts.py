@@ -10,7 +10,8 @@ import sys
 
 GROUP_CASES = {
     'desktop-layout': ('desktop',),
-    'desktop-gameplay': ('desktop-gameplay',),
+    'desktop-gameplay-1': ('desktop-gameplay-1',),
+    'desktop-gameplay-2': ('desktop-gameplay-2',),
     'phone': ('phone-emulation',),
     'touch': ('mobile-touch-emulation', 'tilt-injected-orientation'),
     'stations': ('ramps-release', 'steps-release', 'seams-release', 'gaps-release',
@@ -18,8 +19,15 @@ GROUP_CASES = {
 }
 GAMEPLAY = ('check_run', 'check_gem_release', 'check_fuel_release',
             'check_levels', 'check_level_storage', 'check_objects', 'check_progress')
-GAMEPLAY_TIMINGS = tuple('gameplay/' + ('check_levels/desktop' if x == 'check_levels' else x)
-                         for x in GAMEPLAY)
+# Contiguous order-preserving shards; together exactly GAMEPLAY (#402).
+GAMEPLAY_SHARDS = {'desktop-gameplay-1': GAMEPLAY[:3], 'desktop-gameplay-2': GAMEPLAY[3:]}
+
+
+def gameplay_timing(check):
+    return 'gameplay/' + ('check_levels/desktop' if check == 'check_levels' else check)
+
+
+GAMEPLAY_TIMINGS = tuple(gameplay_timing(x) for x in GAMEPLAY)
 DESKTOP_SIZES = ((1920, 1080), (2560, 1440), (1280, 720))
 PHONE_SIZES = ((1080, 486), (486, 1080), (896, 400), (1080, 486))
 
@@ -73,9 +81,13 @@ def check_group(directory, mode, expected, sha, build_id):
     require({'browser/launch', 'final-assertions', 'cleanup/global'} <= set(phase_names),
             f'Missing verifier phases in {timing_path}')
 
-    if mode == 'desktop-gameplay':
-        require(cases[0].get('checks') == list(GAMEPLAY), 'Missing/reordered desktop gameplay checks')
-        require(set(GAMEPLAY_TIMINGS) <= set(phase_names), 'Missing desktop gameplay module timing')
+    if mode in GAMEPLAY_SHARDS:
+        checks = GAMEPLAY_SHARDS[mode]
+        require(cases[0].get('checks') == list(checks), f'Missing/reordered desktop gameplay checks in {mode}')
+        require({gameplay_timing(x) for x in checks} <= set(phase_names),
+                f'Missing desktop gameplay module timing in {mode}')
+        foreign = {gameplay_timing(x) for x in GAMEPLAY if x not in checks} & set(phase_names)
+        require(not foreign, f'Desktop gameplay module ran in the wrong shard {mode}: {sorted(foreign)}')
     if mode in ('desktop-layout', 'phone'):
         is_desktop = mode == 'desktop-layout'
         sizes = DESKTOP_SIZES if is_desktop else PHONE_SIZES
@@ -117,6 +129,8 @@ def verify(root, sha, build_id):
         check_group(directory, mode, expected, sha, build_id)
         all_cases.extend(expected)
     require(len(all_cases) == len(set(all_cases)), 'Case assigned to multiple release groups')
+    sharded = [check for checks in GAMEPLAY_SHARDS.values() for check in checks]
+    require(sharded == list(GAMEPLAY), 'Desktop gameplay shards must cover every module exactly once, in order')
     deployment = root / f'preview-verification-desktop-layout-{build_id}' / 'deployment'
     check_group(deployment, 'deployment', ('desktop', 'phone-emulation'), sha, build_id)
     check_screenshots(deployment, ['desktop.png', 'phone-emulation.png'])
