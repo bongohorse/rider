@@ -1,0 +1,440 @@
+{
+ "description": "Changed-path rules for `tools/local.py affected` (#401). First matching rule wins; a path no rule matches selects the whole Gym inventory. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
+ "rules": [
+  {
+   "name": "check-only tooling and unit tests",
+   "cases": [],
+   "paths": [
+    ".github/*",
+    "tests/bootstrap/*",
+    "tests/ci/*",
+    "tests/g1/*",
+    "tests/g2/*",
+    "tests/mobile/*",
+    "tests/gameplay/*",
+    "tests/preview/*",
+    "tests/engine/*",
+    "tools/ci/*",
+    "tools/gameplay/*",
+    "tools/preview/*",
+    "tools/local.py",
+    "tools/local_affected.json",
+    ".luacheckrc",
+    "tools/bootstrap_check.py",
+    "requirements-dev.txt",
+    "renovate.json"
+   ]
+  },
+  {
+   "name": "Gym harness shared by every case",
+   "cases": "all",
+   "paths": [
+    "tools/gym/smoke.py",
+    "tools/gym/bundle.py",
+    "tools/gym/launch.cjs",
+    "tools/gym/pointer.cjs",
+    "tools/gym/merge.cjs",
+    "package.json",
+    "package-lock.json"
+   ]
+  },
+  {
+   "name": "ramps station",
+   "cases": [
+    "a16"
+   ],
+   "paths": [
+    "main/gym/ramp_*.lua",
+    "main/gym/stations/ramps*.json",
+    "tools/gym/ramps.cjs",
+    "tools/gym/camera352_math.cjs"
+   ]
+  },
+  {
+   "name": "steps station",
+   "cases": [
+    "a17"
+   ],
+   "paths": [
+    "main/gym/step_metrics.lua",
+    "main/gym/stations/steps*.json",
+    "tools/gym/steps.cjs"
+   ]
+  },
+  {
+   "name": "seams station",
+   "cases": [
+    "a18"
+   ],
+   "paths": [
+    "main/gym/seam_*.lua",
+    "main/gym/stations/seams-*.json",
+    "tools/gym/seam*.cjs"
+   ]
+  },
+  {
+   "name": "gaps station",
+   "cases": [
+    "a19"
+   ],
+   "paths": [
+    "main/gym/gap_metrics.lua",
+    "main/gym/stations/gaps*.json",
+    "tools/gym/gaps.cjs"
+   ]
+  },
+  {
+   "name": "bumps station",
+   "cases": [
+    "a19b"
+   ],
+   "paths": [
+    "main/gym/bump_metrics.lua",
+    "main/gym/stations/bumps.json",
+    "tools/gym/bump*.cjs",
+    "tools/gym/bumps-source.json"
+   ]
+  },
+  {
+   "name": "air station",
+   "cases": [
+    "a19c"
+   ],
+   "paths": [
+    "main/gym/air_*.lua",
+    "main/gym/stations/air.json",
+    "tools/gym/air*.cjs"
+   ]
+  },
+  {
+   "name": "balance station and seesaw",
+   "cases": [
+    "a19d"
+   ],
+   "paths": [
+    "main/gym/balance_*.lua",
+    "main/gym/seesaw*",
+    "main/gym/stations/balance.json",
+    "tools/gym/balance*.cjs"
+   ]
+  },
+  {
+   "name": "pause and slow motion",
+   "cases": [
+    "a20"
+   ],
+   "paths": [
+    "main/gym/time_scale.lua",
+    "main/gym/time_probe.lua",
+    "tools/gym/pause.cjs"
+   ]
+  },
+  {
+   "name": "record and replay",
+   "cases": [
+    "a21"
+   ],
+   "paths": [
+    "main/gym/replay.lua",
+    "main/gym/history.lua",
+    "main/gym/ghost_*",
+    "tools/gym/replay.cjs"
+   ]
+  },
+  {
+   "name": "regression traces",
+   "cases": [
+    "a22",
+    "coast345"
+   ],
+   "paths": [
+    "main/gym/regress.lua",
+    "tests/regress/*",
+    "tools/gym/regress*.cjs"
+   ]
+  },
+  {
+   "name": "struts",
+   "cases": [
+    "cf3"
+   ],
+   "paths": [
+    "main/gym/strut*",
+    "tools/gym/struts.cjs"
+   ]
+  },
+  {
+   "name": "coasting measurements",
+   "cases": [
+    "coast345"
+   ],
+   "paths": [
+    "tools/gym/coast*.cjs"
+   ]
+  },
+  {
+   "name": "station switching runner",
+   "cases": [
+    "a15"
+   ],
+   "paths": [
+    "tools/gym/stations.cjs"
+   ]
+  },
+  {
+   "name": "custom level runner",
+   "cases": [
+    "le1a"
+   ],
+   "paths": [
+    "tools/gym/custom.cjs"
+   ]
+  },
+  {
+   "name": "custom level size runner",
+   "cases": [
+    "le1b"
+   ],
+   "paths": [
+    "tools/gym/sizes*.cjs",
+    "tools/gym/levels.cjs"
+   ]
+  },
+  {
+   "name": "default browser runner (controls, HUD, feedback, coasting)",
+   "cases": [
+    "a3",
+    "a6",
+    "coast",
+    "a15a",
+    "hud",
+    "a7",
+    "a8",
+    "m2feedback",
+    "a9",
+    "a9invalid",
+    "a10",
+    "a11",
+    "a12",
+    "coast345"
+   ],
+   "paths": [
+    "tools/gym/browser.cjs",
+    "main/gym/coast_measure.lua"
+   ]
+  },
+  {
+   "name": "station preset helper",
+   "cases": [
+    "a16",
+    "a17",
+    "a18",
+    "a19",
+    "a19b",
+    "a19c",
+    "a19d"
+   ],
+   "paths": [
+    "tools/gym/preset.cjs"
+   ]
+  },
+  {
+   "name": "shared editor UI targeting",
+   "cases": [
+    "le2",
+    "le3",
+    "le4",
+    "le5a",
+    "le5b",
+    "le5c",
+    "le5d",
+    "le6",
+    "ea2",
+    "ea3"
+   ],
+   "paths": [
+    "tools/gym/editor_ui_target.cjs"
+   ]
+  },
+  {
+   "name": "editor shell runner",
+   "cases": [
+    "le2"
+   ],
+   "paths": [
+    "tools/gym/editor.cjs"
+   ]
+  },
+  {
+   "name": "editor draw runner",
+   "cases": [
+    "le3"
+   ],
+   "paths": [
+    "tools/gym/draw.cjs"
+   ]
+  },
+  {
+   "name": "editor library runner",
+   "cases": [
+    "le4"
+   ],
+   "paths": [
+    "tools/gym/library.cjs"
+   ]
+  },
+  {
+   "name": "editor prefab runner",
+   "cases": [
+    "le5a"
+   ],
+   "paths": [
+    "tools/gym/prefab.cjs"
+   ]
+  },
+  {
+   "name": "editor curve runner",
+   "cases": [
+    "le5b"
+   ],
+   "paths": [
+    "tools/gym/curve.cjs"
+   ]
+  },
+  {
+   "name": "editor path runner",
+   "cases": [
+    "le5c"
+   ],
+   "paths": [
+    "tools/gym/path.cjs"
+   ]
+  },
+  {
+   "name": "editor points runner",
+   "cases": [
+    "le5d"
+   ],
+   "paths": [
+    "tools/gym/points.cjs"
+   ]
+  },
+  {
+   "name": "object browser runner",
+   "cases": [
+    "ea2"
+   ],
+   "paths": [
+    "tools/gym/objects.cjs"
+   ]
+  },
+  {
+   "name": "version history runner",
+   "cases": [
+    "ea3"
+   ],
+   "paths": [
+    "tools/gym/versions.cjs"
+   ]
+  },
+  {
+   "name": "editor polish runner",
+   "cases": [
+    "le6"
+   ],
+   "paths": [
+    "tools/gym/polish.cjs",
+    "tools/gym/editor_ui_checks.cjs"
+   ]
+  },
+  {
+   "name": "level editor",
+   "cases": [
+    "le1a",
+    "le2",
+    "le3",
+    "le4",
+    "le5a",
+    "le5b",
+    "le5c",
+    "le5d",
+    "le6",
+    "ea2",
+    "ea3"
+   ],
+   "paths": [
+    "main/gym/editor*"
+   ]
+  },
+  {
+   "name": "custom levels and samples",
+   "cases": [
+    "le1a",
+    "le1b",
+    "le4"
+   ],
+   "paths": [
+    "main/gym/custom.lua",
+    "main/gym/custom.js",
+    "main/gym/samples/*"
+   ]
+  },
+  {
+   "name": "game loop: run, coins, gems, fuel, medals, progress, levels, objects",
+   "cases": [
+    "a15",
+    "le1a",
+    "le6",
+    "ea2"
+   ],
+   "paths": [
+    "main/gym/coin*",
+    "main/gym/coins.lua",
+    "main/gym/fuel*",
+    "main/gym/medals.lua",
+    "main/gym/run*",
+    "main/gym/course_*",
+    "main/gym/level_*",
+    "main/gym/levels_*",
+    "main/gym/progress_*",
+    "main/gym/mechanism*",
+    "main/gym/juice.lua",
+    "main/gym/level_menu.js",
+    "main/gym/stations/first-run.json",
+    "main/gym/stations/rolling-hills.json",
+    "main/gym/stations/ridge-run.json",
+    "main/gym/stations/objects-demo.json"
+   ]
+  },
+  {
+   "name": "HUD, controls and feedback",
+   "cases": [
+    "a3",
+    "a6",
+    "a15a",
+    "hud",
+    "a7",
+    "a8",
+    "m2feedback",
+    "a9",
+    "a9invalid",
+    "a10",
+    "a11",
+    "a12",
+    "le6"
+   ],
+   "paths": [
+    "main/gym/ui.gui*",
+    "main/gym/layout.lua",
+    "main/gym/mobile.*",
+    "main/gym/tilt.js",
+    "main/gym/feedback.*",
+    "main/gym/graph.lua",
+    "main/gym/telemetry.lua",
+    "main/gym/audio.lua",
+    "main/gym/engine.*",
+    "main/gym/assets/*"
+   ]
+  }
+ ]
+}

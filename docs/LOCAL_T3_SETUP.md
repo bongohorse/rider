@@ -110,15 +110,21 @@ npx playwright install --with-deps chromium
 These are explicit setup commands, not part of each test. Check the exact pinned JDK/Python/Node separately; the commands do not install them. The first verified build obtains Bob; before that doctor reports Bob missing. Existing native/Bridge prerequisites are in [TOOLING.md](TOOLING.md).
 
 ```bash
-python tools/local.py check                     # fast checks, no builds/browser suite
+python tools/local.py check                     # ~10 s: bootstrap, Lua lint, unit tests, gameplay Lua (with Bob)
+python tools/local.py affected                  # changed files -> suggested Gym cases (JSON, no run)
+python tools/local.py affected --run --jobs 3   # check, then the suggested cases in parallel
 python tools/local.py build                     # HTML5 debug via loopback Extender
 python tools/local.py gym --case le6             # one real-input editor suite
-python tools/local.py gym --case le2             # reuse the same unchanged debug bundle
+python tools/local.py gym --case a16,le3 --jobs 2   # several cases, one shared bundle, in parallel
+python tools/local.py gym --suite --jobs 3      # every Gym case of the required CI matrix
 python tools/local.py gym --case le6 --fresh     # force a new game bundle
 python tools/local.py physics --target html5    # full G1 physics, both browser engine modes
+python tools/local.py install-hook              # opt-in pre-push hook running `check` (--remove undoes it)
 ```
 
-Global options go before the command, for example `python tools/local.py --server http://127.0.0.1:9000 gym --case le6`. Each invocation uses a unique evidence directory under `artifacts/local/runs/`; JSON/JUnit/logs retain failures with short terminal output. Exit 0 PASS, 1 FAIL, 2 BLOCKED. Doctor has its own inventory JSON. A targeted PASS establishes only the named suite, not complete regression. The fast check includes bootstrap, Python G1/G2/CI and Node CI/mobile unit checks. It is intentionally not an automatic file-to-test classifier.
+**Local-first loop ([#401](https://github.com/bongohorse/rider/issues/401)):** run `check` while editing, `affected --run` before pushing a finished change, and `gym --suite` for shared physics/storage/input changes. Push only the coherent, locally verified state; GitHub `required` then runs the full matrix once as the final gate. `affected` reads [tools/local_affected.json](../tools/local_affected.json): the first rule matching a changed path names its cases, documentation selects none, and any path without a rule selects the whole inventory (fail closed). The inventory itself is read from `.github/workflows/g1.yml`, so it cannot drift from CI. `--jobs` runs each case in its own process, browser and ephemeral port. Two or three parallel cases are comfortable on a 12-thread WSL host. More can slow the frame-timed cases, so repeat a timing FAIL alone before treating it as a regression. The pre-push hook is installed in the repository's shared hooks directory, so it applies to every worktree. It uses the main checkout's `.venv` unless the worktree has its own or `RIDER_PYTHON` is set.
+
+Global options go before the command, for example `python tools/local.py --server http://127.0.0.1:9000 gym --case le6`. Each invocation uses a unique evidence directory under `artifacts/local/runs/`; JSON/JUnit/logs retain failures with short terminal output. Exit 0 PASS, 1 FAIL, 2 BLOCKED. Doctor has its own inventory JSON. A targeted PASS establishes only the named suite, not complete regression. The fast check includes bootstrap, Lua lint, Python G1/G2/CI and Node CI/mobile unit checks, plus the gameplay Lua suites when a verified Bob is present. `affected` is a suggestion, not proof: a case it does not select can still regress, which is why `required` runs everything.
 
 Choose tests according to changed behavior and adjacent consumers; preserve real gestures, fixed millisecond measurements, assertions and timeout limits. Use existing Gym case names in [TOOLING.md](TOOLING.md#gym-tests). Broaden local verification before pushing shared physics/storage/input changes. Commit checkpoints locally; push a coherent verified state, not every correction. Opening a draft PR still triggers the current CI. Host outages/missing prerequisites are not passes.
 

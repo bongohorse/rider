@@ -20,10 +20,15 @@ class LocalCommandTest(unittest.TestCase):
         def failure(name, *args):
             return {'id': name, 'status': 'FAIL' if name == 'unit_ci' else 'PASS',
                     'duration_ms': 1, 'assertions': 1, 'detail': '', 'artifacts': []}
-        with tempfile.TemporaryDirectory() as directory, mock.patch.object(local, 'execute', side_effect=failure) as run:
-            self.assertEqual(local.fast_check(Path(directory), 'fixture'), 1)
-            self.assertEqual(run.call_count, 7)
-            self.assertIn('lint_lua', [call.args[0] for call in run.call_args_list])
+        for bob, count in ((False, 7), (True, 8)):
+            with self.subTest(bob=bob), tempfile.TemporaryDirectory() as directory, \
+                    mock.patch.object(local, 'gameplay_lua_available', return_value=bob), \
+                    mock.patch.object(local, 'execute', side_effect=failure) as run:
+                self.assertEqual(local.fast_check(Path(directory), 'fixture'), 1)
+                self.assertEqual(run.call_count, count)
+                names = [call.args[0] for call in run.call_args_list]
+                self.assertIn('lint_lua', names)
+                self.assertEqual('gameplay_lua' in names, bob)
 
     def test_local_default_overrides_inherited_server_and_no_public_url_is_allowed(self):
         with mock.patch.dict(os.environ, RIDER_BUILD_SERVER='https://build.defold.com'):
