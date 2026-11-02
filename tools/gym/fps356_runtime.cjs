@@ -65,7 +65,17 @@ function verifyReplay(recorded,played,{sourceSha,station,tolerance}){
   verdict:played.verdict,mismatches:played.mismatches,scaled_ticks:played.scaled_ticks,
   max_position_m:played.max_position_m,max_angle_rad:played.max_angle_rad};
 }
-module.exports={parseArgs,classify,verifyReplay,ORDER,TEST_STATION};
+// Verify real browser lifecycle telemetry; Playwright's default focus emulation
+// must be disabled before loading the game, never fabricate blur/visibility.
+function verifyFocusEvent(events,start,type,focused){
+ assert(Array.isArray(events)&&Number.isSafeInteger(start)&&start>=0,
+  'Missing genuine browser lifecycle evidence');
+ const event=events.slice(start).find(e=>e?.type===type&&e.focus===focused&&
+  Number.isFinite(e.monotonic_ms)&&['visible','hidden'].includes(e.visibility));
+ assert(event,'BLOCKED_BACKGROUND_FOCUS_EVENT_UNOBSERVED: '+type);
+ return {type:event.type,focus:event.focus,visibility:event.visibility,monotonic_ms:event.monotonic_ms};
+}
+module.exports={parseArgs,classify,verifyReplay,verifyFocusEvent,ORDER,TEST_STATION};
 if(require.main===module){
  const {configure}=require('./launch.cjs');
  const {compare,comparePause}=require('./fps356_verify.cjs');
@@ -108,6 +118,11 @@ if(require.main===module){
    // Explicit BrowserContext: Playwright forbids context.newPage() on browser.newPage()'s owned context.
    context=await browser.newContext({viewport:{width:1280,height:720}});
    page=await context.newPage();
+   // Playwright normally forces CDP focus emulation: both tabs then claim
+   // hasFocus()=true and no real blur fires. Disable the TEST HARNESS override,
+   // not browser visibility or game state. Real tab switches must emit blur/focus.
+   const focusCDP=await context.newCDPSession(page);
+   await focusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false});
    page.on('pageerror',e=>{if(errors.length<20)errors.push(e.message);});
    page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text())&&errors.length<20)errors.push(m.text());});
    // Default engine startup is unchanged at 60. No --config display override.
@@ -127,6 +142,8 @@ if(require.main===module){
     window.addEventListener('focus',()=>capture('focus'));
    });
    await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station='+encodeURIComponent(TEST_STATION));
+   await page.bringToFront();
+   await page.waitForFunction(()=>document.hasFocus()===true,null,{polling:100,timeout:10000});
    await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
     window.riderReady?.run_id===runId&&window.riderFps356World?.fixed_ticks>30&&
     window.riderFps356World?.vehicle_ready,{sha,runId},{timeout:30000});
@@ -175,19 +192,32 @@ if(require.main===module){
       (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===true&&s.sequence>seq),
       before.sequence);
     }else if(trigger==='background'){
+     // A real blur is the loader's focus-loss signal. Chromium under Xvfb may
+     // keep an inactive tab visibilityState='visible'; do not claim it was hidden.
+     // The CDP focus emulation was disabled before game load, so blur is genuine.
+     const focusStart=await page.evaluate(()=>({
+      count:(window.riderFps356Lifecycle||[]).length,focused:document.hasFocus()
+     }));
+     assert.equal(focusStart.focused,true,'Game was not foreground-focused before switch');
      other=await page.context().newPage();
      await other.goto('about:blank');await other.bringToFront();
      try{
-      await page.waitForFunction(()=>document.visibilityState==='hidden',null,{polling:100,timeout:10000});
+      await page.waitForFunction(start=>!document.hasFocus()&&
+       (window.riderFps356Lifecycle||[]).slice(start).some(e=>e.type==='blur'&&e.focus===false),
+       focusStart.count,{polling:100,timeout:10000});
      }catch(err){
       const [game,backgroundPage]=await Promise.all([
        page.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus(),
         lifecycle:(window.riderFps356Lifecycle||[]).slice(-24)})),
        other.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus()}))
       ]);
-      throw Error('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED: headed Chromium tab switch did not hide the game page; '+
+      throw Error('BLOCKED_BACKGROUND_FOCUS_UNOBSERVED: real Chromium tab switch did not blur game; '+
        JSON.stringify({game,backgroundPage,context_pages:context.pages().length}));
      }
+     const focusLost=verifyFocusEvent(
+      await page.evaluate(()=>window.riderFps356Lifecycle||[]),focusStart.count,'blur',false);
+     evidence.background_lifecycle={focus_lost:focusLost,
+      visibility_hidden_observed:focusLost.visibility==='hidden'};
      await page.waitForFunction(seq=>window.riderTimeState?.paused===true&&
       (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===true&&s.sequence>seq),
       before.sequence,{polling:100,timeout:10000});
@@ -198,9 +228,13 @@ if(require.main===module){
     const end=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
     assert.equal(end.loader.paused,true,label+': unexpected resume');
     if(other){
+     const focusReturnStart=await page.evaluate(()=>(window.riderFps356Lifecycle||[]).length);
      await other.close();other=null;await page.bringToFront();
-     await page.waitForFunction(()=>document.visibilityState==='visible',
-      null,{polling:100,timeout:10000});
+     await page.waitForFunction(start=>document.hasFocus()&&
+      (window.riderFps356Lifecycle||[]).slice(start).some(e=>e.type==='focus'&&e.focus===true),
+      focusReturnStart,{polling:100,timeout:10000});
+     evidence.background_lifecycle.focus_returned=verifyFocusEvent(
+      await page.evaluate(()=>window.riderFps356Lifecycle||[]),focusReturnStart,'focus',true);
     }
     assert.equal((await loader()).paused,true,label+': focus auto-resumed without explicit input');
     await holdUntil('Space',seq=>window.riderTimeState?.paused===false&&
@@ -273,7 +307,7 @@ if(require.main===module){
     requested_runtime_hz:ORDER,observed:windows,evidence,
     browser_raf_callback_hz:null,presented_fps:null,
     not_run:['Android_device','confirmed_presented_frames','native_refresh_rate'],
-    limitations:'HTML5 scheduling is browser/platform owned. Callback counts are not delivered frames.'};
+    limitations:'HTML5 scheduling is browser/platform owned. Callback counts are not delivered frames. Background focus-loss pause is verified by real blur/focus; inactive tab visibility may remain visible under Xvfb.'};
    fs.writeFileSync(path.join(out,'fps356-runtime.json'),JSON.stringify(report,null,2)+'\n');
    console.log('FPS356_RUNTIME_RESULT '+JSON.stringify({status:report.status,source_sha:sha,
     run_id:runId,cap30:classified.cap30_callback_observed,
