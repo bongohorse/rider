@@ -40,7 +40,13 @@ local function write(t)
     local p=t.pending
     p.tries=p.tries+1
     local seq,err=t.store.save(p.text)
-    if not seq then t.status='Coins not saved';p.retry_in=1;return false end
+    -- Retry indefinitely but at a capped, sparse rate after the initial quick attempts.
+    -- A transient local storage failure must not strand later official rewards.
+    if not seq then
+        t.status='Coins not saved'
+        p.retry_in=p.tries<3 and 1 or math.min(30,2^math.min(p.tries-1,5))
+        return false
+    end
     p.written=true;t.status='Saving coins...';return true
 end
 local function flush(t)
@@ -76,7 +82,7 @@ function M.poll(t,dt)
     if p then
         if not p.written then
             p.retry_in=(p.retry_in or 0)-dt
-            if p.tries<3 and p.retry_in<=0 then write(t) end
+            if p.retry_in<=0 then write(t) end
             return
         end
         if state=='syncing' then return end
