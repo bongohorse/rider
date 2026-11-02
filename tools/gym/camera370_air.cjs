@@ -195,6 +195,9 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
      'Camera370 no observed flight/landing boundaries');
     cases[label]={mode,source_sha:sha,run_id:runId,viewport,canvas:state.canvas,
      descent_rise:descentRise,
+     // Keep original per-render dt, ground, snap and camera centre for the authored
+     // stable landing. Tick-aligned projections alone cannot explain render jitter.
+     render_trace:sectionId==='mid'?state.trace:undefined,
      jump:{airtime_s:jump.airtime_s,status:jump.status,touchdown_x:jump.touchdown_x,
       ground_slope_deg:jump.ground_slope_deg},physics:state.physics,samples};
     fs.writeFileSync(path.join(out,'camera370-air-'+label+'.json'),JSON.stringify(cases[label],null,2));
