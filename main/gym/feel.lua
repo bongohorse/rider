@@ -111,6 +111,7 @@ M.follow={
     sink_rate=1.5,     -- 1/s: hold the framing through short rises, dips and landings
     -- #352: opt-in debug A/B only. Never persisted or used by the production camera default.
     descent_rate=8,    -- 1/s: fast separate downhill signal, not the ground-window filter
+    descent_rise_limit=240, -- u/s: B-only bound on new lead after touchdown (decay remains immediate)
     descent_seconds=0.35, -- seconds of raw downward travel to reserve below the chassis
     descent_max=120,   -- u: cap extra vertical lead before the existing safe-edge clamp
     descent_response=4, -- 1/s: additional render-only downward pan responsiveness
@@ -193,7 +194,11 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
         local downhill=grounded and terrain_descending and
             velocity.x*s.dir>f.vertical_deadband and velocity.y < -f.vertical_deadband
         local requested=downhill and math.min((-velocity.y-f.vertical_deadband)*f.descent_seconds,f.descent_max) or 0
-        s.descent=(s.descent or 0)+(requested-(s.descent or 0))*(1-math.exp(-f.descent_rate*dt))
+        local previous=s.descent or 0
+        local filtered=previous+(requested-previous)*(1-math.exp(-f.descent_rate*dt))
+        -- B-only: avoid a sudden extra downward pan when the wheels first touch a slope.
+        -- Do not slow release when the terrain stops descending or direction reverses.
+        s.descent=math.min(filtered,previous+f.descent_rise_limit*dt)
         descent=s.descent
         y=y-descent
     end
