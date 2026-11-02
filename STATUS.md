@@ -18,25 +18,14 @@ Updated 2026-10-31. Current progress, pending acceptance and blockers. GitHub is
 
 ## Open acceptance
 
-| Item | State |
-| --- | --- |
-| A19 gaps and landings ([PR #117](https://github.com/bongohorse/rider/pull/117)) | Merged; Claudio's drive feedback pending |
-| LE1b size and performance report ([PR #139](https://github.com/bongohorse/rider/pull/139)) | Merged; desktop values from CI. Touch **Import level** entry for the phone procedure merged in [PR #142](https://github.com/bongohorse/rider/pull/142) (GO 2026-10-18). Claudio's [phone procedure](docs/LE1B_REPORT.md#phone-procedure) and drive test on `seg-800`: NOT RUN |
-| LE2 editor shell ([PR #145](https://github.com/bongohorse/rider/pull/145)) | Merged; Claudio's drive test NOT RUN: open `ramps`, press E, move START, place FINISH, drive through it and test from several points (F / Shift+F). Desktop only; phone editing NOT RUN |
-| LE3 draw tool and connections ([PR #152](https://github.com/bongohorse/rider/pull/152)) | Merged; Claudio's drive test NOT RUN: open Straight, press E, delete its line, draw a run-up, a ramp from its end (green ring), a gap and a landing, place FINISH, drive; drag the joint (the ramp follows), Undo/Redo, drive again. Also check Alt (0.1 m grid) in his browser. Desktop only |
-| LE3 follow-up ([PR #155](https://github.com/bongohorse/rider/pull/155), [#156](https://github.com/bongohorse/rider/pull/156), [#158](https://github.com/bongohorse/rider/pull/158)) | Merged; Claudio's drive test NOT RUN: draw a ramp whose top bends back to the left and drive into it; Shift+click two separated line ends and press J; open a template while drawing (the piece is discarded); box-select across a line. Desktop only |
-| LE5c editable paths ([PR #187](https://github.com/bongohorse/rider/pull/187)) | Merged; Claudio's drive test NOT RUN: draw a triangular hill, Make smooth at its peak and shape it with the tangents, Make corner; round a joint between two lines; convert a ramp (confirm) and smooth its joint; Undo/Redo, reload and drive. Desktop only |
-| LE5d several points and whole objects ([PR #196](https://github.com/bongohorse/rider/pull/196)) | Merged; Claudio's drive test NOT RUN: select a whole object and several points (box, Shift+click) and smooth them, Make corner, drag several points, convert a Bump/wave (a curve through its crests), Undo/Redo, reload and drive. Desktop only |
-| LE5b curves, Bump/wave, sampling ([PR #166](https://github.com/bongohorse/rider/pull/166)) | Merged; Claudio's drive test NOT RUN: build and drive a smooth hill (Bump/wave) and a valley (Curve [C]), change their values and tangents, Undo/Redo, reopen the saved course; try the new Step. Desktop only |
-| Car Feel 1 presets D/E ([#199](https://github.com/bongohorse/rider/issues/199)) | Claudio's drive test NOT RUN: drive A, D and E (P or `?preset=d` / `?preset=e`) on Straight, ramps, steps, gaps and bumps; pick one. Desktop only |
-| Car Feel 4 preset F ([#211](https://github.com/bongohorse/rider/issues/211)) | Claudio's drive test NOT RUN: compare D and F on `?station=air` (`?preset=d` / `?preset=f`) with neutral flights and full lean: does neutral flight feel natural or "assisted"? Desktop only |
-| Car Feel 3 struts ([PR #205](https://github.com/bongohorse/rider/pull/205)) | Merged; Claudio's drive test NOT RUN: are the struts readable? (`?struts=0` or the tuning panel turns them off) |
-| M5 final drive test | Ready (A22 deployed); NOT RUN |
-| Drive-test fixes [#236](https://github.com/bongohorse/rider/issues/236) (camera, curve budget, labels, seesaw note) | Claudio's drive test NOT RUN: drive a course that climbs, drops 10–20 m and jumps (the camera stays calm on waves, follows climbs, descents and falls); draw a longer six-anchor curve and play it; type a label and watch it change; open `?station=balance`, press V until SEESAW. Desktop only |
-| Camera look-ahead [#239](https://github.com/bongohorse/rider/issues/239) | Claudio's drive test NOT RUN: accelerate, brake, reverse and turn round on a flat course; the view looks ahead in the direction of motion. Desktop only |
-| M4 final drive test | Ready (all stations deployed 2026-10-20); NOT RUN: bumps, air, balance (seesaw), pause/slow motion (Space/X), record/replay (B, P, G) |
-| M4 stations on the real phone | NOT RUN |
-| Engine sound by ear (A10) | NOT RUN |
+Every open maintainer drive test is grouped into four sessions with steps and a result column in [drive-test sessions](docs/ACCEPTANCE.md) ([#404](https://github.com/bongohorse/rider/issues/404)). All items are NOT RUN until Claudio records a result there or on the item's issue.
+
+| Session | Items | State |
+| --- | --- | --- |
+| [1: desktop editor](docs/ACCEPTANCE.md#session-1-desktop-editor) | LE2 [PR #145](https://github.com/bongohorse/rider/pull/145), LE3 [PR #152](https://github.com/bongohorse/rider/pull/152), LE3 follow-up [#155](https://github.com/bongohorse/rider/pull/155)/[#156](https://github.com/bongohorse/rider/pull/156)/[#158](https://github.com/bongohorse/rider/pull/158), LE5b [PR #166](https://github.com/bongohorse/rider/pull/166), LE5c [PR #187](https://github.com/bongohorse/rider/pull/187), LE5d [PR #196](https://github.com/bongohorse/rider/pull/196), editor part of [#236](https://github.com/bongohorse/rider/issues/236) | NOT RUN |
+| [2: desktop driving and stations](docs/ACCEPTANCE.md#session-2-desktop-driving-and-stations) | M4 final drive test, A19 gaps [PR #117](https://github.com/bongohorse/rider/pull/117), driving part of [#236](https://github.com/bongohorse/rider/issues/236), camera look-ahead [#239](https://github.com/bongohorse/rider/issues/239), M5 final drive test (A22), engine sound A10 | NOT RUN |
+| [3: phone](docs/ACCEPTANCE.md#session-3-phone) | M4 stations on the real phone, LE1b phone procedure on `seg-800` ([PR #139](https://github.com/bongohorse/rider/pull/139), [#142](https://github.com/bongohorse/rider/pull/142)), optional phone trial | NOT RUN |
+| [4: vehicle feel](docs/ACCEPTANCE.md#session-4-vehicle-feel-deferred) | Car Feel 1 D/E [#199](https://github.com/bongohorse/rider/issues/199), Car Feel 4 F [#211](https://github.com/bongohorse/rider/issues/211), Car Feel 3 struts [PR #205](https://github.com/bongohorse/rider/pull/205) | Deferred with vehicle feel; NOT RUN |
 
 Received: A15a rider reaction "works, subtle, OK for now"; A18 "hull strip drives noticeably badly", consistent with the measurement.
 
