@@ -1,0 +1,49 @@
+-- Test-only Defold 1.14.0 bootstrap. One existing Lua test per engine process.
+-- These literal requires are intentional: Bob must include the exact modules.
+local real_sys = sys
+local encode = json.encode
+local real_print = print
+local expected = { best = 4, coin_bank = 3 }
+
+function init(self)
+    local case = real_sys.get_config_string("rider.persistence_case", "")
+    local source_sha = real_sys.get_config_string("rider.source_sha", "")
+    local run_id = real_sys.get_config_string("rider.run_id", "")
+    local engine = real_sys.get_engine_info()
+    local count = 0
+
+    -- The existing tests print one PASS per group and replace sys/json globals.
+    -- Keep the native serializer and engine metadata outside their substitutions.
+    print = function(...)
+        local first = select(1, ...)
+        if type(first) == "string" and first:match("^PASS ") then
+            count = count + 1
+        end
+        real_print(...)
+    end
+    local ok, err = pcall(function()
+        if case == "best" then
+            require "tests.gameplay.best"
+        elseif case == "coin_bank" then
+            require "tests.gameplay.coin_bank"
+        else
+            error("unknown or unbundled persistence case: " .. tostring(case))
+        end
+    end)
+    print = real_print
+
+    local valid = ok and expected[case] ~= nil and count == expected[case]
+        and #source_sha == 40 and #run_id > 0
+    local result = {
+        case = case, source_sha = source_sha, run_id = run_id,
+        engine_sha = engine.version_sha1, engine_version = engine.version,
+        pass_lines = count, status = valid and "PASS" or "FAIL"
+    }
+    if not valid then
+        result.error = ok and "missing/duplicate PASS lines or identity" or tostring(err)
+    end
+    -- Only this post-test marker is accepted as a complete suite result.
+    local encoded_ok, payload = pcall(encode, result)
+    if encoded_ok then real_print("RIDER_PERSISTENCE " .. payload) end
+    msg.post("@system:", "exit", { code = valid and encoded_ok and 0 or 1 })
+end
