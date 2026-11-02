@@ -14,6 +14,8 @@ function classify(windows){
  for(let i=0;i<windows.length;i++){
   const w=windows[i],m=w.measurement;
   assert(w.sequence===i+1,'Runtime request sequence changed');
+  assert(Number.isSafeInteger(w.generation)&&w.generation===windows[0].generation,'World generation changed across rates');
+  assert(w.reset_count===0,'Rate matrix crossed world Retry/reset');
   assert(w.event==='sys.set_update_frequency','No genuine Defold setter event');
   assert(w.source_sha&&w.run_id&&w.source_sha===windows[0].source_sha&&w.run_id===windows[0].run_id,'Mixed source/run');
   assert(m&&m.source_sha===w.source_sha&&m.run_id===w.run_id,'Measurement source mismatch');
@@ -69,6 +71,7 @@ if(require.main===module){
    const initial=await snap();
    assert.equal(initial.source_sha,sha);assert.equal(initial.run_id,runId);
    assert.equal(initial.reset_count,0,'New page inherited Retry');
+   let previousFixed=initial.fixed_ticks;
    async function holdUntil(key,predicate,arg){
     await page.keyboard.down(key);
     try{await page.waitForFunction(predicate,arg,{polling:50,timeout:15000});}
@@ -137,7 +140,13 @@ if(require.main===module){
     const event=await setRate(hz,key,i+1);
     const m=await measure(10);
     assert.equal((await request()).sequence,event.sequence,'Rate changed during observation');
-    windows.push({requested_hz:hz,sequence:event.sequence,event:event.event,
+    const after=await snap();
+    assert.equal(after.generation,initial.generation,'World generation changed during live matrix');
+    assert.equal(after.reset_count,0,'Rate change unexpectedly reset the world');
+    assert(after.fixed_ticks>previousFixed,'Fixed ticks did not progress between rates');
+    previousFixed=after.fixed_ticks;
+    windows.push({generation:after.generation,reset_count:after.reset_count,
+     requested_hz:hz,sequence:event.sequence,event:event.event,
      source_sha:event.source_sha,run_id:event.run_id,presented_fps:null,measurement:m});
     console.log('FPS356_RUNTIME_RATE '+JSON.stringify({requested_hz:hz,
      update_callback_hz:m.world_update_callback_hz,fixed_wall_hz:m.fixed_tick_wall_hz,

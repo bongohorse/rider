@@ -5,7 +5,7 @@ const {parseArgs,classify,ORDER}=require('../../tools/gym/fps356_runtime.cjs');
 const STEP=1/60;
 const args=['out','sha-123','run-abc','fps356runtime','debug-bundle'];
 const windows=()=>ORDER.map((rate,i)=>({
- requested_hz:rate,sequence:i+1,event:'sys.set_update_frequency',
+ requested_hz:rate,sequence:i+1,event:'sys.set_update_frequency',generation:1,reset_count:0,
  source_sha:'sha-123',run_id:'run-abc',presented_fps:null,
  measurement:{source_sha:'sha-123',run_id:'run-abc',physics_fixed_dt_valid:true,
   fixed_dt_s:STEP,fixed_tick_wall_hz:60,elapsed_s:10.4,
@@ -36,6 +36,8 @@ for(const [name,mutate,reason] of [
  ['wrong rate order',w=>{w[2].requested_hz=60;},/Wrong live rate order/],
  ['missing setter event',w=>{w[0].event='browser_raf';},/genuine Defold setter/],
  ['repeated request sequence',w=>{w[1].sequence=1;},/request sequence/],
+ ['world generation changed',w=>{w[2].generation=2;},/World generation/],
+ ['unexpected world Retry',w=>{w[2].reset_count=1;},/crossed world Retry/],
  ['mixed source',w=>{w[2].source_sha='other';},/Mixed source/],
  ['mixed run',w=>{w[2].run_id='other';},/Mixed source/],
  ['world source mismatch',w=>{w[0].measurement.source_sha='other';},/Measurement source/],
