@@ -69,7 +69,7 @@ Milestones are ordered **waves**, named `W1 …`, `W2 …`. Work the lowest open
 - After merge, an issue that needs a drive test stays open with `status: needs drive test` and the steps in its Drive test section (its PR uses `Refs #n`, not `Closes #n`); otherwise the PR closes it.
 - Blocked: label `status: blocked` plus one comment with the blocker and the issue that resolves it.
 - A drive-test result is Claudio's answer quoted with its date in a comment on that issue; OK or obsolete closes it, a FAIL becomes a new bug issue.
-- A coordinator appointed by Claudio (currently the studio Director, [#333](https://github.com/bongohorse/rider/issues/333)) maintains these labels and owners; its former `RIDER-STUDIO` body footer is replaced by them.
+- A coordinator appointed by Claudio (named in pinned [#333](https://github.com/bongohorse/rider/issues/333)) maintains these labels and owners; its former `RIDER-STUDIO` body footer is replaced by them.
 - `P0` interrupts the wave order: the next free writer takes it once a GO is recorded (Claudio, or the coordinator/integration session within its delegated authority).
 
 ## Titles

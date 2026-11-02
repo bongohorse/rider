@@ -1,6 +1,6 @@
 # Issue #356 archived planning text
 
-Full body of [#356 [RIDER-STUDIO][FPS P1] Implement measured Display FPS control with fixed 60-Hz physics and platform gating](https://github.com/bongohorse/rider/issues/356) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and STATUS.md; superseded parts of this text are history.
+Full body of [#356 [RIDER-STUDIO][FPS P1] Implement measured Display FPS control with fixed 60-Hz physics and platform gating](https://github.com/bongohorse/rider/issues/356) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and `status:` labels; superseded parts of this text are history.
 
 **Contents:** [Maintainer clarification — 2026-11-01: dynamic refresh and FPS indicator](#maintainer-clarification--2026-11-01-dynamic-refresh-and-fps-indicator) · [User requirement and dependency](#user-requirement-and-dependency) · [Bounded two-stage implementation, with a real technical stop between stages](#bounded-two-stage-implementation-with-a-real-technical-stop-between-stages) · [Acceptance / safeguards](#acceptance--safeguards) · [RIDER-STUDIO — Director Stage-A readiness (2026-11-01)](#rider-studio--director-stage-a-readiness-2026-11-01)
 

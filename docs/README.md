@@ -2,6 +2,8 @@
 
 Index of every active document. Live project state is on GitHub, not in these files: start from the [current-state links](#current-state), then read the current issue and only the documents its task needs. Finished task reports and their recorded evidence (JSON, logs, screenshots) live in [reports/](reports/); they are historical records, not current contracts. Every longer document starts with a **Contents** line: read it, then jump to the section (search for its `## ` heading) instead of reading the whole file.
 
+**Contents:** [Current state](#current-state) · [By task](#by-task) · [All documents](#all-documents)
+
 ## Current state
 
 Progress, GOs, owners, blockers and open drive tests change with every merge, so they live only on GitHub ([AGENTS.md](../AGENTS.md#project-state)); these links always show the current state.

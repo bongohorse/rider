@@ -37,14 +37,15 @@ Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/game
 
 ## Affected suites
 
-Every change runs the baseline: `python tools/bootstrap_check.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. CI `required` runs all of them on the PR head regardless.
+Every change runs the baseline: `python tools/bootstrap_check.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. `python tools/local.py check` runs the fast checks in one command ([local commands](LOCAL_T3_SETUP.md)). CI selects suites per diff (fail-closed) and `required` gates them on the PR merge commit.
 
 | Changed paths | Local commands |
 | --- | --- |
-| `tools/ci/`, `.github/workflows/`, `tests/ci/` | `python -m unittest discover -s tests/ci -v` · `node --test tests/ci/*.cjs` |
-| `tools/g1/`, build, engine guard, Bob/extender handling | `python -m unittest discover -s tests/g1 -v` |
+| `tools/ci/`, `tools/gym/`, `tools/preview/`, `tools/gameplay/`, `main/gym/`, `tests/ci/` | `python -m unittest discover -s tests/ci -v` · `node --test tests/ci/*.cjs` |
+| `.github/workflows/` | the `tests/ci` row plus `python tools/ci/lint_workflows.py` (hash-verified actionlint) |
+| `tools/g1/`, `tools/gameplay/lua_tests.py`, build, engine guard, Bob/extender handling | `python -m unittest discover -s tests/g1 -v` |
 | `tools/g2/`, CLI, Bridge install | `python -m unittest discover -s tests/g2 -v` |
-| Gameplay or editor Lua under `main/` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
+| Gameplay or editor Lua under `main/`, `tests/gameplay/*.lua` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
 | Storage, best time, level progress, coin bank, `tests/engine/persistence/` | `python -m unittest discover -s tests/engine/persistence -v` · `python tools/g2/persistence_385.py --output <fresh dir>` on a clean tree ([harness](ci/persistence-engine-harness.md)) |
 | Vehicle, physics, presets, stations, editor UI, `main/gym/` | the affected [Gym cases](#gym-tests); `a22` replays `tests/regress/` (regenerate only for an intended physics change) |
 | Touch, tilt, HTML5 presentation | `node --test tests/mobile/*.cjs` |

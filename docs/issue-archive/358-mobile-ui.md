@@ -1,6 +1,6 @@
 # Issue #358 archived planning text
 
-Full body of [#358 [RIDER-STUDIO][UI P1] Modern, consistent mobile-first UI and coherent icons](https://github.com/bongohorse/rider/issues/358) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and STATUS.md; superseded parts of this text are history.
+Full body of [#358 [RIDER-STUDIO][UI P1] Modern, consistent mobile-first UI and coherent icons](https://github.com/bongohorse/rider/issues/358) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and `status:` labels; superseded parts of this text are history.
 
 **Contents:** [Binding maintainer HUD specification — 2026-11-01 (supersedes earlier proposals)](#binding-maintainer-hud-specification--2026-11-01-supersedes-earlier-proposals) · [Binding product decision — 2026-11-01: MOBILE LANDSCAPE ONLY](#binding-product-decision--2026-11-01-mobile-landscape-only) · [Maintainer feedback — 2026-11-01](#maintainer-feedback--2026-11-01) · [Outcome](#outcome) · [Phase 0 — audit and visual proposal (before broad changes)](#phase-0--audit-and-visual-proposal-before-broad-changes) · [Bounded implementation after approval](#bounded-implementation-after-approval) · [Acceptance](#acceptance) · [Rider studio](#rider-studio)
 

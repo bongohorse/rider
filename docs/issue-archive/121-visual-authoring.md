@@ -1,6 +1,6 @@
 # Issue #121 archived planning text
 
-Full body of [#121 [Editor] Visual authoring: terrain look, decoration and atmosphere (epic)](https://github.com/bongohorse/rider/issues/121) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and STATUS.md; superseded parts of this text are history.
+Full body of [#121 [Editor] Visual authoring: terrain look, decoration and atmosphere (epic)](https://github.com/bongohorse/rider/issues/121) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and `status:` labels; superseded parts of this text are history.
 
 **Contents:** [Research basis and approved delivery plan](#research-basis-and-approved-delivery-plan) · [Direction](#direction) · [Natural perspective and live tuning (2026-10-26)](#natural-perspective-and-live-tuning-2026-10-26)
 
