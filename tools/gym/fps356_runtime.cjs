@@ -3,6 +3,9 @@
 'use strict';
 const assert=require('node:assert/strict');
 const ORDER=[30,60,0,30], STEP=1/60;
+// Loader only suspends an admitted campaign course on run_focus_lost.
+// first-run starts stationary, keeping the four 10s rate windows comparable.
+const TEST_STATION='first-run';
 function parseArgs(args){
  const usage='Usage: node tools/gym/fps356_runtime.cjs OUT SHA RUN_ID fps356runtime VERIFIED_DEBUG_BUNDLE';
  if(!Array.isArray(args)||args.length!==5||args.some(v=>typeof v!=='string'||!v)||args[3]!=='fps356runtime')throw Error(usage);
@@ -31,7 +34,7 @@ function classify(windows){
   cap30_callback_observed:cap30,cap60_callback_observed:cap60,
   presented_fps:null,browser_raf_callback_hz:null};
 }
-module.exports={parseArgs,classify,ORDER};
+module.exports={parseArgs,classify,ORDER,TEST_STATION};
 if(require.main===module){
  const {configure}=require('./launch.cjs');
  const {compare,comparePause}=require('./fps356_verify.cjs');
@@ -61,7 +64,7 @@ if(require.main===module){
    page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text())&&errors.length<20)errors.push(m.text());});
    // Default engine startup is unchanged at 60. No --config display override.
    await configure(page,runId,'fps356runtime');
-   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
+   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station='+encodeURIComponent(TEST_STATION));
    await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
     window.riderReady?.run_id===runId&&window.riderFps356World?.fixed_ticks>30&&
     window.riderFps356World?.vehicle_ready,{sha,runId},{timeout:30000});
