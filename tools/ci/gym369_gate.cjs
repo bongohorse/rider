@@ -288,6 +288,8 @@ function validateArtifacts(root,sha,run){
   const dir=path.join(root,'g1-gym-'+group+'-'+run);
   assert.ok(fs.statSync(dir).isDirectory(),'Not a directory: '+group);
   const expected=cases.split(' ').map(c=>CASE_REPORTS[c].join('/'));
+  // Camera #352 writes a second, independently asserted A16 report with the SAME case run_id.
+  if(group==='ramps')expected.push('ramps/camera352-result.json');
   assert.deepEqual(resultPaths(dir),sorted(expected),'Missing/duplicate/unexpected result: '+group);
   for(const c of cases.split(' ')){
    const [sub,file]=CASE_REPORTS[c],r=JSON.parse(fs.readFileSync(path.join(dir,sub,file),'utf8'));
@@ -299,6 +301,14 @@ function validateArtifacts(root,sha,run){
    if(c==='le5c')assert.equal(r.cases?.length,4,'Incomplete path coverage');
    if(c==='a22'){assert.equal(r.cases?.length,7,'Incomplete regression coverage');assert.equal(r.mode,'check','Recording not allowed');}
    count++;
+  }
+  if(group==='ramps'){
+   const camera=JSON.parse(fs.readFileSync(path.join(dir,'ramps','camera352-result.json'),'utf8'));
+   const ramps=JSON.parse(fs.readFileSync(path.join(dir,'ramps','ramps-result.json'),'utf8'));
+   assert.equal(camera.status,'PASS','Camera A/B supplementary report failed');
+   assert.equal(camera.source_sha,sha,'Camera A/B supplementary report source mismatch');
+   assert.equal(camera.run_id,ramps.run_id,'Camera A/B must share the A16 run identity');
+   assert.equal(camera.human_drive,'REQUIRED BEFORE CAMERA DEFAULT MERGE','Camera human gate must remain');
   }
  }
  assert.equal(count,42,'Original 38 case commands plus four split part reports required');

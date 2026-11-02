@@ -20,8 +20,20 @@ test('artifact gate fails closed on missing/duplicate/source/part',()=>{
     if(c==='a22'){r.cases=[1,2,3,4,5,6,7];r.mode='check';}
     fs.writeFileSync(path.join(dir,file),JSON.stringify(r));
    }
+   if(group==='ramps'){
+    const dir=path.join(root,'g1-gym-ramps-'+RUN,'ramps');
+    const ramps=JSON.parse(fs.readFileSync(path.join(dir,'ramps-result.json'),'utf8'));
+    fs.writeFileSync(path.join(dir,'camera352-result.json'),JSON.stringify({
+      status:'PASS',source_sha:SHA,run_id:ramps.run_id,
+      human_drive:'REQUIRED BEFORE CAMERA DEFAULT MERGE'
+    }));
+   }
   }
   assert.deepEqual(validateArtifacts(root,SHA,RUN),{status:'PASS',source_sha:SHA,run:RUN,groups:26,reports:42});
+  const camera=path.join(root,'g1-gym-ramps-'+RUN,'ramps','camera352-result.json');
+  const cameraOriginal=fs.readFileSync(camera,'utf8');
+  fs.rmSync(camera);assert.throws(()=>validateArtifacts(root,SHA,RUN),/Missing\/duplicate\/unexpected/);
+  fs.writeFileSync(camera,cameraOriginal);
   const dir=path.join(root,'g1-gym-path-regress-'+RUN),p=path.join(dir,'path','path-result.json'),original=fs.readFileSync(p,'utf8');
   fs.rmSync(p);assert.throws(()=>validateArtifacts(root,SHA,RUN),/Missing\/duplicate\/unexpected/);
   fs.writeFileSync(p,original);

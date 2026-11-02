@@ -12,7 +12,7 @@ Base: `4a4a315fe97d18abcf20bb61ae2fe463eb9b9c8e`. Status: DRAFT; no whole-workfl
 
 Experiment: group only the independent `path/le5c` and `regress/a22` cases, keeping their **unchanged** two smoke commands, report paths, assertions, physics and timeout policies. In the three runs, path case bodies were 32–47 s, regression 45–47 s; their separate runner setup was about 30–39 s each. This grouping eliminates one runner but may lengthen that group's critical path.
 
-The existing merge job now downloads all 26 Gym job artifacts and fails closed on exactly **42 reports** (38 original distinct smoke commands, four additional split parts), unique run IDs, exact source SHA, PASS, split identity and preserved path/regression counts. Existing four part merges, native Linux/Windows and HTML5 checks remain. The new negative tests exercise missing/extra reports, source/part mismatch and reused identities.
+The existing merge job now downloads all 26 Gym job artifacts and fails closed on exactly **42 primary case reports plus the A16 camera352 supplementary report** (38 original distinct smoke commands, four additional split parts), unique run IDs, exact source SHA, PASS, split identity and preserved path/regression counts. The A16 camera352 supplementary report shares the original ramps run identity and retains its human-drive gate. Existing four part merges, native Linux/Windows and HTML5 checks remain. The new negative tests exercise missing/extra reports, source/part mismatch and reused identities.
 
 Integration: FPS #368's validated `--rates=60` A20 hook is **not yet in main**. When integrating branches, preserve it via normal non-force merge/rebase; do not replace it or claim Android device evidence.
 
