@@ -12,7 +12,16 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
  assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing html5 verification/);
  assert.throws(()=>validateWorkflow(y.replace('    needs: gym\n','    needs: html5\n')),/Gym merge must depend/);
- assert.throws(()=>validateWorkflow(y.replace('run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge','run: echo no-le6-merge --output artifacts/g1/polish --merge')),/Missing split merge: le6/);
+ assert.throws(()=>validateWorkflow(y.replace('run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge','run: echo no-le6-merge --output artifacts/g1/polish --merge')),/Missing\/duplicate active split merge: le6/);
+ for(const c of ['a18','le1b','a19b','le6']){
+  const active=y.match(new RegExp('^        run: python tools/gym/smoke\\.py --case '+c+' --output [^\\n]+$','m'))?.[0];
+  assert.ok(active,'Original active merge command missing: '+c);
+  const commented=y.replace(active,'        run: echo no-'+c+'-merge\n        # '+active.trim());
+  assert.throws(()=>validateWorkflow(commented),new RegExp('Missing/duplicate active split merge: '+c));
+ }
+ const activeLe6=y.match(/^        run: python tools\/gym\/smoke\.py --case le6 --output [^\n]+$/m)?.[0];
+ assert.ok(activeLe6,'Original LE6 merge missing');
+ assert.throws(()=>validateWorkflow(y.replace(activeLe6,activeLe6+'\n      - name: Duplicate LE6 merge\n'+activeLe6)),/Missing\/duplicate active split merge: le6/);
  assert.throws(()=>validateWorkflow(y.replace('name: g1-gym-reports-${{ github.run_id }}-${{ github.run_attempt }}','name: no-merged-reports')),/Merged Gym report artifact missing/);
 });
 test('artifact gate fails closed on missing/duplicate/source/part',()=>{

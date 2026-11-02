@@ -283,9 +283,10 @@ function validateWorkflow(yaml){
  // Preserve the four independent split-result consumers and their merged artifact.
  const reports=yaml.split('\n  gym-reports:\n')[1].split(/\n  [a-z][\w-]*:\n/)[0];
  assert.ok(reports.includes('\n    needs: gym\n'),'Gym merge must depend on Gym');
+ const activeRunCommands=[...reports.matchAll(/^        run: ([^\r\n]+)$/gm)].map(m=>m[1]);
  for(const [c,dir,group] of [['a18','seams','seams'],['le1b','sizes','sizes'],['a19b','bumps','bumps'],['le6','polish','polish']]){
   const command='run: python tools/gym/smoke.py --case '+c+' --output artifacts/g1/'+dir+' --merge "artifacts/parts/g1-gym-'+group+'-1-$RUN/'+dir+'" "artifacts/parts/g1-gym-'+group+'-2-$RUN/'+dir+'"';
-  assert.ok(reports.includes(command),'Missing split merge: '+c);
+  assert.equal(activeRunCommands.filter(run=>run===command.slice('run: '.length)).length,1,'Missing/duplicate active split merge: '+c);
  }
  assert.ok(reports.includes('name: g1-gym-reports-${{ github.run_id }}-${{ github.run_attempt }}'),'Merged Gym report artifact missing');
  return {groups:rows.length,commands:commands.length};
