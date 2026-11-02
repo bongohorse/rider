@@ -23,6 +23,32 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native','echo no-linux-physics')),/Missing native verification/);
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
  assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing html5 verification/);
+ // Native, Windows, HTML5 and Node verification must be active exactly once.
+ const required={
+  native:['python -m unittest discover -s tests/g1 -v',
+   'python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native'],
+  'native-windows':['python -m unittest discover -s tests/g1 -v',
+   'python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native'],
+  html5:['python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5',
+   'node --test tests/ci/*.cjs']
+ };
+ for(const [job,commands] of Object.entries(required)){
+  const header='\n  '+job+':\n';
+  const section=y.split(header)[1].split(/\n  [a-z][\w-]*:\n/)[0];
+  for(const command of commands){
+   const active=section.split('\n').find(line=>line==='      - run: '+command||line==='        run: '+command);
+   assert.ok(active,'Required active command missing: '+job+' '+command);
+   const commented=section.replace(active,active.replace('run: ','run: echo disabled-')+'\n        # run: '+command);
+   assert.throws(()=>validateWorkflow(y.replace(header+section,header+commented)),
+    new RegExp('Missing/duplicate active '+job+' verification'),
+    'Comment-only required command accepted: '+job+' '+command);
+  }
+ }
+ const html5Header='\n  html5:\n';
+ const html5Section=y.split(html5Header)[1].split(/\n  [a-z][\w-]*:\n/)[0];
+ const duplicatedHtml5=html5Section+'\n      - name: Duplicate CI suite\n        run: node --test tests/ci/*.cjs';
+ assert.throws(()=>validateWorkflow(y.replace(html5Header+html5Section,html5Header+duplicatedHtml5)),
+  /Missing\/duplicate active html5 verification/);
  assert.throws(()=>validateWorkflow(y.replace('    needs: gym\n','    needs: html5\n')),/Gym merge must depend/);
  assert.throws(()=>validateWorkflow(y.replace('run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge','run: echo no-le6-merge --output artifacts/g1/polish --merge')),/Missing\/duplicate active split merge: le6/);
  for(const c of ['a18','le1b','a19b','le6']){
