@@ -78,3 +78,28 @@ for(const [name,mutate,reason] of [
     assert.throws(()=>comparePause(c.a,c.b,c.opts),reason);
   });
 }
+
+const {parseRates}=require('../../tools/gym/fps356.cjs');
+const fps356Args=['out','source-sha','run-123','fps356','debug-bundle'];
+test('FPS356 CLI default retains complete 0/30/60 startup matrix',()=>{
+ assert.deepEqual(parseRates(fps356Args),{rates:[0,30,60],mode:'startup-matrix'});
+});
+test('FPS356 CLI explicit trailing --rates=60 selects only 60 Hz',()=>{
+ assert.deepEqual(parseRates([...fps356Args,'--rates=60']),{rates:[60],mode:'single-60'});
+});
+for(const [label,args] of [
+ ['empty selection',[...fps356Args,'--rates=']],
+ ['unsupported 30',[...fps356Args,'--rates=30']],
+ ['unsupported 0',[...fps356Args,'--rates=0']],
+ ['unsupported full list',[...fps356Args,'--rates=0,30,60']],
+ ['unknown option',[...fps356Args,'--fast']],
+ ['wrong case',[...fps356Args,'--rates=60Hz']],
+ ['extra option',[...fps356Args,'--rates=60','--fast']],
+ ['duplicate option',[...fps356Args,'--rates=60','--rates=60']],
+ ['misplaced option',['--rates=60',...fps356Args]],
+ ['missing bundle',fps356Args.slice(0,4)],
+ ['wrong test case',['out','source-sha','run-123','other','debug-bundle']],
+ ['blank required value',['out','source-sha','','fps356','debug-bundle']]
+]){
+ test('FPS356 CLI rejects '+label,()=>assert.throws(()=>parseRates(args),/Usage:|Unsupported FPS356 rate selection/));
+}
