@@ -16,6 +16,10 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
    assert.throws(()=>validateWorkflow(commented),/Changed smoke command count/,'Comment-only smoke accepted: '+caseName);
   }
   const le4='        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/library --case le4';
+  for(const unsafe of ['        if: false','        continue-on-error: true'])
+   assert.throws(()=>validateWorkflow(y.replace(le4,le4+'\n'+unsafe)),
+    /Unsafe conditional verification step|Failure-tolerant verification step/,
+    'Unsafe Gym smoke step accepted: '+unsafe);
   assert.throws(()=>validateWorkflow(y.replace(le4,le4+'\n      - name: Duplicate LE4 smoke\n'+le4)),/Changed smoke command count/);
   const guard="        if: contains(format(' {0} ', matrix.cases), ' le4 ')";
   assert.throws(()=>validateWorkflow(y.replace(guard,'        # '+guard.trim())),/Missing active case guard: le4/);
@@ -42,6 +46,12 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
    assert.throws(()=>validateWorkflow(y.replace(header+section,header+commented)),
     new RegExp('Missing/duplicate active '+job+' verification'),
     'Comment-only required command accepted: '+job+' '+command);
+   for(const unsafe of ['        if: false','        if: ${{ false }}','        continue-on-error: true']){
+    const mutated=section.replace(active,active+'\n'+unsafe);
+    assert.throws(()=>validateWorkflow(y.replace(header+section,header+mutated)),
+     /Unsafe conditional verification step|Failure-tolerant verification step/,
+     'Unsafe required step accepted: '+job+' '+command+' '+unsafe);
+   }
   }
  }
  const html5Header='\n  html5:\n';
@@ -59,6 +69,16 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  }
  const activeLe6=y.match(/^        run: python tools\/gym\/smoke\.py --case le6 --output [^\n]+$/m)?.[0];
  assert.ok(activeLe6,'Original LE6 merge missing');
+  for(const unsafe of ['        if: false','        continue-on-error: true'])
+   assert.throws(()=>validateWorkflow(y.replace(activeLe6,activeLe6+'\n'+unsafe)),
+    /Unsafe conditional verification step|Failure-tolerant verification step/,
+    'Unsafe split merge accepted: '+unsafe);
+ const inventory='        run: node tools/ci/gym369_gate.cjs artifacts/gym369 "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"';
+ assert.ok(y.includes(inventory),'Original runtime inventory gate missing');
+ for(const unsafe of ['        if: false','        continue-on-error: true'])
+  assert.throws(()=>validateWorkflow(y.replace(inventory,inventory+'\n'+unsafe)),
+   /Unsafe conditional verification step|Failure-tolerant verification step/,
+   'Unsafe runtime inventory gate accepted: '+unsafe);
  assert.throws(()=>validateWorkflow(y.replace(activeLe6,activeLe6+'\n      - name: Duplicate LE6 merge\n'+activeLe6)),/Missing\/duplicate active split merge: le6/);
  assert.throws(()=>validateWorkflow(y.replace('name: g1-gym-reports-${{ github.run_id }}-${{ github.run_attempt }}','name: no-merged-reports')),/Merged Gym report artifact missing/);
 });
