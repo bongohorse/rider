@@ -19,10 +19,10 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
   assert.throws(()=>validateWorkflow(y.replace(le4,le4+'\n      - name: Duplicate LE4 smoke\n'+le4)),/Changed smoke command count/);
   const guard="        if: contains(format(' {0} ', matrix.cases), ' le4 ')";
   assert.throws(()=>validateWorkflow(y.replace(guard,'        # '+guard.trim())),/Missing active case guard: le4/);
- assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5','echo no-html5-physics')),/Missing html5 verification/);
- assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native','echo no-linux-physics')),/Missing native verification/);
- assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
- assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing html5 verification/);
+ assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5','echo no-html5-physics')),/Missing\/duplicate active html5 verification/);
+ assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native','echo no-linux-physics')),/Missing\/duplicate active native verification/);
+ assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing\/duplicate active native-windows verification/);
+ assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing\/duplicate active html5 verification/);
  // Native, Windows, HTML5 and Node verification must be active exactly once.
  const required={
   native:['python -m unittest discover -s tests/g1 -v',
