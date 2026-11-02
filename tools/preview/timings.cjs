@@ -36,18 +36,20 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
        new Set(tasks.map(t=>t?.name)).size!==tasks.length||
        tasks.some(t=>typeof t?.name!=='string'||!t.name||typeof t.run!=='function'))
       throw Error('Expected two uniquely named independent verification phases');
-    const work=tasks.map(task=>{
+    const work=tasks.map(async task=>{
       const record={name:task.name,details:task.details||{},status:'RUNNING',elapsed_ms:null};
       cases.push(record);
       const began=clock();
-      return Promise.resolve().then(task.run).then(
-        value=>{record.elapsed_ms=elapsed(began);record.status='PASS';return value;},
-        error=>{
-          record.elapsed_ms=elapsed(began);record.status='FAIL';
-          record.error=String(error?.message||error);
-          if(lastActiveCase===null)lastActiveCase=record.name;
-          throw error;
-        });
+      try{
+        const value=await task.run();
+        record.elapsed_ms=elapsed(began);record.status='PASS';
+        return value;
+      }catch(error){
+        record.elapsed_ms=elapsed(began);record.status='FAIL';
+        record.error=String(error?.message||error);
+        if(lastActiveCase===null)lastActiveCase=record.name;
+        throw error;
+      }
     });
     // Promise.all would reject early and allow cleanup to close a still-running page.
     const settled=await Promise.allSettled(work);
