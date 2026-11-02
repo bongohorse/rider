@@ -45,6 +45,7 @@ package.preload['main.gym.custom']=function()
                 end}
         end}
 end
+package.loaded['main.gym.custom']=package.preload['main.gym.custom']() -- Defold require ignores package.preload
 local bank=require 'main.gym.coin_bank'
 local function reset(failures,permanent)
     documents={};encoded_id=0;attempts=0;fail_first=failures or 0
