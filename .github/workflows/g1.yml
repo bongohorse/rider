@@ -330,6 +330,11 @@ jobs:
       - name: Measure FPS356 real Defold fixed-tick baseline
         if: contains(format(' {0} ', matrix.cases), ' a20 ')
         run: node tools/gym/fps356.cjs artifacts/g1/fps356 "$GITHUB_SHA" "fps356-${{ github.run_id }}-${{ github.run_attempt }}" fps356 artifacts/g1/gym-bundle --rates=60
+      # #372 one-shot: exercise real Defold runtime input only on this stacked FPS experiment PR.
+      # Does NOT run on main/other PRs. Remove after real evidence has been independently reviewed.
+      - name: Prove debug-only live FPS356 runtime switches (one-shot #372)
+        if: ${{ matrix.group == 'pause' && github.head_ref == 'agent/implementation/issue-372-fps-runtime-debug' }}
+        run: node tools/gym/fps356_runtime.cjs artifacts/g1/fps356runtime "$GITHUB_SHA" "fps356runtime-${{ github.run_id }}-${{ github.run_attempt }}" fps356runtime artifacts/g1/gym-bundle
       - name: Verify editor multi-point selection, bulk corner/smooth and prefab conversion
         if: contains(format(' {0} ', matrix.cases), ' le5d ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/points --case le5d

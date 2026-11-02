@@ -224,11 +224,16 @@ function init(self)
     self.mobile={}
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
-    -- #356: debug-only observer; no update-frequency setter or extra physics owner.
-    if self.testcase=="fps356" then
+    -- #356/#372: debug-only observer; the runtime experiment uses the same read-only fixed-step probe.
+    if self.testcase=="fps356" or self.testcase=="fps356runtime" then
         assert(sys.get_engine_info().is_debug and html5,"FPS cadence probe needs debug HTML5")
         self.fps356=require "main.gym.fps_probe356"
         self.fps356_state=self.fps356.new()
+    end
+    if self.testcase=="fps356runtime" then
+        self.fps356runtime=require "main.gym.fps_runtime356"
+        self.fps356runtime_state=self.fps356runtime.new(self)
+        self.replay_debug=true -- read-only A21 per-tick replay verdict in this debug case
     end
     -- #352: opt-in debug HTML5 A/B; release and all normal Gym runs retain camera A.
     if sys.get_engine_info().is_debug and html5 then
@@ -526,6 +531,8 @@ local function command(self)
     return {throttle = throttle and not brake and 1 or 0, brake_reverse = brake and 1 or 0, allow_reverse = not throttle, lean = lean}
 end
 function on_input(self, action_id, action)
+    -- Existing editor-only J/K/Home bindings are intercepted ONLY in the fps356runtime debug case.
+    if self.fps356runtime and self.fps356runtime.input(self,action_id,action) then return end
     if action.pressed then audio.start(self) end
     if action_id==hash("audio_mute") then if action.pressed then audio.mute(self) end;return end
     if self.ui_captured or self.look_captured or self.levels_captured or self.edit then return end
@@ -671,6 +678,7 @@ function fixed_update(self, dt)
     if self.time_probe then self.time_probe.fixed(self,dt) end
 end
 function final(self)
+    if self.fps356runtime then self.fps356runtime.restore(self) end
     editor_view.final(self)
     if self.terrain_compare then require("main.terrain_compare.renderer").final(self) end
     require("main.gym.terrain_mesh").final(self)
