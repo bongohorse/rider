@@ -19,7 +19,7 @@ from build import build  # noqa: E402 - reuse the pinned Bob/JDK and extender en
 
 LOCK = json.loads((ROOT / "tools" / "toolchain-lock.json").read_text())
 EXPECTED = {"best": 4, "coin_bank": 3}
-MARKER = re.compile(r"(?:^|\\s)RIDER_PERSISTENCE\\s+(\\{[^\\n]*\\})\\s*$", re.MULTILINE)
+MARKER = re.compile(r"(?:^|\s)RIDER_PERSISTENCE\s+(\{[^\n]*\})\s*$", re.MULTILINE)
 
 
 def git(*args):
@@ -105,7 +105,7 @@ def main():
     except (RuntimeError, OSError, subprocess.CalledProcessError,
             subprocess.TimeoutExpired) as exc:
         report["error"] = str(exc)
-    (output / "result.json").write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    (output / "result.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": report["status"], "output": str(output),
                       "source_sha": report.get("source_sha"), "cases": len(report["cases"]),
                       "error": report.get("error")}))
