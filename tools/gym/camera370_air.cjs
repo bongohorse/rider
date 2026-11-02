@@ -8,26 +8,26 @@ const authored=require('./air_station.cjs');
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const round=v=>v===null?null:Math.round(v*1e6)/1e6;
 
-function landingSegment(){
+function landingSegment(sectionId='big'){
  const data=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../',authored.FILE),'utf8'));
  assert.deepEqual(data,authored.build(),'Air camera evidence must use the real authored station');
- const section=data.sections.find(s=>s.id==='big'),spec=authored.SECTIONS.find(s=>s.id==='big');
- assert(section&&spec&&spec.slope===45&&spec.drop===3,'Expected existing big 45-degree landing');
+ const section=data.sections.find(s=>s.id===sectionId),spec=authored.SECTIONS.find(s=>s.id===sectionId);
+ assert(section&&spec&&spec.slope>0&&Number.isFinite(spec.drop),'Expected existing authored sloped landing');
  const vertices=data.chains.flat(),startY=section.lip_y-spec.drop;
  const start=vertices.find(p=>Math.abs(p[0]-section.lip_x)<1e-5&&Math.abs(p[1]-startY)<1e-5);
  assert(start,'Missing authored landing-slope start');
  const end=vertices.filter(p=>p[0]>start[0]+0.1&&p[1]<start[1]-0.1&&p[1]>authored.GROUND+0.1)
   .sort((a,b)=>a[0]-b[0])[0];
- assert(end&&end[0]-start[0]>7&&Math.abs((start[1]-end[1])/(end[0]-start[0])-1)<0.01,
-  'Expected existing 45-degree straight landing before the rounded transition');
- return {a:{x:start[0],y:start[1]},b:{x:end[0],y:end[1]},section:'big'};
+ assert(end&&end[0]-start[0]>5&&Math.abs((start[1]-end[1])/(end[0]-start[0])-Math.tan(spec.slope*Math.PI/180))<0.01,
+  'Expected existing straight landing before the rounded transition');
+ return {a:{x:start[0],y:start[1]},b:{x:end[0],y:end[1]},section:sectionId,slope_deg:spec.slope};
 }
 function phaseOf(s){
  if(s.air_from_lip===true)return 'airborne';
  if(Number.isFinite(s.air_landing_age_s)&&s.air_landing_age_s>=0&&s.air_landing_age_s<=0.5)return 'landing';
  return null;
 }
-function pairedPhases(a,b){
+function pairedPhases(a,b,sectionId='big'){
  assert(a&&b&&a.mode==='a'&&b.mode==='b'&&a.source_sha===b.source_sha&&a.source_sha,
   'Camera370 A/B mode/source mismatch');
  assert(a.viewport.width===b.viewport.width&&a.viewport.height===b.viewport.height,
@@ -35,7 +35,7 @@ function pairedPhases(a,b){
  const index=(trial)=>{
   const engineToVehicle=new Map();
   for(const s of trial.physics){
-   assert(s.source_sha===trial.source_sha&&s.station==='air'&&s.section==='big'&&s.mode===trial.mode,
+   assert(s.source_sha===trial.source_sha&&s.station==='air'&&s.section===sectionId&&s.mode===trial.mode,
     'Camera370 wrong fixed-owner identity');
    assert(Number.isSafeInteger(s.engine_tick)&&Number.isSafeInteger(s.tick)&&s.tick>0&&!engineToVehicle.has(s.engine_tick),
     'Camera370 invalid/duplicate fixed-owner engine tick');
@@ -43,7 +43,7 @@ function pairedPhases(a,b){
   }
   const map=new Map();
   for(const s of trial.samples){
-   assert(s.source_sha===trial.source_sha&&s.mode===trial.mode&&s.station==='air'&&s.section==='big',
+   assert(s.source_sha===trial.source_sha&&s.mode===trial.mode&&s.station==='air'&&s.section===sectionId,
     'Camera370 wrong render identity');
    const tick=engineToVehicle.get(s.tick),phase=phaseOf(s);
    if(tick===undefined||phase===null)continue;
@@ -73,10 +73,10 @@ function pairedPhases(a,b){
    mean_b_minus_a_screen_y_px:round(mean(pairs.map(p=>p.b_screen_y_px-p.a_screen_y_px))),
    a_mean_bottom_margin_px:round(mean(pairs.map(p=>p.a_bottom_px))),
    b_mean_bottom_margin_px:round(mean(pairs.map(p=>p.b_bottom_px))),
-   a_mean_visible_45deg_m:round(mean(pairs.map(p=>p.a_visible_slope_m))),
-   b_mean_visible_45deg_m:round(mean(pairs.map(p=>p.b_visible_slope_m))),
-   a_mean_visible_45deg_s:round(seconds('a_visible_slope_s')),
-   b_mean_visible_45deg_s:round(seconds('b_visible_slope_s')),
+   a_mean_visible_landing_m:round(mean(pairs.map(p=>p.a_visible_slope_m))),
+   b_mean_visible_landing_m:round(mean(pairs.map(p=>p.b_visible_slope_m))),
+   a_mean_visible_landing_s:round(seconds('a_visible_slope_s')),
+   b_mean_visible_landing_s:round(seconds('b_visible_slope_s')),
    a_max_one_tick_screen_y_change_px:round(oscillation('a_screen_y_px')),
    b_max_one_tick_screen_y_change_px:round(oscillation('b_screen_y_px')),
    a_first_projection:{m00:pairs[0].a_m00,m11:pairs[0].a_m11},
@@ -104,21 +104,30 @@ function negativeControls(){
 async function run({browser,url,sha,runId,out,testcase,preset,errors}){
  assert.equal(testcase,'a19c','Camera370 air evidence requires the real air trial');
  negativeControls();
- const segment=landingSegment(),cases={};
- for(const viewport of [{width:1280,height:720},{width:1080,height:486}]){
-  for(const mode of ['a','b']){
-   const label=viewport.width+'x'+viewport.height+'-'+mode;
+ const sizes=[{width:1280,height:720},{width:1080,height:486}];
+ // Existing air/big neutral jump crashes; air/mid with forward lean has a
+ // separately observed successful landing. Require LANDED anew in both modes.
+ async function capture(sectionId,lean,requiredStatus){
+  const segment=landingSegment(sectionId),cases={};
+  for(const viewport of sizes)for(const mode of ['a','b']){
+   const label=sectionId+'-'+viewport.width+'x'+viewport.height+'-'+mode;
    const context=await browser.newContext({viewport}),p=await context.newPage();
    try{
     await configure(p,runId,testcase);
     p.on('pageerror',e=>errors.push(e.message));
     p.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
-    await p.goto(url+'?station=air&section=big&lean=0&camera352='+mode+preset.query);
-    await p.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
+    await p.goto(url+'?station=air&section='+sectionId+'&lean='+lean+'&camera352='+mode+preset.query);
+    await p.waitForFunction(({sha,runId,sectionId})=>window.riderReady?.source_sha===sha&&
      window.riderReady?.run_id===runId&&window.riderStationReport?.station==='air'&&
-     window.riderStationReport.section==='big'&&window.riderCamera352Trace?.length>0,{sha,runId},{timeout:20000});
+     window.riderStationReport.section===sectionId&&window.riderCamera352Trace?.length>0,
+     {sha,runId,sectionId},{timeout:20000});
     await p.waitForFunction(()=>(window.riderStationReport?.jumps||[]).some(j=>j.from_lip&&j.complete),
      null,{timeout:25000,polling:50});
+    if(requiredStatus==='LANDED'){
+     // Observe the settled post-touchdown camera, not just the completion edge.
+     await p.waitForFunction(()=>window.riderCamera352Trace?.some(s=>s.air_landing_age_s>=0.35),
+      null,{timeout:10000,polling:50});
+    }
     const state=await p.evaluate(()=>({trace:window.riderCamera352Trace?.slice(),
      physics:window.riderCamera352PhysicsTrace?.slice(),report:window.riderStationReport,
      canvas:(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();
@@ -129,6 +138,8 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
     const jump=state.report.jumps.find(j=>j.from_lip&&j.complete);
     assert(jump&&jump.airtime_s>=.25&&['LANDED','CRASHED'].includes(jump.status),
      'Camera370 missing actual lip jump and landing');
+    if(requiredStatus)assert.equal(jump.status,requiredStatus,
+     'Camera370 stable landing fixture did not land; do not claim stable evidence');
     const samples=state.trace.map(s=>({...C.measure(s,state.canvas,segment),
      source_sha:s.source_sha,mode:s.mode,station:s.station,section:s.section,
      tick:s.tick,m00:s.m00,m11:s.m11,air_from_lip:s.air_from_lip,
@@ -149,26 +160,35 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
     throw e;
    }finally{await context.close();}
   }
+  const viewports={};
+  for(const viewport of sizes){
+   const name=viewport.width+'x'+viewport.height;
+   const a=cases[sectionId+'-'+name+'-a'],b=cases[sectionId+'-'+name+'-b'];
+   const physics=C.comparePhysics(a.physics,b.physics);
+   assert(physics.matched_ticks>=70,'Camera370 insufficient real fixed-step physics overlap');
+   assert.equal(physics.max_engine_units,0,'Camera370 A/B changed fixed physics');
+   viewports[name]={physics,phases:pairedPhases(a,b,sectionId),a_jump:a.jump,b_jump:b.jump};
+  }
+  return {section:sectionId,lean,segment,required_status:requiredStatus||'LANDED or CRASHED',
+   fixture:'existing authored air/'+sectionId+' '+segment.slope_deg+'-degree landing',viewports};
  }
- const result={status:'PASS',source_sha:sha,run_id:runId,fixture:'existing authored air/big 45-degree landing',
-  segment,physical_phone:'NOT RUN',reverse:'NOT RUN',production_default:'A unchanged',
+ const big=await capture('big',0,null);
+ const stable=await capture('mid',-1,'LANDED');
+ if(errors.length)throw Error(errors.join('\\n'));
+ const result={status:'PASS',source_sha:sha,run_id:runId,
+  fixture:big.fixture,segment:big.segment,
+  physical_phone:'NOT RUN',reverse:'measured separately in camera370-reverse-result.json',
+  production_default:'A unchanged',
   method:'Actual Defold camera projection, same canonical vehicle-ready fixed steps, first render per step; real lip flight and 0-0.5 s post-touchdown. Segment visibility is fixture-limited, not general obstacle visibility.',
-  viewports:{}};
- for(const viewport of [{width:1280,height:720},{width:1080,height:486}]){
-  const name=viewport.width+'x'+viewport.height,a=cases[name+'-a'],b=cases[name+'-b'];
-  const physics=C.comparePhysics(a.physics,b.physics);
-  assert(physics.matched_ticks>=70,'Camera370 insufficient real fixed-step physics overlap');
-  assert.equal(physics.max_engine_units,0,'Camera370 A/B changed fixed physics');
-  result.viewports[name]={physics,phases:pairedPhases(a,b),a_jump:a.jump,b_jump:b.jump};
- }
- if(errors.length)throw Error(errors.join('\n'));
+  viewports:big.viewports,stable_landing:stable};
  fs.writeFileSync(path.join(out,'camera370-air-result.json'),JSON.stringify(result,null,2));
+ const summary=scene=>Object.fromEntries(Object.entries(scene.viewports).map(([k,v])=>[k,{
+  physics_ticks:v.physics.matched_ticks,airborne:v.phases.airborne.paired_vehicle_ticks,
+  landing:v.phases.landing.paired_vehicle_ticks,a_status:v.a_jump.status,b_status:v.b_jump.status,
+  airborne_screen_y_delta_px:v.phases.airborne.mean_b_minus_a_screen_y_px,
+  landing_screen_y_delta_px:v.phases.landing.mean_b_minus_a_screen_y_px}]));
  console.log('CAMERA370_AIR '+JSON.stringify({status:result.status,source_sha:sha,run_id:runId,
-  viewports:Object.fromEntries(Object.entries(result.viewports).map(([k,v])=>[k,{
-   physics_ticks:v.physics.matched_ticks,airborne:v.phases.airborne.paired_vehicle_ticks,
-   landing:v.phases.landing.paired_vehicle_ticks,
-   airborne_screen_y_delta_px:v.phases.airborne.mean_b_minus_a_screen_y_px,
-   landing_screen_y_delta_px:v.phases.landing.mean_b_minus_a_screen_y_px}]))}));
+  big:summary(big),stable_landing:summary(stable)}));
  return result;
 }
 module.exports={run,landingSegment,pairedPhases,negativeControls};
