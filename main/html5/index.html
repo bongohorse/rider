@@ -26,6 +26,31 @@ body.rider-editing #page-tools{bottom:max(24px,env(safe-area-inset-bottom))}
 </div>
 <script id="engine-loader" src="dmloader.js"></script>
 <script id="engine-setup">
+// #399: dmloader's preSync treats an exhausted initial IndexedDB->memory restore like success.
+// The engine would then start on an empty FS and its first sync would delete every stored save.
+// Watch the restore result; on final failure keep this session off IndexedDB (no write-back)
+// and let custom.js report 'failed', so every save module stays blocked.
+(() => {
+  const preSync = Module.preSync;
+  let failed = false, watching = false;
+  Module.preSync = function (done) {
+    if (watching || Module.persistentStorage !== true || typeof FS === 'undefined') return preSync.call(this, done);
+    watching = true;
+    const syncfs = FS.syncfs;
+    FS.syncfs = function (populate, callback) {
+      return syncfs.call(this, populate, function (err) { if (populate === true) failed = !!err; callback(err); });
+    };
+    return preSync.call(this, function () {
+      FS.syncfs = syncfs;
+      if (failed) {
+        Module.persistentStorage = false;
+        window.riderStorageRestoreFailed = true;
+        console.warn('Rider: saved data could not be restored; this session will not write saves.');
+      }
+      if (done) done();
+    });
+  };
+})();
 (() => {
   const highDpi = new URLSearchParams(location.search).get('dpi') !== '0';
   const quality=document.getElementById('quality');
