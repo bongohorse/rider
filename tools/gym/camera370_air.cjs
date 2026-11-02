@@ -85,12 +85,57 @@ function pairedPhases(a,b,sectionId='big'){
  }
  return phases;
 }
+
+const DESCENT_RISE_LIMIT_U_PER_S=240;
+// #370: Assert the opt-in B-only slew bound on consecutive *real render frames*.
+// The camera runs in update(dt), not fixed_update; use the observed render dt,
+// not an assumed 1/60 s. Falling/decaying lead has no artificial slew cap.
+function verifyDescentRise(trace,{sourceSha,section,requireRise=false}={}){
+ assert(Array.isArray(trace)&&trace.length>=2,'Camera370 missing B descent render trace');
+ let rises=0,decays=0,maxRise=0,maxRatio=0,maxRelease=0,previous=null;
+ for(const s of trace){
+  assert(s.mode==='b'&&s.source_sha===sourceSha&&s.station==='air'&&s.section===section,
+   'Camera370 B descent source/section mismatch');
+  assert(Number.isSafeInteger(s.frame)&&s.frame>0&&Number.isFinite(s.dt)&&s.dt>0&&
+   Number.isFinite(s.descent)&&s.descent>=0,
+   'Camera370 B descent invalid render dt/frame/value');
+  if(previous){
+   assert(s.frame===previous.frame+1,'Camera370 B descent missing/duplicate render frame');
+   const change=s.descent-previous.descent,allowed=DESCENT_RISE_LIMIT_U_PER_S*s.dt;
+   assert(change<=allowed+1e-3,
+    'Camera370 B descent rise exceeded 240 u/s at frame '+s.frame+': '+change+' > '+allowed);
+   if(change>1e-6){rises++;maxRise=Math.max(maxRise,change);maxRatio=Math.max(maxRatio,change/allowed);}
+   if(change< -1e-6){decays++;maxRelease=Math.max(maxRelease,-change);}
+  }
+  previous=s;
+ }
+ if(requireRise)assert(rises>0,'Camera370 B descent rise never exercised on real landing');
+ return {status:'PASS',limit_u_per_s:DESCENT_RISE_LIMIT_U_PER_S,
+  rise_steps:rises,decay_steps:decays,max_rise_u:round(maxRise),
+  max_rise_fraction_of_limit:round(maxRatio),max_release_u:round(maxRelease)};
+}
 function negativeControls(){
  const trial=mode=>({mode,source_sha:'source',viewport:{width:1280,height:720},
   physics:Array.from({length:10},(_,i)=>({tick:i+1,engine_tick:i+20,source_sha:'source',station:'air',section:'big',mode})),
   samples:Array.from({length:10},(_,i)=>({tick:i+20,source_sha:'source',station:'air',section:'big',mode,
    air_from_lip:i<5,air_landing_age_s:i>=5?(i-5)/60:-1,screen_y_px:10,bottom_margin_px:20,
    visible_slope_m:3,visible_slope_s:.4,m00:.01,m11:.02}))});
+ const bFrame=(frame,descent,dt=1/60)=>({frame,descent,dt,source_sha:'source',
+  station:'air',section:'mid',mode:'b'});
+ const validRise=[bFrame(1,0),bFrame(2,4),bFrame(3,0)];
+ const bounded=verifyDescentRise(validRise,{sourceSha:'source',section:'mid',requireRise:true});
+ assert.equal(bounded.rise_steps,1);
+ assert.equal(bounded.decay_steps,1,'Fast release must remain uncapped');
+ assert.throws(()=>verifyDescentRise([bFrame(1,0),bFrame(2,4.1)],
+  {sourceSha:'source',section:'mid'}),/rise exceeded/);
+ assert.throws(()=>verifyDescentRise([bFrame(1,0),bFrame(3,4)],
+  {sourceSha:'source',section:'mid'}),/missing\/duplicate render frame/);
+ assert.throws(()=>verifyDescentRise([bFrame(1,0),bFrame(2,4,0)],
+  {sourceSha:'source',section:'mid'}),/invalid render dt/);
+ assert.throws(()=>verifyDescentRise([bFrame(1,0),{...bFrame(2,4),source_sha:'foreign'}],
+  {sourceSha:'source',section:'mid'}),/source\/section mismatch/);
+ assert.throws(()=>verifyDescentRise([bFrame(1,0),bFrame(2,0)],
+  {sourceSha:'source',section:'mid',requireRise:true}),/never exercised/);
  const a=trial('a'),b=trial('b');
  assert.equal(pairedPhases(a,b).airborne.paired_vehicle_ticks,5);
  assert.equal(pairedPhases(a,b).landing.paired_vehicle_ticks,5);
@@ -140,6 +185,8 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
      'Camera370 missing actual lip jump and landing');
     if(requiredStatus)assert.equal(jump.status,requiredStatus,
      'Camera370 stable landing fixture did not land; do not claim stable evidence');
+    const descentRise=mode==='b'?verifyDescentRise(state.trace,
+     {sourceSha:sha,section:sectionId,requireRise:requiredStatus==='LANDED'}):null;
     const samples=state.trace.map(s=>({...C.measure(s,state.canvas,segment),
      source_sha:s.source_sha,mode:s.mode,station:s.station,section:s.section,
      tick:s.tick,m00:s.m00,m11:s.m11,air_from_lip:s.air_from_lip,
@@ -147,6 +194,7 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
     assert(samples.some(s=>s.air_from_lip)&&samples.some(s=>s.air_landing_age_s>=0),
      'Camera370 no observed flight/landing boundaries');
     cases[label]={mode,source_sha:sha,run_id:runId,viewport,canvas:state.canvas,
+     descent_rise:descentRise,
      jump:{airtime_s:jump.airtime_s,status:jump.status,touchdown_x:jump.touchdown_x,
       ground_slope_deg:jump.ground_slope_deg},physics:state.physics,samples};
     fs.writeFileSync(path.join(out,'camera370-air-'+label+'.json'),JSON.stringify(cases[label],null,2));
@@ -167,7 +215,8 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
    const physics=C.comparePhysics(a.physics,b.physics);
    assert(physics.matched_ticks>=70,'Camera370 insufficient real fixed-step physics overlap');
    assert.equal(physics.max_engine_units,0,'Camera370 A/B changed fixed physics');
-   viewports[name]={physics,phases:pairedPhases(a,b,sectionId),a_jump:a.jump,b_jump:b.jump};
+   viewports[name]={physics,phases:pairedPhases(a,b,sectionId),a_jump:a.jump,b_jump:b.jump,
+    b_descent_rise:b.descent_rise};
   }
   return {section:sectionId,lean,segment,required_status:requiredStatus||'LANDED or CRASHED',
    fixture:'existing authored air/'+sectionId+' '+segment.slope_deg+'-degree landing',viewports};
@@ -186,9 +235,10 @@ async function run({browser,url,sha,runId,out,testcase,preset,errors}){
   physics_ticks:v.physics.matched_ticks,airborne:v.phases.airborne.paired_vehicle_ticks,
   landing:v.phases.landing.paired_vehicle_ticks,a_status:v.a_jump.status,b_status:v.b_jump.status,
   airborne_screen_y_delta_px:v.phases.airborne.mean_b_minus_a_screen_y_px,
-  landing_screen_y_delta_px:v.phases.landing.mean_b_minus_a_screen_y_px}]));
+  landing_screen_y_delta_px:v.phases.landing.mean_b_minus_a_screen_y_px,
+  b_descent_rise:v.b_descent_rise}]));
  console.log('CAMERA370_AIR '+JSON.stringify({status:result.status,source_sha:sha,run_id:runId,
   big:summary(big),stable_landing:summary(stable)}));
  return result;
 }
-module.exports={run,landingSegment,pairedPhases,negativeControls};
+module.exports={run,landingSegment,pairedPhases,verifyDescentRise,negativeControls};
