@@ -34,7 +34,38 @@ function classify(windows){
   cap30_callback_observed:cap30,cap60_callback_observed:cap60,
   presented_fps:null,browser_raf_callback_hz:null};
 }
-module.exports={parseArgs,classify,ORDER,TEST_STATION};
+// A21's MATCH verdict is necessary but not enough: bind it to this exact
+// source, campaign course, full per-tick trace and the declared pose tolerance.
+function verifyReplay(recorded,played,{sourceSha,station,tolerance}){
+ assert(recorded&&played&&tolerance,'Missing genuine A21 replay evidence');
+ assert.equal(recorded.source_sha,sourceSha,'Recorded trace source SHA changed');
+ assert.equal(recorded.station,station,'Recorded trace station changed');
+ assert(Number.isSafeInteger(recorded.ticks)&&recorded.ticks>90,'Too few recorded fixed ticks');
+ assert.equal(recorded.error,false,'Recording error');
+ assert.equal(recorded.ended,'stopped','Recording was not explicitly stopped');
+ assert.equal(recorded.scaled_ticks,0,'Recording contained scaled physics ticks');
+ assert.equal(recorded.tuning_changed,false,'Recording tuning changed');
+ assert.equal(recorded.trailing,true,'Recording lacks post-step trailing pose');
+ assert.equal(recorded.poses,recorded.ticks+1,'Recording pose count differs from fixed ticks');
+ assert.equal(played.ended,'done','Replay did not finish');
+ assert.equal(played.verdict,'MATCH','Replay trajectory verdict is not MATCH');
+ assert.equal(played.same,true,'Replay used a different physics/preset identity');
+ assert.equal(played.complete,true,'Replay did not apply the complete trace');
+ assert.equal(played.mismatches,0,'Replay commands differ from recorded commands');
+ assert.equal(played.scaled_ticks,0,'Replay contained scaled physics ticks');
+ assert.equal(played.tuning_changed,false,'Replay tuning changed');
+ assert.equal(played.ticks,recorded.ticks,'Replay trace length differs');
+ assert.equal(played.applied,recorded.ticks,'Replay lost fixed-step commands');
+ for(const [field,limit] of [['max_position_m','position_m'],['max_angle_rad','angle_rad']]){
+  assert(Number.isFinite(tolerance[limit])&&tolerance[limit]>=0,'Missing A21 trajectory tolerance');
+  assert(Number.isFinite(played[field])&&played[field]>=0&&played[field]<=tolerance[limit],
+   'Replay exceeded '+limit+' trajectory tolerance');
+ }
+ return {recorded_ticks:recorded.ticks,applied_ticks:played.applied,
+  verdict:played.verdict,mismatches:played.mismatches,scaled_ticks:played.scaled_ticks,
+  max_position_m:played.max_position_m,max_angle_rad:played.max_angle_rad};
+}
+module.exports={parseArgs,classify,verifyReplay,ORDER,TEST_STATION};
 if(require.main===module){
  const {configure}=require('./launch.cjs');
  const {compare,comparePause}=require('./fps356_verify.cjs');
@@ -173,19 +204,18 @@ if(require.main===module){
    await page.keyboard.up('ArrowUp');
    await page.waitForFunction(()=>window.riderReplay?.command?.throttle===0,null,{polling:50,timeout:10000});
    await holdUntil('b',()=>window.riderReplay?.recording?.active===false);
+   // A21 captures the post-step trailing pose on the next genuine fixed tick.
+   // Wait for that evidence, never synthesize a trace or add a timing sleep.
+   await page.waitForFunction(()=>window.riderReplay?.recording?.trailing===true,
+    null,{polling:50,timeout:10000});
    const recorded=await page.evaluate(()=>window.riderReplay?.recording);
-   assert(recorded&&recorded.ticks>90&&recorded.scaled_ticks===0&&recorded.error===false,'Invalid real input recording');
    await setRate(60,'k',5);
    const beforePlay=await page.evaluate(()=>window.riderReplay?.resets);
    await holdUntil('g',n=>window.riderReplay?.play?.active&&window.riderReplay?.resets===n+1,beforePlay);
    await page.waitForFunction(()=>window.riderReplay?.play?.ended==='done',null,{polling:50,timeout:30000});
    const played=await page.evaluate(()=>window.riderReplay?.play);
-   assert(played&&played.verdict==='MATCH'&&played.mismatches===0&&played.scaled_ticks===0,
-    'Physics replay identity changed across runtime update rate');
-   assert.equal(played.applied,recorded.ticks,'Replay lost fixed-step commands');
-   evidence.replay={recorded_ticks:recorded.ticks,applied_ticks:played.applied,
-    verdict:played.verdict,mismatches:played.mismatches,scaled_ticks:played.scaled_ticks,
-    max_position_m:played.max_position_m,max_angle_rad:played.max_angle_rad};
+   const tolerance=await page.evaluate(()=>window.riderReplay?.tolerance);
+   evidence.replay=verifyReplay(recorded,played,{sourceSha:sha,station:TEST_STATION,tolerance});
    assert.equal(errors.length,0,'Defold errors: '+errors.join('; '));
    const report={...classified,source_sha:sha,build_source_fingerprint:metadata.source_fingerprint,
     run_id:runId,platform:'real-debug-defold-html5-chromium',
