@@ -51,13 +51,26 @@ function hudPoint(page, name) {
 async function click(page, point, {until, arg, counter = null, n, timeout, label = 'click', state = null, waitTimeout} = {}) {
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
+  // Always release after a successful press, including failed acknowledgements.
+  // Preserve the acknowledgement failure if releasing also fails.
+  let waitError = null;
   try {
     await page.waitForFunction(until, arg, {polling: 50, ...(waitTimeout ? {timeout: waitTimeout} : {})});
   } catch (error) {
-    const extra = state ? await state().catch(() => '') : '';
-    throw Error(`${label}: expected state not reached (${firstLine(error)})${extra ? '; ' + extra : ''}`);
+    waitError = error;
   }
-  await page.mouse.up();
+  let releaseError = null;
+  try {
+    await page.mouse.up();
+  } catch (error) {
+    releaseError = error;
+  }
+  if (waitError) {
+    const extra = state ? await state().catch(() => '') : '';
+    const release = releaseError ? '; release failed (' + firstLine(releaseError) + ')' : '';
+    throw Error(`${label}: expected state not reached (${firstLine(waitError)})${extra ? '; ' + extra : ''}${release}`);
+  }
+  if (releaseError) throw Error(`${label}: pointer release failed (${firstLine(releaseError)})`);
   await frames(page, {counter, n, timeout, label: label + ' release'});
 }
 
