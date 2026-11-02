@@ -18,7 +18,9 @@ sys.path.insert(0, str(ROOT / "tools" / "g1"))
 from build import build  # noqa: E402 - reuse the pinned Bob/JDK and extender engine guard
 
 LOCK = json.loads((ROOT / "tools" / "toolchain-lock.json").read_text())
-EXPECTED = {"best": 4, "coin_bank": 3}
+# PASS lines per suite. Defold 1.14.0 require ignores package.preload: suites must
+# install module stubs through package.loaded or they silently test the real module.
+EXPECTED = {"best": 4, "coin_bank": 3, "level_progress": 1, "run_best_pending": 16, "coin_bank_recovery": 3, "coin_bank_late_restore": 6}
 MARKER = re.compile(r"(?:^|\s)RIDER_PERSISTENCE\s+(\{[^\n]*\})\s*$", re.MULTILINE)
 
 
@@ -86,7 +88,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     report = {"status": "FAIL", "cases": [], "engine_version": LOCK["engine"]["version"],
               "engine_sha": LOCK["engine"]["commit"], "platform": "x86_64-linux",
-              "storage": "production custom.slot_store with injected sys file APIs"}
+              "storage": "injected sys/json and slot-store stubs per suite; no native disk, IndexedDB or device storage"}
     try:
         sha = clean_head()
         report["source_sha"] = sha

@@ -3,7 +3,7 @@
 local real_sys = sys
 local encode = json.encode
 local real_print = print
-local expected = { best = 4, coin_bank = 3 }
+local expected = { best = 4, coin_bank = 3, level_progress = 1, run_best_pending = 16, coin_bank_recovery = 3, coin_bank_late_restore = 6 }
 
 function init(self)
     local case = real_sys.get_config_string("rider.persistence_case", "")
@@ -26,6 +26,14 @@ function init(self)
             require "tests.gameplay.best"
         elseif case == "coin_bank" then
             require "tests.gameplay.coin_bank"
+        elseif case == "level_progress" then
+            require "tests.gameplay.level_progress"
+        elseif case == "run_best_pending" then
+            require "tests.gameplay.run_best_pending"
+        elseif case == "coin_bank_recovery" then
+            require "tests.gameplay.coin_bank_recovery"
+        elseif case == "coin_bank_late_restore" then
+            require "tests.gameplay.coin_bank_late_restore"
         else
             error("unknown or unbundled persistence case: " .. tostring(case))
         end

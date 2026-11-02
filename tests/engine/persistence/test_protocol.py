@@ -4,6 +4,7 @@ These tests do NOT count as pinned Defold or storage-adapter fault injection.
 """
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -80,6 +81,22 @@ class PersistenceProtocolTests(unittest.TestCase):
         self.assertEqual(report["status"], "FAIL")
         self.assertEqual(report["cases"], [])
         self.assertIn("injected protocol failure", report["error"])
+
+    def test_runner_cases_match_expected_counts(self):
+        script = (ROOT / "tests/engine/persistence/runner.script").read_text(encoding="utf-8")
+        cases = re.findall(r'case == "([a-z_]+)" then\n\s+require "tests\.gameplay\.([a-z_]+)"', script)
+        self.assertEqual({c for c, _ in cases}, set(HARNESS.EXPECTED))
+        self.assertTrue(all(c == m for c, m in cases))
+        for case, count in HARNESS.EXPECTED.items():
+            self.assertIn(f"{case} = {count}", script)
+            self.assertTrue((ROOT / f"tests/gameplay/{case}.lua").is_file(), case)
+
+    def test_suites_do_not_rely_on_package_preload_alone(self):
+        for case in HARNESS.EXPECTED:
+            source = (ROOT / f"tests/gameplay/{case}.lua").read_text(encoding="utf-8")
+            for name in re.findall(r"package\.preload\['([^']+)'\]\s*=", source):
+                self.assertTrue(f"package.loaded['{name}']" in source,
+                                f"{case}: stubs {name} only via package.preload, which Defold ignores")
 
 
 if __name__ == "__main__":
