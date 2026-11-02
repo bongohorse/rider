@@ -31,7 +31,7 @@ python tools/g2/negative_build.py --output artifacts/g2/negative-build
 
 Baseline checks for any change: `python tools/bootstrap_check.py`, `python -m unittest discover -s tests/bootstrap -v`, plus affected `tests/g1`, `tests/g2`, `tests/ci` (Python and `node --test tests/ci/*.cjs`) and `node --test tests/mobile/*.cjs`.
 
-Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/gameplay/*.lua` with the pinned Bob LuaJIT (`-joff`, extracted from the verified `bob.jar` to `.cache/g1/luajit`) and fails on a missing suite, a non-zero exit, a timeout or a missing `PASS` line. The Linux `G1 native` job runs it, so `required` gates it. This is Bob's LuaJIT, not the Defold engine runtime ([#385](https://github.com/bongohorse/rider/issues/385)).
+Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/gameplay/*.lua` with the pinned Bob LuaJIT (`-joff`, extracted from the verified `bob.jar` to `.cache/g1/luajit`) and fails on a missing suite, a non-zero exit, a timeout or a missing `PASS` line. The Linux `G1 native` job runs it, so `required` gates it. This is Bob's LuaJIT, not the Defold engine runtime ([#385](https://github.com/bongohorse/rider/issues/385)). The persistence suites additionally run inside the pinned Defold engine in the same job ([harness](ci/persistence-engine-harness.md)).
 
 ## Gym tests
 
