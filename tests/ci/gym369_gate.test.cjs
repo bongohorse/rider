@@ -11,6 +11,9 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native','echo no-linux-physics')),/Missing native verification/);
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
  assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing html5 verification/);
+ assert.throws(()=>validateWorkflow(y.replace('    needs: gym\n','    needs: html5\n')),/Gym merge must depend/);
+ assert.throws(()=>validateWorkflow(y.replace('run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge','run: echo no-le6-merge --output artifacts/g1/polish --merge')),/Missing split merge: le6/);
+ assert.throws(()=>validateWorkflow(y.replace('name: g1-gym-reports-${{ github.run_id }}-${{ github.run_attempt }}','name: no-merged-reports')),/Merged Gym report artifact missing/);
 });
 test('artifact gate fails closed on missing/duplicate/source/part',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'rider-gym369-'));let n=0;
