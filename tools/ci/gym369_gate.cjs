@@ -245,6 +245,19 @@ const CASE_REPORTS=Object.freeze({
   ]
 });
 const sorted=x=>[...x].sort();
+// Verify the actual YAML step, not just a run line: a skipped or non-fatal test is no test.
+function assertSafeRunStep(section,command,label,expectedIf=null){
+ const steps=section.split(/\n(?=      - )/);
+ const matches=steps.filter(step=>step.split('\n').some(line=>
+  line==='      - run: '+command||line==='        run: '+command));
+ assert.equal(matches.length,1,'Missing/duplicate active '+label);
+ const fields=matches[0].split('\n').map(line=>line.trim()).filter(line=>!line.startsWith('#'));
+ const conditions=fields.filter(line=>line.startsWith('if: '));
+ assert.deepEqual(conditions,expectedIf?['if: '+expectedIf]:[],
+  'Unsafe conditional verification step: '+label);
+ assert.ok(!fields.some(line=>line.startsWith('continue-on-error:')),
+  'Failure-tolerant verification step: '+label);
+}
 function validateWorkflow(yaml){
  for(const name of ['native','native-windows','html5','gym','gym-reports'])
   assert.ok(yaml.includes('\n  '+name+':\n'),'Required G1 job missing: '+name);
@@ -259,11 +272,9 @@ function validateWorkflow(yaml){
  };
  for(const [job,commands] of Object.entries(required)){
   const section=yaml.split('\n  '+job+':\n')[1].split(/\n  [a-z][\w-]*:\n/)[0];
-  // Only active exact YAML run steps count: comments and duplicate commands fail closed.
-  const activeRuns=section.split('\n').filter(line=>line.startsWith('      - run: ')||line.startsWith('        run: '))
-   .map(line=>line.trim().replace(/^-? ?run: /,''));
+  // Exact active commands must also be unconditional and failure-fatal.
   for(const command of commands)
-   assert.equal(activeRuns.filter(run=>run===command).length,1,'Missing/duplicate active '+job+' verification: '+command);
+   assertSafeRunStep(section,command,job+' verification: '+command);
  }
  const gym=yaml.split('\n  gym:\n')[1].split('\n  gym-reports:\n')[0];
  const rows=[...gym.matchAll(/^          - group: ([\w-]+)\n            cases: '([^']+)'(?:\n            part: '([^']+)')?/gm)];
@@ -280,7 +291,9 @@ function validateWorkflow(yaml){
  for(const m of commands){
   assert.equal(m[1],CASE_REPORTS[m[2]][0],'Changed case output: '+m[2]);
   const step=gym.slice(0,m.index).split('\n      - name:').pop();
-  assert.ok(step.split('\n').includes("        if: contains(format(' {0} ', matrix.cases), ' "+m[2]+" ')"),'Missing active case guard: '+m[2]);
+  const guard="contains(format(' {0} ', matrix.cases), ' "+m[2]+" ')";
+  assert.ok(step.split('\n').includes('        if: '+guard),'Missing active case guard: '+m[2]);
+  assertSafeRunStep(gym,m[0].trim().slice('run: '.length),'Gym smoke '+m[2],guard);
  }
  assert.ok(yaml.includes('pattern: g1-gym-*-${{ github.run_id }}-${{ github.run_attempt }}'),'Artifact download missing');
  assert.ok(yaml.includes('node tools/ci/gym369_gate.cjs artifacts/gym369'),'Runtime gate missing');
@@ -291,7 +304,9 @@ function validateWorkflow(yaml){
  for(const [c,dir,group] of [['a18','seams','seams'],['le1b','sizes','sizes'],['a19b','bumps','bumps'],['le6','polish','polish']]){
   const command='run: python tools/gym/smoke.py --case '+c+' --output artifacts/g1/'+dir+' --merge "artifacts/parts/g1-gym-'+group+'-1-$RUN/'+dir+'" "artifacts/parts/g1-gym-'+group+'-2-$RUN/'+dir+'"';
   assert.equal(activeRunCommands.filter(run=>run===command.slice('run: '.length)).length,1,'Missing/duplicate active split merge: '+c);
+  assertSafeRunStep(reports,command.slice('run: '.length),'split merge: '+c);
  }
+ assertSafeRunStep(reports,'node tools/ci/gym369_gate.cjs artifacts/gym369 "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"','Gym inventory gate');
  assert.ok(reports.includes('name: g1-gym-reports-${{ github.run_id }}-${{ github.run_attempt }}'),'Merged Gym report artifact missing');
  return {groups:rows.length,commands:commands.length};
 }
