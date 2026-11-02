@@ -195,12 +195,22 @@ if(require.main===module){
      // A real blur is the loader's focus-loss signal. Chromium under Xvfb may
      // keep an inactive tab visibilityState='visible'; do not claim it was hidden.
      // The CDP focus emulation was disabled before game load, so blur is genuine.
+     // Reassert after real game navigation: a renderer swap may reset CDP
+     // emulation state. Never force focus=true or dispatch a synthetic blur.
+     await page.bringToFront();
+     await focusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false});
      const focusStart=await page.evaluate(()=>({
       count:(window.riderFps356Lifecycle||[]).length,focused:document.hasFocus()
      }));
      assert.equal(focusStart.focused,true,'Game was not foreground-focused before switch');
      other=await page.context().newPage();
-     await other.goto('about:blank');await other.bringToFront();
+     await other.goto('about:blank');
+     // Playwright installs focus emulation per target, not per BrowserContext.
+     // Disable it on BOTH pages before the real tab activation; otherwise
+     // Chromium can report two simultaneously focused documents under Xvfb.
+     const otherFocusCDP=await context.newCDPSession(other);
+     await otherFocusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false});
+     await other.bringToFront();
      try{
       await page.waitForFunction(start=>!document.hasFocus()&&
        (window.riderFps356Lifecycle||[]).slice(start).some(e=>e.type==='blur'&&e.focus===false),
