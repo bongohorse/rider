@@ -20,7 +20,7 @@ from build import build  # noqa: E402 - reuse the pinned Bob/JDK and extender en
 LOCK = json.loads((ROOT / "tools" / "toolchain-lock.json").read_text())
 # PASS lines per suite. Defold 1.14.0 require ignores package.preload: suites must
 # install module stubs through package.loaded or they silently test the real module.
-EXPECTED = {"best": 4, "coin_bank": 3, "level_progress": 1, "run_best_pending": 16, "coin_bank_recovery": 3, "coin_bank_late_restore": 6}
+EXPECTED = {"best": 4, "coin_bank": 3, "level_progress": 1, "run_best_pending": 16, "coin_bank_recovery": 3, "coin_bank_late_restore": 7}
 MARKER = re.compile(r"(?:^|\s)RIDER_PERSISTENCE\s+(\{[^\n]*\})\s*$", re.MULTILINE)
 
 
