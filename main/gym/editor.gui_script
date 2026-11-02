@@ -1065,12 +1065,9 @@ local function adjust_track(self,delta,height)
 end
 local function drop_track(self,height)
     local c=track_context(self)
-    if height==nil then
-        if c.active and not c.error then
-            if c.mixed then editor.message='Mixed heights: enter a Height before Drop to Track.';return end
-            height=c.height
-        else height=self.track_height or track_align.DEFAULT end
-    end
+    -- #427: Drop always applies the Height setting. A bound selection's displayed offset follows free moves,
+    -- so using it would turn a second Drop after moving a coin into a no-op.
+    if height==nil then height=self.track_height or track_align.DEFAULT end
     local plan,err=track_align.plan(editor.doc.editor,c.ids,height)
     if not plan then editor.message=err;return end
     if #plan.moves>0 and not editor.commit(function(e)return track_align.apply(e,plan)end,true) then return end
