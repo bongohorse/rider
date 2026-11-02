@@ -148,7 +148,12 @@ if(require.main===module){
     }else if(trigger==='background'){
      other=await page.context().newPage();
      await other.goto('about:blank');await other.bringToFront();
-     await page.waitForFunction(()=>document.visibilityState==='hidden',null,{polling:100,timeout:10000});
+     try{
+      await page.waitForFunction(()=>document.visibilityState==='hidden',null,{polling:100,timeout:10000});
+     }catch(err){
+      const visibility=await page.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus()}));
+      throw Error('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED: real Chromium tab switch did not hide the game page; '+JSON.stringify(visibility));
+     }
      await page.waitForFunction(seq=>window.riderTimeState?.paused===true&&
       (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===true&&s.sequence>seq),
       before.sequence,{polling:100,timeout:10000});
@@ -194,8 +199,7 @@ if(require.main===module){
    await holdUntil('r',n=>window.riderFps356World?.reset_count===n+1,beforeRetry);
    evidence.retry=await measure(10);
    assert.equal(evidence.retry.reset_count,beforeRetry+1,'Retry reset identity lost');
-   evidence.background=await pauseAndResume('background','background');
-   assert.equal((await request()).sequence,4,'Rate request changed during pause/focus/Retry');
+   assert.equal((await request()).sequence,4,'Rate request changed during keyboard pause/Retry');
    // Record at 30 Hz then replay identical fixed-tick commands after switching to 60.
    const beforeRecord=await page.evaluate(()=>window.riderReplay?.resets);
    assert(Number.isSafeInteger(beforeRecord),'Missing genuine A21 replay observer');
@@ -218,6 +222,11 @@ if(require.main===module){
    const played=await page.evaluate(()=>window.riderReplay?.play);
    const tolerance=await page.evaluate(()=>window.riderReplay?.tolerance);
    evidence.replay=verifyReplay(recorded,played,{sourceSha:sha,station:TEST_STATION,tolerance});
+   // Headless Chromium can keep every page 'visible' even after a real tab switch.
+   // Run Replay first so its genuine engine verdict is preserved if background visibility is unsupported.
+   // Never synthesize a JS blur/visibility event or report background PASS without loader pause ACK.
+   evidence.background=await pauseAndResume('background','background');
+   assert.equal((await request()).sequence,5,'Rate request changed during background/focus');
    assert.equal(errors.length,0,'Defold errors: '+errors.join('; '));
    const report={...classified,source_sha:sha,build_source_fingerprint:metadata.source_fingerprint,
     run_id:runId,platform:'real-debug-defold-html5-chromium',
