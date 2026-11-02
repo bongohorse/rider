@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {parseArgs,classify,verifyReplay,ORDER,TEST_STATION}=require('../../tools/gym/fps356_runtime.cjs');
+const {parseArgs,classify,verifyReplay,verifyFocusEvent,ORDER,TEST_STATION}=require('../../tools/gym/fps356_runtime.cjs');
 const fs=require('node:fs'),path=require('node:path');
 const STEP=1/60;
 const args=['out','sha-123','run-abc','fps356runtime','debug-bundle'];
@@ -109,16 +109,41 @@ for(const [name,mutate,reason] of [
  assert.throws(()=>verifyReplay(x.recorded,x.played,x.options),reason);
 });
 
-test('real focus-loss probe owns an explicit BrowserContext and does not synthesize pause',()=>{
+test('real Chromium focus lifecycle is valid even when inactive tab stays visible',()=>{
+ const events=[
+  {type:'focus',focus:true,visibility:'visible',monotonic_ms:1},
+  {type:'blur',focus:false,visibility:'visible',monotonic_ms:2},
+  {type:'focus',focus:true,visibility:'visible',monotonic_ms:3}
+ ];
+ assert.deepEqual(verifyFocusEvent(events,1,'blur',false),events[1]);
+ assert.deepEqual(verifyFocusEvent(events,2,'focus',true),events[2]);
+});
+for(const [name,events,start,type,focus] of [
+ ['missing blur',[],0,'blur',false],
+ ['prior blur not new',[{type:'blur',focus:false,visibility:'visible',monotonic_ms:1}],1,'blur',false],
+ ['still focused',[{type:'blur',focus:true,visibility:'visible',monotonic_ms:1}],0,'blur',false],
+ ['missing focus return',[{type:'blur',focus:false,visibility:'visible',monotonic_ms:1}],0,'focus',true],
+ ['invalid event clock',[{type:'blur',focus:false,visibility:'visible',monotonic_ms:NaN}],0,'blur',false],
+ ['invented visibility',[{type:'blur',focus:false,visibility:'synthetic',monotonic_ms:1}],0,'blur',false]
+])test('reject unsupported browser lifecycle '+name,()=>{
+ assert.throws(()=>verifyFocusEvent(events,start,type,focus),/BLOCKED_BACKGROUND_FOCUS_EVENT_UNOBSERVED/);
+});
+test('reject missing or invalid lifecycle source',()=>{
+ assert.throws(()=>verifyFocusEvent(null,0,'blur',false),/Missing genuine browser lifecycle/);
+ assert.throws(()=>verifyFocusEvent([], -1,'blur',false),/Missing genuine browser lifecycle/);
+});
+
+test('real focus-loss probe owns an explicit BrowserContext and disables Playwright focus emulation',()=>{
  const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
- // browser.newPage() creates an API-owned context whose context.newPage() throws.
  for(const required of [
   'context=await browser.newContext({viewport:',
   'page=await context.newPage()',
+  "focusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false})",
   'other=await page.context().newPage()',
   'await context.close().catch',
   'await other.bringToFront()',
-  "document.visibilityState==='hidden'",
+  "e.type==='blur'&&e.focus===false",
+  "e.type==='focus'&&e.focus===true",
   'window.riderTimeState?.paused===true',
   'comparePause(p,resume,'
  ])assert(runner.includes(required),'Missing real focus/context contract: '+required);
@@ -129,15 +154,15 @@ test('real focus-loss probe owns an explicit BrowserContext and does not synthes
  ])assert(!runner.includes(forbidden),'Unsafe API-owned context or fake pause: '+forbidden);
 });
 
-test('headless visibility failure is BLOCKED after independent real replay proof',()=>{
+test('focus-loss verification remains fail-closed after independent real replay proof',()=>{
  const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
  const replay=runner.indexOf('evidence.replay=verifyReplay(');
  const background=runner.indexOf("evidence.background=await pauseAndResume('background','background')");
- assert(replay>=0&&background>replay,'Replay must be independently verified before optional browser background gate');
- assert(runner.includes('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED:'),
-  'Headless unsupported visibility must have a truthful explicit blocker');
- assert(runner.includes("document.visibilityState==='hidden'"),
-  'Do not substitute synthetic blur for actual browser visibility');
+ assert(replay>=0&&background>replay,'Replay must be independently verified before browser focus gate');
+ assert(runner.includes('BLOCKED_BACKGROUND_FOCUS_UNOBSERVED:'),
+  'Unobserved real blur must remain a hard blocker');
+ assert(runner.includes('visibility_hidden_observed:'),
+  'Visibility must be recorded honestly, not inferred from focus loss');
  assert(runner.includes('comparePause(p,resume,'),
   'Background pause must retain the exact zero-fixed-tick gate');
  for(const forbidden of [
@@ -147,7 +172,7 @@ test('headless visibility failure is BLOCKED after independent real replay proof
  ])assert(!runner.includes(forbidden),'Fake background/pause signal: '+forbidden);
 });
 
-test('background verification uses headed Chromium with a real X11 display, never fake visibility',()=>{
+test('headed Chromium focus lifecycle uses real X11 and never fabricates visibility',()=>{
  const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
  for(const required of [
   "chromium.launch({headless:false})",
@@ -158,9 +183,10 @@ test('background verification uses headed Chromium with a real X11 display, neve
   "document.addEventListener('visibilitychange'",
   "window.addEventListener('blur'",
   "window.addEventListener('focus'",
-  "document.visibilityState==='hidden'",
-  "document.visibilityState==='visible'",
-  "BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED:",
+  "focusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false})",
+  "document.hasFocus()",
+  "visibility_hidden_observed:",
+  "BLOCKED_BACKGROUND_FOCUS_UNOBSERVED:",
   "lifecycle:(window.riderFps356Lifecycle||[]).slice(-24)",
   "comparePause(p,resume,"
  ])assert(runner.includes(required),'Missing headed lifecycle or fixed-tick gate: '+required);
