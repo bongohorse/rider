@@ -7,7 +7,8 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Task | Read |
 | --- | --- |
 | What is next, what is open | [STATUS.md](../STATUS.md) |
-| Decisions, roadmap, stop points | [PLAN.md](PLAN.md) |
+| Decisions, work order, roadmap, stop points | [PLAN.md](PLAN.md) |
+| Writing, labelling, ordering or closing issues | [issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/); archived long issue texts in [issue-archive/](issue-archive/) |
 | Gameplay intent, open design choices | [GAME_DESIGN.md](GAME_DESIGN.md), [vehicle contract](contracts/vehicle.md) |
 | Buggy handling baseline and A/B experiment plan (#339) | [Feel evidence and protocols](feel/buggy-baseline.md) |
 | Physics, units, tick owner, reset | [physics contract](contracts/physics.md), [engine pitfalls](contracts/engine-pitfalls.md); measured API table in [G1 baseline](contracts/g1-baseline.md) |
@@ -41,7 +42,9 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | --- | --- | --- |
 | [AGENTS.md](../AGENTS.md) | Rules for every AI agent | Start · Workflow · Technical boundaries · Verification |
 | [STATUS.md](../STATUS.md) | Current progress and blockers | Now · Open acceptance · Milestones · Measured limits · Open limits and blockers |
-| [PLAN.md](PLAN.md) | Goal, decisions D1–D13, roadmap | Goal · Decisions · Roadmap · Stop points · Later phases |
+| [PLAN.md](PLAN.md) | Goal, decisions D1–D13, work order, roadmap | Goal · Decisions · Work order · Roadmap · Stop points · Later phases |
+| [ISSUES.md](ISSUES.md) | Issue kinds, sub-issues, required sections, length, labels, waves, GO/owner/status | Kinds and hierarchy · Required sections · Length · Labels · Milestones and order · GO, owner and status · Titles · Updating and closing · Checklist |
+| [issue-archive/](issue-archive/) | Full former bodies of long epics/issues (#120, #121, #198, #230, #262, #263, #333, #356, #358, #392), moved 2026-11-02 | Background only, not a GO |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Design brief | Core loop and duration · Controls and feel trials · Crash, recovery and checkpoints · Identity and fun acceptance |
 | [feel/buggy-baseline.md](feel/buggy-baseline.md) | Historical vs missing feel evidence, preset A–F, two reproducible protocols (#339) | System and preset inventory · Evidence and gaps · Two reproducible protocols · Candidate hypotheses and stop points · Verification and limitations |
 | [TOOLING.md](TOOLING.md) | Commands and operations | Prerequisites · Commands · Gym tests · Local environment · Worktrees · CI and required check · Agent CI completion watch · Dependencies and Renovate · Preview deployment · Gemini read-only reviewer setup |

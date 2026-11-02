@@ -6,7 +6,8 @@ These rules apply to every AI agent working in this repository.
 
 - `bongohorse/rider` is the only source; do not reuse code or assets from the old project.
 - Check branch, HEAD and working tree before editing; preserve existing changes.
-- Read [STATUS.md](STATUS.md), the current issue and the contracts it touches. The [documentation index](docs/README.md) routes further reading; [PLAN.md](docs/PLAN.md) defines scope, order and stop points.
+- Read [STATUS.md](STATUS.md), the current issue and the contracts it touches. The [documentation index](docs/README.md) routes further reading; [PLAN.md](docs/PLAN.md) defines scope, the [work order](docs/PLAN.md#work-order) and stop points.
+- Create, update and close issues per the [issue guide](docs/ISSUES.md): templates, sub-issues of the owning epic, type/area/priority/status labels and a wave milestone.
 - Longer docs start with a **Contents** line: read it and jump to the needed section instead of reading the whole file. Keep that line in sync when you add, rename or remove a `## ` section.
 
 ## Workflow
