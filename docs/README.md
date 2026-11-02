@@ -42,7 +42,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | --- | --- | --- |
 | [AGENTS.md](../AGENTS.md) | Rules for every AI agent | Start · Workflow · Technical boundaries · Verification |
 | [STATUS.md](../STATUS.md) | Current progress and blockers | Now · Open acceptance · Milestones · Measured limits · Open limits and blockers |
-| [ACCEPTANCE.md](ACCEPTANCE.md) | Open maintainer drive tests in four sessions (#404) | How to run a session · Session 1: desktop editor · Session 2: desktop driving and stations · Session 3: phone · Session 4: vehicle feel (deferred) · Recording results |
+| [ACCEPTANCE.md](ACCEPTANCE.md) | Open maintainer drive tests in four sessions (#404) | How to run a session · Results 2026-11-02 · Session 1: desktop editor · Session 2: desktop driving and stations · Session 3: phone · Session 4: vehicle feel (deferred) · Recording results |
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, roadmap | Goal · Decisions · Roadmap · Stop points · Later phases |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Design brief | Core loop and duration · Controls and feel trials · Crash, recovery and checkpoints · Identity and fun acceptance |
 | [feel/buggy-baseline.md](feel/buggy-baseline.md) | Historical vs missing feel evidence, preset A–F, two reproducible protocols (#339) | System and preset inventory · Evidence and gaps · Two reproducible protocols · Candidate hypotheses and stop points · Verification and limitations |
