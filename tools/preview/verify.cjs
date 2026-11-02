@@ -186,13 +186,26 @@ async function main(){
       if(plan.includes(name))results.push(await timings.run('preview/'+name,()=>require('./'+name+'.cjs')(browser,url,sha,out)));
     }
     if(plan.includes('desktop-gameplay')&&mode!=='deployment'){
-      // Each module creates its own normal Playwright page/context. None shares
-      // the desktop layout page, so the two CI groups can run independently.
+      // Every gameplay module opens its own BrowserContext and its own storage;
+      // no scoring, physics, input or individual module is changed by this experiment.
       const subdirs={check_levels:'levels',check_level_storage:'level-storage',check_objects:'objects'};
-      for(const check of DESKTOP_GAMEPLAY_CHECKS){
+      const runCheck=check=>{
         const destination=subdirs[check]?path.join(out,subdirs[check]):out;
+        return require('../gameplay/'+check+'.cjs')(browser,url,sha,destination);
+      };
+      const twoContexts=mode==='desktop-gameplay'&&process.env.RIDER_VERIFY_PARALLEL_GAMEPLAY==='1';
+      if(twoContexts){
+        // Two contexts on ONE existing runner, not a second GitHub job.
+        // parallel() waits for both even if either fails; browser cleanup follows both.
+        await timings.run('gameplay/two-contexts',()=>timings.parallel([
+          {name:'gameplay/check_run',run:()=>runCheck('check_run')},
+          {name:'gameplay/check_levels/desktop',run:()=>runCheck('check_levels')}
+        ]),{experiment:'issue-378',max_contexts:2});
+      }
+      for(const check of DESKTOP_GAMEPLAY_CHECKS){
+        if(twoContexts&&(check==='check_run'||check==='check_levels'))continue;
         const phase=check==='check_levels'?'check_levels/desktop':check;
-        await timings.run('gameplay/'+phase,()=>require('../gameplay/'+check+'.cjs')(browser,url,sha,destination));
+        await timings.run('gameplay/'+phase,()=>runCheck(check));
       }
       results.push({name:'desktop-gameplay',status:'PASS',checks:[...DESKTOP_GAMEPLAY_CHECKS]});
     }
