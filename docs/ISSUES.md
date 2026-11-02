@@ -9,10 +9,10 @@ How Rider issues are structured, labelled, ordered and kept short. Applies to hu
 | Kind | Purpose | Delivered by | Template |
 | --- | --- | --- | --- |
 | Epic | Outcome that needs several PRs | Its sub-issues; never a PR of its own | [epic](../.github/ISSUE_TEMPLATE/epic.md) |
-| Task | One reviewable change | Exactly one PR (`Closes #n`) | [task](../.github/ISSUE_TEMPLATE/task.md) |
+| Task | One reviewable change | Exactly one PR (`Closes #n`; `Refs #n` if a drive test follows) | [task](../.github/ISSUE_TEMPLATE/task.md) |
 | Bug | Observed or source-proven defect | One PR with a failing-before test | [bug](../.github/ISSUE_TEMPLATE/bug.md) |
 | Experiment | Measure or compare before deciding; keep/drop result | One PR or report; ends with a decision | [experiment](../.github/ISSUE_TEMPLATE/experiment.md) |
-| Decision | Question only the maintainer can answer | A recorded answer, then close | — (label `decision`) |
+| Decision | Question only the maintainer can answer | A recorded answer, then close | [decision](../.github/ISSUE_TEMPLATE/decision.md) |
 
 - Use GitHub **sub-issues**: every task, bug or experiment that belongs to an outcome is a sub-issue of its epic. Two levels at most (epic → task); a task that needs its own children is an epic.
 - Do not keep checkbox task lists of issue numbers in epic bodies; the sub-issue panel shows progress. Order sub-issues in the panel in the intended work order.
@@ -64,12 +64,12 @@ Milestones are ordered **waves**, named `W1 …`, `W2 …`. Work the lowest open
 
 ## GO, owner and status
 
-- A GO is recorded as a comment on the issue (`GO: Claudio YYYY-MM-DD — <quote or link>`), mirrored in STATUS.md as AGENTS.md requires, and the label becomes `status: ready`.
+- A GO is recorded on the issue — a `**GO:** Claudio YYYY-MM-DD — <quote or link>` line at the top of the body or a comment — **and** listed in STATUS.md (Recorded GOs) as AGENTS.md requires; then the label becomes `status: ready`. A label without both records is not a GO.
 - When work starts the owner comments `Owner: <agent> · branch <name> · PR #n`, and the label becomes `status: in progress`. One writing owner per issue.
-- After merge, an issue that needs a drive test stays open with `status: needs drive test` and the steps in its Drive test section; otherwise the PR closes it.
+- After merge, an issue that needs a drive test stays open with `status: needs drive test` and the steps in its Drive test section (its PR uses `Refs #n`, not `Closes #n`); otherwise the PR closes it.
 - Blocked: label `status: blocked` plus one comment with the blocker and the issue that resolves it.
 - A coordinator appointed by Claudio (currently the studio Director, [#333](https://github.com/bongohorse/rider/issues/333)) maintains these labels and owners; its former `RIDER-STUDIO` body footer is replaced by them.
-- `P0` interrupts the wave order: the next free writer takes it.
+- `P0` interrupts the wave order: the next free writer takes it once a GO is recorded (Claudio, or the coordinator/integration session within its delegated authority).
 
 ## Titles
 

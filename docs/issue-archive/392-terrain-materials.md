@@ -1,6 +1,6 @@
 # Issue #392 archived planning text
 
-Full body of [#392 [Terrain Materials] Kenney Platformer Pack 1.1 — section/region textures, renderer + editor preparation](https://github.com/bongohorse/rider/issues/392) as of 2026-11-02, moved here unchanged so the issue can stay a short current spec ([issue guide](../ISSUES.md#length)). The issue and its sub-issues decide scope, order and GO; this text is background, not an implementation GO.
+Full body of [#392 [Terrain Materials] Kenney Platformer Pack 1.1 — section/region textures, renderer + editor preparation](https://github.com/bongohorse/rider/issues/392) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and STATUS.md; superseded parts of this text are history.
 
 **Contents:** [Binding asset selection and implementation-readiness audit (2026-11-02)](#binding-asset-selection-and-implementation-readiness-audit-2026-11-02) · [Goal and scope](#goal-and-scope) · [User-facing material regions (two orthogonal scopes)](#user-facing-material-regions-two-orthogonal-scopes) · [Recommended design / alternatives](#recommended-design--alternatives) · [Editor UX proposal](#editor-ux-proposal) · [Proposed slices (each with explicit GO/owner/test stop)](#proposed-slices-each-with-explicit-goownertest-stop) · [Mandatory QA checks](#mandatory-qa-checks) · [Official implementation sources](#official-implementation-sources)
 
