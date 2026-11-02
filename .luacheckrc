@@ -5,10 +5,11 @@ std = "luajit"
 
 -- Rider keeps compact one-line statements; line length is not a correctness signal.
 max_line_length = false
--- Defold lifecycle callbacks and shared interfaces keep their full argument lists.
+-- Defold lifecycle callbacks and shared interfaces keep their full argument lists. This also
+-- disables unused loop variables (W213).
 unused_args = false
--- Shadowing/redefinition (41x-43x) is pervasive in long GUI scripts and renaming it is churn
--- without a behaviour change. Undefined globals, unused values and dead code stay errors.
+-- Shadowing/redefinition (41x-43x, 32 sites today, mostly in long GUI scripts) is not renamed
+-- here: churn without a behaviour change. Undefined globals, unused values and dead code stay errors.
 ignore = { "41.", "42.", "43." }
 
 local defold = {
@@ -21,7 +22,10 @@ local defold = {
 local callbacks = { "init", "final", "update", "fixed_update", "late_update", "on_message", "on_input", "on_reload" }
 
 read_globals = defold
-globals = callbacks
+-- Only Defold script components may define the lifecycle callbacks as globals.
+for _, pattern in ipairs({ "**/*.script", "**/*.gui_script", "**/*.render_script" }) do
+    files[pattern] = { globals = callbacks }
+end
 
 -- Native debug Bridge extension module; only the debug Bridge fixture GUI reads it.
 files["main/bridge/**"] = { read_globals = { "automation_bridge" } }

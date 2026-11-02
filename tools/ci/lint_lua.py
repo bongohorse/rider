@@ -56,7 +56,10 @@ def ensure_binary(key=None):
 
 
 def tracked_lua_files():
-    listed = subprocess.run(['git', 'ls-files', '-z'], cwd=ROOT, check=True, capture_output=True).stdout
+    try:
+        listed = subprocess.run(['git', 'ls-files', '-z'], cwd=ROOT, check=True, capture_output=True).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(f'BLOCKED: git ls-files failed: {exc}') from exc
     files = [name for name in listed.decode().split('\0') if name.endswith(LUA_SUFFIXES)]
     if not files:
         raise RuntimeError('BLOCKED: no tracked Lua sources found')
@@ -75,7 +78,11 @@ def main(argv=None):
         return 2 if isinstance(exc, OSError) or str(exc).startswith('BLOCKED') else 1
     command = [str(binary), '--config', str(ROOT / '.luacheckrc'), '--codes', '--no-color',
                '--formatter', 'plain', '--no-cache', *files]
-    result = subprocess.run(command, cwd=ROOT)
+    try:
+        result = subprocess.run(command, cwd=ROOT)
+    except OSError as exc:
+        print(f'lint_lua: BLOCKED: cannot run {binary.name}: {exc}', file=sys.stderr)
+        return 2
     # luacheck: 0 clean, 1 warnings, 2 syntax errors, 3+ crashes. Any finding fails.
     if result.returncode == 0:
         print(f'lint_lua: PASS ({len(files)} files, luacheck {LOCK["version"]})')

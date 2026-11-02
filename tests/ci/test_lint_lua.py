@@ -69,6 +69,9 @@ class WorkflowTest(unittest.TestCase):
         ignored = re.search(r'^ignore\s*=\s*\{([^}]*)\}', config, re.M)[1]
         for code in ('1', '2', '3', '5'):
             self.assertNotRegex(ignored, rf'"{code}')
+        for option in ('unused', 'global', 'unused_values', 'redefined'):
+            self.assertNotRegex(config, rf'(?m)^\s*{option}\s*=\s*false')
+        self.assertNotRegex(config, r'allow_defined(_top)?\s*=\s*true')
 
 
 @unittest.skipUnless(lint_lua.binary_path(lint_lua.host_key()).is_file()
@@ -94,6 +97,11 @@ class RealLuacheckTest(unittest.TestCase):
         result = self.lint('function init(self) msg.post(".", "acquire_input_focus") end\n'
                            'function update(self, dt) go.set_position(vmath.vector3()) end\n', 'ok.script')
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_plain_module_cannot_define_lifecycle_globals(self):
+        result = self.lint('function update(self, dt) end\n', 'module.lua')
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn('(W111)', result.stdout)
 
     def test_repository_is_clean(self):
         self.assertEqual(subprocess.run([sys.executable, 'tools/ci/lint_lua.py'], cwd=ROOT,
