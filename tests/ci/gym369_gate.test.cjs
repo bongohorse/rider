@@ -7,6 +7,9 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  assert.deepEqual(validateWorkflow(y),{groups:26,commands:38});
  assert.throws(()=>validateWorkflow(y.replace("cases: 'le5c a22'","cases: 'le5c'")),/Changed case list/);
  assert.throws(()=>validateWorkflow(y.replace('--case a22','--case a21')),/Missing\/duplicate smoke case/);
+ assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5','echo no-html5-physics')),/Missing html5 verification/);
+ assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
+ assert.throws(()=>validateWorkflow(y.replace('node --test tests/ci/*.cjs','echo no-ci-tests')),/Missing html5 verification/);
 });
 test('artifact gate fails closed on missing/duplicate/source/part',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'rider-gym369-'));let n=0;

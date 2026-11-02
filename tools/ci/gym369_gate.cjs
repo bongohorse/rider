@@ -248,6 +248,20 @@ const sorted=x=>[...x].sort();
 function validateWorkflow(yaml){
  for(const name of ['native','native-windows','html5','gym','gym-reports'])
   assert.ok(yaml.includes('\n  '+name+':\n'),'Required G1 job missing: '+name);
+ // A job name alone is not coverage: fail if native/HTML5 verification is removed.
+ const required={
+  native:['python -m unittest discover -s tests/g1 -v',
+   'python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native'],
+  'native-windows':['python -m unittest discover -s tests/g1 -v',
+   'python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native'],
+  html5:['python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5',
+   'node --test tests/ci/*.cjs']
+ };
+ for(const [job,commands] of Object.entries(required)){
+  const section=yaml.split('\n  '+job+':\n')[1].split(/\n  [a-z][\w-]*:\n/)[0];
+  for(const command of commands)
+   assert.ok(section.includes('run: '+command),'Missing '+job+' verification: '+command);
+ }
  const gym=yaml.split('\n  gym:\n')[1].split('\n  gym-reports:\n')[0];
  const rows=[...gym.matchAll(/^          - group: ([\w-]+)\n            cases: '([^']+)'(?:\n            part: '([^']+)')?/gm)];
  assert.equal(rows.length,Object.keys(GROUPS).length,'Wrong matrix size');
