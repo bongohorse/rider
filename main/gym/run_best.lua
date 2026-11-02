@@ -42,8 +42,11 @@ local function flush(t)
     if state~='saved' then t.blocked=true;t.status='Best not saved ('..state..')';return false end
     -- A failed write may have damaged its target slot. Recheck both slots before
     -- any retry so an unreadable or future-version alternate is never replaced.
-    if t.retry_at and M.new(t.key).blocked then
-        t.blocked=true;t.status='Record unavailable; save protected';return false
+    if t.retry_at then
+        local fresh=M.new(t.key)
+        if fresh.blocked or fresh.best~=t.best or fresh.medal~=t.medal then
+            t.blocked=true;t.status='Record unavailable; save protected';return false
+        end
     end
     local time,medal=t.desired_best,t.desired_medal
     local seq,err=t.store.save(json.encode({version=2,key=t.key,time=time,medal=medal}))
