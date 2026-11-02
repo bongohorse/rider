@@ -141,8 +141,21 @@ async function run({browser,url,sha,runId,out,preset,errors}){
    await p.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
     window.riderReady?.run_id===runId&&window.riderTelemetry?.station==='straight'&&
     window.riderCamera352PhysicsTrace?.length>=15,{sha,runId},{timeout:20000,polling:50});
-   stage='real throttle';
+   // The Defold keyboard listener is canvas-focused. A fresh Playwright
+   // context can lose focus between sequential landscape viewport trials.
+   // Bring this real page forward and focus its actual canvas; never inject
+   // throttle or alter engine/game state to make a test pass.
+   stage='focus game canvas';
+   await p.bringToFront();
+   await p.locator('canvas').focus();
+   await p.waitForFunction(()=>document.hasFocus()&&
+    document.activeElement===document.querySelector('canvas'),
+    null,{timeout:3000,polling:50});
+   stage='real throttle input';
    await p.keyboard.down('ArrowUp');
+   await p.waitForFunction(()=>window.riderCamera352PhysicsTrace?.slice(-8)
+    .some(s=>s.throttle===1),null,{timeout:5000,polling:50});
+   stage='real acceleration';
    await p.waitForFunction(()=>window.riderCamera352PhysicsTrace?.at(-1)?.vx>=150,
     null,{timeout:15000,polling:50});
    await p.keyboard.up('ArrowUp');
@@ -168,9 +181,23 @@ async function run({browser,url,sha,runId,out,preset,errors}){
    await p.screenshot({path:path.join(out,'camera370-reverse-'+label+'.png')});
   }catch(e){
    fs.writeFileSync(path.join(out,'camera370-reverse-failed-'+label+'.json'),JSON.stringify({
-    stage,error:String(e),state:await p.evaluate(()=>({ready:window.riderReady,
-     telemetry:window.riderTelemetry,physics:window.riderCamera352PhysicsTrace?.slice(-20),
-     frames:window.riderCamera352Trace?.length})).catch(()=>null)},null,2));
+    stage,error:String(e),state:await p.evaluate(()=>{
+     const canvas=document.querySelector('canvas');
+     const fixed=window.riderCamera352PhysicsTrace||[];
+     const recent=fixed.slice(-180);
+     return {ready:window.riderReady,telemetry:window.riderTelemetry,
+      focus:{document_has_focus:document.hasFocus(),visibility:document.visibilityState,
+       active_tag:document.activeElement?.tagName,
+       active_id:document.activeElement?.id,
+       canvas_focused:document.activeElement===canvas,canvas_present:!!canvas},
+      input_summary:{recent_fixed_ticks:recent.length,
+       throttle_ticks:recent.filter(s=>s.throttle===1).length,
+       max_vx:recent.length?Math.max(...recent.map(s=>s.vx)):null,
+       last_command:recent.at(-1)?{throttle:recent.at(-1).throttle,
+        brake_reverse:recent.at(-1).brake_reverse,
+        allow_reverse:recent.at(-1).allow_reverse}:null},
+      physics:fixed.slice(-40),frames:window.riderCamera352Trace?.length};
+    }).catch(()=>null)},null,2));
    await p.screenshot({path:path.join(out,'camera370-reverse-failed-'+label+'.png')}).catch(()=>{});
    throw e;
   }finally{await p.keyboard.up('ArrowUp').catch(()=>{});await p.keyboard.up('ArrowDown').catch(()=>{});
