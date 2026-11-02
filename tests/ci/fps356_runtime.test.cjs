@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {parseArgs,classify,ORDER,TEST_STATION}=require('../../tools/gym/fps356_runtime.cjs');
+const {parseArgs,classify,verifyReplay,ORDER,TEST_STATION}=require('../../tools/gym/fps356_runtime.cjs');
 const fs=require('node:fs'),path=require('node:path');
 const STEP=1/60;
 const args=['out','sha-123','run-abc','fps356runtime','debug-bundle'];
@@ -67,4 +67,44 @@ test('background pause selects a campaign course admitted by the real loader',()
   'Loader focus admission contract changed; revalidate runtime pause');
  const runner=fs.readFileSync(path.join(root,'tools/gym/fps356_runtime.cjs'),'utf8');
  assert.match(runner,/encodeURIComponent\(TEST_STATION\)/,'Runner no longer uses the admitted course');
+});
+
+const replayFixture=()=>({
+ recorded:{source_sha:'sha-123',station:TEST_STATION,ticks:121,error:false,
+  ended:'stopped',scaled_ticks:0,tuning_changed:false,trailing:true,poses:122},
+ played:{ended:'done',verdict:'MATCH',same:true,complete:true,mismatches:0,
+  scaled_ticks:0,tuning_changed:false,ticks:121,applied:121,max_position_m:0.012,max_angle_rad:0.008},
+ options:{sourceSha:'sha-123',station:TEST_STATION,tolerance:{position_m:0.05,angle_rad:0.05}}
+});
+test('genuine A21 replay evidence binds source, trailing pose and full fixed-tick trajectory',()=>{
+ const {recorded,played,options}=replayFixture();
+ const v=verifyReplay(recorded,played,options);
+ assert.deepEqual(v,{recorded_ticks:121,applied_ticks:121,verdict:'MATCH',
+  mismatches:0,scaled_ticks:0,max_position_m:0.012,max_angle_rad:0.008});
+});
+for(const [name,mutate,reason] of [
+ ['wrong source SHA',x=>{x.recorded.source_sha='other';},/source SHA/],
+ ['wrong campaign station',x=>{x.recorded.station='straight';},/station changed/],
+ ['short recording',x=>{x.recorded.ticks=60;},/Too few/],
+ ['recording error',x=>{x.recorded.error='tick gap';},/Recording error/],
+ ['unexpected recording end',x=>{x.recorded.ended='full';},/explicitly stopped/],
+ ['scaled recording',x=>{x.recorded.scaled_ticks=1;},/scaled physics/],
+ ['changed tuning',x=>{x.recorded.tuning_changed=true;},/tuning changed/],
+ ['missing trailing pose',x=>{x.recorded.trailing=false;},/trailing pose/],
+ ['incomplete pose count',x=>{x.recorded.poses=121;},/pose count/],
+ ['incomplete playback',x=>{x.played.complete=false;},/complete trace/],
+ ['different preset',x=>{x.played.same=false;},/preset identity/],
+ ['diverged verdict',x=>{x.played.verdict='DIVERGED';},/trajectory verdict/],
+ ['replayed command mismatch',x=>{x.played.mismatches=1;},/commands differ/],
+ ['scaled playback',x=>{x.played.scaled_ticks=1;},/scaled physics/],
+ ['changed replay tuning',x=>{x.played.tuning_changed=true;},/Replay tuning changed/],
+ ['lost fixed command',x=>{x.played.applied=120;},/fixed-step commands/],
+ ['wrong replay length',x=>{x.played.ticks=120;},/trace length/],
+ ['position drift',x=>{x.played.max_position_m=0.06;},/position_m trajectory tolerance/],
+ ['angular drift',x=>{x.played.max_angle_rad=0.06;},/angle_rad trajectory tolerance/],
+ ['invalid position',x=>{x.played.max_position_m=NaN;},/position_m trajectory tolerance/],
+ ['missing tolerance',x=>{x.options.tolerance=null;},/Missing genuine/]
+])test('A21 replay verifier rejects '+name,()=>{
+ const x=replayFixture();mutate(x);
+ assert.throws(()=>verifyReplay(x.recorded,x.played,x.options),reason);
 });
