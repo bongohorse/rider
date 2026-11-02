@@ -224,6 +224,12 @@ function init(self)
     self.mobile={}
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
+    -- #356: debug-only observer; no update-frequency setter or extra physics owner.
+    if self.testcase=="fps356" then
+        assert(sys.get_engine_info().is_debug and html5,"FPS cadence probe needs debug HTML5")
+        self.fps356=require "main.gym.fps_probe356"
+        self.fps356_state=self.fps356.new()
+    end
     -- #352: opt-in debug HTML5 A/B; release and all normal Gym runs retain camera A.
     if sys.get_engine_info().is_debug and html5 then
         local mode=html5.run("new URLSearchParams(location.search).get('camera352') || ''")
@@ -316,6 +322,7 @@ function init(self)
     msg.post(".", "acquire_input_focus")
 end
 function update(self, dt)
+    if self.fps356 then self.fps356.update(self.fps356_state,self,dt) end
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
     require('main.gym.coin_runtime').update(self,dt)
@@ -564,6 +571,7 @@ end
 function fixed_update(self, dt)
     if self.measure_case then assert(math.abs(dt*60-1)<1e-4,"Measurement case ticked at time factor "..dt*60) end
     self.world_time,self.fixed_ticks=self.world_time+dt,self.fixed_ticks+1
+    if self.fps356 then self.fps356.fixed(self.fps356_state,dt) end
     if math.abs(dt*60-1)>1e-4 then self.time_scaled_ticks=self.time_scaled_ticks+1 end
     if self.resetting then return end
     if self.vehicle and self.vehicle.ready then
@@ -695,6 +703,12 @@ function on_message(self,id,data,sender)
         race.pause(self,data.paused)
         if data.step~=1 then race.practice(self,"Slow motion") end
         self.paused,self.time_factor=data.paused,data.factor
+        -- #356: publish the loader time_state boundary even when the paused
+        -- world stops update(); never invent a fixed tick or world heartbeat.
+        if self.fps356 then
+            self.fps356_time_seq=data.seq
+            self.fps356.publish(self.fps356_state,self,"time_state")
+        end
         msg.post(sender,"time_ready",{generation=data.generation,seq=data.seq})
     elseif (id==hash("next_section") or id==hash("select_preset")) and self.paused then self.time_dropped=self.time_dropped+1
     elseif id==hash("replay_control") and self.paused then self.time_dropped=self.time_dropped+1
