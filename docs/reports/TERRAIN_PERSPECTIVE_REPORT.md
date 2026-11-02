@@ -12,7 +12,7 @@ The actual tested runtime is `4e710d1b5f4d71ccf151f55616a26b701d4f38ec`, pinned 
 
 ## Projection and resources
 
-The [road-look contract](contracts/road-look.md) defines bounded parameters, coordinate spaces, rejection and retention. A rigid shallow body is projected globally onto the unchanged collision plane. With camera XY `C`, extrusion coordinate `z`, `b=(0.18,tan(angle))` and `a=perspective/40`, projection is `(P+z*(a*C+b))/(1+a*z)`. Fixed mode uses `a=0`. The front contact contour at z=0 is explicitly preserved; homogeneous shader interpolation carries the denominator. There is no time, speed, direction, lag or previous-shape input. Actual camera follow, source, collision geometry, physics ownership and reset remain unchanged.
+The [road-look contract](../contracts/road-look.md) defines bounded parameters, coordinate spaces, rejection and retention. A rigid shallow body is projected globally onto the unchanged collision plane. With camera XY `C`, extrusion coordinate `z`, `b=(0.18,tan(angle))` and `a=perspective/40`, projection is `(P+z*(a*C+b))/(1+a*z)`. Fixed mode uses `a=0`. The front contact contour at z=0 is explicitly preserved; homogeneous shader interpolation carries the denominator. There is no time, speed, direction, lag or previous-shape input. Actual camera follow, source, collision geometry, physics ownership and reset remain unchanged.
 
 Width, angle, body depth and shading use cached uniforms. The accepted 64-interval partition/topology remains. Camera motion updates constants and conservative projected bounds without emitting geometry or uploading terrain vertex buffers. Bounds include all allowed body/ribbon extrema and use the existing viewport/residency logic. Existing floor and overhang caps remain.
 

@@ -1,6 +1,6 @@
 # LE1b custom level size and performance report
 
-Measurement report for [#123](https://github.com/bongohorse/rider/issues/123) (level-editor contract [R7 and R15](contracts/level-editor.md#rules-r1r18)). It measures custom levels through the unchanged LE1a import path and only within the unchanged validation limits. Automated desktop values and Claudio's phone values are reported separately; phone values stay NOT RUN until he supplies them.
+Measurement report for [#123](https://github.com/bongohorse/rider/issues/123) (level-editor contract [R7 and R15](../contracts/level-editor.md#rules-r1r18)). It measures custom levels through the unchanged LE1a import path and only within the unchanged validation limits. Automated desktop values and Claudio's phone values are reported separately; phone values stay NOT RUN until he supplies them.
 
 **Contents:** [Summary](#summary) · [Protocol](#protocol) · [Desktop results](#desktop-results) · [Phone results](#phone-results) · [Phone procedure](#phone-procedure) · [Findings for later tasks](#findings-for-later-tasks) · [Reproduction](#reproduction) · [Engine sources](#engine-sources)
 
@@ -172,7 +172,7 @@ Touch mode hides the page tools; its toolbar has its own **Import level** button
      - (c) Make the guard's tolerance scale with coordinate size. This is a vehicle/physics contract change.
      - Independent of a–c: save an import only after the vehicle is drive-ready.
    - **Not measured:** driving more than about 50 m away from the start, so precision effects far from the origin are unknown.
-   - **Resolved in LE2 ([#124](https://github.com/bongohorse/rider/issues/124)):** imports are saved only after the vehicle is drive-ready, a placement failure leaves a safe error state, and starts are limited to ±500 m in x and y (option a, tightened after a dense placement sweep failed from 724 m). Details: [decisions after LE1b](contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18).
+   - **Resolved in LE2 ([#124](https://github.com/bongohorse/rider/issues/124)):** imports are saved only after the vehicle is drive-ready, a placement failure leaves a safe error state, and starts are limited to ±500 m in x and y (option a, tightened after a dense placement sweep failed from 724 m). Details: [decisions after LE1b](../contracts/level-editor.md#decisions-after-le1b-claudio-2026-10-18).
 2. **Switch-frame spike at full budget:** 21–26 ms at 612–800 objects on desktop. It matters for LE3/LE5 re-checks with editor overlays, and for phone values.
 3. **Validator wording (R16):** coordinates at or beyond 100 km report `Non-finite bounds` although the values are finite but out of range. The source validator should name the range.
 4. **Text fields were unbounded:** the level `name` reaches the measurements message as `station_name`, and `msg.post` caps payloads at 2048 bytes. Since [PR #140](https://github.com/bongohorse/rider/pull/140) the station validator limits id and name (and section id/name) to 64 bytes; the `le1a` case loads a 64-byte id with a 64-byte multi-byte name and gets telemetry. Text fields that LE2 adds still need their own byte tests.

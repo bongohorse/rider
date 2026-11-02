@@ -8,7 +8,7 @@ Claudio reports that the #290 comparison works well, accepts camera-dependent pe
 
 The separately authorized #292 / draft PR #293 integrates the same projection, shader and parameter contract into ordinary Play and Editor. `perspective-v1` means version 1, perspective mode, width **0.9 m**, strength **0.35**, angle **atan(0.55) = 28.810793742973°**, side cap **64 m**, shading **1**. These are the shipped/hosted #290 values. Claudio's private retained browser JSON was not supplied; unreported personal adjustments are not claimed as observed.
 
-The [shared contract](contracts/road-look.md#production-compatibility) defines spaces, immutable profile mapping and bounds. No second projector or tuner was created. The z=0 driving contour, source geometry, collision, physics, follow camera and Retry are preserved. Full per-section settings, persistence and Undo belong to #278.
+The [shared contract](../contracts/road-look.md#production-compatibility) defines spaces, immutable profile mapping and bounds. No second projector or tuner was created. The z=0 driving contour, source geometry, collision, physics, follow camera and Retry are preserved. Full per-section settings, persistence and Undo belong to #278.
 
 Playable ordinary release: http://127.0.0.1:8792/terrain-preview.html?course=mixed-over-budget. It explicitly imports marked derived fixtures; select **Legacy fixed Depth (500 m)** for the original unmarked file, or **Open ordinary Gym** for built-in stations. The launcher does not set a renderer build flag. [Release descent](terrain-292/release-descent.png), [release Editor](terrain-292/release-editor.png), [660 m Fit](terrain-292/660-fit.png) are unmodified actual screenshots.
 
