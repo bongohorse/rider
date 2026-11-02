@@ -146,3 +146,30 @@ test('headless visibility failure is BLOCKED after independent real replay proof
   'window.riderTimeState={'
  ])assert(!runner.includes(forbidden),'Fake background/pause signal: '+forbidden);
 });
+
+test('background verification uses headed Chromium with a real X11 display, never fake visibility',()=>{
+ const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
+ for(const required of [
+  "chromium.launch({headless:false})",
+  "spawnSync('xvfb-run'",
+  "FPS356_XVFB_CHILD",
+  "BLOCKED_BACKGROUND_DISPLAY_UNAVAILABLE",
+  "await page.addInitScript(()=>{",
+  "document.addEventListener('visibilitychange'",
+  "window.addEventListener('blur'",
+  "window.addEventListener('focus'",
+  "document.visibilityState==='hidden'",
+  "document.visibilityState==='visible'",
+  "BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED:",
+  "lifecycle:(window.riderFps356Lifecycle||[]).slice(-24)",
+  "comparePause(p,resume,"
+ ])assert(runner.includes(required),'Missing headed lifecycle or fixed-tick gate: '+required);
+ for(const forbidden of [
+  'chromium.launch();',
+  'chromium.launch({headless:true})',
+  "dispatchEvent(new Event('blur'))",
+  'Emulation.setPageVisibilityState',
+  'document.visibilityState =',
+  'window.riderTimeState={'
+ ])assert(!runner.includes(forbidden),'Synthetic or headless background proof: '+forbidden);
+});
