@@ -270,13 +270,14 @@ function validateWorkflow(yaml){
   assert.equal(m[2],GROUPS[m[1]][0],'Changed case list: '+m[1]);
   assert.equal(m[3]||null,GROUPS[m[1]][1]||null,'Changed split part: '+m[1]);
  }
- const commands=[...gym.matchAll(/run: python tools\/gym\/smoke\.py --bundle artifacts\/g1\/gym-bundle --output artifacts\/g1\/([\w-]+) --case ([\w-]+)/g)];
+ // Only exact active YAML run steps count; a commented copy must not preserve coverage.
+ const commands=[...gym.matchAll(/^        run: python tools\/gym\/smoke\.py --bundle artifacts\/g1\/gym-bundle --output artifacts\/g1\/([\w-]+) --case ([\w-]+)(?: --part "\$PART")?$/gm)];
  assert.equal(commands.length,Object.keys(CASE_REPORTS).length,'Changed smoke command count');
  assert.deepEqual(sorted(commands.map(m=>m[2])),sorted(Object.keys(CASE_REPORTS)),'Missing/duplicate smoke case');
  for(const m of commands){
   assert.equal(m[1],CASE_REPORTS[m[2]][0],'Changed case output: '+m[2]);
   const step=gym.slice(0,m.index).split('\n      - name:').pop();
-  assert.ok(step.includes("' "+m[2]+" '"),'Missing case guard: '+m[2]);
+  assert.ok(step.split('\n').includes("        if: contains(format(' {0} ', matrix.cases), ' "+m[2]+" ')"),'Missing active case guard: '+m[2]);
  }
  assert.ok(yaml.includes('pattern: g1-gym-*-${{ github.run_id }}-${{ github.run_attempt }}'),'Artifact download missing');
  assert.ok(yaml.includes('node tools/ci/gym369_gate.cjs artifacts/gym369'),'Runtime gate missing');
