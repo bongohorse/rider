@@ -7,6 +7,18 @@ test('original 38 smoke commands and native/HTML5 remain',()=>{
  assert.deepEqual(validateWorkflow(y),{groups:26,commands:38});
  assert.throws(()=>validateWorkflow(y.replace("cases: 'le5c a22'","cases: 'le5c'")),/Changed case list/);
  assert.throws(()=>validateWorkflow(y.replace('--case a22','--case a21')),/Missing\/duplicate smoke case/);
+  // Every original smoke must be an active exact YAML run, never a commented copy.
+  for(const [caseName,[output]] of Object.entries(CASE_REPORTS)){
+   const prefix='        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/'+output+' --case '+caseName;
+   const active=y.split('\n').find(line=>line===prefix||line===prefix+' --part "$PART"');
+   assert.ok(active,'Original active smoke missing: '+caseName);
+   const commented=y.replace(active,'        run: echo disabled-'+caseName+'\n        # '+active.trim());
+   assert.throws(()=>validateWorkflow(commented),/Changed smoke command count/,'Comment-only smoke accepted: '+caseName);
+  }
+  const le4='        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/library --case le4';
+  assert.throws(()=>validateWorkflow(y.replace(le4,le4+'\n      - name: Duplicate LE4 smoke\n'+le4)),/Changed smoke command count/);
+  const guard="        if: contains(format(' {0} ', matrix.cases), ' le4 ')";
+  assert.throws(()=>validateWorkflow(y.replace(guard,'        # '+guard.trim())),/Missing active case guard: le4/);
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target html5 --output artifacts/g1/html5','echo no-html5-physics')),/Missing html5 verification/);
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration ${{ matrix.configuration }} --output artifacts/g1/native','echo no-linux-physics')),/Missing native verification/);
  assert.throws(()=>validateWorkflow(y.replace('python tools/project.py verify --suite physics --target desktop --configuration debug --output artifacts/g1/native','echo no-windows-physics')),/Missing native-windows verification/);
