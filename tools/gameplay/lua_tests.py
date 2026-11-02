@@ -5,6 +5,7 @@ This is Bob's verified LuaJIT, not the Defold engine runtime (see #385).
 Fails closed on no suites, a non-zero exit, a timeout or a missing PASS line.
 """
 import argparse
+import os
 import platform
 import subprocess
 import sys
@@ -29,10 +30,10 @@ def luajit_from_bob(bob, target):
         data = source.read()
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists() or target.read_bytes() != data:
-        temporary = target.with_suffix('.download')
+        temporary = target.with_name(f'{target.name}.{os.getpid()}.download')
         temporary.write_bytes(data)
-        temporary.chmod(0o755)
         temporary.replace(target)
+    target.chmod(0o755)
     return target
 
 
