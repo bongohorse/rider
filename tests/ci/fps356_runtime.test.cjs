@@ -154,6 +154,28 @@ test('real focus-loss probe owns an explicit BrowserContext and disables Playwri
  ])assert(!runner.includes(forbidden),'Unsafe API-owned context or fake pause: '+forbidden);
 });
 
+test('real tab focus emulation is disabled on BOTH CDP targets after navigation',()=>{
+ const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
+ const gameNav=runner.indexOf("await page.goto('http://127.0.0.1:'");
+ const gameReassert=runner.indexOf("await focusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false});",gameNav);
+ const focusStart=runner.indexOf('const focusStart=await page.evaluate(');
+ const otherNav=runner.indexOf("await other.goto('about:blank');");
+ const otherCDP=runner.indexOf('const otherFocusCDP=await context.newCDPSession(other);');
+ const otherDisable=runner.indexOf("await otherFocusCDP.send('Emulation.setFocusEmulationEnabled',{enabled:false});");
+ const otherFront=runner.indexOf('await other.bringToFront();');
+ assert(gameNav>=0&&gameNav<gameReassert&&gameReassert<focusStart,
+  'Game focus emulation must be disabled again after actual navigation');
+ assert(focusStart<otherNav&&otherNav<otherCDP&&otherCDP<otherDisable&&otherDisable<otherFront,
+  'Second tab must disable its own Playwright focus override before activation');
+ for(const forbidden of [
+  "Emulation.setFocusEmulationEnabled',{enabled:true}",
+  'Emulation.setPageVisibilityState',
+  "dispatchEvent(new Event('blur'))",
+  'document.visibilityState =',
+  'window.riderTimeState={'
+ ])assert(!runner.includes(forbidden),'Synthetic focus/visibility or pause state: '+forbidden);
+});
+
 test('focus-loss verification remains fail-closed after independent real replay proof',()=>{
  const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
  const replay=runner.indexOf('evidence.replay=verifyReplay(');
