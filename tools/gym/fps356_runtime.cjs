@@ -71,7 +71,21 @@ if(require.main===module){
  const {compare,comparePause}=require('./fps356_verify.cjs');
  const {chromium}=require('playwright');
  const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+ const {spawnSync}=require('node:child_process');
  const {output,sha,runId,bundle}=parseArgs(process.argv.slice(2));
+ // Headless Chromium can keep every tab foregrounded. Use an actual headed
+ // Chromium window in a virtual X11 display, not fabricated JS blur/visibility.
+ // xvfb-run is provided by the CI browser dependency setup. A missing X11
+ // dependency is a hard blocker, never a silent headless fallback.
+ if(process.platform==='linux'&&!process.env.DISPLAY){
+  if(process.env.FPS356_XVFB_CHILD==='1')
+   throw Error('BLOCKED_BACKGROUND_DISPLAY_UNAVAILABLE: xvfb-run did not supply DISPLAY');
+  const child=spawnSync('xvfb-run',
+   ['-a','-s','-screen 0 1280x720x24',process.execPath,__filename,...process.argv.slice(2)],
+   {stdio:'inherit',env:{...process.env,FPS356_XVFB_CHILD:'1'}});
+  if(child.error)throw Error('BLOCKED_BACKGROUND_DISPLAY_UNAVAILABLE: '+child.error.message);
+  process.exit(child.status===null?1:child.status);
+ }
  const out=path.resolve(output);fs.mkdirSync(out,{recursive:true});
  fs.rmSync(path.join(out,'fps356-runtime.json'),{force:true});
  const metadata=JSON.parse(fs.readFileSync(path.join(bundle,'bundle.json'),'utf8'));
@@ -89,7 +103,8 @@ if(require.main===module){
   let browser,context,page,other;const errors=[],windows=[],evidence={};
   try{
    await new Promise(r=>server.listen(0,'127.0.0.1',r));
-   browser=await chromium.launch();
+   // A headed browser is required for genuine tab visibility/focus evidence.
+   browser=await chromium.launch({headless:false});
    // Explicit BrowserContext: Playwright forbids context.newPage() on browser.newPage()'s owned context.
    context=await browser.newContext({viewport:{width:1280,height:720}});
    page=await context.newPage();
@@ -97,6 +112,20 @@ if(require.main===module){
    page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text())&&errors.length<20)errors.push(m.text());});
    // Default engine startup is unchanged at 60. No --config display override.
    await configure(page,runId,'fps356runtime');
+   // Passive lifecycle telemetry: observe real browser events, never dispatch
+   // them or write game pause state. Keep only a bounded diagnostic history.
+   await page.addInitScript(()=>{
+    const events=[];
+    window.riderFps356Lifecycle=events;
+    const capture=type=>{
+     events.push({type,monotonic_ms:performance.now(),
+      visibility:document.visibilityState,focus:document.hasFocus()});
+     if(events.length>24)events.shift();
+    };
+    document.addEventListener('visibilitychange',()=>capture('visibilitychange'));
+    window.addEventListener('blur',()=>capture('blur'));
+    window.addEventListener('focus',()=>capture('focus'));
+   });
    await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station='+encodeURIComponent(TEST_STATION));
    await page.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&
     window.riderReady?.run_id===runId&&window.riderFps356World?.fixed_ticks>30&&
@@ -151,8 +180,13 @@ if(require.main===module){
      try{
       await page.waitForFunction(()=>document.visibilityState==='hidden',null,{polling:100,timeout:10000});
      }catch(err){
-      const visibility=await page.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus()}));
-      throw Error('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED: real Chromium tab switch did not hide the game page; '+JSON.stringify(visibility));
+      const [game,backgroundPage]=await Promise.all([
+       page.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus(),
+        lifecycle:(window.riderFps356Lifecycle||[]).slice(-24)})),
+       other.evaluate(()=>({state:document.visibilityState,focus:document.hasFocus()}))
+      ]);
+      throw Error('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED: headed Chromium tab switch did not hide the game page; '+
+       JSON.stringify({game,backgroundPage,context_pages:context.pages().length}));
      }
      await page.waitForFunction(seq=>window.riderTimeState?.paused===true&&
       (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===true&&s.sequence>seq),
@@ -163,7 +197,11 @@ if(require.main===module){
     await page.waitForTimeout(2400);
     const end=await page.evaluate(()=>({loader:{...window.riderTimeState},wallMs:performance.now()}));
     assert.equal(end.loader.paused,true,label+': unexpected resume');
-    if(other){await other.close();other=null;await page.bringToFront();}
+    if(other){
+     await other.close();other=null;await page.bringToFront();
+     await page.waitForFunction(()=>document.visibilityState==='visible',
+      null,{polling:100,timeout:10000});
+    }
     assert.equal((await loader()).paused,true,label+': focus auto-resumed without explicit input');
     await holdUntil('Space',seq=>window.riderTimeState?.paused===false&&
      (window.riderFps356Transitions||[]).some(s=>s.event==='time_state'&&s.paused===false&&s.sequence>seq),
@@ -250,7 +288,9 @@ if(require.main===module){
     diag.state=await page.evaluate(()=>({ready:window.riderReady??null,
      runtime:window.riderFps356Runtime??null,world:window.riderFps356World??null,
      loader:window.riderTimeState??null,replay:window.riderReplay??null,
-     transitions:(window.riderFps356Transitions||[]).slice(-12)})).catch(err=>({capture_error:String(err)}));
+     transitions:(window.riderFps356Transitions||[]).slice(-12),
+     lifecycle:(window.riderFps356Lifecycle||[]).slice(-24),
+     visibility:{state:document.visibilityState,focus:document.hasFocus()}})).catch(err=>({capture_error:String(err)}));
     try{await page.screenshot({path:path.join(out,'fps356-runtime-failed.png'),timeout:5000});}
     catch(err){diag.screenshot_error=String(err);}
    }
