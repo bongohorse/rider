@@ -91,6 +91,8 @@ jobs:
         env:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           SOURCE_SHA: ${{ github.sha }}
+          # #378 experimental; no parallel mode on main, other PRs or other groups.
+          RIDER_VERIFY_PARALLEL_GAMEPLAY: ${{ matrix.group == 'desktop-gameplay' && github.head_ref == 'agent/performance/issue-378-release-contexts' && '1' || '0' }}
         run: node tools/preview/verify.cjs _site "$SOURCE_SHA" "$BUILD_ID" artifacts/preview/verification/${{ matrix.group }} ${{ matrix.group }}
       - name: Exercise public-deployment check against the packaged release
         if: matrix.group == 'desktop-layout'

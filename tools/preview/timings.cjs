@@ -28,6 +28,35 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
     try{const value=await fn();end(entry);return value;}
     catch(error){end(entry,'FAIL',error);throw error;}
   }
+  // Concurrent phases have independent clocks: the regular nested LIFO stack cannot
+  // represent overlapping Playwright BrowserContexts. Every started phase must settle.
+  async function parallel(tasks){
+    if(status!=='RUNNING')throw Error('Cannot start parallel phases after finish/failure');
+    if(!Array.isArray(tasks)||tasks.length!==2||
+       new Set(tasks.map(t=>t?.name)).size!==tasks.length||
+       tasks.some(t=>typeof t?.name!=='string'||!t.name||typeof t.run!=='function'))
+      throw Error('Expected two uniquely named independent verification phases');
+    const work=tasks.map(async task=>{
+      const record={name:task.name,details:task.details||{},status:'RUNNING',elapsed_ms:null};
+      cases.push(record);
+      const began=clock();
+      try{
+        const value=await task.run();
+        record.elapsed_ms=elapsed(began);record.status='PASS';
+        return value;
+      }catch(error){
+        record.elapsed_ms=elapsed(began);record.status='FAIL';
+        record.error=String(error?.message||error);
+        if(lastActiveCase===null)lastActiveCase=record.name;
+        throw error;
+      }
+    });
+    // Promise.all would reject early and allow cleanup to close a still-running page.
+    const settled=await Promise.allSettled(work);
+    const failure=settled.find(x=>x.status==='rejected');
+    if(failure)throw failure.reason;
+    return settled.map(x=>x.value);
+  }
   function fail(error){
     if(stack.length&&lastActiveCase===null)lastActiveCase=stack.at(-1).record.name;
     if(topError===null)topError=String(error?.message||error);
@@ -46,6 +75,6 @@ function createTimings({source_sha,build_id,mode,clock=()=>process.hrtime.bigint
   function write(out){
     fs.writeFileSync(path.join(out,'timings.json'),JSON.stringify(snapshot(),null,2)+'\n');
   }
-  return {run,fail,finish,snapshot,write};
+  return {run,parallel,fail,finish,snapshot,write};
 }
 module.exports={createTimings};

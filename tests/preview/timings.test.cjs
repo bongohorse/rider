@@ -114,3 +114,58 @@ test('FAIL: active nested phase recorded by fail is not overwritten by unwinding
   assert.equal(data.error,'phase assertion failed');
   assert.deepEqual(data.cases.map(c=>c.status),['FAIL','FAIL']);
 });
+
+
+test('parallel: independent gameplay phases overlap without violating nested LIFO timings',async()=>{
+  const {timings,advance}=observer();const events=[];
+  const values=await timings.run('gameplay/two-contexts',()=>timings.parallel([
+    {name:'gameplay/check_run',run:async()=>{events.push('run-start');await Promise.resolve();advance(10);events.push('run-end');return 'run report';}},
+    {name:'gameplay/check_levels/desktop',run:async()=>{events.push('levels-start');await new Promise(resolve=>setImmediate(resolve));advance(15);events.push('levels-end');return 'level report';}}
+  ]));
+  timings.finish('PASS');
+  assert.deepEqual(values,['run report','level report']);
+  assert.deepEqual(events,['run-start','levels-start','run-end','levels-end'],
+    'both independent BrowserContexts must start before either completes');
+  const report=timings.snapshot();
+  assert.deepEqual(report.cases.map(x=>x.name),['gameplay/two-contexts','gameplay/check_run','gameplay/check_levels/desktop']);
+  assert.deepEqual(report.cases.map(x=>x.elapsed_ms),[25,10,25]);
+  assert.deepEqual(report.cases.map(x=>x.status),['PASS','PASS','PASS']);
+  assert.equal(report.elapsed_ms,25);
+});
+
+test('parallel: preserves earliest gameplay failure and waits for the other page to finish cleanup',async()=>{
+  const {timings,advance}=observer(),original=new Error('real-input check_run failed');
+  let done=false,releaseSecond;
+  const waitSecond=new Promise(resolve=>{releaseSecond=resolve;});
+  const pending=timings.run('gameplay/two-contexts',()=>timings.parallel([
+    {name:'gameplay/check_run',run:async()=>{advance(2);throw original;}},
+    {name:'gameplay/check_levels/desktop',run:async()=>{await waitSecond;advance(7);done=true;return 'level report';}}
+  ]));
+  // Rejection of check_run must not close BrowserContexts while levels is active.
+  let settled=false;pending.then(()=>{settled=true;},()=>{settled=true;});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(settled,false,'parallel group must wait for both independently opened contexts');
+  releaseSecond();
+  await assert.rejects(pending,error=>error===original);
+  assert.equal(done,true);
+  timings.fail(original);
+  await timings.run('cleanup/global',async()=>advance(3));
+  timings.finish('FAIL');
+  const report=timings.snapshot();
+  assert.equal(report.status,'FAIL');
+  assert.equal(report.error,'real-input check_run failed');
+  assert.equal(report.last_active_case,'gameplay/check_run');
+  assert.deepEqual(report.cases.map(x=>x.status),['FAIL','FAIL','PASS','PASS']);
+  assert.equal(report.cases[1].error,original.message);
+  // Second task starts after the first synchronous failure advanced the test clock.
+  assert.equal(report.cases[2].elapsed_ms,7);
+});
+
+test('parallel: rejects missing/duplicate phases before launching any gameplay checks',async()=>{
+  const {timings}=observer();let called=false;
+  for(const tasks of [[],[{name:'x',run:()=>{called=true;}},{name:'x',run:()=>{called=true;}}],[{name:'x',run:()=>{called=true;}}]]){
+    await assert.rejects(timings.parallel(tasks),/Expected two uniquely named/);
+  }
+  assert.equal(called,false);
+  assert.equal(timings.snapshot().cases.length,0);
+});
