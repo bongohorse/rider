@@ -125,6 +125,35 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   assert.throws(()=>C.comparePhysics(synthetic,synthetic,{downhillA:loaded,downhillB:loaded.map(s=>({tick:s.tick+10}))}),/Missing dual-supported downhill/);
   assert.throws(()=>C.comparePhysics(synthetic,synthetic.concat({...synthetic[13],x:999}),{downhillA:loaded,downhillB:loaded}),/conflicting duplicate/);
   assert.throws(()=>C.comparePhysics(synthetic,without(14)),/Missing\/unmatched fixed tick/);
+  // #370: compare render framing at matching canonical vehicle-ready fixed steps.
+  // Engine ticks can start one step apart on separately loaded A/B pages.
+  const alignedFixture=(mode,epoch=0)=>({
+   summary:{mode,station:'ramps-long',source_sha:'test-source',viewport:{width:1280,height:720}},
+   physicsTrace:Array.from({length:12},(_,i)=>({tick:i+1,engine_tick:i+10+epoch,
+    source_sha:'test-source',mode,station:'ramps-long'})),
+   trace:Array.from({length:12},(_,i)=>({tick:i+10+epoch,source_sha:'test-source',
+    mode,station:'ramps-long',section:'down-30'})),
+   measured:Array.from({length:12},(_,i)=>({tick:i+10+epoch,on_slope:true,loaded:true,
+    vx:1,vy:-1,visible_slope_s:mode==='a'?0.4:0.5,bottom_margin_px:100,
+    screen_y_px:-80,fixture_limited:true,viewport_truncated:false}))
+  });
+  const alignedA=alignedFixture('a'),alignedB=alignedFixture('b',1);
+  const alignedGood=C.alignedVisibility(alignedA,alignedB);
+  assert.equal(alignedGood.status,'MEASURED');
+  assert.equal(alignedGood.paired_vehicle_ticks,12,'Different raw engine epochs lost canonical A/B alignment');
+  assert(Math.abs(alignedGood.mean_delta_visible_s-0.1)<1e-9);
+  const badEpoch=alignedFixture('b',1);
+  badEpoch.physicsTrace[1].engine_tick=badEpoch.physicsTrace[0].engine_tick;
+  assert.throws(()=>C.alignedVisibility(alignedA,badEpoch),/duplicate fixed-owner engine tick/);
+  const badSource=alignedFixture('b',1);
+  badSource.trace[0].source_sha='wrong';
+  assert.throws(()=>C.alignedVisibility(alignedA,badSource),/render source\/section\/step mismatch/);
+  const tooFew=alignedFixture('b',1);
+  tooFew.trace=tooFew.trace.slice(0,3);tooFew.measured=tooFew.measured.slice(0,3);
+  const inconclusive=C.alignedVisibility(alignedA,tooFew);
+  assert.equal(inconclusive.status,'INCONCLUSIVE','Sparse render overlap falsely claimed measured improvement');
+  assert.equal(inconclusive.mean_delta_visible_s,undefined,'Inconclusive overlap emitted an A/B improvement');
+
   // Render snapshots can skip fixed ticks; A/B physics must use the separate
   // once-per-Defold-fixed-tick read-only probe instead.
   const cameraCases={};
@@ -196,6 +225,10 @@ const P=require('./preset.cjs').fromArgv(process.argv);
    const equal=C.comparePhysics(a.physicsTrace,b.physicsTrace,{downhillA:a.validPhysics,downhillB:b.validPhysics});
    const name=viewport.width+'x'+viewport.height;
    cameraCases['physics-'+name]={equal};
+   // Paired render observations are keyed by vehicle-ready fixed step, not
+   // independent A/B frame means or raw engine ticks. Fewer than five matching
+   // downhill render steps are INCONCLUSIVE, never a fabricated improvement.
+   cameraCases['aligned-'+name]={summary:C.alignedVisibility(a,b)};
   }
   const flatA=await cameraTrial('a',{width:1280,height:720},'straight');
   const flatB=await cameraTrial('b',{width:1280,height:720},'straight');

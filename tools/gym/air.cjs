@@ -86,7 +86,13 @@ const SECTIONS=station.SECTIONS.map(s=>s.id),LEANS=[0,1,-1],DEFAULT_SPEED=7;
   // held for the whole flight (from the first step after the lip is confirmed).
   const slow=[];
   for(const speed of [5.6,6.3])slow.push(await trial(SECTIONS[0],1,{speed}));
-  if(errors.length)throw Error(errors.join('\n'));
+  // #370: run real camera A/B only on this isolated PR head (or explicit local opt-in).
+  // Normal/main A19c CI keeps its original runtime and unchanged jump assertions.
+  const camera370Enabled=process.env.GITHUB_HEAD_REF==='agent/camera/issue-370-aligned-evidence'||
+   process.env.RIDER_CAMERA370_AIR==='1';
+  if(camera370Enabled)await require('./camera370_air.cjs').run({
+   browser,url,sha,runId,out,testcase:process.argv[5],preset:P,errors});
+  if(errors.length)throw Error(errors.join('\\n'));
   const full=results.filter(r=>r.section===SECTIONS[0]&&r.lean!==0);
   const best=Math.max(...full.map(r=>Math.abs(r.rotation_deg)));
   // Acceptance (#56): at the default start speed, full lean held in flight gives at least one full rotation.

@@ -9,6 +9,15 @@ function M.sample(self,target,velocity,position,projection,dt)
     assert(math.abs(scale-0.01)<1e-7,"camera352: unexpected physics scale")
     local section=self.station.sections and self.station.sections[self.station.section_index]
     local follow=self.camera_follow
+    -- #370: identify actual A19c lip flight and the first 0.5 s after
+    -- touchdown from the existing air observer; no new physics/contact owner.
+    local flight=self.station.kind=="air" and self.air and self.air.flight
+    local landing
+    if self.station.kind=="air" and self.air and self.air.jumps then
+        for i=#self.air.jumps,1,-1 do
+            if self.air.jumps[i].from_lip then landing=self.air.jumps[i];break end
+        end
+    end
     local s={
         source_sha=sys.get_config_string("rider.source_sha","development"),
         mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
@@ -20,7 +29,9 @@ function M.sample(self,target,velocity,position,projection,dt)
         ground=follow.ground,filtered_vy=follow.vy,descent=follow.descent or 0,
         snapping=follow.snapping,dir=follow.dir,
         rear=contacts.supported(self.vehicle.wheels[1]),
-        front=contacts.supported(self.vehicle.wheels[2])
+        front=contacts.supported(self.vehicle.wheels[2]),
+        air_from_lip=flight and flight.from_lip or false,
+        air_landing_age_s=landing and self.air.elapsed-landing.touchdown_at or -1
     }
     self.camera352_frames=s.frame
     -- #352 CI failure triage: the straight B control has a strict 5-u descent
