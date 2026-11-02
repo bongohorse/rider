@@ -51,6 +51,7 @@ package.preload['main.gym.custom']=function()
                 end}
         end}
 end
+package.loaded['main.gym.custom']=package.preload['main.gym.custom']() -- Defold require ignores package.preload
 local best=require 'main.gym.run_best'
 local function reset()
     docs={};encoded=0;files={};attempts=0;fail_next=0;fail_always=false
