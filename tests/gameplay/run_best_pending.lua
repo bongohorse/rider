@@ -146,6 +146,47 @@ poll_saved(checking_old);assert(attempts==2 and checking_old.pending==45)
 poll_saved(checking_old);assert(checking_old.best==45 and checking_old.medal==2)
 print('PASS initial storage check with an existing record defers the new result')
 
+-- IndexedDB may reveal a pre-existing slot only AFTER the initial checking instance.
+-- Reconcile restored records before any queued write, never erase a better survivor.
+local late=reset()
+sync='syncing';late=best.new()
+assert(late.pending==false and late.best==nil)
+assert(best.offer(late,{official=true,time=40,medal=1}))
+local late_a='rider/best-'..best.KEY..'-a'
+files[late_a]={seq=1,text=json.encode({version=2,key=best.KEY,time=20,medal=3})}
+assert(attempts==0)
+poll_saved(late)
+assert(late.best==20 and late.medal==3 and late.desired_best==20 and late.desired_medal==3)
+assert(attempts==0 and late.pending==nil,'do not overwrite a superior late-restored slot')
+assert(not best.offer(late,{official=true,time=35,medal=2}))
+assert(attempts==0 and reopen().best==20 and reopen().medal==3)
+print('PASS late-restored superior best and medal survive queued worse offers')
+
+-- A late-restored worse record must be merged with the queued better official result.
+local late_worse=reset()
+sync='syncing';late_worse=best.new()
+assert(best.offer(late_worse,{official=true,time=40,medal=2}))
+files[late_a]={seq=1,text=json.encode({version=2,key=best.KEY,time=50,medal=1})}
+poll_saved(late_worse)
+assert(attempts==1 and late_worse.best==50 and late_worse.medal==1)
+assert(late_worse.pending==40 and late_worse.pending_medal==2)
+poll_saved(late_worse)
+assert(late_worse.best==40 and late_worse.medal==2 and reopen().best==40)
+print('PASS late-restored worse record merges with queued official improvement')
+
+-- Unknown or unreadable files revealed by initial sync must never be overwritten.
+for _,broken in ipairs({'unreadable', {seq=1,text=json.encode({version=999,key=best.KEY,time=1})}}) do
+    local late_guard=reset()
+    sync='syncing';late_guard=best.new()
+    assert(best.offer(late_guard,{official=true,time=30,medal=2}))
+    files[late_a]=broken
+    poll_saved(late_guard)
+    assert(late_guard.blocked and attempts==0 and files[late_a]==broken)
+    assert(late_guard.best==nil and late_guard.medal==0)
+    assert(not best.offer(late_guard,{official=true,time=25,medal=3}))
+end
+print('PASS late-restored unreadable and future-version slots block queued writes')
+
 -- Duplicate, practice, invalid values and medal-only monotonic updates.
 local m=reset()
 assert(best.offer(m,{official=true,time=20,medal=1}))
