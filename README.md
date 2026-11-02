@@ -2,7 +2,7 @@
 
 Rider is a 2D mobile buggy-driving game built with **Defold 1.14.0** and integrated **Box2D 3**. It combines precision driving, authored obstacle courses, a playable level editor and a Driving Gym for physics experiments.
 
-[Play the latest deployed HTML5 build](https://bongohorse.github.io/rider/) · [Project status](STATUS.md) · [Development plan](docs/PLAN.md) · [Documentation index](docs/README.md)
+[Play the latest deployed HTML5 build](https://bongohorse.github.io/rider/) · [Project status](docs/README.md#current-state) · [Development plan](docs/PLAN.md) · [Documentation index](docs/README.md)
 
 ## Play and test
 
@@ -18,7 +18,7 @@ The deployed build may lag behind an unmerged PR. Check the site's [build.json](
 
 **Local first:** T3 Code or VS Code on Windows/WSL2, a pinned Bob/Defold toolchain, optional local loopback Extender, focused checks and GitHub `required` CI for final verification. Follow the [local T3 setup](docs/LOCAL_T3_SETUP.md), [tooling guide](docs/TOOLING.md), [toolchain lock](docs/TOOLCHAIN_LOCK.md) and [agent rules](AGENTS.md). Only approved issues/PRs authorize changes.
 
-**Targets:** HTML5 preview today; Android is the first planned app-store release, iOS later. Playwright desktop/touch emulation does **not** replace real phone performance, touch and installation tests. Known gaps are tracked in [STATUS.md](STATUS.md) and the [platform matrix](docs/PLATFORM_MATRIX.md).
+**Targets:** HTML5 preview today; Android is the first planned app-store release, iOS later. Playwright desktop/touch emulation does **not** replace real phone performance, touch and installation tests. Known gaps are tracked in the [platform matrix](docs/PLATFORM_MATRIX.md) and the [release-readiness epic #422](https://github.com/bongohorse/rider/issues/422).
 
 ## Licensing
 

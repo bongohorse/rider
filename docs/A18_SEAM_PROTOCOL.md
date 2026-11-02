@@ -54,7 +54,7 @@ node --test tests/ci/seams.test.cjs
 
 The JSON `status` describes verification of the measurement machinery; `acceptance` is PASS only when all three free-roll pairs qualify, otherwise BLOCKED. `d8` is derived from qualified pairs only (CONFIRMED when chain has no more ghost bumps than hull at every speed; REVISE otherwise; PROVISIONAL when pairs are missing) and is never asserted by the test.
 
-Current outcome and evidence links live solely in [STATUS.md](../STATUS.md).
+The measured outcome is in the Gym's [measured limits](../main/gym/README.md#measured-limits); evidence is in [PR #113](https://github.com/bongohorse/rider/pull/113).
 
 ## Engine boundary found during the experiment
 

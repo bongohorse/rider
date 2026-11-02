@@ -2,7 +2,7 @@
 
 Setup, build, test and CI operations. Versions: [TOOLCHAIN_LOCK.md](TOOLCHAIN_LOCK.md) and [toolchain-lock.json](../tools/toolchain-lock.json). Test/result rules: [automation contract](contracts/automation.md).
 
-**Contents:** [Prerequisites](#prerequisites) · [Commands](#commands) · [Gym tests](#gym-tests) · [Local environment (WSL, VS Code)](#local-environment-wsl-vs-code) · [Worktrees](#worktrees) · [CI and required check](#ci-and-required-check) · [Agent CI completion watch](#agent-ci-completion-watch) · [Dependencies and Renovate](#dependencies-and-renovate) · [Preview deployment](#preview-deployment) · [Gemini read-only reviewer setup](#gemini-read-only-reviewer-setup)
+**Contents:** [Prerequisites](#prerequisites) · [Commands](#commands) · [Affected suites](#affected-suites) · [Gym tests](#gym-tests) · [Local environment (WSL, VS Code)](#local-environment-wsl-vs-code) · [Worktrees](#worktrees) · [CI and required check](#ci-and-required-check) · [Agent CI completion watch](#agent-ci-completion-watch) · [Dependencies and Renovate](#dependencies-and-renovate) · [Preview deployment](#preview-deployment) · [Gemini read-only reviewer setup](#gemini-read-only-reviewer-setup)
 
 ## Prerequisites
 
@@ -29,11 +29,30 @@ python tools/g2/negative_build.py --output artifacts/g2/negative-build
 - Every invocation writes `results.json` (schema 1), `junit.xml` and logs to `artifacts/g2/<uuid>/` by default. Exit 0 PASS, 1 FAIL, 2 BLOCKED (never green).
 - `negative_build.py` injects a Lua error into a temporary copy, requires the named build error, restores the bytes and rebuilds; the working tree stays unchanged. The Android job also verifies the APK with `apksigner`/`aapt2` (not a device install).
 
-Baseline checks for any change: `python tools/bootstrap_check.py`, `python tools/ci/lint_lua.py`, `python -m unittest discover -s tests/bootstrap -v`, plus affected `tests/g1`, `tests/g2`, `tests/ci` (Python and `node --test tests/ci/*.cjs`) and `node --test tests/mobile/*.cjs`.
+Baseline checks for any change and the suites per changed path: [affected suites](#affected-suites).
 
 Lua static analysis ([#400](https://github.com/bongohorse/rider/issues/400)): `python tools/ci/lint_lua.py` runs luacheck over every tracked `.lua`/`.script`/`.gui_script` file with [.luacheckrc](../.luacheckrc). The binary version and SHA-256 are locked in `tools/ci/luacheck-lock.json` (Linux and Windows x86-64); it is cached in `.cache/ci/` and re-verified on every run, and a mismatching cache fails instead of being replaced. Any warning fails. Undefined/read-only globals, unused variables/values and dead code are checked; line length, unused arguments/loop variables (Defold callback signatures) and shadowing are not. The `Change classification` job runs it before any build, so `required` gates it, and `tools/local.py check` includes it. Silence a deliberate case on its line with `-- luacheck: ignore <code>` and a reason.
 
 Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/gameplay/*.lua` with the pinned Bob LuaJIT (`-joff`, extracted from the verified `bob.jar` to `.cache/g1/luajit`) and fails on a missing suite, a non-zero exit, a timeout or a missing `PASS` line. The Linux `G1 native` job runs it, so `required` gates it. This is Bob's LuaJIT, not the Defold engine runtime ([#385](https://github.com/bongohorse/rider/issues/385)). The persistence suites additionally run inside the pinned Defold engine in the same job ([harness](ci/persistence-engine-harness.md)).
+
+## Affected suites
+
+Every change runs the baseline: `python tools/bootstrap_check.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. CI `required` runs all of them on the PR head regardless.
+
+| Changed paths | Local commands |
+| --- | --- |
+| `tools/ci/`, `.github/workflows/`, `tests/ci/` | `python -m unittest discover -s tests/ci -v` · `node --test tests/ci/*.cjs` |
+| `tools/g1/`, build, engine guard, Bob/extender handling | `python -m unittest discover -s tests/g1 -v` |
+| `tools/g2/`, CLI, Bridge install | `python -m unittest discover -s tests/g2 -v` |
+| Gameplay or editor Lua under `main/` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
+| Storage, best time, level progress, coin bank, `tests/engine/persistence/` | `python -m unittest discover -s tests/engine/persistence -v` · `python tools/g2/persistence_385.py --output <fresh dir>` on a clean tree ([harness](ci/persistence-engine-harness.md)) |
+| Vehicle, physics, presets, stations, editor UI, `main/gym/` | the affected [Gym cases](#gym-tests); `a22` replays `tests/regress/` (regenerate only for an intended physics change) |
+| Touch, tilt, HTML5 presentation | `node --test tests/mobile/*.cjs` |
+| `tools/preview/`, release preview, `tests/preview/`, object fixtures in `tests/objects/` | `node --test tests/preview/*.test.cjs`; the release verification groups (`tools/preview/verify.cjs`, incl. `check_objects`) run in the preview CI job ([preview deployment](#preview-deployment)) |
+| Dependencies, `renovate.json` | Renovate validation and extraction ([Renovate](#dependencies-and-renovate)) |
+| Markdown only | baseline; CI also checks changed relative links (`tools/ci/check_docs_links.py`) |
+
+Add a row here when a new suite or test directory appears; AGENTS.md points to this table instead of listing suites.
 
 ## Gym tests
 
@@ -85,6 +104,7 @@ git -C ~/rider worktree remove ~/rider-worktrees/<name>   # after merge
 ## CI and required check
 
 - `required` (in `ci.yml`) is the only required status check on `main`. It aggregates bootstrap, Renovate, physics (native + HTML5), tooling/Android, Bridge and release preview, and fails on any failed, cancelled or unexpectedly skipped dependency. Never bypass it or use whole-workflow `paths-ignore`; keep the force-push/deletion protections on `main`.
+- Branch protection requires zero approving reviews, so the independent review is a workflow rule ([AGENTS.md](../AGENTS.md)), not technically enforced.
 - PR jobs test GitHub's merge commit; preview manifests identify that SHA.
 - **Fast path:** `tools/ci/classify_changes.py` classifies the diff. Non-bundled Markdown and plain `.txt` under `docs/` are docs-only: workflow lint, CI regression tests and Markdown link/anchor checks run, without rebuilding the game. Text files elsewhere, JSON/CSV/YAML fixtures, scripts, configuration and anything in `game.project` `custom_resources` retain full selection. Changes limited to `main/gym/` plus the same non-runtime documentation skip the Windows native entry, Bridge and negative build. Unknown diffs and manual dispatch fail closed to the full suite. The PR summary records the selection reason.
 - **Parallel browser suites:** build the debug Gym once per run, then run its cases in independent jobs: seams and sizes in two parts each, ramps, steps, gaps, air, struts, editor, draw, library, prefab, curve, path and controls. A part keeps whole measurement units (a seam speed pair, a custom level) on one runner; `Merge Gym part reports` checks that the parts share source, browser and machine identity, cover every case exactly once, and writes the same `seams-result.json`, `sizes-result.json` and `sizes-report.md` as a single run (`smoke.py --part` / `--merge`). Build/package the release once, then verify desktop, phone emulation, touch/tilt and stations in four independent jobs. Transfer artifacts are attempt-scoped, so after a failure use **Re-run all jobs**; re-running only failed jobs cannot find the earlier attempt's bundle or parts. All existing regression cases run before `required`; a failed matrix member fails the reusable workflow. SHA/run/attempt-scoped artifacts are transferred only within that run, never used as a build cache.

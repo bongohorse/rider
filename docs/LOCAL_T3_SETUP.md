@@ -143,11 +143,11 @@ For release builds use a **separate checkout/worktree** and its own dependencies
 
 Use this instruction for the first T3 thread after the preparation branch is merged and host setup is complete:
 
-> Read AGENTS.md, STATUS.md and docs/LOCAL_T3_SETUP.md. Report the environment, architecture, checkout, branch and HEAD. Work only on the selected issue with its GO, in one worktree. Run the local doctor, then the fast check and affected real-input tests. Use the loopback Extender and rebuild after changed inputs. Correct failures locally before pushing a coherent reviewed change. Keep required CI and toolchain pins. Report named PASS/FAIL/BLOCKED results and evidence paths; never infer a device, offline or full-suite pass. Do not install/update tools, expose services or copy credentials as part of the coding task.
+> Read AGENTS.md, the selected issue and docs/LOCAL_T3_SETUP.md. Report the environment, architecture, checkout, branch and HEAD. Work only on the selected issue with its GO, in one worktree. Run the local doctor, then the fast check and affected real-input tests. Use the loopback Extender and rebuild after changed inputs. Correct failures locally before pushing a coherent reviewed change. Keep required CI and toolchain pins. Report named PASS/FAIL/BLOCKED results and evidence paths; never infer a device, offline or full-suite pass. Do not install/update tools, expose services or copy credentials as part of the coding task.
 
 ## Host acceptance
 
-Record progress in STATUS.md and evidence in the implementation PR. Host observations are NOT RUN until performed; repository unit tests are not substitutes.
+Record progress on the issue and evidence in the implementation PR. Host observations are NOT RUN until performed; repository unit tests are not substitutes.
 
 1. Confirm intended WSL x86-64 environment, free CPU/RAM/disk, pinned dependencies and selected Codex account interactively. T3 edits a disposable file in the intended checkout; discard it. Keep credentials out of evidence.
 2. Record Extender/JAR/image/SDK identities and loopback binding. From a new separate worktree with no Bob engine cache, build HTML5 through the local server. Confirm actual local request logs, `engines.json` PASS for both engines and G1 HTML5 runtime/Box2D v3 PASS in both isolated and players modes.

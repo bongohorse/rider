@@ -1,6 +1,6 @@
 # Issue guide
 
-How Rider issues are structured, labelled, ordered and kept short. Applies to humans and agents. [PLAN.md](PLAN.md#work-order) holds the current work order; [STATUS.md](../STATUS.md) holds progress and recorded GOs.
+How Rider issues are structured, labelled, ordered and kept short. Applies to humans and agents. [PLAN.md](PLAN.md#work-order) holds the work order and its reasons. Live state — GOs, owners, progress, blockers, open drive tests — exists only on GitHub as described here; no repository file repeats it ([current-state links](README.md#current-state)).
 
 **Contents:** [Kinds and hierarchy](#kinds-and-hierarchy) · [Required sections](#required-sections) · [Length](#length) · [Labels](#labels) · [Milestones and order](#milestones-and-order) · [GO, owner and status](#go-owner-and-status) · [Titles](#titles) · [Updating and closing](#updating-and-closing) · [Checklist](#checklist)
 
@@ -64,10 +64,11 @@ Milestones are ordered **waves**, named `W1 …`, `W2 …`. Work the lowest open
 
 ## GO, owner and status
 
-- A GO is recorded on the issue — a `**GO:** Claudio YYYY-MM-DD — <quote or link>` line at the top of the body or a comment — **and** listed in STATUS.md (Recorded GOs) as AGENTS.md requires; then the label becomes `status: ready`. A label without both records is not a GO.
+- A GO is recorded on the issue — a `**GO:** Claudio YYYY-MM-DD — <quote or link>` line at the top of the body or a comment (a coordinator GO within its delegated authority names the authority, e.g. `**GO:** Director per #333 …`); then the label becomes `status: ready`. A label without that record is not a GO.
 - When work starts the owner comments `Owner: <agent> · branch <name> · PR #n`, and the label becomes `status: in progress`. One writing owner per issue.
 - After merge, an issue that needs a drive test stays open with `status: needs drive test` and the steps in its Drive test section (its PR uses `Refs #n`, not `Closes #n`); otherwise the PR closes it.
 - Blocked: label `status: blocked` plus one comment with the blocker and the issue that resolves it.
+- A drive-test result is Claudio's answer quoted with its date in a comment on that issue; OK or obsolete closes it, a FAIL becomes a new bug issue.
 - A coordinator appointed by Claudio (currently the studio Director, [#333](https://github.com/bongohorse/rider/issues/333)) maintains these labels and owners; its former `RIDER-STUDIO` body footer is replaced by them.
 - `P0` interrupts the wave order: the next free writer takes it once a GO is recorded (Claudio, or the coordinator/integration session within its delegated authority).
 
