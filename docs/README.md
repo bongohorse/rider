@@ -7,6 +7,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | Task | Read |
 | --- | --- |
 | What is next, what is open | [STATUS.md](../STATUS.md) |
+| Open maintainer drive tests, grouped into sessions | [drive-test sessions](ACCEPTANCE.md) |
 | Decisions, work order, roadmap, stop points | [PLAN.md](PLAN.md) |
 | Writing, labelling, ordering or closing issues | [issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/); archived long issue texts in [issue-archive/](issue-archive/) |
 | Gameplay intent, open design choices | [GAME_DESIGN.md](GAME_DESIGN.md), [vehicle contract](contracts/vehicle.md) |
@@ -42,6 +43,7 @@ Index of every active document. Read [STATUS.md](../STATUS.md), the current issu
 | --- | --- | --- |
 | [AGENTS.md](../AGENTS.md) | Rules for every AI agent | Start · Workflow · Technical boundaries · Verification |
 | [STATUS.md](../STATUS.md) | Current progress and blockers | Now · Open acceptance · Milestones · Measured limits · Open limits and blockers |
+| [ACCEPTANCE.md](ACCEPTANCE.md) | Open maintainer drive tests in four sessions (#404) | How to run a session · Results 2026-11-02 · Session 1: desktop editor · Session 2: desktop driving and stations · Session 3: phone · Session 4: vehicle feel (deferred) · Recording results |
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, work order, roadmap | Goal · Decisions · Work order · Roadmap · Stop points · Later phases |
 | [ISSUES.md](ISSUES.md) | Issue kinds, sub-issues, required sections, length, labels, waves, GO/owner/status | Kinds and hierarchy · Required sections · Length · Labels · Milestones and order · GO, owner and status · Titles · Updating and closing · Checklist |
 | [issue-archive/](issue-archive/) | Full former bodies of long epics/issues (#120, #121, #198, #230, #262, #263, #333, #356, #358, #392), moved 2026-11-02 | Background only, not a GO |
