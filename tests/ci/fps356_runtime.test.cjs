@@ -128,3 +128,21 @@ test('real focus-loss probe owns an explicit BrowserContext and does not synthes
   'window.riderTimeState = {'
  ])assert(!runner.includes(forbidden),'Unsafe API-owned context or fake pause: '+forbidden);
 });
+
+test('headless visibility failure is BLOCKED after independent real replay proof',()=>{
+ const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
+ const replay=runner.indexOf('evidence.replay=verifyReplay(');
+ const background=runner.indexOf("evidence.background=await pauseAndResume('background','background')");
+ assert(replay>=0&&background>replay,'Replay must be independently verified before optional browser background gate');
+ assert(runner.includes('BLOCKED_BACKGROUND_VISIBILITY_UNOBSERVED:'),
+  'Headless unsupported visibility must have a truthful explicit blocker');
+ assert(runner.includes("document.visibilityState==='hidden'"),
+  'Do not substitute synthetic blur for actual browser visibility');
+ assert(runner.includes('comparePause(p,resume,'),
+  'Background pause must retain the exact zero-fixed-tick gate');
+ for(const forbidden of [
+  "dispatchEvent(new Event('blur'))",
+  'document.visibilityState =',
+  'window.riderTimeState={'
+ ])assert(!runner.includes(forbidden),'Fake background/pause signal: '+forbidden);
+});
