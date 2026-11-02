@@ -105,6 +105,25 @@ poll_saved(q)
 assert(q.best==20 and q.medal==3 and reopen().best==20)
 print('PASS queued second snapshot recovers from its own local write failure')
 
+-- Two consecutive local EIOs must retain the newer official result across backoff.
+local twice=reset();fail_next=2
+assert(not best.offer(twice,{official=true,time=25,medal=1}))
+assert(best.offer(twice,{official=true,time=20,medal=3}))
+assert(attempts==1 and twice.best==nil and twice.medal==0)
+assert(twice.desired_best==20 and twice.desired_medal==3)
+clock=clock+1;best.poll(twice)
+assert(attempts==2 and twice.pending==nil and twice.best==nil)
+clock=clock+1;best.poll(twice)
+assert(attempts==2,'second failed write must back off for two seconds')
+clock=clock+1;best.poll(twice)
+assert(attempts==3 and twice.pending==20 and twice.pending_medal==3 and twice.best==nil)
+sync='syncing';best.poll(twice);assert(twice.best==nil and twice.medal==0)
+poll_saved(twice)
+assert(twice.best==20 and twice.medal==3 and attempts==3)
+assert(reopen().best==20 and reopen().medal==3)
+print('PASS two consecutive local EIOs retain queued official best and medal')
+
+
 -- Initial sync verification is not permission to write or discard official offers.
 local checking=reset()
 sync='syncing';checking=best.new()
