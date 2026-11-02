@@ -16,8 +16,10 @@ function M.parse(text)
  end
  return d
 end
-function M.new()
- local store=custom.slot_store(names,M.parse);local restored,err=store.restore();local latest=store.newest()
+-- Inspect both slots before the first write, including after an asynchronous browser restore.
+-- A corrupt or newer-format peer must never be silently replaced by a valid survivor.
+local function read_slots(store)
+ local restored,err=store.restore();local latest=store.newest()
  local bad=err or latest and latest.unsupported or restored and restored.skipped or not restored and store.exists()
  local completed={}
  for i,name in ipairs(names) do
@@ -26,6 +28,11 @@ function M.new()
   if not ok or exists and not valid then bad=true end
   if valid then for id in pairs(slot.doc.completed) do completed[id]=true end end
  end
+ return completed,bad
+end
+function M.new()
+ local store=custom.slot_store(names,M.parse)
+ local completed,bad=read_slots(store)
  return {store=store,completed=completed,desired=copy(completed),blocked=bad or false,checking=not bad and custom.sync_state()~='saved',status=bad and 'Progress protected' or 'Checking progress storage'}
 end
 function M.offer(t,id,official)
@@ -43,6 +50,11 @@ function M.poll(t)
   if state=='syncing' then return end
   t.checking=false
   if state~='saved' then t.blocked=true;t.status='Progress not saved';return end
+  -- IndexedDB may have populated the save slots only after new() sampled them.
+  -- Merge persisted acknowledgements and queued offers before any flush.
+  local restored,bad=read_slots(t.store)
+  if bad then t.blocked=true;t.status='Progress protected';return end
+  for id in pairs(restored) do t.completed[id]=true;t.desired[id]=true end
  end
  if t.pending then
   if state=='syncing' then return end
