@@ -219,8 +219,9 @@ jobs:
             cases: 'le5a'
           - group: curve
             cases: 'le5b'
-          - group: path
-            cases: 'le5c'
+          # #369: keep both original smoke commands on one runner.
+          - group: path-regress
+            cases: 'le5c a22'
           - group: pause
             cases: 'a20'
           - group: points
@@ -239,8 +240,6 @@ jobs:
             cases: 'cf3'
           - group: replay
             cases: 'a21'
-          - group: regress
-            cases: 'a22'
           - group: controls
             cases: 'a3 a6 coast coast345 a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
     runs-on: ubuntu-26.04
@@ -451,6 +450,13 @@ jobs:
         with:
           pattern: g1-gym-*-[12]-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/parts/
+      # #369: require all real Gym artifacts and exact source identities.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: g1-gym-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/gym369/
+      - name: Require complete Gym report inventory and source SHA (#369)
+        run: node tools/ci/gym369_gate.cjs artifacts/gym369 "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
       - name: Merge seam parts into the full A18 report
         env:
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
