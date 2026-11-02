@@ -57,14 +57,14 @@ for(const [name,mutate,reason] of [
 test('background pause selects a campaign course admitted by the real loader',()=>{
  const root=path.resolve(__dirname,'../..');
  const catalog=fs.readFileSync(path.join(root,'main/gym/course_catalog.lua'),'utf8');
- const match=catalog.match(/M=\\{ids=\\{([^}]+)\\}\\}/);
+ const match=catalog.match(/M=\{ids=\{([^}]+)\}\}/);
  assert(match,'Cannot read the actual campaign course IDs');
  const admitted=[...match[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
  assert(admitted.includes(TEST_STATION),'Runtime probe station cannot suspend on focus loss');
  assert.notEqual(TEST_STATION,'straight','Non-campaign Gym station would bypass focus suspend');
  const loader=fs.readFileSync(path.join(root,'main/gym/boot.script'),'utf8');
- assert.match(loader,/id==hash\\("run_focus_lost"\\)[^\\n]*catalog\\.index\\(self\\.station\\)~=nil/,
+ assert.match(loader,/id==hash\("run_focus_lost"\)[^\n]*catalog\.index\(self\.station\)~=nil/,
   'Loader focus admission contract changed; revalidate runtime pause');
  const runner=fs.readFileSync(path.join(root,'tools/gym/fps356_runtime.cjs'),'utf8');
- assert.match(runner,/encodeURIComponent\\(TEST_STATION\\)/,'Runner no longer uses the admitted course');
+ assert.match(runner,/encodeURIComponent\(TEST_STATION\)/,'Runner no longer uses the admitted course');
 });
