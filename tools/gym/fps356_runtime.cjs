@@ -86,11 +86,13 @@ if(require.main===module){
   fs.createReadStream(file).pipe(res);
  });
  (async()=>{
-  let browser,page,other;const errors=[],windows=[],evidence={};
+  let browser,context,page,other;const errors=[],windows=[],evidence={};
   try{
    await new Promise(r=>server.listen(0,'127.0.0.1',r));
    browser=await chromium.launch();
-   page=await browser.newPage({viewport:{width:1280,height:720}});
+   // Explicit BrowserContext: Playwright forbids context.newPage() on browser.newPage()'s owned context.
+   context=await browser.newContext({viewport:{width:1280,height:720}});
+   page=await context.newPage();
    page.on('pageerror',e=>{if(errors.length<20)errors.push(e.message);});
    page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text())&&errors.length<20)errors.push(m.text());});
    // Default engine startup is unchanged at 60. No --config display override.
@@ -249,6 +251,7 @@ if(require.main===module){
   }finally{
    if(other)await other.close().catch(()=>{});
    if(page)await page.close().catch(()=>{});
+   if(context)await context.close().catch(()=>{});
    if(browser)await browser.close().catch(()=>{});
    await new Promise(resolve=>server.close(resolve));
   }
