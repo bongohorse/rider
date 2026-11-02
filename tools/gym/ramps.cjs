@@ -237,6 +237,12 @@ const P=require('./preset.cjs').fromArgv(process.argv);
    cases:Object.fromEntries(Object.entries(cameraCases).map(([key,v])=>[key,v.summary||v])),
    human_drive:'REQUIRED BEFORE CAMERA DEFAULT MERGE'};
   fs.writeFileSync(path.join(out,'camera352-result.json'),JSON.stringify(cameraReport,null,2));
+  // #370: real ArrowUp -> held ArrowDown reverse on authored Straight; camera
+  // branch/explicit local opt-in only. Preserve all original a16 assertions.
+  const camera370Reverse=process.env.GITHUB_HEAD_REF==='agent/camera/issue-370-aligned-evidence'||
+   process.env.RIDER_CAMERA370_REVERSE==='1';
+  if(camera370Reverse)await require('./camera370_reverse.cjs').run({
+   browser,url,sha,runId,out,preset:P,errors});
   if(errors.length)throw Error(errors.join('\n'));
   const report={source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',...P.report(),protocol:'Debug normal-owner tick commands, up throttle=1 / brake=0 / lean=0; independent authored 8 m/s starts; 6 s observation. Down neutral from 1 m/s.',results,
    summary:['ramps','ramps-long'].map(station=>({station,highest_climbed_degrees:Math.max(0,...results.filter(r=>r.station===station&&r.status==='CLIMBED').map(r=>r.angle))}))};
