@@ -108,3 +108,23 @@ for(const [name,mutate,reason] of [
  const x=replayFixture();mutate(x);
  assert.throws(()=>verifyReplay(x.recorded,x.played,x.options),reason);
 });
+
+test('real focus-loss probe owns an explicit BrowserContext and does not synthesize pause',()=>{
+ const runner=fs.readFileSync(path.resolve(__dirname,'../../tools/gym/fps356_runtime.cjs'),'utf8');
+ // browser.newPage() creates an API-owned context whose context.newPage() throws.
+ for(const required of [
+  'context=await browser.newContext({viewport:',
+  'page=await context.newPage()',
+  'other=await page.context().newPage()',
+  'await context.close().catch',
+  'await other.bringToFront()',
+  "document.visibilityState==='hidden'",
+  'window.riderTimeState?.paused===true',
+  'comparePause(p,resume,'
+ ])assert(runner.includes(required),'Missing real focus/context contract: '+required);
+ for(const forbidden of [
+  'page=await browser.newPage(',
+  'window.riderTimeState={',
+  'window.riderTimeState = {'
+ ])assert(!runner.includes(forbidden),'Unsafe API-owned context or fake pause: '+forbidden);
+});
