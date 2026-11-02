@@ -1072,7 +1072,7 @@ local function drop_track(self,height)
     if not plan then editor.message=err;return end
     if #plan.moves>0 and not editor.commit(function(e)return track_align.apply(e,plan)end,true) then return end
     self.track_height=height;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
-    track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan)
+    track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan,height)
 end
 local function auto_context(self)
     if self.auto_opened~=editor.opened then
@@ -1115,9 +1115,10 @@ local function apply_auto(self)
     if not ok then clear_auto(self);return end
     editor.selected={};for _,id in ipairs(p.ids) do editor.selected[id]=true end
     editor.selection=p.ids[#p.ids];editor.vertex,editor.vertex2,editor.vertices=nil,nil,{}
-    if self.track_opened~=editor.opened then self.track_session=nil end -- never inherit another document's temporary routes
+    if self.track_opened~=editor.opened then self.track_session=nil;self.track_height=track_align.DEFAULT end -- never inherit another document's temporary routes or Height
     self.track_opened=editor.opened;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
     track_align.attach(editor.doc.editor,self.track_session,p.targets);self.track_cache=nil
+    if self.auto_settings and self.auto_settings.height then self.track_height=self.auto_settings.height end -- #427: Drop keeps the applied Auto height
     clear_auto(self);editor.tool='select';self.ui.scroll=0;editor.touch()
     editor.message=string.format('Applied %d new coins; %d removed. Selection retained: adjust Height / Along track or drag. One Undo.',#p.ids,p.removed)
 end
