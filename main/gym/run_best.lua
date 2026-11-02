@@ -29,7 +29,7 @@ function M.new(key)
     end
     local t={store=s,key=key,best=best_time,medal=medal,desired_best=best_time,desired_medal=medal,
         status=bad and 'Record unavailable; save protected' or 'saved',blocked=bad}
-    if not bad and custom.sync_state()~='saved' then t.status='Checking storage';t.pending=t.best or false end
+    if not bad and custom.sync_state()~='saved' then t.status='Checking storage';t.pending=t.best or false;t.checking=true end
     return t
 end
 -- Only one immutable absolute snapshot may await storage acknowledgement at a time.
@@ -92,8 +92,23 @@ function M.poll(t)
             t.pending=nil;t.pending_medal=nil
             return
         end
-        if t.pending then t.best=t.pending end
-        if t.pending_medal then t.medal=t.pending_medal end
+        if t.checking then
+            -- The initial IndexedDB restore can reveal slots after M.new first ran.
+            -- Reconcile their acknowledged record before writing any queued offer.
+            local fresh=M.new(t.key)
+            if fresh.blocked then
+                t.blocked=true;t.status='Record unavailable; save protected'
+                t.pending=nil;t.pending_medal=nil;t.checking=nil
+                return
+            end
+            t.best=fresh.best;t.medal=fresh.medal
+            if fresh.best then t.desired_best=math.min(t.desired_best or fresh.best,fresh.best) end
+            t.desired_medal=math.max(t.desired_medal,fresh.medal)
+            t.checking=nil
+        else
+            if t.pending then t.best=t.pending end
+            if t.pending_medal then t.medal=t.pending_medal end
+        end
         t.pending=nil;t.pending_medal=nil
     end
     if t.retry_at and os.time()<t.retry_at then return end
