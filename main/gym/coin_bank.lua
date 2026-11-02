@@ -18,20 +18,40 @@ function M.parse(text)
     end
     return d
 end
-function M.new()
-    local store=custom.slot_store(NAMES,M.parse)
+-- Inspect both slots before the first write, including after an asynchronous browser restore.
+-- A corrupt or newer-format peer must never be silently replaced by a valid survivor.
+local function read_slots(store)
     local restored,err=store.restore();local latest=store.newest()
     local bad=err or latest and latest.unsupported or restored and restored.skipped or not restored and store.exists()
-    local total,serial,gems,claims=0,0,0,{}
+    local total,serial,claims=0,0,{}
     for i,name in ipairs(NAMES) do
         local ok,exists=pcall(sys.exists,sys.get_save_file('rider',name));local slot=store.slot(i)
         local valid=slot and not slot.unsupported and integer(slot.seq,M.LIMIT) and slot.seq>=1
         if not ok or exists and not valid then bad=true end
         if valid then total=math.max(total,slot.doc.total);serial=math.max(serial,slot.doc.serial);for k in pairs(slot.doc.claims or {}) do claims[k]=true end end
     end
-    for _ in pairs(claims) do gems=gems+1 end
+    return total,serial,claims,bad
+end
+local function count(t) local n=0;for _ in pairs(t) do n=n+1 end;return n end
+function M.new()
+    local store=custom.slot_store(NAMES,M.parse)
+    local total,serial,claims,bad=read_slots(store)
+    local gems=count(claims)
     return {gems=gems,desired_gems=gems,claims=claims,desired_claims=copy(claims),store=store,total=total,desired=total,serial=serial,blocked=bad or false,
         checking=not bad and custom.sync_state()~='saved',status=bad and 'Coin bank protected' or 'saved',generation=0,attempt=0}
+end
+-- IndexedDB may populate the slots only after new() sampled them (#393). Adopt the persisted
+-- balance, serial and gem claims, then re-apply official coins queued meanwhile, before any write.
+local function adopt_restored(t)
+    local total,serial,claims,bad=read_slots(t.store)
+    if bad then t.blocked=true;t.status='Coin bank protected';return false end
+    local queued=t.desired-t.total
+    t.total=math.max(t.total,total);t.serial=math.max(t.serial,serial)
+    for k in pairs(claims) do t.claims[k]=true;t.desired_claims[k]=true end
+    t.gems,t.desired_gems=count(t.claims),count(t.desired_claims)
+    t.desired=t.total+queued
+    if t.desired>M.LIMIT or t.desired_gems>M.MAX_CLAIMS then t.blocked=true;t.status='Coins not saved';return false end
+    return true
 end
 function M.generation(t,generation)
     if generation>t.generation then t.generation=generation;t.attempt=0 end
@@ -77,6 +97,7 @@ function M.poll(t,dt)
         if state=='syncing' then t.status='Checking coin storage';return end
         t.checking=false;t.status='saved'
         if state~='saved' then t.blocked=true;t.status='Coins not saved';return end
+        if not adopt_restored(t) then return end
     end
     local p=t.pending
     if p then
