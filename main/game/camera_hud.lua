@@ -116,7 +116,8 @@ function M.place(h,area,blocked,gap)
     local ux,uy=units(h.hit)
     if not ux then return false end
     local w,hh=M.CONTROL.w*ux,M.CONTROL.h*uy
-    local left,top,clear=fps_place.to_screen(area,w,hh,M.DEFAULT_X,M.DEFAULT_Y)
+    local left,top=fps_place.to_screen(area,w,hh,M.DEFAULT_X,M.DEFAULT_Y)
+    local clear
     left,top,clear=fps_place.place(area,w,hh,left,top,blocked,gap)
     move(h.control,left,top,ux,uy,true)
     h.rect={x0=left,y0=top-hh,x1=left+w,y1=top}
