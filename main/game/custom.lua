@@ -55,9 +55,26 @@ function M.file_bytes(paths)
     for _,path in ipairs(paths) do local f=io.open(path,"rb");if f then n=n+f:seek("end");f:close() end end
     return n
 end
+-- Removes one save file: true once it is gone (or was never there), else nil, error; a thrown error counts
+-- as a failure too. Read-only closes no longer schedule HTML5 persistence, so a removal requests it.
+local function unlink(path)
+    local f=io.open(path,"rb")
+    if not f then return true end
+    f:close()
+    local ok,removed,err=pcall(os.remove,path)
+    if not ok or not removed then return nil,tostring(ok and err or removed) end
+    if html5 then html5.run("Module.persistentSync()") end
+    return true
+end
+-- Refusal shown when a save would have to write over the only valid slot next to newer-version data
+-- (UI: "Save failed; the previous saved level is kept (<this>)").
+M.NEWER_VERSION="saved data is from a newer Rider version; this build will not overwrite it. Open the newer version to keep saving"
 -- parse(text) -> doc | nil, error, unsupported. An unsupported slot (unknown editor version) is never
--- overwritten: its original text stays as it is (contract R1).
-local function store(slots,parse)
+-- overwritten: its original text stays as it is (contract R1). Nor is the only valid slot next to it: a
+-- failed write would leave nothing this build can restore. around=true (drafts, LE2) saves around an
+-- unsupported slot anyway and replaces the only valid draft: a failed write loses that draft, and the
+-- level then survives only where another copy was saved (its My levels copy or the played level).
+local function store(slots,parse,around)
     local S={}
     local protection
     local function raw(i)
@@ -115,17 +132,33 @@ local function store(slots,parse)
         end
         return best
     end
-    function S.save(text,key)
-        protection=nil
-        -- One fresh pair supplies both target selection and sequence; readback stays mandatory.
+    -- Target slot and sequence of the next write, or nil, why a write is refused. One fresh pair supplies
+    -- both target selection and sequence.
+    local function plan()
         local a,b=slot(1),slot(2)
         local current=latest_valid(a,b)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
         local target=current and 3-current.slot or 1
         local held=target==1 and a or b
-        if held and held.unsupported then target=current and current.slot or 3-target end
+        if held and held.unsupported then
+            if current and not around then return nil,M.NEWER_VERSION end
+            target=current and current.slot or 3-target
+        end
         held=target==1 and a or b
         if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
+        return target,seq
+    end
+    -- True when a save would be attempted, else nil, why it is refused; writes nothing.
+    function S.writable()
+        local target,err=plan()
+        if not target then return nil,err end
+        return true
+    end
+    function S.save(text,key)
+        protection=nil
+        -- Readback stays mandatory.
+        local target,seq=plan()
+        if not target then return nil,seq end
         local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time(),key=key})
         if not ok then return nil,tostring(err) end
         local back=slot(target)
@@ -148,17 +181,26 @@ local function store(slots,parse)
     function S.cost(text)
         return #sys.serialize({format=1,seq=1,text=text,time=os.time()})
     end
+    -- Removes both slots, the older (or unreadable) one first, so a partial removal keeps the newest copy.
     function S.remove()
         protection=nil
-        for _,name in ipairs(slots) do
-            local path=sys.get_save_file(APP,name);local f=io.open(path,"rb")
-            if f then
-                f:close();local ok,err=os.remove(path);if not ok then return nil,err end
-                -- Read-only closes no longer schedule persistence; include successful/partial deletes.
-                if html5 then html5.run("Module.persistentSync()") end
-            end
+        local function rank(i) local t=raw(i);return t and t.seq or -math.huge end
+        local first=rank(2)<rank(1) and 2 or 1
+        for _,i in ipairs({first,3-first}) do
+            local ok,err=unlink(sys.get_save_file(APP,slots[i]))
+            if not ok then return nil,err end
         end
         return true
+    end
+    -- Rollback of the write that returned seq: removes that slot, so the slot that was current before is
+    -- current again (a first write leaves no file). nil, error when no slot holds seq or it stays.
+    function S.drop(seq)
+        protection=nil
+        for i=1,2 do
+            local t=raw(i)
+            if t and t.seq==seq then return unlink(sys.get_save_file(APP,slots[i])) end
+        end
+        return nil,"the written slot was not found"
     end
     return S
 end
@@ -168,12 +210,15 @@ function M.restore() return M.level.restore() end
 -- key: the My levels entry the level was played from (LE4), nil for an imported file.
 function M.save(text,key) return M.level.save(text,key) end
 -- Editor drafts (LE2) live in their own slot pair; a draft may be unplayable (R9).
-function M.drafts(parse) M.draft=M.draft or store({"custom-draft-a","custom-draft-b"},parse);return M.draft end
+function M.drafts(parse) M.draft=M.draft or store({"custom-draft-a","custom-draft-b"},parse,true);return M.draft end
 -- My levels (LE4): a small index plus one slot pair per level ("custom-doc-<key>-a/-b"), keyed by a
 -- storage key that is never reused, so level ids need not be unique and an import never overwrites.
 -- The index ({format, next, levels={key, id, name, time}}) is a slot pair too. One editor tab at a
 -- time: the index is read once per page and then kept in memory.
 M.LIBRARY_MAX=64
+-- Keys new_key probes before it reports a storage error: files that exist or cannot be read are skipped,
+-- never taken as free, and never scanned without end.
+M.KEY_PROBES=64
 local function parse_index(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"The level index is not valid JSON" end
@@ -192,8 +237,9 @@ function M.library(parse)
     local L={}
     local index=store({"custom-index-a","custom-index-b"},parse_index)
     local docs,cached,reserved={},nil,0
+    local function doc_slots(key) return {"custom-doc-"..key.."-a","custom-doc-"..key.."-b"} end
     local function doc_store(key)
-        docs[key]=docs[key] or store({"custom-doc-"..key.."-a","custom-doc-"..key.."-b"},parse)
+        docs[key]=docs[key] or store(doc_slots(key),parse)
         return docs[key]
     end
     L.store=doc_store
@@ -225,16 +271,21 @@ function M.library(parse)
     end
     -- A key for a level that is saved for the first time, or nil, error while the index is unusable.
     -- Unique within this page even before saving, never below keep (e.g. a draft's key), and never a key
-    -- whose files exist (a level saved before its index entry was written).
+    -- whose files exist or cannot be read (a level saved before its index entry was written). After
+    -- M.KEY_PROBES such keys it gives a storage error rather than probing on.
     function L.new_key(keep)
         local idx,err=L.index()
         if not idx then return nil,err end
-        local k=math.max(reserved+1,idx.next,(keep or 0)+1)
-        while doc_store(k).exists() do k=k+1 end
-        reserved=k
-        return k
+        local first=math.max(reserved+1,idx.next,(keep or 0)+1)
+        local last=first+M.KEY_PROBES-1
+        for k=first,last do
+            if not (docs[k] or store(doc_slots(k),parse)).exists() then reserved=k;return k end
+        end
+        return nil,"no free storage key: level files for keys "..first.."-"..last.." exist or cannot be read"
     end
-    -- Saves a level document under its key and updates its index entry (created on the first save).
+    -- Saves a level document under its key and updates its index entry (created on the first save). When
+    -- the index write fails the new document slot is withdrawn again, so the level opens as its previous
+    -- save (a first save leaves no files) and never shows content its index entry does not describe.
     function L.save(key,text,id,name)
         local idx,err=L.index()
         if not idx then return nil,err end
@@ -248,11 +299,16 @@ function M.library(parse)
             if #next.levels>=M.LIBRARY_MAX then return nil,"My levels is full ("..M.LIBRARY_MAX.." levels); delete a level first" end
             found={key=key};next.levels[#next.levels+1]=found
         end
-        local seq,serr=doc_store(key).save(text)
+        local s=doc_store(key)
+        local seq,serr=s.save(text)
         if not seq then return nil,serr end
         found.id,found.name,found.time=id,name,os.time()
         local ok,ierr=index.save(json.encode(next))
-        if not ok then return nil,"level index: "..tostring(ierr) end
+        if not ok then
+            local dropped,derr=s.drop(seq)
+            if not dropped then return nil,"level index: "..tostring(ierr).."; the new level copy could not be rolled back ("..tostring(derr)..")" end
+            return nil,"level index: "..tostring(ierr)
+        end
         cached=next
         return seq
     end
@@ -265,16 +321,22 @@ function M.library(parse)
         if not r then return nil,err or "no saved data" end
         return r.doc
     end
-    -- Removes the index entry first, then the level's files (HTML5 syncs the removal with the next save).
+    -- Removes the level's files (older slot first), then its index entry. A failure is reported and keeps
+    -- the entry listed for a retry; a partial removal leaves the newest copy, never an older one. An index
+    -- that refuses every write (newer-version data) is checked first, so it never leaves a listed level
+    -- without files.
     function L.remove(key)
         local idx,err=L.index()
         if not idx then return nil,err end
+        local writable,werr=index.writable()
+        if not writable then return nil,"the My levels index cannot be changed ("..tostring(werr).."); the level was not deleted" end
+        local removed,ferr=doc_store(key).remove()
+        if not removed then return nil,"level files: "..tostring(ferr) end
         local next={format=1,next=idx.next,levels={}}
         for _,l in ipairs(idx.levels) do if l.key~=key then next.levels[#next.levels+1]={key=l.key,id=l.id,name=l.name,time=l.time} end end
         local ok,ierr=index.save(json.encode(next))
-        if not ok then return nil,"level index: "..tostring(ierr) end
+        if not ok then return nil,"level index: "..tostring(ierr).."; the level's files are deleted but its entry could not be removed" end
         cached=next
-        for _,s in ipairs({"a","b"}) do pcall(os.remove,sys.get_save_file(APP,"custom-doc-"..key.."-"..s)) end
         docs[key]=nil
         return true
     end

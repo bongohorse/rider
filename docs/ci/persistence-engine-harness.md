@@ -14,6 +14,8 @@
 | `run_best_pending` | 16 | stubbed `main.game.custom` slot store with injected EIO |
 | `coin_bank_recovery` | 3 | stubbed `main.game.custom` slot store with injected EIO |
 | `coin_bank_late_restore` | 7 | production `custom.slot_store`, injected `sys`/`json`, late IndexedDB restore |
+| `my_levels_storage` | 9 | production My levels (`custom.library`), injected `sys`/`json`/`io.open`/`os.remove` failures |
+| `slot_protection` | 5 | production `custom.slot_store`/`custom.save`, injected `sys`/`json`, newer-version slots |
 
 The bootstrap prints exactly one `RIDER_PERSISTENCE` JSON completion marker (source commit, run ID, Defold engine version and SHA, case, PASS-line count, status) and exits non-zero on failure.
 
@@ -34,7 +36,7 @@ Use a fresh, empty output path. Optional: `--cases best level_progress …`, `--
 
 ## CI
 
-The Linux `G1 native` job runs the protocol checks and then the harness for all six suites, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
+The Linux `G1 native` job runs the protocol checks and then the harness for all eight suites, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
 
 ## Evidence and limits
 
