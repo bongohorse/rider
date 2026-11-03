@@ -4,6 +4,7 @@ local mobile=require "main.game.mobile"
 local seam_metrics
 local history=require "main.game.history"
 local audio=require "main.game.audio"
+local sfx=require "main.game.sfx"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.game.vehicle"
@@ -449,6 +450,7 @@ function update(self, dt)
     require("main.game.terrain_mesh").update(self)
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
+        sfx.update(self)
         rider.animate(self.vehicle,dt)
         rider.paint(self.vehicle,self.head_contact)
         juice.update(self)
@@ -604,6 +606,7 @@ function fixed_update(self, dt)
         else self.attempt_time=(self.attempt_time or 0)+dt end
         require('main.game.coin_runtime').observe(self,state)
         check_finish(self,state)
+        sfx.fixed(self,vehicle.touching(self.vehicle),feel.metres(b2d.body.get_linear_velocity(self.vehicle.chassis).y),dt)
         progress.observe(self,state)
         if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5d" then
             -- LE3b, LE5a, LE5b, LE5d only: per-tick extremes of chassis and wheel centres (metres) prove that a two-sided

@@ -97,6 +97,8 @@ Car Feel 3 ([#201](https://github.com/bongohorse/rider/issues/201)): `juice.lua`
 
 `engine.wav` is an original 0.4 s loop (`tools/art/engine_loop.py`, CC0). One voice starts after the first gameplay input, follows average wheel speed (playback 0.65–2.2) and survives retries; M mutes. Never autoplays. Gain/speed are component properties (`go.set`), not `sound.set_speed`.
 
+One-shot effects ([#438](https://github.com/bongohorse/rider/issues/438)): `sfx_coin`, `sfx_gem`, `sfx_fuel`, `sfx_land`, `sfx_crash` and `sfx_finish` (`tools/art/sfx.py`, CC0, `assets/sfx-LICENSE.txt`) are sound components on the controller GO. `main/game/sfx.lua` plays at most one voice per cue and render frame when a coin, gem or fuel count rises within an attempt, the run fails (head or bounds), FINISH is crossed, or after a hard landing (chassis and wheels without contact for at least 0.25 s, last airborne vertical speed at least 4.5 m/s down; dropped when the run fails on the same frame). Presentation only: it reads that state and never writes physics, scoring or run state. Like the engine voice nothing plays before the first gameplay input; mute and pause drop new cues (not queued) and stop ringing ones. Per-voice gains: `audio.effects` in `main/game/audio.lua`.
+
 ## Feedback copy
 
 F or Copy feedback formats Markdown with source SHA, preset, station, velocity, contacts, travel, FPS/profile, crash rule, tuning and station results. HTML5 uses `navigator.clipboard.writeText` after the gesture and reports success only when it resolves; otherwise a selectable read-only fallback appears. Native builds show the report. F respects Ctrl/Meta/Alt shortcuts.
