@@ -57,8 +57,13 @@ for i,e in ipairs(entries) do
             local k=(n+j-1)*4
             assert(c.base_colors[k+1]==material.SHADE[face] and c.base_colors[k+1]==c.base_colors[k+2] and c.base_colors[k+2]==c.base_colors[k+3],'face shading is not neutral')
             assert(c.color[k+4]==q.color[k+4],'alpha must stay the selection/visibility channel')
-            -- Arc-length U of side/rim/surface is unchanged (continuous across chunks and joins).
-            assert(c.uv[(n+j-1)*2+1]==q.uv[(n+j-1)*2+1] and c.uv[(n+j-1)*2+2]==q.uv[(n+j-1)*2+2])
+            -- Per-quad U drops whole tiles only (same fract as the continuous arc length) and stays small; V unchanged.
+            local tiles=4/material.PERIOD[face];local k=(n+j-1)*2+1
+            local shift=(q.uv[k]-c.uv[k])*tiles
+            assert(math.abs(shift-math.floor(shift+.5))<1e-9,'U shift is not whole tiles')
+            assert(c.uv[k]*tiles>=-1e-9 and c.uv[k]*tiles<1+(q.uv[(n+(j<=6 and 2 or j<=12 and 8 or 14)-1)*2+1]-q.uv[(n+(j<=6 and 1 or j<=12 and 7 or 13)-1)*2+1])*tiles+1e-9,'per-quad U not bounded')
+            assert(c.uv[k+1]==q.uv[k+1])
+            assert(c.color[(n+j-1)*4+1]==material.SHADE[face],'uploaded colour is not the neutral shade')
         end
     end
     -- End caps only at real run ends: END face, U 0 at the front and 1 at the back.
@@ -94,7 +99,13 @@ local function compare(prep,first,last,looks,label)
     for i=1,c.vertices do
         local face=c.texture[i]-3*4
         assert(face>=0 and face<=3,label..': not a snow slot')
-        assert(c.base_colors[(i-1)*4+1]==material.SHADE[face],label..': shading not neutral')
+        assert(c.base_colors[(i-1)*4+1]==material.SHADE[face] and c.color[(i-1)*4+1]==material.SHADE[face],label..': shading not neutral')
+    end
+    local caps=(first==1 and 1 or 0)+(last==#prep.p and 1 or 0)
+    for cap=1,caps do
+        local n=(last-first)*18+(cap-1)*6;local u={}
+        for j=1,6 do assert(c.texture[n+j]==3*4+material.END,label..': cap slot');u[j]=c.uv[(n+j-1)*2+1] end
+        assert(table.concat(u,',')=='0,1,1,0,1,0',label..': cap U '..table.concat(u,','))
     end
 end
 local looks={};for i=1,#entries[1].prep.p do looks[i]={width=1.4,side=3,shading=.4} end
@@ -110,6 +121,8 @@ for k,n in ipairs({520,496}) do local chain={};for i=0,n do chain[i+1]={i+(k-1)*
 long._road_profile='perspective-v1'
 local r=assert(budget.check(long))
 assert(r.vertices==18312 and r.sections==17 and r.stride==52 and r.payload==952224 and budget.PAYLOAD-r.payload==96352)
+-- CPU working estimate: 576 B/vertex retained + 512 B/physics vertex + two payload copies.
+assert(r.cpu_estimate==18312*576+r.physics_vertices*512+2*952224)
 material.override=false
 assert(assert(budget.check(long)).payload==878976)
 print('PASS 660 m Fit payload: 18,312 vertices x 52 B = 952,224 B (96,352 B under 1 MiB); untextured 878,976 B')

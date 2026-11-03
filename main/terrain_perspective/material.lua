@@ -12,6 +12,8 @@ local M={STRIDE=52,UNTEXTURED_STRIDE=48,FAMILIES={'grass','dirt','sand','snow','
 -- Neutral face shading (equal RGB): the texture keeps its own colour (Snow stays white);
 -- selection/hover gains from terrain_mesh.colors multiply these base values.
 M.SHADE={[0]=1,[1]=1,[2]=.86,[3]=.74}
+-- Metres per tile along the arc (must match textured.vp).
+M.PERIOD={[0]=.9,[1]=.9,[2]=1}
 local SELECT_GAIN={1.6,.95,.5}
 local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 
@@ -67,9 +69,19 @@ function M.apply(c,prep,first,last,spec,styles)
         end
     end
     local function family(i) return (p[i][1]+p[i+1][1])/2<spec.boundary and spec.left or spec.right end
+    -- Quads share no vertices: drop whole tiles from each quad's U (units of 4 m) so the shader's tile U stays
+    -- within about 1 + segment/period. Its fract() is unchanged, so the pattern stays continuous.
+    local function bound(first_vertex,period)
+        local tiles=4/period
+        local start=math.huge
+        for j=0,5 do start=math.min(start,uv[(first_vertex+j-1)*2+1]) end
+        local whole=math.floor(start*tiles)/tiles
+        for j=0,5 do local k=(first_vertex+j-1)*2+1;uv[k]=uv[k]-whole end
+    end
     for i=first,last-1 do
         local n,f=(i-first)*18,family(i)
         for j=1,6 do paint(n+j,f,M.SIDE,i);paint(n+6+j,f,M.RIM,i);paint(n+12+j,f,M.SURFACE,i) end
+        bound(n+1,M.PERIOD[M.SIDE]);bound(n+7,M.PERIOD[M.RIM]);bound(n+13,M.PERIOD[M.SURFACE])
     end
     -- Caps: quad(e,{e,depth},{bottom,depth},bottom) emits a,b,c,a,c,d; U runs front (0) to back (1).
     local n,depth_u=(last-first)*18,{0,1,1,0,1,0}

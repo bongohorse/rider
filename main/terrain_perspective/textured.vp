@@ -24,7 +24,7 @@ void main() {
         else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
     }
     // Side and end faces tile by world height (metres), after the bottom is resolved and before projection.
-    // Section-local plus the fractional origin: same fract() as the world value, small for mediump fragments.
+    // Section-local plus the fractional origin: same fract() as the world value; bounded by the section height.
     float tile_y=p.y*s+fract(look_origin.y);
     float perspective_w=1.0;
     if(depth>0.0 && look_shape.y==0.0) {
@@ -42,9 +42,9 @@ void main() {
     var_color=color;
     float id=floor(texture_slot+0.5);
     float face=id-4.0*floor(id*0.25+0.01);
-    // Arc length in tile periods: section-local U plus the fractional section phase. This differs from the
-    // course-wide value by a whole number of tiles (continuous across sections) but stays small, so tiling far
-    // along a long course keeps its precision on GPUs that run fragments at mediump.
+    // Arc length in tile periods: per-quad U (material.lua drops whole tiles) plus the fractional section phase.
+    // It differs from the course-wide value by whole tiles only (continuous), and stays below about
+    // 1 + segment/period, so fract() keeps its precision even where fragments run at mediump.
     float period=face<1.5?0.9:1.0;
     float arc=texcoord0.x*4.0/period+fract(editor_params.x*4.0/period);
     // Surface: one cross-section over the depth, image top at the back edge. Rim: image top at the road line.

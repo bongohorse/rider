@@ -39,8 +39,10 @@ from PIL import Image,ImageChops
 out=sys.argv[1];r={}
 for st in sys.argv[2:]:
     a=Image.open(f'{out}/main-{st}-edit.png').convert('RGB');b=Image.open(f'{out}/branch-{st}-edit.png').convert('RGB')
-    d=ImageChops.difference(a,b);px=[v for v in d.get_flattened_data() if v!=(0,0,0)]
-    r[st]={'differing_pixels':len(px),'max_channel_delta':max((max(v) for v in px),default=0),'bbox':d.getbbox()}
+    d=ImageChops.difference(a,b);w=d.width;data=d.get_flattened_data()
+    px=[[i%w,i//w,max(v)] for i,v in enumerate(data) if v!=(0,0,0)]
+    # Every differing pixel as [x,y,max channel delta] (bounded), so overlaps with a control run are checkable.
+    r[st]={'differing_pixels':len(px),'max_channel_delta':max((p[2] for p in px),default=0),'bbox':d.getbbox(),'pixels':px[:5000]}
 print(json.dumps(r))`,out,...STATIONS],{encoding:'utf8'});
  const result={schema:1,issue:392,bundles:shots,errors,diff:JSON.parse(diff)};
  fs.writeFileSync(path.join(out,'legacy-compare.json'),JSON.stringify(result,null,1)+'\n');

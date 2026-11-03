@@ -130,13 +130,14 @@ def check(out=OUT):
         elif sha256(image.tobytes()) != a['pixels_sha256']:
             errors.append('atlas pixels differ from the manifest hash')
     expected = [(f, s) for f in FAMILIES for s, _ in SLOTS]
-    got = [(e['family'], e['slot']) for e in manifest['entries']]
-    if got != expected or [e['index'] for e in manifest['entries']] != list(range(len(expected))):
+    got = [(e.get('family'), e.get('slot')) for e in manifest['entries']]
+    if got != expected or [e.get('index') for e in manifest['entries']] != list(range(len(expected))):
         errors.append('manifest entries are not the fixed 6x4 family/slot order')
+        return errors
     for e in manifest['entries']:
         row, col = divmod(e['index'], len(SLOTS))
-        if e['rect'] != [col*CELL+PAD, row*CELL+PAD, TILE, TILE]:
-            errors.append(f"manifest rect of {e['id']} is not its fixed atlas cell")
+        if e.get('rect') != [col*CELL+PAD, row*CELL+PAD, TILE, TILE]:
+            errors.append(f"manifest rect of {e.get('id')} is not its fixed atlas cell")
     return errors
 
 
