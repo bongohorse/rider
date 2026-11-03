@@ -44,7 +44,7 @@
   };
   // Focus loss, hidden page, view or orientation change: no lean while away, neutral kept.
   api.suspend=reason=>{
-    if(api.mode==='active'){api.mode='paused';api.reason=(reason||'Tilt paused')+' — tilt resumes on return';}
+    if(api.mode==='active'){api.mode='paused';api.reason=(reason||'Tilt paused')+' — tilt resumes on return (or tap Calibrate neutral)';}
     if(api.mode==='paused')api.raw=null;
   };
   const view=()=>({visible:!document.hidden,focused:typeof document.hasFocus!=='function'||document.hasFocus(),
