@@ -10,6 +10,7 @@ local graph=require "main.game.graph"
 local feedback=require "main.game.feedback"
 local controls=require "main.game.controls"
 local telemetry = require "main.game.telemetry"
+local fps_counter=require "main.game.fps_counter"
 local function cancel_drag(self)
     if self.controls and self.controls.drag then
         self.controls.drag=nil
@@ -151,6 +152,10 @@ function init(self)
         gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W);gui.set_scale(n,vmath.vector3(0.48,0.48,1))
     end
     gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
+    -- #417: metrics[4] is the tap-to-switch FPS counter; this transparent box is its tap target.
+    self.fps_hit=layout.box(vmath.vector3(56,521,0),vmath.vector3(112,34,0),"left_top")
+    gui.set_color(self.fps_hit,vmath.vector4(0,0,0,0))
+    self.fps=fps_counter.new();self.fps_cap=fps_counter.DEFAULT_CAP;self.fps_label_until=0;self.fps_seq=0;self.fps_cap_seq=0
     self.reason = layout.text(vmath.vector3(480,498,0), "")
     gui.set_font(self.reason,"default");gui.set_scale(self.reason,vmath.vector3(0.55,0.55,1))
     self.run_ui=run_ui.new()
@@ -158,8 +163,25 @@ function init(self)
     self.levels_ui=levels_ui.new()
     self.mechanism_text=layout.text(vmath.vector3(480,50,0),'','bottom');gui.set_font(self.mechanism_text,'default');gui.set_scale(self.mechanism_text,vmath.vector3(.75,.75,1));gui.set_visible(self.mechanism_text,false)
 end
-local function fps_color(fps)
-    return fps>=55 and vmath.vector4(0.3,0.9,0.6,1) or fps>=30 and vmath.vector4(1,0.65,0.2,1) or vmath.vector4(1,0.25,0.25,1)
+-- #417: colour relative to the cap (Unlimited against 60); neutral while no reading or the cap label shows.
+local function fps_color(fps,cap)
+    local level=fps_counter.level(fps,cap)
+    local c=level and fps_counter.COLORS[level]
+    return c and vmath.vector4(c[1],c[2],c[3],1) or vmath.vector4(0.86,0.95,0.91,1),level
+end
+local function show_fps(self,now)
+    local label=now<self.fps_label_until
+    self.fps_label_shown=label
+    local fps=self.fps.fps
+    local color,level=fps_color(not label and fps,self.fps_cap)
+    gui.set_text(self.metrics[4],label and fps_counter.label(self.fps_cap) or fps_counter.text(fps))
+    gui.set_color(self.metrics[4],color)
+    self.fps_seq=self.fps_seq+1
+    if html5 then
+        html5.run("window.riderFpsCounter="..json.encode({seq=self.fps_seq,cap_seq=self.fps_cap_seq,cap=self.fps_cap,fps=fps,
+            text=gui.get_text(self.metrics[4]),level=level or false,label=label,buckets=#self.fps.buckets,saved=self.fps_saved or false,
+            status=self.fps_status or false,color={color.x,color.y,color.z}}))
+    end
 end
 local function toggle_tuning(self)
     cancel_drag(self)
@@ -218,11 +240,18 @@ function on_message(self,id,data,sender)
         if html5 then html5.run("window.riderCustomStatus="..json.encode(data.text)) end
     elseif id==hash("hud_probe") then
         assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
-        -- The probe specifies integer FPS via its inverse interval; remove inversion rounding noise.
-        local fps=math.floor(1000/data.frame_ms+0.5)
-        gui.set_color(self.metrics[4],fps_color(fps))
+        -- Colour the live counter node for a given reading and cap, read it back from the node.
+        local color,level=fps_color(data.fps,data.cap)
+        gui.set_color(self.metrics[4],color)
         local c=gui.get_color(self.metrics[4])
-        msg.post(sender,"hud_probe_result",{fps=fps,r=c.x,g=c.y,b=c.z})
+        msg.post(sender,"hud_probe_result",{fps=data.fps,cap=data.cap,level=level,r=c.x,g=c.y,b=c.z})
+    elseif id==hash("fps_cap") then
+        -- The loader applied (and stored) this cap; measure only the new cadence from here on.
+        self.fps_cap,self.fps_saved,self.fps_status=data.cap,data.saved,data.status
+        self.fps_cap_seq=self.fps_cap_seq+1
+        fps_counter.restart(self.fps)
+        if data.changed then self.fps_label_until=socket.gettime()+fps_counter.LABEL_S end
+        show_fps(self,socket.gettime())
     elseif id==hash("cancel_drag") then cancel_drag(self)
     elseif id==hash("graph") then
         graph.draw(self.graph,data)
@@ -270,11 +299,12 @@ function on_message(self,id,data,sender)
             string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
             string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "unset")}
         for i,text in ipairs(values) do
-            gui.set_text(self.metrics[i],text)
+            -- metrics[4] is the FPS counter: it shows its own measured cadence (#417), not this telemetry value.
+            if i~=4 then gui.set_text(self.metrics[i],text) end
             local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
                 or i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
                 or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
-            gui.set_color(self.metrics[i],i==4 and fps_color(data.fps) or over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
+            if i~=4 then gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1)) end
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
             contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2,
@@ -282,6 +312,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("editor_mode") then
         -- The level editor draws its own panels; the driving HUD stays hidden while editing.
         for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
+        self.editing=data.active
         cancel_drag(self)
     elseif id==hash("time_state") then
         self.time={paused=data.paused,step=data.step}
@@ -323,6 +354,9 @@ local function copy_feedback(self)
 end
 function update(self,dt)
     levels_ui.update(self.levels_ui)
+    -- #417: one engine frame per update(); wall time keeps the reading honest under any cap.
+    local now=socket.gettime()
+    if fps_counter.frame(self.fps,now) or self.fps_label_shown and now>=self.fps_label_until then show_fps(self,now) end
     local enabled=mobile.enabled()
     gui.set_visible(self.section_next,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
     gui.set_visible(self.section_label,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
@@ -415,7 +449,7 @@ function update(self,dt)
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
             pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
-            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box)}))
+            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit)}))
     end
     if html5 then
         local status,visible=feedback.state()
@@ -450,6 +484,11 @@ function on_input(self,id,action)
         return true
     end
     if self.feedback_open or self.feedback_modal then return true end
+    -- #417: a tap on the FPS counter switches the cap and is consumed here (hidden while editing;
+    -- pick_node ignores enabled state). Drive input is keyboard or the DOM touch zones, never this node.
+    if id==hash("ui_pointer") and action.pressed and not self.editing and gui.pick_node(self.fps_hit,action.x,action.y) then
+        msg.post("#script","fps_cap_next");return true
+    end
     if id==hash("pause_toggle") and action.pressed then msg.post("main:/loader#script","time_control",{action="pause"});return true end
     if id==hash("time_step") and action.pressed then msg.post("main:/loader#script","time_control",{action="step"});return true end
     if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then

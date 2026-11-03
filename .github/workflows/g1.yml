@@ -258,6 +258,8 @@ jobs:
             cases: 'a22'
           - group: struts
             cases: 'cf3'
+          - group: fps-counter
+            cases: 'fps417'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -368,6 +370,9 @@ jobs:
       - name: Replay the regression traces (jump distance, top speed, air) against frozen tolerances; perturbed runs must fail
         if: contains(format(' {0} ', matrix.cases), ' a22 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/regress --case a22
+      - name: Tap the FPS counter through every cap while driving; fixed 60 Hz physics, measured reading, reload and replay
+        if: contains(format(' {0} ', matrix.cases), ' fps417 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/fps-counter --case fps417
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

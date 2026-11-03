@@ -602,23 +602,36 @@ function M.coast_tick(self,dt)
         self.coast_phase,self.coast_ticks,self.coast_x,self.coast_last="tap_roll",0,state.x,state.vx
     end
 end
+-- #417: the FPS counter colour is relative to the selected cap (green >= 90 %, orange >= 70 %, red below;
+-- Unlimited (0) counts against 60). Each case colours the live counter node and reads the colour back.
+M.HUD_CASES={
+    {"cap60_54_green",54,60,"green"},{"cap60_53_orange",53,60,"orange"},{"cap60_42_orange",42,60,"orange"},{"cap60_41_red",41,60,"red"},
+    {"cap30_27_green",27,30,"green"},{"cap30_26_orange",26,30,"orange"},{"cap30_20_red",20,30,"red"},
+    {"cap144_130_green",130,144,"green"},{"cap144_129_orange",129,144,"orange"},{"cap144_101_orange",101,144,"orange"},{"cap144_100_red",100,144,"red"},
+    {"cap90_60_red",60,90,"red"},{"cap120_108_green",108,120,"green"},
+    {"unlimited_54_green",54,0,"green"},{"unlimited_53_orange",53,0,"orange"},{"unlimited_41_red",41,0,"red"}}
+local HUD_RGB={green={0.3,0.9,0.6},orange={1,0.65,0.2},red={1,0.25,0.25}}
 function M.hud_tick(self,dt)
     self.hud_ticks=(self.hud_ticks or 0)+1
     if self.hud_ticks<60 then return end
-    local cases={{55,0.3,0.9,0.6},{54,1,0.65,0.2},{30,1,0.65,0.2},{29,1,0.25,0.25}}
+    local cases=M.HUD_CASES
     self.hud_index=self.hud_index or 1
+    self.hud_passed=self.hud_passed or {}
     local result=self.hud_probe_result
     if result then
         local c=cases[self.hud_index]
-        assert(math.abs(result.fps-c[1])<0.001 and math.abs(result.r-c[2])<0.001 and math.abs(result.g-c[3])<0.001 and math.abs(result.b-c[4])<0.001,"FPS badge colour threshold wrong")
+        local rgb=HUD_RGB[c[4]]
+        assert(result.fps==c[2] and result.cap==c[3] and result.level==c[4],"FPS counter level wrong for "..c[1]..": "..tostring(result.level))
+        assert(math.abs(result.r-rgb[1])<0.001 and math.abs(result.g-rgb[2])<0.001 and math.abs(result.b-rgb[3])<0.001,"FPS counter colour wrong for "..c[1])
+        self.hud_passed[c[1]]=true
         self.hud_index=self.hud_index+1;self.hud_probe_result=nil;self.hud_waiting=false
     end
     if self.hud_index>#cases then
-        emit(self,"suite_end",{status="PASS",cases={fps_green_55=true,fps_orange_54=true,fps_orange_30=true,fps_red_29=true}})
+        emit(self,"suite_end",{status="PASS",cases=self.hud_passed})
         self.testcase="done"
     elseif not self.hud_waiting then
         self.hud_waiting=true
-        msg.post("main:/loader#ui","hud_probe",{frame_ms=1000/cases[self.hud_index][1]})
+        msg.post("main:/loader#ui","hud_probe",{fps=cases[self.hud_index][2],cap=cases[self.hud_index][3]})
     end
 end
 -- A15a: visual rider reaction is bounded, readable and returns to rest;
