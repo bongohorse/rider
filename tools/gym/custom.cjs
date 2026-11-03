@@ -107,6 +107,27 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   t=await ready('rolling-hills',6);assert.deepEqual(counts(t),a1);
   assert.deepEqual(await page.evaluate(()=>[...window.__riderSeen]),['rolling-hills'],'The superseded import reported telemetry');cases.push('import_during_load_queued');
 
+  // #387: object-shaped or sparse hulls, labels and hull vertices are refused by the real json.decode import,
+  // before any world load: same level, world and shape/sprite/label counts; the reload below proves the save.
+  const kicker=JSON.parse(text('kicker-platform')),hull=kicker.hulls[0],label=kicker.labels[0];
+  const shaped=(hulls,labels)=>JSON.stringify({...kicker,id:'malformed-lists',hulls,labels});
+  const malformed=[
+   [shaped({'1':hull},kicker.labels),'Invalid hulls: hulls is not a list (key "1")'],
+   [shaped([hull,null,hull],kicker.labels),'Invalid hulls: hulls has a gap at entry 2'],
+   [shaped(kicker.hulls,{'1':label}),'Invalid labels: labels is not a list (key "1")'],
+   [shaped(kicker.hulls,[label,null,label]),'Invalid labels: labels has a gap at entry 2'],
+   [shaped([{vertices:[hull.vertices[0],null,...hull.vertices.slice(1)]}],kicker.labels),'Invalid hull vertices: hull 1 vertices has a gap at entry 2'],
+  ];
+  const before=await state();measurements.malformed_lists=[];
+  for(const [value,reason] of malformed){
+   await importText(value);
+   const message='Import failed: '+reason+'. The current level and its save are unchanged.';
+   await page.waitForFunction(m=>document.querySelector('#rider-custom-error')?.textContent===m,message);
+   measurements.malformed_lists.push(message);
+  }
+  t=await state();assert.equal(t.station,'rolling-hills');assert.equal(t.world_loads,before.world_loads);assert.deepEqual(counts(t),a1);
+  cases.push('malformed_lists_refused');
+
   // Reload restores the last valid level.
   await page.goto(url);t=await ready('rolling-hills',1,null);assert.deepEqual(counts(t),a1);
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);cases.push('reload_restores_last_valid');
