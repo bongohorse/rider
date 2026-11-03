@@ -16,6 +16,7 @@
 | `coin_bank_late_restore` | 7 | production `custom.slot_store`, injected `sys`/`json`, late IndexedDB restore |
 | `my_levels_storage` | 9 | production My levels (`custom.library`), injected `sys`/`json`/`io.open`/`os.remove` failures |
 | `slot_protection` | 6 | production `custom.slot_store`/`custom.save`, injected `sys`/`json`, newer-version slots |
+| `my_levels_index` | 4 | production My levels (`custom.library`) with real Defold `json` and `custom.parse`, injected `sys`/`io.open`/`os.remove`; non-dense `levels` (#382) |
 
 The bootstrap prints exactly one `RIDER_PERSISTENCE` JSON completion marker (source commit, run ID, Defold engine version and SHA, case, PASS-line count, status) and exits non-zero on failure.
 
@@ -36,12 +37,12 @@ Use a fresh, empty output path. Optional: `--cases best level_progress …`, `--
 
 ## CI
 
-The Linux `G1 native` job runs the protocol checks and then the harness for all eight suites, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
+The Linux `G1 native` job runs the protocol checks and then the harness for all nine suites, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
 
 ## Evidence and limits
 
 2026-11-02, local WSL x86-64, Temurin-25.0.4.1+1, Bob `90da8341…`, Defold 1.14.0 engine `a81dbb04`: with the P2 fixes (#390, #380, #381, #393) all six suites PASS; against the unpatched modules `level_progress`, `run_best_pending`, `coin_bank_recovery` and `coin_bank_late_restore` FAIL at their regression assertions while `best`/`coin_bank` PASS (PR #389/#391 comments).
 
-These suites inject file/slot-store failures. They do **not** prove native disk EIO, browser IndexedDB durability or Android persistence. `tools/gameplay/lua_tests.py` (#395) runs the same suites under Bob's LuaJIT; that is cheaper but not the engine.
+These suites inject file/slot-store failures. They do **not** prove native disk EIO, browser IndexedDB durability or Android persistence. `tools/gameplay/lua_tests.py` (#395) runs the same suites under Bob's LuaJIT; that is cheaper but not the engine. There `my_levels_index` has no Defold `json` and decodes each fixture to a modelled table; the engine run first asserts that the real `json.decode` gives exactly those tables.
 
 Official references: [Defold automated testing](https://defold.com/manuals/automated-testing/), [Bob project builder](https://defold.com/manuals/bob/), [Defold 1.14.0 System API](https://defold.com/ref/sys-lua/).

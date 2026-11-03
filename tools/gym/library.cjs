@@ -311,10 +311,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await storage.durable(page);
   await page.goto(base+'?station=custom');e=await edit();assert.equal(e.key,kicker.key);assert.deepEqual(e.library,[]);
   s=(await doc()).start.position;await drag(s,[s[0],s[1]+1]);
-  await page.waitForFunction(()=>window.riderEditor.status.includes('index cannot be read'));
+  await page.waitForFunction(()=>window.riderEditor.status.includes('(My levels: index kept unchanged (cannot be read))'));
   await button('new');e=await ed();assert.ok(e.message.startsWith('Not switched'),e.message);assert.equal(e.key,kicker.key);
   await button('new');await page.waitForFunction(k=>window.riderEditor.key!==k,kicker.key);
-  await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('index cannot be read'));
+  await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('(My levels: index kept unchanged (cannot be read))'));
   e=await ed();assert.equal(e.key,0);
   await storage.durable(page,{label:'unreadable index settles'});
   // Observing an unreadable index, including its Open dialog, must let IndexedDB settle.
