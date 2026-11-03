@@ -1,0 +1,486 @@
+local socket=require "socket"
+local stations=require "main.game.stations"
+local mobile=require "main.game.mobile"
+local layout=require "main.game.layout"
+local run_ui=require "main.game.run_ui"
+local levels_ui=require "main.game.levels_ui"
+local progress_ui=require "main.game.progress_ui"
+local feel=require "main.game.feel"
+local graph=require "main.game.graph"
+local feedback=require "main.game.feedback"
+local controls=require "main.game.controls"
+local telemetry = require "main.game.telemetry"
+local function cancel_drag(self)
+    if self.controls and self.controls.drag then
+        self.controls.drag=nil
+        if self.owner then msg.post(self.owner,"ui_capture",{active=self.feedback_open or self.feedback_modal or false}) end
+    end
+end
+local function hud_textures()
+    for _,name in ipairs({"dot","speaker","copy"}) do
+        local pixels={}
+        for y=0,15 do for x=0,15 do
+            local on=name=="dot" and ((x-7.5)^2+(y-7.5)^2<42)
+                or name=="speaker" and ((x>=2 and x<=5 and y>=5 and y<=10) or (x>=6 and x<=10 and math.abs(y-7.5)<=x-3) or (x>=13 and x<=14 and y>=4 and y<=11))
+                or name=="copy" and (((x==3 or x==10) and y>=2 and y<=11) or ((y==2 or y==11) and x>=3 and x<=10) or (x==13 and y>=5 and y<=14) or (y==14 and x>=6 and x<=13))
+            pixels[#pixels+1]=on and string.char(255,255,255,255) or string.char(0,0,0,0)
+        end end
+        assert(gui.new_texture("hud_"..name,16,16,"rgba",table.concat(pixels)),"HUD icon texture unavailable")
+    end
+end
+local function icon(x,y,name,anchor,size)
+    local n=layout.box(vmath.vector3(x,y,0),vmath.vector3(size or 14,size or 14,0),anchor)
+    gui.set_texture(n,"hud_"..name);return n
+end
+function init(self)
+    layout.init()
+    gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
+    feedback.init()
+    hud_textures()
+    self.station_next=layout.box(vmath.vector3(270,390,0),vmath.vector3(54,24,0),"left_top")
+    gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
+    self.station_next_label=layout.text(vmath.vector3(270,390,0),"Next","left_top");gui.set_font(self.station_next_label,"default");gui.set_scale(self.station_next_label,vmath.vector3(0.5,0.5,1))
+    self.section_next=layout.box(vmath.vector3(374,390,0),vmath.vector3(116,24,0),"left_top")
+    gui.set_color(self.section_next,vmath.vector4(0.12,0.3,0.3,1))
+    self.section_label=layout.text(vmath.vector3(374,390,0),"Section [V]","left_top")
+    gui.set_font(self.section_label,"default");gui.set_scale(self.section_label,vmath.vector3(0.5,0.5,1))
+    -- A20 pause and slow motion: two overlay buttons and a centred state line (desktop; touch uses the toolbar).
+    self.time_buttons={}
+    for _,spec in ipairs({{"pause",482,"Pause [Space]",92},{"step",584,"Speed 1x [X]",100}}) do
+        local box=layout.box(vmath.vector3(spec[2],390,0),vmath.vector3(spec[4],24,0),"left_top")
+        gui.set_color(box,vmath.vector4(0.12,0.3,0.3,1))
+        local label=layout.text(vmath.vector3(spec[2],390,0),spec[3],"left_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.5,0.5,1))
+        self.time_buttons[spec[1]]={box=box,label=label}
+    end
+    -- A21 record and replay: two overlay buttons and a status line (desktop; touch uses the toolbar).
+    self.replay_buttons={}
+    for _,spec in ipairs({{"record",694,"Record [B]",84},{"replay",788,"Replay [G]",84}}) do
+        local box=layout.box(vmath.vector3(spec[2],390,0),vmath.vector3(spec[4],24,0),"left_top")
+        gui.set_color(box,vmath.vector4(0.12,0.3,0.3,1))
+        local label=layout.text(vmath.vector3(spec[2],390,0),spec[3],"left_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.5,0.5,1))
+        self.replay_buttons[spec[1]]={box=box,label=label}
+    end
+    self.replay_line=layout.text(vmath.vector3(240,364,0),"","left_top")
+    gui.set_font(self.replay_line,"default");gui.set_pivot(self.replay_line,gui.PIVOT_W);gui.set_scale(self.replay_line,vmath.vector3(0.48,0.48,1))
+    gui.set_color(self.replay_line,vmath.vector4(0.6,0.88,1,1))
+    self.time_line=layout.text(vmath.vector3(480,460,0),"")
+    gui.set_font(self.time_line,"default");gui.set_scale(self.time_line,vmath.vector3(0.7,0.7,1));gui.set_color(self.time_line,vmath.vector4(1,0.85,0.35,1))
+    self.time={paused=false,step=1}
+    self.debug_clock=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a20"
+    self.debug_replay=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="a21"
+    self.station=layout.text(vmath.vector3(240,434,0),"Straight | start 0 m/s [1-9]","left_top")
+    gui.set_font(self.station,"default");gui.set_pivot(self.station,gui.PIVOT_W);gui.set_scale(self.station,vmath.vector3(0.48,0.48,1))
+    self.station_result=layout.text(vmath.vector3(240,414,0),"","left_top")
+    gui.set_font(self.station_result,"default");gui.set_pivot(self.station_result,gui.PIVOT_W);gui.set_scale(self.station_result,vmath.vector3(0.48,0.48,1))
+    self.tuning_open=false
+    self.help=layout.text(vmath.vector3(16,322,0),"W / Up: throttle   S / Down: brake / reverse   A / D: lean\nR: retry   P: preset   T: tuning   H: help   C: crash   M: mute   F: copy\nSpace: pause   X: slow motion 1x / 0.5x / 0.25x   B: record run   G: replay run (ghost)")
+    gui.set_font(self.help,"default");gui.set_pivot(self.help,gui.PIVOT_W)
+    gui.set_scale(self.help,vmath.vector3(0.5,0.5,1));gui.set_visible(self.help,false)
+    self.tuning_button=layout.box(vmath.vector3(922,514,0),vmath.vector3(52,28,0),"right_top")
+    self.help_button=layout.box(vmath.vector3(860,514,0),vmath.vector3(52,28,0),"right_top")
+    local button_color=vmath.vector4(0.13,0.24,0.28,1)
+    gui.set_color(self.tuning_button,button_color);gui.set_color(self.help_button,button_color)
+    self.toggle_labels={}
+    for _,spec in ipairs({{922,"T"},{860,"H"}}) do
+        local n=layout.text(vmath.vector3(spec[1],514,0),spec[2],"right_top")
+        gui.set_font(n,"default");gui.set_scale(n,vmath.vector3(0.6,0.6,1));self.toggle_labels[#self.toggle_labels+1]=n
+    end
+    local sha = sys.get_config_string("rider.source_sha","development")
+    local version = layout.text(vmath.vector3(480,20,0),"Build "..string.sub(sha,1,12))
+    gui.set_font(version,"default")
+    gui.set_scale(version,vmath.vector3(0.4,0.4,1));gui.set_color(version,vmath.vector4(0.55,0.65,0.65,0.7))
+    if html5 then html5.run("window.riderBuild = "..json.encode(sha)) end
+    msg.post(".","acquire_input_focus")
+    local panel_start=#layout.nodes+1
+    local panel=layout.box(vmath.vector3(788,294,0),vmath.vector3(304,400,0),"right_top")
+    gui.set_color(panel,vmath.vector4(0.05,0.1,0.13,0.9))
+    self.presets={}
+    -- One chip per registered preset (feel.order), spread across the same panel row.
+    local step=math.floor(294/#feel.order)
+    for i,key in ipairs(feel.order) do
+        local x=788+math.floor((i-(#feel.order+1)/2)*step)
+        local box=layout.box(vmath.vector3(x,475,0),vmath.vector3(step-8,26,0),"right_top")
+        local label=layout.text(vmath.vector3(x,475,0),string.upper(key),"right_top")
+        gui.set_font(label,"default");gui.set_scale(label,vmath.vector3(0.55,0.55,1))
+        self.presets[key]=box
+    end
+    self.preset_note=layout.text(vmath.vector3(788,449,0),"","right_top")
+    gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.4,0.4,1))
+    self.crash_button=layout.box(vmath.vector3(716,426,0),vmath.vector3(136,24,0),"right_top")
+    gui.set_color(self.crash_button,button_color)
+    self.crash_label=layout.text(vmath.vector3(716,426,0),"Crash OFF [C]","right_top")
+    gui.set_font(self.crash_label,"default");gui.set_scale(self.crash_label,vmath.vector3(0.5,0.5,1))
+    -- Car Feel 3: visual suspension struts on/off (the owner's juice module holds the setting).
+    self.struts_button=layout.box(vmath.vector3(860,426,0),vmath.vector3(136,24,0),"right_top")
+    gui.set_color(self.struts_button,button_color)
+    self.struts_label=layout.text(vmath.vector3(860,426,0),"Struts","right_top")
+    gui.set_font(self.struts_label,"default");gui.set_scale(self.struts_label,vmath.vector3(0.5,0.5,1))
+    self.head=layout.text(vmath.vector3(788,407,0),"","right_top")
+    gui.set_font(self.head,"default");gui.set_scale(self.head,vmath.vector3(0.4,0.4,1))
+    self.controls=controls.new()
+    self.audio_button=layout.box(vmath.vector3(714,128,0),vmath.vector3(132,24,0),"right_top")
+    gui.set_color(self.audio_button,button_color)
+    icon(662,128,"speaker","right_top")
+    self.audio_label=layout.text(vmath.vector3(726,128,0),"Sound [M]","right_top")
+    gui.set_font(self.audio_label,"default");gui.set_scale(self.audio_label,vmath.vector3(0.4,0.4,1))
+    self.feedback_button=layout.box(vmath.vector3(862,128,0),vmath.vector3(132,24,0),"right_top")
+    gui.set_color(self.feedback_button,button_color)
+    icon(810,128,"copy","right_top")
+    self.feedback_label=layout.text(vmath.vector3(874,128,0),"Copy [F]","right_top")
+    gui.set_font(self.feedback_label,"default");gui.set_scale(self.feedback_label,vmath.vector3(0.4,0.4,1))
+    self.panel_nodes={}
+    for i=panel_start,#layout.nodes do self.panel_nodes[#self.panel_nodes+1]=layout.nodes[i];gui.set_visible(layout.nodes[i],false) end
+    self.report_bg=layout.box(vmath.vector3(480,260,0),vmath.vector3(680,340,0))
+    gui.set_color(self.report_bg,vmath.vector4(0.06,0.1,0.13,1));gui.set_enabled(self.report_bg,false)
+    self.report=layout.text(vmath.vector3(480,260,0),"")
+    gui.set_font(self.report,"default");gui.set_scale(self.report,vmath.vector3(0.55,0.55,1));gui.set_enabled(self.report,false)
+    self.graph=graph.new()
+    self.metrics = {}
+    for i=1,6 do
+        local y=({496,477,458,520,0,104})[i]
+        local n=layout.text(vmath.vector3(i==6 and 648 or 12,y,0),"",i==6 and "right_top" or "left_top")
+        gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W)
+        gui.set_scale(n,vmath.vector3(i==4 and 0.6 or 0.48,i==4 and 0.6 or 0.48,1))
+        self.metrics[i]=n
+    end
+    self.contact_dots={icon(32,477,"dot","left_top",6),icon(94,477,"dot","left_top",6)}
+    for _,x in ipairs({12,74}) do
+        local n=layout.text(vmath.vector3(x,477,0),x==12 and "L" or "R","left_top")
+        gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W);gui.set_scale(n,vmath.vector3(0.48,0.48,1))
+    end
+    gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
+    self.reason = layout.text(vmath.vector3(480,498,0), "")
+    gui.set_font(self.reason,"default");gui.set_scale(self.reason,vmath.vector3(0.55,0.55,1))
+    self.run_ui=run_ui.new()
+    self.progress_ui=progress_ui.new()
+    self.levels_ui=levels_ui.new()
+    self.mechanism_text=layout.text(vmath.vector3(480,50,0),'','bottom');gui.set_font(self.mechanism_text,'default');gui.set_scale(self.mechanism_text,vmath.vector3(.75,.75,1));gui.set_visible(self.mechanism_text,false)
+end
+local function fps_color(fps)
+    return fps>=55 and vmath.vector4(0.3,0.9,0.6,1) or fps>=30 and vmath.vector4(1,0.65,0.2,1) or vmath.vector4(1,0.25,0.25,1)
+end
+local function toggle_tuning(self)
+    cancel_drag(self)
+    if mobile.enabled() then html5.run("window.riderMobile.toggleDetails()") else self.tuning_open=not self.tuning_open end
+end
+local function toggle_help(self)
+    self.help_open=not self.help_open;gui.set_visible(self.help,self.help_open)
+
+end
+function on_message(self,id,data,sender)
+    if id==hash('mechanism_state') then if data.generation<(self.session_generation or 1) then return end;self.mechanism_status=data.text;gui.set_text(self.mechanism_text,data.text);gui.set_visible(self.mechanism_text,not mobile.enabled());return end
+    if id==hash('fuel_state') then
+        if data.generation<(self.session_generation or 1) then return end
+        local old=self.fuel_data
+        if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        if not old or old.generation~=data.generation or old.attempt~=data.attempt then self.fuel_flash=0
+        elseif data.collected>old.collected then self.fuel_flash=.8;self.fuel_gain=data.feedback end
+        self.fuel_data=data;return
+    end
+    if id==hash('coin_state') then
+        if data.generation<(self.session_generation or 1) then return end
+        local old=self.coin_data
+        if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        if not old or old.generation~=data.generation or old.attempt~=data.attempt then self.coin_flash=0 end
+        self.coin_data=data;if data.feedback>0 then self.coin_flash=.5;self.coin_flash_amount=data.feedback end;return
+    elseif id==hash('coin_bank_state') then self.coin_bank_data=data;return end
+    if id==hash("course_progress") then
+        if data.generation<(self.session_generation or 1) then return end
+        local old=self.progress_ui.data
+        if old and old.generation==data.generation and old.attempt>data.attempt then return end
+        progress_ui.show(self.progress_ui,data,mobile.enabled())
+        if html5 then html5.run("window.riderProgress="..json.encode(data)..";window.riderProgressUI="..json.encode(progress_ui.geometry(self.progress_ui))) end
+        return
+    end
+    if id==hash("run_state") then
+        if data.generation<(self.session_generation or 1) then return end
+        run_ui.show(self.run_ui,data,mobile.enabled())
+        if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
+        return
+    elseif id==hash("station_loading") then self.fuel_data=nil;self.fuel_flash=0;self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
+    if id==hash("station_loading") then
+        -- A new world starts uncaptured; re-send an open modal once it reports measurements.
+        self.mechanism_status=nil;gui.set_visible(self.mechanism_text,false);if html5 then html5.run('window.riderMechanisms=null') end
+        self.session_generation=data.generation;self.latest=nil;self.station_error=nil;self.custom_status=nil;self.feedback_modal=false;self.load_timing=nil
+        if html5 then html5.run("window.riderStationError=null;window.riderCustomStatus=null") end
+        cancel_drag(self);gui.set_text(self.station,"Loading station...");gui.set_color(self.station,vmath.vector4(1,1,1,1))
+    elseif id==hash("station_error") then
+        if html5 then html5.run("window.riderStationError="..json.encode(data.note)) end
+        self.station_error=data.note
+        gui.set_text(self.station,data.note);gui.set_color(self.station,vmath.vector4(1,0.3,0.2,1))
+    elseif id==hash("load_timing") and data.generation==(self.session_generation or 1) then
+        self.load_timing=data
+        if html5 then html5.run("window.riderLoad="..json.encode(data)) end
+    elseif id==hash("custom_status") then
+        self.custom_status=data.text
+        if html5 then html5.run("window.riderCustomStatus="..json.encode(data.text)) end
+    elseif id==hash("hud_probe") then
+        assert(sys.get_engine_info().is_debug,"HUD probe requires debug engine")
+        -- The probe specifies integer FPS via its inverse interval; remove inversion rounding noise.
+        local fps=math.floor(1000/data.frame_ms+0.5)
+        gui.set_color(self.metrics[4],fps_color(fps))
+        local c=gui.get_color(self.metrics[4])
+        msg.post(sender,"hud_probe_result",{fps=fps,r=c.x,g=c.y,b=c.z})
+    elseif id==hash("cancel_drag") then cancel_drag(self)
+    elseif id==hash("graph") then
+        graph.draw(self.graph,data)
+        msg.post(sender,"graph_shown",{series=data.series,peak=data.peak,positive_peak=data.positive_peak,generation=data.generation})
+    elseif id==hash("preset") then
+        self.owner=sender
+        self.preset,self.modified=data.key,data.modified
+        for key,box in pairs(self.presets) do
+            gui.set_color(box,key==data.key and vmath.vector4(0.15,0.5,0.45,1) or vmath.vector4(0.13,0.24,0.28,1))
+        end
+        -- A refused preset file must never pass silently for A (#199).
+        gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A"..(data.modified and " | Modified" or "")) or data.invalid and "Invalid URL: A"
+            or data.modified and "Modified - select "..string.upper(table.concat(feel.order,"/")) or "Presets [P]")
+    elseif id==hash("tuning") then
+        self.owner=sender
+        self.tuning=data
+        controls.sync(self.controls,data)
+    elseif id==hash("measurements") then
+        if data.session_generation and data.session_generation<(self.session_generation or 1) then return end
+        self.owner=sender
+        self.latest=data
+        local note=self.station_error or data.station_note or ""
+        if data.custom then note=note..(note~="" and " | " or "")..(self.custom_status or "Saved level") end
+        gui.set_text(self.station,string.format("%s | start %.1f m/s [1-9] %s",data.station_name or "Straight",data.start_speed or 0,note))
+        gui.set_text(self.station_result,data.station_result or string.format("x %.1f m | top %.1f m/s | brake %.1f m",data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0))
+        self.report_text=feedback.report(data,self.preset,self.modified,self.tuning,self.load_timing)
+        feedback.update(self.report_text)
+        gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
+        if html5 then
+            html5.run("window.riderTelemetry = "..json.encode(data))
+            html5.run("window.riderControls = "..json.encode(controls.geometry(self.controls)))
+            html5.run("window.riderDragging = "..tostring(self.controls.drag~=nil))
+        end
+        gui.set_text(self.crash_label,"Crash "..(data.crash_enabled and "ON" or "OFF").." [C]")
+        gui.set_text(self.head,"Head: "..tostring(data.head_contact))
+        for i,n in ipairs(self.contact_dots) do
+            gui.set_color(n,(i==1 and data.contact1 or i==2 and data.contact2) and vmath.vector4(0.3,0.9,0.6,1) or vmath.vector4(0.4,0.45,0.5,1))
+        end
+        local b=telemetry.budget
+        local values={
+            string.format("%.2f m/s | %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
+            "",
+            string.format("L %+.1f   R %+.1f u",data.travel1,data.travel2),
+            string.format("%.0f fps / %.1f ms",data.fps,data.frame_ms),
+            string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
+            string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "unset")}
+        for i,text in ipairs(values) do
+            gui.set_text(self.metrics[i],text)
+            local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
+                or i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
+                or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
+            gui.set_color(self.metrics[i],i==4 and fps_color(data.fps) or over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
+        end
+        msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
+            contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2,
+            preset_note=gui.get_text(self.preset_note),report_preset=self.report_text and string.match(self.report_text,"%- Preset: [^\n]*")})
+    elseif id==hash("editor_mode") then
+        -- The level editor draws its own panels; the driving HUD stays hidden while editing.
+        for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
+        cancel_drag(self)
+    elseif id==hash("time_state") then
+        self.time={paused=data.paused,step=data.step}
+        local step=data.step==1 and "1x" or tostring(data.step).."x"
+        gui.set_text(self.time_buttons.pause.label,data.paused and "Resume [Space]" or "Pause [Space]")
+        gui.set_text(self.time_buttons.step.label,"Speed "..step.." [X]")
+        gui.set_text(self.time_line,data.paused and "PAUSED [Space]" or data.step~=1 and "Slow motion "..step.." - values not comparable" or "")
+        if html5 then
+            html5.run("window.riderTimeState="..json.encode({paused=data.paused,step=data.step}))
+            html5.run("window.riderMobile?.setTime?.("..tostring(data.paused)..","..data.step..")")
+        end
+    elseif id==hash("struts") then gui.set_text(self.struts_label,"Struts "..(data.enabled and "ON" or "OFF"))
+    elseif id==hash("replay_state") then
+        gui.set_text(self.replay_line,data.text)
+        if html5 then html5.run("window.riderMobile?.setReplay?.("..json.encode(data.text)..")") end
+    elseif id==hash("finish_reached") then
+        self.toast_time=3;gui.set_visible(self.reason,not mobile.enabled())
+        gui.set_text(self.reason,string.format("Finish reached %.2f s",data.time)..(data.time_scaled and " (slow motion: not comparable)" or "")..(data.has_coins and (" | Coins "..data.coins..(self.run_ui.data and "" or " (practice)")) or ""))
+        if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
+    elseif id==hash("retry_done") then
+        self.toast_time=1.5;gui.set_visible(self.reason,not mobile.enabled())
+        gui.set_text(self.reason,data.reason=="bounds" and "Retry: outside practice area" or data.reason=="head" and "Retry: head contact" or data.reason=="preset" and "Retry: preset changed" or data.reason=="record" and "Retry: recording from the start"
+            or data.reason=="replay" and "Retry: replay from the start" or "Retry: manual")
+        if mobile.enabled() then html5.run("window.riderMobile.toast("..json.encode(gui.get_text(self.reason))..")") end
+        msg.post(sender,"retry_labelled",{reason=data.reason})
+    end
+end
+
+local function copy_feedback(self)
+    if self.owner then msg.post(self.owner,"clear_input") end
+    if html5 then feedback.copy()
+    else
+        self.feedback_open=not self.feedback_open
+        gui.set_text(self.report,self.report_text or "Waiting for measurements")
+        gui.set_enabled(self.report_bg,self.feedback_open);gui.set_enabled(self.report,self.feedback_open)
+        gui.set_text(self.feedback_label,"Clipboard unavailable; F closes report")
+        if self.owner then msg.post(self.owner,"ui_capture",{active=self.feedback_open}) end
+    end
+end
+function update(self,dt)
+    levels_ui.update(self.levels_ui)
+    local enabled=mobile.enabled()
+    gui.set_visible(self.section_next,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
+    gui.set_visible(self.section_label,not enabled and self.latest and (self.latest.section_count or 0)>1 or false)
+    for _,node in ipairs({self.station,self.station_result,self.station_next,self.station_next_label,self.time_line,self.replay_line}) do gui.set_visible(node,not enabled) end
+    for _,b in pairs(self.time_buttons) do gui.set_visible(b.box,not enabled);gui.set_visible(b.label,not enabled) end
+    -- The open tuning panel can cover the Record/Replay buttons on small views: hide them then (B/G still work).
+    for _,b in pairs(self.replay_buttons) do gui.set_visible(b.box,not enabled and not self.panel_open);gui.set_visible(b.label,not enabled and not self.panel_open) end
+    if self.debug_clock then
+        -- A20 only: unscaled engine time (this collection is not time-scaled) next to the wall clock.
+        self.engine_time,self.engine_frames=(self.engine_time or 0)+dt,(self.engine_frames or 0)+1
+        -- The editor camera (shared module state, read only) shows whether Edit mode received Space+drag.
+        local editor=require "main.editor.editor"
+        html5.run("window.riderClock="..json.encode({engine=self.engine_time,frames=self.engine_frames,wall=socket.gettime(),
+            editor_camera={x=editor.camera.x,y=editor.camera.y}}))
+        -- Debug burst: several time requests posted in one frame (stale-acknowledgement check).
+        local ok,burst=pcall(json.decode,html5.run("(()=>{const b=window.riderDebugTimeBurst;window.riderDebugTimeBurst=null;return JSON.stringify(b||null)})()"))
+        if ok and type(burst)=="table" then for _,a in ipairs(burst) do msg.post("main:/loader#script","time_control",{action=a}) end end
+    end
+    if self.debug_replay then
+        -- A21 only: editor mode/grid (shared module state, read only) prove B/G never touch the editor in Play and G
+        -- stays the grid key in Edit mode.
+        local editor=require "main.editor.editor"
+        local e=editor.doc and editor.doc.editor
+        html5.run("window.riderReplayEditor="..json.encode({mode=editor.mode,grid=editor.grid,revision=e and e.revision or -1,
+            undo=editor.history and #editor.history.undo or 0,toast=gui.get_text(self.reason),line=gui.get_text(self.replay_line)}))
+    end
+    self.toast_time=math.max(0,(self.toast_time or 0)-dt)
+    gui.set_visible(self.reason,self.toast_time>0 and not enabled and not self.run_ui.data)
+    gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
+    for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
+    if self.run_ui.data then
+        run_ui.show(self.run_ui,self.run_ui.data,mobile.enabled())
+        gui.set_visible(self.time_line,false)
+        gui.set_visible(self.station_result,false);gui.set_visible(self.replay_line,false)
+        for _,b in pairs(self.replay_buttons) do gui.set_visible(b.box,false);gui.set_visible(b.label,false) end
+        gui.set_visible(self.time_buttons.step.box,false);gui.set_visible(self.time_buttons.step.label,false)
+        gui.set_visible(self.station_next,false);gui.set_visible(self.station_next_label,false)
+        local terminal=self.run_ui.data.state=='finished' or self.run_ui.data.state=='failed'
+        if terminal then gui.set_visible(self.time_buttons.pause.box,false);gui.set_visible(self.time_buttons.pause.label,false) end
+    end
+    self.fuel_flash=math.max(0,(self.fuel_flash or 0)-dt)
+    run_ui.show_fuel(self.run_ui,self.fuel_data,enabled,self.fuel_flash>0 and self.fuel_gain or nil)
+    if html5 then
+        local d=self.fuel_data;local encoded=json.encode(d)
+        if self.fuel_published~=encoded then self.fuel_published=encoded;html5.run('window.riderFuel='..encoded) end
+    end
+    self.coin_flash=math.max(0,(self.coin_flash or 0)-dt)
+    run_ui.show_coins(self.run_ui,self.coin_data,self.coin_bank_data,enabled,self.coin_flash>0 and (self.coin_flash_amount or 1) or false)
+    if html5 then
+        local c,b=self.coin_data,self.coin_bank_data
+        local published=c and {count=c.count,total=c.total,practice=c.practice,finished=c.finished,flash=self.coin_flash>0 and (self.coin_flash_amount or 1) or 0,gems=c.gems,gem_total=c.gem_total,gem_bank=b and b.gems or 0,gem_earned=b and b.course_gems or 0,bank=b and b.total or 0,save=b and b.status or 'Checking storage'} or nil
+        local encoded=json.encode(published)
+        if encoded~=self.coin_published then
+            self.coin_published=encoded;html5.run('window.riderCoins='..encoded..';window.riderRunUI='..json.encode(run_ui.geometry(self.run_ui)))
+        end
+    end
+    if self.progress_ui.data and self.progress_ui.data.enabled then gui.set_visible(self.time_line,false) end
+    local compact=mobile.compact()
+    self.compact=compact
+    local open=mobile.enabled() and not compact or self.tuning_open
+    if open~=self.panel_open then
+        if html5 then html5.run("document.body.classList.toggle('rider-tuning',"..tostring(open)..")") end
+        if not open then cancel_drag(self) end
+        self.panel_open=open
+        for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open) end
+        gui.set_visible(self.metrics[6],open)
+    end
+    self.feedback_poll=(self.feedback_poll or 0)+dt
+    if self.feedback_poll<0.1 then return end
+    self.feedback_poll=0
+    local pixel_ratio=html5 and tonumber(html5.run("document.querySelector('canvas').width / document.querySelector('canvas').getBoundingClientRect().width")) or 1
+    local unit=math.abs(gui.get_screen_position(self.graph.probe).x-gui.get_screen_position(self.graph.origin).x)
+    local root=layout.roots.left_top
+    local base=unit/math.max(0.01,pixel_ratio or 1)/gui.get_scale(root).x
+    local panel_scale=math.max(1,1/math.max(0.01,base))
+    -- Small/portrait FIT views still need a usable editor and a legible graph.
+    gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
+    local height=html5 and tonumber(html5.run("innerHeight")) or 540
+    local bottom=html5 and not enabled and 52 or 16
+    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-bottom)/(446*base)))
+    gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
+    layout.readable(base)
+    local narrow=html5 and tonumber(html5.run("innerWidth"))<520
+    graph.visible(self.graph,not self.run_ui.data and not (open and narrow))
+    if html5 then
+        local function point(n)
+            local p=gui.get_screen_position(n);return {x=p.x,y=p.y}
+        end
+        local c=gui.get_color(self.metrics[4])
+        html5.run("window.riderCompact = "..tostring(compact))
+        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
+            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box)}))
+    end
+    if html5 then
+        local status,visible=feedback.state()
+        -- The custom import panel captures input like the feedback fallback.
+        local modal=visible or html5.run("!!window.riderCustom?.visible")=="true"
+        gui.set_text(self.feedback_label,"Copy [F]")
+        if self.owner and self.latest then
+            if status~=self.last_feedback_status or visible~=self.feedback_visible then
+                self.last_feedback_status,self.feedback_visible=status,visible
+                msg.post(self.owner,"feedback_status",{status=status,visible=visible})
+            end
+            if modal~=self.feedback_modal then
+                self.feedback_modal=modal
+                msg.post(self.owner,"ui_capture",{active=modal})
+            end
+        end
+    end
+end
+function on_input(self,id,action)
+    if levels_ui.input(self.levels_ui,id,action) then return true end
+    if not self.feedback_modal and run_ui.input(self.run_ui,id,action,self.owner) then return true end
+    if id==hash("ui_pointer") and action.pressed and self.latest and (self.latest.section_count or 0)>1 and gui.pick_node(self.section_next,action.x,action.y) then
+        msg.post(self.owner,"next_section");return true
+    end
+    if id==hash("ui_pointer") and action.pressed and self.latest and not self.run_ui.data and gui.pick_node(self.station_next,action.x,action.y) then
+        local index=1;for i,key in ipairs(stations.ids) do if key==self.latest.station then index=i end end
+        msg.post("main:/loader#script","select_station",{id=stations.ids[index%#stations.ids+1],preset=self.preset or "a"})
+        return true
+    end
+    if id==hash("feedback") and action.pressed then
+        if html5 then if self.owner then msg.post(self.owner,"clear_input") end else copy_feedback(self) end
+        return true
+    end
+    if self.feedback_open or self.feedback_modal then return true end
+    if id==hash("pause_toggle") and action.pressed then msg.post("main:/loader#script","time_control",{action="pause"});return true end
+    if id==hash("time_step") and action.pressed then msg.post("main:/loader#script","time_control",{action="step"});return true end
+    if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
+        for name,b in pairs(self.time_buttons) do
+            if gui.pick_node(b.box,action.x,action.y) then msg.post("main:/loader#script","time_control",{action=name});return true end
+        end
+        for name,b in pairs(self.replay_buttons) do
+            if not self.panel_open and gui.pick_node(b.box,action.x,action.y) and self.owner then msg.post(self.owner,"replay_control",{action=name});return true end
+        end
+    end
+    if id==hash("tuning_toggle") and action.pressed then toggle_tuning(self);return true end
+    if id==hash("help_toggle") and action.pressed then toggle_help(self);return true end
+    if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
+        if gui.pick_node(self.tuning_button,action.x,action.y) then toggle_tuning(self);return true end
+        if gui.pick_node(self.help_button,action.x,action.y) then toggle_help(self);return true end
+    end
+    if not self.panel_open then return end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.feedback_button,action.x,action.y) then copy_feedback(self);return true end
+    if controls.input(self.controls,id,action,self.owner) then return true end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.audio_button,action.x,action.y) then msg.post(self.owner,"audio_mute");return true end
+    if id==hash("ui_pointer") and action.pressed then
+        for key,box in pairs(self.presets) do
+            if gui.pick_node(box,action.x,action.y) then msg.post(self.owner,"select_preset",{key=key});return true end
+        end
+    end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.crash_button,action.x,action.y) then
+        msg.post("gym:/owner#script","crash_toggle")
+        return true
+    end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.struts_button,action.x,action.y) then
+        msg.post("gym:/owner#script","struts_toggle")
+        return true
+    end
+end

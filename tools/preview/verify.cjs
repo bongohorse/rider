@@ -7,7 +7,7 @@ const {verificationPlan,DESKTOP_GAMEPLAY_SHARDS}=require('./verification-plan.cj
 const {createTimings}=require('./timings.cjs');
 const pointer=require('../gym/pointer.cjs');
 // Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
-const PRESETS=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/feel.lua'),'utf8'))[1].match(/\w+/g);
+const PRESETS=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/game/feel.lua'),'utf8'))[1].match(/\w+/g);
 async function main(){
   const [target,sha,buildId,out,mode='full']=process.argv.slice(2);
   const plan=verificationPlan(mode);

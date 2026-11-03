@@ -14,7 +14,7 @@ class ClassificationTest(unittest.TestCase):
         self.assertTrue(is_docs_only(["README.md", "STATUS.md", "AGENTS.md", "docs/PLAN.md"]))
         self.assertTrue(is_docs_only(["main/gym/README.md", "main/README.md"]))
         self.assertTrue(is_docs_only([".github/PULL_REQUEST_TEMPLATE.md"]))
-        self.assertTrue(is_docs_only(["main/gym/stations.md"]))
+        self.assertTrue(is_docs_only(["main/game/stations.md"]))
         self.assertTrue(is_docs_only(["docs/research/evidence/empty.txt"]))
         self.assertTrue(is_docs_only(["README.md", "docs/README.md", "docs/reports/terrain-p5/native-memory.txt"]))
 
@@ -27,7 +27,7 @@ class ClassificationTest(unittest.TestCase):
             ["docs/evidence.csv"], ["docs/data.yaml"], ["tools/trace.txt"],
             ["main/gym/README.txt"], [".github/notes.txt"],
             ["docs/README.md", "docs/extra.py"],
-            ["main/gym/stations/notes.md"], ["main/gym/presets/README.md"],
+            ["main/game/stations/notes.md"], ["main/game/presets/README.md"],
             ["docs/README.md", "tools/old.script"],  # rename with --no-renames
         ):
             with self.subTest(paths=paths):
@@ -35,8 +35,8 @@ class ClassificationTest(unittest.TestCase):
 
     def test_bundled_paths_from_project(self):
         bundled = bundled_paths()
-        self.assertIn("main/gym/stations", bundled)
-        self.assertIn("main/gym/presets", bundled)
+        self.assertIn("main/game/stations", bundled)
+        self.assertIn("main/game/presets", bundled)
         with tempfile.TemporaryDirectory() as tmp:
             f = Path(tmp) / "game.project"
             f.write_text("[project]\ncustom_resources = /a/b, /c.json,\n", encoding="utf-8")
@@ -78,6 +78,10 @@ class ClassificationTest(unittest.TestCase):
                          ("true", "false", "docs-text-only"))
         self.assertEqual(selection(["docs/samples.json"])[0], "false")
         self.assertEqual(selection(["main/gym/game.script", "docs/evidence.txt"])[1], "true")
+        # #405 split main/gym into game, editor and gym; all three keep the same selection.
+        self.assertEqual(selection(["main/game/controller.script", "main/editor/editor.lua",
+                                    "main/game/ramp_metrics.lua"])[1], "true")
+        self.assertFalse(is_gym_only(["main/games/x.lua"]))
         for path in (
             "tools/project.py", ".github/workflows/ci.yml", "game.project",
             "main/physics.appmanifest", "requirements-dev.txt",

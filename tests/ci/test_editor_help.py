@@ -32,7 +32,7 @@ NOT_KEYS = {'<', '>'}
 
 
 def help_text():
-    source = (ROOT / 'main/gym/editor.gui_script').read_text()
+    source = (ROOT / 'main/editor/editor.gui_script').read_text()
     block = source.split('-- HELP BEGIN', 1)[1].split('-- HELP END', 1)[0]
     return '\n'.join(re.findall(r'"((?:[^"\\]|\\.)*)"', block))
 

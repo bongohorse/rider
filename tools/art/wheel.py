@@ -20,7 +20,7 @@ ROUND_ASSETS = ('wheel',)
 
 
 def radius(root, name):
-    shape = (root / f'main/gym/{name}.convexshape').read_text()
+    shape = (root / f'main/game/{name}.convexshape').read_text()
     values = re.findall(r'^data:\s*([0-9.]+)\s*$', shape, re.M)
     if 'shape_type: TYPE_SPHERE' not in shape or len(values) != 1:
         raise ValueError('Expected a centred circular collision shape with one radius')
@@ -85,13 +85,13 @@ def outputs(root=ROOT, name='wheel'):
     logical_size = int(ET.fromstring(svg).attrib['width'])
     sprite = (f'default_animation: "{name}"\n'
               'material: "/builtins/materials/sprite.material"\n'
-              'textures { sampler: "texture_sampler" texture: "/main/gym/assets/gym.atlas" }\n'
+              'textures { sampler: "texture_sampler" texture: "/main/game/assets/gym.atlas" }\n'
               f'size_mode: SIZE_MODE_MANUAL\nsize {{ x: {logical_size}.0 y: {logical_size}.0 }}\n')
     png = BytesIO()
     raster(svg).save(png, format='PNG', optimize=False, compress_level=9)
-    return {f'main/gym/assets/{name}.svg': svg.encode(),
-            f'main/gym/assets/{name}.png': png.getvalue(),
-            f'main/gym/{name}.sprite': sprite.encode()}
+    return {f'main/game/assets/{name}.svg': svg.encode(),
+            f'main/game/assets/{name}.png': png.getvalue(),
+            f'main/game/{name}.sprite': sprite.encode()}
 
 
 def check(root=ROOT):

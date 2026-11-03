@@ -24,10 +24,10 @@ def validate(root):
         import configparser
         config = configparser.ConfigParser()
         config.read(project)
-        if config.get('bootstrap', 'main_collection', fallback='') != '/main/gym/boot.collectionc':
+        if config.get('bootstrap', 'main_collection', fallback='') != '/main/game/boot.collectionc':
             errors.append('Gym main_collection must reference the compiled gym boot resource')
         else:
-            if not (root / 'main/gym/boot.collection').is_file():
+            if not (root / 'main/game/boot.collection').is_file():
                 errors.append('Gym main_collection source missing')
             if not (root / 'main/main.collection').is_file():
                 errors.append('G1 physics fixture boot source missing')

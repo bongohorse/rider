@@ -2,7 +2,7 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-ROOT = Path(__file__).resolve().parents[2] / 'main/gym/assets'
+ROOT = Path(__file__).resolve().parents[2] / 'main/game/assets'
 
 def generate(name, gem=False):
     shapes=[]

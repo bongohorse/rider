@@ -1,7 +1,7 @@
 -- #272: supplementary pure-Lua CPU observation, run with verified Bob's LuaJIT -joff.
 -- This is native interpreter CPU, not HTML5 engine/frame timing. No physics/engine calls.
-local doc=require 'main.gym.editor_doc'
-local sample=require 'main.gym.editor_sample'
+local doc=require 'main.editor.editor_doc'
+local sample=require 'main.editor.editor_sample'
 local function count(d) local n=0;for _,c in ipairs(d.chains) do n=n+#c-1 end;return n end
 local function measure(fn)
     local times={}

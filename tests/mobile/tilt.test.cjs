@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {angle,normalize}=require('../../main/gym/tilt.js');
+const {angle,normalize}=require('../../main/game/tilt.js');
 const near=(a,b)=>assert(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 test('screen horizontal lean stays consistent in four orientations',()=>{
   near(angle(0,-30,0),30);

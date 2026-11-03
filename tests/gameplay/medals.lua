@@ -1,4 +1,4 @@
-local M=require 'main.gym.medals'
+local M=require 'main.game.medals'
 local t=M.defaults()
 assert(M.validate(nil) and M.validate(t))
 for _,case in ipairs({{26,3},{26.00000001,2},{30,2},{30.00000001,1},{40,1},{40.00000001,0}}) do assert(M.award(t,case[1])==case[2]) end
@@ -16,7 +16,7 @@ local course={id='first-run',finish={}}
 local key=M.key(course);assert(key=='first-run-course1-rules1-buggy-a-crash')
 course.editor={revision=55,road_look={width=2}};course.medal_times=edited;assert(M.key(course)==key)
 course.race_revision=2;assert(M.key(course)~=key);course.custom=true;assert(not M.key(course))
-local D=require 'main.gym.editor_doc'
+local D=require 'main.editor.editor_doc'
 local d=D.blank('medal-test','Medal test');d.editor.objects={{id='o1',type='line',points={{-10,0},{50,0}}}};d.editor.next_id=2;d.editor.start.position={0,2};d.editor.finish={position={40,0},direction=1}
 assert(D.validate(d));d.editor.medal_times=t
 local compiled=assert(D.compile(d));assert(compiled.medal_times.gold==26 and compiled.editor.editor_version==12)

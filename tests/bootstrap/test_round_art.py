@@ -34,12 +34,12 @@ class RoundArt(unittest.TestCase):
     def test_exported_round_assets(self):
         for name in wheel.ROUND_ASSETS:
             with self.subTest(asset=name):
-                shape = (ROOT/f'main/gym/{name}.convexshape').read_text()
+                shape = (ROOT/f'main/game/{name}.convexshape').read_text()
                 radius = float(re.search(r'^data:\s*([0-9.]+)',shape,re.M)[1])
-                sprite = (ROOT/f'main/gym/{name}.sprite').read_text()
+                sprite = (ROOT/f'main/game/{name}.sprite').read_text()
                 self.assertIn('size_mode: SIZE_MODE_MANUAL',sprite)
                 size = float(re.search(r'size\s*\{\s*x:\s*([0-9.]+)',sprite)[1])
-                with Image.open(ROOT/f'main/gym/assets/{name}.png') as image:
+                with Image.open(ROOT/f'main/game/assets/{name}.png') as image:
                     self.assertEqual(image.size,(int(size*3),int(size*3)))
                     assert_round(image,size,radius)
                     # Interior art must also stay centred, not only the outer silhouette.

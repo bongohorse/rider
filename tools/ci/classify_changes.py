@@ -54,12 +54,16 @@ def read_paths(filename):
     return paths
 
 
+# The game, editor and Gym sources that lived together in main/gym/ until #405.
+GYM_PREFIXES = ("main/game/", "main/editor/", "main/gym/")
+
+
 def is_gym_only(paths):
-    """Conservative allowlist: gym paths plus approved non-runtime docs only."""
+    """Conservative allowlist: game/editor/gym paths plus approved non-runtime docs only."""
     return (
         bool(paths)
-        and any(path.startswith("main/gym/") for path in paths)
-        and all(path.startswith("main/gym/") or is_docs_only([path]) for path in paths)
+        and any(path.startswith(GYM_PREFIXES) for path in paths)
+        and all(path.startswith(GYM_PREFIXES) or is_docs_only([path]) for path in paths)
     )
 
 

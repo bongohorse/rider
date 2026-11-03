@@ -1,7 +1,7 @@
 -- #352: debug HTML5-only readout of the actual render camera and completed fixed-owner body state.
 -- Never writes physics bodies, messages, tuning, game save data or production telemetry.
 local M={}
-local contacts=require "main.gym.seam_metrics"
+local contacts=require "main.game.seam_metrics"
 function M.sample(self,target,velocity,position,projection,dt)
     assert(sys.get_engine_info().is_debug and html5,"camera352 requires debug HTML5")
     assert(projection and projection.m00>0 and projection.m11>0,"camera352: missing live orthographic projection")

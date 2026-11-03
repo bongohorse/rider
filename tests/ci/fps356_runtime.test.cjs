@@ -57,13 +57,13 @@ for(const [name,mutate,reason] of [
 // Keep this tied to the actual loader admission condition, not a mock of pause.
 test('background pause uses a real campaign course and the loader focus-suspend admission',()=>{
  const root=path.resolve(__dirname,'../..');
- const catalog=fs.readFileSync(path.join(root,'main/gym/course_catalog.lua'),'utf8');
+ const catalog=fs.readFileSync(path.join(root,'main/game/course_catalog.lua'),'utf8');
  const match=catalog.match(/M=\{ids=\{([^}]+)\}\}/);
  assert(match,'Cannot read the actual campaign course IDs');
  const admitted=[...match[1].matchAll(/'([^']+)'/g)].map(m=>m[1]);
  assert(admitted.includes(TEST_STATION),'Runtime probe station is not a real campaign course');
  assert.notEqual(TEST_STATION,'straight','Runtime probe must drive a campaign course, not the Gym straight');
- const loader=fs.readFileSync(path.join(root,'main/gym/boot.script'),'utf8');
+ const loader=fs.readFileSync(path.join(root,'main/game/boot.script'),'utf8');
  // Since #359/#365 the loader suspends every playable station in Play mode (no course restriction).
  assert.match(loader,/id==hash\("run_focus_lost"\) and not self\.loading and editor\.mode=="play" then\n\s*msg\.post\("#script","time_control",\{action="suspend"\}\)/,
   'Loader focus admission contract changed; revalidate runtime pause');

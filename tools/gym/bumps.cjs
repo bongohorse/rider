@@ -1,6 +1,6 @@
 // A19b Bumps station in the debug HTML5 gym: geometry reproduced by the editor compiler, URL start and R,
 // the wave ladder and crest-dip at the default start speed and at 7 m/s, a crest lift-off speed sweep and
-// repeatability. Protocol: main/gym/bump_metrics.lua (M.protocol) and main/gym/README.md#bumps.
+// repeatability. Protocol: main/game/bump_metrics.lua (M.protocol) and main/gym/README.md#bumps.
 const {configure}=require('./launch.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');

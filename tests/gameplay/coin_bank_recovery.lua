@@ -19,7 +19,7 @@ end,decode=function(text)
 end}
 sys={get_save_file=function(app,name) return app..'/'..name end,
     exists=function(path) return slots[path]~=nil end}
-package.preload['main.gym.custom']=function()
+package.preload['main.game.custom']=function()
     return {sync_state=function() return sync end,
         slot_store=function(names,parse)
             local function slot(i)
@@ -45,8 +45,8 @@ package.preload['main.gym.custom']=function()
                 end}
         end}
 end
-package.loaded['main.gym.custom']=package.preload['main.gym.custom']() -- Defold require ignores package.preload
-local bank=require 'main.gym.coin_bank'
+package.loaded['main.game.custom']=package.preload['main.game.custom']() -- Defold require ignores package.preload
+local bank=require 'main.game.coin_bank'
 local function reset(failures,permanent)
     documents={};encoded_id=0;attempts=0;fail_first=failures or 0
     fail_always=permanent or false;slots={};sync='saved'

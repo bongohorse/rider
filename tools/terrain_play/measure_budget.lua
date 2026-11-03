@@ -1,8 +1,8 @@
 -- Native Lua allocation measurement of actual compiler + complete Edit emissions.
 -- Two emitted generations model replacement, independently of adapter residency/engine pools.
-local doc=require 'main.gym.editor_doc'
-local geom=require 'main.gym.terrain_geometry'
-local budget=require 'main.gym.terrain_budget'
+local doc=require 'main.editor.editor_doc'
+local geom=require 'main.game.terrain_geometry'
+local budget=require 'main.game.terrain_budget'
 for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
     collectgarbage('collect')
     local start=collectgarbage('count')

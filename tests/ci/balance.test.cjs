@@ -24,12 +24,12 @@ test('balance sections: raised decks, narrowing beams, independent starts from r
 
 test('seesaw plank: data, resource and rest/tip geometry agree',()=>{
   const d=geometry.build(),s=d.seesaw,P=geometry.PLANK;
-  const shape=fs.readFileSync(path.join(ROOT,'main/gym/seesaw.convexshape'),'utf8');
+  const shape=fs.readFileSync(path.join(ROOT,'main/game/seesaw.convexshape'),'utf8');
   const v=[...shape.matchAll(/data: (-?[0-9.]+)/g)].map(m=>+m[1]),r=x=>Math.round(x)/100,xs=v.filter((_,i)=>i%3===0),ys=v.filter((_,i)=>i%3===1);
   assert.equal(r(Math.max(...xs)-Math.min(...xs)),s.length);assert.equal(r(Math.max(...ys)-Math.min(...ys)),s.thickness);
   assert.equal(r(Math.max(...xs)-Math.max(...xs.filter(x=>x<Math.max(...xs)))),s.taper);
-  assert.match(fs.readFileSync(path.join(ROOT,'main/gym/seesaw.collisionobject'),'utf8'),new RegExp(`mass: ${s.mass}\\.0\\n`));
-  assert.match(fs.readFileSync(path.join(ROOT,'main/gym/station_data.lua'),'utf8'),new RegExp(`M.SEESAW_PLANK=\\{length=${s.length},thickness=${s.thickness},taper=${s.taper},mass=${s.mass}\\}`));
+  assert.match(fs.readFileSync(path.join(ROOT,'main/game/seesaw.collisionobject'),'utf8'),new RegExp(`mass: ${s.mass}\\.0\\n`));
+  assert.match(fs.readFileSync(path.join(ROOT,'main/game/station_data.lua'),'utf8'),new RegExp(`M.SEESAW_PLANK=\\{length=${s.length},thickness=${s.thickness},taper=${s.taper},mass=${s.mass}\\}`));
   const half=s.length/2,deck=1.6,reach=half*Math.cos(s.rest_angle),chain=d.chains[0];
   // At rest the left tip lies on the start deck, tipped the right tip on the exit deck; the limit is beyond both.
   assert.ok(Math.abs(s.pivot[1]-half*Math.sin(s.rest_angle)-deck)<1e-6);

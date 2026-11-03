@@ -1,4 +1,4 @@
-local D=require 'main.gym.editor_doc';local A=require 'main.gym.editor_track_align'
+local D=require 'main.editor.editor_doc';local A=require 'main.editor.editor_track_align'
 local function level(points,coins)
  local d=D.blank('along-test','Along test');local e=d.editor;e.start.position={0,2};e.objects={{id='o1',type='line',points=points}};e.next_id=2
  for _,p in ipairs(coins) do local id='o'..e.next_id;e.objects[#e.objects+1]={id=id,type='coin',pickup_id='coin-'..id,position=p};e.next_id=e.next_id+1 end
@@ -30,6 +30,6 @@ stacked.revision=stacked.revision+1;s=A.refresh(stacked,s);near(s.bindings.o2.he
 local hull=level({{0,0},{10,0}},{{4,5.7}});hull.objects[#hull.objects+1]={id='o3',type='hull',vertices={{2,3},{8,3},{8,5},{2,5}}};p=assert(A.adjust(hull,A.refresh(hull),{'o2'},10));near(p.delta,4);near(p.moves[1].position[2],5.7)
 local large=level({{0,0},{1,0}},{{1,.7}});large.objects[1].points={};local second={id='o3',type='line',points={}}
 for i=0,1025 do large.objects[1].points[#large.objects[1].points+1]={i,0};second.points[#second.points+1]={1100+i,0} end
-large.objects[#large.objects+1]=second;large.next_id=4;local wrapper={schema=1,units='metres',id='along-limit',name='Along limit',editor=large};assert(D.validate(wrapper));local bounded,reason=require('main.gym.editor_coin_route').prepare(large);assert(not bounded and reason:find('2048'))
+large.objects[#large.objects+1]=second;large.next_id=4;local wrapper={schema=1,units='metres',id='along-limit',name='Along limit',editor=large};assert(D.validate(wrapper));local bounded,reason=require('main.editor.editor_coin_route').prepare(large);assert(not bounded and reason:find('2048'))
 local down=level({{0,0},{3,4},{6,0}},{{3,4.7}});local descent=assert(A.adjust(down,A.refresh(down),{'o2'},2.5));near(descent.moves[1].position[1],4.5);near(descent.moves[1].position[2],2.7)
 print('PASS route arc length vs X, shared signed clamping/gaps/joins/reverse, Mixed Height, locks, refresh/free moves, parallel-surface ownership, hull tops and unsupported ambiguity')

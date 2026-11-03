@@ -1,8 +1,8 @@
 -- Native Lua observation of two complete Edit generations; not process/GPU memory.
-local doc=require 'main.gym.editor_doc'
-local geom=require 'main.gym.terrain_geometry'
+local doc=require 'main.editor.editor_doc'
+local geom=require 'main.game.terrain_geometry'
 local projection=require 'main.terrain_perspective.projection'
-local budget=require 'main.gym.terrain_budget'
+local budget=require 'main.game.terrain_budget'
 for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
  local d=assert(doc.compile(dofile(arg[1]..'/'..name..'-source.lua')))
  local entries=geom.describe(d)

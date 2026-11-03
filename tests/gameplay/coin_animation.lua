@@ -5,7 +5,7 @@ factory={create=function()nextid=nextid+1;return nextid end}
 sprite={play_flipbook=function(url,anim)assert(anim=='wonder-gem')end}
 go={set_position=function(p,id)positions[id]=p end,set_scale=function(p,id)scales[id]=p end,set=function(url,property,v)assert(property=='tint');tints[url.id]=v end}
 msg={url=function(_,id,component)return {id=id,component=component}end,post=function(url,event)if type(url)=='table' then enabled[url.id]=event=='enable' end end}
-local R=require 'main.gym.coin_runtime'
+local R=require 'main.game.coin_runtime'
 local self={station={coins={version=2,items={{id='gold',position={2,3}},{id='gem',position={4,5},kind='gem'}}}}}
 R.reset(self);assert(nextid==2 and scales[2].x==1.44)
 self.coin_effects.gold={age=0,item=self.coins.items[1]};self.coin_effects.gem={age=0,item=self.coins.items[2]}

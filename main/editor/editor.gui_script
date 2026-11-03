@@ -1,0 +1,3143 @@
+-- Level editor (LE2 shell, LE3 drawing, LE4 documents, LE5a prefabs, LE5b curves). Its own game object sits on top of the input stack: in Edit
+-- mode every action is consumed here (Defold only stops propagation between game objects, not between
+-- the components of one), so game keys, the HUD and the world never see editor input (R15).
+local editor=require "main.editor.editor"
+local doc_lib=require "main.editor.editor_doc"
+local edit=require "main.editor.editor_edit"
+local prefab=require "main.editor.editor_prefab"
+local snap_lib=require "main.editor.editor_snap"
+local overlay=require "main.editor.editor_overlay"
+local editor_ui=require "main.editor.editor_ui"
+local zoom_policy=require "main.editor.editor_zoom"
+local track_align=require "main.editor.editor_track_align"
+local auto_coins=require "main.editor.editor_auto_coins"
+local terrain_look=require "main.editor.editor_look"
+local stations=require "main.game.stations"
+local custom=require "main.game.custom"
+local socket=require "socket"
+local LOADER="main:/loader#script"
+-- Screen-space behaviour (independent of zoom): pick tolerance, anchor snap radius, handle size,
+-- double-click time and distance. Grid steps are metres (R6).
+-- Pixel values are logical canvas pixels; only DPR and the small-window fallback scale them.
+local PICK_PX,SNAP_PX,HANDLE_PX,DOUBLE_S,DOUBLE_PX=10,12,9,0.4,4
+-- Editor zoom range (LE6: down to 0.01, about 650 m across the canvas, so Fit level shows long courses;
+-- it was 0.05, about 130 m).
+local MIN_ZOOM,MAX_ZOOM=zoom_policy.MIN,zoom_policy.MAX
+local ui=1
+local C={param=vmath.vector4(1,0.45,0.85,1),vertex=vmath.vector4(0.9,0.95,1,0.9),free=vmath.vector4(1,1,1,0.95),joint=editor_ui.c.connected,
+    selected=editor_ui.c.selected,hover=editor_ui.c.hover,connect=editor_ui.c.connected,
+    draw=vmath.vector4(0.55,0.8,1,1),rubber=vmath.vector4(0.55,0.8,1,0.6),join=vmath.vector4(1,0.6,0.15,0.5),box=vmath.vector4(1,0.95,0.35,0.7),
+    anchor=vmath.vector4(0.35,1,0.45,1),angle=vmath.vector4(0.4,0.7,1,1),grid=vmath.vector4(0.85,0.85,0.85,1),off=vmath.vector4(1,0.35,0.3,1),free_snap=vmath.vector4(0.85,0.85,0.85,0.6),
+    bounds=vmath.vector4(1,0.55,0.25,0.75),test=vmath.vector4(0.55,0.8,1,0.7),
+    ghost=vmath.vector4(0.8,0.92,1,0.3),ghost_bad=vmath.vector4(1,0.35,0.3,0.35),last=vmath.vector4(0.55,0.8,1,0.22)}
+local TOOLS={{"select","Select [S]"},{"draw","Draw [D]"},{"curve","Curve [C]"},{"prefab","Prefab [P]"},{"start","START"},{"finish","FINISH"},{"label","Label [L]"},{"pan","Pan"}}
+-- editor.gui max_nodes (raised from the default 512 for the LE5a panel rows).
+local MAX_NODES=640
+local KIND_KEYS={}
+for i,kind in ipairs(prefab.ORDER) do KIND_KEYS[hash("station_"..i)]=kind end
+-- Open dialog (LE4): My levels rows per page; templates per page (LE6: paged, so a growing station list
+-- never covers the Close button).
+local ROWS,TEMPLATE_ROWS=10,10
+-- Warning list (LE6): clickable rows per page.
+local WARN_ROWS=8
+-- View row (LE6) in the bottom bar, left of the page's own High DPI / Fullscreen buttons: name, label, width.
+local VIEW={{"view_fit","Fit [Home]",70},{"view_centre","Centre [.]",70},{"view_start","START",50},{"view_test","Last test",64},{"view_bounds","Bounds",56},
+    {"view_ghost","Ghost",50},{"view_help","Help [H]",60}}
+-- Help overlay (LE6b): the shipped controls. Keys in [brackets]; tests/ci/test_editor_help.py checks that
+-- every editor key binding is listed here.
+-- HELP BEGIN
+local HELP_LEFT={
+    "Editor help  ([H], [Esc] or a click outside closes it)",
+    "",
+    "Tools",
+    "  [S] Select  [D] Draw  [C] Curve  [P] Prefab  [L] Label",
+    "  START, FINISH and Pan: buttons on the left",
+    "",
+    "Mouse",
+    "  Click selects or places; drag moves (one Undo step)",
+    "  Wheel zooms; Middle drag or [Space]+drag pans",
+    "  Zoom: - / editable % / + (1 to 400 percent)",
+    "  Shift+click adds or removes; drag on empty space: box",
+    "  [Tab] picks the next item under the cursor",
+    "  Double-click a selected line or curve: insert a point",
+    "  Double-click a label: edit its text",
+    "  [Esc] cancels the action, then clears the selection",
+    "",
+    "Draw [D] and Curve [C]",
+    "  Click places points; click the last one, double-click",
+    "  or [Enter] finishes; [Backspace] or Ctrl+[Z] removes",
+    "  the last point; [Esc] discards the piece",
+    "  Free ends: hollow rings; connected ends: cyan squares",
+    "",
+    "Snapping",
+    "  0.5 m grid + anchors; [Alt] 0.1 m; Shift 15 deg",
+    "  Ctrl while dragging: off; [G] grid on/off",
+}
+local HELP_RIGHT={
+    "Edit",
+    "  [Delete] / [Backspace] delete; [K] split; [J] connect",
+    "  Versions: named snapshots and earlier saved designs",
+    "  Ctrl+[Z] undo; Ctrl+[Y] or Ctrl+Shift+[Z] redo",
+    "  Ctrl+[C] copy; Ctrl+[V] paste at the cursor",
+    "  Mirror [<] [>] (right panel): mirrored copy left/right",
+    "  Prefab [P]: [1] to [7] pick the type; pink handles and",
+    "    the right panel change its values",
+    "  Curves: drag anchors and tangents (pink); Make smooth /",
+    "    Make corner on points (Shift+click or a box)",
+    "  Label [L]: click places one and edits its text",
+    "",
+    "Test and play",
+    "  [E], [Enter] or Play: drive from START",
+    "  [F] test start on the surface; Shift+[F] drop here",
+    "  -/+ (right panel): start or test speed; [R] retry",
+    "    (while driving); [E] back to the editor",
+    "",
+    "View (bottom row)",
+    "  [Home] Fit level; [.] centre the selection; START;",
+    "  Last test; Bounds; Ghost (test start preview, off by default)",
+    "",
+    "Fields (level name, values, label text)",
+    "  While a field is focused every key types into it;",
+    "  [Tab] / Shift+[Tab]: next / previous number field",
+    "  Step buttons: Shift 10x, Alt 0.1x (counts stay whole)",
+    "  Panel headers collapse; Properties wheel scrolls",
+    "  [Enter] applies, [Esc] cancels, a click elsewhere applies",
+}
+-- HELP END
+local function shorten(t,n) if #t<=n then return t end;return t:sub(1,n-3):gsub("[\128-\191]*$",""):gsub("[\192-\255]$","").."..." end
+-- A faint upright vehicle (LE6b), relative to the chassis centre in metres: chassis box (feel: 1.08 x
+-- 0.28 m), two wheels at (+-0.46, -0.30) of radius 0.22 m (two squares each, one turned 45 degrees: an
+-- octagon) and the rider. {centre x, y, width, height, turned}.
+local SILHOUETTE={{0,0,1.08,0.28},{-0.46,-0.3,0.39,0.39},{-0.46,-0.3,0.39,0.39,true},{0.46,-0.3,0.39,0.39},{0.46,-0.3,0.39,0.39,true},{-0.04,0.4,0.3,0.5}}
+local function silhouette(self)
+    local list={}
+    for i=1,#SILHOUETTE do
+        local n=gui.new_box_node(vmath.vector3(0,0,0),vmath.vector3(1,1,0))
+        gui.set_enabled(n,false);list[i]=n
+    end
+    self.extra_nodes=(self.extra_nodes or 0)+#list
+    return list
+end
+-- Places a silhouette with its chassis centre at p (metres); nil hides it.
+local function show_silhouette(o,list,p,s,color)
+    for i,n in ipairs(list) do
+        gui.set_enabled(n,p~=nil)
+        if p then
+            local part=SILHOUETTE[i]
+            gui.set_screen_position(n,vmath.vector3(s.ox+(p[1]+part[1])*s.ppm_x,s.oy+(p[2]+part[2])*s.ppm_y,0))
+            gui.set_size(n,vmath.vector3(part[3]*math.abs(s.ppm_x)/o.k,part[4]*math.abs(s.ppm_y)/o.k,0))
+            gui.set_euler(n,vmath.vector3(0,0,part[5] and 45 or 0))
+            gui.set_color(n,color)
+        end
+    end
+end
+function init(self)
+    -- Terrain Look is also available over the driving HUD; keep its native scene on top.
+    gui.set_render_order(1)
+    self.overlay=overlay.init()
+    self.buttons,self.held={},{}
+    self.ghost,self.last_ghost=silhouette(self),silhouette(self)
+    self.ui=editor_ui.init()
+    self.templates={}
+    for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
+    local case=sys.get_config_string("rider.gym_test","")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="ea2" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
+    self.gui_nodes=self.overlay.nodes+self.extra_nodes+editor_ui.BOXES+editor_ui.TEXTS
+    msg.post(".","acquire_input_focus")
+    window.set_listener(function(_,event)
+        if event==window.WINDOW_EVENT_FOCUS_LOST then
+            -- HTML5 reports canvas blur when a native DOM toolbar takes focus too.
+            -- Only document/window loss suspends a run; the toolbar's own Pause request stays single.
+            if not html5 or html5.run("document.hidden || !document.hasFocus()")=='true' then msg.post(LOADER,"run_focus_lost") end
+            self.focus_lost,self.refocus,self.refocus_until=true,true,nil
+        elseif event==window.WINDOW_EVENT_FOCUS_GAINED then self.refocus_until=socket.gettime()+1 end
+    end)
+end
+-- Held commands, gestures and previews never survive a mode change or focus loss (R15). A polyline
+-- being drawn keeps its placed points on focus loss; a mode change ends it (see play).
+local function clear_auto(self)
+    self.auto_plan=nil
+    if editor.auto_range or editor.auto_remove then editor.auto_range,editor.auto_remove=nil,nil;editor.touch() end
+end
+local function cancel(self)
+    clear_auto(self)
+    self.drag,self.pan,self.box,self.held,self.pending=nil,nil,nil,{},nil
+    if editor.preview then editor.preview=nil;editor.touch() end
+    if editor.preview_objects then editor.set_preview(nil) end
+end
+local function map() return editor.map() end
+local function cursor(self,action)
+    local s=map()
+    if not s or not action.screen_x or s.ppm_x==0 or s.ppm_y==0 then return self.cursor end
+    self.cursor={(action.screen_x-s.ox)/s.ppm_x,(action.screen_y-s.oy)/s.ppm_y}
+    self.cursor_px={action.screen_x,action.screen_y}
+    return self.cursor
+end
+local function tolerance(px) local s=map();return px*ui/math.max(1e-6,s and math.abs(s.ppm_x) or 1) end
+local function to_px(p,s) return {s.ox+p[1]*s.ppm_x,s.oy+p[2]*s.ppm_y} end
+local function dist(a,b) return math.sqrt((a[1]-b[1])^2+(a[2]-b[2])^2) end
+local function length(v) return math.sqrt(v[1]*v[1]+v[2]*v[2]) end
+local function seg_t(p,a,b)
+    local dx,dy=b[1]-a[1],b[2]-a[2]
+    return math.max(0,math.min(1,((p[1]-a[1])*dx+(p[2]-a[2])*dy)/math.max(1e-12,dx*dx+dy*dy)))
+end
+local function seg_dist(p,a,b)
+    local t=seg_t(p,a,b)
+    return dist(p,{a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t})
+end
+local function find(id) return edit.find(editor.doc.editor,id) end
+local path=doc_lib.path
+-- Handles of a selected prefab (LE5a). A handle on the exit also selects that end (Connect/Disconnect).
+local function prefab_handles(o)
+    local list=prefab.handles(o)
+    if doc_lib.terrain(o) then
+        local pts=path(o)
+        local e=pts[#pts]
+        for _,h in ipairs(list) do if dist(h.p,e)<1e-9 then h.index=#pts end end
+    end
+    return list
+end
+-- Handles of a selected curve (LE5b): every anchor ("a<i>") and its tangents ("i<i>", "o<i>"; the open
+-- ends have none). The first anchor of a connected start belongs to the upstream piece and is left out
+-- (R4); an end anchor also selects that end (Connect/Disconnect).
+local function curve_handles(o)
+    local _,prev=doc_lib.links(editor.doc.editor)
+    local n,last=#o.anchors,#path(o)
+    local list={}
+    for i,a in ipairs(o.anchors) do
+        if not (i==1 and prev[o.id]) then list[#list+1]={name="a"..i,p=a.p,label="anchor "..i,anchor=i,index=i==1 and 1 or i==n and last or nil} end
+        -- A corner (LE5c) has no tangents; the open ends have none either.
+        if i>1 and a.mode~="corner" then list[#list+1]={name="i"..i,p={a.p[1]+a["in"][1],a.p[2]+a["in"][2]},label="tangent in, anchor "..i,anchor=i,tangent=true} end
+        if i<n and a.mode~="corner" then list[#list+1]={name="o"..i,p={a.p[1]+a.out[1],a.p[2]+a.out[2]},label="tangent out, anchor "..i,anchor=i,tangent=true} end
+    end
+    return list
+end
+local function object_handles(o)
+    if o.type=="curve" then return curve_handles(o) end
+    if o.type=="prefab" then return prefab_handles(o) end
+    return {}
+end
+local function drawing_tool() return editor.tool=="draw" or editor.tool=="curve" end
+-- The point of a selected vertex in pts (a drag preview may hold another sample count): a line's point by
+-- index, a curve's or prefab's first or last point.
+local function end_point(pts,o,index)
+    if o.type=="line" then return pts[index] end
+    return index==1 and pts[1] or pts[#pts]
+end
+-- Pick candidates under the cursor, best first (hover shows the first; Tab cycles; click picks the
+-- shown one): handles of a selected prefab, line points (every point of a selected line, the ends of
+-- every line and terrain prefab; a joint once, as its upstream piece's last point), START, FINISH,
+-- labels, then lines, prefabs and hulls by edge distance.
+local function candidates(p)
+    local e=editor.doc.editor
+    local tol=tolerance(PICK_PX)
+    local _,prev=doc_lib.links(e)
+    local list,seen={},{}
+    local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
+    for _,o in ipairs(e.objects) do
+        if not o.hidden and not o.locked and (o.type=="prefab" or o.type=="curve") and editor.selected[o.id] then
+            for _,h in ipairs(object_handles(o)) do
+                local d=dist(p,h.p)
+                if d<=tol then add({kind="handle",id=o.id,handle=h.name,label=h.label,index=h.index,anchor=h.anchor,d=d,rank=0,key="h:"..o.id..":"..h.name}) end
+            end
+        end
+    end
+    for _,o in ipairs(e.objects) do
+        if not o.hidden and doc_lib.terrain(o) then
+            local selected=editor.selected[o.id] and o.type=="line"
+            local pts=path(o)
+            for i,q in ipairs(pts) do
+                if (selected or i==1 or i==#pts) and math.abs(q[1]-p[1])<=tol and math.abs(q[2]-p[2])<=tol then
+                    local d=dist(p,q)
+                    if d<=tol then
+                        local id,index=o.id,i
+                        if i==1 and prev[o.id] and not find(prev[o.id]).hidden then id=prev[o.id];index=#path(find(id)) end
+                        add({kind="vertex",id=id,index=index,d=d,rank=1,key="v:"..id..":"..index})
+                    end
+                end
+            end
+        end
+    end
+    local v,s=doc_lib.VEHICLE,e.start.position
+    if p[1]>=s[1]+v[1] and p[1]<=s[1]+v[2] and p[2]>=s[2]+v[3] and p[2]<=s[2]+v[4] then add({kind="start",id="start",d=0,rank=2,key="start"}) end
+    local f=e.finish
+    if f and math.abs(p[1]-f.position[1])<=tol and p[2]>=f.position[2]-doc_lib.FINISH_BELOW and p[2]<=f.position[2]+doc_lib.FINISH_ABOVE then
+        add({kind="finish",id="finish",d=math.abs(p[1]-f.position[1]),rank=2,key="finish"})
+    end
+    for _,o in ipairs(e.objects) do
+        local d,segment
+        if o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.game.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
+        elseif o.type=="label" then
+            -- The drawn text's box (LE6b): editor_view scales labels by max(1, 0.5 / zoom); the builtin
+            -- font is about 7.9 x 14 units per character at scale 1 (1 unit = 1 cm).
+            local k=math.max(1,0.5/editor.camera.zoom)/100
+            local chars=select(2,o.text:gsub("[^\128-\191]",""))
+            local dx=math.max(0,math.abs(p[1]-o.position[1])-chars*3.95*k)
+            local dy=math.max(0,math.abs(p[2]-o.position[2])-7*k)
+            d=math.sqrt(dx*dx+dy*dy)
+        else
+            local closed=doc_lib.outline(o)
+            for _,pts in ipairs(closed and {closed} or doc_lib.parts(o)) do
+                for i=2,#pts+(closed and 1 or 0) do
+                    local q=seg_dist(p,pts[i-1],pts[(i-1)%#pts+1])
+                    if not d or q<d then d,segment=q,i-1 end
+                end
+            end
+        end
+        if not o.hidden and d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
+    end
+    table.sort(list,function(a,b) if a.rank~=b.rank then return a.rank<b.rank end;if a.d~=b.d then return a.d<b.d end;return a.key<b.key end)
+    return list
+end
+local function describe_candidate(c)
+    if not c then return "" end
+    if c.kind=="handle" then return "handle ("..c.label..") of "..doc_lib.label(find(c.id)) end
+    if c.kind=="vertex" then
+        local o=find(c.id)
+        if o and o.type~="line" then return (c.index==1 and "entry" or "exit").." of "..doc_lib.label(o) end
+        return "point "..c.index.." of "..c.id
+    end
+    if c.kind=="object" then local o=find(c.id);return o and doc_lib.label(o):lower() or c.type.." "..c.id end
+    return c.kind=="start" and "START" or "FINISH"
+end
+-- Hover (R6 editing basics): the candidate a click would pick is highlighted before clicking.
+local function set_hover(self,list)
+    local keys={};for _,c in ipairs(list) do keys[#keys+1]=c.key end
+    local key=table.concat(keys,",")
+    if key~=self.hover_key then self.hover_key,self.hover_index=key,1 end
+    self.candidates=list
+    local c=list[self.hover_index]
+    local object=c and c.kind=="object" and c.id or nil
+    if editor.hover_object~=object then editor.hover_object=object;editor.touch() end
+    editor.hover=c
+end
+-- Anchors for snapping: every line point and hull vertex except those that move with the edit, plus
+-- extra points. Line ends carry their end so the draw tool can show and confirm a connect preview.
+local cache={}
+local function anchors(skip,extra)
+    local e=editor.doc.editor
+    -- Rebuilt only when the document, the moving set or the drawn points change (not per mouse move).
+    if cache.doc==editor.doc and cache.revision==e.revision and cache.skip==skip and cache.extra==(extra and #extra or 0)
+        and cache.last==(extra and extra[#extra]) then return cache.list end
+    local next,prev=doc_lib.links(e)
+    local list={}
+    for _,o in ipairs(e.objects) do
+        if not o.hidden and not o.locked and not (skip and skip[o.id]) then
+            if doc_lib.terrain(o) then
+                local pts=path(o)
+                for i,q in ipairs(pts) do
+                    local free=(i==1 and not prev[o.id]) or (i==#pts and not next[o.id])
+                    local skip_point=skip and skip.vertex and skip.vertex[o.id..":"..i]
+                    if not skip_point then list[#list+1]={p=q,id=o.id,index=i,end_free=free and {id=o.id,index=i} or nil} end
+                end
+            elseif doc_lib.outline(o) then for _,q in ipairs(doc_lib.outline(o)) do list[#list+1]={p=q,id=o.id} end end
+        end
+    end
+    for _,q in ipairs(extra or {}) do list[#list+1]={p=q} end
+    cache={doc=editor.doc,revision=e.revision,skip=skip,extra=extra and #extra or 0,last=extra and extra[#extra],list=list}
+    return list
+end
+local function snap(self,p,skip,from,extra)
+    local q,kind,anchor=snap_lib.snap(p,{off=self.held.ctrl,grid=editor.grid,fine=self.held.alt,from=self.held.shift and from or nil,
+        anchors=anchors(skip,extra),radius=tolerance(SNAP_PX)})
+    self.snapped={p=q,kind=kind,anchor=anchor}
+    return q,kind,anchor
+end
+local function selected_object()
+    for _,o in ipairs(editor.doc.editor.objects) do if o.id==editor.selection then return o end end
+end
+local function delete(self)
+    if editor.point_count()>=2 then editor.message="Delete works on one point at a time: click one of the selected points first.";return end
+    local s=editor.selection
+    local v=editor.vertex
+    -- A curve anchor (or a curve end) deletes that anchor; a prefab end stands for the whole prefab.
+    -- Only an anchor of the single selected curve counts (never one left over from another selection).
+    local a=editor.anchor
+    if a and not (a.id==editor.selection and #editor.selected_ids()==1) then a=nil end
+    if not a and v and find(v.id) and find(v.id).type=="curve" then a={id=v.id,i=v.index==1 and 1 or #find(v.id).anchors} end
+    if a and find(a.id) then
+        if editor.commit(function(e) return edit.delete_anchor(e,a.id,a.i) end,true) then editor.select(a.id) end
+        return
+    end
+    if v and find(v.id) and find(v.id).type=="prefab" then v=nil end
+    if v then
+        if editor.commit(function(e) return edit.delete_point(e,v.id,v.index) end,true) then editor.select(v.id) end
+        return
+    end
+    if s=="start" then editor.message="START cannot be deleted; move it instead.";return end
+    if s=="finish" then editor.commit(function(e) e.finish=nil end);return end
+    local ids=editor.selected_ids()
+    if #ids>0 then editor.commit(function(e) edit.remove(e,ids) end,true) end
+end
+local function place(target,p)
+    editor.commit(function(e)
+        if target=="start" then e.start.position={p[1],p[2]}
+        elseif e.finish then e.finish.position={p[1],p[2]}
+        else e.finish={position={p[1],p[2]},direction=1} end
+    end)
+    editor.select(target)
+end
+-- Drawing (D): each click places a snapped point; a click on the last point, a double-click or Enter
+-- finishes the piece; ending on a free end connects and finishes there; Backspace removes the last
+-- point; Esc discards the unfinished piece.
+local function finish_drawing(self)
+    local d=self.drawing
+    self.drawing=nil
+    if not d or #d.points<2 or d.opened~=editor.opened then return end
+    -- Connections are resolved when the piece is finished: a free end exactly at its first or last
+    -- point (snapped there, shown as a connect preview). Undo/Redo while drawing cannot leave stale ends.
+    local function free_end(p)
+        for _,c in ipairs(edit.ends(editor.doc.editor)) do if c.free and not find(c.id).hidden and not find(c.id).locked and c.p[1]==p[1] and c.p[2]==p[2] then return {id=c.id,index=c.index} end end
+    end
+    -- Only a point placed with the anchor snap (the visible connect preview) connects; Ctrl never does.
+    local first=d.anchored[1] and free_end(d.points[1])
+    local last=d.anchored[#d.points] and free_end(d.points[#d.points])
+    if first and last and first.id==last.id and first.index==last.index then last=nil end
+    local id,note
+    local ok=editor.commit(function(e)
+        local err
+        id,err=(d.kind=="curve" and edit.add_curve or edit.add_line)(e,d.points,first,last)
+        if not id then return nil,err end
+        note=err
+    end,true)
+    if ok and id then editor.select(id);if note then editor.message=note end end
+end
+local function connect_target(v)
+    -- The nearest free end of another run within the snap radius of the selected free end.
+    local e=editor.doc.editor
+    if not v or edit.joint(e,v.id,v.index) then return nil end
+    local o=find(v.id)
+    if not o or (v.index~=1 and v.index~=#path(o)) then return nil end
+    local run={};for _,id in ipairs(edit.run_of(e,v.id)) do run[id]=true end
+    local p=path(o)[v.index]
+    local best,bd
+    for _,c in ipairs(edit.ends(e)) do
+        if c.free and not find(c.id).hidden and not find(c.id).locked and not run[c.id] then
+            local d=dist(p,c.p)
+            if d<=math.max(0.01,tolerance(SNAP_PX)) and (not bd or d<bd) then best,bd=c,d end
+        end
+    end
+    return best
+end
+local function connect(self)
+    if editor.point_count()>=2 then editor.message="Connect [J] works on one point at a time: click one of the selected points first.";return end
+    local v=editor.vertex
+    if not v then editor.message="Select a line end first.";return end
+    local e=editor.doc.editor
+    if edit.joint(e,v.id,v.index) then
+        local id,index=edit.owner(e,v.id,v.index)
+        local q=path(find(id))[index]
+        q={q[1],q[2]}
+        if editor.commit(function(doc_e) local to,err=edit.disconnect(doc_e,id,index);if not to then return nil,err end end,true) then
+            -- Disconnect may re-orient a remaining line run: select the same end by position.
+            local pts=path(find(id))
+            editor.select(id,{id=id,index=dist(pts[1],q)<1e-6 and 1 or #pts})
+        end
+        return
+    end
+    local v2=editor.vertex2
+    local function point(x) local o=x and find(x.id);return o and path(o)[x.index] end
+    if point(v2) and dist(point(v2),point(v))>=0.01 then
+        -- Two separated free ends: a new piece bridges them; neither end moves (LE3b).
+        local id
+        if editor.commit(function(doc_e) local new,err=edit.bridge(doc_e,{id=v.id,index=v.index},{id=v2.id,index=v2.index});id=new;if not new then return nil,err end end,true) then
+            editor.select(id)
+        end
+        return
+    end
+    local target=point(v2) and {id=v2.id,index=v2.index,p=point(v2)} or connect_target(v)
+    if not target then editor.message="Connect needs a second free end: Shift+click it, or drag this end onto it.";return end
+    local id=v.id
+    if editor.commit(function(doc_e) return edit.connect(doc_e,{id=v.id,index=v.index},{id=target.id,index=target.index}) end,true) then
+        -- The connected end is the joint at the target position; select it again by position.
+        local pts=path(find(id))
+        local index=dist(pts[1],target.p)<1e-6 and 1 or #pts
+        local oid,oindex=edit.owner(editor.doc.editor,id,index)
+        editor.select(oid,{id=oid,index=oindex})
+    end
+end
+local function split(self)
+    if editor.point_count()>=2 then editor.message="Split [K] works on one point at a time: click one of the selected points first.";return end
+    local a=editor.anchor
+    if a and find(a.id) and a.id==editor.selection and #editor.selected_ids()==1 then
+        if editor.commit(function(e) local id,err=edit.split_curve(e,a.id,a.i);if not id then return nil,err end end,true) then editor.select(a.id) end
+        return
+    end
+    local v=editor.vertex
+    if not v then editor.message="Select a point inside a line (or an anchor inside a curve) first.";return end
+    if editor.commit(function(e) local id,err=edit.split(e,v.id,v.index);if not id then return nil,err end end,true) then
+        editor.select(v.id,{id=v.id,index=#find(v.id).points})
+    end
+end
+local show_problem,problem_rows
+local function play(self,test)
+    -- An unfinished piece is completed first, so Play never drops placed points.
+    if self.drawing then finish_drawing(self) end
+    if editor.dirty then editor.save_draft() end
+    cancel(self)
+    if #editor.errors>0 then
+        self.play_error={opened=editor.opened,text=editor.errors[1]}
+        local rows=problem_rows()
+        show_problem(self,rows[1])
+        editor.message="Play blocked: "..editor.errors[1]
+        return
+    end
+    self.play_requested=editor.opened
+    msg.post(LOADER,"editor_play",{test=test})
+end
+local function test_start(self)
+    local p=self.cursor
+    if not p then return end
+    local mode=self.held.shift and "drop" or "surface"
+    local pos,err=doc_lib.test_start(editor.doc,p,mode)
+    if not pos then editor.message="Test start refused: "..err..".";return end
+    play(self,{position=pos,speed=editor.test_speed,mode=mode})
+end
+local function set_zoom(self,z,p)
+    local c=editor.camera
+    z=math.max(MIN_ZOOM,math.min(MAX_ZOOM,z))
+    if not p then
+        local m,u=map(),editor_ui.usable(self.ui)
+        if m and m.ppm_x~=0 and m.ppm_y~=0 then
+            p={((u.x0+u.x1)/2-m.ox)/m.ppm_x,((u.y0+u.y1)/2-m.oy)/m.ppm_y}
+        end
+    end
+    if p then c.x,c.y=p[1]-(p[1]-c.x)*c.zoom/z,p[2]-(p[2]-c.y)*c.zoom/z end
+    c.zoom=z
+end
+local function zoom(self,factor) set_zoom(self,editor.camera.zoom*factor,self.cursor) end
+-- After another document became current: dialogs close, and an unfinished piece (which belongs to the
+-- previous document) is discarded with its gesture state.
+local function opened(self)
+    self.track_height=track_align.DEFAULT;self.track_session,self.track_cache,self.track_opened=nil,nil,nil
+    self.open_dialog,self.field,self.confirm_delete,self.place=false,nil,nil,nil
+    if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
+    cancel(self);self.snapped=nil
+end
+local function open_template(self,id)
+    local d=stations.resource(id)
+    if not d then editor.message="Template unavailable: "..id;return end
+    local doc,note=doc_lib.template(d)
+    -- A note of the previous template must not stay on another one.
+    editor.message=""
+    if editor.open(doc,true) then
+        opened(self)
+        if note then editor.message=editor.message~="" and editor.message.." "..note or note end
+    end
+end
+-- My levels (LE4): open, delete (asks once more), new.
+local function refresh_library(self)
+    local list,err=editor.library().list(),select(2,editor.library().index())
+    self.library,self.library_error=list,err
+    self.library_opened,self.library_revision=editor.opened,editor.doc and editor.doc.editor.revision
+    self.library_status,self.library_key=editor.status,editor.key()
+    self.page=math.max(0,math.min(self.page or 0,math.floor((#list-1)/ROWS)))
+end
+-- Reads close persistent files too: the pinned HTML5 loader requests an IndexedDB sync on close.
+-- An unreadable index is not cached by storage. Observe it after document/save transitions rather
+-- than on every render/debug frame, so displaying its error cannot keep storage syncing forever.
+local function library_snapshot(self)
+    if not self.library or self.library_opened~=editor.opened or self.library_revision~=(editor.doc and editor.doc.editor.revision)
+        or self.library_status~=editor.status or self.library_key~=editor.key() then refresh_library(self) end
+    return self.library
+end
+local function open_saved(self,key)
+    if key==editor.key() then editor.message="This level is already open.";self.open_dialog=false;return end
+    local doc,err,unsupported=editor.library().load(key)
+    if not doc then
+        editor.message=unsupported and "Not opened: this level was saved by an unsupported editor ("..err.."). It is kept unchanged." or "The level cannot be opened: "..tostring(err)
+        return
+    end
+    if editor.open(doc,true,{key=key}) then opened(self) end
+end
+local function delete_saved(self,key)
+    if key==editor.key() then editor.message="The open level cannot be deleted; open another level first.";return end
+    if self.confirm_delete~=key then self.confirm_delete=key;editor.message="Click Sure? to delete this level from My levels.";return end
+    self.confirm_delete=nil
+    if editor.versions.busy() then editor.message="Wait for the version save before deleting a level.";return end
+    -- Keep the level entry available for retry until its version transaction is acknowledged.
+    local ok,err=editor.versions.remove(key,nil,function()
+        local removed,why=editor.library().remove(key)
+        editor.message=removed and "Level and its versions deleted." or "Delete failed (My levels: "..tostring(why).."). Retry the deletion."
+        editor.version_error=not removed and editor.message or nil
+        if not removed then editor.status=editor.message end
+        refresh_library(self)
+    end)
+    if ok then editor.syncing=true;editor.status="Saving..." end
+    editor.message=ok and "Deleting level versions…" or "Save failed (versions: "..tostring(err).."). The level is kept; retry deletion."
+    if not ok then editor.version_error=editor.message;editor.status=editor.message end
+    refresh_library(self)
+end
+local function new_level(self)
+    local n=#editor.library().list()+1
+    local drawing=self.drawing
+    if not editor.open(doc_lib.blank("my-level-"..n,"New level "..n),true,{store=true}) then return end
+    opened(self)
+    if not drawing then editor.message="New level "..n..": draw terrain [D]." end
+end
+-- Copy/paste (R17): new ids, internal connections kept, outside connections dropped, no START/FINISH.
+local function copy_selection()
+    local ids=editor.selected_ids()
+    if #ids==0 then
+        editor.message=(editor.selection=="start" or editor.selection=="finish") and "START and FINISH are not copied: a level has one of each." or "Select objects to copy first."
+        return false
+    end
+    editor.clipboard=edit.copy(editor.doc.editor,ids)
+    editor.message="Copied "..#ids.." object"..(#ids==1 and "" or "s")..". Ctrl+V pastes at the cursor."
+    editor.touch()
+    return true
+end
+local function paste_by(d)
+    local clip=editor.clipboard
+    local ids
+    if editor.commit(function(e) ids=edit.paste(e,clip,d) end,true) then
+        editor.select(nil)
+        for _,id in ipairs(ids) do editor.selected[id]=true end
+        editor.selection=ids[1];editor.touch()
+        local n=#ids
+        editor.message="Pasted "..n.." object"..(n==1 and "" or "s")..(#clip.connections>0 and " with their connections" or "")..". Connections to other pieces are not copied."
+    end
+end
+-- The copy's centre lands on the cursor; the offset keeps the active grid, so on-grid points stay on it.
+local function paste_at(self,p)
+    local clip=editor.clipboard
+    if not clip then editor.message="Nothing to paste: copy a selection first [Ctrl+C].";return end
+    local b=edit.bbox(clip.objects)
+    local d={p[1]-(b[1]+b[2])/2,p[2]-(b[3]+b[4])/2}
+    local step=self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID or nil
+    if step then d={snap_lib.round(d[1],step),snap_lib.round(d[2],step)} end
+    paste_by(d)
+end
+-- Mirror (LE5a): a horizontally mirrored copy to the left or right of the selection, at least 1 m apart,
+-- offset by a multiple of 0.5 m. The original and the clipboard stay unchanged; one Undo step.
+local function mirror(self,side)
+    local ids=editor.selected_ids()
+    if #ids==0 then editor.message="Select objects to mirror first.";return end
+    local new
+    if editor.commit(function(e) new=edit.mirror(e,ids,side) end,true) then
+        editor.select(nil)
+        for _,id in ipairs(new) do editor.selected[id]=true end
+        editor.selection=new[1];editor.touch()
+        editor.message="Mirrored copy of "..#new.." object"..(#new==1 and "" or "s").." to the "..(side>0 and "right" or "left")..". The original is unchanged."
+    end
+end
+-- Prefabs (LE5a). A parameter change keeps the entry and moves the downstream run (edit.set_params);
+-- one Undo step. A change that adds a Play-blocking error is applied and named as a conflict.
+local function apply_params(id,params,partner)
+    local known={}
+    for _,m in ipairs(editor.errors) do known[m]=true end
+    -- params: prefab parameters, or the new anchors of a curve (LE5b, same R4 rule).
+    local change=find(id).type=="curve" and edit.set_anchors or edit.set_params
+    if editor.commit(function(e)
+        local moved,err=change(e,id,params)
+        if not moved then return nil,err end
+        -- A smoothed joint's other tangent (LE5c) changes in the same Undo step.
+        if partner then local ok,perr=edit.set_anchors(e,partner.id,partner.anchors);if not ok then return nil,perr end end
+    end,true) then
+        for _,m in ipairs(editor.errors) do
+            if not known[m] then editor.message="Changed, with a conflict: "..m..(m:match("%.$") and "" or ".").." Undo [Ctrl+Z] restores the previous shape.";return true end
+        end
+        return true
+    end
+end
+local function same_params(a,b)
+    for k,v in pairs(a) do if b[k]~=v then return false end end
+    for k in pairs(b) do if a[k]==nil then return false end end
+    return true
+end
+-- Snapping steps for handle drags: lengths on the active grid, angles in 1 deg steps (Alt 0.1, Shift 15
+-- deg); Ctrl turns both off (R6).
+local function steps(self)
+    if self.held.ctrl then return {} end
+    return {length=self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID or nil,angle=self.held.shift and 15 or self.held.alt and 0.1 or 1}
+end
+-- Where a click with the Prefab tool places the current type: its entry at the snapped cursor. On a free
+-- exit the prefab continues that run; on a free entry its exit ends there (a visible connect preview,
+-- R5). A Platform is a separate obstacle and never connects.
+local function placement(self,p)
+    local kind=editor.prefab_kind
+    local params=prefab.defaults(kind)
+    local q,how,anchor=snap(self,p)
+    local place={kind=kind,params=params,at={q[1],q[2]},p=q}
+    if kind~="platform" and how=="anchor" and anchor.end_free then
+        local o=find(anchor.id)
+        if anchor.index==#path(o) and anchor.index>1 then place.first={id=anchor.id,index=anchor.index}
+        else
+            local x=doc_lib.exit({type="prefab",kind=kind,at={0,0},params=params})
+            place.at={q[1]-x[1],q[2]-x[2]};place.last={id=anchor.id,index=1}
+        end
+        place.target=anchor.id
+    end
+    return place
+end
+local function place_prefab(self,p)
+    local place=placement(self,p)
+    local id
+    if editor.commit(function(e) local new,err=edit.add_prefab(e,place.kind,place.params,place.at,place.first,place.last);id=new;if not new then return nil,err end end,true) then
+        editor.select(id)
+        editor.message="Placed "..prefab.name(place.kind).." "..id..(place.target and ", connected to "..place.target or "")..". Change its values on the right."
+    end
+end
+-- Point selection (LE5d). A point is {id, i}: a line point or a curve anchor by index, a joint as its
+-- upstream piece's last point. Points belong to selected lines and curves (a joint also to its selected
+-- downstream piece); prefab points never (convert first). editor.points holds two or more; one point is the
+-- LE5c single selection (vertex/anchor), none means whole objects.
+local function editable(o) return o and (o.type=="line" or o.type=="curve") end
+local function point_total(o) return o.type=="line" and #o.points or #o.anchors end
+local function own_point(id,i)
+    local o=find(id)
+    if not editable(o) then return nil end
+    local next,prev=doc_lib.links(editor.doc.editor)
+    if i==1 and prev[id] then
+        local u=find(prev[id])
+        if not editable(u) or not (editor.selected[id] or editor.selected[u.id]) then return nil end
+        return {id=u.id,i=point_total(u)}
+    end
+    if editor.selected[id] or (i==point_total(o) and next[id] and editor.selected[next[id]]) then return {id=id,i=i} end
+end
+-- The point a pick candidate stands for (a line point or end, a curve's anchor handle), or nil.
+local function point_of(c)
+    if c.kind=="vertex" then
+        local o=find(c.id)
+        if not editable(o) then return nil end
+        return own_point(c.id,o.type=="curve" and (c.index==1 and 1 or #o.anchors) or c.index)
+    end
+    if c.kind=="handle" and c.anchor and c.handle:sub(1,1)=="a" then return own_point(c.id,c.anchor) end
+end
+local function point_pos(pt)
+    local o=editor.preview_objects and editor.preview_objects[pt.id] or find(pt.id)
+    if not o then return nil end
+    return o.type=="line" and o.points[pt.i] or o.anchors[pt.i] and o.anchors[pt.i].p
+end
+-- The LE5c single point (anchor or vertex) as a point, if it is one.
+local function single_point()
+    local a=editor.anchor
+    if a and a.id==editor.selection and find(a.id) then return own_point(a.id,a.i) end
+    local v=editor.vertex
+    if v and find(v.id) then return point_of({kind="vertex",id=v.id,index=v.index}) end
+end
+-- Selects only this point, as the LE5c single selection. The object selection stays as it is: a joint
+-- picked through its selected downstream piece does not add the upstream piece.
+local function set_single(pt)
+    local o=find(pt.id)
+    editor.points,editor.vertex2={},nil
+    if o.type=="line" then editor.selection,editor.vertex,editor.anchor=pt.id,{id=pt.id,index=pt.i},nil
+    else
+        local n=#o.anchors
+        editor.selection,editor.anchor=pt.id,{id=pt.id,i=pt.i}
+        editor.vertex=(pt.i==1 or pt.i==n) and {id=pt.id,index=pt.i==1 and 1 or #path(o)} or nil
+    end
+    editor.touch()
+end
+-- After a change of editor.points: one point becomes the single selection, two or more drop it.
+local function settle_points(primary)
+    local n=editor.point_count()
+    if n==1 then for _,only in pairs(editor.points) do set_single(only) end;return end
+    editor.vertex,editor.vertex2,editor.anchor=nil,nil,nil
+    if n>=2 and primary and editor.selected[primary] then editor.selection=primary end
+    editor.touch()
+end
+-- Shift+click on a point: add or remove it (the current single point joins the set first).
+local function toggle_point(pt)
+    if editor.point_count()==0 then
+        local s1=single_point()
+        if s1 then editor.points[s1.id..":"..s1.i]={id=s1.id,i=s1.i} end
+    end
+    local key=pt.id..":"..pt.i
+    if editor.points[key] then editor.points[key]=nil else editor.points[key]={id=pt.id,i=pt.i} end
+    settle_points(pt.id)
+end
+local function has_paths()
+    for id in pairs(editor.selected) do if editable(find(id)) then return true end end
+    return false
+end
+-- A box on empty space while lines or curves are selected: their points inside it (LE5d box rule).
+local function box_points(b)
+    local x0,x1=math.min(b.from[1],b.to[1]),math.max(b.from[1],b.to[1])
+    local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
+    local found,any={},false
+    for _,o in ipairs(editor.doc.editor.objects) do
+        if not o.hidden and not o.locked and editor.selected[o.id] and editable(o) then
+            for i=1,point_total(o) do
+                local q=o.type=="line" and o.points[i] or o.anchors[i].p
+                if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then
+                    local pt=own_point(o.id,i)
+                    if pt then found[pt.id..":"..pt.i]=pt;any=true end
+                end
+            end
+        end
+    end
+    return any and found or nil
+end
+local function plural(n,word) return n.." "..word..(n==1 and "" or "s") end
+local function names_text(list)
+    if #list<=3 then return table.concat(list,", ") end
+    return table.concat(list,", ",1,3).." and "..(#list-3).." more"
+end
+-- What Make smooth / Make corner would do with the current points or whole objects (panel text), cached
+-- per document state and selection.
+local corner_cache={}
+local function corner_summary()
+    local e=editor.doc.editor
+    local multi=editor.point_count()>=2
+    local ids=editor.selected_ids()
+    local list=multi and editor.point_list() or edit.object_points(e,ids)
+    local keys={}
+    for _,pt in ipairs(list) do keys[#keys+1]=pt.id..":"..pt.i end
+    local key=tostring(editor.doc)..":"..e.revision..":"..table.concat(ids,",")..":"..tostring(multi)..":"..table.concat(keys,",")
+    if corner_cache.key==key then return corner_cache.value end
+    local r={points=#list,sharp=0,smooth=0,ends=0,prefab=0,convert=0,multi=multi}
+    local seen={}
+    for _,pt in ipairs(list) do
+        local st=edit.corner_state(e,pt.id,pt.i)
+        if not st then r.ends=r.ends+1
+        elseif not seen[st.id..":"..st.i] then
+            seen[st.id..":"..st.i]=true
+            if st.prefab then r.prefab=r.prefab+1 elseif st.corner then r.sharp=r.sharp+1 else r.smooth=r.smooth+1 end
+        end
+    end
+    if not multi then
+        for _,id in ipairs(ids) do local o=find(id);if o.type=="prefab" and doc_lib.terrain(o) and not prefab.sample_error(o) then r.convert=r.convert+1 end end
+    end
+    corner_cache={key=key,value=r}
+    return r
+end
+-- Whole-object Make smooth / Make corner is offered for selected lines or curves (no single point picked),
+-- or for several objects with a terrain prefab among them; a single prefab keeps its Convert button.
+local function object_corner_mode()
+    if not editor.doc then return false end
+    if editor.point_count()>=2 or editor.vertex or editor.anchor then return false end
+    if has_paths() then return true end
+    local ids=editor.selected_ids()
+    if #ids<2 then return false end
+    for _,id in ipairs(ids) do if doc_lib.terrain(find(id)) then return true end end
+    return false
+end
+-- Bulk Corner / Smooth (LE5d): every selected point, or every eligible point of the selected objects, in
+-- one Undo step. Prefabs among whole objects are converted first, after a confirmation click.
+local function bulk_text(r,smooth,nothing)
+    local head=nothing and "Nothing to "..(smooth and "smooth" or "make sharp") or (smooth and "Make smooth: " or "Make corner: ")..plural(r.changed,"point")..(smooth and " rounded" or " made sharp")
+    local skips={}
+    if r.ends>0 then skips[#skips+1]=plural(r.ends,"open end") end
+    if r.already>0 then skips[#skips+1]=plural(r.already,"point").." already "..(smooth and "smooth" or "sharp") end
+    if r.prefab>0 then skips[#skips+1]=plural(r.prefab,"joint").." to a prefab (convert it first)" end
+    if #r.skipped>0 then skips[#skips+1]=names_text(r.skipped)..(smooth and " (no path)" or " (no smooth points)") end
+    if #r.refused>0 then skips[#skips+1]=plural(#r.refused,"point").." refused ("..r.refused[1]..")" end
+    return head..(#skips>0 and "; skipped: "..table.concat(skips,", ") or "")..(#r.converted>0 and ". Converted "..names_text(r.converted).." to paths" or "").."."
+end
+-- The extra note for converting a Bump/wave: a curve through its crests, at most this far from its shape.
+local function wave_note(objects)
+    local worst
+    for _,o in ipairs(objects) do
+        if o.type=="prefab" and o.kind=="wave" then worst=math.max(worst or 0,edit.convert_deviation(o)) end
+    end
+    return worst and string.format(" (a Bump/wave becomes a curve through its crests and troughs, at most %.1f mm from its shape)",worst*1000) or ""
+end
+local function bulk_corner(self,smooth)
+    local multi=editor.point_count()>=2
+    local points=multi and editor.point_list() or {}
+    local ids=editor.selected_ids()
+    if not multi and #ids==0 then editor.message="Select lines, curves or points first.";return end
+    local e=editor.doc.editor
+    if not multi and smooth then
+        local names,objects={},{}
+        for _,id in ipairs(ids) do
+            local o=find(id)
+            if o.type=="prefab" and doc_lib.terrain(o) and not prefab.sample_error(o) then names[#names+1]=doc_lib.label(o);objects[#objects+1]=o end
+        end
+        local key=table.concat(ids,",")
+        if #names>0 and not (self.confirm_bulk and self.confirm_bulk.key==key and self.confirm_bulk.revision==e.revision) then
+            self.confirm_bulk={key=key,revision=e.revision}
+            editor.message="Make smooth converts "..names_text(names).." to editable paths first: parameter fields and handles go; shapes and connections stay"..wave_note(objects)..". Click Sure? Make smooth."
+            return
+        end
+    end
+    self.confirm_bulk=nil
+    local report
+    if editor.commit(function(doc_e)
+        local r,rep=edit.set_corners(doc_e,points,smooth,not multi and {objects=ids} or nil)
+        report=r
+        if not r then return nil,bulk_text(rep,smooth,true) end
+    end,true) then
+        -- Converted prefabs keep their ids; a Kicker's landing is a new line and joins the selection.
+        for _,id in ipairs(report.objects or {}) do editor.selected[id]=true end
+        editor.touch()
+        editor.message=bulk_text(report,smooth)
+    end
+end
+-- Corner / Smooth (LE5c): the point a click picked (a curve anchor, a line point or a joint, owned by the
+-- upstream piece) and whether it is sharp now. Open ends have no corner; prefab points need a conversion.
+local function smooth_state()
+    local id,i
+    local a=editor.anchor
+    if a and a.id==editor.selection and find(a.id) then id,i=a.id,a.i
+    elseif editor.vertex and find(editor.vertex.id) then
+        local v=editor.vertex
+        local o=find(v.id)
+        id,i=v.id,(o.type=="curve" and v.index>1) and #o.anchors or v.index
+    end
+    if not id then return nil end
+    -- The rule lives in edit.corner_state (shared with the bulk action, LE5d).
+    return edit.corner_state(editor.doc.editor,id,i)
+end
+local function smooth_point(self)
+    local st=smooth_state()
+    if not st then editor.message="Select a point inside a line or curve, or a joint, first.";return end
+    local rid,ri
+    if editor.commit(function(e) local id,i=edit.set_corner(e,st.id,st.i,st.corner);rid,ri=id,i;if not id then return nil,i end end,true) then
+        editor.select(rid);editor.anchor={id=rid,i=ri}
+        editor.message=st.corner and "Smooth: the corner is rounded through the same point; drag its tangents (pink) to shape it." or "Corner: the point is sharp again."
+    end
+end
+-- Convert to editable path asks once more and says what it removes (contract: LE5c).
+local function convert_prefab(self)
+    local o=editor.selection and find(editor.selection)
+    if not (o and o.type=="prefab") then return end
+    if self.confirm_convert~=o.id then
+        self.confirm_convert,self.confirm_revision=o.id,editor.doc.editor.revision
+        editor.message="Converting removes the "..prefab.name(o.kind).."'s parameter fields and handles; its shape and connections stay"..wave_note({o})..". Click Sure? to convert."
+        return
+    end
+    self.confirm_convert=nil
+    local ids
+    if editor.commit(function(e) local list,err=edit.convert_prefab(e,o.id);ids=list;if not list then return nil,err end end,true) then
+        editor.select(ids[1])
+        editor.message="Converted to an editable path"..(#ids>1 and " ("..#ids.." lines; the jump gap stays open)" or "")..": its points can now be moved, smoothed [Make smooth] or deleted."
+    end
+end
+-- Labels (LE6b): Label [L] places one at the snapped cursor (one Undo step) and focuses its text at once
+-- (the whole text selected, so typing replaces it); a changed text is a second step. Double-click or the
+-- panel's Text row edits it later. Station rule: at most 64 bytes, never empty.
+local LABEL_TEXT="Label"
+local function edit_label(self,id)
+    local o=find(id)
+    if not (o and o.type=="label") then return end
+    if o.locked then editor.message="Locked: "..doc_lib.label(o)..". Unlock it before editing.";return end
+    self.field={text=o.text,initial=o.text,all=true,label=id}
+    editor.message="Type the label text; Enter applies, Esc keeps it."
+end
+local function place_label(self,p)
+    local q=snap(self,p)
+    local id
+    if editor.commit(function(e)
+        id=editor.new_id()
+        e.objects[#e.objects+1]={id=id,type="label",position={q[1],q[2]},text=LABEL_TEXT}
+    end,true) then
+        editor.select(id)
+        edit_label(self,id)
+    end
+end
+local function confirm_label(self,closing)
+    local f=self.field
+    local o=find(f.label)
+    local t=f.text:match("^%s*(.-)%s*$")
+    if not o then self.field=nil;return end
+    if t=="" then
+        editor.message=(closing and "Not applied: " or "").."A label cannot be empty."..(closing and " The previous text is kept." or "")
+        if closing then self.field=nil end
+        return
+    end
+    self.field=nil;editor.message=""
+    if t~=o.text then
+        editor.commit(function(e) local l=edit.find(e,f.label);l.text=t end,true)
+    end
+end
+-- Number fields edit the same parameters as the handles; a choice field steps to its next value.
+local function number_text(v) return (string.format("%.4f",v):gsub("0+$",""):gsub("%.$","")) end
+local function param_rows(o)
+    if o.type=="label" then return {{key="text",label="Text"}} end
+    if o.type=="curve" then
+        local a=editor.anchor
+        local inner=a and a.id==o.id and a.i>1 and a.i<#o.anchors and o.anchors[a.i].mode~="corner"
+        return inner and {{key="mode",label="Tangents",choices={"free","smooth","symmetric"}}} or {}
+    end
+    return prefab.fields(o.kind,o.params,true)
+end
+-- A curve anchor's tangent mode (LE5b): free tangents move independently; smooth keeps them on one line
+-- (each keeps its length); symmetric mirrors them. Switching applies the mode to the in tangent.
+local MODES={free="smooth",smooth="symmetric",symmetric="free"}
+local function anchor_mode(id,i)
+    local o=find(id)
+    local anchors=doc_lib.copy(o.anchors)
+    local a=anchors[i]
+    a.mode=MODES[a.mode]
+    local len=math.sqrt(a.out[1]^2+a.out[2]^2)
+    if i>1 and i<#anchors and len>0 then
+        if a.mode=="symmetric" then a["in"]={-a.out[1],-a.out[2]}
+        elseif a.mode=="smooth" then
+            local l=math.sqrt(a["in"][1]^2+a["in"][2]^2)
+            a["in"]={-a.out[1]/len*l,-a.out[2]/len*l}
+        end
+    end
+    apply_params(id,anchors)
+end
+local function remember_error(self,key,message)
+    self.ui_error={key=key,message=message,revision=editor.doc.editor.revision,opened=editor.opened}
+end
+local function param_click(self,i)
+    local o=find(editor.selection)
+    if o and o.type=="label" then edit_label(self,o.id);return end
+    if o and o.type=="curve" then if editor.anchor then anchor_mode(o.id,editor.anchor.i) end;return end
+    local f=o and o.type=="prefab" and param_rows(o)[i]
+    if not f then return end
+    if f.choices then
+        local params,err=prefab.cycle(o.kind,o.params,f.key)
+        if params then apply_params(o.id,params) else editor.message=err end
+    else
+        local t=number_text(o.params[f.key])
+        self.field={text=t,initial=t,all=true,param=f.key,id=o.id,label=f.label,unit=f.unit}
+        self.ui.reveal="param_"..i
+        editor.message=string.format("Type %s (%s, %s to %s); Enter applies, Esc cancels.",f.label:lower(),f.unit,number_text(f.min),number_text(f.max))
+    end
+end
+-- Applies a number field. Invalid input leaves the shape unchanged and keeps the field open with the
+-- reason (close: a click elsewhere drops it with the same message).
+local function confirm_param(self,closing)
+    local f=self.field
+    local o=find(f.id)
+    if not o or f.text==f.initial then self.field=nil;editor.message="";return end
+    local params,err=prefab.set(o.kind,o.params,f.param,f.text)
+    if not params then
+        f.error=err.." The previous value is kept."
+        editor.message=(closing and "Not applied: " or "")..f.error
+        remember_error(self,f.param,f.error)
+        if closing then self.field=nil end
+        return
+    end
+    self.field=nil;self.ui_error=nil;editor.message=""
+    apply_params(o.id,params)
+end
+-- Export (R9, R12): only a playable level, compiled like Play; the file is the station JSON with its
+-- editor block. Import opens a file as a copy in My levels (the HTML helper reads it; boot validates it).
+local function export(self)
+    if self.drawing then finish_drawing(self) end
+    local level,err=editor.compile()
+    if not level then editor.message="Export blocked: "..err;return end
+    local text=json.encode(level,{encode_empty_table_as_object=false})
+    if #text>custom.limit then editor.message="Export blocked: the level is larger than 256 KiB.";return end
+    if not html5 then editor.message="Export needs the web build.";return end
+    html5.run("window.riderCustom.exportLevel("..json.encode({name=level.id..".json",text=text})..")")
+    editor.message=string.format("Exported %s.json (%.1f KiB).",level.id,#text/1024)
+end
+local function import(self)
+    if not html5 then editor.message="Import needs the web build.";return end
+    cancel(self)
+    custom.open("Import a level file into the editor. It opens as a copy in My levels; nothing is overwritten.",true)
+end
+-- Rename (LE4): a text field. While it is focused every key acts on the field only (contract controls).
+local function drop_char(t)
+    local i=#t
+    while i>0 and t:byte(i)>=128 and t:byte(i)<192 do i=i-1 end
+    return t:sub(1,math.max(0,i-1))
+end
+-- Temporary per-coin references; rebuilding is deferred until a coin control actually needs them.
+local function track_context(self)
+    local e=editor.doc.editor
+    if self.track_opened~=editor.opened then
+        self.track_opened=editor.opened;self.track_session=nil;self.track_cache=nil;self.track_height=track_align.DEFAULT
+    end
+    if not self.track_session or self.track_session.revision~=e.revision then
+        self.track_session=track_align.refresh(e,self.track_session);self.track_cache=nil
+    end
+    local ids=editor.selected_ids();local key=table.concat(ids,',')
+    if not self.track_cache or self.track_cache.key~=key then
+        self.track_cache=track_align.selection(e,self.track_session,ids);self.track_cache.key=key;self.track_cache.ids=ids
+    end
+    return self.track_cache
+end
+local function adjust_track(self,delta,height)
+    local c=track_context(self)
+    local plan,err=track_align.adjust(editor.doc.editor,self.track_session,c.ids,delta,height)
+    if not plan then editor.message=err;return nil,err end
+    if #plan.moves>0 then local ok;ok,err=editor.commit(function(e)return track_align.apply(e,plan)end,true);if not ok then return nil,err end end
+    track_align.accept(self.track_session,plan,editor.doc.editor.revision);self.track_cache=nil
+    if height~=nil then self.track_height=height;editor.message=string.format('Height: %d coins at %.2f m above their routes.',#c.bindings,height)
+    else editor.message=string.format('Along track: %.2f m for the whole selection%s.',plan.delta,plan.limited and ' (limited by a track end or gap)' or '') end
+    return true
+end
+local function drop_track(self,height)
+    local c=track_context(self)
+    -- #427: Drop always applies the Height setting. A bound selection's displayed offset follows free moves,
+    -- so using it would turn a second Drop after moving a coin into a no-op.
+    if height==nil then height=self.track_height or track_align.DEFAULT end
+    local plan,err=track_align.plan(editor.doc.editor,c.ids,height)
+    if not plan then editor.message=err;return end
+    if #plan.moves>0 and not editor.commit(function(e)return track_align.apply(e,plan)end,true) then return end
+    self.track_height=height;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
+    track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan,height)
+end
+local function auto_context(self)
+    if self.auto_opened~=editor.opened then
+        clear_auto(self);self.auto_opened=editor.opened;self.auto_settings=auto_coins.defaults()
+    end
+    return self.auto_settings
+end
+local function auto_value(self,key)
+    local c=auto_context(self)
+    if key=='count' or key=='spacing' then
+        local scope=auto_coins.scope(editor.doc.editor,c,editor.selected_ids())
+        if scope then local n,sp=auto_coins.metrics(scope,c);return key=='count' and n or sp end
+    end
+    return c[key]
+end
+local function set_auto(self,key,value)
+    local n,err=auto_coins.value(key,value)
+    if not n then editor.message=err;return nil,err end
+    local c=auto_context(self);c[key]=n
+    if key=='count' or key=='spacing' then c.driver=key end
+    clear_auto(self);return true
+end
+local function preview_auto(self,reroll)
+    local c=auto_context(self)
+    if reroll then c.seed=c.seed%2147483646+1 end
+    clear_auto(self)
+    local plan,err=auto_coins.preview(editor.doc,c,editor.selected_ids())
+    if not plan then editor.message=err;return end
+    self.auto_plan=plan;self.auto_revision=editor.doc.editor.revision;self.auto_selection=table.concat(editor.selected_ids(),',')
+    editor.auto_range,editor.auto_remove=plan.range,plan.remove;editor.touch()
+    -- Keep the alternative input coupled, without changing the last-edited driver.
+    if c.driver=='count' then c.spacing=math.max(.75,math.min(100000,plan.spacing)) else c.count=math.min(10000,plan.desired) end
+    editor.message=string.format('Preview: %d / %d new coins; %d removals. Cyan diamonds = additions; red coins = removals. Apply or Esc.',plan.possible,plan.desired,plan.removed)..(plan.warning and ' Skipped: '..plan.warning or '')
+end
+local function apply_auto(self)
+    local p=self.auto_plan
+    if not p then editor.message='Preview first; Apply only accepts the visible preview.';return end
+    if #p.ids==0 and p.removed==0 then editor.message='No coin changes to apply.';return end
+    local ok=editor.commit(function(_,d)return auto_coins.apply(d,p)end,true)
+    if not ok then clear_auto(self);return end
+    editor.selected={};for _,id in ipairs(p.ids) do editor.selected[id]=true end
+    editor.selection=p.ids[#p.ids];editor.vertex,editor.vertex2,editor.vertices=nil,nil,{}
+    if self.track_opened~=editor.opened then self.track_session=nil;self.track_height=track_align.DEFAULT end -- never inherit another document's temporary routes or Height
+    self.track_opened=editor.opened;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
+    track_align.attach(editor.doc.editor,self.track_session,p.targets);self.track_cache=nil
+    if self.auto_settings and self.auto_settings.height then self.track_height=self.auto_settings.height end -- #427: Drop keeps the applied Auto height
+    clear_auto(self);editor.tool='select';self.ui.scroll=0;editor.touch()
+    editor.message=string.format('Applied %d new coins; %d removed. Selection retained: adjust Height / Along track or drag. One Undo.',#p.ids,p.removed)
+end
+local function confirm_name(self,closing)
+    if self.field.auto then
+        local f=self.field;local ok,err=set_auto(self,f.auto,f.text)
+        if ok then self.field=nil elseif closing then self.field=nil else f.error=err end;return
+    end
+    if self.field.along then
+        local f=self.field;local delta,err=track_align.distance(f.text)
+        if delta then local ok;ok,err=adjust_track(self,delta);if ok then self.field=nil;return end end
+        f.error=err;editor.message=err;if closing then self.field=nil end;return
+    end
+    if self.field.track then
+        local f=self.field;local height,err=track_align.height(f.text)
+        if height and f.adjust then local ok;ok,err=adjust_track(self,0,height);if not ok then height=nil end end
+        if not height then f.error=err;editor.message=err;if closing then self.field=nil end;return end
+        self.track_height=height;self.field=nil
+        if not f.adjust then editor.message='Height ready; Drop to Track applies it to the selection.' end
+        return
+    end
+    if self.field.zoom then
+        local f=self.field;local z,err=zoom_policy.parse(f.text)
+        if not z then
+            f.error=err;editor.message=err
+            if closing then self.field=nil end
+            return
+        end
+        set_zoom(self,z);self.field=nil;editor.message='';return
+    end
+    if self.field.fuel then
+        local f=self.field;local policy=require 'main.game.fuel';local n,err=policy.value(f.fuel,f.text)
+        if not n then f.error=err;editor.message=err;if closing then remember_error(self,'fuel_'..f.fuel,err);self.field=nil end;return end
+        self.field=nil;self.ui_error=nil
+        editor.commit(function(e)
+            e.fuel=e.fuel or policy.defaults();e.fuel[f.fuel]=n
+        end)
+        return
+    end
+    if self.field.medal then
+        local f=self.field
+        local times,err=require('main.game.medals').set(editor.doc.editor.medal_times,f.medal,f.text)
+        if not times then
+            f.error=err;editor.message=err
+            if closing then remember_error(self,'medal_'..f.medal,err);self.field=nil end
+            return
+        end
+        self.field=nil;self.ui_error=nil;editor.message='Medal targets saved. Editor/test runs remain practice.'
+        local old=editor.doc.editor.medal_times
+        if not old or old[f.medal]~=times[f.medal] then editor.commit(function(e) e.medal_times=times end) end
+        return
+    end
+    if self.field.snapshot then
+        local name=self.field.text:match("^%s*(.-)%s*$")
+        if name=="" then self.field.error="A snapshot name cannot be empty.";return end
+        self.field=nil
+        local ok=editor.snapshot(name,true)
+        if ok then editor.message="Saving named snapshot…" end
+        return
+    end
+    if self.field.search then
+        self.ui.object_query=self.field.text;self.ui.object_scroll=0;self.field=nil;editor.message="";return
+    end
+    if self.field.object then
+        local f=self.field;self.field=nil
+        local name=f.text:match("^%s*(.-)%s*$")
+        local o=find(f.object)
+        if o and (o.name or "")~=name then editor.commit(function(e) edit.find(e,f.object).name=name~="" and name or nil end) end
+        return
+    end
+    if self.field.speed then
+        local f=self.field;local value=tonumber(f.text)
+        if not value or value~=value or math.abs(value)>30 then
+            f.error="Speed must be from -30 to 30 m/s. Previous value kept.";editor.message=f.error
+            if closing then remember_error(self,f.speed,f.error);self.field=nil end
+            return
+        end
+        self.field=nil;self.ui_error=nil;editor.message=""
+        if f.speed=="start" then
+            if value~=editor.doc.editor.start.speed then editor.commit(function(e) e.start.speed=value end) end
+        else editor.test_speed=value;editor.touch() end
+        return
+    end
+    if self.field.param then confirm_param(self,closing);return end
+    if self.field.label then confirm_label(self,closing);return end
+    local name=self.field.text:match("^%s*(.-)%s*$")
+    if name=="" then self.field.error="A level name cannot be empty.";editor.message=self.field.error;return end
+    self.field=nil
+    if name~=editor.doc.name then editor.commit(function(_,doc) doc.name=name end) end
+end
+local function set_tool(self,tool)
+    if self.drawing and tool~=self.drawing.kind:gsub("line","draw") then finish_drawing(self) end
+    editor.tool=tool;self.place=nil;editor.touch()
+end
+-- Navigation (LE6): view only. The camera moves and the selection may change; nothing is committed, so
+-- the document, its dirty state and the Undo history stay unchanged.
+-- The canvas area not covered by the panels (canvas pixels): left palette, right panel, top and bottom bars.
+local function usable(self) return editor_ui.usable(self.ui) end
+
+local function grow(b,x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
+local function empty_box() return {math.huge,-math.huge,math.huge,-math.huge} end
+local function start_box(b,p) local v=doc_lib.VEHICLE;grow(b,p[1]+v[1],p[2]+v[3]);grow(b,p[1]+v[2],p[2]+v[4]) end
+local function object_box(b,o) for _,q in ipairs(editor.shape(o)) do grow(b,q[1],q[2]) end end
+-- Puts box (metres {x0, x1, y0, y1}) in the middle of the usable area. fit: zoom so it fills 80 % of the
+-- area (in or out); otherwise the zoom is kept unless the box does not fit (then zoomed out). Returns
+-- true when the zoom limit kept the box from fitting.
+local function view_box(self,box,fit)
+    local m=map()
+    if not m or m.ppm_x==0 or m.ppm_y==0 then return false end
+    local c,u=editor.camera,usable(self)
+    local px,py=math.abs(m.ppm_x)/c.zoom,math.abs(m.ppm_y)/c.zoom
+    local bw,bh=math.max(box[2]-box[1],1),math.max(box[4]-box[3],1)
+    local z=math.min((u.x1-u.x0)*0.8/(bw*px),(u.y1-u.y0)*0.8/(bh*py))
+    local limited=z<MIN_ZOOM
+    if not fit then z=math.min(z,c.zoom) end
+    z=math.max(MIN_ZOOM,math.min(MAX_ZOOM,z))
+    -- The camera centre stays at the same canvas pixel; the box centre goes to the usable area's centre.
+    local cx,cy=m.ox+c.x*m.ppm_x,m.oy+c.y*m.ppm_y
+    local nx,ny=m.ppm_x*z/c.zoom,m.ppm_y*z/c.zoom
+    c.x=(box[1]+box[2])/2-((u.x0+u.x1)/2-cx)/nx
+    c.y=(box[3]+box[4])/2-((u.y0+u.y1)/2-cy)/ny
+    c.zoom=z
+    return limited
+end
+local function fit_level(self)
+    local b=doc_lib.extent(editor.doc.editor)
+    local limited=view_box(self,b,true)
+    editor.message=limited and string.format("Fit level: the level is %.0f m wide; this is the farthest zoom (its centre is shown).",b[2]-b[1]) or ""
+end
+-- The selection's box: selected points, the single point, START/FINISH or the selected objects.
+local function selection_box()
+    local b=empty_box()
+    local e=editor.doc.editor
+    local s=editor.selection
+    if s=="start" then start_box(b,e.start.position)
+    elseif s=="finish" and e.finish then local f=e.finish.position;grow(b,f[1],f[2]-doc_lib.FINISH_BELOW);grow(b,f[1],f[2]+doc_lib.FINISH_ABOVE)
+    elseif editor.point_count()>=2 then
+        for _,pt in ipairs(editor.point_list()) do local q=point_pos(pt);if q then grow(b,q[1],q[2]) end end
+    else
+        for _,id in ipairs(editor.selected_ids()) do object_box(b,find(id)) end
+    end
+    if b[1]>b[2] then return nil end
+    return b
+end
+local function centre_selection(self)
+    local b=selection_box()
+    if not b then editor.message="Centre selection: nothing is selected. Select objects, points, START or FINISH first.";return end
+    view_box(self,b,false)
+    editor.message=""
+end
+local function go_start(self)
+    local b=empty_box();start_box(b,editor.doc.editor.start.position)
+    view_box(self,b,false);editor.message=""
+end
+local function go_last_test(self)
+    local p=editor.last_test_start()
+    if not p then editor.message="Last test start: none yet in this level. Press F (or Shift+F) to start a test run here first.";return end
+    local b=empty_box();start_box(b,p)
+    view_box(self,b,false)
+    editor.message=string.format("Last test start: x %.2f m  y %.2f m.",p[1],p[2])
+end
+-- The R13 bounds of the current revision (cached; LE6 bounds display and panel).
+local function current_bounds(self)
+    local e=editor.doc.editor
+    local key=tostring(editor.doc)..":"..e.revision
+    if self.bounds_key~=key then self.bounds_key,self.bounds=key,doc_lib.bounds(e) end
+    return self.bounds
+end
+-- Whether Centre has something to centre (cheap: no shapes; selection_box computes the box on use).
+local function has_selection()
+    local s=editor.selection
+    if s=="start" or (s=="finish" and editor.doc.editor.finish) then return true end
+    return editor.point_count()>=2 or next(editor.selected)~=nil
+end
+-- Warning list (LE6): every error, the display note and every warning, each with its target if any.
+problem_rows=function()
+    local rows={}
+    for i,m in ipairs(editor.errors) do rows[#rows+1]={text=m,error=true,target=editor.error_at[i]} end
+    if editor.display_note then rows[#rows+1]={text=editor.display_note} end
+    for i,m in ipairs(editor.warnings) do rows[#rows+1]={text=m,target=editor.warning_at[i]} end
+    return rows
+end
+-- Jump to a problem: its source objects are resolved by stable id in the current document (a deleted one
+-- is skipped, never navigated to), selected and centred; a message without a target only shows its text.
+show_problem=function(self,row)
+    local kind=row.error and "Error: " or "Warning: "
+    local t=row.target
+    local ids={}
+    for _,id in ipairs(t and t.ids or {}) do if find(id) then ids[#ids+1]=id end end
+    if not t or (#ids==0 and not t.start and not t.at) then
+        editor.message=kind..row.text..(t and " (its source no longer exists)" or "")
+        return
+    end
+    local b=empty_box()
+    if t.at then
+        -- A located message: a few metres around the spot, so the spot stays in view.
+        grow(b,t.at[1]-3,t.at[2]-2);grow(b,t.at[1]+3,t.at[2]+2)
+    else
+        for _,id in ipairs(ids) do object_box(b,find(id)) end
+        if t.start then start_box(b,editor.doc.editor.start.position) end
+    end
+    if t.start then editor.select("start")
+    else
+        editor.select(ids[1])
+        for _,id in ipairs(ids) do editor.selected[id]=true end
+        editor.touch()
+    end
+    view_box(self,b,false)
+    self.flash={p=t.at or {(b[1]+b[2])/2,(b[3]+b[4])/2},until_t=socket.gettime()+2,ids=ids,start=t.start,error=row.error}
+    editor.message=kind..row.text
+end
+-- Help is modal and consumes input, so a piece being drawn stays as it is (neither finished nor dropped).
+local function open_help(self)
+    cancel(self)
+    self.help_open,self.warnings_open,self.open_dialog=true,false,false
+    editor.message=""
+end
+local function stepped_params(self,o,index,sign,params)
+    local fd=param_rows(o)[index]
+    if not fd or fd.choices then return nil,"This field cannot be stepped." end
+    local step=fd.integer and 1 or fd.unit=="deg" and 1 or .1
+    if not fd.integer then step=step*(self.held.shift and 10 or self.held.alt and .1 or 1) end
+    params=params or o.params
+    return prefab.set(o.kind,params,fd.key,number_text(params[fd.key]+sign*step))
+end
+-- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
+local function step_focused(self,name)
+    local f=self.field
+    local ak=name:match('^[di][en]c_auto_(%a+)$')
+    if f.auto and ak==f.auto then
+        local n=tonumber(f.text);local step=ak=='count' and 1 or ak=='randomness' and 5 or ak=='height' and .1 or .25
+        local ok,err=set_auto(self,ak,n and n+(name:sub(1,1)=='d' and -step or step) or f.text)
+        if ok then self.field=nil else f.error=err end;return true
+    end
+    if f.track and name=='drop_to_track' then
+        local height,err=track_align.height(f.text)
+        if not height then f.error=err;editor.message=err;return true end
+        self.field=nil;drop_track(self,height);return true
+    end
+    if f.along and (name=='inc_along_track' or name=='dec_along_track') then
+        local n,err=track_align.distance(f.text)
+        if n then local ok;ok,err=adjust_track(self,n+(name=='inc_along_track' and 1 or -1)*(self.held.shift and 10 or self.held.alt and .1 or 1));if ok then self.field=nil;return true end end
+        f.error=err;editor.message=err;return true
+    end
+    if f.track and (name=='inc_track_height' or name=='dec_track_height') then
+        local height,err=track_align.height(f.text)
+        if height then height,err=track_align.height(height+(name=='inc_track_height' and 1 or -1)*.1*(self.held.shift and 10 or self.held.alt and .1 or 1)) end
+        if height and f.adjust then local ok;ok,err=adjust_track(self,0,height);if not ok then height=nil end end
+        if not height then f.error=err;editor.message=err;return true end
+        self.track_height=height;self.field=nil
+        if not f.adjust then editor.message='Height ready; Drop to Track applies it to the selection.' end
+        return true
+    end
+    if f.zoom and (name=='zoom_in' or name=='zoom_out') then
+        local z,err=zoom_policy.parse(f.text)
+        if not z then f.error=err;editor.message=err;return true end
+        set_zoom(self,zoom_policy.step(z,name=='zoom_in' and 1 or -1));self.field=nil;editor.message='';return true
+    end
+    local index=tonumber(name:match("^[di][en]c_param_(%d)$"))
+    if f.param and index then
+        local o=find(f.id)
+        if not o then self.field=nil;return true end
+        local params,err=prefab.set(o.kind,o.params,f.param,f.text)
+        if params then params,err=stepped_params(self,o,index,name:sub(1,1)=="d" and -1 or 1,params) end
+        if not params then
+            f.error=err.." The previous value is kept.";editor.message=f.error;remember_error(self,f.param,f.error)
+        else self.field=nil;self.ui_error=nil;apply_params(o.id,params) end
+        return true
+    end
+    local which=(name=="inc_speed" or name=="dec_speed") and "start" or
+        (name=="inc_test_speed" or name=="dec_test_speed" or name=="plus" or name=="minus") and "test"
+    local fk=name:match('^[di][en]c_fuel_(%a+)$')
+    if fk and f.fuel==fk then
+        local policy=require 'main.game.fuel';local n,err=policy.value(fk,f.text)
+        if not n then f.error=err;return true end
+        local step=policy.fields[fk][3]*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        f.text=number_text(n+(name:sub(1,1)=='d' and -step or step));confirm_name(self);return true
+    end
+    local medal=name:match('^[di][en]c_medal_(%a+)$')
+    if medal and f.medal==medal then
+        local value=tonumber(f.text)
+        if not value then f.error='Enter a valid target time first.';return true end
+        local step=.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        f.text=number_text(value+(name:sub(1,1)=='d' and -step or step))
+        confirm_name(self);return true
+    end
+    if which and f.speed==which then
+        local value=tonumber(f.text)
+        local step=.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        local sign=(name:sub(1,1)=="d" or name=="minus") and -1 or 1
+        if value and value==value and math.abs(value)<=30 and math.abs(value+sign*step)<=30 then
+            value=value+sign*step;self.field=nil;self.ui_error=nil;editor.message=""
+            if which=="start" then
+                if value~=editor.doc.editor.start.speed then editor.commit(function(e) e.start.speed=value end) end
+            else editor.test_speed=value;editor.touch() end
+        else f.error="Speed must be from -30 to 30 m/s. Previous value kept.";editor.message=f.error end
+        return true
+    end
+    return false
+end
+local function on_button(self,name)
+    if name:match('^auto_') or name:match('^[di][en]c_auto_') then
+        local c=auto_context(self);local key=name:match('^auto_(count)$') or name:match('^auto_(spacing)$') or name:match('^auto_(randomness)$') or name:match('^auto_(height)$')
+        local stepkey=name:match('^[di][en]c_auto_(%a+)$')
+        if key then
+            self.ui.reveal=name;self.field={auto=key,text=number_text(auto_value(self,key)),all=true}
+        elseif stepkey then
+            local step=stepkey=='count' and 1 or stepkey=='randomness' and 5 or stepkey=='height' and .1 or .25
+            set_auto(self,stepkey,auto_value(self,stepkey)+(name:sub(1,1)=='d' and -step or step))
+        elseif name=='auto_range' then c.range=c.range=='whole' and 'selected' or 'whole';clear_auto(self)
+        elseif name=='auto_replace' then c.replace=not c.replace;clear_auto(self)
+        elseif name=='auto_preview' then preview_auto(self,false)
+        elseif name=='auto_reroll' then preview_auto(self,true)
+        elseif name=='auto_apply' then apply_auto(self) end
+        return
+    end
+    if name=='along_track' then
+        self.ui.reveal=name;self.field={along=true,text='0',all=true};return
+    elseif name=='inc_along_track' or name=='dec_along_track' then
+        adjust_track(self,(name=='inc_along_track' and 1 or -1)*(self.held.shift and 10 or self.held.alt and .1 or 1));return
+    elseif name=='track_height' then
+        local c=track_context(self);local active=c.active and not c.error
+        self.ui.reveal=name;self.field={track=true,adjust=active,text=active and (c.mixed and '' or number_text(c.height)) or number_text(self.track_height or track_align.DEFAULT),all=true};return
+    elseif name=='inc_track_height' or name=='dec_track_height' then
+        local c=track_context(self);local active=c.active and not c.error
+        if active and c.mixed then editor.message='Mixed heights: enter a common Height first.';return end
+        local h,err=track_align.height((active and c.height or self.track_height or track_align.DEFAULT)+(name=='inc_track_height' and 1 or -1)*.1*(self.held.shift and 10 or self.held.alt and .1 or 1))
+        if h and active then adjust_track(self,0,h)
+        elseif h then self.track_height=h;editor.message='Height ready; Drop to Track applies it to the selection.' else editor.message=err end
+        return
+    elseif name=='drop_to_track' then drop_track(self);return end
+    if name=='zoom_value' then
+        self.field={zoom=true,text=zoom_policy.text(editor.camera.zoom),all=true};return
+    elseif name=='zoom_in' or name=='zoom_out' then
+        set_zoom(self,zoom_policy.step(editor.camera.zoom,name=='zoom_in' and 1 or -1));editor.message='';return
+    end
+    if name=="collapse_objects" then self.ui.objects_collapsed=not self.ui.objects_collapsed;return
+    elseif name=="object_search" then
+        self.field={search=true,text=self.ui.object_query or "",all=true};return
+    elseif name=="object_name" then
+        local o=find(editor.selection)
+        if o and o.locked then editor.message="Locked: "..doc_lib.label(o)..". Unlock it before editing."
+        elseif o then self.ui.reveal=name;self.field={object=o.id,text=o.name or "",all=true} end
+        return
+    elseif name:match("^object_select_") then
+        cancel(self);editor.select(name:sub(15));return
+    elseif name:match("^object_eye_") or name:match("^object_lock_") then
+        local eye=name:match("^object_eye_");local id=name:sub(eye and 12 or 13)
+        editor.commit(function(e) local o=edit.find(e,id);if o then if eye then o.hidden=not o.hidden else o.locked=not o.locked end end end,true)
+        editor.vertex,editor.vertex2,editor.anchor,editor.points=nil,nil,nil,{};return
+    end
+    if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" or name=="collapse_fuel" or name=="collapse_gameplay" or name=="collapse_tool_category" then
+        local key=name:sub(10);self.ui[key]=not self.ui[key];return
+    elseif name=='fuel_enabled' then
+        editor.commit(function(e) if not e.fuel then e.fuel=require('main.game.fuel').defaults() else e.fuel.enabled=not e.fuel.enabled end end);return
+    elseif name:match('^fuel_') or name:match('^[di][en]c_fuel_') then
+        local key=name:match('fuel_(%a+)$');local policy=require 'main.game.fuel';local c=editor.doc.editor.fuel or policy.defaults()
+        if not policy.fields[key] then return end
+        local value=c[key]
+        local sign=name:match('^dec_') and -1 or name:match('^inc_') and 1 or 0
+        local step=policy.fields[key][3]*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        self.ui.reveal='fuel_'..key;self.field={fuel=key,text=number_text(value+sign*step),all=true}
+        if sign~=0 then confirm_name(self) end;return
+    elseif name:match('^medal_') then
+        local key=name:sub(7);local times=editor.doc.editor.medal_times or require('main.game.medals').defaults()
+        self.ui.reveal=name;self.field={medal=key,text=number_text(times[key]),all=true};return
+    elseif name:match('^[di][en]c_medal_') then
+        local key=name:match('medal_(%a+)$');local times=editor.doc.editor.medal_times or require('main.game.medals').defaults()
+        local step=.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        self.field={medal=key,text=number_text(times[key]+(name:sub(1,1)=='d' and -step or step)),all=true}
+        confirm_name(self);return
+    elseif name=="clear_medals" then
+        editor.commit(function(e) e.medal_times=nil end);return
+    elseif name=="speed" or name=="test_speed" then
+        self.ui.reveal=name
+        local which=name=="speed" and "start" or "test"
+        self.field={speed=which,text=number_text(which=="start" and editor.doc.editor.start.speed or editor.test_speed),all=true}
+        return
+    elseif name=="mode_angle" or name=="mode_height" then
+        local o=find(editor.selection)
+        if o and o.type=="prefab" and o.kind=="ramp" and o.params.mode~=name:sub(6) then
+            local params,err=prefab.cycle(o.kind,o.params,"mode")
+            if params then self.ui_error=nil;apply_params(o.id,params) else remember_error(self,"mode",err);editor.message=err end
+        end
+        return
+    elseif name:match("^[di][en]c_param_%d$") then
+        local index=tonumber(name:match("(%d)$"));local o=find(editor.selection);local fd=o and param_rows(o)[index]
+        if o and o.type=="prefab" and fd and not fd.choices then
+            local params,err=stepped_params(self,o,index,name:sub(1,1)=="d" and -1 or 1)
+            if params then self.ui_error=nil;apply_params(o.id,params)
+            else remember_error(self,fd.key,err);editor.message=err end
+        end
+        return
+    elseif name=="dec_speed" or name=="inc_speed" then
+        local value=editor.doc.editor.start.speed+(name:sub(1,1)=="d" and -1 or 1)*.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        if value>=-30 and value<=30 then editor.commit(function(e) e.start.speed=value end) end
+        return
+    elseif name=="inc_test_speed" then name="plus"
+    elseif name=="dec_test_speed" then name="minus" end
+    if name~="libdel_"..(self.confirm_row or "") then self.confirm_delete=nil end
+    if name~="convert" then self.confirm_convert=nil end
+    if name~="smooth_all" then self.confirm_bulk=nil end
+    if name=="undo" or name=="redo" then
+        if editor.undo(name=="undo")==false then editor.message="Nothing to "..name.."." end
+    elseif name=="open" then
+        self.version_dialog=false
+        self.open_dialog=not self.open_dialog
+        -- The warning list closes under a dialog (its rows would take the dialog's clicks).
+        if self.open_dialog then self.page,self.tpl_page,self.warnings_open=0,0,false;refresh_library(self) end
+    elseif name=="versions" then
+        self.open_dialog,self.version_dialog,self.warnings_open=true,true,false;self.version_page=0;self.field=nil
+        self.version_rows,self.version_list_error=editor.versions.list(editor.key());self.version_generation=editor.versions.generation
+    elseif name=="snapshot" then
+        self.field={snapshot=true,text="Snapshot "..os.date("%H:%M"),all=true}
+    elseif name=="versions_prev" then self.version_page=math.max(0,(self.version_page or 0)-1)
+    elseif name=="versions_next" then self.version_page=(self.version_page or 0)+1
+    elseif name:match("^restore_%d+$") then
+        local v=(self.version_rows or {})[(self.version_page or 0)*(self.version_per or 6)+tonumber(name:sub(9))]
+        if v then editor.restore_version(v.id) end
+    elseif name:match("^versiondel_%d+$") then
+        local v=(self.version_rows or {})[(self.version_page or 0)*(self.version_per or 6)+tonumber(name:sub(12))]
+        if v then
+            if self.version_delete~=v.id then self.version_delete=v.id;editor.message="Click Sure? to delete this version."
+            else
+                self.version_delete=nil
+                local ok,err=editor.versions.remove(editor.key(),v.id,function() editor.version_error=nil end)
+                if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
+            end
+        end
+    elseif name=="terrain_look" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
+    elseif name=="new" then new_level(self)
+    elseif name=="export" then export(self)
+    elseif name=="import" then import(self)
+    elseif name=="rename" then
+        self.ui.reveal="rename"
+        -- The whole name starts selected: typing replaces it, Backspace clears it.
+        self.field={text=editor.doc.name,all=true};editor.message="Type the level name; Enter confirms, Esc cancels."
+    elseif name=="mirror_left" or name=="mirror_right" then mirror(self,name=="mirror_left" and -1 or 1)
+    elseif name=="smooth" then smooth_point(self)
+    elseif name=="convert" then convert_prefab(self)
+    elseif name=="smooth_all" or name=="corner_all" then bulk_corner(self,name=="smooth_all")
+    elseif name:match("^param_%d$") then param_click(self,tonumber(name:sub(7)))
+    elseif name:match("^kind_") then editor.prefab_kind=name:sub(6);set_tool(self,"prefab")
+    elseif name=="paste" then paste_at(self,{editor.camera.x,editor.camera.y})
+    elseif name=="dialog_close" then self.open_dialog=false
+    elseif name=="lib_newer" then self.page=math.max(0,self.page-1)
+    elseif name=="lib_older" then self.page=self.page+1
+    elseif name:match("^lib_%d+$") then
+        local l=self.library[self.page*ROWS+tonumber(name:sub(5))]
+        if l then open_saved(self,l.key) end
+    elseif name:match("^libdel_%d+$") then
+        local row=tonumber(name:sub(8))
+        local l=self.library[self.page*ROWS+row]
+        if l then self.confirm_row=row;delete_saved(self,l.key) end
+    elseif name=="conflict_source" then
+        editor.conflict=nil;editor.message="Opened the editor source; Play and Export recompile from it."
+    elseif name=="conflict_lines" then
+        -- The line copy replaces the source in My levels: it takes the source's key (saved first).
+        local c=editor.conflict
+        editor.flush()
+        if not editor.open(c.lines,true,{key=editor.key(),store=editor.store[editor.opened]}) then return end
+        opened(self)
+        editor.message="Opened the compiled geometry as editable lines (one Undo step back to the source)."
+    elseif name=="play" then play(self)
+    elseif name:match("^tool_") then set_tool(self,name:sub(6))
+    elseif name:match("^template_") then open_template(self,name:sub(10))
+    elseif name=="minus" or name=="plus" then
+        local step=(name=="plus" and 1 or -1)*.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
+        local value=(editor.selection=="start" and editor.doc.editor.start.speed or editor.test_speed)+step
+        if value < -30 or value > 30 then editor.message="Speed must be from -30 to 30 m/s. Previous value kept.";return end
+        editor.message=""
+        if editor.selection=="start" then editor.commit(function(e) e.start.speed=value end)
+        else editor.test_speed=value;editor.touch() end
+    elseif name=="direction" and editor.doc.editor.finish then
+        editor.commit(function(e) e.finish.direction=-e.finish.direction end)
+    elseif name=="delete" then delete(self)
+    elseif name=="split" then split(self)
+    elseif name=="connect" or name=="disconnect" then connect(self)
+    elseif name=="warnings" then self.warnings_open,self.open_dialog=not self.warnings_open,false;self.warn_page=0
+    elseif name:match("^warn_%d$") then
+        local row=(self.problem_rows or {})[(self.warn_page or 0)*WARN_ROWS+tonumber(name:sub(6))]
+        if row then self.warnings_open=false;show_problem(self,row) end
+    elseif name=="warn_prev" then self.warn_page=math.max(0,(self.warn_page or 0)-1)
+    elseif name=="warn_next" then self.warn_page=(self.warn_page or 0)+1
+    elseif name=="tpl_prev" then self.tpl_page=math.max(0,(self.tpl_page or 0)-1)
+    elseif name=="tpl_next" then self.tpl_page=(self.tpl_page or 0)+1
+    elseif name=="view_fit" then fit_level(self)
+    elseif name=="view_centre" then centre_selection(self)
+    elseif name=="view_start" then go_start(self)
+    elseif name=="view_test" then go_last_test(self)
+    elseif name=="view_help" then open_help(self)
+    elseif name=="view_ghost" then
+        editor.show_ghost=not editor.show_ghost;editor.touch()
+        editor.message=editor.show_ghost and "Ghost on: the vehicle shows where F would start a test run." or "Ghost off."
+    elseif name=="view_bounds" then
+        editor.show_bounds=not editor.show_bounds;editor.touch()
+        editor.message=editor.show_bounds and "Bounds shown: the safety bounds Play, Export and test starts use (computed automatically)." or ""
+    end
+end
+local function vertex_state()
+    local v=editor.vertex
+    if not v then return nil end
+    local o=find(v.id)
+    if not o then return nil end
+    return {inner=v.index>1 and v.index<#path(o),joint=edit.joint(editor.doc.editor,v.id,v.index)~=nil,o=o}
+end
+local function offered_buttons(self)
+    if terrain_look.session and terrain_look.session.open then return self.ui.visible end
+    -- The R1 choice is modal: nothing else is offered until it is made; so is the help overlay (LE6b).
+    if editor.conflict then return {"conflict_source","conflict_lines"} end
+    if self.help_open then return {"help_close"} end
+    local list={}
+    -- The open warning list lies over other controls: its rows are hit first (LE6).
+    if self.warnings_open and not self.open_dialog then
+        local rows=self.problem_rows or {}
+        local page=self.warn_page or 0
+        for i=1,WARN_ROWS do if rows[page*WARN_ROWS+i] then list[#list+1]="warn_"..i end end
+        if page>0 then list[#list+1]="warn_prev" end
+        if (page+1)*WARN_ROWS<#rows then list[#list+1]="warn_next" end
+    end
+    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","tool_fuel","warnings"}) do list[#list+1]=name end
+    for _,v in ipairs(VIEW) do list[#list+1]=v[1] end
+    if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
+    local vs=vertex_state()
+    if editor.selection=="finish" then list[#list+1]="direction"
+    elseif editor.selection and editor.selection~="start" then list[#list+1]="delete"
+    elseif not editor.selection then list[#list+1]="rename" end
+    if vs then
+        if vs.inner then list[#list+1]="split" end
+        list[#list+1]=vs.joint and "disconnect" or (not vs.inner and "connect") or nil
+    end
+    local o=editor.selection and find(editor.selection)
+    -- A curve's inner anchor splits there (LE5b).
+    local a=editor.anchor
+    if o and o.type=="curve" and a and a.id==o.id and a.i>1 and a.i<#o.anchors and not (vs and vs.inner) then list[#list+1]="split" end
+    local st=smooth_state()
+    if editor.point_count()>=2 or (not st and object_corner_mode()) then list[#list+1]="smooth_all";list[#list+1]="corner_all"
+    elseif st then list[#list+1]="smooth" end
+    if o and o.type=="prefab" and doc_lib.terrain(o) and #editor.selected_ids()==1 then list[#list+1]="convert" end
+    if o and (o.type=="prefab" or o.type=="curve" or o.type=="label") and #editor.selected_ids()==1 then
+        for i=1,#param_rows(o) do list[#list+1]="param_"..i end
+    end
+    if next(editor.selected) then list[#list+1]="mirror_left";list[#list+1]="mirror_right" end
+    if editor.clipboard then list[#list+1]="paste" end
+    if self.open_dialog and self.version_dialog then
+        local list={"snapshot","dialog_close"}
+        for i=1,(self.version_per or 6) do if (self.version_rows or {})[(self.version_page or 0)*(self.version_per or 6)+i] then list[#list+1]="restore_"..i;list[#list+1]="versiondel_"..i end end
+        if (self.version_page or 0)>0 then list[#list+1]="versions_prev" end
+        if ((self.version_page or 0)+1)*(self.version_per or 6)<#(self.version_rows or {}) then list[#list+1]="versions_next" end
+        return list
+    end
+    if self.open_dialog then
+        local tp=self.tpl_page or 0
+        for i=tp*TEMPLATE_ROWS+1,math.min(#self.templates,(tp+1)*TEMPLATE_ROWS) do list[#list+1]=self.templates[i] end
+        if tp>0 then list[#list+1]="tpl_prev" end
+        if (tp+1)*TEMPLATE_ROWS<#self.templates then list[#list+1]="tpl_next" end
+        local count=#(self.library or {})
+        for i=1,ROWS do
+            local l=self.library[self.page*ROWS+i]
+            if l then
+                list[#list+1]="lib_"..i
+                if l.key~=editor.key() then list[#list+1]="libdel_"..i end
+            end
+        end
+        if self.page>0 then list[#list+1]="lib_newer" end
+        if (self.page+1)*ROWS<count then list[#list+1]="lib_older" end
+        list[#list+1]="dialog_close"
+    end
+    return list
+end
+local function visible_buttons(self) return self.ui.visible end
+local function hit(self,action)
+    for _,name in ipairs(visible_buttons(self)) do
+        local b=self.buttons[name]
+        if b and gui.pick_node(b.box,action.x,action.y) then return name end
+    end
+    if self.open_dialog then return "dialog_panel" end
+    if editor.conflict then return "conflict_panel" end
+    if self.warnings_open then return "warning_panel" end
+    if editor_ui.area(self.ui,action) then return "chrome_panel" end
+end
+-- Translating a selection: each connected run moves once (R4, R17); the grabbed object's nearest
+-- point snaps (anchors outside the moving set, Shift 15 degree directions, grid).
+local function start_move(self,c,p)
+    local e=editor.doc.editor
+    local ids=editor.selected_ids()
+    local list,set=edit.closure(e,ids)
+    local o=find(c.id)
+    local ref
+    for _,q in ipairs(path(o)) do if not ref or dist(p,q)<dist(p,ref) then ref=q end end
+    local base={}
+    for _,id in ipairs(list) do base[id]=doc_lib.copy(find(id)) end
+    self.drag={kind="move",ids=ids,list=list,skip=set,ref={ref[1],ref[2]},press={p[1],p[2]},press_px=self.cursor_px,base=base,delta={0,0},moved=false}
+end
+local function start_vertex(self,c,p)
+    local e=editor.doc.editor
+    local o=find(c.id)
+    local skip={vertex={[c.id..":"..c.index]=true}}
+    -- An exit point carries its downstream run along: those points never snap to themselves.
+    if c.index==#o.points then
+        for _,id in ipairs(edit.downstream(e,c.id)) do skip[id]=true end
+    end
+    local from=o.points[c.index>1 and c.index-1 or 2]
+    self.drag={kind="vertex",id=c.id,index=c.index,skip=skip,from={from[1],from[2]},origin={o.points[c.index][1],o.points[c.index][2]},
+        offset={p[1]-o.points[c.index][1],p[2]-o.points[c.index][2]},press_px=self.cursor_px,moved=false}
+end
+-- Dragging a prefab handle changes its parameters (R4: the entry stays fixed, the downstream run moves);
+-- the drag delta is converted by prefab.drag with the active snapping.
+local function start_handle(self,id,name,p)
+    local o=find(id)
+    self.drag={kind="handle",id=id,handle=name,p0=doc_lib.copy(o.params or o.anchors),press={p[1],p[2]},press_px=self.cursor_px,moved=false}
+    if o.type=="curve" then
+        -- An anchor drag snaps (never to its own curve, nor to a downstream run it carries along); Shift
+        -- keeps 15 degree directions from the neighbouring anchor.
+        local i=tonumber(name:sub(2))
+        local skip={[id]=true}
+        if i==#o.anchors then for _,d in ipairs(edit.downstream(editor.doc.editor,id)) do skip[d]=true end end
+        local from=o.anchors[i>1 and i-1 or 2].p
+        -- Only an anchor drag snaps (and shows the snap marker); tangents never snap to points.
+        if name:sub(1,1)=="a" then self.drag.skip,self.drag.from=skip,{from[1],from[2]} end
+        -- A smoothed joint (LE5c): the neighbouring piece holds the other tangent, which follows.
+        local next,prev=doc_lib.links(editor.doc.editor)
+        local kind=name:sub(1,1)
+        local pid=(kind=="i" and i==#o.anchors and next[id]) or (kind=="o" and i==1 and prev[id])
+        local po=pid and find(pid)
+        if po and po.type=="curve" then
+            local pi,pkey=kind=="i" and 1 or #po.anchors,kind=="i" and "out" or "in"
+            local b,t=po.anchors[pi],o.anchors[i][kind=="i" and "in" or "out"]
+            local bt=b[pkey]
+            -- Only a smoothed joint couples: the other side is no corner and its tangent already points
+            -- the opposite way (a joint left with a kink stays independent).
+            local lt,lb=length(t),length(bt)
+            if b.mode~="corner" and lt>0 and lb>0 and (t[1]*bt[1]+t[2]*bt[2])/(lt*lb)<-0.9999 then
+                self.drag.partner={id=pid,i=pi,key=pkey,p0=doc_lib.copy(po.anchors)}
+            end
+        end
+        editor.anchor={id=id,i=i};editor.touch()
+    end
+end
+local function anchor_key(anchors)
+    local t={}
+    for _,a in ipairs(anchors) do t[#t+1]=string.format("%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%s",a.p[1],a.p[2],a["in"][1],a["in"][2],a.out[1],a.out[2],a.mode) end
+    return table.concat(t,";")
+end
+-- A curve handle drag: an anchor moves (snapped; its tangents move with it), a tangent changes and its
+-- partner follows the anchor's mode (smooth: on one line, symmetric: mirrored, free: unchanged).
+local function curve_drag(self,drag,p)
+    local anchors=doc_lib.copy(drag.p0)
+    local kind,i=drag.handle:sub(1,1),tonumber(drag.handle:sub(2))
+    local a=anchors[i]
+    local d={p[1]-drag.press[1],p[2]-drag.press[2]}
+    if kind=="a" then
+        a.p=snap(self,{a.p[1]+d[1],a.p[2]+d[2]},drag.skip,drag.from)
+        return anchors
+    end
+    local key,other=kind=="i" and "in" or "out",kind=="i" and "out" or "in"
+    local t={a[key][1]+d[1],a[key][2]+d[2]}
+    if self.held.shift and not self.held.ctrl then
+        local l,step=length(t),math.rad(snap_lib.ANGLE)
+        local angle=math.floor(math.atan2(t[2],t[1])/step+0.5)*step
+        t={l*math.cos(angle),l*math.sin(angle)}
+    end
+    a[key]=t
+    local lt=length(t)
+    if ((other=="in" and i>1) or (other=="out" and i<#anchors)) and lt>0 then
+        if a.mode=="symmetric" then a[other]={-t[1],-t[2]}
+        elseif a.mode=="smooth" then local l=length(a[other]);a[other]={-t[1]/lt*l,-t[2]/lt*l} end
+    end
+    local pt=drag.partner
+    if pt and lt>0 and (a.mode=="smooth" or a.mode=="symmetric") then
+        local partner=doc_lib.copy(pt.p0)
+        local b=partner[pt.i]
+        if a.mode=="symmetric" then b[pt.key]={-t[1],-t[2]}
+        else local l=length(b[pt.key]);b[pt.key]={-t[1]/lt*l,-t[2]/lt*l} end
+        drag.partner_anchors=partner
+    end
+    return anchors
+end
+-- The Bezier segment and parameter nearest to p (for inserting an anchor on a selected curve).
+local function curve_nearest(o,p)
+    local best,bi,bt
+    for i=1,#o.anchors-1 do
+        local a,b=o.anchors[i],o.anchors[i+1]
+        local p0,p3=a.p,b.p
+        local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+        if a.mode=="corner" and b.mode=="corner" then
+            -- A straight chord (LE5c): the click projected onto it (insert_anchor places corners linearly).
+            local t=seg_t(p,p0,p3)
+            local dd=dist(p,{p0[1]+(p3[1]-p0[1])*t,p0[2]+(p3[2]-p0[2])*t})
+            if t>0 and t<1 and (not best or dd<best) then best,bi,bt=dd,i,t end
+        else for k=1,63 do
+            local t=k/64;local u=1-t
+            local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
+            local dd=dist(p,q)
+            if not best or dd<best then best,bi,bt=dd,i,t end
+        end end
+    end
+    return bi,bt
+end
+-- Dragging one point of a multi-point selection moves all of them (LE5d): the grabbed point snaps
+-- (never to a moving point or a run carried along), each point moves once (edit.move_points).
+local function start_points(self,pt,p)
+    local e=editor.doc.editor
+    local list=editor.point_list()
+    local skip={vertex={}}
+    for _,q in ipairs(list) do
+        local o=find(q.id)
+        if o.type=="line" then skip.vertex[q.id..":"..q.i]=true else skip[q.id]=true end
+        if q.i==point_total(o) then for _,d in ipairs(edit.downstream(e,q.id)) do skip[d]=true end end
+    end
+    local ref=point_pos(pt)
+    self.drag={kind="points",points=list,grab=pt,skip=skip,ref={ref[1],ref[2]},press={p[1],p[2]},press_px=self.cursor_px,delta={0,0},moved=false}
+end
+local function prefab_end_handle(o,index)
+    for _,h in ipairs(prefab_handles(o)) do if h.index==index then return h.name end end
+end
+local function canvas_press(self,action)
+    local p=cursor(self,action)
+    if not p then return end
+    self.confirm_convert,self.confirm_bulk,self.pending=nil,nil,nil
+    if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
+    if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
+    if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
+    if editor.tool=='coin' or editor.tool=='gem' or editor.tool=='fuel' then
+        local q=snap(self,p);local id
+        if editor.commit(function(e)
+            if editor.tool=='fuel' and not e.fuel then e.fuel=require('main.game.fuel').defaults() end
+            id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',kind=editor.tool~='coin' and editor.tool or nil,pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
+        end,true) then editor.select(id) end
+        return
+    end
+    if editor.tool=="label" then place_label(self,p);return end
+    local now=socket.gettime()
+    local px=self.cursor_px
+    local double=self.last_press and now-self.last_press.t<=DOUBLE_S and dist(px,self.last_press.px)<=DOUBLE_PX*ui
+    -- A Shift+click only changes the selection; it never starts a double-click.
+    self.last_press=not self.held.shift and {t=now,px={px[1],px[2]}} or nil
+    if drawing_tool() then
+        if self.drawing and self.drawing.opened~=editor.opened then self.drawing=nil end
+        local d=self.drawing
+        local last=d and d.points[#d.points]
+        local q,kind,anchor=snap(self,p,nil,last,d and {unpack(d.points,1,#d.points-1)} or nil)
+        if not d then
+            -- Curve [C] places anchors like Draw places points; their tangents are set automatically.
+            self.drawing={kind=editor.tool=="curve" and "curve" or "line",points={q},anchored={kind=="anchor"},opened=editor.opened}
+        elseif double or dist(q,last)<0.01 then finish_drawing(self)
+        else
+            d.points[#d.points+1]=q;d.anchored[#d.points]=kind=="anchor"
+            -- Ending on another free end connects there and completes the piece (R5).
+            if kind=="anchor" and anchor.end_free then finish_drawing(self) end
+        end
+        editor.touch()
+        return
+    end
+    -- Select tool.
+    local list=candidates(p)
+    set_hover(self,list)
+    local c=list[self.hover_index]
+    if double and c and c.kind=="object" and c.type=="label" then
+        -- Double-click on a label edits its text (LE6b).
+        editor.select(c.id);edit_label(self,c.id)
+        self.last_press=nil
+        return
+    end
+    if double and c and c.kind=="object" and c.type=="curve" and editor.selected[c.id] then
+        -- Double-click on a selected curve inserts an anchor on it (de Casteljau; shape unchanged).
+        local i,t=curve_nearest(find(c.id),p)
+        local index
+        if editor.commit(function(e) local k,err=edit.insert_anchor(e,c.id,i,t);index=k;if not k then return nil,err end end,true) then
+            editor.select(c.id);editor.anchor={id=c.id,i=index}
+        end
+        self.last_press=nil
+        return
+    end
+    if double and c and c.kind=="object" and c.type=="line" and editor.selected[c.id] then
+        -- Double-click on a selected line inserts a point exactly on the segment (shape unchanged).
+        local o=find(c.id)
+        local a,b=o.points[c.segment],o.points[c.segment+1]
+        local t=seg_t(p,a,b)
+        -- With grid snap the point gets a grid x (y for a vertical segment), still on the segment.
+        local step=not self.held.ctrl and (self.held.alt and snap_lib.FINE or editor.grid and snap_lib.GRID)
+        local axis=math.abs(b[1]-a[1])>1e-9 and 1 or 2
+        local exact
+        if step then
+            local v=snap_lib.round(a[axis]+(b[axis]-a[axis])*t,step)
+            local u=(v-a[axis])/(b[axis]-a[axis])
+            if u>0 and u<1 then t,exact=u,v end
+        end
+        local q={a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t}
+        if exact then q[axis]=exact end
+        local index
+        if editor.commit(function(e) local i,err=edit.insert_point(e,c.id,c.segment,q);index=i;if not i then return nil,err end end,true) then
+            editor.select(c.id,{id=c.id,index=index})
+        end
+        self.last_press=nil
+        return
+    end
+    if not c then
+        -- With lines or curves selected, the box selects their points (LE5d); it falls back to the LE3b
+        -- object box when it catches none, so the selection is cleared only on release then.
+        local points=has_paths()
+        if not self.held.shift and not points then editor.select(nil) end
+        self.box={from={p[1],p[2]},to={p[1],p[2]},add=self.held.shift,points=points}
+        return
+    end
+    if self.held.shift and c.kind=="object" then editor.toggle(c.id);return end
+    if self.held.shift and (c.kind=="vertex" or c.kind=="handle") then
+        if c.kind=="vertex" then
+            -- Shift+click a second free end: the pair Connect [J] joins or bridges (LE3b, takes precedence).
+            local e=editor.doc.editor
+            local v=editor.vertex
+            local function free(x) local o=find(x.id);return o and x.index and (x.index==1 or x.index==#path(o)) and not edit.joint(e,x.id,x.index) end
+            if v and free(v) and free(c) and not (c.id==v.id and c.index==v.index) then editor.vertex2={id=c.id,index=c.index};editor.touch();return end
+        end
+        -- Shift+click on a point of a selected line or curve adds or removes it (LE5d). On an anchor handle
+        -- the decision waits for the release: Shift+drag keeps its 15 degree anchor drag (LE5b).
+        local pt=point_of(c)
+        if pt then
+            if c.kind=="handle" then self.pending={c=c,p={p[1],p[2]},px=self.cursor_px,pt=pt} else toggle_point(pt) end
+            return
+        end
+        if c.kind=="vertex" then editor.message="Shift+click picks a second free end after selecting a free end.";return end
+    end
+    -- Pressing a point of a multi-point selection drags them all; a click without moving selects only it.
+    local pt=editor.point_count()>=2 and (c.kind=="vertex" or c.kind=="handle") and point_of(c)
+    if pt and editor.points[pt.id..":"..pt.i] then start_points(self,pt,p);return end
+    if c.kind~="start" and c.kind~="finish" then editor.points={} end
+    if c.kind=="handle" then
+        editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,c.index and {id=c.id,index=c.index} or nil,nil,nil;editor.touch()
+        start_handle(self,c.id,c.handle,p)
+    elseif c.kind=="vertex" then
+        if not editor.selected[c.id] then editor.select(c.id,{id=c.id,index=c.index})
+        else editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,{id=c.id,index=c.index},nil,nil;editor.touch() end
+        local o=find(c.id)
+        if o.type=="prefab" then
+            -- A prefab end: its exit handle changes parameters; otherwise the whole run moves.
+            local name=prefab_end_handle(o,c.index)
+            if name then start_handle(self,c.id,name,p) else start_move(self,c,p) end
+        elseif o.type=="curve" then start_handle(self,c.id,"a"..(c.index==1 and 1 or #o.anchors),p)
+        else start_vertex(self,c,p) end
+    elseif c.kind=="start" or c.kind=="finish" then
+        editor.select(c.id)
+        local origin=c.id=="start" and editor.doc.editor.start.position or editor.doc.editor.finish.position
+        self.drag={kind="marker",target=c.id,offset={p[1]-origin[1],p[2]-origin[2]},origin={origin[1],origin[2]},moved=false}
+        editor.preview={target=c.id,position={origin[1],origin[2]}}
+    else
+        if not editor.selected[c.id] then editor.select(c.id)
+        else editor.selection,editor.vertex,editor.anchor=c.id,nil,nil;editor.touch() end
+        start_move(self,c,p)
+    end
+end
+local function canvas_move(self,action)
+    local p=cursor(self,action)
+    local s=map()
+    if self.pan and action.screen_x and s then
+        editor.camera.x=editor.camera.x-(action.screen_x-self.pan[1])/s.ppm_x
+        editor.camera.y=editor.camera.y-(action.screen_y-self.pan[2])/s.ppm_y
+        self.pan={action.screen_x,action.screen_y}
+        return
+    end
+    if not p then return end
+    local pend=self.pending
+    if pend and self.cursor_px and dist(self.cursor_px,pend.px)>=DOUBLE_PX*ui then
+        -- A Shift+press on an anchor that moves is the LE5b anchor drag (Shift: 15 degree steps).
+        self.pending=nil
+        local c=pend.c
+        editor.points={}
+        editor.selection,editor.vertex,editor.vertex2,editor.anchor=c.id,c.index and {id=c.id,index=c.index} or nil,nil,nil;editor.touch()
+        start_handle(self,c.id,c.handle,pend.p)
+        self.drag.press_px=pend.px
+    end
+    local drag=self.drag
+    if drag and drag.kind=="marker" then
+        local q={p[1]-drag.offset[1],p[2]-drag.offset[2]}
+        -- A click without movement selects only; it is not an edit.
+        if q[1]~=drag.origin[1] or q[2]~=drag.origin[2] then
+            editor.preview={target=drag.target,position=q}
+            drag.moved=true
+            editor.touch()
+        end
+    elseif drag and drag.kind~="marker" and not drag.moved and dist(self.cursor_px,drag.press_px)<DOUBLE_PX*ui then
+        -- A click is not a drag: snapping must not move an off-grid object that was only clicked.
+        return
+    elseif drag and drag.kind=="vertex" then
+        local raw={p[1]-drag.offset[1],p[2]-drag.offset[2]}
+        local q=snap(self,raw,drag.skip,drag.from)
+        if drag.moved or q[1]~=drag.origin[1] or q[2]~=drag.origin[2] then
+            drag.moved,drag.to=true,q
+            local e=doc_lib.copy(editor.doc.editor)
+            local preview={}
+            for _,id in ipairs(edit.move_vertex(e,drag.id,drag.index,q)) do preview[id]=edit.find(e,id) end
+            editor.set_preview(preview)
+        end
+    elseif drag and drag.kind=="handle" then
+        local o=find(drag.id)
+        local params,changed
+        if o.type=="curve" then
+            params=curve_drag(self,drag,p)
+            local key=anchor_key(params)
+            changed=key~=(drag.key or anchor_key(drag.p0));drag.key=key
+        else
+            params=prefab.drag(o,drag.handle,drag.p0,{p[1]-drag.press[1],p[2]-drag.press[2]},steps(self))
+            changed=not same_params(params,drag.params or drag.p0)
+        end
+        if changed then
+            drag.moved,drag.params=true,params
+            -- Preview: the reshaped piece and the moved downstream run; a new Play-blocking error is shown
+            -- as a conflict before the release applies it.
+            local e=doc_lib.copy(editor.doc.editor)
+            local moved=(o.type=="curve" and edit.set_anchors or edit.set_params)(e,drag.id,params) or {}
+            if drag.partner_anchors and edit.set_anchors(e,drag.partner.id,doc_lib.copy(drag.partner_anchors)) then
+                local listed=false
+                for _,id in ipairs(moved) do listed=listed or id==drag.partner.id end
+                if not listed then moved[#moved+1]=drag.partner.id end
+            end
+            local preview={}
+            for _,id in ipairs(moved) do preview[id]=edit.find(e,id) end
+            drag.downstream=math.max(0,#moved-1)
+            -- The same checks as live validation: the domain rules and the compile (START overlap).
+            local known={}
+            for _,m in ipairs(editor.errors) do known[m]=true end
+            local copy={schema=1,units="metres",id=editor.doc.id,name=editor.doc.name,editor=e}
+            local errors=doc_lib.problems(e)
+            local _,cerr=doc_lib.compile(copy,nil,errors)
+            if cerr and errors[1]~=cerr then errors[#errors+1]=cerr end
+            drag.conflict=nil
+            for _,m in ipairs(errors) do if not known[m] then drag.conflict=m;break end end
+            editor.set_preview(preview)
+        end
+    elseif drag and drag.kind=="points" then
+        local raw={drag.ref[1]+p[1]-drag.press[1],drag.ref[2]+p[2]-drag.press[2]}
+        local q=snap(self,raw,drag.skip,drag.ref)
+        local d={q[1]-drag.ref[1],q[2]-drag.ref[2]}
+        if drag.moved or d[1]~=0 or d[2]~=0 then
+            drag.moved,drag.delta=true,d
+            local e=doc_lib.copy(editor.doc.editor)
+            local preview={}
+            for _,id in ipairs(edit.move_points(e,drag.points,d) or {}) do preview[id]=edit.find(e,id) end
+            editor.set_preview(preview)
+        end
+    elseif drag and drag.kind=="move" then
+        local raw={drag.ref[1]+p[1]-drag.press[1],drag.ref[2]+p[2]-drag.press[2]}
+        local q=snap(self,raw,drag.skip,drag.ref)
+        local d={q[1]-drag.ref[1],q[2]-drag.ref[2]}
+        if drag.moved or d[1]~=0 or d[2]~=0 then
+            drag.moved,drag.delta=true,d
+            local preview={}
+            for id,o in pairs(drag.base) do
+                local t=doc_lib.copy(o);edit.translate_object(t,d)
+                preview[id]=t
+            end
+            editor.set_preview(preview)
+        end
+    elseif self.box then self.box.to={p[1],p[2]}
+    elseif drawing_tool() then
+        local d=self.drawing
+        snap(self,p,nil,d and d.points[#d.points],d and {unpack(d.points,1,#d.points-1)} or nil)
+    elseif editor.tool=="prefab" then self.place=placement(self,p)
+    elseif editor.tool=="select" then set_hover(self,candidates(p)) end
+end
+local function box_select(self,b)
+    local x0,x1=math.min(b.from[1],b.to[1]),math.max(b.from[1],b.to[1])
+    local y0,y1=math.min(b.from[2],b.to[2]),math.max(b.from[2],b.to[2])
+    if not b.add then editor.selected={} end
+    -- An object is picked when the box contains one of its points or one of its edges crosses the box.
+    local box={x0,x1,y0,y1}
+    for _,o in ipairs(editor.doc.editor.objects) do
+        local closed=doc_lib.outline(o)
+        local hit=false
+        for _,pts in ipairs(closed and {closed} or (o.type=="label" or o.type=="coin") and {{o.position}} or doc_lib.parts(o)) do
+            for i,q in ipairs(pts) do
+                if q[1]>=x0 and q[1]<=x1 and q[2]>=y0 and q[2]<=y1 then hit=true;break end
+                local r=pts[i+1] or (closed and pts[1])
+                if r and doc_lib.segment_box(q,r,box) then hit=true;break end
+            end
+            if hit then break end
+        end
+        if hit and not o.hidden then editor.selected[o.id]=true end
+    end
+    editor.selection,editor.vertex,editor.vertex2,editor.anchor,editor.points=next(editor.selected),nil,nil,nil,{}
+    for _,o in ipairs(editor.doc.editor.objects) do if editor.selected[o.id] then editor.selection=o.id;break end end
+    editor.touch()
+end
+local function canvas_release(self)
+    self.pan=nil
+    local drag,box=self.drag,self.box
+    self.drag,self.box=nil,nil
+    if self.pending then
+        -- A Shift+click on an anchor without moving: add or remove that point (LE5d).
+        local pt=self.pending.pt
+        self.pending=nil
+        toggle_point(pt)
+        return
+    end
+    if box then
+        -- A click on empty space only clears the selection; a real drag selects what it touches: the points
+        -- of the selected lines and curves inside it (LE5d), or else objects (LE3b).
+        local s=map()
+        if s and dist(to_px(box.from,s),to_px(box.to,s))>=DOUBLE_PX*ui then
+            local found=box.points and box_points(box)
+            if found then
+                if not box.add then editor.points={} elseif editor.point_count()==0 then
+                    local s1=single_point()
+                    if s1 then editor.points[s1.id..":"..s1.i]=s1 end
+                end
+                for k,pt in pairs(found) do editor.points[k]=pt end
+                settle_points(editor.selection)
+                return
+            end
+            if box.points and not box.add then editor.select(nil) end
+            box_select(self,box)
+        elseif box.points and not box.add then editor.select(nil) end
+        return
+    end
+    if not drag then return end
+    if drag.kind=="marker" then
+        if drag.moved and editor.preview then
+            local p=editor.preview.position
+            editor.preview=nil
+            -- A whole drag is one completed action (R12, R17).
+            place(drag.target,p)
+        elseif editor.preview then editor.preview=nil;editor.touch() end
+        return
+    end
+    editor.set_preview(nil)
+    if drag.kind=="points" and not drag.moved then set_single(drag.grab);return end
+    if not drag.moved then return end
+    if drag.kind=="handle" then
+        local o=find(drag.id)
+        local differs=drag.params and (o.type=="curve" and anchor_key(drag.params)~=anchor_key(drag.p0) or o.type~="curve" and not same_params(drag.params,drag.p0))
+        if differs then apply_params(drag.id,drag.params,drag.partner_anchors and {id=drag.partner.id,anchors=drag.partner_anchors}) end
+    elseif drag.kind=="vertex" then
+        local q=drag.to
+        if q[1]==drag.origin[1] and q[2]==drag.origin[2] then return end
+        editor.commit(function(e) edit.move_vertex(e,drag.id,drag.index,q) end,true)
+    elseif drag.kind=="points" then
+        -- The whole multi-point drag is one Undo step; the points stay selected.
+        local d=drag.delta
+        if d[1]~=0 or d[2]~=0 then editor.commit(function(e) local m,err=edit.move_points(e,drag.points,d);if not m then return nil,err end end,true) end
+    else
+        local d=drag.delta
+        if d[1]~=0 or d[2]~=0 then editor.commit(function(e) edit.translate(e,drag.ids,d) end,true) end
+    end
+end
+function on_input(self,action_id,action)
+    if editor.mode~="edit" and not (terrain_look.session and terrain_look.session.open) then
+        -- An open report or import panel keeps its input; E does not leave it behind.
+        local panel=html5 and html5.run("!!(window.riderFeedback?.visible||window.riderCustom?.visible)")=="true"
+        editor_ui.pointer(self.ui,action)
+        if not panel and action_id==hash('ui_pointer') and action.pressed and hit(self,action)=='terrain_look' then
+            msg.post(LOADER,'terrain_look_open');return true
+        end
+        if action_id==hash("editor_toggle") and action.pressed and not panel then
+            editor.message=""
+            msg.post(LOADER,"editor_enter")
+            return true
+        end
+        return false
+    end
+    if self.focus_lost then if terrain_look.session then terrain_look.session.drag=nil end;self.focus_lost=false;self.ui.scroll_drag=nil;cancel(self) end
+    -- An open Import/Export panel keeps all input: canvas clicks and keys never edit behind it.
+    if self.panel_open then
+        if action_id==hash("ui_pointer") and action.pressed then editor.message="Close the Import/Export panel first." end
+        return true
+    end
+    for _,m in ipairs({{"editor_ctrl","ctrl"},{"editor_shift","shift"},{"editor_space","space"},{"editor_alt","alt"}}) do
+        if action_id==hash(m[1]) then
+            -- Held keys report every frame, so a modifier cleared by cancel() comes back while still down.
+            self.held[m[2]]=not action.released or nil
+            return true
+        end
+    end
+    editor_ui.pointer(self.ui,action)
+    if not (terrain_look.session and terrain_look.session.open) and not self.help_open and not self.open_dialog and not self.warnings_open and not editor.conflict then
+        if self.field and action_id==hash("ui_pointer") and action.pressed and editor_ui.scrollbar_hit(self.ui) then
+            confirm_name(self)
+            if self.field then return true end -- invalid pending input retains focus
+        end
+        if not self.field and editor_ui.scrollbar_input(self.ui,action_id,action) then return true end
+    end
+    local ls=terrain_look.session
+    if ls and ls.open then
+        local controls=require('main.terrain_perspective.projection').CONTROLS
+        local ranges=require('main.terrain_perspective.projection').RANGES
+        local function slider(key)
+            if ls.scope=='selected' and (key=='perspective' or key=='angle') then return end
+            local r=self.ui.rects['look_slider_'..key];local p=self.ui.pointer
+            if r and p then local range=ranges[key];local step
+                for _,v in ipairs(controls) do if v.key==key then step=v.step end end
+                local value=range[1]+math.max(0,math.min(1,(p[1]-r.x)/r.w))*(range[2]-range[1])
+                terrain_look.change(key,math.max(range[1],math.min(range[2],math.floor(value/step+.5)*step)))
+            end
+        end
+        if action_id==hash('editor_text') and action.text and ls.field then
+            local f=ls.field;local t=action.text:gsub('[^0-9eE+%.%-]','')
+            if f.all and t~='' then f.text='';f.all=false end
+            if #f.text+#t<=16 then f.text=f.text..t end
+        elseif action_id==hash('editor_delete') and (action.pressed or action.repeated) and ls.field then
+            ls.field.text=ls.field.all and '' or ls.field.text:sub(1,-2);ls.field.all=false
+        elseif self.held.ctrl and action_id==hash('lean_left') and action.pressed and ls.field then ls.field.all=true
+        elseif action_id==hash('editor_play') and action.pressed then terrain_look.confirm()
+        elseif action_id==hash('editor_cancel') and action.pressed then
+            if ls.field then ls.field=nil else terrain_look.close();cancel(self) end
+        elseif (action_id==hash('editor_zoom_in') or action_id==hash('editor_zoom_out')) and action.pressed then
+            self.ui.look_scroll=math.max(0,math.min(self.ui.look_max or 0,(self.ui.look_scroll or 0)+(action_id==hash('editor_zoom_in') and -44 or 44)))
+        elseif action_id==hash('ui_pointer') and action.pressed then
+            local name=hit(self,action)
+            if name=='look_close' then terrain_look.confirm();terrain_look.close();cancel(self)
+            elseif terrain_look.confirm() then
+                if name=='look_scope_level' then terrain_look.scope('level')
+                elseif name=='look_scope_selected' then terrain_look.scope('selected')
+                elseif name=='look_apply' then terrain_look.apply()
+                elseif name=='look_reset' then terrain_look.reset()
+                elseif name and name:match('^look_value_') then local key=name:sub(12)
+                    if not (ls.scope=='selected' and (key=='perspective' or key=='angle')) then ls.field={key=key,text=tostring(ls.params[key]),all=true} end
+                elseif name and name:match('^look_slider_') then ls.drag=name:sub(13);slider(ls.drag) end
+            end
+        elseif action_id==hash('ui_pointer') and action.released then ls.drag=nil
+        elseif (action_id==nil or action_id==hash('ui_pointer')) and ls.drag then slider(ls.drag) end
+        return true
+    end
+    -- The help overlay (LE6b) is modal: it takes every key and click; [H], [Esc], Close or a click
+    -- outside the panel closes it. Nothing behind it is edited or driven.
+    if self.help_open then
+        if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
+            self.ui.help_scroll=math.max(0,math.min(self.ui.help_max or 0,(self.ui.help_scroll or 0)+(action_id==hash("editor_zoom_in") and -64 or 64)))
+        elseif action_id==hash("ui_pointer") and action.pressed then
+            if hit(self,action)=="help_close" or not gui.pick_node(self.help_nodes[1],action.x,action.y) then self.help_open=false end
+        elseif (action_id==hash("help_toggle") or action_id==hash("editor_cancel")) and action.pressed then self.help_open=false end
+        return true
+    end
+    -- A focused name field takes every key (contract controls); a click elsewhere confirms it.
+    if self.field then
+        local f=self.field
+        if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
+            if editor_ui.area(self.ui,action)=="properties" then self.ui.scroll=math.max(0,math.min(self.ui.max_scroll or 0,self.ui.scroll+(action_id==hash("editor_zoom_in") and -64 or 64))) end
+        elseif action_id==hash("editor_text") and action.text then
+            local t=action.text:gsub("[%z\1-\31\127]","")
+            if f.all and t~="" then f.text,f.all="",false end
+            local limit=(f.param or f.speed or f.medal or f.fuel or f.zoom or f.track or f.along or f.auto) and 16 or 64
+            if #f.text+#t>limit then editor.message=(f.param or f.medal or f.fuel or f.speed or f.zoom or f.track or f.along or f.auto) and "A value is limited to 16 characters." or f.label and "A label is limited to 64 bytes." or f.object and "An object name is limited to 64 bytes." or f.search and "Search is limited to 64 bytes." or "A level name is limited to 64 bytes." else f.text=f.text..t end
+        elseif action_id==hash("editor_delete") and (action.pressed or action.repeated) then
+            f.text=f.all and "" or drop_char(f.text);f.all=false
+        elseif action_id==hash("editor_cycle") and action.pressed then
+            local old=f.param;local speed=f.speed;local medal=f.medal;local fuel=f.fuel
+            confirm_name(self)
+            if not self.field then
+                local o=editor.selection and find(editor.selection)
+                if old and o and o.type=="prefab" then
+                    local list=param_rows(o);local index
+                    for i,fd in ipairs(list) do if fd.key==old then index=i end end
+                    if index then
+                        for offset=1,#list do
+                            local next=(index-1+(self.held.shift and -offset or offset))%#list+1
+                            if not list[next].choices then param_click(self,next);break end
+                        end
+                    end
+                elseif fuel then
+                    local order={'start','time','drive','warning','refill'};local i=1;for j,k in ipairs(order) do if k==fuel then i=j end end
+                    on_button(self,'fuel_'..order[(i-1+(self.held.shift and -1 or 1))%#order+1])
+                elseif medal then
+                    local order={'gold','silver','bronze'};local i=medal=='gold' and 1 or medal=='silver' and 2 or 3
+                    on_button(self,'medal_'..order[(i-1+(self.held.shift and -1 or 1))%3+1])
+                elseif not f.auto and not f.along and not f.track and not f.zoom and not f.snapshot and not f.object and not f.search and (speed or not f.label) then
+                    on_button(self,speed=="start" and (self.held.shift and "rename" or "test_speed") or speed=="test" and (self.held.shift and "speed" or "rename") or (self.held.shift and "test_speed" or "speed"))
+                end
+            end
+        elseif action_id==hash("editor_play") and action.pressed then confirm_name(self)
+        elseif action_id==hash("editor_cancel") and action.pressed then self.field=nil;editor.message=""
+        elseif action_id==hash("ui_pointer") and action.pressed then
+            local name=hit(self,action)
+            if name and (name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track" or name:match("^auto_")) then
+                if not step_focused(self,name) then
+                    confirm_name(self)
+                    if not self.field then on_button(self,name) end
+                end
+            else confirm_name(self,true) end
+        elseif action_id==nil then cursor(self,action) end
+        return true
+    end
+    if action_id==nil then
+        if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
+        else cursor(self,action);set_hover(self,{}) end
+        return true
+    end
+    if action_id==hash("ui_pointer") then
+        if action.pressed then
+            -- The click that returns focus to the canvas never edits the level.
+            if self.refocus then
+                self.refocus=false
+                if not self.refocus_until or socket.gettime()<self.refocus_until then return true end
+            end
+            local name=hit(self,action)
+            if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" or name=="chrome_panel" then return true
+            elseif name then on_button(self,name)
+            elseif self.open_dialog then self.open_dialog=false
+            else canvas_press(self,action) end
+        elseif action.released then canvas_release(self) end
+        if not editor_ui.area(self.ui,action) then canvas_move(self,action) end
+        return true
+    end
+    if action_id==hash("editor_pan") then
+        if editor_ui.area(self.ui,action) or self.open_dialog or self.warnings_open or editor.conflict then return true end
+        if action.pressed and action.screen_x then self.pan={action.screen_x,action.screen_y} elseif action.released then self.pan=nil end
+        return true
+    end
+    if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
+        local up=action_id==hash("editor_zoom_in")
+        -- Over the Open dialog the wheel pages its list (templates on the right half, My levels on the left).
+        if self.open_dialog and not self.version_dialog and action.x and gui.pick_node(self.dialog_nodes[1],action.x,action.y) then
+            local templates=(action.screen_x or 0)>=gui.get_screen_position(self.dialog_nodes[1]).x
+            local key,count,per=templates and "tpl_page" or "page",templates and #self.templates or #(self.library or {}),templates and TEMPLATE_ROWS or ROWS
+            self[key]=math.max(0,math.min(math.max(0,math.ceil(count/per)-1),(self[key] or 0)+(up and -1 or 1)))
+            return true
+        end
+        local area=editor_ui.area(self.ui,action)
+        if area then
+            if area=="properties" then self.ui.scroll=math.max(0,math.min(self.ui.max_scroll or 0,self.ui.scroll+(up and -64 or 64)))
+            elseif area=="tools" and editor_ui.object_area(self.ui) and not self.ui.objects_collapsed then self.ui.object_scroll=math.max(0,math.min(self.ui.object_max_scroll or 0,(self.ui.object_scroll or 0)+(up and -1 or 1)))
+            elseif area=="tools" then self.ui.tool_scroll=math.max(0,math.min(self.ui.tool_max_scroll or 0,self.ui.tool_scroll+(up and -64 or 64))) end
+            return true
+        end
+        if self.warnings_open or editor.conflict then return true end
+        cursor(self,action);zoom(self,up and 1.2 or 1/1.2);return true
+    end
+    if not action.pressed then return true end
+    if self.open_dialog or self.warnings_open then
+        if action_id==hash("editor_cancel") then self.open_dialog,self.warnings_open=false,false end
+        return true
+    end
+    -- "Sure? Make smooth" (LE5d) belongs to the click right after it: any key disarms it.
+    self.confirm_bulk=nil
+    if editor.conflict then editor.message="Choose how to open this level first.";return true end
+    if self.drag and action_id~=hash("editor_cancel") then return true end
+    if action_id==hash("editor_toggle") then play(self)
+    elseif action_id==hash("editor_play") then
+        -- Enter first completes a piece being drawn; otherwise it is Play.
+        if self.drawing then finish_drawing(self) else play(self) end
+    elseif action_id==hash("editor_test") then test_start(self)
+    elseif action_id==hash("editor_tool_select") then set_tool(self,"select")
+    elseif action_id==hash("editor_tool_draw") then set_tool(self,"draw")
+    elseif action_id==hash("editor_tool_prefab") then set_tool(self,"prefab")
+    elseif action_id==hash("editor_grid") then editor.grid=not editor.grid;editor.touch()
+    elseif action_id==hash("editor_label") then set_tool(self,"label")
+    elseif action_id==hash("help_toggle") then open_help(self)
+    elseif action_id==hash("editor_fit") then fit_level(self)
+    elseif action_id==hash("editor_centre") then centre_selection(self)
+    elseif action_id==hash("editor_cycle") then
+        -- Tab cycles through overlapping candidates under the cursor.
+        if self.candidates and #self.candidates>1 then self.hover_index=self.hover_index%#self.candidates+1;set_hover(self,self.candidates) end
+    elseif action_id==hash("editor_connect") then connect(self)
+    elseif action_id==hash("editor_split") then split(self)
+    elseif action_id==hash("editor_delete") then
+        if self.drawing then
+            table.remove(self.drawing.points)
+            if #self.drawing.points==0 then self.drawing=nil end
+            editor.touch()
+        else delete(self) end
+    elseif action_id==hash("editor_z") and self.held.ctrl then
+        if self.drawing and not self.held.shift then
+            -- While drawing, Ctrl+Z removes the last placed point (like Backspace).
+            table.remove(self.drawing.points)
+            if #self.drawing.points==0 then self.drawing=nil end
+            editor.touch()
+        elseif editor.undo(not self.held.shift)==false then editor.message="Nothing to "..(self.held.shift and "redo" or "undo").."." end
+    elseif action_id==hash("editor_y") and self.held.ctrl then
+        if editor.undo(false)==false then editor.message="Nothing to redo." end
+    elseif action_id==hash("editor_c") and self.held.ctrl then copy_selection()
+    elseif action_id==hash("editor_c") then set_tool(self,"curve")
+    elseif action_id==hash("editor_v") and self.held.ctrl then
+        if self.drawing then finish_drawing(self) end
+        paste_at(self,self.cursor or {editor.camera.x,editor.camera.y})
+    elseif editor.tool=="prefab" and KIND_KEYS[action_id] then
+        -- 1-7 pick the prefab type (the game's station keys are editor input while editing).
+        editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
+    elseif action_id==hash("editor_cancel") then
+        if self.auto_plan then clear_auto(self);editor.message="Coin preview cancelled.";return true end
+        -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
+        if self.drag or self.pan or self.box then cancel(self)
+        elseif self.drawing then self.drawing=nil;editor.touch()
+        elseif self.open_dialog then self.open_dialog=false
+        elseif self.warnings_open then self.warnings_open=false
+        else editor.select(nil) end
+    end
+    return true
+end
+local function one_sided(e,run)
+    for _,c in ipairs(doc_lib.run_chains(e,run)) do if not doc_lib.one_sided(c.points) then return false end end
+    return true
+end
+local function seg_text(a,b)
+    local length,angle=snap_lib.measure(a,b)
+    return string.format("%.2f m  %.1f deg",length,angle)
+end
+local function describe(self)
+    local e=editor.doc.editor
+    local s=editor.selection
+    local lines
+    local ids=editor.selected_ids()
+    local v=editor.vertex
+    if s=="start" then
+        local p=editor.preview and editor.preview.target=="start" and editor.preview.position or e.start.position
+        lines={"START",string.format("x %.2f m  y %.2f m",p[1],p[2]),string.format("Start speed %.1f m/s",e.start.speed)}
+        local blocked=doc_lib.blocked(e,p)
+        if blocked then lines[#lines+1]="Overlaps "..blocked.type.." "..blocked.id end
+    elseif s=="finish" and e.finish then
+        local p=e.finish.position
+        lines={"FINISH",string.format("x %.2f m  y %.2f m",p[1],p[2]),"Direction "..(e.finish.direction<0 and "<- (left)" or "-> (right)")}
+    elseif editor.point_count()>=2 then
+        -- Several points (LE5d): what the bulk buttons do with them.
+        local r=corner_summary()
+        lines={r.points.." points selected","Make smooth rounds "..r.sharp,"Make corner sharpens "..r.smooth}
+        if r.ends>0 then lines[#lines+1]=plural(r.ends,"open end").." (skipped)" end
+        if r.prefab>0 then lines[#lines+1]=plural(r.prefab,"joint").." to a prefab (skipped)" end
+        lines[#lines+1]="Drag one: all move together;"
+        lines[#lines+1]="click one: only that point."
+        lines[#lines+1]="Shift+click adds or removes."
+    elseif v and find(v.id) then
+        local o=find(v.id)
+        local pts=editor.shape(o)
+        local p=end_point(pts,o,v.index)
+        if o.type~="line" then lines={(v.index==1 and "Entry" or "Exit").." of "..doc_lib.label(o),string.format("x %.2f m  y %.2f m",p[1],p[2])}
+        else
+            lines={"Point "..v.index.." of "..#pts.." in line "..v.id,string.format("x %.2f m  y %.2f m",p[1],p[2])}
+            if v.index>1 then lines[#lines+1]="Before: "..seg_text(pts[v.index-1],p) end
+            if v.index<#pts then lines[#lines+1]="After: "..seg_text(p,pts[v.index+1]) end
+        end
+        local joint=edit.joint(e,v.id,v.index)
+        if joint then lines[#lines+1]="Joint "..v.id.." -> "..joint..": dragging moves the downstream run"
+        elseif o.type=="line" and v.index>1 and v.index<#pts then lines[#lines+1]="Delete joins its neighbours (orange)"
+        else
+            local v2=editor.vertex2
+            local q=v2 and find(v2.id) and path(find(v2.id))[v2.index]
+            local target=connect_target(v)
+            if q and dist(q,p)>=0.01 then lines[#lines+1]=string.format("Connect [J] bridges to %s (%.2f m)",v2.id,dist(q,p))
+            elseif q or target then lines[#lines+1]="Touches "..(q and v2.id or target.id).." end: Connect [J]"
+            else lines[#lines+1]="Free end; Shift+click another free end to connect" end
+            if o.type=="line" then lines[#lines+1]=#pts>2 and "Delete shortens the line" or "Delete: not possible (2 points)" end
+        end
+    elseif #ids>1 then
+        local list=edit.closure(e,ids)
+        lines={#ids.." objects selected","Dragging moves "..#list.." pieces","(each connected run once)"}
+    elseif s and selected_object() then
+        local o=selected_object()
+        if o.type=="line" then
+            local length=0
+            for i=2,#o.points do length=length+dist(o.points[i-1],o.points[i]) end
+            local run=edit.run_of(e,o.id)
+            lines={"Line "..o.id,#o.points.." points, "..string.format("%.2f m",length),
+                #run>1 and "Run of "..#run.." pieces: "..table.concat(run," > ",1,math.min(#run,4))..(#run>4 and " ..." or "") or "Not connected",
+                one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
+                "Drag moves the whole run","Double-click inserts a point"}
+        elseif o.type=='coin' then
+            lines={(o.kind=='fuel' and 'Fuel canister ' or o.kind=='gem' and 'Wonder Gem ' or 'Gold coin ')..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
+        elseif o.type=="hull" then
+            local b=empty_box()
+            for _,q in ipairs(o.vertices) do grow(b,q[1],q[2]) end
+            lines={"Hull "..o.id,#o.vertices.." vertices",string.format("x %.2f m to %.2f m",b[1],b[2]),string.format("y %.2f m to %.2f m",b[3],b[4])}
+        elseif o.type=="curve" then
+            local pts=editor.shape(o)
+            local l=0
+            for i=2,#pts do l=l+dist(pts[i-1],pts[i]) end
+            local run=edit.run_of(e,o.id)
+            lines={"Curve "..o.id,string.format("%d anchors, %.2f m, %d samples",#o.anchors,l,#pts),#run>1 and "Run of "..#run.." pieces" or "Not connected"}
+            -- The direction change at each joint (0 deg: a smooth join).
+            local next,prev=doc_lib.links(e)
+            local function kink(a,b)
+                local la,lb=length(a),length(b)
+                if la==0 or lb==0 then return 0 end
+                return math.deg(math.acos(math.max(-1,math.min(1,(a[1]*b[1]+a[2]*b[2])/(la*lb)))))
+            end
+            if prev[o.id] then
+                local u=editor.shape(find(prev[o.id]))
+                lines[#lines+1]=string.format("Join from %s: kink %.1f deg",prev[o.id],kink({u[#u][1]-u[#u-1][1],u[#u][2]-u[#u-1][2]},{pts[2][1]-pts[1][1],pts[2][2]-pts[1][2]}))
+            end
+            if next[o.id] then
+                local w=editor.shape(find(next[o.id]))
+                local n=#pts
+                lines[#lines+1]=string.format("Join to %s: kink %.1f deg",next[o.id],kink({pts[n][1]-pts[n-1][1],pts[n][2]-pts[n-1][2]},{w[2][1]-w[1][1],w[2][2]-w[1][2]}))
+            end
+            local a=editor.anchor and editor.anchor.id==o.id and o.anchors[editor.anchor.i]
+            if a then lines[#lines+1]=string.format("Anchor %d (%s): x %.2f m  y %.2f m",editor.anchor.i,a.mode,a.p[1],a.p[2]) end
+            lines[#lines+1]="Drag anchors and tangents (pink);"
+            lines[#lines+1]="double-click adds an anchor."
+        elseif o.type=="prefab" then
+            local pts=editor.shape(o)
+            lines={doc_lib.label(o).." (prefab)",string.format("At x %.2f m  y %.2f m",o.at[1],o.at[2])}
+            if doc_lib.terrain(o) then
+                local q=pts[#pts]
+                lines[#lines+1]=string.format("Exit x %.2f m  y %.2f m",q[1],q[2])
+                local run=edit.run_of(e,o.id)
+                lines[#lines+1]=#run>1 and "Run of "..#run.." pieces" or "Not connected"
+            end
+            for _,t in ipairs(prefab.derived(o)) do lines[#lines+1]=t end
+        else
+            lines={"Label "..o.id,shorten(o.text,30),string.format("x %.2f m  y %.2f m",o.position[1],o.position[2]),
+                "Click Text or double-click","to edit; drag moves it."}
+        end
+    elseif editor.tool=="prefab" then
+        lines={"Prefab [P]: "..prefab.name(editor.prefab_kind),"Click places it (keys 1-7 or the","list pick the type). On a free end","(green ring) it connects: after an","exit, or ending at an entry.","Select it to change its values:","fields on the right or the handles.","Snap: 0.5 m grid [G], Alt 0.1 m."}
+    elseif editor.tool=='fuel' then
+        lines={'Fuel canister','Click to place; all use the level refill value.','FUEL in Level Properties sets refill percentage points.','Collected even when full. Retry restores it.'}
+    elseif editor.tool=='gem' then
+        lines={'Wonder Gem','Click to place a purple Wonder Gem.','Each new gem is worth +1 on official finish.','Select [S] to move / copy / delete.','Retry restores pickups; practice is unbanked.'}
+    elseif editor.tool=='coin' then
+        lines={'Coin','Click to place an ordinary coin.','Select [S] to move / copy / delete.','Retry restores collected coins.','Only official finishes bank coins.'}
+    elseif editor.tool=="label" then
+        lines={"Label [L]","Click places a label and","edits its text (up to 64","bytes); Enter applies.","Select it to edit, move,","copy or delete it."}
+    elseif editor.tool=="curve" then
+        lines={"Curve [C]","Click to place anchors; tangents","follow them automatically. Click","the last anchor, double-click or","Enter to finish; Backspace undoes","an anchor. Select the curve to drag","anchors and tangents (pink).","Start or end on a free end to","connect (green ring)."}
+    elseif editor.tool=="draw" then
+        lines={"Draw [D]","Click to place points","Click the last point, double-click","or Enter to finish; Backspace undoes","a point; Esc discards the piece.","Start or end on a free end to","connect (green ring).","","Snap: 0.5 m grid [G], Alt 0.1 m,","Shift 15 deg, Ctrl off."}
+    else
+        lines={shorten(editor.doc.name,30),string.format("Test start speed %.1f m/s",editor.test_speed),"-/+: speed (Shift+click: 5 m/s)","F test start, Shift+F drop here",
+            "Ctrl+Z / Ctrl+Y: undo / redo","Ctrl+C / Ctrl+V: copy / paste","Tab: next item under the cursor","Shift+click: add to selection","Drag on empty space: box select",
+            string.format("Curves sampled: %s mm / %s m",doc_lib.SAMPLING.tolerance*1000,doc_lib.SAMPLING.max_segment)}
+    end
+    if editor.show_bounds and not s and editor.tool=="select" then
+        -- The shown R13 bounds (LE6): what Play, Export and test starts use.
+        local b=current_bounds(self)
+        lines[#lines+1]=string.format("Bounds x %.1f to %.1f m",b[1],b[2])
+        lines[#lines+1]=string.format("       y %.1f to %.1f m",b[3],b[4])
+    end
+    if object_corner_mode() then
+        -- Whole objects (LE5d): what Make smooth / Make corner would change, and the box rule.
+        local r=corner_summary()
+        lines[#lines+1]="Make smooth: "..plural(r.sharp,"point")..(r.convert>0 and ", "..r.convert.." conv." or "")
+        lines[#lines+1]="Make corner: "..plural(r.smooth,"point")
+        if has_paths() then
+            lines[#lines+1]="Drag on empty space: points;"
+            lines[#lines+1]="Esc first to box-select objects."
+        end
+    end
+    return table.concat(lines,"\n")
+end
+local function readout(self)
+    local d,drag=self.drawing,self.drag
+    if d and self.snapped and drawing_tool() then
+        local last=d.points[#d.points]
+        local note=self.snapped.kind=="anchor" and self.snapped.anchor.end_free and "  connects to "..self.snapped.anchor.id or ""
+        return seg_text(last,self.snapped.p)..note
+    end
+    if drawing_tool() and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then return "starts at "..self.snapped.anchor.id.." end (connects)" end
+    if drag and drag.kind=="vertex" and drag.to then
+        local o=find(drag.id)
+        local pts=editor.shape(o)
+        local t={}
+        if drag.index>1 then t[#t+1]=seg_text(pts[drag.index-1],pts[drag.index]) end
+        if drag.index<#pts then t[#t+1]=seg_text(pts[drag.index],pts[drag.index+1]) end
+        return table.concat(t," | ")
+    end
+    -- START / FINISH drag (LE6b): position, and for START the clearance check Play uses.
+    if drag and drag.kind=="marker" and drag.moved and editor.preview then
+        local q=editor.preview.position
+        local text=string.format("%s x %.2f m  y %.2f m",drag.target=="start" and "START" or "FINISH",q[1],q[2])
+        local blocked=drag.target=="start" and doc_lib.blocked(editor.doc.editor,q)
+        return blocked and text.." | overlaps "..doc_lib.label(blocked):lower().." (Play blocked)" or text
+    end
+    if drag and drag.kind=="move" and drag.moved then return string.format("dx %.2f m  dy %.2f m",drag.delta[1],drag.delta[2]) end
+    if drag and drag.kind=="points" and drag.moved then return string.format("dx %.2f m  dy %.2f m | %d points",drag.delta[1],drag.delta[2],#drag.points) end
+    if self.box then return self.box.points and "Box: points of the selected lines and curves (none inside: objects)" or "Box: objects" end
+    if drag and drag.kind=="handle" and drag.params and find(drag.id).type=="curve" then
+        local kind,i=drag.handle:sub(1,1),tonumber(drag.handle:sub(2))
+        local a=drag.params[i]
+        local text
+        if kind=="a" then text=string.format("anchor %d: x %.2f m  y %.2f m",i,a.p[1],a.p[2])
+        else
+            local t=a[kind=="i" and "in" or "out"]
+            text=string.format("tangent %.2f m  %.1f deg (%s)",length(t),math.deg(math.atan2(t[2],t[1])),a.mode)
+        end
+        text=text..(drag.downstream and drag.downstream>0 and " | moves "..drag.downstream.." downstream" or "")
+        return drag.conflict and text.." | conflict: "..drag.conflict or text
+    end
+    if drag and drag.kind=="handle" and drag.params then
+        local o=find(drag.id)
+        local t={}
+        for _,f in ipairs(prefab.fields(o.kind,drag.params,true)) do
+            if not f.choices and drag.params[f.key]~=drag.p0[f.key] then t[#t+1]=f.label:lower().." "..prefab.value(f,drag.params) end
+        end
+        local text=table.concat(t,", ")..(drag.downstream and drag.downstream>0 and " | moves "..drag.downstream.." downstream" or "")
+        return drag.conflict and text.." | conflict: "..drag.conflict or text
+    end
+    if editor.tool=="prefab" and self.place then
+        local pl=self.place
+        return "Preview: "..prefab.name(pl.kind)..string.format(" at x %.2f m  y %.2f m",pl.at[1],pl.at[2])..(pl.target and "  connects to "..pl.target or "")
+    end
+    local g=self.ghost_now
+    if g then
+        local key=g.mode=="drop" and "Shift+F" or "F"
+        return g.pos and string.format("%s: test start here (x %.2f m  y %.2f m)",key,g.pos[1],g.pos[2]) or key..": refused ("..g.err..")"
+    end
+    if editor.tool=="select" and editor.hover then
+        local n=self.candidates and #self.candidates or 0
+        return describe_candidate(editor.hover)..(n>1 and string.format("  (%d/%d, Tab)",self.hover_index,n) or "")
+    end
+    return ""
+end
+-- The test start preview (LE6b): where F (Shift+F: drop here) would start, by the same rules as F
+-- (editor_doc.test_start), or why it would be refused. Shown with the Select tool over empty canvas inside
+-- the free area, never while dragging, with a field, dialog, list or help open, or when switched off.
+local function ghost_state(self)
+    if not editor.show_ghost or editor.tool~="select" or not self.cursor or not self.cursor_px then return nil end
+    if self.drag or self.box or self.pan or self.pending or self.field or self.help_open or self.open_dialog or self.warnings_open or editor.conflict or self.panel_open then return nil end
+    if self.candidates and #self.candidates>0 then return nil end
+    local u,q=usable(self),self.cursor_px
+    if q[1]<u.x0 or q[1]>u.x1 or q[2]<u.y0 or q[2]>u.y1 then return nil end
+    local mode=self.held.shift and "drop" or "surface"
+    local key=string.format("%s:%d:%s:%.17g:%.17g",tostring(editor.doc),editor.doc.editor.revision,mode,self.cursor[1],self.cursor[2])
+    if self.ghost_key~=key then
+        local pos,err=doc_lib.test_start(editor.doc,self.cursor,mode)
+        self.ghost_key,self.ghost_cache=key,{pos=pos,err=err,mode=mode}
+    end
+    return self.ghost_cache
+end
+-- Overlays for this frame: grid, handles (hover and selection first, then selected lines' points,
+-- then every line end in view), connect preview, draw and selection previews, snap and readout.
+local function draw_overlay(self)
+    local o=self.overlay
+    overlay.begin(o)
+    o.s=self.ui.scale or 1;ui=o.s
+    gui.set_scale(o.readout,vmath.vector3(ui/o.k,ui/o.k,1))
+    local s=map()
+    local w,h=window.get_size()
+    if not s then overlay.finish(o);show_silhouette(o,self.ghost,nil);show_silhouette(o,self.last_ghost,nil);return end
+    local e=editor.doc.editor
+    overlay.grid(o,s,w,h,self.held.alt and snap_lib.FINE or snap_lib.GRID)
+    local function visible(q) return q[1]>=-20 and q[1]<=w+20 and q[2]>=-20 and q[2]<=h+20 end
+    local function handle(p,color,size,diamond) local q=to_px(p,s);if visible(q) then overlay.handle(o,q,color,size or HANDLE_PX,diamond) end end
+    if self.auto_plan then
+        for _,p in ipairs(self.auto_plan.positions) do handle(p,C.connect,7,true) end
+        overlay.snap(o,nil);gui.set_enabled(o.readout,false);self.readout_text='Coin preview: cyan additions, red removals'
+        show_silhouette(o,self.ghost,nil);show_silhouette(o,self.last_ghost,nil);overlay.finish(o);return
+    end
+    local hover=editor.hover
+    local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
+    local hover_point=hovered and editor.shape(hovered)[hover.index]
+    if hover_point then handle(hover_point,C.hover,HANDLE_PX+5) end
+    local v=editor.vertex
+    if v and find(v.id) and not find(v.id).hidden and not find(v.id).locked then
+        local pts=editor.shape(find(v.id))
+        handle(end_point(pts,find(v.id),v.index),C.selected,HANDLE_PX+3)
+        local vs=vertex_state()
+        -- Delete preview: an inner point's neighbours are joined.
+        if vs and vs.inner and not self.drag then overlay.line(o,to_px(pts[v.index-1],s),to_px(pts[v.index+1],s),C.join,2) end
+        local v2=editor.vertex2 and find(editor.vertex2.id)
+        if v2 and not self.drag then
+            -- Second end for Connect: a bridge preview, or a ring when the ends touch.
+            local vp=end_point(pts,find(v.id),v.index)
+            local q=end_point(editor.shape(v2),v2,editor.vertex2.index) or vp
+            handle(q,C.selected,HANDLE_PX+3)
+            if dist(q,vp)>=0.01 then overlay.line(o,to_px(vp,s),to_px(q,s),C.connect,3) else handle(q,C.connect,HANDLE_PX+12) end
+        else
+            local target=not self.drag and connect_target(v)
+            if target then handle(target.p,C.connect,HANDLE_PX+12) end
+        end
+    end
+    if drawing_tool() and self.snapped and self.snapped.kind=="anchor" and self.snapped.anchor.end_free then handle(self.snapped.p,C.connect,HANDLE_PX+12) end
+    local next,prev=doc_lib.links(e)
+    -- A selected prefab's or curve's handles, the hovered one larger. Curve tangents are drawn as lines to
+    -- diamond handles; at a joint the neighbour's direction (green) and the curve's (pink) show the kink.
+    local hovered_handle=editor.tool=="select" and hover and hover.kind=="handle" and not self.drag and hover.key
+    for _,obj in ipairs(e.objects) do
+        if not obj.hidden and not obj.locked and (obj.type=="prefab" or obj.type=="curve") and editor.selected[obj.id] then
+            local shown=editor.preview_objects and editor.preview_objects[obj.id] or obj
+            for _,h in ipairs(object_handles(shown)) do
+                if h.tangent then overlay.line(o,to_px(shown.anchors[h.anchor].p,s),to_px(h.p,s),C.param,1) end
+                local picked=editor.anchor and editor.anchor.id==obj.id and editor.anchor.i==h.anchor and not h.tangent
+                handle(h.p,picked and C.selected or C.param,HANDLE_PX+(hovered_handle=="h:"..obj.id..":"..h.name and 6 or 1),h.tangent)
+            end
+            if obj.type=="curve" then
+                local pts=editor.shape(shown)
+                local function ray(p,d,color)
+                    local l=length(d)
+                    if l==0 then return end
+                    local k=40*ui/math.abs(s.ppm_x)/l
+                    overlay.line(o,to_px(p,s),to_px({p[1]+d[1]*k,p[2]+d[2]*k},s),color,2)
+                end
+                if prev[obj.id] then
+                    local u=editor.shape(find(prev[obj.id]))
+                    ray(pts[1],{u[#u][1]-u[#u-1][1],u[#u][2]-u[#u-1][2]},C.joint);ray(pts[1],{pts[2][1]-pts[1][1],pts[2][2]-pts[1][2]},C.param)
+                end
+                if next[obj.id] then
+                    local w=editor.shape(find(next[obj.id]))
+                    local n=#pts
+                    ray(pts[n],{w[2][1]-w[1][1],w[2][2]-w[1][2]},C.joint);ray(pts[n],{pts[n][1]-pts[n-1][1],pts[n][2]-pts[n-1][2]},C.param)
+                end
+            end
+        end
+    end
+    for _,obj in ipairs(e.objects) do
+        if not obj.hidden and not obj.locked and obj.type=="line" and editor.selected[obj.id] then
+            for _,q in ipairs(editor.shape(obj)) do handle(q,C.vertex,HANDLE_PX-2) end
+        end
+    end
+    for _,obj in ipairs(e.objects) do
+        if not obj.hidden and doc_lib.terrain(obj) then
+            local pts=editor.shape(obj)
+            local a,b=to_px(pts[1],s),to_px(pts[#pts],s)
+            if visible(a) then overlay.endpoint(o,a,prev[obj.id]~=nil,C.joint,C.free) end
+            if not next[obj.id] and visible(b) then overlay.endpoint(o,b,false,C.joint,C.free) end
+        end
+    end
+    -- The multi-point selection (LE5d): filled orange squares over the handles.
+    for _,pt in ipairs(editor.point_list()) do
+        local q=not find(pt.id).hidden and not find(pt.id).locked and point_pos(pt)
+        if q then handle(q,C.selected,HANDLE_PX+3) end
+    end
+    -- Prefab placement preview (R5): the shape a click places, and a ring on the end it connects to.
+    local pl=editor.tool=="prefab" and self.place
+    if pl and not self.drag then
+        local ghost={type="prefab",kind=pl.kind,at=pl.at,params=pl.params}
+        local closed=doc_lib.outline(ghost)
+        for _,pts in ipairs(closed and {closed} or doc_lib.parts(ghost)) do
+            for i=2,#pts+(closed and 1 or 0) do
+                local a,b=to_px(pts[i-1],s),to_px(pts[(i-1)%#pts+1],s)
+                local n=math.max(1,math.min(8,math.ceil(dist(a,b)/(14*ui))))
+                -- Small sampled chords use alternating gaps too; geometry itself is untouched.
+                for j=0,n-1 do
+                    local t0,t1=j/n,(j+.65)/n
+                    overlay.line(o,{a[1]+(b[1]-a[1])*t0,a[2]+(b[2]-a[2])*t0},{a[1]+(b[1]-a[1])*t1,a[2]+(b[2]-a[2])*t1},editor_ui.c.active,3)
+                end
+            end
+        end
+        if pl.target then handle(pl.p,C.connect,HANDLE_PX+12) end
+    end
+    local d=self.drawing
+    if d and d.kind=="curve" then
+        -- The curve as it would be placed (automatic tangents), 8 lines per segment, up to the pool size.
+        local pts={unpack(d.points)}
+        if self.snapped and dist(self.snapped.p,pts[#pts])>=0.01 then pts[#pts+1]=self.snapped.p end
+        local anchors=edit.auto_anchors(pts)
+        local steps=math.max(1,math.min(8,math.floor(56/math.max(1,#anchors-1))))
+        for i=1,#anchors-1 do
+            local a,b=anchors[i],anchors[i+1]
+            local p0,p3=a.p,b.p
+            local p1,p2={p0[1]+a.out[1],p0[2]+a.out[2]},{p3[1]+b["in"][1],p3[2]+b["in"][2]}
+            local last=p0
+            for k=1,steps do
+                local t=k/steps;local u=1-t
+                local q={u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],u*u*u*p0[2]+3*u*u*t*p1[2]+3*u*t*t*p2[2]+t*t*t*p3[2]}
+                overlay.line(o,to_px(last,s),to_px(q,s),i<#d.points and C.draw or C.rubber,i<#d.points and 3 or 2);last=q
+            end
+        end
+        for _,q in ipairs(d.points) do handle(q,C.draw,HANDLE_PX-2) end
+    elseif d then
+        for i=2,#d.points do overlay.line(o,to_px(d.points[i-1],s),to_px(d.points[i],s),C.draw,3) end
+        for _,q in ipairs(d.points) do handle(q,C.draw,HANDLE_PX-2) end
+        if self.snapped then overlay.line(o,to_px(d.points[#d.points],s),to_px(self.snapped.p,s),C.rubber,2) end
+    end
+    local b=self.box
+    if b then
+        local p0,p1=to_px(b.from,s),to_px(b.to,s)
+        overlay.line(o,{p0[1],p0[2]},{p1[1],p0[2]},C.box,1);overlay.line(o,{p1[1],p0[2]},{p1[1],p1[2]},C.box,1)
+        overlay.line(o,{p1[1],p1[2]},{p0[1],p1[2]},C.box,1);overlay.line(o,{p0[1],p1[2]},{p0[1],p0[2]},C.box,1)
+    end
+    -- R13 bounds (LE6, view only): the same calculation as Play, Export and test starts, per revision.
+    if editor.show_bounds then
+        local bb=current_bounds(self)
+        overlay.rect(o,to_px({bb[1],bb[3]},s),to_px({bb[2],bb[4]},s),w,h,C.bounds,2)
+    end
+    -- The last launched test start of this document (LE6) as a faint vehicle, the test start preview
+    -- (ghost, LE6b), and the spot a problem row jumped to.
+    show_silhouette(o,self.last_ghost,editor.last_test_start(),s,C.last)
+    local g=ghost_state(self)
+    self.ghost_now=g
+    show_silhouette(o,self.ghost,g and (g.pos or self.cursor),s,g and (g.pos and C.ghost or C.ghost_bad))
+    local f=self.flash
+    if f and socket.gettime()<f.until_t then
+        local phase=(f.until_t-socket.gettime())%0.5/0.5
+        handle(f.p,C.off,HANDLE_PX+10+12*phase,true)
+        if phase>.45 then
+            for _,id in ipairs(f.ids or {}) do
+                local obj=find(id);local pts=obj and not obj.hidden and path(obj)
+                if pts then for i=2,#pts,math.max(1,math.ceil(#pts/64)) do overlay.line(o,to_px(pts[i-1],s),to_px(pts[i],s),C.off,5) end end
+            end
+            if f.start and editor.doc then handle(editor.doc.editor.start.position,C.off,HANDLE_PX+16) end
+        end
+    elseif f then self.flash=nil end
+    local snapping=self.snapped and (drawing_tool() or editor.tool=="prefab" or (self.drag and self.drag.kind~="marker" and (self.drag.kind~="handle" or self.drag.skip)))
+    overlay.snap(o,snapping and to_px(self.snapped.p,s) or nil,snapping and (C[self.snapped.kind] or C.free_snap) or nil)
+    local text=readout(self)
+    overlay.readout(o,self.cursor_px,text,usable(self))
+    self.readout_text=text
+    overlay.finish(o)
+end
+-- Editor A1b adapter: business state and existing actions remain here; the renderer only draws
+-- bounded pools. Templates have logical identities, never one permanent GUI allocation per station.
+local function render_ui(self)
+    terrain_look.tick()
+    local vh=select(2,window.get_size())/(self.ui.scale or 1)
+    self.version_per=math.max(1,math.min(6,math.floor((math.min(620,vh-64)-244)/48)))
+    local e=editor.doc.editor
+    if self.ui_error and (self.ui_error.revision~=e.revision or self.ui_error.opened~=editor.opened) then self.ui_error=nil end
+    if self.last_opened~=editor.opened then
+        self.last_opened=editor.opened;self.open_dialog,self.field,self.confirm_delete=false,nil,nil;self.ui.object_query,self.ui.object_scroll="",0
+        self.frame_opened,self.frame_delay=editor.opened,3;self.flash=nil
+    end
+    if self.frame_opened then
+        local s=map()
+        if s and s.ppm_x~=0 and editor.screen.opened==editor.opened and self.frame_delay>0 then self.frame_delay=self.frame_delay-1
+        elseif s and s.ppm_x~=0 and editor.screen.opened==editor.opened then
+            local u=usable(self);local start=editor.doc.editor.start.position
+            local target=u.x0+math.min(88*self.ui.scale,(u.x1-u.x0)/4)
+            editor.camera.x=editor.camera.x+(s.ox+start[1]*s.ppm_x-target)/s.ppm_x
+            self.frame_opened=nil;editor.touch()
+        end
+    end
+    if self.open_dialog and self.version_dialog then
+        if self.version_generation~=editor.versions.generation then
+            self.version_rows,self.version_list_error=editor.versions.list(editor.key());self.version_generation=editor.versions.generation
+            self.version_page=math.max(0,math.min(self.version_page or 0,math.floor(math.max(0,#self.version_rows-1)/(self.version_per or 6))))
+        end
+    elseif self.open_dialog then library_snapshot(self) end
+    local rows=problem_rows();self.problem_rows=rows
+    local error_key=tostring(editor.opened)..":"..table.concat(editor.errors,"\n")
+    if error_key~=self.attention_key then
+        self.attention_key=error_key
+        if self.flash and self.flash.error then self.flash=nil end
+        if self.play_error and self.play_error.opened==editor.opened and #editor.errors>0 then self.play_error.text=editor.errors[1] end
+        if #editor.errors==0 then
+            self.play_error=nil
+            if self.flash and self.flash.error then self.flash=nil end
+        else
+            -- New validation errors flash their source without interrupting the active selection/gesture.
+            for _,row in ipairs(rows) do
+                local t=row.error and row.target
+                if t then
+                    local b=empty_box();local ids={}
+                    for _,id in ipairs(t.ids or {}) do if find(id) then ids[#ids+1]=id;object_box(b,find(id)) end end
+                    if t.start then start_box(b,editor.doc.editor.start.position) end
+                    local p=t.at or (b[1]<=b[2] and {(b[1]+b[2])/2,(b[3]+b[4])/2})
+                    if p then self.flash={p=p,ids=ids,start=t.start,error=true,until_t=socket.gettime()+2};break end
+                end
+            end
+        end
+    end
+    if self.play_error and (self.play_error.opened~=editor.opened or
+        (#editor.errors==0 and self.play_error.revision and self.play_error.revision~=e.revision)) then self.play_error=nil end
+    if self.play_requested==editor.opened and editor.message:match("^Play blocked: ") then
+        self.play_error={opened=editor.opened,revision=e.revision,text=editor.message:sub(15)};self.play_requested=nil
+    end
+    self.warn_page=math.max(0,math.min(self.warn_page or 0,math.max(0,math.ceil(#rows/WARN_ROWS)-1)))
+    self.tpl_page=math.max(0,math.min(self.tpl_page or 0,math.max(0,math.ceil(#self.templates/TEMPLATE_ROWS)-1)))
+    local notes=#editor.warnings+(editor.display_note and 1 or 0)
+    local diagnostics=#editor.errors>0 and (#editor.errors.." errors, "..notes.." warnings") or notes>0 and (notes.." warnings") or "No problems"
+    local offered={};for _,name in ipairs(offered_buttons(self)) do offered[name]=true end
+    local sel=editor.selection and find(editor.selection)
+    local f=self.field
+    if self.ui.error_selection~=editor.selection then self.ui_error=nil;self.ui.error_selection=editor.selection end
+    local has_track=track_align.available(e,editor.selected_ids())
+    local tc=has_track and track_context(self) or nil
+    local track_active=tc and tc.active and not tc.error
+    local fields,actions,disabled={},{},{}
+    if sel and (sel.type=="prefab" or sel.type=="curve" or sel.type=="label") and #editor.selected_ids()==1 then
+        for i,fd in ipairs(param_rows(sel)) do
+            local name="param_"..i
+            local value=sel.type=="prefab" and (fd.choices and sel.params[fd.key] or fd.integer and string.format("%d",sel.params[fd.key]) or string.format(fd.unit=="deg" and "%.1f" or "%.2f",sel.params[fd.key])) or sel.type=="label" and sel.text or (editor.anchor and sel.anchors[editor.anchor.i].mode or "")
+            local focused=f and ((f.param==fd.key and f.id==sel.id) or (sel.type=="label" and f.label==sel.id))
+            if focused then value=(f.all and "["..f.text.."]" or f.text.."_") end
+            fields[#fields+1]={name=name,label=sel.type=="prefab" and sel.kind=="ramp" and fd.key=="length" and "Horizontal length" or fd.label,unit=fd.unit=="" and fd.integer and "count" or fd.unit or "",value=value,choices=fd.choices or sel.type=="curve",
+                ramp=sel.type=="prefab" and sel.kind=="ramp" and fd.key=="mode",error=focused and f.error or self.ui_error and self.ui_error.key==fd.key and self.ui_error.message or nil}
+            if not fd.choices and sel.type=="prefab" then
+                for _,sign in ipairs({-1,1}) do
+                    local step=fd.integer and 1 or fd.unit=="deg" and 1 or .1
+                    if not fd.integer then step=step*(self.held.shift and 10 or self.held.alt and .1 or 1) end
+                    local candidate,err=prefab.set(sel.kind,sel.params,fd.key,number_text(sel.params[fd.key]+sign*step))
+                    disabled[(sign<0 and "dec_" or "inc_")..name]=not candidate and err or nil
+                end
+            end
+        end
+    end
+    local labels={direction="Flip direction",delete="Delete [Del]",split="Split here [K]",connect="Connect [J]",disconnect="Disconnect [J]",
+        smooth="Make smooth",smooth_all="Make smooth",corner_all="Make corner",convert="Convert to editable path",mirror_left="Mirror <",mirror_right="Mirror >",paste="Paste [Ctrl+V]"}
+    local st=smooth_state();labels.smooth=st and not st.corner and "Make corner" or "Make smooth"
+    if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
+    if self.confirm_bulk and (self.confirm_bulk.key~=table.concat(editor.selected_ids(),",") or self.confirm_bulk.revision~=e.revision or editor.point_count()>=2) then self.confirm_bulk=nil end
+    if self.confirm_convert then labels.convert="Sure? Convert" end
+    if self.confirm_bulk then labels.smooth_all="Sure? Make smooth" end
+    for _,name in ipairs({"direction","split","connect","disconnect","smooth","smooth_all","corner_all","mirror_left","mirror_right","convert","paste","delete"}) do
+        if offered[name] then actions[#actions+1]={name=name,label=labels[name]} end
+    end
+    local list=self.library or {};local library_rows,template_rows,problems={},{},{}
+    local page=self.page or 0
+    for i=1,ROWS do
+        local l=list[page*ROWS+i]
+        if l then library_rows[#library_rows+1]={title=(l.key==editor.key() and "* " or "")..l.name.."  "..os.date("%Y-%m-%d",l.time),remove=l.key~=editor.key(),confirm=self.confirm_delete==l.key} end
+    end
+    for i=(self.tpl_page or 0)*TEMPLATE_ROWS+1,math.min(#self.templates,((self.tpl_page or 0)+1)*TEMPLATE_ROWS) do
+        local name=self.templates[i];local id=name:sub(10);local d=stations.resource(id)
+        template_rows[#template_rows+1]={name=name,title=(d and d.name or id).." ("..id..")"}
+    end
+    for i=1,WARN_ROWS do
+        local r=rows[(self.warn_page or 0)*WARN_ROWS+i]
+        if r then problems[#problems+1]={text=r.text,error=r.error,located=r.target~=nil} end
+    end
+    local description=describe(self)
+    -- Keep familiar explanation text for paths/multi-point selection. Prefab forms need a compact
+    -- identity/connection summary so the editable values take precedence over repeated descriptions.
+    if sel and sel.type=="prefab" and #editor.selected_ids()==1 then
+        local next,prev=doc_lib.links(e)
+        description=prefab.name(sel.kind).."  "..sel.id.."\n"..((prev[sel.id] and 1 or 0)+(next[sel.id] and 1 or 0)).." connections"
+        if sel.kind=="ramp" then description=description.."\n"..prefab.derived(sel)[1].."\nEntry fixed; run follows exit." end
+    elseif not editor.selection then description="Level\nNothing selected" end
+    local status=editor.dirty and "Unsaved" or editor.status~="" and editor.status or "Not saved yet"
+    local hint=editor.message or ""
+    if (self.overlay.dropped or 0)>0 then hint=(hint~="" and hint.." | " or "").."Zoom in to see every point." end
+    local object_rows,icons={},{}
+    local query=(f and f.search and f.text or self.ui.object_query or ""):lower()
+    for _,obj in ipairs(e.objects) do
+        local kind=obj.type=="prefab" and prefab.name(obj.kind) or obj.type
+        local tip=(obj.name and obj.name~="" and obj.name.." — " or "")..kind.." "..obj.id
+        if query=="" or tip:lower():find(query,1,true) then
+            object_rows[#object_rows+1]={id=obj.id,title=obj.name and obj.name~="" and obj.name or kind,subtitle=(obj.name and obj.name~="" and kind.." " or "")..obj.id,tip=tip,hidden=obj.hidden,locked=obj.locked,selected=editor.selected[obj.id]}
+        end
+        icons['object_eye_'..obj.id]=obj.hidden and 'eye_off' or 'eye'
+        icons['object_lock_'..obj.id]=obj.locked and 'lock' or 'unlock'
+    end
+    local d={objects=object_rows,icons=icons,search=f and f.search and f.text.."_" or self.ui.object_query or "",
+        object_name=sel and #editor.selected_ids()==1 and (f and f.object==sel.id and f.text or sel.name or "") or nil,
+        k=self.overlay.k or 4/3,now=socket.gettime(),title=editor.doc.name,name=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.fuel and not f.zoom and not f.track and not f.along and not f.auto and f.text or editor.doc.name,
+        status=status,selection=editor.selection or "",tool=editor.tool,prefab_kind=editor.prefab_kind,tools=TOOLS,kinds=prefab.ORDER,names={},full_names={},
+        fuel=e.fuel,fuel_field=f and f.fuel,fuel_text=f and f.fuel and f.text,fuel_error=f and f.fuel and f.error,
+        medal_times=e.medal_times,medal_field=f and f.medal,medal_text=f and f.medal and f.text,medal_error=f and f.medal and f.error,
+        description=description,fields=fields,actions=actions,disabled=disabled,diagnostics=diagnostics,blocking=#editor.errors>0 or self.play_error~=nil,error_count=math.max(#editor.errors,self.play_error and 1 or 0),warning_count=notes,play_error=self.play_error and self.play_error.text,grid=self.held.alt and "0.1 m" or editor.grid and "0.5 m" or "off",zoom=editor.camera.zoom,
+        readout=self.readout_text or "",cursor_text=self.cursor and string.format("x %.2f m  y %.2f m",self.cursor[1],self.cursor[2]) or "x - m  y - m",message=hint,level=not editor.selection,start_selected=editor.selection=="start",speed=f and f.speed=="start" and f.text or number_text(e.start.speed),
+        name_error=f and not f.object and not f.search and not f.param and not f.label and not f.speed and not f.medal and not f.fuel and not f.zoom and not f.track and not f.along and not f.auto and f.error,speed_error=f and f.speed=="start" and f.error,test_speed=f and f.speed=="test" and f.text or number_text(editor.test_speed),
+        track_alignment=has_track,track_height=f and f.track and (f.all and f.text~='' and '['..f.text..']' or f.text..'_') or track_active and (tc.mixed and 'Mixed' or number_text(tc.height)) or number_text(self.track_height or track_align.DEFAULT),track_error=f and f.track and f.error,
+        along_text=f and f.along and f.text..'_' or '0',along_error=f and f.along and f.error or tc and tc.error,
+        zoom_text=f and f.zoom and f.text or zoom_policy.text(editor.camera.zoom),zoom_edit=f and f.zoom,zoom_error=f and f.zoom and f.error,
+        field=f and {key=f.fuel and "fuel_"..f.fuel or f.auto and "auto_"..f.auto or f.along and "along_track" or f.track and "track_height" or f.zoom and "zoom_value" or f.medal and "medal_"..f.medal or f.snapshot and "snapshot" or f.search and "object_search" or f.object and "object_name" or f.param and (function() for i,fd in ipairs(sel and param_rows(sel) or {}) do if fd.key==f.param then return "param_"..i end end end)() or f.label and "param_1" or f.speed and (f.speed=="start" and "speed" or "test_speed") or "rename"} or nil,
+        on={view_bounds=editor.show_bounds,view_ghost=editor.show_ghost},reasons={view_centre=not has_selection() and "No selection to centre" or nil,view_test=not editor.last_test_start() and "No test has launched in this document" or nil},
+        look=terrain_look.session,look_legacy=not require("main.terrain_perspective.profile").enabled({editor=e}),modal=terrain_look.session and terrain_look.session.open and "terrain_look" or editor.conflict and "conflict" or self.help_open and "help" or self.open_dialog and (self.version_dialog and "versions" or "open") or self.warnings_open and "warnings" or nil,
+        version_rows=self.version_rows or {},version_page=self.version_page or 0,version_per=self.version_per or 6,version_delete=self.version_delete,
+        version_name=f and f.snapshot and f.text,version_error=self.version_list_error or editor.version_error,
+        version_message=f and f.snapshot and f.error or editor.message,version_status=editor.status,
+        help={HELP_LEFT,HELP_RIGHT},conflict=editor.conflict and ("The compiled geometry differs from its source:\n"..editor.conflict.summary.."\nRecompile from source, or keep the compiled geometry as editable lines. Connections are not kept in the line copy.") or "",
+        dialog_message=editor.message,library_title=self.library_error and "My levels: "..self.library_error or "My levels ("..#list..", newest first)",library_rows=library_rows,template_rows=template_rows,problems=problems,
+        page=page,tpl_page=self.tpl_page or 0,warn_page=self.warn_page or 0,library_more=(page+1)*ROWS<#list,template_more=((self.tpl_page or 0)+1)*TEMPLATE_ROWS<#self.templates,warning_more=((self.warn_page or 0)+1)*WARN_ROWS<#rows}
+    for _,kind in ipairs(prefab.ORDER) do d.full_names[kind]=prefab.name(kind);d.names[kind]=kind=="kicker" and "Kicker" or kind=="wave" and "Wave" or kind=="gap" and "Gap" or prefab.name(kind) end
+    if editor.tool=='coin' then
+        local c=auto_context(self);local scope
+        local scopekey=tostring(editor.opened)..':'..e.revision..':'..c.range..':'..table.concat(editor.selected_ids(),',')
+        if self.auto_scope_key~=scopekey then self.auto_scope_key=scopekey;self.auto_scope=auto_coins.scope(e,c,editor.selected_ids()) end
+        scope=self.auto_scope
+        local n,sp,density
+        if scope then n,sp,density=auto_coins.metrics(scope,c) end
+        d.auto={settings=c,plan=self.auto_plan,field=f and f.auto,text=f and f.text,error=f and f.auto and f.error,desired=n,spacing=sp,density=density}
+        d.description='Auto Add Coins\nClick on the course places a single coin. Preview a row here; Apply selects it for adjustment.'
+        d.fields,d.actions={},{};d.object_name=nil;d.level=false;d.start_selected=false;d.track_alignment=false
+    end
+    editor_ui.render(self.ui,d)
+    self.buttons=self.ui.buttons
+    if self.buttons.inc_test_speed then self.buttons.plus=self.buttons.inc_test_speed;self.buttons.minus=self.buttons.dec_test_speed
+        self.ui.visible[#self.ui.visible+1]="plus";self.ui.visible[#self.ui.visible+1]="minus"
+    elseif self.buttons.inc_speed and editor.selection=="start" then
+        self.buttons.plus=self.buttons.inc_speed;self.buttons.minus=self.buttons.dec_speed
+        self.ui.visible[#self.ui.visible+1]="plus";self.ui.visible[#self.ui.visible+1]="minus"
+    end
+    -- The legacy +/- commands still change the temporary test speed (or START when it is selected).
+    self.dialog_nodes={self.ui.dialog_panel};self.help_nodes={self.ui.help_panel}
+end
+local function screen(n) local p=gui.get_screen_position(n);return {x=p.x,y=p.y} end
+-- Test state (debug only): the selected prefab's handles and its panel rows as shown.
+local function published_handles()
+    local o=editor.selection and editor.doc and find(editor.selection)
+    if not (o and (o.type=="prefab" or o.type=="curve")) then return {} end
+    local list={}
+    for _,h in ipairs(object_handles(o)) do list[#list+1]={name=h.name,p=h.p,index=h.index or false} end
+    return list
+end
+local function published_rows(self)
+    local o=editor.selection and editor.doc and find(editor.selection)
+    if not (o and (o.type=="prefab" or o.type=="curve" or o.type=="label") and #editor.selected_ids()==1) then return {} end
+    if o.type=="curve" then
+        if #param_rows(o)==0 then return {} end
+        return {"Anchor "..editor.anchor.i.." tangents: "..o.anchors[editor.anchor.i].mode.."  (click)"}
+    end
+    local list={}
+    for i,fd in ipairs(param_rows(o)) do
+        -- A logical row is label + displayed value + unit; it remains queryable while scrolled out.
+        local f=self.field
+        local value=o.type=="prefab" and prefab.value(fd,o.params) or o.type=="label" and o.text or editor.anchor and o.anchors[editor.anchor.i].mode or ""
+        local focused=f and f.param==fd.key and f.id==o.id
+        list[i]=fd.label..": "..(focused and (f.all and "["..f.text.."] " or f.text.."_ ")..(fd.unit or "") or value..(fd.choices and "  (click)" or ""))
+    end
+    return list
+end
+-- Test state (debug only): the View row's button rectangles in canvas pixels (LE6 overlap check).
+local function view_rects(self)
+    local list={};local h=select(2,window.get_size());local s=self.ui.scale or 1
+    for _,v in ipairs(VIEW) do
+        local r=self.ui.rects[v[1]]
+        if r then list[#list+1]={name=v[1],x0=r.x*s,x1=(r.x+r.w)*s,y0=h-(r.y+r.h)*s,y1=h-r.y*s} end
+    end
+    return list
+end
+-- Test state (debug only): every listed problem with its target (LE6).
+local function published_problems(self)
+    local list={}
+    for _,r in ipairs(self.problem_rows or {}) do
+        local t=r.target
+        list[#list+1]={text=r.text,error=r.error or false,ids=t and t.ids or {},at=t and t.at or false,start=t and t.start or false,located=t~=nil}
+    end
+    return list
+end
+local function publish(self)
+    local e=editor.doc and editor.doc.editor
+    local buttons={}
+    for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
+    for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
+    local o=self.overlay
+    local gold,gems=require('main.game.coin_data').counts(e and e.objects)
+    html5.run("window.riderEditor="..json.encode({gold_count=gold,gem_count=gems,mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
+        auto_preview=self.auto_plan and {positions=self.auto_plan.positions,removed=self.auto_plan.removed,desired=self.auto_plan.desired,possible=self.auto_plan.possible,seed=self.auto_plan.seed} or false,auto_settings=self.auto_settings or false,message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,track_bound=self.track_cache and self.track_cache.active and not self.track_cache.error or false,track_mixed=self.track_cache and self.track_cache.active and not self.track_cache.error and self.track_cache.mixed or false,along_error=self.track_cache and self.track_cache.error or false,camera=editor.camera,screen=editor.map(),
+        id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,
+        start=e and e.start,finish=e and e.finish or false,objects=e and #e.objects or 0,undo=editor.history and #editor.history.undo or 0,
+        redo=editor.history and #editor.history.redo or 0,view=editor.view_counts,cursor=self.cursor or false,buttons=buttons,open_dialog=self.open_dialog or false,
+        selected=editor.doc and editor.selected_ids() or {},vertex=editor.vertex or false,hover=editor.hover and editor.hover.key or "",hover_count=self.candidates and #self.candidates or 0,
+        drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
+        readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
+        overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
+        look=terrain_look.session,visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,object_scroll=self.ui.object_scroll or 0,object_max_scroll=self.ui.object_max_scroll or 0,object_query=self.ui.object_query or "",objects_collapsed=self.ui.objects_collapsed or false,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},hidden_objects=editor.hidden_objects or {},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
+        conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
+        versions=self.version_rows or {},versions_open=self.open_dialog and self.version_dialog or false,versions_busy=editor.versions.busy(),version_error=editor.version_error or false,
+        clipboard=editor.clipboard and {objects=#editor.clipboard.objects,connections=#editor.clipboard.connections} or false,
+        prefab_kind=editor.prefab_kind,place=self.place and {at=self.place.at,target=self.place.target or false,kind=self.place.kind} or false,
+        handles=published_handles(),field_param=self.field and self.field.param or false,
+        points=editor.doc and editor.point_list() or {},confirm_bulk=self.confirm_bulk and true or false,anchor=editor.anchor or false,
+        rows=published_rows(self),problems=published_problems(self),warn_page=self.warn_page or 0,tpl_page=self.tpl_page or 0,
+        show_bounds=editor.show_bounds,bounds=e and doc_lib.bounds(e) or false,extent=e and doc_lib.extent(e) or false,
+        last_test=editor.doc and editor.last_test_start() or false,view_rects=view_rects(self),usable=self.overlay.k and usable(self) or false,flash=self.flash and self.flash.p or false,
+        ghost=self.ghost_now and {pos=self.ghost_now.pos or false,err=self.ghost_now.err or false,mode=self.ghost_now.mode} or false,show_ghost=editor.show_ghost,
+        help_open=self.help_open or false,help=self.help_open and {left=HELP_LEFT,right=HELP_RIGHT} or false,field_label=self.field and self.field.label or false,
+        labels_drawn=editor.drawn_labels or {}},{encode_empty_table_as_object=false}))
+    -- The document itself only when it changed (it can hold thousands of points).
+    local key=e and editor.doc.id..":"..e.revision
+    if key and key~=self.published then
+        self.published=key
+        html5.run("window.riderEditorDoc="..json.encode(e,{encode_empty_table_as_object=false}))
+        -- Derived geometry (prefab paths), so tests can check what the document compiles from.
+        local paths={}
+        for _,o in ipairs(e.objects) do paths[o.id]=path(o) end
+        html5.run("window.riderEditorPaths="..json.encode(paths))
+    end
+end
+function update(self,dt)
+    if not self.focused then
+        -- After every init has run: the loader acquired focus too, and this GO must sit above it.
+        self.focused=true
+        msg.post(".","acquire_input_focus")
+    end
+    local edit_mode=editor.mode=="edit" and editor.doc~=nil
+    self.panel_open=edit_mode and html5 and html5.run("String(!!window.riderCustom?.visible)")=="true"
+    if self.clear_edit~=edit_mode then
+        self.clear_edit=edit_mode
+        msg.post("@render:","clear_color",{color=edit_mode and editor_ui.c.canvas or vmath.vector4(sys.get_config_number("render.clear_color_red",0),sys.get_config_number("render.clear_color_green",0),sys.get_config_number("render.clear_color_blue",0),sys.get_config_number("render.clear_color_alpha",0))})
+    end
+    if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
+    editor.sync()
+    terrain_look.tick()
+    local look_open=editor.mode=='play' and terrain_look.session and terrain_look.session.open or false
+    if self.look_capture~=look_open then
+        self.look_capture=look_open;msg.post('gym:/owner#script','terrain_look_capture',{active=look_open})
+    end
+    if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
+    if edit_mode then
+        editor_ui.size(self.ui)
+        if editor.dirty and socket.gettime()-(editor.dirty_at or 0)>=0.4 then editor.save_draft() end
+        local e=editor.doc.editor
+        local f=self.field
+        editor.label_preview=f and f.label and not f.param and {id=f.label,text=f.text} or nil
+        -- After any document change (edit, Undo/Redo, another document) hover is picked again at the cursor.
+        local key=tostring(editor.doc)..":"..e.revision..":"..editor.tool
+        if key~=self.seen then
+            self.seen=key
+            -- A piece being drawn belongs to the document it was started in (LE3b): opening another
+            -- document (template, E on another level) discards it with its gesture state.
+            if self.drawing and self.drawing.opened~=editor.opened then
+                self.drawing=nil;cancel(self);self.snapped=nil
+                editor.message="Unfinished piece discarded: another document is now current."
+            end
+            if editor.tool=="select" and self.cursor then set_hover(self,candidates(self.cursor))
+            else self.candidates,editor.hover=nil,nil;if editor.hover_object then editor.hover_object=nil;editor.touch() end end
+            self.place=editor.tool=="prefab" and self.cursor and placement(self,self.cursor) or nil
+        end
+        auto_context(self)
+        if self.auto_plan and (editor.tool~='coin' or self.auto_revision~=e.revision or self.auto_selection~=table.concat(editor.selected_ids(),',')) then clear_auto(self) end
+        draw_overlay(self)
+        render_ui(self)
+        self.overlay_shown=true
+    elseif self.overlay_shown then
+        self.overlay_shown=false
+        editor_ui.hide(self.ui)
+        overlay.hide(self.overlay)
+        show_silhouette(self.overlay,self.ghost,nil);show_silhouette(self.overlay,self.last_ghost,nil)
+    end
+    if not edit_mode then
+        local a,b=gui.get_screen_position(self.overlay.probe0),gui.get_screen_position(self.overlay.probe1)
+        self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
+        if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui)
+        else
+            editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session and terrain_look.session.play_generation and terrain_look.session,
+                editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status)
+            self.buttons=self.ui.buttons
+        end
+    end
+    -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
+    -- change or every 0.25 s, so the published state costs the driven world little.
+    if self.debug then
+        local now=socket.gettime()
+        local key=editor.mode..":"..tostring(editor.message)..":"..tostring(editor.status)..":"..tostring(editor.dirty)
+        if editor.mode=="edit" or key~=self.publish_key or now-(self.publish_at or 0)>=0.25 then
+            self.publish_key,self.publish_at=key,now
+            publish(self)
+        end
+    end
+end
+function on_message(self,id,data)
+    if id==hash("editor_mode") then
+        -- A structural edit reloads the edit world through the same path; only a real mode change
+        -- cancels gestures and an unfinished piece.
+        if data.mode~=self.mode then
+            self.mode=data.mode
+            cancel(self);self.open_dialog,self.warnings_open,self.drawing,self.field,self.help_open=false,false,nil,nil,false
+            if data.mode~="edit" then terrain_look.close();editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1 end
+        end
+        -- Back on top of the input stack for this mode.
+        msg.post(".","acquire_input_focus")
+    end
+end

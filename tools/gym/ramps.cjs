@@ -77,7 +77,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   // reads actual camera.get_projection (not a guessed portrait half-extent) and authored
   // ramps-long chain vertices. This does not weaken the original 25 ramp trials.
   const C=require('./camera352_math.cjs');
-  const authored=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../main/gym/stations/ramps-long.json'),'utf8'));
+  const authored=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../main/game/stations/ramps-long.json'),'utf8'));
   const slope=C.slope(authored,'down-30');
   assert(Math.abs(slope.b.x-slope.a.x-3.464101615)<1e-5);
   assert.deepEqual(C.clip({x:0,y:0},{x:10,y:-10},{left:2,right:8,bottom:-8,top:-2}),{low:0.2,high:0.8});

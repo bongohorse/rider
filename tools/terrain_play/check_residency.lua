@@ -1,7 +1,7 @@
 -- Pure selection/ownership policy with the real descriptors; no simulated physics.
-local geom=require 'main.gym.terrain_geometry'
-local doc=require 'main.gym.editor_doc'
-local policy=require 'main.gym.terrain_residency'
+local geom=require 'main.game.terrain_geometry'
+local doc=require 'main.editor.editor_doc'
+local policy=require 'main.game.terrain_residency'
 msg={url=function(_,id) return id end,post=function() end}
 local serial,uploads,drops=0,0,0
 local function activate(e)

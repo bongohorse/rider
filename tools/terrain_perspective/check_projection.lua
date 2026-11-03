@@ -1,8 +1,8 @@
 -- Actual production geometry, encoded comparison body and coherent central projection.
-local geom=require 'main.gym.terrain_geometry'
+local geom=require 'main.game.terrain_geometry'
 local proj=require 'main.terrain_perspective.projection'
-local doc=require 'main.gym.editor_doc'
-local budget=require 'main.gym.terrain_budget'
+local doc=require 'main.editor.editor_doc'
+local budget=require 'main.game.terrain_budget'
 local function check(d)
  local es=geom.describe(d)
  for _,e in ipairs(es) do

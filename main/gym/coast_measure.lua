@@ -1,10 +1,10 @@
 -- Debug-only stock-A coast/brake observer (#345). Called only by the controller's existing fixed_update.
 -- No second physics loop, no timing callbacks, no changes to vehicle/preset behavior.
-local feel=require "main.gym.feel"
-local vehicle=require "main.gym.vehicle"
-local stations=require "main.gym.stations"
-local replay=require "main.gym.replay"
-local seam_metrics=require "main.gym.seam_metrics"
+local feel=require "main.game.feel"
+local vehicle=require "main.game.vehicle"
+local stations=require "main.game.stations"
+local replay=require "main.game.replay"
+local seam_metrics=require "main.game.seam_metrics"
 local M={SETTLE=90,CAP=1200,ORDER={"coast","brake","coast"}}
 local emit,request_reset
 function M.bind(emitter,resetter) emit,request_reset=emitter,resetter end

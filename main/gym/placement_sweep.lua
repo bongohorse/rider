@@ -1,8 +1,8 @@
 -- Debug le1a only: runs the full vehicle reset (and its pose guards) at many start positions in one live world.
 -- x and y follow independent low-discrepancy sequences (golden ratio, sqrt 2) plus the four corners,
 -- so positions are fractional and dense in both axes rather than a coarse grid.
-local vehicle=require "main.gym.vehicle"
-local feel=require "main.gym.feel"
+local vehicle=require "main.game.vehicle"
+local feel=require "main.game.feel"
 local M={}
 function M.run(v,spec)
     assert(sys.get_engine_info().is_debug,"Placement sweep requires debug engine")

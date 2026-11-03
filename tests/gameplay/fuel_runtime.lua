@@ -1,4 +1,4 @@
-local R=require 'main.gym.fuel_runtime';local F=require 'main.gym.fuel';local s={station={fuel=F.defaults()},race={state='ready'}}
+local R=require 'main.game.fuel_runtime';local F=require 'main.game.fuel';local s={station={fuel=F.defaults()},race={state='ready'}}
 R.reset(s);local c={throttle=0,brake_reverse=0,lean=0};R.command(s,c,1);R.observe(s);assert(s.fuel.amount==100)
 s.race.state='running';R.command(s,c,1);R.observe(s);assert(s.fuel.amount==99)
 s.fuel.power=1;R.command(s,c,.5);R.observe(s);assert(s.fuel.amount==98)

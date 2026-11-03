@@ -1,0 +1,39 @@
+local feel=require "main.game.feel"
+local M={}
+-- socket.gettime has 1 ms steps on HTML5: never print a sub-step value as zero cost.
+local function ms(v) return not v and "n/a" or v<1 and "<1 ms" or string.format("%.0f ms",v) end
+function M.report(data,preset,modified,tuning,load)
+    if not data then return nil end
+    return table.concat({"## Rider gym feedback",
+        "- Commit: "..sys.get_config_string("rider.source_sha","development"),
+        "- Preset: "..string.upper(preset or "a")..(modified and " (modified)" or "")..(data.preset_refused and " (preset "..data.preset_refused..")" or ""),
+        "- Station: "..(data.station or "straight"),
+        "- Station result: "..(data.station_result or "straight speed/braking"),
+        string.format("- Start speed: %.2f m/s; distance %.2f m; top %.2f m/s; brake distance %.2f m",data.start_speed or 0,data.station_distance or 0,data.station_top_speed or 0,data.station_brake_distance or 0),
+        string.format("- Speed: %.2f m/s (%.1f km/h); vx %+.2f m/s",feel.metres(data.speed),feel.metres(data.speed)*3.6,feel.metres(data.velocity_x)),
+        string.format("- Wheel contact: L %s / R %s",tostring(data.contact1),tostring(data.contact2)),
+        string.format("- Suspension: L %+.3f / R %+.3f u",data.travel1,data.travel2),
+        string.format("- FPS: %.2f; mean frame %.3f ms; physics step %.3f ms",data.fps,data.frame_ms,data.physics_ms),
+        -- A20: values from a world that ticked at another factor are not comparable with the 1.0 protocols.
+        "- Time scale: "..(data.time_factor==0 and "paused" or tostring(data.time_factor or 1).."x")
+            ..((data.time_scaled_ticks or 0)>0 and string.format("; %d ticks not at 1.0x: values not comparable with the protocols",data.time_scaled_ticks) or ""),
+        string.format("- Level load: switch %s; parse %s; terrain %s; decoration %s; terrain shapes %d; decoration sprites %d, labels %d",
+            ms(load and load.switch_ms),ms(load and load.parse_ms),ms(load and load.build_ms),ms(load and load.decorate_ms),data.terrain_shapes or 0,data.decor_sprites or 0,data.decor_labels or 0),
+        "- Crash reset: "..tostring(data.crash_enabled).."; head contact: "..tostring(data.head_contact),
+        "- Tuning: "..json.encode(tuning or {}),"","## What I noticed",""},"\n")
+end
+function M.init()
+    if html5 then
+        local source=assert(sys.load_resource("/main/game/feedback.js"),"Missing feedback helper")
+        html5.run(source)
+    end
+end
+function M.update(text)
+    if html5 and text then html5.run("window.riderFeedback.text="..json.encode(text)) end
+end
+function M.copy() if html5 then html5.run("window.riderFeedback.copy()") end end
+function M.state()
+    if not html5 then return "Clipboard unavailable — report shown",false end
+    return html5.run("window.riderFeedback.status"),html5.run("window.riderFeedback.visible") == "true"
+end
+return M

@@ -5,7 +5,7 @@ const pointer=require('./pointer.cjs');
 const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
-// Sampling settings of compiler versions 4 and 5 (main/gym/editor_sample.lua).
+// Sampling settings of compiler versions 4 and 5 (main/editor/editor_sample.lua).
 const TOL=0.005,SEG=0.5;
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;

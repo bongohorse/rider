@@ -11,8 +11,8 @@
 | `best` | 4 | production `custom.slot_store`, injected `sys`/`json` |
 | `coin_bank` | 3 | production `custom.slot_store`, injected `sys`/`json` |
 | `level_progress` | 1 | production `custom.slot_store`, injected `sys`/`json` |
-| `run_best_pending` | 16 | stubbed `main.gym.custom` slot store with injected EIO |
-| `coin_bank_recovery` | 3 | stubbed `main.gym.custom` slot store with injected EIO |
+| `run_best_pending` | 16 | stubbed `main.game.custom` slot store with injected EIO |
+| `coin_bank_recovery` | 3 | stubbed `main.game.custom` slot store with injected EIO |
 | `coin_bank_late_restore` | 7 | production `custom.slot_store`, injected `sys`/`json`, late IndexedDB restore |
 
 The bootstrap prints exactly one `RIDER_PERSISTENCE` JSON completion marker (source commit, run ID, Defold engine version and SHA, case, PASS-line count, status) and exits non-zero on failure.

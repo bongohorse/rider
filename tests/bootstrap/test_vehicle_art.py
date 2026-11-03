@@ -9,7 +9,7 @@ from PIL import Image
 from test_round_art import assert_round
 
 ROOT = Path(__file__).resolve().parents[2]
-ART = ROOT/'main/gym/assets'
+ART = ROOT/'main/game/assets'
 UPLOADS = {
     'body': ((750, 343), '326593b7b5ea3009b61a9d667df240dba014a4bb7024b69ce3311f88ee3c5d5f'),
     'rider': ((189, 225), '4c31a37414ddb599ff29664b6465e8707a50b3037921451acbfe614bdeaf4845'),
@@ -33,16 +33,16 @@ class VehicleArt(unittest.TestCase):
     def test_runtime_atlas_replaces_every_placeholder(self):
         atlas = (ART/'gym.atlas').read_text()
         for animation, image in [('chassis', 'body'), ('rider', 'rider'), ('strut', 'spring'), ('wheel', 'wheel')]:
-            self.assertRegex(atlas, rf'id: "{animation}"\s+images \{{ image: "/main/gym/assets/car_{image}.png"')
+            self.assertRegex(atlas, rf'id: "{animation}"\s+images \{{ image: "/main/game/assets/car_{image}.png"')
         for name in ('chassis', 'rider', 'strut', 'wheel'):
-            self.assertNotIn(f'/main/gym/assets/{name}.png', atlas)
+            self.assertNotIn(f'/main/game/assets/{name}.png', atlas)
 
     def test_live_and_replay_wheels_match_collision_radius(self):
-        sprite = (ROOT/'main/gym/wheel.sprite').read_text()
+        sprite = (ROOT/'main/game/wheel.sprite').read_text()
         size = float(re.search(r'size\s*\{\s*x:\s*([0-9.]+)', sprite)[1])
-        radius = float(re.search(r'^data:\s*([0-9.]+)', (ROOT/'main/gym/wheel.convexshape').read_text(), re.M)[1])
+        radius = float(re.search(r'^data:\s*([0-9.]+)', (ROOT/'main/game/wheel.convexshape').read_text(), re.M)[1])
         for name in ('wheel', 'ghost_wheel'):
-            source = (ROOT/f'main/gym/{name}.go').read_text()
+            source = (ROOT/f'main/game/{name}.go').read_text()
             scale = re.search(r'scale \{ x: ([0-9.]+) y: ([0-9.]+)', source)
             self.assertEqual(scale[1], scale[2])
             world_size = size*float(scale[1])
@@ -59,7 +59,7 @@ class VehicleArt(unittest.TestCase):
 
     def test_body_and_rider_preserve_aspect_ratio(self):
         for sprite, name in [('chassis', 'body'), ('rider', 'rider')]:
-            source = (ROOT/f'main/gym/{sprite}.sprite').read_text()
+            source = (ROOT/f'main/game/{sprite}.sprite').read_text()
             size = re.search(r'size \{ x: ([0-9.]+) y: ([0-9.]+)', source)
             w, h = UPLOADS[name][0]
             self.assertAlmostEqual(float(size[1])/float(size[2]), w/h, places=4)

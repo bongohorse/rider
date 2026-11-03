@@ -1,4 +1,4 @@
-// #411: durable-save waits for the Gym runners. window.riderCustom.syncState() (main/gym/custom.js) is
+// #411: durable-save waits for the Gym runners. window.riderCustom.syncState() (main/game/custom.js) is
 // 'syncing' while an IndexedDB sync is queued or running, 'saved' when the last sync completed, 'failed' when
 // the initial restore or a sync failed, and 'session' when the page has no persistent storage at all.
 // Only 'saved' proves the browser copy exists: a durable wait never accepts 'failed', and accepts 'session'

@@ -325,7 +325,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    assert.ok(b.overlay.handles<=192&&b.overlay.grid<=96&&b.overlay.lines<=64,JSON.stringify(b));
   }
   assert.ok(budget.some(b=>b.overlay.dropped>0),'a full level exceeds the handle pool');
-  measurements.budget={play_decor_sprites:playSprites,edit:budget,editor_gui_max_nodes:Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/editor.gui'),'utf8'))[1])};
+  measurements.budget={play_decor_sprites:playSprites,edit:budget,editor_gui_max_nodes:Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/editor/editor.gui'),'utf8'))[1])};
   assert.equal(measurements.budget.editor_gui_max_nodes,budget[0].overlay.max_nodes);
   cases.push('editor_budget_recheck');
 

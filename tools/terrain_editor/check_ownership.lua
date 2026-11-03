@@ -1,6 +1,6 @@
 -- Actual editor planner + production adapter; simulated engine boundary only, no physics mocks.
 local alive,created,sets,fail={},0,0,false
-package.loaded['main.gym.stations']={decorate=function() return 0,0 end}
+package.loaded['main.game.stations']={decorate=function() return 0,0 end}
 package.loaded.socket={gettime=function() return 0 end}
 hash=function(v) return v end
 sys={get_config_number=function() return .01 end,get_engine_info=function() return {is_debug=false} end}
@@ -14,8 +14,8 @@ local next_id=0
 factory={create=function() next_id=next_id+1;return next_id end}
 msg={url=function(_,id) return id end,post=function() end}
 go={set=function() end,set_position=function() end,delete=function() end}
-local terrain=require 'main.gym.editor_terrain'
-local doc=require 'main.gym.editor_doc'
+local terrain=require 'main.editor.editor_terrain'
+local doc=require 'main.editor.editor_doc'
 local e=dofile(arg[1]..'/six-anchor-source.lua').editor
 local state=terrain.create()
 local first=assert(terrain.update(state,e,nil,{},nil,7));assert(first.chunks==11 and created==11)
@@ -32,8 +32,8 @@ terrain.final(state,true);assert(not next(alive))
 terrain.final(state,true);assert(not next(alive))
 -- The same downstream samples may start at a different index after upstream resampling.
 -- Recoloring must use their new owner indices, including both physical end caps.
-local mesh=require 'main.gym.terrain_mesh'
-local geom=require 'main.gym.terrain_geometry'
+local mesh=require 'main.game.terrain_mesh'
+local geom=require 'main.game.terrain_geometry'
 fail=false
 local c=geom.section(geom.prepare({{0,0},{1,0},{2,0}},-2),1,3,'shifted',true,{})
 local entry={};mesh.upload(entry,c,'/shifted.bufferc')

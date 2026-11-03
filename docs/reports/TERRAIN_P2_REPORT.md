@@ -85,7 +85,7 @@ def lua(v):
     if isinstance(v, dict): return '{' + ','.join('['+json.dumps(k)+']='+lua(x) for k,x in v.items()) + '}'
     if isinstance(v, bool): return 'true' if v else 'false'
     return 'nil' if v is None else json.dumps(v, ensure_ascii=False)
-for p in Path('main/gym/stations').glob('*.json'):
+for p in Path('main/game/stations').glob('*.json'):
     Path('artifacts/terrain-p2/native-inputs', p.stem+'-compiled.lua').write_text('return '+lua(json.loads(p.read_text()))+'\n')
 PYINPUT
 <verified-locked-bob-luajit> -joff tools/terrain_play/check_geometry.lua artifacts/terrain-p2/native-inputs

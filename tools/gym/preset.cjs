@@ -5,7 +5,7 @@
 const assert = require('node:assert/strict');
 
 // Removes `--preset <key>` / `--preset=<key>` from argv in place, so the positional runner arguments keep
-// their indices. Keys follow the preset file names (main/gym/presets/<key>.json).
+// their indices. Keys follow the preset file names (main/game/presets/<key>.json).
 function fromArgv(argv) {
   let key = null;
   for (let i = 0; i < argv.length; i++) {

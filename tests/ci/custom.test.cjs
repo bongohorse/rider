@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const SOURCE=fs.readFileSync(path.join(__dirname,'../../main/gym/custom.js'),'utf8');
+const SOURCE=fs.readFileSync(path.join(__dirname,'../../main/game/custom.js'),'utf8');
 // Sync logic copied from the pinned dmloader (a81dbb0, dmloader.js L1342-L1357 and L1452-L1476).
 function dmloader(syncfs){
  const Module={persistentStorage:true,_syncInProgress:false,_syncNeeded:false,_syncInitial:true,_syncMaxTries:3,_syncTries:0,

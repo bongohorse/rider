@@ -1,3 +1,0 @@
-name: "main"
-instances { id: "loader" prototype: "/main/gym/boot.go" }
-instances { id: "editor" prototype: "/main/gym/editor.go" }

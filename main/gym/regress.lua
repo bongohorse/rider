@@ -5,11 +5,11 @@
 -- A21 recorder. Both modes start at the same fixed tick after vehicle-ready with the same neutral pre-roll.
 -- Read-only besides that: the only other write is the declared debug perturbation of one preset value, through the
 -- normal live-tuning path, before the replay starts.
-local feel=require "main.gym.feel"
-local replay=require "main.gym.replay"
+local feel=require "main.game.feel"
+local replay=require "main.game.replay"
 local air_trial=require "main.gym.air_trial"
-local gaps=require "main.gym.gap_metrics"
-local air=require "main.gym.air_metrics"
+local gaps=require "main.game.gap_metrics"
+local air=require "main.game.air_metrics"
 local M={TUNE=15,START=30}
 
 function M.new() return {ticks=0,phase="waiting",run_ticks=0} end

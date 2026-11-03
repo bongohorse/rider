@@ -70,12 +70,12 @@ class AffectedTest(unittest.TestCase):
         self.assertEqual(self.pick('tools/unknown/new_tool.py'), self.inventory)
 
     def test_bootstrap_graph_follows_collections_resources_and_requires(self):
-        for path in ('main/gym/boot.script', 'main/gym/controller.script', 'main/gym/ui.gui_script',
-                     'main/gym/editor.gui_script', 'main/gym/time_scale.lua', 'main/gym/seam_metrics.lua',
-                     'main/gym/replay.lua', 'main/gym/history.lua', 'main/gym/custom.lua', 'main/gym/custom.js',
-                     'main/gym/mobile.js', 'main/gym/editor_ui.lua', 'main/terrain_perspective/look.lua'):
+        for path in ('main/game/boot.script', 'main/game/controller.script', 'main/game/ui.gui_script',
+                     'main/editor/editor.gui_script', 'main/game/time_scale.lua', 'main/game/seam_metrics.lua',
+                     'main/game/replay.lua', 'main/game/history.lua', 'main/game/custom.lua', 'main/game/custom.js',
+                     'main/game/mobile.js', 'main/editor/editor_ui.lua', 'main/terrain_perspective/look.lua'):
             self.assertIn(path, CLOSURE)
-        self.assertNotIn('main/gym/stations/ramps.json', CLOSURE)  # loaded per station id, not by literal path
+        self.assertNotIn('main/game/stations/ramps.json', CLOSURE)  # loaded per station id, not by literal path
 
     def test_every_module_every_case_loads_selects_the_whole_inventory(self):
         # Derived from the sources: a module newly required by boot/controller/ui/editor scripts
@@ -115,10 +115,10 @@ class AffectedTest(unittest.TestCase):
                                               self.inventory, CLOSURE)[2], {})
 
     def test_station_json_is_loaded_by_id_and_selects_every_case(self):
-        # stations.lua loads /main/gym/stations/<id>.json by id; editor, pause, struts, replay and
+        # stations.lua loads /main/game/stations/<id>.json by id; editor, pause, struts, replay and
         # regress runners also open stations, so no station JSON may sit behind a narrow rule.
-        stations = [p for p in tracked('main/gym/stations') if p.endswith('.json')
-                    and p not in ('main/gym/stations/straight-test.json', 'main/gym/stations/invalid-test.json')]
+        stations = [p for p in tracked('main/game/stations') if p.endswith('.json')
+                    and p not in ('main/game/stations/straight-test.json', 'main/game/stations/invalid-test.json')]
         self.assertGreater(len(stations), 5)
         for path in stations:
             self.assertEqual(self.pick(path), self.inventory, path)
@@ -131,7 +131,7 @@ class AffectedTest(unittest.TestCase):
             self.assertIn(path, ci_only, path)
         self.assertIn('main/g1/wheel.convexshape', CLOSURE)
         # Gym-only collections must not be flagged CI-only (fnmatch '*' crosses '/').
-        for path in ('main/gym/boot.collection', 'main/gym/world.collection'):
+        for path in ('main/game/boot.collection', 'main/game/world.collection'):
             self.assertNotIn(path, local.affected_cases([path], RULES, self.inventory, CLOSURE)[2], path)
 
     def test_unknown_case_in_rules_is_rejected(self):

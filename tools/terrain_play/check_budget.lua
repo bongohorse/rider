@@ -1,15 +1,15 @@
 -- Real compiler/geometry predictions, independent boundary cases; no engine overrides.
-local budget=require 'main.gym.terrain_budget'
-local doc=require 'main.gym.editor_doc'
-local geometry=require 'main.gym.terrain_geometry'
+local budget=require 'main.game.terrain_budget'
+local doc=require 'main.editor.editor_doc'
+local geometry=require 'main.game.terrain_geometry'
 local function fixture(name) return dofile(arg[1]..'/'..name..'-source.lua') end
 for _,name in ipairs({'six-anchor','long-curves','mixed','long-over-budget'}) do
     local d=assert(doc.compile(fixture(name)))
     local r=assert(budget.check(d));local chunks,s=geometry.build(d)
     assert(r.sections==#chunks and r.vertices==s.vertices and r.payload==s.buffer_bytes)
     assert(r.mesh_peak==2*#chunks and r.allocated_max==#chunks and r.cached_max<=2)
-    assert(require('main.gym.editor_terrain').admitted(d.editor))
-    assert(require('main.gym.editor_terrain').admitted(d.editor,r),'Cached live validation must admit the same mesh preview')
+    assert(require('main.editor.editor_terrain').admitted(d.editor))
+    assert(require('main.editor.editor_terrain').admitted(d.editor,r),'Cached live validation must admit the same mesh preview')
     print(name..': '..r.sections..' sections, '..r.vertices..' vertices, '..r.payload..' payload B, '..r.cpu_estimate..' estimated CPU B, '..r.physics_vertices..' physics vertices')
 end
 local base=assert(doc.compile(fixture('long-over-budget')))

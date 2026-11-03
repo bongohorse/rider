@@ -1,5 +1,5 @@
 -- Derive the first short directed course from Rider's accepted P0 six-anchor source.
-local doc=require 'main.gym.editor_doc'
+local doc=require 'main.editor.editor_doc'
 local d=dofile(arg[1]);d.id='first-run';d.name='First run'
 for _,o in ipairs(d.editor.objects) do
     o.name='Rolling road'

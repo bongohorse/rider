@@ -12,7 +12,7 @@ json={encode=function(d) encoded=encoded+1;docs[tostring(encoded)]=copy(d);retur
     decode=function(text) assert(docs[text],'bad document');return copy(docs[text]) end}
 sys={get_save_file=function(app,name) return app..'/'..name end,
     exists=function(path) return files[path]~=nil end}
-package.preload['main.gym.custom']=function()
+package.preload['main.game.custom']=function()
     return {sync_state=function() return sync end,
         slot_store=function(names,parse)
             local function slot(i)
@@ -51,8 +51,8 @@ package.preload['main.gym.custom']=function()
                 end}
         end}
 end
-package.loaded['main.gym.custom']=package.preload['main.gym.custom']() -- Defold require ignores package.preload
-local best=require 'main.gym.run_best'
+package.loaded['main.game.custom']=package.preload['main.game.custom']() -- Defold require ignores package.preload
+local best=require 'main.game.run_best'
 local function reset()
     docs={};encoded=0;files={};attempts=0;fail_next=0;fail_always=false
     sync='saved';clock=100

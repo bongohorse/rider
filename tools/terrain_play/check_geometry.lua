@@ -1,6 +1,6 @@
 -- Focused normal-Play coverage using the real compiler and previously accepted P1 output.
-local doc=require 'main.gym.editor_doc'
-local geom=require 'main.gym.terrain_geometry'
+local doc=require 'main.editor.editor_doc'
+local geom=require 'main.game.terrain_geometry'
 local old=require 'main.terrain_compare.geometry'
 local function equal(a,b)
     if type(a)~='table' then return a==b end

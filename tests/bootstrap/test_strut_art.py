@@ -16,12 +16,12 @@ class StrutArt(unittest.TestCase):
         self.assertEqual(strut.check(), [])
 
     def test_sprite_spans_mount_to_wheel_centre(self):
-        sprite = (ROOT/'main/gym/strut.sprite').read_text()
+        sprite = (ROOT/'main/game/strut.sprite').read_text()
         self.assertIn('size_mode: SIZE_MODE_MANUAL', sprite)
         size = re.search(r'size\s*\{\s*x:\s*([0-9.]+)\s*y:\s*([0-9.]+)', sprite)
         width, length = float(size[1]), float(size[2])
         self.assertEqual((width, length), (strut.WIDTH, strut.LENGTH))
-        with Image.open(ROOT/'main/gym/assets/strut.png') as image:
+        with Image.open(ROOT/'main/game/assets/strut.png') as image:
             self.assertEqual(image.size, (int(width*3), int(length*3)))
             # juice.lua stretches the sprite centre-to-centre: the solid silhouette must reach both ends.
             alpha = image.getchannel('A').point(lambda a: 255 if a >= 128 else 0)
@@ -31,9 +31,9 @@ class StrutArt(unittest.TestCase):
             self.assertEqual(image.tobytes(), ImageOps.flip(image).tobytes())
 
     def test_atlas_and_factory_reference_the_strut(self):
-        self.assertIn('/main/gym/assets/car_spring.png', (ROOT/'main/gym/assets/gym.atlas').read_text())
-        self.assertIn('/main/gym/strut.sprite', (ROOT/'main/gym/strut.go').read_text())
-        self.assertIn('/main/gym/strut.factory', (ROOT/'main/gym/controller.go').read_text())
+        self.assertIn('/main/game/assets/car_spring.png', (ROOT/'main/game/assets/gym.atlas').read_text())
+        self.assertIn('/main/game/strut.sprite', (ROOT/'main/game/strut.go').read_text())
+        self.assertIn('/main/game/strut.factory', (ROOT/'main/game/controller.go').read_text())
 
 
 if __name__ == '__main__':
