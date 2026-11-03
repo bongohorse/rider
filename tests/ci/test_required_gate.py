@@ -39,10 +39,24 @@ class RequiredGate(unittest.TestCase):
 
     def test_full_suite(self):
         self.assertEqual(evaluate(needs()), [])
-        for reason in ("scheduled-or-manual-full", "missing-base-full"):
+        for reason in ("scheduled-or-manual-full", "missing-base-full", "main-push-full"):
             obj = needs()
             obj["changes"]["outputs"]["selection_reason"] = reason
             self.assertEqual(evaluate(obj), [], reason)
+
+    def test_main_push_is_full(self):
+        obj = needs()
+        obj["changes"]["outputs"]["selection_reason"] = "main-push-full"
+        for name in NAMES:
+            with self.subTest(name=name):
+                tampered = {k: dict(v) for k, v in obj.items()}
+                tampered[name]["result"] = "skipped"
+                self.assertTrue(evaluate(tampered))
+        for flag in ("docs_only", "skip_special", "repo_tooling"):
+            with self.subTest(flag=flag):
+                tampered = needs()
+                tampered["changes"]["outputs"].update({"selection_reason": "main-push-full", flag: "true"})
+                self.assertTrue(evaluate(tampered))
 
     def test_repo_tooling_short_path(self):
         self.assertEqual(evaluate(needs("tooling")), [])

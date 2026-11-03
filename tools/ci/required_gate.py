@@ -18,6 +18,7 @@ SELECTIONS = {
     "unknown-or-shared-change-full": FULL,
     "scheduled-or-manual-full": FULL,
     "missing-base-full": FULL,
+    "main-push-full": FULL,
 }
 
 

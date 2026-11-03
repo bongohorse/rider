@@ -68,9 +68,12 @@ def is_gym_only(paths):
 
 
 # Repo-only tooling (#437): files that only the change classification, Bootstrap and
-# CI Node test jobs load. Direct children of the directories only; anything deeper is full.
-REPO_TOOLING_FILES = ("tools/bootstrap_check.py",)
+# CI Node test jobs load. Only Python and CommonJS sources directly in the directories, plus
+# the existing tool locks; manifests, configuration, data and anything deeper are full.
+REPO_TOOLING_FILES = ("tools/bootstrap_check.py", "tools/ci/actionlint-lock.json",
+                      "tools/ci/luacheck-lock.json")
 REPO_TOOLING_DIRS = ("tools/ci/", "tests/ci/")
+REPO_TOOLING_SUFFIXES = (".py", ".cjs")
 # Tooling-directory files that always select the full run. tests/ci/test_repo_tooling.py fails
 # when a file the skipped jobs load is missing here.
 FULL_RUN_TOOLING = {
@@ -88,8 +91,8 @@ def is_repo_tooling_path(path, bundled):
         return False
     if path in REPO_TOOLING_FILES:
         return True
-    return any(path.startswith(d) and "/" not in path[len(d):] and path != d
-               for d in REPO_TOOLING_DIRS)
+    return path.endswith(REPO_TOOLING_SUFFIXES) and any(
+        path.startswith(d) and "/" not in path[len(d):] for d in REPO_TOOLING_DIRS)
 
 
 def is_repo_tooling(paths, project=PROJECT):
@@ -105,6 +108,9 @@ def is_repo_tooling(paths, project=PROJECT):
 
 def selection(paths):
     """Return (docs_only, skip_special, repo_tooling, selection_reason); unknown is full."""
+    if any(path.startswith(".github/") for path in paths):
+        # Workflows and their templates never take a fast path; ci.yml enforces this too.
+        return "false", "false", "false", "unknown-or-shared-change-full"
     if is_docs_only(paths):
         return "true", "false", "false", "docs-text-only"
     if is_gym_only(paths):

@@ -33,6 +33,15 @@ SHORT_PATH_JOBS = {
     "nightly_alert": "schedule only; scheduled runs are always classified full",
 }
 SKIPPED_JOBS = {"renovate", "physics", "tooling", "bridge", "preview", "pages"}
+SENSITIVE = (".github/workflows/ci.yml", ".github/PULL_REQUEST_TEMPLATE.md",
+             "tools/ci/required_gate.py", "tools/ci/classify_changes.py")
+FAST_VERDICTS = {
+    "docs": ("true", "false", "false", "docs-text-only"),
+    "gym": ("false", "true", "false", "gym-and-docs-only"),
+    "tooling": ("false", "false", "true", "repo-tooling-and-docs-only"),
+}
+FULL_VERDICT = ("false", "false", "false", "unknown-or-shared-change-full")
+CI_NODE_COMMAND = "node --test tests/ci/*.cjs"
 # Every reference to a repo-tooling file from a file outside the short-path jobs, with the
 # reason it does not make a gameplay, Gym or release job load it. A new reference fails the
 # test: either explain it here or add the file to FULL_RUN_TOOLING in classify_changes.py.
@@ -44,6 +53,8 @@ KNOWN_REFERENCES = {
     ("tools/gym/smoke.py", "tests/ci/coast_measure.cjs"): "same basename; smoke.py runs tools/gym/coast_measure.cjs",
     ("tools/ci/classify_changes.py", "tools/bootstrap_check.py"): "selection data; only the changes job and local tools run the classifier",
     ("tools/ci/classify_changes.py", "tools/ci/"): "selection data; only the changes job and local tools run the classifier",
+    ("tools/ci/classify_changes.py", "tools/ci/actionlint-lock.json"): "selection data; only the changes job and local tools run the classifier",
+    ("tools/ci/classify_changes.py", "tools/ci/luacheck-lock.json"): "selection data; only the changes job and local tools run the classifier",
     ("tools/ci/classify_changes.py", "tests/ci/test_repo_tooling.py"): "comment naming the test that keeps FULL_RUN_TOOLING in sync",
     ("tools/project.py", "tools/bootstrap_check.py"): "only under verify --suite bootstrap, which only the Bootstrap job runs",
     ("tests/bootstrap/test_bootstrap.py", "tools/bootstrap_check.py"): "tests/bootstrap runs in the Bootstrap job",
@@ -57,9 +68,10 @@ KNOWN_REFERENCES = {
     ("tools/local_affected.json", "tools/ci/"): "data for tools/local.py affected (local only)",
 }
 DIR_REFERENCE = re.compile(
-    r"(?:tools|tests)/ci(?![\w-]*\.\w|/[\w.-]+\.\w)"
+    r"(?:tools|tests)/ci(?![\w-])(?!/[\w.-]+\.\w)"
     r"|['\"](?:tools|tests)['\"]\s*[,/]\s*['\"]ci['\"]"
-    r"|\.\./ci/|['\"]\.\.['\"]\s*,\s*['\"]ci['\"]")
+    r"|\.\./ci(?:/|['\"])|['\"]\.\.['\"]\s*,\s*['\"]ci['\"]"
+    r"|/\s*['\"]ci['\"]")
 
 
 def tracked():
@@ -135,8 +147,9 @@ class RepoToolingInventory(unittest.TestCase):
 
     def test_tooling_class_is_exactly_the_allowlist_minus_exclusions(self):
         expected = {f for f in self.files
-                    if f == "tools/bootstrap_check.py"
-                    or re.fullmatch(r"(?:tools|tests)/ci/[^/]+", f)} - set(FULL_RUN_TOOLING)
+                    if f in ("tools/bootstrap_check.py", "tools/ci/actionlint-lock.json",
+                             "tools/ci/luacheck-lock.json")
+                    or re.fullmatch(r"(?:tools|tests)/ci/[^/]+\.(?:py|cjs)", f)} - set(FULL_RUN_TOOLING)
         self.assertEqual(self.tooling, expected)
         self.assertIn("tools/ci/lint_lua.py", self.tooling)
         self.assertIn("tests/ci/test_changes.py", self.tooling)
@@ -179,6 +192,58 @@ class RepoToolingInventory(unittest.TestCase):
             short = path in self.tooling or (is_docs_only([path]) and not path.startswith(".github/"))
             with self.subTest(path=path):
                 self.assertEqual(mixed, TOOLING if short else FULL)
+
+    def test_ci_node_is_the_only_job_running_the_tests_ci_node_suite(self):
+        runners = []
+        for workflow in sorted((ROOT / ".github/workflows").glob("*.yml")):
+            for name, job in load(f".github/workflows/{workflow.name}")["jobs"].items():
+                if any(CI_NODE_COMMAND in step.get("run", "") for step in job.get("steps", [])):
+                    runners.append((workflow.name, name))
+        self.assertEqual(runners, [("ci.yml", "ci_node")])
+        ci = load(".github/workflows/ci.yml")
+        job = ci["jobs"]["ci_node"]
+        self.assertEqual(job["if"], "needs.changes.outputs.docs_only != 'true'")
+        self.assertEqual([s["run"] for s in job["steps"] if CI_NODE_COMMAND in s.get("run", "")],
+                         [CI_NODE_COMMAND])
+        self.assertIn("ci_node", ci["jobs"]["required"]["needs"])
+
+    def test_known_reference_approvals_hold(self):
+        # tools/local.py and its rule data never run in CI.
+        for workflow in sorted((ROOT / ".github/workflows").glob("*.yml")):
+            text = workflow.read_text(encoding="utf-8")
+            with self.subTest(workflow=workflow.name):
+                self.assertNotIn("tools/local.py", text)
+                self.assertNotIn("local_affected.json", text)
+        # tools/project.py reaches bootstrap_check.py only inside its bootstrap suite.
+        lines = (ROOT / "tools/project.py").read_text(encoding="utf-8").splitlines()
+        hits = [i for i, line in enumerate(lines) if "bootstrap_check" in line]
+        self.assertTrue(hits)
+        for i in hits:
+            self.assertIn("args.suite=='bootstrap'", lines[i - 1])
+        # ...and only the Bootstrap job runs that suite.
+        ci = load(".github/workflows/ci.yml")
+        runs = [(name, s.get("run", "")) for name, job in ci["jobs"].items()
+                for s in job.get("steps", []) if "--suite bootstrap" in s.get("run", "")]
+        self.assertEqual({name for name, _ in runs}, {"bootstrap"})
+        # The classifier and the gate run only in the changes and required jobs.
+        for script, jobs in (("tools/ci/classify_changes.py", {"changes"}),
+                             ("tools/ci/required_gate.py", {"required"})):
+            users = {name for name, job in ci["jobs"].items() if script in "\n".join(strings(job))}
+            self.assertEqual(users, jobs, script)
+            for workflow in sorted((ROOT / ".github/workflows").glob("*.yml")):
+                if workflow.name != "ci.yml":
+                    self.assertNotIn(script, workflow.read_text(encoding="utf-8"))
+
+    def test_directory_reference_patterns(self):
+        for text in ("ROOT / 'tools' / 'ci'", "tools/ci", "glob('tests/ci/*.cjs')",
+                     "require('../ci/x.cjs')", "path.join(__dirname, '../ci')",
+                     "path.join(__dirname, '..', 'ci', name)", 'here.parent / "ci"',
+                     "Path(__file__).parents[1] / 'ci' / 'x.py'"):
+            with self.subTest(text=text):
+                self.assertTrue(DIR_REFERENCE.search(text))
+        for text in ("tools/ci/lint_lua.py", "'cinema'", "../circle.cjs", "tests/cifoo"):
+            with self.subTest(text=text):
+                self.assertIsNone(DIR_REFERENCE.search(text))
 
     def test_references_to_tooling_files_are_explained(self):
         seen, unexplained = set(), []
@@ -229,7 +294,7 @@ class ClassifyStepGuard(unittest.TestCase):
     """The workflow refuses a short path for the classifier, gate or workflows, even if the
     classifier under test is broken (the classifier itself is never trusted to exclude itself)."""
 
-    def run_step(self, changed, verdict):
+    def run_step(self, changed, verdict, event="pull_request", ref="refs/pull/1/merge"):
         step = next(s for s in load(".github/workflows/ci.yml")["jobs"]["changes"]["steps"]
                     if s.get("id") == "classify")
         with tempfile.TemporaryDirectory() as tmp:
@@ -240,9 +305,8 @@ class ClassifyStepGuard(unittest.TestCase):
             subprocess.run(["git", "init", "-q", str(repo)], check=True)
             # A deliberately broken classifier that returns a fixed verdict for any diff.
             stub = repo / "tools/ci/classify_changes.py"
-            reason = "repo-tooling-and-docs-only" if verdict == "true" else "unknown-or-shared-change-full"
-            stub.write_text("print('docs_only=false')\nprint('skip_special=false')\n"
-                            f"print('repo_tooling={verdict}')\nprint('selection_reason={reason}')\n")
+            keys = ("docs_only", "skip_special", "repo_tooling", "selection_reason")
+            stub.write_text("".join(f"print('{k}={v}')\n" for k, v in zip(keys, verdict)))
             subprocess.run(git + ["add", "-A"], check=True)
             subprocess.run(git + ["commit", "-qm", "base"], check=True)
             base = subprocess.run(git + ["rev-parse", "HEAD"], capture_output=True, text=True,
@@ -256,32 +320,66 @@ class ClassifyStepGuard(unittest.TestCase):
             subprocess.run(git + ["commit", "-qm", "head"], check=True)
             output, temp = Path(tmp) / "output", Path(tmp) / "runner"
             temp.mkdir()
-            env = {**os.environ, "GITHUB_EVENT_NAME": "pull_request", "PR_BASE": base,
-                   "PUSH_BEFORE": "", "GITHUB_OUTPUT": str(output), "RUNNER_TEMP": str(temp)}
+            env = {**os.environ, "GITHUB_EVENT_NAME": event, "GITHUB_REF": ref,
+                   "PR_BASE": base if event == "pull_request" else "",
+                   "PUSH_BEFORE": base if event == "push" else "",
+                   "GITHUB_OUTPUT": str(output), "RUNNER_TEMP": str(temp)}
             result = subprocess.run([shutil.which("bash"), "-c", step["run"]], cwd=repo, env=env,
                                     capture_output=True, text=True)
             return result, output.read_text() if output.exists() else ""
 
+    @staticmethod
+    def outputs(text):
+        return dict(line.split("=", 1) for line in text.splitlines() if "=" in line)
+
     @unittest.skipUnless(shutil.which("bash") and shutil.which("git"), "needs bash and git")
-    def test_self_selection_fails_the_classification_job(self):
-        for path in (".github/workflows/ci.yml", ".github/PULL_REQUEST_TEMPLATE.md",
-                     "tools/ci/required_gate.py", "tools/ci/classify_changes.py"):
-            with self.subTest(path=path):
-                result, output = self.run_step([path], "true")
-                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertNotIn("repo_tooling=true", output)
+    def test_any_fast_path_for_selection_logic_or_github_fails_the_job(self):
+        for path in SENSITIVE:
+            for mode, verdict in FAST_VERDICTS.items():
+                with self.subTest(path=path, mode=mode):
+                    result, output = self.run_step([path], verdict)
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(output, "")
 
     @unittest.skipUnless(shutil.which("bash") and shutil.which("git"), "needs bash and git")
     def test_guard_passes_other_selections_through(self):
-        for path, verdict in (("tools/ci/lint_lua.py", "true"), ("tools/ci/lint_lua.py", "false"),
-                              ("tools/ci/classify_changes.py", "false"),
-                              (".github/workflows/ci.yml", "false")):
+        cases = [("tools/ci/lint_lua.py", FAST_VERDICTS["tooling"]),
+                 ("docs/TOOLING.md", FAST_VERDICTS["docs"]),
+                 ("main/game/controller.script", FAST_VERDICTS["gym"]),
+                 ("tools/ci/lint_lua.py", FULL_VERDICT)]
+        cases += [(path, FULL_VERDICT) for path in SENSITIVE]
+        for path, verdict in cases:
             with self.subTest(path=path, verdict=verdict):
                 result, output = self.run_step([path], verdict)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertIn(f"repo_tooling={verdict}\n", output)
-                self.assertEqual(output.count("selection_reason="), 1)
+                self.assertEqual(self.outputs(output), dict(zip(
+                    ("docs_only", "skip_special", "repo_tooling", "selection_reason"), verdict)))
 
+    @unittest.skipUnless(shutil.which("bash") and shutil.which("git"), "needs bash and git")
+    def test_main_pushes_always_select_full(self):
+        # A newer push can replace a pending main run; a later fast-path push must not then
+        # skip the replaced change's suites or its Pages deploy.
+        main_full = {"docs_only": "false", "skip_special": "false", "repo_tooling": "false",
+                     "selection_reason": "main-push-full"}
+        for path, verdict in (("docs/TOOLING.md", FAST_VERDICTS["docs"]),
+                              ("main/game/controller.script", FAST_VERDICTS["gym"]),
+                              ("tools/ci/lint_lua.py", FAST_VERDICTS["tooling"])):
+            with self.subTest(path=path):
+                result, output = self.run_step([path], verdict, "push", "refs/heads/main")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.outputs(output), main_full)
+                # Pages then deploys: its selection terms all hold for a main push.
+                pages = load(".github/workflows/ci.yml")["jobs"]["pages"]["if"]
+                terms = re.findall(r"needs\.changes\.outputs\.(\w+) != 'true'", pages)
+                self.assertEqual(sorted(terms), ["docs_only", "repo_tooling"])
+                self.assertTrue(all(main_full[term] != "true" for term in terms))
+        # Other pushes and pull requests keep their fast paths.
+        for event, ref in (("push", "refs/heads/setup/g0-bootstrap"),
+                           ("pull_request", "refs/pull/1/merge")):
+            with self.subTest(event=event, ref=ref):
+                result, output = self.run_step(["docs/TOOLING.md"], FAST_VERDICTS["docs"], event, ref)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.outputs(output)["selection_reason"], "docs-text-only")
 
 if __name__ == "__main__":
     unittest.main()

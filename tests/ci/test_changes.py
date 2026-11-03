@@ -151,6 +151,38 @@ class RepoToolingSelection(unittest.TestCase):
             with self.subTest(paths=paths):
                 self.assertEqual(selection(paths), FULL)
 
+    def test_only_ci_tooling_file_types_take_the_short_path(self):
+        from classify_changes import selection
+        for path in ("tools/ci/new_check.py", "tests/ci/new.test.cjs",
+                     "tools/ci/actionlint-lock.json", "tools/ci/luacheck-lock.json"):
+            with self.subTest(path=path):
+                self.assertEqual(selection([path]), TOOLING)
+        # Manifests, configuration and data that Renovate, npm, pip or Actions could pick up.
+        for path in (
+            "tools/ci/package.json", "tests/ci/package.json", "tools/ci/package-lock.json",
+            "tools/ci/requirements.txt", "tests/ci/requirements-dev.txt", "tools/ci/pyproject.toml",
+            "tools/ci/setup.cfg", "tools/ci/Pipfile", "tools/ci/.npmrc", "tools/ci/renovate.json",
+            "tools/ci/action.yml", "tests/ci/action.yaml", "tools/ci/Dockerfile",
+            "tools/ci/.gitattributes", "tests/ci/.gitattributes", "tools/ci/.gitignore",
+            "tools/ci/new-lock.json", "tests/ci/actionlint-lock.json", "tests/ci/fixture.json",
+            "tools/ci/run.sh", "tools/ci/run.ps1", "tests/ci/x.js", "tools/ci/x.mjs", "tools/ci/x.lua",
+            "tools/ci/go.mod", "tools/ci/notes.txt", "tests/ci/data.csv", "tools/ci/Makefile",
+        ):
+            for paths in ([path], [path, "tools/ci/lint_lua.py"], [path, "docs/TOOLING.md"]):
+                with self.subTest(paths=paths):
+                    self.assertEqual(selection(paths), FULL)
+
+    def test_github_paths_never_take_a_fast_path(self):
+        # The workflow guard fails any fast path that touches .github/, so the classifier
+        # must select full for its Markdown too (#437 review).
+        from classify_changes import selection
+        for paths in ([".github/PULL_REQUEST_TEMPLATE.md"], [".github/ISSUE_TEMPLATE/bug.md"],
+                      [".github/PULL_REQUEST_TEMPLATE.md", "docs/README.md"],
+                      [".github/PULL_REQUEST_TEMPLATE.md", "main/game/controller.script"],
+                      [".github/PULL_REQUEST_TEMPLATE.md", "tools/ci/lint_lua.py"]):
+            with self.subTest(paths=paths):
+                self.assertEqual(selection(paths), FULL)
+
     def test_docs_and_gym_selection_unchanged(self):
         from classify_changes import selection
         self.assertEqual(selection(["docs/TOOLING.md"]), ("true", "false", "false", "docs-text-only"))
