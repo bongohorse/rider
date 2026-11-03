@@ -5,10 +5,13 @@ local s=L.new(spec);local empty,occupied={['plate-a']={}},{['plate-a']={['crate-
 for _=1,4 do L.tick(s,1/60,occupied,{},y) end;assert(not s.plates['plate-a'].pressed)
 L.tick(s,1/60,occupied,{},y);assert(s.plates['plate-a'].pressed and s.plates['plate-a'].count==2 and s.events==1 and s.gates['gate-a'].speed==1.8)
 for _=1,120 do L.tick(s,1/60,occupied,{},y) end;assert(s.events==1,'one event per stable occupancy transition')
-L.tick(s,1/60,occupied,{['gate-a']=true},y);assert(s.gates['gate-a'].state=='blocked' and s.gates['gate-a'].speed==0)
+-- #482: an occupied path is reported but never stops the gate (opening here, closing below).
+L.tick(s,1/60,occupied,{['gate-a']=true},y);assert(s.gates['gate-a'].blocked and s.gates['gate-a'].state=='opening' and s.gates['gate-a'].speed==1.8)
 for _=1,3 do L.tick(s,1/60,empty,{},y) end;L.tick(s,1/60,occupied,{},y);assert(s.events==1,'release jitter must not rearm')
 for _=1,10 do L.tick(s,1/60,empty,{},y) end;assert(s.events==2 and not s.plates['plate-a'].pressed)
 y['gate-a']=2;L.tick(s,1/60,empty,{},y);assert(s.gates['gate-a'].speed==-1.8)
+L.tick(s,1/60,empty,{['gate-a']=true},y);assert(s.gates['gate-a'].blocked and s.gates['gate-a'].state=='closing' and s.gates['gate-a'].speed==-1.8,'occupied path must not stop a closing gate')
+y['gate-a']=0;L.tick(s,1/60,empty,{['gate-a']=true},y);assert(not s.gates['gate-a'].blocked and s.gates['gate-a'].state=='closed' and s.gates['gate-a'].speed==0)
 local old=s.generation;L.reset(s);assert(s.generation==old+1 and s.events==0 and not s.gates['gate-a'].open)
 assert(not L.event(s,{generation=old,source='plate-a',event='active',active=true,serial=99}));assert(L.event(s,{generation=s.generation,source='plate-a',event='active',active=true,serial=1}));assert(not L.event(s,{generation=s.generation,source='plate-a',event='active',active=false,serial=1}))
 assert(not D.validate(spec,{-10,48,-10,6}));spec.plates[1].actors={'unknown'};assert(not D.validate(spec));spec.plates[1].actors={'vehicle'}
@@ -27,7 +30,7 @@ local X=require 'main.editor.editor_edit';local A=require 'main.editor.editor_me
 assert(E.validate(d));assert(d.editor.editor_version==13 and d.editor.mechanisms==nil and X.find(d.editor,'crate-a').type=='crate' and #d.editor.mechanism_links==1)
 local compiled=assert(E.compile(d));assert(compiled.schema==5 and compiled.mechanisms.links[1].to=='gate-a');assert(not E.compare(d,compiled));local reopened=assert(E.open_level(compiled));assert(A.runtime(reopened.editor).crates[1].id=='crate-a' and X.find(reopened.editor,'crate-a').type=='crate');local copied=E.copy(d);X.find(copied.editor,'crate-a').position[1]=7;assert(X.find(d.editor,'crate-a').position[1]==6)
 d.editor.editor_version=11;d.editor.compiler_version=11;_,_,unknown=E.validate(d);assert(unknown)
-print('PASS typed bounded mechanisms/source roundtrip, occupancy dedup/debounce, all3 modes, stale/duplicate events, reset, blocked motion and future protection')
+print('PASS typed bounded mechanisms/source roundtrip, occupancy dedup/debounce, all3 modes, stale/duplicate events, reset, occupied paths keep gates moving and future protection')
 local function clone(t)if type(t)~='table' then return t end;local r={};for k,v in pairs(t)do r[k]=clone(v)end;return r end
 local multi=clone(spec);multi.plates[1].mode='hold';multi.plates[1].initial_on=false;multi.plates[2]=clone(multi.plates[1]);multi.plates[2].id='plate-b';multi.plates[2].position={20,.05};multi.gates[2]=clone(multi.gates[1]);multi.gates[2].id='gate-b';multi.gates[2].condition='all';multi.gates[2].position={25,1.5};multi.gates[3]=clone(multi.gates[1]);multi.gates[3].id='gate-c';multi.gates[3].position={30,1.5};multi.links={}
 for _,p in ipairs(multi.plates)do for _,g in ipairs(multi.gates)do multi.links[#multi.links+1]={from=p.id,event='active',to=g.id,action='open'}end end

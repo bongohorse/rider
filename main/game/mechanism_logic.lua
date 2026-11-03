@@ -42,9 +42,12 @@ function M.tick(s,dt,occupants,blocked,positions)
  end
  for _,g in ipairs(s.spec.gates) do
   local r=s.gates[g.id];local remaining=(r.open and g.travel or 0)-(positions[g.id] or 0)
+  -- #482 (Claudio 2026-11-03, "immer schließen, schiebt"): an occupied path never stops a gate. It keeps
+  -- driving to its target and presses on whatever is in the way with its limited motor force (FORCE).
+  -- blocked only reports "path occupied while moving" for diagnostics.
   r.blocked=blocked[g.id]==true and math.abs(remaining)>.015
-  r.speed=r.blocked and 0 or math.abs(remaining)<=.015 and 0 or math.max(-g.speed,math.min(g.speed,remaining/dt))
-  r.state=r.blocked and 'blocked' or r.speed>0 and 'opening' or r.speed<0 and 'closing' or r.open and 'open' or 'closed'
+  r.speed=math.abs(remaining)<=.015 and 0 or math.max(-g.speed,math.min(g.speed,remaining/dt))
+  r.state=r.speed>0 and 'opening' or r.speed<0 and 'closing' or r.open and 'open' or 'closed'
  end
 end
 return M
