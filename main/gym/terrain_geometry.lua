@@ -41,7 +41,7 @@ function M.prepare(raw,lower,arc)
         return {p=p,normals=normals,monotone=monotone,u=u,arc=arc,lower=lower,offset=offset,bottom=bottom}
 end
 function M.section(prep,first,last,key,editing,styles)
-    local p,u,monotone,lower=prep.p,prep.u,prep.monotone,prep.lower
+    local p,u,monotone=prep.p,prep.u,prep.monotone
     local offset,bottom=prep.offset,prep.bottom
     local depth,edge=M.DEPTH,M.EDGE
             local c={position={},color={},uv={},first=first,last=last,key=key,body=monotone and "filled" or "ribbon",origin={p[first][1],p[first][2]},bounds={math.huge,math.huge,0,-math.huge,-math.huge,0},u0=u[first],u1=u[last]}
@@ -81,7 +81,7 @@ function M.section(prep,first,last,key,editing,styles)
             -- End caps belong only to physical run ends, never to chunk seams or across gaps.
             if depth>0 then
                 for _,i in ipairs({first==1 and 1 or false,last==#p and #p or false}) do
-                    if i then state=styles and styles[i==1 and 1 or i-1] or 0;local q=p[i]
+                    if i then state=styles and styles[i==1 and 1 or i-1] or 0
                         local e,b=offset(i,edge),bottom(i)
                         local color_first=#c.color+1
                         quad(e,{e[1],e[2],depth},{b[1],b[2],depth,b[4]},b,CAP,CAP,BODY_BOTTOM,BODY_BOTTOM,u[i],u[i])

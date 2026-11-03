@@ -231,7 +231,7 @@ end
 local function candidates(p)
     local e=editor.doc.editor
     local tol=tolerance(PICK_PX)
-    local next,prev=doc_lib.links(e)
+    local _,prev=doc_lib.links(e)
     local list,seen={},{}
     local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
@@ -336,14 +336,6 @@ local function anchors(skip,extra)
     for _,q in ipairs(extra or {}) do list[#list+1]={p=q} end
     cache={doc=editor.doc,revision=e.revision,skip=skip,extra=extra and #extra or 0,last=extra and extra[#extra],list=list}
     return list
-end
-local function snap_mode(self)
-    if self.held.ctrl then return "Snap off (Ctrl)" end
-    local parts={}
-    if self.held.alt then parts[#parts+1]="grid 0.1 m (Alt)" elseif editor.grid then parts[#parts+1]="grid 0.5 m" else parts[#parts+1]="grid off [G]" end
-    parts[#parts+1]="anchors"
-    if self.held.shift then parts[#parts+1]="15 deg (Shift)" end
-    return "Snap: "..table.concat(parts," + ")
 end
 local function snap(self,p,skip,from,extra)
     local q,kind,anchor=snap_lib.snap(p,{off=self.held.ctrl,grid=editor.grid,fine=self.held.alt,from=self.held.shift and from or nil,
@@ -2416,7 +2408,7 @@ end
 local function describe(self)
     local e=editor.doc.editor
     local s=editor.selection
-    local lines={}
+    local lines
     local ids=editor.selected_ids()
     local v=editor.vertex
     if s=="start" then

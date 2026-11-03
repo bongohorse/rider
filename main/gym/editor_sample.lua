@@ -69,7 +69,8 @@ local MIN_CHORD=0.05
 local function reach(c,a,b,dir,g)
     local span=b-a
     local function ok(d) if dir>0 then return fits(c,a,a+d) end return fits(c,b-d,b) end
-    local lo,hi=math.min(g,span),nil
+    local lo=math.min(g,span)
+    local hi
     if ok(lo) then
         while true do
             local n=math.min(lo*1.25,span)

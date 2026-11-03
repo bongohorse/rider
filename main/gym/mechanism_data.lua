@@ -39,13 +39,13 @@ function M.validate(d,bounds)
   local seen={};for _,actor in ipairs(v.actors) do if (actor~='vehicle' and ids[actor]~='crates') or seen[actor] then return nil,'Unknown/duplicate plate actor' end;seen[actor]=true end
  end
  if not dense(d.links,M.MAX_LINKS) then return nil,'At most '..M.MAX_LINKS..' plate-to-gate links' end
- local targets,pairs_seen={},{}
+ local pairs_seen={}
  for _,v in ipairs(d.links) do
   if type(v)~='table' then return nil,'Invalid mechanism link' end
   local supported,why,future=fields(v,{from=true,event=true,to=true,action=true});if not supported then return nil,why,future end
   if v.event~='active' or v.action~='open' then return nil,'Unsupported mechanism event/action',true end
   if ids[v.from]~='plates' or ids[v.to]~='gates' or v.event~='active' or v.action~='open' or pairs_seen[v.from..'/'..v.to] then return nil,'Link must connect a distinct plate active output to a gate open input' end
-  targets[v.to]=true;pairs_seen[v.from..'/'..v.to]=true
+  pairs_seen[v.from..'/'..v.to]=true
  end
  if bounds then for _,b in ipairs(M.extents(d)) do if b[1]<=bounds[1] or b[2]>=bounds[2] or b[3]<=bounds[3] or b[4]>=bounds[4] then return nil,'Mechanism or gate travel exceeds safety bounds' end end end
  return true

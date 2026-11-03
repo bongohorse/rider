@@ -31,7 +31,7 @@ for _,name in ipairs({'six-anchor','long-curves','mixed'}) do
             if policy.intersects(e.bounds,view,.005) then assert(e.resource and e.enabled,'Missing incoming section') end
             if e.resource then assert(e.geometry.key==e.key,'Stale reassigned section') end
         end
-        local before=uploads
+        local before
         -- Drain at most two preloads/update, then stationary selection must emit no geometry.
         for i=1,#entries do policy.update(state,entries,view,activate,drop) end
         before=uploads;policy.update(state,entries,view,activate,drop);assert(before==uploads)

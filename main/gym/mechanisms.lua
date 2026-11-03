@@ -35,7 +35,7 @@ function M.spawn(spec)
  return s
 end
 local function rect(body,x,y,w,h)
- local k=scale();local pts={};for _,p in ipairs({{x-w,y-h},{x+w,y-h},{x+w,y+h},{x-w,y+h}}) do pts[#pts+1]=at(p,0) end
+ local pts={};for _,p in ipairs({{x-w,y-h},{x+w,y-h},{x+w,y+h},{x-w,y+h}}) do pts[#pts+1]=at(p,0) end
  local info=b2d.body.create_shape(body,{type=b2d.shape.SHAPE_TYPE_POLYGON,vertices=pts,sensor=true,density=0,filter={category_bits=1,mask_bits=1,group_index=0}})
  b2d.shape.enable_sensor_events(info.shape_id,true);return info.shape_id
 end

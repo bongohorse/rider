@@ -22,7 +22,8 @@ class LocalCommandTest(unittest.TestCase):
                     'duration_ms': 1, 'assertions': 1, 'detail': '', 'artifacts': []}
         with tempfile.TemporaryDirectory() as directory, mock.patch.object(local, 'execute', side_effect=failure) as run:
             self.assertEqual(local.fast_check(Path(directory), 'fixture'), 1)
-            self.assertEqual(run.call_count, 6)
+            self.assertEqual(run.call_count, 7)
+            self.assertIn('lint_lua', [call.args[0] for call in run.call_args_list])
 
     def test_local_default_overrides_inherited_server_and_no_public_url_is_allowed(self):
         with mock.patch.dict(os.environ, RIDER_BUILD_SERVER='https://build.defold.com'):

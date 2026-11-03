@@ -183,7 +183,7 @@ function M.connect(e,a,b)
     elseif a_first then oa.at=pb
     elseif ob.type~="prefab" then set_end(ob,b_first,path(oa)[a.index]) end
     if a_first==b_first then
-        if reverse_run(e,run) then a_first=not a_first else reverse_run(e,M.run_of(e,b.id));b_first=not b_first end
+        if reverse_run(e,run) then a_first=not a_first else reverse_run(e,M.run_of(e,b.id)) end -- reversing b would flip b_first, which is not read below
     end
     e.connections[#e.connections+1]=a_first and {from=b.id,to=a.id} or {from=a.id,to=b.id}
     M.orient(e,a.id)
