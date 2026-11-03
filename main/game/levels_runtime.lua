@@ -37,7 +37,9 @@ function M.poll(t,self,dt)
    for _,p in ipairs(d.coins and d.coins.items or {}) do if p.kind=='gem' then total=total+1;if self.coin_bank.claims[id..'/'..p.id] then gems=gems+1 end end end
    local chain=d.chains[1];local preview={}
    for n=0,19 do local p=chain[1+math.floor(n*(#chain-1)/19)];preview[#preview+1]={p[1],p[2]} end
-   courses[#courses+1]={id=id,name=d.name,unlocked=catalog.unlocked(t.progress.completed,id) and not t.progress.checking,completed=t.progress.completed[id]==true,best=r.best or 0,medal=r.medal,gems=gems,total_gems=total,record_status=r.status,preview=preview}
+   local i=catalog.index(id);local prev=i>1 and catalog.ids[i-1] or nil
+   -- number and requires follow the catalogue, not the list position, so a left-out course cannot shift them (#480).
+   courses[#courses+1]={id=id,number=i,requires=prev and (t.levels[prev] and t.levels[prev].name or prev) or false,name=d.name,unlocked=catalog.unlocked(t.progress.completed,id) and not t.progress.checking,completed=t.progress.completed[id]==true,best=r.best or 0,medal=r.medal,gems=gems,total_gems=total,record_status=r.status,preview=preview}
   end
  end
  local next=catalog.next(self.station)

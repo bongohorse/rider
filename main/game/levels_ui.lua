@@ -20,7 +20,7 @@ function M.update(t)
  for _,n in ipairs(t.nodes) do gui.set_visible(n,shown or false) end
  if not shown then return end
  local c=v.courses[t.index];if not c then return end
- gui.set_text(t.title,t.index..'. '..c.name..(c.completed and ' - Completed' or c.unlocked and '' or ' - Locked'))
+ gui.set_text(t.title,(c.number or t.index)..'. '..c.name..(c.completed and ' - Completed' or c.unlocked and '' or ' - Locked'))
  gui.set_text(t.detail,string.format('Best %s | %s | Wonder Gems %d/%d',c.best>0 and string.format('%.2f s',c.best) or '--',require('main.game.medals').names[c.medal+1],c.gems,c.total_gems))
  gui.set_text(t.status,c.unlocked and v.status or 'Finish the previous level to unlock')
  local pts=c.preview;local lo,hi=math.huge,-math.huge;for _,p in ipairs(pts) do lo=math.min(lo,p[2]);hi=math.max(hi,p[2]) end
@@ -32,8 +32,8 @@ function M.input(t,id,a)
  if id==hash('ui_pointer') and a.pressed then
   if gui.pick_node(t.close,a.x,a.y) then msg.post('main:/loader#script','levels_menu',{open=false})
   elseif gui.pick_node(t.prev,a.x,a.y) then t.index=math.max(1,t.index-1)
-  elseif gui.pick_node(t.next,a.x,a.y) then t.index=math.min(#v.courses,t.index+1)
-  elseif gui.pick_node(t.play,a.x,a.y) and v.courses[t.index].unlocked then msg.post('main:/loader#script','select_station',{id=v.courses[t.index].id,preset='a',level_menu=true}) end
+  elseif gui.pick_node(t.next,a.x,a.y) then t.index=math.max(1,math.min(#v.courses,t.index+1))
+  elseif gui.pick_node(t.play,a.x,a.y) and v.courses[t.index] and v.courses[t.index].unlocked then msg.post('main:/loader#script','select_station',{id=v.courses[t.index].id,preset='a',level_menu=true}) end
  end
  return true
 end

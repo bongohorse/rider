@@ -56,8 +56,8 @@
     const xs=c.preview.map(p=>p[0]),ys=c.preview.map(p=>p[1]),xmin=Math.min(...xs),xrange=Math.max(...xs)-xmin||1,ymin=Math.min(...ys),yrange=Math.max(4,Math.max(...ys)-ymin);
     const points=c.preview.slice().sort((a,b)=>a[0]-b[0]).map(p=>[10+280*(p[0]-xmin)/xrange,80-50*(p[1]-ymin)/yrange]);
     const terrain=document.createElementNS(ns,'polygon');terrain.setAttribute('points',[[10,100],...points,[290,100]].map(p=>p.join(',')).join(' '));terrain.setAttribute('fill','#38745e');terrain.setAttribute('stroke','#8ed49d');terrain.setAttribute('stroke-width','3');svg.append(terrain);card.append(svg);
-    const info=document.createElement('div');info.className='level-info';const name=document.createElement('h2');name.textContent=`${i+1}. ${c.name}`;info.append(name);
-    for(const text of [c.completed?'Completed':c.unlocked?'Ready to drive':`Locked — finish ${view.courses[i-1]?.name||'the previous level'}`,`Best ${c.best>0?c.best.toFixed(2)+' s':'--'} · Medal ${['None','Bronze','Silver','Gold'][c.medal]}`,`Wonder Gems ${c.gems}/${c.total_gems}`,c.record_status==='saved'?'':c.record_status]){if(text){const p=document.createElement('p');p.textContent=text;info.append(p);}}
+    const info=document.createElement('div');info.className='level-info';const name=document.createElement('h2');name.textContent=`${c.number||i+1}. ${c.name}`;info.append(name);
+    for(const text of [c.completed?'Completed':c.unlocked?'Ready to drive':`Locked — finish ${c.requires||view.courses[i-1]?.name||'the previous level'}`,`Best ${c.best>0?c.best.toFixed(2)+' s':'--'} · Medal ${['None','Bronze','Silver','Gold'][c.medal]}`,`Wonder Gems ${c.gems}/${c.total_gems}`,c.record_status==='saved'?'':c.record_status]){if(text){const p=document.createElement('p');p.textContent=text;info.append(p);}}
     card.append(info);const play=document.createElement('button');play.textContent=c.unlocked?'Play '+c.name:'Locked';play.disabled=!c.unlocked||view.loading;play.onclick=()=>request('play',c.id);card.append(play);grid.append(card);
    }
   }

@@ -32,7 +32,8 @@ end
 local t=L.new()
 local v=view(t,self_at('first-run',false))
 assert(#v.courses==#C.ids,'every readable course is listed')
-for i,id in ipairs(C.ids) do assert(v.courses[i].id==id,'catalogue order kept') end
+for i,id in ipairs(C.ids) do assert(v.courses[i].id==id and v.courses[i].number==i,'catalogue order and number kept') end
+assert(v.courses[1].requires==false and v.courses[2].requires=='first-run name','lock hint names the catalogue predecessor')
 assert(#logged==0,'no error for readable courses')
 
 -- The middle course is unreadable: no crash, it is left out and logged once with its cause.
@@ -45,6 +46,12 @@ for _,c in ipairs(v.courses) do assert(c.id~='rolling-hills') end
 assert(#logged==1 and logged[1]:find('^ERROR:LEVELS: course rolling%-hills is unavailable: Station id mismatch'),'logged loudly: '..tostring(logged[1]))
 -- Next Level never points at an unavailable course.
 assert(v.next_id=='' and v.next_enabled==false,'next level skips an unavailable course')
+-- Numbers and lock hints follow the catalogue, not the shortened list.
+local ridge;for _,c in ipairs(v.courses) do if c.id=='ridge-run' then ridge=c end end
+assert(ridge.number==3 and ridge.requires=='rolling-hills','ridge-run keeps number 3 and names its real predecessor: '..tostring(ridge.number)..' '..tostring(ridge.requires))
+-- Next Level stays enabled for a readable successor once the current course is completed.
+unavailable={};local all=L.new();all.progress.completed['first-run']=true;all.progress.checking=false
+v=view(all,self_at('first-run',true));assert(v.next_id=='rolling-hills' and v.next_enabled==true,'readable successor stays reachable')
 -- Records and the remaining courses keep working.
 assert(broken.records['first-run'] and broken.records['ridge-run'] and not broken.records['rolling-hills'])
 
