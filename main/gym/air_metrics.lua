@@ -1,5 +1,5 @@
 -- A19c: read-only per-jump observations on the air station; no tuning, limits or reset requests.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 -- Declared protocol constants (main/gym/README.md#air-control).
 M.MIN_AIRTIME=0.25 -- shorter unloaded phases (suspension hops) are not jumps

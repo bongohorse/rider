@@ -7,7 +7,7 @@
 -- tuning-panel button), which deliberately survives world reloads like a setting, plus the strut
 -- sprite's authored size (a resource constant). Everything that belongs to a world (strut GO ids,
 -- counts, probe statistics) lives on the per-session vehicle table.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 -- Visual top mount (chassis space, engine units): 8 u above the centre line, on the new fenders. The
 -- joint anchor (wheel_x, wheel_y) coincides with the wheel centre at spring rest (local_anchor_b

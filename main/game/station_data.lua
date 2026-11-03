@@ -27,9 +27,9 @@ function M.validate(d)
         if d.coins and d.coins.version==3 and not d.fuel then return nil,'Canisters require fuel settings' end
     end
     if d.mechanisms~=nil and d.schema~=5 then return nil,'Mechanisms require station schema 5',true end
-    local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(d.fuel)
+    local fuel_ok,fuel_err,fuel_unknown=require('main.game.fuel').validate(d.fuel)
     if not fuel_ok then return nil,fuel_err,fuel_unknown end
-    local medals_ok,medals_err,medals_unknown=require('main.gym.medals').validate(d.medal_times)
+    local medals_ok,medals_err,medals_unknown=require('main.game.medals').validate(d.medal_times)
     if not medals_ok then return nil,medals_err,medals_unknown end
     if d.race_revision~=nil and (type(d.race_revision)~='number' or d.race_revision<1 or d.race_revision>1000000 or d.race_revision%1~=0) then return nil,'Invalid race revision' end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(d)
@@ -43,9 +43,9 @@ function M.validate(d)
     if type(b)~="table" or #b~=4 then return nil,"Missing safety bounds" end
     for _,n in ipairs(b) do if not finite(n) then return nil,"Non-finite bounds" end end
     if b[1]>=b[2] or b[3]>=b[4] or d.spawn[1]<=b[1] or d.spawn[1]>=b[2] or d.spawn[2]<=b[3] or d.spawn[2]>=b[4] then return nil,"Invalid safety bounds" end
-    local mechanisms_ok,mechanisms_err,mechanisms_unknown=require('main.gym.mechanism_data').validate(d.mechanisms,d.bounds)
+    local mechanisms_ok,mechanisms_err,mechanisms_unknown=require('main.game.mechanism_data').validate(d.mechanisms,d.bounds)
     if not mechanisms_ok then return nil,mechanisms_err,mechanisms_unknown end
-    local coin_ok,coin_err,coin_unknown=require('main.gym.coin_data').validate(d.coins,b)
+    local coin_ok,coin_err,coin_unknown=require('main.game.coin_data').validate(d.coins,b)
     if not coin_ok then return nil,coin_err,coin_unknown end
     if type(d.chains)~="table" or #d.chains>32 then return nil,"Missing/too many chains" end
     -- Structural geometry count for the empty-terrain check; rendering and physics admission are checked independently below.
@@ -179,7 +179,7 @@ function M.validate(d)
     end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate_station(d)
     if not look_ok then return nil,look_err,look_unknown end
-    local resources,err=require("main.gym.terrain_budget").check(d)
+    local resources,err=require("main.game.terrain_budget").check(d)
     if not resources then return nil,err end
     return d
 end

@@ -1,5 +1,5 @@
-local data=require "main.gym.station_data"
-local feel=require "main.gym.feel"
+local data=require "main.game.station_data"
+local feel=require "main.game.feel"
 local ramps=require "main.gym.ramp_metrics"
 local gaps=require "main.gym.gap_metrics"
 local seams=require "main.gym.seam_metrics"
@@ -7,7 +7,7 @@ local steps=require "main.gym.step_metrics"
 local balance=require "main.gym.balance_metrics"
 local bumps=require "main.gym.bump_metrics"
 local air=require "main.gym.air_metrics"
-local custom=require "main.gym.custom"
+local custom=require "main.game.custom"
 local M={ids={"straight","ramps","ramps-long","steps","steps-down","seams-chain","seams-hull","gaps","gaps-landing","balance","bumps","air"}}
 if sys.get_config_string("rider.gym_test","")=="a15" and sys.get_engine_info().is_debug then
     M.ids={"straight","straight-test","invalid-test"}
@@ -27,8 +27,8 @@ end
 function M.resource(id)
     local found=false
     for _,key in ipairs(M.ids) do if id==key then found=true end end
-    if not found and id~="objects-demo" and not require("main.gym.course_catalog").index(id) then return nil,"Unknown station" end
-    local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/gym/stations/"..id..".json"))) end)
+    if not found and id~="objects-demo" and not require("main.game.course_catalog").index(id) then return nil,"Unknown station" end
+    local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/game/stations/"..id..".json"))) end)
     if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     if not ok or not data.validate(d) then return nil,"Unreadable station file" end
     return d
@@ -37,10 +37,10 @@ function M.load(id,speed,section,snapshot)
     if id=="custom" then return load_custom(snapshot,speed) end
     local found=false
     for _,key in ipairs(M.ids) do if id==key then found=true end end
-    found=found or id=="objects-demo" or require("main.gym.course_catalog").index(id)~=nil
+    found=found or id=="objects-demo" or require("main.game.course_catalog").index(id)~=nil
     local note=not found and "Unknown station; using Straight" or ""
     id=found and id or "straight"
-    local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/gym/stations/"..id..".json"))) end)
+    local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/game/stations/"..id..".json"))) end)
     if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     local valid,err
     if ok then valid,err=data.validate(d) else err="Unreadable station file" end

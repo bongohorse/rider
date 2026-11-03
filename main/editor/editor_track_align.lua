@@ -1,7 +1,7 @@
 -- Bounded editor projection, not a route engine. Sources/IDs survive; the caller owns one Undo commit.
-local doc=require 'main.gym.editor_doc'
-local edit=require 'main.gym.editor_edit'
-local routes=require 'main.gym.editor_coin_route'
+local doc=require 'main.editor.editor_doc'
+local edit=require 'main.editor.editor_edit'
+local routes=require 'main.editor.editor_coin_route'
 local M={DEFAULT=.7,MIN=0,MAX=100}
 function M.height(text)
     local n=tonumber(text)

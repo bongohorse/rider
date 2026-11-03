@@ -1,5 +1,5 @@
 -- Separate-build entry only: immutable P0 fixtures and ordinary validated START variants.
-local custom=require "main.gym.custom"
+local custom=require "main.game.custom"
 local M={}
 function M.enabled() return sys.get_config_int("rider.terrain_compare",0)==1 end
 function M.options()

@@ -4,8 +4,8 @@ sys={get_save_file=function(app,name)return app..'/'..name end,exists=function(p
  get_engine_info=function()return {is_debug=true}end,load=function(p)if files[p]=='bad' then error('bad slot') end;return files[p] or {}end,
  save=function(p,d)if fail then error('write failure') end;files[p]=d;return true end}
 json={encode=function(t)serial=serial+1;encoded[tostring(serial)]=t;return tostring(serial)end,decode=function(t)assert(encoded[t]);return encoded[t]end}
-require('main.gym.custom').sync_state=function()return state end
-local P=require 'main.gym.level_progress';local C=require 'main.gym.course_catalog';local p=P.new();P.poll(p)
+require('main.game.custom').sync_state=function()return state end
+local P=require 'main.game.level_progress';local C=require 'main.game.course_catalog';local p=P.new();P.poll(p)
 assert(C.unlocked(p.completed,'first-run') and not C.unlocked(p.completed,'rolling-hills'))
 assert(not P.offer(p,'rolling-hills',true));assert(not P.offer(p,'first-run',false));assert(not P.offer(p,'custom',true))
 assert(P.offer(p,'first-run',true));assert(not P.offer(p,'first-run',true));P.poll(p)

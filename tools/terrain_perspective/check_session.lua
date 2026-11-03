@@ -1,5 +1,5 @@
 -- Production session transactions/guards with the real source compiler, simulated editor owner only.
-local doc=require 'main.gym.editor_doc'
+local doc=require 'main.editor.editor_doc'
 local look=require 'main.terrain_perspective.look'
 require 'main.terrain_perspective.projection'
 local function encode(v)
@@ -19,8 +19,8 @@ function E.commit(fn)
  local conflict=doc.lock_conflict(before.editor,E.doc.editor);assert(not conflict,conflict)
  assert(doc.validate(E.doc));E.doc.editor.revision=E.doc.editor.revision+1;count=count+1;return true
 end
-package.loaded['main.gym.editor']=E
-local session=require 'main.gym.editor_look'
+package.loaded['main.editor.editor']=E
+local session=require 'main.editor.editor_look'
 session.open();session.scope('level');session.tick();session.close();assert(not E.doc.editor.road_profile and not E.look_preview)
 session.open();assert(session.change('width',1.4));assert(session.preview());assert(not E.doc.editor.road_profile)
 session.close();session.open();assert(session.session.params.width==1.4 and not E.doc.editor.road_profile)

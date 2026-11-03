@@ -1,5 +1,5 @@
 -- Read-only fixed-tick observer. It never changes vehicle commands or physics.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 function M.restart(self)
     local parts={}

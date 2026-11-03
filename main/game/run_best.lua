@@ -1,5 +1,5 @@
 -- Instance-owned records; reuse the existing alternating slots and HTML5 sync acknowledgement.
-local custom=require 'main.gym.custom'
+local custom=require 'main.game.custom'
 local M={KEY='first-run-course1-rules1-buggy-a-crash'}
 local function finite(n) return type(n)=='number' and n==n and n>0 and n<86400 end
 local function parse(text,key)

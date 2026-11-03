@@ -1,6 +1,6 @@
 -- Loader-owned absolute completion set. Unlocks expose acknowledged state only.
-local custom=require 'main.gym.custom'
-local catalog=require 'main.gym.course_catalog'
+local custom=require 'main.game.custom'
+local catalog=require 'main.game.course_catalog'
 local M={}
 local names={'level-progress-a','level-progress-b'}
 local function copy(t) local r={};for k,v in pairs(t) do r[k]=v end;return r end

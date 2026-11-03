@@ -1,1 +1,1 @@
-components { id: "gui" component: "/main/gym/editor.gui" }
+components { id: "gui" component: "/main/editor/editor.gui" }

@@ -1,10 +1,10 @@
-local D=require 'main.gym.editor_doc';local A=require 'main.gym.editor_track_align';local P=require 'main.gym.editor_prefab'
+local D=require 'main.editor.editor_doc';local A=require 'main.editor.editor_track_align';local P=require 'main.editor.editor_prefab'
 local d=D.blank('drop-test','Drop test');local e=d.editor;e.start.position={-2,2}
 e.objects={{id='o1',type='line',points={{-5,0},{10,0},{20,5},{30,0}}},{id='o2',type='hull',vertices={{4,3},{8,3},{8,5},{4,5}}}}
 for i,p in ipairs({{2,10},{6,10},{6,4},{15,8},{40,10},{2,-1},{25,7}}) do e.objects[#e.objects+1]={id='o'..(i+2),type='coin',pickup_id='drop-'..i,position=p,locked=i==7 or nil} end
 e.next_id=10;assert(D.validate(d));local ids={};for _,o in ipairs(e.objects) do ids[#ids+1]=o.id end
 local plan=assert(A.plan(e,ids,.7));assert(#plan.moves==4 and plan.locked==1 and plan.unsupported==2 and plan.no_surface==2)
-local original=D.copy(e);assert(A.apply(e,plan));for _,v in ipairs({{'o3',.7},{'o4',5.7},{'o5',.7},{'o6',3.2}}) do local o=require('main.gym.editor_edit').find(e,v[1]);assert(math.abs(o.position[2]-v[2])<1e-9) end
+local original=D.copy(e);assert(A.apply(e,plan));for _,v in ipairs({{'o3',.7},{'o4',5.7},{'o5',.7},{'o6',3.2}}) do local o=require('main.editor.editor_edit').find(e,v[1]);assert(math.abs(o.position[2]-v[2])<1e-9) end
 for i,o in ipairs(e.objects) do if o.type=='coin' then assert(o.position[1]==original.objects[i].position[1] and o.pickup_id==original.objects[i].pickup_id) end end
 assert(e.objects[9].position[2]==7 and e.objects[9].locked)
 local again=assert(A.plan(e,ids,.7));assert(#again.moves==0 and again.unchanged==4)

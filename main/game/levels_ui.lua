@@ -1,6 +1,6 @@
 -- Native fallback; HTML5 uses the responsive DOM surface with the same admitted commands/state.
-local layout=require 'main.gym.layout'
-local runtime=require 'main.gym.levels_runtime'
+local layout=require 'main.game.layout'
+local runtime=require 'main.game.levels_runtime'
 local M={}
 local function text(t,x,y,s,scale)
  local n=layout.text(vmath.vector3(x,y,0),s,'centre');gui.set_font(n,'default');gui.set_scale(n,vmath.vector3(scale or .8,scale or .8,1));t.nodes[#t.nodes+1]=n;return n
@@ -21,7 +21,7 @@ function M.update(t)
  if not shown then return end
  local c=v.courses[t.index];if not c then return end
  gui.set_text(t.title,t.index..'. '..c.name..(c.completed and ' - Completed' or c.unlocked and '' or ' - Locked'))
- gui.set_text(t.detail,string.format('Best %s | %s | Wonder Gems %d/%d',c.best>0 and string.format('%.2f s',c.best) or '--',require('main.gym.medals').names[c.medal+1],c.gems,c.total_gems))
+ gui.set_text(t.detail,string.format('Best %s | %s | Wonder Gems %d/%d',c.best>0 and string.format('%.2f s',c.best) or '--',require('main.game.medals').names[c.medal+1],c.gems,c.total_gems))
  gui.set_text(t.status,c.unlocked and v.status or 'Finish the previous level to unlock')
  local pts=c.preview;local lo,hi=math.huge,-math.huge;for _,p in ipairs(pts) do lo=math.min(lo,p[2]);hi=math.max(hi,p[2]) end
  local xmin,xmax=math.min(pts[1][1],pts[#pts][1]),math.max(pts[1][1],pts[#pts][1]);local function p(a)return 260+440*(a[1]-xmin)/math.max(1,xmax-xmin),270+35*(a[2]-lo)/math.max(4,hi-lo)end

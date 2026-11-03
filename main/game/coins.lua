@@ -1,5 +1,5 @@
 -- Per-attempt collection from observed vehicle-part sweeps, in metres. No simulation/render/storage.
-local data=require 'main.gym.coin_data'
+local data=require 'main.game.coin_data'
 local M={}
 function M.new(authored) return {items=authored and authored.items or {},taken={},count=0,gems=0,previous=nil} end
 function M.reset(c) c.taken={};c.count=0;c.gems=0;c.previous=nil end

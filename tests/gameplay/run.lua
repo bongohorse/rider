@@ -1,4 +1,4 @@
-local run=require 'main.gym.run'
+local run=require 'main.game.run'
 local r=run.new(7);local a=run.reset(r,true)
 for i=1,100 do run.tick(r,1/60) end;assert(r.elapsed==0 and r.state=='ready')
 assert(not run.start(r,'stale'));assert(run.start(r,a));assert(not run.start(r,a))
@@ -15,7 +15,7 @@ local function score(group) local t=run.new(1);local id=run.reset(t,true);run.st
 assert(score(1)==score(2))
 print('PASS run ready/start/pause/finish/failure/retry/stale IDs/unrounded clock/30 vs 60 render grouping')
 
-local scale=require 'main.gym.time_scale';local t=scale.new()
+local scale=require 'main.game.time_scale';local t=scale.new()
 assert(scale.control(t,'suspend') and t.paused);assert(not scale.control(t,'suspend') and t.paused)
 assert(scale.control(t,'pause') and not t.paused)
 print('PASS repeated background notifications pause idempotently; explicit resume required')

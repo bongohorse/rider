@@ -1,7 +1,7 @@
 -- P1-only render adapter: resource ownership belongs to the proxied world instance.
 local geometry=require "main.terrain_compare.geometry"
 local entry=require "main.terrain_compare.entry"
-local stations=require "main.gym.stations"
+local stations=require "main.game.stations"
 local socket=require "socket"
 local M={}
 function M.build(self,d)

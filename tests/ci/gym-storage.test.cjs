@@ -58,8 +58,8 @@ test('the timeout option reaches waitForFunction',async()=>{
 });
 
 // The states must match the game's own syncState() source.
-test('the helper knows every state main/gym/custom.js returns',()=>{
-  const source=fs.readFileSync(path.join(__dirname,'../../main/gym/custom.js'),'utf8');
+test('the helper knows every state main/game/custom.js returns',()=>{
+  const source=fs.readFileSync(path.join(__dirname,'../../main/game/custom.js'),'utf8');
   const body=source.slice(source.indexOf('api.syncState = '),source.indexOf('};',source.indexOf('api.syncState = ')));
   const returned=[...body.matchAll(/return [^;]*?'(\w+)'(?: : '(\w+)')?/g)].flatMap(m=>m.slice(1).filter(Boolean));
   assert.deepEqual([...new Set(returned)].sort(),[...storage.STATES].sort());

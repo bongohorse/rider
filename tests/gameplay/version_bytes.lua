@@ -6,7 +6,7 @@ sys={get_save_file=function(_,name)return 'rider/'..name end,load=function(path)
 json={decode=function(text)assert(text=='index');return idx end,encode=function(paths)last=paths;return 'paths' end}
 html5={run=function(code)calls=calls+1;local n=0;for _,path in ipairs(last)do if not sizes[path] then return nil end;n=n+sizes[path] end;return tostring(n)end}
 io={open=function(path)reads=reads+1;if not sizes[path] then return nil end;return {seek=function()return sizes[path]end,close=function()end}end}
-local H=require('main.gym.editor_versions').create(function()return {}end)
+local H=require('main.editor.editor_versions').create(function()return {}end)
 assert(H.bytes()==350 and calls==1 and reads==0 and #last==6)
 sizes['rider/custom-version-1-a']=55;assert(H.bytes()==365 and calls==2 and reads==0,'must not cache physical sizes')
 sizes['rider/custom-version-2-b']=nil;assert(H.bytes()==330 and calls==3 and reads==6,'missing metadata must fall back for the full set')

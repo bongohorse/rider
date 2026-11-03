@@ -3,19 +3,19 @@
 -- Pinned OpenGL program teardown retains scratch UBOs; avoid shader churn on switches.
 go.property("terrain_material",resource.material("/main/terrain_compare/terrain.material"))
 go.property("perspective_material",resource.material("/main/terrain_perspective/terrain.material"))
-local stations=require "main.gym.stations"
-local custom=require "main.gym.custom"
-local station_data=require "main.gym.station_data"
+local stations=require "main.game.stations"
+local custom=require "main.game.custom"
+local station_data=require "main.game.station_data"
 local socket=require "socket"
-local editor=require "main.gym.editor"
-local doc_lib=require "main.gym.editor_doc"
+local editor=require "main.editor.editor"
+local doc_lib=require "main.editor.editor_doc"
 local EDITOR="main:/editor#gui"
-local time_scale=require "main.gym.time_scale"
+local time_scale=require "main.game.time_scale"
 local OWNER="gym:/owner#script"
-local catalog=require "main.gym.course_catalog"
-local levels=require "main.gym.levels_runtime"
+local catalog=require "main.game.course_catalog"
+local levels=require "main.game.levels_runtime"
 local function switch(self,request)
-    require('main.gym.editor_look').clear_play()
+    require('main.editor.editor_look').clear_play()
     self.station,self.speed=request.id,request.speed or ""
     self.run_terminal=nil;self.level_finished=nil
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
@@ -61,7 +61,7 @@ end
 -- otherwise this level (R2) or a template copy of the built-in station (R3). A replaced document
 -- stays one Undo step away.
 local function open_current(self)
-    local session=require('main.gym.editor_look').session
+    local session=require('main.editor.editor_look').session
     if editor.doc and session and session.instance==editor.opened and session.play_generation==self.generation then return true end
     local saved=editor.saved_draft()
     local notice
@@ -177,9 +177,9 @@ function init(self)
     local case=sys.get_config_string("rider.gym_test","")
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
-    self.coin_bank=require('main.gym.coin_bank').new()
+    self.coin_bank=require('main.game.coin_bank').new()
     self.levels=levels.new()
-    if html5 then html5.run(assert(sys.load_resource('/main/gym/level_menu.js'))) end
+    if html5 then html5.run(assert(sys.load_resource('/main/game/level_menu.js'))) end
     self.world_loads,self.generation=0,1
     self.time=time_scale.new()
     self.loading,self.deadline=true,0
@@ -237,7 +237,7 @@ function update(self,dt)
         end
     end
     local bank=self.coin_bank
-    require('main.gym.coin_bank').poll(bank,dt)
+    require('main.game.coin_bank').poll(bank,dt)
     local coin_key=tostring(bank.total)..'|'..bank.gems..'|'..bank.status..'|'..tostring(self.station)
     if coin_key~=self.coin_bank_key then
         local level=self.station~='custom' and stations.resource(self.station)
@@ -328,7 +328,7 @@ function on_message(self,id,data,sender)
     if self.levels_open and (id==hash('editor_enter') or id==hash('editor_play') or id==hash('terrain_look_open') or id==hash('time_control') and data.action~='suspend') then return end
     if id==hash('coin_finish') then
         if data.generation==self.generation and not self.edit and sender==msg.url(OWNER) then
-            local bank=require 'main.gym.coin_bank'
+            local bank=require 'main.game.coin_bank'
             bank.generation(self.coin_bank,self.generation)
             local claims={}
             -- Decode a bounded bitmap against trusted shipped source, never caller-supplied reward IDs.
@@ -374,7 +374,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("terrain_look_open") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)
         if ok and not editor.conflict then
-            require("main.gym.editor_look").play_open(self.generation)
+            require("main.editor.editor_look").play_open(self.generation)
         else editor.message=err or "Resolve the source conflict in the Editor before changing Terrain Look." end
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)

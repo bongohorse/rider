@@ -1,7 +1,7 @@
 -- Coin-only authoring plan. Source routes/IDs/admission stay owned by existing editor systems.
-local D=require 'main.gym.editor_doc'
-local E=require 'main.gym.editor_edit'
-local R=require 'main.gym.editor_coin_route'
+local D=require 'main.editor.editor_doc'
+local E=require 'main.editor.editor_edit'
+local R=require 'main.editor.editor_coin_route'
 local M={MIN_SPACING=.75,RADIUS=.25,MAX_COUNT=10000}
 local EPS=1e-7
 function M.defaults() return {range='whole',driver='count',count=20,spacing=3,randomness=0,height=.7,seed=1,replace=false} end

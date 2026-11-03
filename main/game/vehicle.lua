@@ -1,8 +1,8 @@
 -- Per-session vehicle. Positions/anchors: engine units; angular speed: rad/s.
 -- Motor torque uses the pinned binding's scaled input convention (not body torque).
 local M = {}
-local rider = require "main.gym.rider"
-local feel = require "main.gym.feel"
+local rider = require "main.game.rider"
+local feel = require "main.game.feel"
 M.config = feel.values
 function M.spawn()
     local c = M.config

@@ -1,6 +1,6 @@
 -- A20 debug probe (case a20 only): read-only world time, tick and input state for the pause/slow-motion test.
 -- World time is the sum of fixed-step dt (the Box2D step dt); wall time is socket.gettime (1 ms steps on HTML5).
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local socket=require "socket"
 local M={}
 local DRIVE={}

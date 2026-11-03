@@ -1,5 +1,5 @@
 -- Read-only completed-step observations; no tuning, limits or reset requests.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 function M.restart(self)
     self.step_tuning={}

@@ -3,7 +3,7 @@
 // to a flat landing area or a downslope (with a circular transition to flat) and a long run-out. The next
 // section starts with a wall up to its own plateau.
 const fs=require('node:fs'),path=require('node:path');
-const ROOT=path.resolve(__dirname,'../..'),FILE='main/gym/stations/air.json';
+const ROOT=path.resolve(__dirname,'../..'),FILE='main/game/stations/air.json';
 const GROUND=0.8,START_SPEED=7,RUN_IN=4,KICKER={angle:20,rise:0.5},RUN_OUT=40,TRANSITION_RADIUS=15;
 // Plateau height above the landing ground (m); downslope angle in degrees (0 = flat landing) and how far
 // below the lip the downslope starts (m).

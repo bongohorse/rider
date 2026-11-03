@@ -305,7 +305,7 @@ function M.render(u,d)
             end
             if not u.gameplay then
                 local cy=gameplay_top+160-u.tool_scroll
-                if shown(cy,20) then local gold,gems=require('main.gym.coin_data').counts(require('main.gym.editor').doc.editor.objects);text(28,cy,string.format('Gold %d  |  Gems %d',gold,gems),C.secondary,12) end
+                if shown(cy,20) then local gold,gems=require('main.game.coin_data').counts(require('main.editor.editor').doc.editor.objects);text(28,cy,string.format('Gold %d  |  Gems %d',gold,gems),C.secondary,12) end
             end
             local py=prefabs_top-u.tool_scroll
             if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end
@@ -439,7 +439,7 @@ function M.render(u,d)
             if d.level then row('rename','Name','',''..d.name,d.name_error);row('speed','START speed','m/s',d.speed,d.speed_error);row('test_speed','Test start speed','m/s',d.test_speed)
                 row('collapse_fuel',u.fuel and 'FUEL  v' or 'FUEL  >',nil,nil,nil,'Configure starting tank and additive time / powered-input consumption.')
                 if u.fuel then
-                    local c=d.fuel or require('main.gym.fuel').defaults()
+                    local c=d.fuel or require('main.game.fuel').defaults()
                     row('fuel_enabled',d.fuel and d.fuel.enabled and 'Fuel: ON' or 'Fuel: OFF',nil,nil,nil,'Enable / disable fuel for this course; keeps authored values.')
                     for _,f in ipairs({{'start','Starting tank','%'},{'time','Time consumption','%/s'},{'drive','Powered consumption','%/s'},{'warning','Low warning','%'},{'refill','All canisters refill','%'}}) do
                         row('fuel_'..f[1],f[2],f[3],d.fuel_field==f[1] and d.fuel_text or tostring(c[f[1]]),d.fuel_field==f[1] and d.fuel_error)

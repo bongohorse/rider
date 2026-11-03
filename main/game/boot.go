@@ -1,3 +1,3 @@
-components { id: "script" component: "/main/gym/boot.script" }
-components { id: "world" component: "/main/gym/world.collectionproxy" }
-components { id: "ui" component: "/main/gym/ui.gui" }
+components { id: "script" component: "/main/game/boot.script" }
+components { id: "world" component: "/main/game/world.collectionproxy" }
+components { id: "ui" component: "/main/game/ui.gui" }

@@ -4,7 +4,7 @@
 
 ## Source and scope
 
-- Source main SHA: `42129e1a3d029383db0f8368cce592c5f248802b` (2026-11-01). Camera math: `main/gym/feel.lua`, `M.camera_start` and `M.camera` (around lines 142–220). Call site: `main/gym/controller.script` lines 393–402. Baseline A: `main/gym/presets/a.json`. Camera resource: `main/gym/camera.camera`.
+- Source main SHA: `42129e1a3d029383db0f8368cce592c5f248802b` (2026-11-01). Camera math: `main/game/feel.lua`, `M.camera_start` and `M.camera` (around lines 142–220). Call site: `main/game/controller.script` lines 393–402. Baseline A: `main/game/presets/a.json`. Camera resource: `main/game/camera.camera`.
 - **Already implemented:** horizontal direction/hysteresis/look-ahead, smoothed vertical velocity, vertical signed look-ahead, ground window, safe-edge clamps and speed-dependent zoom. The report does **not** claim these are absent. No production code or preset changed.
 - Preset A: `camera_height=250`, `camera_lift=70`, `camera_response=6/s`, `camera_look_seconds=.22`, `camera_look_max=130`, `camera_zoom=1`, `camera_zoom_min=.82`, `camera_zoom_speed=650 u/s`. Follow defaults: `sink_rate=1.5/s`, `vertical_deadband=40 u/s`, `vertical_full=300 u/s`, `vertical_response_scale=.6`, `margin_bottom=100 u`, `margin_top=100 u`, `margin_side=120 u`.
 - `game.project`: `[engine] fixed_update_frequency=60`, `[physics] use_fixed_timestep=1`; `[display] update_frequency=60`. Camera output is used for `go.set_position` and `orthographic_zoom`, not Box2D body writes. `tools/gym/regress.cjs` already has a separate 30-FPS-render/60-Hz-replay check, but it is **not** a downhill camera-framing measurement.

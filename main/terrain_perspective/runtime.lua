@@ -5,7 +5,7 @@ function M.comparison() return sys and sys.get_config_int and sys.get_config_int
 function M.enabled(d) return M.comparison() or require('main.terrain_perspective.profile').enabled(d) end
 function M.init()
     if not M.comparison() then return false end
-    require('main.gym.terrain_budget').COMPARISON=true
+    require('main.game.terrain_budget').COMPARISON=true
     if html5 then html5.run([[window.riderRoadLook={current:null,pending:null,status:'Starting',token:0,set(p){this.pending={token:++this.token,params:p};return this.token;}};]]) end
     return true
 end

@@ -1,7 +1,7 @@
 """Original Rider fuel-canister SVG and supersampled transparent PNG, no runtime dependency."""
 from pathlib import Path
 from PIL import Image, ImageDraw
-ROOT=Path(__file__).resolve().parents[2]/'main/gym/assets'
+ROOT=Path(__file__).resolve().parents[2]/'main/game/assets'
 SHAPES=[([(11,2),(31,2),(39,10),(41,45),(37,49),(7,49),(3,45),(5,12)],'#243a39'),
  ([(12,4),(29,4),(29,11),(10,11)],'#b3caba'), ([(29,4),(36,10),(31,12)],'#f6ce68'),
  ([(7,14),(33,14),(38,20),(38,44),(8,44),(6,40)],'#ed613d'),

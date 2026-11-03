@@ -1,7 +1,7 @@
 -- Decorative rider + a zero-density sensor on the retained chassis body.
 -- The rider sprite lives on its own child GO so it can lean/bob visually;
 -- the head sensor stays on the chassis body and is never moved by the visual.
-local feel = require "main.gym.feel"
+local feel = require "main.game.feel"
 local M = {}
 M.center_y,M.radius=56,12
 -- Hip pivot in chassis space; the sprite offset seats the rider inside the body.

@@ -1,5 +1,5 @@
 -- Debug scenarios only. Called by the sole controller tick owner; no callbacks.
-local vehicle = require "main.gym.vehicle"
+local vehicle = require "main.game.vehicle"
 local M = {}
 local emit, request_reset
 function M.bind(emitter, resetter) emit, request_reset = emitter, resetter end
@@ -15,7 +15,7 @@ function M.drive(self)
         emit(self,"phase",{name="throttle"})
     elseif t == 240 then
         if self.testcase=="a10" then
-            local audio=require "main.gym.audio"
+            local audio=require "main.game.audio"
             assert(self.audio_started and self.audio_starts==1 and self.audio_pitch>audio.idle_pitch+0.2,"Wheel pitch did not rise after input")
             assert(math.abs(go.get("#engine","speed")-self.audio_pitch)<0.001,"Audio playback property not updated")
             self.measured_audio_pitch=self.audio_pitch
@@ -35,7 +35,7 @@ function M.drive(self)
         local m=self.measurements_shown
         assert(m and m.fps>0 and m.physics_ms>=0 and m.contact1 and m.contact2,"Overlay did not display plausible live measurements")
         assert(math.abs(m.travel1)<30 and math.abs(m.travel2)<30,"Implausible spring travel")
-        local observer=require "main.gym.telemetry"
+        local observer=require "main.game.telemetry"
         assert(observer.budget.fps_min==60 and observer.over(30,60,true) and observer.over(40,16.67) and not observer.over(1,nil),"Budget configuration/classification failed")
         self.drive_cases = {drive_dx=self.drive_dx,drive_speed=self.drive_speed,
             stopped_speed=state.vx,max_angle=self.max_angle,wheel_contact=true,camera_follow=true,brake_priority=true}
@@ -191,7 +191,7 @@ function M.feel_tick(self,dt)
             assert(#b2d.body.get_contact_data(self.vehicle.wheels[1])==0 and #b2d.body.get_contact_data(self.vehicle.wheels[2])==0,"Lean probe was not airborne")
             assert(state.angle>0.1,"Air lean did not rotate chassis")
             self.drive_cases.air_angle=state.angle
-            local c=require "main.gym.feel"
+            local c=require "main.game.feel"
             local v3,f=vmath.vector3,c.follow
             local s=c.camera_start(0,90,0,0)
             local right,zr=c.camera(s,v3(0,46,0),v3(350,0,0),true,v3(0,250,500),1,270,1)
@@ -343,7 +343,7 @@ function M.slider_tick(self,dt)
         end
     elseif self.slider_phase=="release" and not self.ui_captured then
         assert(self.last_command.throttle==0,"Slider release retained held throttle")
-        local feel=require "main.gym.feel"
+        local feel=require "main.game.feel"
         assert(not feel.set("spawn_x",1) and not feel.set("spring_hz",0),"Tuner accepted invalid parameter")
         emit(self,"suite_end",{status="PASS",cases={live_spring=true,no_restart=true,input_isolated=true,release_cleared=true,invalid_rejected=true}})
         self.testcase="done"
@@ -373,7 +373,7 @@ local function preset_rules(feel)
     return assert(feel.validate(long,"a"))
 end
 function M.preset_tick(self,dt)
-    local feel=require "main.gym.feel"
+    local feel=require "main.game.feel"
     self.preset_ticks=(self.preset_ticks or 0)+1
     if self.preset_ticks==60 and self.world_loads==2 then
         local m=self.measurements_shown
@@ -400,7 +400,7 @@ function M.preset_tick(self,dt)
         assert(feel.values.air_pitch_damping==k and not self.vehicle.damped,"Air damping not replaced by preset "..self.preset)
         -- The replay identity covers the optional key: a D recording replayed on F is COMPARED, never MATCH.
         self.preset_identity=self.preset_identity or {}
-        self.preset_identity[self.preset]=require("main.gym.replay").identity()
+        self.preset_identity[self.preset]=require("main.game.replay").identity()
         if self.preset=="f" then
             assert(self.preset_identity.d and self.preset_identity.d~=self.preset_identity.f,"D and F share a replay identity")
         end
@@ -461,7 +461,7 @@ function M.feedback_tick(self,dt)
     end
 end
 function M.graph_tick(self,dt)
-    local history=require "main.gym.history"
+    local history=require "main.game.history"
     self.graph_ticks=(self.graph_ticks or 0)+1
     if self.graph_ticks==120 then
         self.history=history.new(self.history.generation+1)
@@ -497,7 +497,7 @@ function M.graph_tick(self,dt)
 end
 -- Flat-ground input probe only; ramps and human air-control acceptance stay M4.
 function M.feedback_feel_tick(self,dt)
-    local feel=require "main.gym.feel"
+    local feel=require "main.game.feel"
     self.feedback_feel_ticks=(self.feedback_feel_ticks or 0)+1
     local state=vehicle.state(self.vehicle)
     if not self.ground_phase and self.feedback_feel_ticks==60 then
@@ -624,7 +624,7 @@ end
 -- A15a: visual rider reaction is bounded, readable and returns to rest;
 -- the physics vehicle and head sensor are unchanged by it.
 function M.reaction_tick(self,dt)
-    local v,c=self.vehicle,require("main.gym.feel").rider
+    local v,c=self.vehicle,require("main.game.feel").rider
     local r=v.reaction
     self.rx_tick=(self.rx_tick or 0)+1
     local t=self.rx_tick

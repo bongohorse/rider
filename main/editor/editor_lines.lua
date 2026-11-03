@@ -3,9 +3,9 @@
 -- to the editor view. Moves, drags and Undo of moves update sprites in place; a structural change
 -- (objects or point counts) reloads this world. Grid, handles and previews are GUI overlays
 -- (editor.gui), so editing never takes sprites from the level (R7).
-local editor=require "main.gym.editor"
-local doc_lib=require "main.gym.editor_doc"
-local stations=require "main.gym.stations"
+local editor=require "main.editor.editor"
+local doc_lib=require "main.editor.editor_doc"
+local stations=require "main.game.stations"
 local socket=require "socket"
 local M={}
 local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
@@ -82,7 +82,7 @@ end
 -- k sprites shared out by segments, at least one per part.
 local function draw(v,o,k)
     if o.type=='coin' then
-        local id=require('main.gym.coin_visual').create(o.position,o.kind)
+        local id=require('main.game.coin_visual').create(o.position,o.kind)
         v.gos[#v.gos+1]=id;v.coin_ids=v.coin_ids or {};v.coin_ids[#v.coin_ids+1]=id
         v.coin_sources=v.coin_sources or {};v.coin_sources[o.id]=true
         v.sprites=v.sprites+1;v.zoom=nil;return {id},{}
@@ -153,7 +153,7 @@ local function refresh(v,e)
     for _,o in ipairs(e.objects) do
         local pts=editor.shape(o)
         if changed(pts,v.shapes[o.id]) then
-            if o.type=='coin' then require('main.gym.coin_visual').position(v.objects[o.id][1],pts[1])
+            if o.type=='coin' then require('main.game.coin_visual').position(v.objects[o.id][1],pts[1])
             elseif o.type=="label" then
                 go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
             else

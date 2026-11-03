@@ -7,7 +7,7 @@ import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PRESETS = ROOT/'main/gym/presets'
+PRESETS = ROOT/'main/game/presets'
 FIXTURES = Path(__file__).resolve().parent/'fixtures/presets'
 # A is the measurement baseline; B and C are evidence for earlier PRs. Changing one needs a new GO and a new pin.
 PINNED = {
@@ -22,7 +22,7 @@ LEGACY_ABOVE_CAP = {'b', 'c'}
 
 def feel_tables():
     """Read the registry, keys and ranges from feel.lua, the single source the game validates with."""
-    lua = (ROOT/'main/gym/feel.lua').read_text()
+    lua = (ROOT/'main/game/feel.lua').read_text()
     order = re.findall(r'"(\w+)"', re.search(r'^M\.order=\{([^}]*)\}', lua, re.M).group(1))
     keys = re.findall(r'"(\w+)"', re.search(r'^M\.preset_keys=\{([^}]*)\}', lua, re.M).group(1))
     # Optional keys (#211) and their defaults: a preset file may omit them.

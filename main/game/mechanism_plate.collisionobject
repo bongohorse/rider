@@ -1,4 +1,4 @@
-collision_shape: "/main/gym/mechanism_plate.convexshape"
+collision_shape: "/main/game/mechanism_plate.convexshape"
 type: COLLISION_OBJECT_TYPE_STATIC
 mass: 0.0
 friction: 0.8

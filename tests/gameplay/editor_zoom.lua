@@ -1,4 +1,4 @@
-local Z=require 'main.gym.editor_zoom'
+local Z=require 'main.editor.editor_zoom'
 assert(Z.parse('100')==1 and Z.parse(' 100 % ')==1)
 assert(Z.parse('1')==Z.MIN and Z.parse('400')==Z.MAX and Z.parse('12.5%')==.125)
 for _,bad in ipairs({'','abc','0','0.99','401','-5','nan','inf','1e2','100%%','0x64','100% extra'}) do assert(not Z.parse(bad),bad) end

@@ -16,7 +16,7 @@ function M.measure(d)
         if n>r.largest_segments then r.largest_chain,r.largest_segments=i,n end
     end
     for _,h in ipairs(d.hulls or {}) do r.hull_vertices=r.hull_vertices+#h.vertices end
-    local mech=require('main.gym.mechanism_data').cost(d.mechanisms)
+    local mech=require('main.game.mechanism_data').cost(d.mechanisms)
     r.mechanism_bodies=mech.bodies;r.mechanism_shapes=mech.shapes;r.mechanism_joints=mech.joints
     r.physics_vertices=r.physics_vertices+r.hull_vertices+mech.vertices
     r.sprites=#(d.coins and d.coins.items or {})+r.hull_vertices+(d.finish and 1 or 0)+(d.seesaw and 1 or 0)

@@ -1,7 +1,7 @@
 -- Source-to-preview dependency planning. No compiler/physics/source writes; no per-frame rebuild.
-local doc=require "main.gym.editor_doc"
-local geometry=require "main.gym.terrain_geometry"
-local residency=require "main.gym.terrain_residency"
+local doc=require "main.editor.editor_doc"
+local geometry=require "main.game.terrain_geometry"
+local residency=require "main.game.terrain_residency"
 local M={}
 local function point_key(p) return string.format("%.17g,%.17g",p[1],p[2]) end
 local function same(a,b)
@@ -26,7 +26,7 @@ end
 function M.admitted(e,compiled_budget)
     if compiled_budget then
         -- Reuse the existing live validation result; a drag's actual plan is guarded below.
-        return require("main.gym.terrain_budget").preview(compiled_budget.sections,compiled_budget.vertices,
+        return require("main.game.terrain_budget").preview(compiled_budget.sections,compiled_budget.vertices,
             compiled_budget.sprites-(e.finish and 1 or 0),compiled_budget.labels-(e.finish and 1 or 0),e)
     end
     local sections,vertices,sprites,labels=0,0,0,0
@@ -41,7 +41,7 @@ function M.admitted(e,compiled_budget)
         if doc.outline(o) then sprites=sprites+#doc.outline(o)
         elseif o.type=="label" then labels=labels+1 end
     end
-    return require("main.gym.terrain_budget").preview(sections,vertices,sprites,labels,e)
+    return require("main.game.terrain_budget").preview(sections,vertices,sprites,labels,e)
 end
 function M.plan(e,previews,selected,hover,old)
     local effective={objects={},connections=e.connections,start=e.start,finish=e.finish}
@@ -102,7 +102,7 @@ function M.plan(e,previews,selected,hover,old)
     -- Safe fallback for still-invalid drafts; configured engine capacity is not raised.
     local vertices=0
     for _,p in ipairs(plans) do vertices=vertices+(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0) end
-    if not require("main.gym.terrain_budget").preview(#plans,vertices,0,0,e) then
+    if not require("main.game.terrain_budget").preview(#plans,vertices,0,0,e) then
         return nil,"Mesh preview exceeds component or Fit payload budget; shorten terrain. Line preview retained."
     end
     return plans
@@ -113,7 +113,7 @@ function M.create(e)
     return {entries={},serial=0,updates=0,uploads=0,perspective=projected,params=require("main.terrain_perspective.look").params({editor=e}),baked=require("main.terrain_perspective.look").has_sections({editor=e})}
 end
 local function materialize(state,entry,generation,result)
-    local mesh=require "main.gym.terrain_mesh"
+    local mesh=require "main.game.terrain_mesh"
     local p=entry.plan
     local rebuilt=entry.dirty or not entry.resource
     if rebuilt then
@@ -132,7 +132,7 @@ local function materialize(state,entry,generation,result)
     entry.restyle=nil
 end
 function M.resident(state,generation,view,result)
-    local mesh=require "main.gym.terrain_mesh"
+    local mesh=require "main.game.terrain_mesh"
     result=result or {rebuilt=0,recolored=0,uniforms=0}
     local perspective=require "main.terrain_perspective.runtime"
     if state.perspective then perspective.prepare(state,{(view[1]+view[3])/2,(view[2]+view[4])/2}) end
@@ -145,7 +145,7 @@ function M.resident(state,generation,view,result)
     return r
 end
 function M.update(state,e,previews,selected,hover,generation,view)
-    local mesh=require "main.gym.terrain_mesh"
+    local mesh=require "main.game.terrain_mesh"
     state.params=require("main.terrain_perspective.look").params({editor=e});state.baked=require("main.terrain_perspective.look").has_sections({editor=e})
     local plans,err=M.plan(e,previews,selected,hover,state.entries)
     if not plans then return nil,err end
@@ -175,7 +175,7 @@ function M.update(state,e,previews,selected,hover,generation,view)
     return result
 end
 function M.final(state,remove)
-    local mesh=require "main.gym.terrain_mesh"
+    local mesh=require "main.game.terrain_mesh"
     if state then
         local seen={}
         for _,list in ipairs({state.entries,state.pending or {}}) do for _,entry in ipairs(list) do

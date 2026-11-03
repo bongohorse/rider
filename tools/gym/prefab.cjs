@@ -341,7 +341,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await at([25,-0.5]);await page.waitForFunction(()=>window.riderEditor.selection==='o13');e=await ed();
   assert.deepEqual(e.handles.map(h=>h.name),['end','floor']);assert.ok(e.overlay.nodes<=e.overlay.max_nodes,JSON.stringify(e.overlay));
   await key('e');const t=await played('prefab-budget');
-  measurements.budget={...blocked,playable_objects:254,terrain_shapes:t.terrain_shapes??null,edit_sprites:e.view.sprites,editor_gui_max_nodes:Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/editor.gui'),'utf8'))[1])};
+  measurements.budget={...blocked,playable_objects:254,terrain_shapes:t.terrain_shapes??null,edit_sprites:e.view.sprites,editor_gui_max_nodes:Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/editor/editor.gui'),'utf8'))[1])};
   assert.equal(measurements.budget.editor_gui_max_nodes,e.overlay.max_nodes);
   await key('e');await edit();
   done('prefab_budget');

@@ -1,5 +1,5 @@
 -- Read-only completed-step observer. No physics mutation or second tick owner.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 M.protocol={version=3,speeds_mps={5,7,9},tolerance_fraction=.05,dt_s=1/60,seam_radius_m=1,
     vy_floor_mps=.1,dvy_floor_mps=.1,rise_floor_m=.005,dvx_floor_mps=.02,baseline_factor=3,

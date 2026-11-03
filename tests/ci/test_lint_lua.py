@@ -145,7 +145,7 @@ class RealLuacheckTest(unittest.TestCase):
             path = Path(directory) / name
             path.write_text(source)
             return subprocess.run([str(binary), '--config', str(ROOT / '.luacheckrc'), '--codes',
-                                   '--no-color', '--no-cache', '--filename', f'main/gym/{name}', str(path)],
+                                   '--no-color', '--no-cache', '--filename', f'main/game/{name}', str(path)],
                                   capture_output=True, text=True)
 
     def test_undefined_global_and_dead_value_fail(self):

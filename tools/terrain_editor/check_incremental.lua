@@ -1,6 +1,6 @@
-local doc=require 'main.gym.editor_doc'
-local planner=require 'main.gym.editor_terrain'
-local geom=require 'main.gym.terrain_geometry'
+local doc=require 'main.editor.editor_doc'
+local planner=require 'main.editor.editor_terrain'
+local geom=require 'main.game.terrain_geometry'
 local source=dofile(arg[1]..'/six-anchor-source.lua')
 local e=source.editor
 local function old_entries(plans)

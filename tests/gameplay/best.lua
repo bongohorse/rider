@@ -8,8 +8,8 @@ sys={get_save_file=function(app,name)return app..'/'..name end,get_engine_info=f
  files[path]=t;return true end}
 local encoded={};local serial=0
 json={encode=function(t)serial=serial+1;encoded[tostring(serial)]=t;return tostring(serial)end,decode=function(s)assert(encoded[s],'bad JSON');return encoded[s]end}
-local custom=require 'main.gym.custom';custom.sync_state=function()return state end
-local best=require 'main.gym.run_best'
+local custom=require 'main.game.custom';custom.sync_state=function()return state end
+local best=require 'main.game.run_best'
 local t=best.new();assert(not t.best)
 assert(not best.offer(t,{official=false,time=2}));assert(best.offer(t,{official=true,time=5}));assert(not t.best)
 state='syncing';best.poll(t);assert(not t.best and t.pending==5)

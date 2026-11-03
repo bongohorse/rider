@@ -8,8 +8,8 @@
 -- lean[i] (-1..1) and pose[9(i-1)+1..9i] = chassis x, y, angle, rear wheel x, y, angle, front wheel x, y, angle
 -- in metres and radians, read after the tick's reset/start and before its command is applied. trailing=true adds
 -- pose ticks+1: the post-step pose of the last tick, read at the next fixed tick (missing if that tick never ran).
-local feel=require "main.gym.feel"
-local mobile=require "main.gym.mobile"
+local feel=require "main.game.feel"
+local mobile=require "main.game.mobile"
 local M={VERSION=1,CAP=3600,POSE=9}
 -- Declared before running (same preset, same build): chassis position and angle over every replayed tick.
 M.TOLERANCE={position_m=0.05,angle_rad=0.05}

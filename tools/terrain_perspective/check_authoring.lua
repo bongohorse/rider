@@ -1,9 +1,9 @@
 -- Versioned section look with actual compiler/builder: geometry and transitions remain source-owned.
-local doc=require 'main.gym.editor_doc'
+local doc=require 'main.editor.editor_doc'
 local look=require 'main.terrain_perspective.look'
 local proj=require 'main.terrain_perspective.projection'
-local geo=require 'main.gym.terrain_geometry'
-local edit=require 'main.gym.editor_edit'
+local geo=require 'main.game.terrain_geometry'
+local edit=require 'main.editor.editor_edit'
 local function same(a,b)
  if type(a)~=type(b) then return false end;if type(a)~='table' then return a==b end
  for k,v in pairs(a) do if not same(v,b[k]) then return false end end;for k in pairs(b) do if a[k]==nil then return false end end;return true
@@ -35,14 +35,14 @@ print('PASS future version and incoherent local projection refusal')
 
 -- A derived global floor change must invalidate baked bottoms of otherwise unchanged sections.
 local t=dofile(arg[1]..'/long-curves-source.lua').editor;t.road_profile=look.ID;t.road_look={version=1,params=proj.validate(proj.DEFAULT)};t.objects[1].road_look={version=1,width=1,side=64,shading=1}
-local terrain=require 'main.gym.editor_terrain';local plans=assert(terrain.plan(t,nil,{},nil))
+local terrain=require 'main.editor.editor_terrain';local plans=assert(terrain.plan(t,nil,{},nil))
 local old={};for i,p in ipairs(plans) do old[i]={points=p.points,signature=p.signature,color=p.color,key=i} end
 local curve=t.objects[#t.objects-1]
 for _,o in ipairs(t.objects) do if o.type=='curve' then curve=o end end
 curve.anchors[#curve.anchors].p[2]=curve.anchors[#curve.anchors].p[2]-30
 local changed=assert(terrain.plan(t,nil,{},nil,old));assert(changed[1].changed,'Stale baked floor on unchanged first section')
 local compiled=assert(doc.compile(dofile(arg[1]..'/six-anchor-source.lua')));compiled.editor=nil;compiled.road_profile=look.ID
-assert(require('main.gym.station_data').validate(compiled));assert(not look.authored(compiled));assert(require('main.gym.terrain_budget').measure(compiled).stride==36)
+assert(require('main.game.station_data').validate(compiled));assert(not look.authored(compiled));assert(require('main.game.terrain_budget').measure(compiled).stride==36)
 print('PASS baked floor dependency and legacy root-extension isolation')
 
 local values={a={width=.9,side=64,shading=1,manual=false},b={width=1.8,side=4,shading=.4,manual=true}}
@@ -59,11 +59,11 @@ valid,why,unsupported=doc.validate(future);assert(not valid and unsupported)
 print('PASS nested future parameter version and invalid section-format protection')
 
 local extension=dofile(arg[1]..'/long-curves-source.lua');extension.editor.schema=1;extension.editor.road_profile=look.ID;extension.editor.road_look={version=1,params=proj.validate(proj.DEFAULT)};extension.editor.objects[2].road_look={version=1,width=2,side=4,shading=.5}
-local level=assert(doc.compile(extension));assert(look.params(level).width==.9 and look.has_sections(level));assert(look.has_sections({editor=extension.editor}));assert(require('main.gym.terrain_budget').preview(12,12552,0,0,extension.editor))
-assert(require('main.gym.editor_terrain').create(extension.editor).perspective)
+local level=assert(doc.compile(extension));assert(look.params(level).width==.9 and look.has_sections(level));assert(look.has_sections({editor=extension.editor}));assert(require('main.game.terrain_budget').preview(12,12552,0,0,extension.editor))
+assert(require('main.editor.editor_terrain').create(extension.editor).perspective)
 print('PASS explicit editor-context parity with preserved extension fields')
 
-local prefab=require 'main.gym.editor_prefab';local mirrored=doc.blank('my-style','Style').editor;mirrored.road_profile=look.ID;mirrored.road_look={version=1,params=proj.validate(proj.DEFAULT)}
+local prefab=require 'main.editor.editor_prefab';local mirrored=doc.blank('my-style','Style').editor;mirrored.road_profile=look.ID;mirrored.road_look={version=1,params=proj.validate(proj.DEFAULT)}
 local id=assert(edit.add_prefab(mirrored,'ramp',prefab.defaults('ramp'),{0,0}));mirrored.objects[1].road_look={version=1,width=1.4,side=5,shading=.6}
 assert(edit.mirror(mirrored,{id},1));assert(same(mirrored.objects[1].road_look,mirrored.objects[2].road_look))
 mirrored.objects[1].kind='platform';assert(not look.validate(mirrored))
@@ -88,10 +88,10 @@ recover.editor.road_profile=look.ID;recover.editor.road_look={version=1,params=p
 recover.editor.objects[2].road_look={version=1,width=1.4,side=5,shading=.6}
 local cached=assert(doc.compile(recover));assert(look.mapping(cached))
 for _,o in ipairs(cached.editor.objects) do if o.type=='curve' then o.anchors[2].p[2]=o.anchors[2].p[2]+1;break end end
-assert(require('main.gym.station_data').validate(cached));assert(not look.mapping(cached))
+assert(require('main.game.station_data').validate(cached));assert(not look.mapping(cached))
 local opened,note,conflict=doc.open_level(cached);assert(opened and conflict and conflict.lines)
 assert(look.mapping(assert(doc.compile(opened))))
 cached.editor.revision=cached.editor.revision+1
-assert(require('main.gym.station_data').validate(cached));opened,note,conflict=doc.open_level(cached)
+assert(require('main.game.station_data').validate(cached));opened,note,conflict=doc.open_level(cached)
 assert(opened and not conflict);assert(look.mapping(assert(doc.compile(opened))))
 print('PASS authored mismatch import/conflict and stale-source recovery without unsafe style mapping')

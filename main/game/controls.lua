@@ -1,6 +1,6 @@
-local layout=require "main.gym.layout"
+local layout=require "main.game.layout"
 -- GUI only: changes are messages; physics writes remain in the fixed owner.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 local function text(x,y,value)
     local n=layout.text(vmath.vector3(x,y,0),value,"right_top")

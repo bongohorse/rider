@@ -1,10 +1,10 @@
-// A19d Balance station geometry (metres). Writes main/gym/stations/balance.json; --check compares.
+// A19d Balance station geometry (metres). Writes main/game/stations/balance.json; --check compares.
 // node tools/gym/balance_geometry.cjs [--check]
 // Floor at 0.8 m (the gym ground level); raised decks 0.8 m above it. Every section is independent:
 // its own start deck (spawn 1.2 m from the deck start, start speed 0), its target platform and a cliff
 // back to the floor. Falling to the floor is a miss. One descending-x chain like the other stations.
 const fs=require('node:fs'),path=require('node:path');
-const ROOT=path.resolve(__dirname,'../..'),FILE='main/gym/stations/balance.json';
+const ROOT=path.resolve(__dirname,'../..'),FILE='main/game/stations/balance.json';
 const FLOOR=0.8,DECK=1.6,START=3,SLOT=0.3,RUN_OUT=4,SPAWN_IN=1.2,SPAWN_UP=0.9;
 const RAMP_DEG=35,RAMP_RISE=0.4;
 // Plank: station geometry, matched by the seesaw resource (seesaw.convexshape, seesaw.collisionobject).

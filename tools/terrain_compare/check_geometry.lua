@@ -1,5 +1,5 @@
 -- Focused P1 checks on the actual compiler output, not a parallel sampler.
-local doc=require "main.gym.editor_doc"
+local doc=require "main.editor.editor_doc"
 local geometry=require "main.terrain_compare.geometry"
 local checks=0
 for _,id in ipairs({"six-anchor","long-curves","mixed"}) do

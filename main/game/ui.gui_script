@@ -1,15 +1,15 @@
 local socket=require "socket"
-local stations=require "main.gym.stations"
-local mobile=require "main.gym.mobile"
-local layout=require "main.gym.layout"
-local run_ui=require "main.gym.run_ui"
-local levels_ui=require "main.gym.levels_ui"
-local progress_ui=require "main.gym.progress_ui"
-local feel=require "main.gym.feel"
-local graph=require "main.gym.graph"
-local feedback=require "main.gym.feedback"
-local controls=require "main.gym.controls"
-local telemetry = require "main.gym.telemetry"
+local stations=require "main.game.stations"
+local mobile=require "main.game.mobile"
+local layout=require "main.game.layout"
+local run_ui=require "main.game.run_ui"
+local levels_ui=require "main.game.levels_ui"
+local progress_ui=require "main.game.progress_ui"
+local feel=require "main.game.feel"
+local graph=require "main.game.graph"
+local feedback=require "main.game.feedback"
+local controls=require "main.game.controls"
+local telemetry = require "main.game.telemetry"
 local function cancel_drag(self)
     if self.controls and self.controls.drag then
         self.controls.drag=nil
@@ -334,7 +334,7 @@ function update(self,dt)
         -- A20 only: unscaled engine time (this collection is not time-scaled) next to the wall clock.
         self.engine_time,self.engine_frames=(self.engine_time or 0)+dt,(self.engine_frames or 0)+1
         -- The editor camera (shared module state, read only) shows whether Edit mode received Space+drag.
-        local editor=require "main.gym.editor"
+        local editor=require "main.editor.editor"
         html5.run("window.riderClock="..json.encode({engine=self.engine_time,frames=self.engine_frames,wall=socket.gettime(),
             editor_camera={x=editor.camera.x,y=editor.camera.y}}))
         -- Debug burst: several time requests posted in one frame (stale-acknowledgement check).
@@ -344,7 +344,7 @@ function update(self,dt)
     if self.debug_replay then
         -- A21 only: editor mode/grid (shared module state, read only) prove B/G never touch the editor in Play and G
         -- stays the grid key in Edit mode.
-        local editor=require "main.gym.editor"
+        local editor=require "main.editor.editor"
         local e=editor.doc and editor.doc.editor
         html5.run("window.riderReplayEditor="..json.encode({mode=editor.mode,grid=editor.grid,revision=e and e.revision or -1,
             undo=editor.history and #editor.history.undo or 0,toast=gui.get_text(self.reason),line=gui.get_text(self.replay_line)}))

@@ -1,9 +1,9 @@
 -- Mesh edit world: source handles/storage stay loader-owned; no terrain physics or follow camera.
-local editor=require "main.gym.editor"
-local doc=require "main.gym.editor_doc"
-local lines=require "main.gym.editor_lines"
-local terrain=require "main.gym.editor_terrain"
-local residency=require "main.gym.terrain_residency"
+local editor=require "main.editor.editor"
+local doc=require "main.editor.editor_doc"
+local lines=require "main.editor.editor_lines"
+local terrain=require "main.editor.editor_terrain"
+local residency=require "main.game.terrain_residency"
 local socket=require "socket"
 local M={}
 local SELECTED,HOVER=vmath.vector4(1,0.7765,0.4275,1),vmath.vector4(0.8353,0.9529,0.9137,1)
@@ -33,12 +33,12 @@ local function objects(v,e)
         if not r then
             r={ids={},sprites=0,labels=0,type=o.type,kind=o.kind,terrain=doc.terrain(o),points=copy(pts)}
             if o.type=="label" then
-                local label_id=require("main.gym.stations").marker(o.position,o.text)
+                local label_id=require("main.game.stations").marker(o.position,o.text)
                 lines.count(v,{label_id},true);r.ids={label_id};r.labels=1
             elseif not r.terrain then r.ids=lines.draw(v,shown);r.sprites=#r.ids end
             v.records[id]=r;v.zoom=nil
         elseif changed(r.points,pts) then
-            if o.type=='coin' then require('main.gym.coin_visual').position(r.ids[1],pts[1])
+            if o.type=='coin' then require('main.game.coin_visual').position(r.ids[1],pts[1])
             elseif o.type=="label" then go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),r.ids[1])
             elseif not r.terrain then for i,go_id in ipairs(r.ids) do lines.place_line(go_id,pts[i],pts[i%#pts+1],scale) end end
             r.points=copy(pts)
@@ -56,7 +56,7 @@ local function objects(v,e)
         end
         v.hidden[id]=hidden
         if o.type~="label" and not r.terrain then
-            local colour=editor.auto_remove and editor.auto_remove[id] and vmath.vector4(1,.25,.25,1) or editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.gym.stations").TERRAIN_TINT
+            local colour=editor.auto_remove and editor.auto_remove[id] and vmath.vector4(1,.25,.25,1) or editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.game.stations").TERRAIN_TINT
             if r.tint~=colour then lines.tint(r.ids,colour);r.tint=colour end
         end
     end
@@ -72,7 +72,7 @@ local function markers(v,e)
     if f then lines.move(v.finish,f.position) end
     local blocked=doc.blocked(e,p)
     lines.tint({unpack(v.start.ids,1,#v.start.ids-1)},editor.selection=="start" and SELECTED or blocked and BLOCKED or START)
-    if v.finish then lines.tint({v.finish.ids[1]},editor.selection=="finish" and SELECTED or require("main.gym.stations").FINISH_TINT) end
+    if v.finish then lines.tint({v.finish.ids[1]},editor.selection=="finish" and SELECTED or require("main.game.stations").FINISH_TINT) end
 end
 local function counts(self)
     local v=self.view;local last=v.mesh.last_geometry or {chunks=0,buffer_bytes=0}
@@ -100,7 +100,7 @@ function M.build(self)
     v.mesh.resource_serial=self.mesh_serial or 0
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
-    local mechanism_preview=require('main.gym.mechanisms').preview(editor.doc.editor.mechanisms)
+    local mechanism_preview=require('main.game.mechanisms').preview(editor.doc.editor.mechanisms)
     lines.count(v,mechanism_preview,false)
     v.start=lines.start_marker(v,editor.doc.editor.start.position)
     M.refresh(self,true)

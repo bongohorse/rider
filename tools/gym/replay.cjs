@@ -1,13 +1,13 @@
 // A21 record and replay: a keyboard run recorded from the station start, replayed on the same and on other presets
 // with a sprite-only ghost; tick policy, tolerances, pause/slow motion, render rate, resets and the input surfaces.
-// Debug gym case `a21`. Tolerances are declared in main/gym/replay.lua (M.TOLERANCE) before any run.
+// Debug gym case `a21`. Tolerances are declared in main/game/replay.lua (M.TOLERANCE) before any run.
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const TOL={position_m:0.05,angle_rad:0.05};
 // The P cycle follows the preset registry (feel.order), so a new preset needs no change here.
-const ORDER=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/gym/feel.lua'),'utf8'))[1].match(/\w+/g);
+const ORDER=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/game/feel.lua'),'utf8'))[1].match(/\w+/g);
 const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses from `from` back to A
 (async()=>{
  const [root,sha,runId]=process.argv.slice(2);const out=path.resolve(root);let browser;

@@ -1,6 +1,6 @@
 -- A3: immutable source snapshots, paired index and deferred garbage collection.
 -- Never remove a retired file until BOTH index slots and their browser sync succeeded.
-local custom=require "main.gym.custom"
+local custom=require "main.game.custom"
 local M={MAX_AUTO=10,MAX_NAMED=10,CAP=16*1024*1024}
 local function copy(v) if type(v)~="table" then return v end;local t={};for k,x in pairs(v) do t[k]=copy(x) end;return t end
 function M.create(parse)

@@ -1,9 +1,9 @@
-local coins=require 'main.gym.coins'
-local visual=require 'main.gym.coin_visual'
-local data=require 'main.gym.coin_data'
+local coins=require 'main.game.coins'
+local visual=require 'main.game.coin_visual'
+local data=require 'main.game.coin_data'
 local M={}
 function M.reset(self)
-    require('main.gym.fuel_runtime').reset(self)
+    require('main.game.fuel_runtime').reset(self)
     if not self.station or not self.station.coins then return end
     if not self.coins then
         self.coins=coins.new(self.station.coins);self.coin_ids={}
@@ -17,9 +17,9 @@ function M.reset(self)
 end
 function M.observe(self,state)
     local c=self.coins;if not c then return end
-    local feel=require 'main.gym.feel'
+    local feel=require 'main.game.feel'
     local parts={{feel.metres(state.x),feel.metres(state.y),radius=.65}}
-    local head=require 'main.gym.rider'
+    local head=require 'main.game.rider'
     local offset=feel.metres(head.center_y)
     parts[#parts+1]={parts[1][1]-math.sin(state.angle)*offset,parts[1][2]+math.cos(state.angle)*offset,radius=feel.metres(head.radius)}
     for _,body in ipairs(self.vehicle.wheels) do local p=b2d.body.get_position(body);parts[#parts+1]={feel.metres(p.x),feel.metres(p.y),radius=.22} end
@@ -27,7 +27,7 @@ function M.observe(self,state)
     local before=c.count
     local found=coins.observe(c,parts,active)
     for _,id in ipairs(found) do
-        for _,p in ipairs(c.items) do if p.id==id then if p.kind=='fuel' then require('main.gym.fuel').refill(self.fuel) end;self.coin_effects[id]={age=0,item=p};break end end
+        for _,p in ipairs(c.items) do if p.id==id then if p.kind=='fuel' then require('main.game.fuel').refill(self.fuel) end;self.coin_effects[id]={age=0,item=p};break end end
     end
     if #found>0 then self.coin_feedback=c.count-before;self.coin_publish=true end
 end
@@ -39,7 +39,7 @@ function M.finish(self,result)
     msg.post('main:/loader#script','coin_finish',{generation=self.session_generation,attempt=self.race.attempt,amount=result.coins,official=result.official,gems=table.concat(bitmap)})
 end
 function M.update(self,dt)
-    require('main.gym.fuel_runtime').update(self)
+    require('main.game.fuel_runtime').update(self)
     if not self.coins then return end
     -- Presentation only: reuse collected sprites, bounded by the authored pickup cap.
     for key,e in pairs(self.coin_effects) do

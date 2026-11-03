@@ -12,15 +12,15 @@ class GymResources(unittest.TestCase):
         config = configparser.ConfigParser()
         config.read(ROOT / 'game.project')
         resources = config.get('project', 'custom_resources').split(',')
-        self.assertIn('/main/gym/budget.json', resources)
+        self.assertIn('/main/game/budget.json', resources)
         budget = json.loads((ROOT / resources[0].lstrip('/')).read_text())
         self.assertEqual(budget['fps_min'], 60)
         self.assertGreater(budget['frame_ms_max'], 0)
         self.assertIsNone(budget['physics_ms_max'])
 
     def test_gap_ladder_geometry(self):
-        ladder=json.loads((ROOT/'main/gym/stations/gaps.json').read_text())
-        landing=json.loads((ROOT/'main/gym/stations/gaps-landing.json').read_text())
+        ladder=json.loads((ROOT/'main/game/stations/gaps.json').read_text())
+        landing=json.loads((ROOT/'main/game/stations/gaps-landing.json').read_text())
         gaps=[s['gap'] for s in ladder['sections']]
         self.assertEqual(gaps,[1,1.5,2,2.5,3,4,5,6,8,10])
         self.assertEqual([s['landing'] for s in landing['sections']],['flat','down','up'])
@@ -36,7 +36,7 @@ class GymResources(unittest.TestCase):
                 self.assertEqual(s['mode'],'up')
 
     def test_bump_ladder_geometry(self):
-        station=json.loads((ROOT/'main/gym/stations/bumps.json').read_text())
+        station=json.loads((ROOT/'main/game/stations/bumps.json').read_text())
         source=json.loads((ROOT/'tools/gym/bumps-source.json').read_text())['editor']
         sections=station['sections']
         heights=[0.05,0.1,0.15,0.2,0.3]
@@ -66,8 +66,8 @@ class GymResources(unittest.TestCase):
             self.assertTrue(all(y==0 for x,y in chain if s['spawn'][0]-1<=x<=s['features'][0]['start_x']))
 
     def test_seam_variants_share_twenty_internal_abutments(self):
-        chain=json.loads((ROOT/'main/gym/stations/seams-chain.json').read_text())
-        hull=json.loads((ROOT/'main/gym/stations/seams-hull.json').read_text())
+        chain=json.loads((ROOT/'main/game/stations/seams-chain.json').read_text())
+        hull=json.loads((ROOT/'main/game/stations/seams-hull.json').read_text())
         for key in ('spawn','start_speed','baseline','window','bounds','seams'):
             self.assertEqual(chain[key],hull[key])
         self.assertEqual(chain['seams'],list(range(40,80,2)))
@@ -81,7 +81,7 @@ class GymResources(unittest.TestCase):
     def test_custom_level_helper_and_samples(self):
         config = configparser.ConfigParser()
         config.read(ROOT / 'game.project')
-        self.assertIn('/main/gym/custom.js', config.get('project', 'custom_resources').split(','))
+        self.assertIn('/main/game/custom.js', config.get('project', 'custom_resources').split(','))
         samples = ROOT / 'main/gym/samples'
         for name in ('rolling-hills', 'kicker-platform'):
             level = json.loads((samples / f'{name}.json').read_text())

@@ -1,8 +1,8 @@
 -- Production profile compatibility and actual compiler/resource admission; no simulation.
-local doc=require 'main.gym.editor_doc'
+local doc=require 'main.editor.editor_doc'
 local profile=require 'main.terrain_perspective.profile'
-local budget=require 'main.gym.terrain_budget'
-local data=require 'main.gym.station_data'
+local budget=require 'main.game.terrain_budget'
+local data=require 'main.game.station_data'
 local function same(a,b)
  if type(a)~=type(b) then return false end
  if type(a)~='table' then return a==b end
@@ -57,7 +57,7 @@ docs.root_future=doc.copy(docs.root);docs.root_future.road_profile='future'
 local saved={a={format=1,seq=1,text='legacy'},b={format=1,seq=2,text='future'}}
 json={decode=function(text) return doc.copy(assert(docs[text])) end}
 sys={get_save_file=function(_,n) return n end,load=function(n) return doc.copy(saved[n] or {}) end,save=function(n,t) saved[n]=doc.copy(t) end}
-local custom=require 'main.gym.custom'
+local custom=require 'main.game.custom'
 local internal=assert(custom.parse('internal'));assert(not profile.enabled(internal) and internal._road_profile==nil,'Imported runtime flag must not restyle an unmarked course')
 for _,name in ipairs({'root','root_future'}) do
  local root=assert(custom.parse(name));assert(not profile.enabled(root) and budget.measure(root).stride==36)

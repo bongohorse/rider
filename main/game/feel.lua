@@ -55,7 +55,7 @@ function M.validate(data,key)
 end
 -- Module field so the debug a9 probe can stub one refused file; nothing else replaces it.
 function M.load(key)
-    local resource=sys.load_resource("/main/gym/presets/"..key..".json")
+    local resource=sys.load_resource("/main/game/presets/"..key..".json")
     if not resource then return nil,"missing file" end
     local ok,data=pcall(json.decode,resource)
     if not ok then return nil,"invalid JSON" end

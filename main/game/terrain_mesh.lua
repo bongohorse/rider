@@ -1,8 +1,8 @@
 -- Normal-Play mesh adapter. Resources/objects belong to this proxy owner, never Retry.
-local geometry=require "main.gym.terrain_geometry"
-local stations=require "main.gym.stations"
+local geometry=require "main.game.terrain_geometry"
+local stations=require "main.game.stations"
 local socket=require "socket"
-local residency=require "main.gym.terrain_residency"
+local residency=require "main.game.terrain_residency"
 local M={}
 local SELECT_GAIN={1.6,.95,.5}
 -- Scalar debug accounting only; no world/resource handles are kept in module state.
@@ -77,7 +77,7 @@ function M.build(self,d)
     local started=socket.gettime()
     local look=require "main.terrain_perspective.look"
     local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d)};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.gym.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
+    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.game.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
     local mapping=look.mapping(d);if mapping then for _,e in ipairs(entries) do e.looks=mapping[e.chain] end end
     if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
     M.update(self)
@@ -122,7 +122,7 @@ local function same_looks(a,b,first,last)
     return true
 end
 local function live_look(self,state)
-    local session=require("main.gym.editor_look")
+    local session=require("main.editor.editor_look")
     local d=session.live(self.session_generation) or state.source
     if d==state.look_source then return end
     if not same_chains(state.source,d) then
@@ -131,7 +131,7 @@ local function live_look(self,state)
     end
     -- Retain the actual running station's markers/props/physics costs, even for a template copy.
     local visual={};for k,v in pairs(state.source) do visual[k]=v end;visual.editor=d.editor
-    local budget,err=require('main.gym.terrain_budget').check(visual)
+    local budget,err=require('main.game.terrain_budget').check(visual)
     if not budget then
         if session.session then session.session.error=err end
         state.look_source=d;return

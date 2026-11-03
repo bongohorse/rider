@@ -5,8 +5,8 @@ sys={get_save_file=function(app,name)return app..'/'..name end,exists=function(p
  get_engine_info=function()return {is_debug=true}end,load=function(p)if files[p]=='bad' then error('bad slot') end;return files[p] or {}end,
  save=function(p,d)writes=writes+1;if fail then error('write failure') end;files[p]=d;return true end}
 json={encode=function(t)serial=serial+1;encoded[tostring(serial)]=t;return tostring(serial)end,decode=function(t)assert(encoded[t],'bad document');return encoded[t]end}
-local custom=require 'main.gym.custom';custom.sync_state=function()return state end
-local B=require 'main.gym.coin_bank'
+local custom=require 'main.game.custom';custom.sync_state=function()return state end
+local B=require 'main.game.coin_bank'
 local A,Z='rider/coin-bank-a','rider/coin-bank-b'
 local function slot(seq,doc) return {format=1,seq=seq,text=json.encode(doc)} end
 local function restored() return slot(1,{version=2,total=100,gems=1,claims={['first-run/gem-a']=true},serial=5}) end

@@ -1,6 +1,6 @@
 -- Compact run/result surface, sharing the Gym's layout and existing input/reset owners.
-local layout=require 'main.gym.layout'
-local medals=require 'main.gym.medals'
+local layout=require 'main.game.layout'
+local medals=require 'main.game.medals'
 local M={}
 local function text(x,y,value,scale,anchor)
  local n=layout.text(vmath.vector3(x,y,0),value,anchor);gui.set_font(n,'default');gui.set_scale(n,vmath.vector3(scale,scale,1));return n
@@ -32,7 +32,7 @@ function M.show(t,r,touch)
  for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch) end
  for _,n in ipairs({t.card,t.result,t.detail,t.medal,t.next,t.retry,t.retry_label}) do gui.set_visible(n,done or false) end
  gui.set_visible(t.entry,not touch);gui.set_visible(t.entry_label,not touch)
- local v=require('main.gym.levels_runtime').view
+ local v=require('main.game.levels_runtime').view
  for _,n in ipairs({t.levelback,t.levelback_label}) do gui.set_visible(n,done or false) end
  for _,n in ipairs({t.levelnext,t.levelnext_label}) do gui.set_visible(n,done and v.next_enabled or false) end
  gui.set_text(t.retry_label,touch and "Retry" or "Retry [R]")
@@ -84,7 +84,7 @@ function M.input(t,id,action,owner)
  local r=t.data
  if r and (r.state=='finished' or r.state=='failed') then
   if gui.pick_node(t.levelback,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end
-  if require('main.gym.levels_runtime').view.next_enabled and gui.pick_node(t.levelnext,action.x,action.y) then msg.post('main:/loader#script','level_next');return true end
+  if require('main.game.levels_runtime').view.next_enabled and gui.pick_node(t.levelnext,action.x,action.y) then msg.post('main:/loader#script','level_next');return true end
  end
  if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.retry,action.x,action.y) then msg.post(owner,'run_retry',{id=r.id});return true end
  if r and (r.state=='finished' or r.state=='failed') and gui.pick_node(t.card,action.x,action.y) then return true end

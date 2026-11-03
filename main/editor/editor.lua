@@ -1,8 +1,8 @@
 -- Loader-side level editor state (contract R15): document, Undo history, selection and editor camera
 -- live here, outside the proxied world, so a world reload for Play or Edit cannot lose them.
 -- Defold 1.14 runs every script in one Lua context: the edit world reads this module directly.
-local doc_lib=require "main.gym.editor_doc"
-local custom=require "main.gym.custom"
+local doc_lib=require "main.editor.editor_doc"
+local custom=require "main.game.custom"
 local socket=require "socket"
 -- selection: primary id (or "start"/"finish"); selected: set of selected object ids (multi-select, LE3);
 -- vertex: {id,index} of the selected line point or prefab end; preview_objects: moved or reshaped copies
@@ -34,7 +34,7 @@ end
 local function drafts() return custom.drafts(parse_draft) end
 local function library() return custom.library(parse_draft) end
 M.library=library
-local versions=require "main.gym.editor_versions"
+local versions=require "main.editor.editor_versions"
 M.versions=versions.create(parse_draft)
 M.versioned={}
 M.version_times={}
@@ -92,7 +92,7 @@ local function check()
     local e=M.doc.editor
     local errors,warnings,error_at,warning_at=doc_lib.problems(e)
     local level,err=doc_lib.compile(M.doc,nil,errors)
-    M.render_budget=level and require("main.gym.terrain_budget").measure(level) or nil
+    M.render_budget=level and require("main.game.terrain_budget").measure(level) or nil
     if err and errors[1]~=err then
         errors[#errors+1]=err
         -- Compile errors about START (its clearance, the start limit) point at START and what it overlaps.

@@ -1,5 +1,5 @@
 -- Small fixed HUD allocation; read-only display, no input/finish/scoring actions.
-local layout=require 'main.gym.layout'
+local layout=require 'main.game.layout'
 local M={}
 local function text(x,y,value)
  local n=layout.text(vmath.vector3(x,y,0),value,'top');gui.set_font(n,'default');gui.set_scale(n,vmath.vector3(.55,.55,1));return n

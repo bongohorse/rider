@@ -1,6 +1,6 @@
-local layout=require "main.gym.layout"
+local layout=require "main.game.layout"
 -- Keep all 50 min/max buckets; connect their centres without dropping spikes.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 local colors={vmath.vector4(0.7,0.9,1,1),vmath.vector4(0.3,0.85,0.73,1),vmath.vector4(1,0.72,0.3,1)}
 local function text(x,y,value)

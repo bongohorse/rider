@@ -1,8 +1,8 @@
 local sent={};msg={post=function(target,id,data)sent[#sent+1]={target=target,id=id,data=data}end}
 local debug=false;sys={get_engine_info=function()return {is_debug=debug}end}
 local offered=0
-package.loaded['main.gym.run_best']={new=function()return {status='saved'}end,poll=function()end,offer=function(_,r)offered=offered+1;return r.official end}
-local runtime=require 'main.gym.run_runtime';require 'main.gym.run'
+package.loaded['main.game.run_best']={new=function()return {status='saved'}end,poll=function()end,offer=function(_,r)offered=offered+1;return r.official end}
+local runtime=require 'main.game.run_runtime';require 'main.game.run'
 local function owner()return {station={id='first-run',start_speed=0},preset='a',crash_enabled=true,time_factor=1,testcase='',replay={},session_generation=7}end
 local s=owner();assert(runtime.eligible(s));s.station.editor={revision=999,road_look={cosmetic=true}};assert(runtime.eligible(s))
 for _,bad in ipairs({function(t)t.station.custom=true end,function(t)t.station.start_speed=1 end,function(t)t.preset='b' end,function(t)t.modified=true end,function(t)t.crash_enabled=false end,function(t)t.time_factor=.5 end,function(t)t.testcase='le6' end,function(t)t.replay.play={}end,function(t)t.replay.rec={active=true}end})do local t=owner();bad(t);assert(not runtime.eligible(t))end

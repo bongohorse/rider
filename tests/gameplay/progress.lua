@@ -1,4 +1,4 @@
-local R=require 'main.gym.course_progress'
+local R=require 'main.game.course_progress'
 local function near(a,b)assert(math.abs(a-b)<1e-8,tostring(a)..' ~= '..tostring(b))end
 local function course(chains,start,goal,direction)
  return {chains=chains,spawn=start,finish={position={goal,0},line={{goal,-100},{goal,100}},direction={direction or 1,0}}}
@@ -31,9 +31,9 @@ assert(not R.prepare(course({oversized},{0,0},R.MAX_SEGMENTS+1)))
 near(d.chains[1][1][1],9);near(d.chains[1][3][1],0)
 print('PASS slope/descent/vertical arc length, reverse/no odometer, directed left course, airborne gap, bounds and unsupported topology')
 -- Adapter uses the existing run state and never changes its clock/finish/record fields.
-package.loaded['main.gym.feel']={metres=function(n)return n*.01 end}
+package.loaded['main.game.feel']={metres=function(n)return n*.01 end}
 local sent={};msg={post=function(_,id,data)assert(id=='course_progress');sent[#sent+1]=data end}
-local P=require 'main.gym.progress_runtime'
+local P=require 'main.game.progress_runtime'
 local self={station=d,race={state='ready',elapsed=12.5},session_generation=7,generation=1}
 P.reset(self);P.observe(self,{x=600,y=400});near(self.progress.fraction,0)
 self.race.state='running';P.observe(self,{x=600,y=400});near(self.progress.distance,8)

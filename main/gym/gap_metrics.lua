@@ -1,5 +1,5 @@
 -- Read-only completed-step observations; no tuning, limits or reset requests.
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 -- Speculative manifolds alone are not loaded contact (see A18 seam protocol).
 local function supported(body)

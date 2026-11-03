@@ -1,6 +1,6 @@
 -- Defold owns every body/world. This instance is called only by controller's existing attach/reset/fixed owner.
-local data=require 'main.gym.mechanism_data'
-local logic=require 'main.gym.mechanism_logic'
+local data=require 'main.game.mechanism_data'
+local logic=require 'main.game.mechanism_logic'
 local M={}
 local function scale() return sys.get_config_number('physics.scale',.01) end
 local function at(p,z) local k=scale();return vmath.vector3(p[1]/k,p[2]/k,z or .2) end

@@ -1,8 +1,8 @@
 -- Level editor source documents (level-editor contract R1-R4, R9, R10, R13, R16). Pure: no engine
 -- calls besides json, metres throughout. The editor block is authoritative; Play recompiles from it.
-local data=require "main.gym.station_data"
-local prefab=require "main.gym.editor_prefab"
-local sample=require "main.gym.editor_sample"
+local data=require "main.game.station_data"
+local prefab=require "main.editor.editor_prefab"
+local sample=require "main.editor.editor_sample"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
 -- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
@@ -289,14 +289,14 @@ function M.validate(doc)
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
     if e.mechanisms~=nil and e.editor_version<12 then return nil,'Mechanisms need editor/compiler 12',true end
-    local mech_ok,mech_err,mech_unknown=require('main.gym.mechanism_data').validate(e.mechanisms)
+    local mech_ok,mech_err,mech_unknown=require('main.game.mechanism_data').validate(e.mechanisms)
     if not mech_ok then return nil,mech_err,mech_unknown end
-    if #e.objects+require('main.gym.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,'Source object limit is 256; remove objects or split the document' end
+    if #e.objects+require('main.game.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,'Source object limit is 256; remove objects or split the document' end
     if e.fuel~=nil and e.editor_version<11 then return nil,'Fuel needs editor/compiler 11',true end
-    local fuel_ok,fuel_err,fuel_unknown=require('main.gym.fuel').validate(e.fuel)
+    local fuel_ok,fuel_err,fuel_unknown=require('main.game.fuel').validate(e.fuel)
     if not fuel_ok then return nil,fuel_err,fuel_unknown end
     if e.medal_times~=nil and e.editor_version<8 then return nil,'Medal targets require editor/compiler version 8',true end
-    local medal_ok,medal_err,medal_unknown=require('main.gym.medals').validate(e.medal_times)
+    local medal_ok,medal_err,medal_unknown=require('main.game.medals').validate(e.medal_times)
     if not medal_ok then return nil,medal_err,medal_unknown end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
@@ -318,7 +318,7 @@ function M.validate(doc)
                 if not e.fuel then return nil,'Canisters need fuel settings' end
             end
             if o.content~=nil then return nil,'Canister refill is configured once for the course',true end
-            local cd=require 'main.gym.coin_data'
+            local cd=require 'main.game.coin_data'
             if not point(o.position) or not cd.id(o.pickup_id) or pickups[o.pickup_id] then return nil,'Invalid/duplicate coin pickup ID: '..o.id end
             pickups[o.pickup_id]=true;coin_count=coin_count+1
             if coin_count>cd.MAX then return nil,'Combined coin pickup limit is '..cd.MAX end
@@ -646,8 +646,8 @@ local function extent(e)
     local function add(x,y) b[1]=math.min(b[1],x);b[2]=math.max(b[2],x);b[3]=math.min(b[3],y);b[4]=math.max(b[4],y) end
     -- Both ends of every edge: an open line's last point is no edge's start.
     each_segment(e,function(a,b) add(a[1],a[2]);add(b[1],b[2]) end)
-    for _,o in ipairs(e.objects) do if o.type=='label' or o.type=='coin' then add(o.position[1],o.position[2]);if o.type=='coin' then local r=require('main.gym.coin_data').radius(o);add(o.position[1]-r,o.position[2]-r);add(o.position[1]+r,o.position[2]+r) end end end
-    for _,r in ipairs(require('main.gym.mechanism_data').extents(e.mechanisms)) do add(r[1],r[3]);add(r[2],r[4]) end
+    for _,o in ipairs(e.objects) do if o.type=='label' or o.type=='coin' then add(o.position[1],o.position[2]);if o.type=='coin' then local r=require('main.game.coin_data').radius(o);add(o.position[1]-r,o.position[2]-r);add(o.position[1]+r,o.position[2]+r) end end end
+    for _,r in ipairs(require('main.game.mechanism_data').extents(e.mechanisms)) do add(r[1],r[3]);add(r[2],r[4]) end
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
     if e.finish then local f=e.finish.position;add(f[1],f[2]-M.FINISH_BELOW);add(f[1],f[2]+M.FINISH_ABOVE) end

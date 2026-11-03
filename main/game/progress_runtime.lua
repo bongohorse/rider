@@ -1,6 +1,6 @@
 -- Adapter inside the existing tick owner; the route is immutable and never controls a run.
-local route=require 'main.gym.course_progress'
-local feel=require 'main.gym.feel'
+local route=require 'main.game.course_progress'
+local feel=require 'main.game.feel'
 local M={}
 local function phase(self)
     return self.race and self.race.state or self.finish_done and 'finished' or self.paused and 'paused' or 'running'

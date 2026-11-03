@@ -1,7 +1,7 @@
 -- Loader-side owner of imported custom levels (level-editor contract R14).
 -- Defold 1.14 runs every script in one Lua context, so this module outlives
 -- proxied world reloads. The world receives only a snapshot id + generation.
-local data=require "main.gym.station_data"
+local data=require "main.game.station_data"
 local M={limit=256*1024}
 local snapshots,serial={},0
 -- Two alternating save slots: a write only ever replaces the older slot, so a
@@ -282,7 +282,7 @@ function M.library(parse)
     return L
 end
 function M.init()
-    if html5 then html5.run(assert(sys.load_resource("/main/gym/custom.js"),"Missing custom level helper")) end
+    if html5 then html5.run(assert(sys.load_resource("/main/game/custom.js"),"Missing custom level helper")) end
 end
 function M.take()
     if not html5 then return nil end

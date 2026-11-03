@@ -1,5 +1,5 @@
 -- Bounded editor coin references from existing physical source chains. Never bridge a gap.
-local doc=require 'main.gym.editor_doc'
+local doc=require 'main.editor.editor_doc'
 local M={MAX_SEGMENTS=2048};local EPS=1e-7
 local function same(a,b) return math.abs(a[1]-b[1])<EPS and math.abs(a[2]-b[2])<EPS end
 local function route(id,raw,owners)

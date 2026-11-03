@@ -1,19 +1,19 @@
 -- Level editor (LE2 shell, LE3 drawing, LE4 documents, LE5a prefabs, LE5b curves). Its own game object sits on top of the input stack: in Edit
 -- mode every action is consumed here (Defold only stops propagation between game objects, not between
 -- the components of one), so game keys, the HUD and the world never see editor input (R15).
-local editor=require "main.gym.editor"
-local doc_lib=require "main.gym.editor_doc"
-local edit=require "main.gym.editor_edit"
-local prefab=require "main.gym.editor_prefab"
-local snap_lib=require "main.gym.editor_snap"
-local overlay=require "main.gym.editor_overlay"
-local editor_ui=require "main.gym.editor_ui"
-local zoom_policy=require "main.gym.editor_zoom"
-local track_align=require "main.gym.editor_track_align"
-local auto_coins=require "main.gym.editor_auto_coins"
-local terrain_look=require "main.gym.editor_look"
-local stations=require "main.gym.stations"
-local custom=require "main.gym.custom"
+local editor=require "main.editor.editor"
+local doc_lib=require "main.editor.editor_doc"
+local edit=require "main.editor.editor_edit"
+local prefab=require "main.editor.editor_prefab"
+local snap_lib=require "main.editor.editor_snap"
+local overlay=require "main.editor.editor_overlay"
+local editor_ui=require "main.editor.editor_ui"
+local zoom_policy=require "main.editor.editor_zoom"
+local track_align=require "main.editor.editor_track_align"
+local auto_coins=require "main.editor.editor_auto_coins"
+local terrain_look=require "main.editor.editor_look"
+local stations=require "main.game.stations"
+local custom=require "main.game.custom"
 local socket=require "socket"
 local LOADER="main:/loader#script"
 -- Screen-space behaviour (independent of zoom): pick tolerance, anchor snap radius, handle size,
@@ -266,7 +266,7 @@ local function candidates(p)
     end
     for _,o in ipairs(e.objects) do
         local d,segment
-        if o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.gym.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
+        if o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.game.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
         elseif o.type=="label" then
             -- The drawn text's box (LE6b): editor_view scales labels by max(1, 0.5 / zoom); the builtin
             -- font is about 7.9 x 14 units per character at scale 1 (1 unit = 1 cm).
@@ -1142,7 +1142,7 @@ local function confirm_name(self,closing)
         set_zoom(self,z);self.field=nil;editor.message='';return
     end
     if self.field.fuel then
-        local f=self.field;local policy=require 'main.gym.fuel';local n,err=policy.value(f.fuel,f.text)
+        local f=self.field;local policy=require 'main.game.fuel';local n,err=policy.value(f.fuel,f.text)
         if not n then f.error=err;editor.message=err;if closing then remember_error(self,'fuel_'..f.fuel,err);self.field=nil end;return end
         self.field=nil;self.ui_error=nil
         editor.commit(function(e)
@@ -1152,7 +1152,7 @@ local function confirm_name(self,closing)
     end
     if self.field.medal then
         local f=self.field
-        local times,err=require('main.gym.medals').set(editor.doc.editor.medal_times,f.medal,f.text)
+        local times,err=require('main.game.medals').set(editor.doc.editor.medal_times,f.medal,f.text)
         if not times then
             f.error=err;editor.message=err
             if closing then remember_error(self,'medal_'..f.medal,err);self.field=nil end
@@ -1384,7 +1384,7 @@ local function step_focused(self,name)
         (name=="inc_test_speed" or name=="dec_test_speed" or name=="plus" or name=="minus") and "test"
     local fk=name:match('^[di][en]c_fuel_(%a+)$')
     if fk and f.fuel==fk then
-        local policy=require 'main.gym.fuel';local n,err=policy.value(fk,f.text)
+        local policy=require 'main.game.fuel';local n,err=policy.value(fk,f.text)
         if not n then f.error=err;return true end
         local step=policy.fields[fk][3]*(self.held.shift and 10 or self.held.alt and .1 or 1)
         f.text=number_text(n+(name:sub(1,1)=='d' and -step or step));confirm_name(self);return true
@@ -1465,9 +1465,9 @@ local function on_button(self,name)
     if name=="collapse_tools" or name=="collapse_properties" or name=="collapse_prefabs" or name=="collapse_medals" or name=="collapse_fuel" or name=="collapse_gameplay" or name=="collapse_tool_category" then
         local key=name:sub(10);self.ui[key]=not self.ui[key];return
     elseif name=='fuel_enabled' then
-        editor.commit(function(e) if not e.fuel then e.fuel=require('main.gym.fuel').defaults() else e.fuel.enabled=not e.fuel.enabled end end);return
+        editor.commit(function(e) if not e.fuel then e.fuel=require('main.game.fuel').defaults() else e.fuel.enabled=not e.fuel.enabled end end);return
     elseif name:match('^fuel_') or name:match('^[di][en]c_fuel_') then
-        local key=name:match('fuel_(%a+)$');local policy=require 'main.gym.fuel';local c=editor.doc.editor.fuel or policy.defaults()
+        local key=name:match('fuel_(%a+)$');local policy=require 'main.game.fuel';local c=editor.doc.editor.fuel or policy.defaults()
         if not policy.fields[key] then return end
         local value=c[key]
         local sign=name:match('^dec_') and -1 or name:match('^inc_') and 1 or 0
@@ -1475,10 +1475,10 @@ local function on_button(self,name)
         self.ui.reveal='fuel_'..key;self.field={fuel=key,text=number_text(value+sign*step),all=true}
         if sign~=0 then confirm_name(self) end;return
     elseif name:match('^medal_') then
-        local key=name:sub(7);local times=editor.doc.editor.medal_times or require('main.gym.medals').defaults()
+        local key=name:sub(7);local times=editor.doc.editor.medal_times or require('main.game.medals').defaults()
         self.ui.reveal=name;self.field={medal=key,text=number_text(times[key]),all=true};return
     elseif name:match('^[di][en]c_medal_') then
-        local key=name:match('medal_(%a+)$');local times=editor.doc.editor.medal_times or require('main.gym.medals').defaults()
+        local key=name:match('medal_(%a+)$');local times=editor.doc.editor.medal_times or require('main.game.medals').defaults()
         local step=.5*(self.held.shift and 10 or self.held.alt and .1 or 1)
         self.field={medal=key,text=number_text(times[key]+(name:sub(1,1)=='d' and -step or step)),all=true}
         confirm_name(self);return
@@ -1837,7 +1837,7 @@ local function canvas_press(self,action)
     if editor.tool=='coin' or editor.tool=='gem' or editor.tool=='fuel' then
         local q=snap(self,p);local id
         if editor.commit(function(e)
-            if editor.tool=='fuel' and not e.fuel then e.fuel=require('main.gym.fuel').defaults() end
+            if editor.tool=='fuel' and not e.fuel then e.fuel=require('main.game.fuel').defaults() end
             id=editor.new_id();e.objects[#e.objects+1]={id=id,type='coin',kind=editor.tool~='coin' and editor.tool or nil,pickup_id=doc_lib.pickup_id(e,id),position={q[1],q[2]}}
         end,true) then editor.select(id) end
         return
@@ -3022,7 +3022,7 @@ local function publish(self)
     for name,b in pairs(self.buttons) do buttons[name]=screen(b.box) end
     for _,name in ipairs(self.templates) do if not buttons[name] then buttons[name]={x=-1,y=-1} end end
     local o=self.overlay
-    local gold,gems=require('main.gym.coin_data').counts(e and e.objects)
+    local gold,gems=require('main.game.coin_data').counts(e and e.objects)
     html5.run("window.riderEditor="..json.encode({gold_count=gold,gem_count=gems,mode=editor.mode,tool=editor.tool,selection=editor.selection or "",status=editor.status,
         auto_preview=self.auto_plan and {positions=self.auto_plan.positions,removed=self.auto_plan.removed,desired=self.auto_plan.desired,possible=self.auto_plan.possible,seed=self.auto_plan.seed} or false,auto_settings=self.auto_settings or false,message=editor.message,problem=editor.problem or "",dirty=editor.dirty or false,test_speed=editor.test_speed,track_height=self.track_height or track_align.DEFAULT,track_bound=self.track_cache and self.track_cache.active and not self.track_cache.error or false,track_mixed=self.track_cache and self.track_cache.active and not self.track_cache.error and self.track_cache.mixed or false,along_error=self.track_cache and self.track_cache.error or false,camera=editor.camera,screen=editor.map(),
         id=editor.doc and editor.doc.id or "",name=editor.doc and editor.doc.name or "",revision=e and e.revision or -1,next_id=e and e.next_id or 0,

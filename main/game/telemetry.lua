@@ -1,7 +1,7 @@
 -- Read-only observer. Values describe the most recent completed engine step.
-local vehicle = require "main.gym.vehicle"
+local vehicle = require "main.game.vehicle"
 local M = {}
-M.budget = json.decode(sys.load_resource("/main/gym/budget.json"))
+M.budget = json.decode(sys.load_resource("/main/game/budget.json"))
 function M.new() return {elapsed=0,frames=0} end
 function M.over(value,limit,minimum)
     if not limit then return false end

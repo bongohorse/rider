@@ -1,1 +1,1 @@
-components { id: "body" component: "/main/gym/terrain.collisionobject" }
+components { id: "body" component: "/main/game/terrain.collisionobject" }

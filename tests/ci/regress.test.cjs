@@ -12,7 +12,7 @@ test('tolerances stay frozen at their declared sources',()=>{
     gaps:{jump_distance_m:0.05,takeoff_speed_mps:0.02,peak_compression_m:0.005}, // a19
     air:{takeoff_speed_mps:0.02,airtime_s:0.034,rotation_deg:5,landing_angle_deg:5,peak_compression_m:0.005}, // a19c
   });
-  assert.match(fs.readFileSync(path.join(S.ROOT,'main/gym/replay.lua'),'utf8'),/M\.TOLERANCE=\{position_m=0\.05,angle_rad=0\.05\}/);
+  assert.match(fs.readFileSync(path.join(S.ROOT,'main/game/replay.lua'),'utf8'),/M\.TOLERANCE=\{position_m=0\.05,angle_rad=0\.05\}/);
   assert.equal(S.TRACES.length,3);
   assert.deepEqual(JSON.parse(JSON.stringify(S.PERTURB)),{
     trace:{name:'gaps-3',throttle_zero:[1,45],must_fail:['verdict','takeoff_speed_mps']},
@@ -41,7 +41,7 @@ test('every trace is a valid format-v1 recording of preset A, unmodified, from i
     assert.equal(t.preset,'a',def.name+': preset');assert.equal(t.modified,false,def.name+': modified');
     assert.deepEqual(t.tuning,A.values,def.name+': tuning is not preset A');assert.equal(t.identity,A.identity);
     assert.equal(t.station,def.station);assert.equal(t.section,def.section);assert.equal(t.start_speed,def.start_speed);
-    const station=JSON.parse(fs.readFileSync(path.join(S.ROOT,'main/gym/stations',def.station+'.json'),'utf8'));
+    const station=JSON.parse(fs.readFileSync(path.join(S.ROOT,'main/game/stations',def.station+'.json'),'utf8'));
     const start=def.section===false?station.start_speed:station.sections.find(s=>s.id===def.section).start_speed;
     assert.equal(start,def.start_speed,def.name+': station start speed');
     assert.equal(t.ticks,def.ticks);assert.equal(t.ended,'full');assert.equal(t.scaled_ticks,0);assert.equal(t.trailing,true);

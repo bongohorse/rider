@@ -1,5 +1,5 @@
 {
- "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS; \"also_ci\": true selects the cases and additionally reports BLOCKED, because part of the coverage exists only in CI. A file every case loads is also reported BLOCKED when a \"ci\" or \"also_ci\" rule matches it. Station JSONs are loaded by id (`sys.load_resource` in main/gym/stations.lua) and by many runners, so they have no narrow rule. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
+ "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS; \"also_ci\": true selects the cases and additionally reports BLOCKED, because part of the coverage exists only in CI. A file every case loads is also reported BLOCKED when a \"ci\" or \"also_ci\" rule matches it. Station JSONs are loaded by id (`sys.load_resource` in main/game/stations.lua) and by many runners, so they have no narrow rule. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
  "rules": [
   {
    "name": "le6 editor gameplay checks (loaded by polish.cjs and editor_ui_checks.cjs)",
@@ -215,8 +215,8 @@
    ],
    "paths": [
     "tools/gym/stations.cjs",
-    "main/gym/stations/straight-test.json",
-    "main/gym/stations/invalid-test.json"
+    "main/game/stations/straight-test.json",
+    "main/game/stations/invalid-test.json"
    ]
   },
   {

@@ -1,6 +1,6 @@
 -- Terrain Look session: drafts are separate from source, Apply is one existing editor commit.
-local editor=require 'main.gym.editor'
-local doc=require 'main.gym.editor_doc'
+local editor=require 'main.editor.editor'
+local doc=require 'main.editor.editor_doc'
 local look=require 'main.terrain_perspective.look'
 local projection=require 'main.terrain_perspective.projection'
 local socket=require 'socket'

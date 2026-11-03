@@ -3,7 +3,7 @@
 -- A prefab object is {id, type="prefab", kind, at={x,y}, params={...}}. The parameters are the source
 -- (R1); the geometry is derived from them. `at` is the entry (the left end; a Platform's bottom-left
 -- corner). Terrain prefabs are pieces of a run like lines; a Platform is a separate hull obstacle.
-local sample=require "main.gym.editor_sample"
+local sample=require "main.editor.editor_sample"
 local M={}
 M.ORDER={"flat","ramp","step","gap","kicker","platform","wave"}
 -- Fields in panel order. A number field has a unit and an inclusive range (magnitude: the smallest

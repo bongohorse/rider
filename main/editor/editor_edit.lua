@@ -1,7 +1,7 @@
 -- Level editor edit operations (LE3; contract R4, R5, R16, R17). Pure: they change the editor block
 -- of a document copy in place; the caller validates and commits the result as one Undo step.
-local doc_lib=require "main.gym.editor_doc"
-local prefab=require "main.gym.editor_prefab"
+local doc_lib=require "main.editor.editor_doc"
+local prefab=require "main.editor.editor_prefab"
 local M={}
 local function find(e,id) for i,o in ipairs(e.objects) do if o.id==id then return o,i end end end
 M.find=find

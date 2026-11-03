@@ -3,8 +3,8 @@ sys={get_save_file=function(app,name)return app..'/'..name end,exists=function(p
  get_engine_info=function()return {is_debug=true}end,load=function(p)if files[p]=='bad' then error('bad slot') end;return files[p] or {}end,
  save=function(p,d)writes=writes+1;if fail then files[p]=nil;error('write failure') end;files[p]=d;return true end}
 json={encode=function(t)serial=serial+1;encoded[tostring(serial)]=t;return tostring(serial)end,decode=function(t)assert(encoded[t]);return encoded[t]end}
-local custom=require 'main.gym.custom';custom.sync_state=function()return state end
-local B=require 'main.gym.coin_bank';local b=B.new();B.generation(b,1)
+local custom=require 'main.game.custom';custom.sync_state=function()return state end
+local B=require 'main.game.coin_bank';local b=B.new();B.generation(b,1)
 assert(not B.offer(b,1,1,3,false) and b.total==0);assert(not B.offer(b,1,1,3,true))
 assert(B.offer(b,1,2,3,true));assert(b.total==0 and b.desired==3);assert(not B.offer(b,1,2,3,true))
 state='syncing';B.poll(b,.1);assert(b.total==0);assert(B.offer(b,1,3,2,true));assert(b.desired==5 and b.pending.total==3)

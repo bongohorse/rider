@@ -1,6 +1,6 @@
 -- Versioned visual-only contract for #290; #278 can reuse it after visual acceptance.
 -- World metres. The z=0 collision plane is invariant under this central projection.
-local geometry=require 'main.gym.terrain_geometry'
+local geometry=require 'main.game.terrain_geometry'
 local M={VERSION=1,FOCAL=40,STRIDE=48,WORKING=560}
 M.DEFAULT={version=1,mode='perspective',width=.9,perspective=.35,angle=math.atan(.55)*180/math.pi,side=64,shading=1}
 M.RANGES={width={.25,2},perspective={0,1},angle={10,45},side={.25,64},shading={0,1}}

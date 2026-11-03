@@ -63,11 +63,11 @@ Relevant pre-mesh code paths (for problem history only):
 | File | Historical behavior / limitation |
 | --- | --- |
 | [`game.project`](https://github.com/bongohorse/rider/blob/main/game.project) | `[sprite] max_count = 1024`; no separately configured `collection.max_instances` (Defold default applies). `[physics] type = 2D`, Box2D fixed-step; `max_collision_object_count = 256` is **not** a terrain-segment count. |
-| [`main/gym/editor_sample.lua`](https://github.com/bongohorse/rider/blob/main/main/gym/editor_sample.lua) | Adaptive curve sampling: `TOLERANCE = 0.005` m (5 mm), `MAX_SEGMENT = 0.5` m, `MAX_POINTS = 2048`. Shape accuracy and chord length can create many sampled segments. |
-| [`main/gym/editor_doc.lua`](https://github.com/bongohorse/rider/blob/main/main/gym/editor_doc.lua) | Compiles connected paths to collision chains; `drawn()` counts all sampled segments as line sprites. |
-| [`main/gym/stations.lua`](https://github.com/bongohorse/rider/blob/main/main/gym/stations.lua) | `line()` creates an individual line Sprite/GameObject per segment; `decorate()` traverses the full compiled terrain. Box2D chains are built independently. |
-| [`main/gym/station_data.lua`](https://github.com/bongohorse/rider/blob/main/main/gym/station_data.lua) | Rejects levels exceeding **800 calculated render objects**, including terrain segments, obstacle edges, labels, finish and markers. |
-| [`main/gym/editor_view.lua`](https://github.com/bongohorse/rider/blob/main/main/gym/editor_view.lua) | Editor can simplify the preview by distributing fewer line sprites, but the full geometry remains and Play still requires the 800-object validator to pass. |
+| [`main/editor/editor_sample.lua`](https://github.com/bongohorse/rider/blob/main/main/editor/editor_sample.lua) | Adaptive curve sampling: `TOLERANCE = 0.005` m (5 mm), `MAX_SEGMENT = 0.5` m, `MAX_POINTS = 2048`. Shape accuracy and chord length can create many sampled segments. |
+| [`main/editor/editor_doc.lua`](https://github.com/bongohorse/rider/blob/main/main/editor/editor_doc.lua) | Compiles connected paths to collision chains; `drawn()` counts all sampled segments as line sprites. |
+| [`main/game/stations.lua`](https://github.com/bongohorse/rider/blob/main/main/game/stations.lua) | `line()` creates an individual line Sprite/GameObject per segment; `decorate()` traverses the full compiled terrain. Box2D chains are built independently. |
+| [`main/game/station_data.lua`](https://github.com/bongohorse/rider/blob/main/main/game/station_data.lua) | Rejects levels exceeding **800 calculated render objects**, including terrain segments, obstacle edges, labels, finish and markers. |
+| [`main/editor/editor_view.lua`](https://github.com/bongohorse/rider/blob/main/main/editor/editor_view.lua) | Editor can simplify the preview by distributing fewer line sprites, but the full geometry remains and Play still requires the 800-object validator to pass. |
 
 Previous issue [#236](https://github.com/bongohorse/rider/issues/236) addressed an incorrect/premature warning on a longer six-anchor curve. It is **closed**. This epic concerns the remaining *structural* per-segment scaling problem, not a duplicate regression ticket.
 

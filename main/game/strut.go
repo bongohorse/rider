@@ -1,1 +1,1 @@
-components { id: "sprite" component: "/main/gym/strut.sprite" }
+components { id: "sprite" component: "/main/game/strut.sprite" }

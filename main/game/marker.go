@@ -1,1 +1,1 @@
-components { id: "label" component: "/main/gym/marker.label" }
+components { id: "label" component: "/main/game/marker.label" }

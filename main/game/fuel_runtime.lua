@@ -1,4 +1,4 @@
-local fuel=require 'main.gym.fuel'
+local fuel=require 'main.game.fuel'
 local M={}
 function M.reset(self)
     self.fuel=fuel.new(self.station and self.station.fuel);self.fuel_attempt=(self.fuel_attempt or 0)+1

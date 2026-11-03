@@ -1,1 +1,1 @@
-components { id: "camera" component: "/main/gym/camera.camera" }
+components { id: "camera" component: "/main/game/camera.camera" }

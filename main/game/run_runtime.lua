@@ -1,7 +1,7 @@
 -- Adapter to the existing controller/reset owner. Session state stays on that owner instance.
-local run=require 'main.gym.run'
-local best=require 'main.gym.run_best'
-local medals=require 'main.gym.medals'
+local run=require 'main.game.run'
+local best=require 'main.game.run_best'
+local medals=require 'main.game.medals'
 local M={}
 function M.eligible(self)
     return self.station and (self.station.id=='first-run' or self.station.medal_times and self.station.finish) and not self.station.custom
@@ -41,7 +41,7 @@ function M.finish(self)
     if result then
         msg.post('main:/loader#script','level_finish',{generation=self.session_generation,official=result.official,attempt=self.race.attempt})
         result.medal=result.official and medals.award(self.station.medal_times,result.time) or 0
-        require('main.gym.coin_runtime').finish(self,result)
+        require('main.game.coin_runtime').finish(self,result)
         self.race.new_best=best.offer(self.personal,result)
     end
 end

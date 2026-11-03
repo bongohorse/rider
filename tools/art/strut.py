@@ -36,13 +36,13 @@ def outputs():
     svg = vector()
     sprite = ('default_animation: "strut"\n'
               'material: "/builtins/materials/sprite.material"\n'
-              'textures { sampler: "texture_sampler" texture: "/main/gym/assets/gym.atlas" }\n'
+              'textures { sampler: "texture_sampler" texture: "/main/game/assets/gym.atlas" }\n'
               f'size_mode: SIZE_MODE_MANUAL\nsize {{ x: {WIDTH}.0 y: {LENGTH}.0 }}\n')
     png = BytesIO()
     raster(svg).save(png, format='PNG', optimize=False, compress_level=9)
-    return {'main/gym/assets/strut.svg': svg.encode(),
-            'main/gym/assets/strut.png': png.getvalue(),
-            'main/gym/strut.sprite': sprite.encode()}
+    return {'main/game/assets/strut.svg': svg.encode(),
+            'main/game/assets/strut.png': png.getvalue(),
+            'main/game/strut.sprite': sprite.encode()}
 
 
 def check(root=ROOT):

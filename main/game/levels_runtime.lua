@@ -1,10 +1,10 @@
 -- Runs in the loader collection; world teardown cannot discard in-flight progress acknowledgement.
-local catalog=require 'main.gym.course_catalog'
-local progress=require 'main.gym.level_progress'
-local best=require 'main.gym.run_best'
-local medals=require 'main.gym.medals'
-local stations=require 'main.gym.stations'
-local custom=require 'main.gym.custom'
+local catalog=require 'main.game.course_catalog'
+local progress=require 'main.game.level_progress'
+local best=require 'main.game.run_best'
+local medals=require 'main.game.medals'
+local stations=require 'main.game.stations'
+local custom=require 'main.game.custom'
 local M={view={open=false,courses={}}}
 function M.new()
  local t={progress=progress.new(),levels={},records={},refresh=true}

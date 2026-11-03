@@ -8,7 +8,7 @@
 -- bounds) runs in the owner's fixed_update reset window. Never in a contact callback.
 -- The revolute joint is recreated on every reset: the old handle is destroyed and must be invalid,
 -- the new one valid, the plank keeps exactly one joint, and the joint generation advances.
-local data=require "main.gym.station_data"
+local data=require "main.game.station_data"
 local M={}
 local function scale() return sys.get_config_number("physics.scale",0.01) end
 local function pose(s)

@@ -3,7 +3,7 @@
 -- held), "skill" (slow closed-loop driving with key-like binary throttle/brake, recorded) and "replay"
 -- (plays a recorded trace open-loop). Commands keep the keyboard shape: allow_reverse = not throttle.
 -- With watch_plank=true in the same spec, the attempt also publishes the plank state every tick (#228).
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local seesaw=require "main.gym.seesaw"
 local M={}
 -- Skill controller, declared before evidence runs: speed reference sqrt(2 a d) capped at VMAX towards the

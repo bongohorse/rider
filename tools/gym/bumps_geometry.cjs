@@ -15,7 +15,7 @@ const CREST_HEIGHT=0.4,CREST_WAVELENGTHS=[8,6,4,3];
 const RUN_IN=5,RUN_OUT=6,BETWEEN=6,LEAD=10,TAIL=10,MARGIN=5;
 const SPAWN_Y=0.9,START_SPEED=5;
 const SOURCE={id:'bumps-source',name:'Bumps station source',file:'tools/gym/bumps-source.json'};
-const STATION_FILE='main/gym/stations/bumps.json';
+const STATION_FILE='main/game/stations/bumps.json';
 const fmt=x=>String(Number(x.toFixed(6)));
 function layout(){
  const objects=[],sections=[],labels=[];

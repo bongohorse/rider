@@ -1,4 +1,4 @@
-collision_shape: "/main/gym/mechanism_gate.convexshape"
+collision_shape: "/main/game/mechanism_gate.convexshape"
 type: COLLISION_OBJECT_TYPE_DYNAMIC
 mass: 16.0
 friction: 0.6

@@ -1,26 +1,26 @@
-local stations=require "main.gym.stations"
-local mobile=require "main.gym.mobile"
+local stations=require "main.game.stations"
+local mobile=require "main.game.mobile"
 -- Read-only wheel-support helper for the LE5b reference drive (debug only).
 local seam_metrics
-local history=require "main.gym.history"
-local audio=require "main.gym.audio"
+local history=require "main.game.history"
+local audio=require "main.game.audio"
 -- Sole gym physics owner. Defold owns bodies/world stepping; all lengths here
 -- are engine units. create_chain applies physics.scale once in the binding.
-local vehicle = require "main.gym.vehicle"
+local vehicle = require "main.game.vehicle"
 -- A19d seesaw: per-session dynamic obstacle owned here (see seesaw.lua for its lifecycle).
 local seesaw = require "main.gym.seesaw"
-local mechanisms=require "main.gym.mechanisms"
+local mechanisms=require "main.game.mechanisms"
 local socket = require "socket"
-local rider = require "main.gym.rider"
-local feel = require "main.gym.feel"
-local telemetry = require "main.gym.telemetry"
-local editor_view = require "main.gym.editor_view"
+local rider = require "main.game.rider"
+local feel = require "main.game.feel"
+local telemetry = require "main.game.telemetry"
+local editor_view = require "main.editor.editor_view"
 -- Car Feel 3 struts: render-only visuals on the chassis; never touches bodies or the fixed tick.
-local juice = require "main.gym.juice"
+local juice = require "main.game.juice"
 -- A21 record and replay: one more command source in this tick owner; the recording lives on self.replay.
-local replay=require "main.gym.replay"
-local race=require "main.gym.run_runtime"
-local progress=require "main.gym.progress_runtime"
+local replay=require "main.game.replay"
+local race=require "main.game.run_runtime"
+local progress=require "main.game.progress_runtime"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
 local LOADER="main:/loader#script"
 local GAMEPLAY={}
@@ -38,7 +38,7 @@ local function request_reset(self,reason)
 end
 local function manual_retry(self)
     request_reset(self,"manual")
-    if self.race and require("main.gym.run").terminal(self.race) then
+    if self.race and require("main.game.run").terminal(self.race) then
         msg.post(LOADER,"run_retry_resume",{generation=self.session_generation,id=self.race.id})
     end
 end
@@ -91,7 +91,7 @@ local function reset(self)
     self.reset_count = self.reset_count+1
     self.last_reset_reason = request.reason
     race.ready(self)
-    require('main.gym.coin_runtime').reset(self)
+    require('main.game.coin_runtime').reset(self)
     progress.reset(self)
     self.resetting = false
     self.check_reset_pose = self.testcase=="a3"
@@ -187,12 +187,12 @@ local function setup(self)
         if sys.get_config_int("rider.terrain_compare",0)==1 then
             self.decor_sprites,self.decor_labels=require("main.terrain_compare.renderer").build(self,self.station)
         else
-            self.decor_sprites,self.decor_labels=require("main.gym.terrain_mesh").build(self,self.station)
+            self.decor_sprites,self.decor_labels=require("main.game.terrain_mesh").build(self,self.station)
         end
         self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
     if not built then
-        require("main.gym.terrain_mesh").final(self,true)
+        require("main.game.terrain_mesh").final(self,true)
         print("GYM_BUILD_FAILED "..json.encode({station=self.station.id,error=tostring(err)}))
         msg.post("main:/loader#ui","station_error",{note=(self.station.custom and "Custom level" or "Station").." could not be built. Import another level [I]."})
         self.station,self.segments,self.chain=nil,nil,nil
@@ -330,7 +330,7 @@ function update(self, dt)
     if self.fps356 then self.fps356.update(self.fps356_state,self,dt) end
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
-    require('main.gym.coin_runtime').update(self,dt)
+    require('main.game.coin_runtime').update(self,dt)
     race.update(self,dt)
     progress.update(self,dt)
     local mechanism_clock=socket.gettime()
@@ -369,7 +369,7 @@ function update(self, dt)
         -- Paused: touch drive, Retry and section requests are dropped; a station switch leaves the pause.
         local m=self.mobile
         if m.retry or m.next_section or m.throttle or m.brake or m.left or m.right or m.record or m.replay then self.time_dropped=self.time_dropped+1 end
-        self.mobile={station=m.station,clear=m.clear,started=m.started,retry=self.race and require("main.gym.run").terminal(self.race) and m.retry or nil}
+        self.mobile={station=m.station,clear=m.clear,started=m.started,retry=self.race and require("main.game.run").terminal(self.race) and m.retry or nil}
     end
     if self.mobile.clear then self.held={};msg.post("main:/loader#ui","cancel_drag") end
     if self.mobile.started then audio.start(self) end
@@ -395,7 +395,7 @@ function update(self, dt)
         start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         race.ready(self)
-        require('main.gym.coin_runtime').reset(self)
+        require('main.game.coin_runtime').reset(self)
         progress.reset(self)
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
         self.target = self.vehicle.ids.chassis
@@ -437,7 +437,7 @@ function update(self, dt)
     else
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
-    require("main.gym.terrain_mesh").update(self)
+    require("main.game.terrain_mesh").update(self)
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
         rider.animate(self.vehicle,dt)
@@ -542,7 +542,7 @@ function on_input(self, action_id, action)
             return
         end
     end
-    if self.race and require("main.gym.run").terminal(self.race) and action_id==hash("retry") then
+    if self.race and require("main.game.run").terminal(self.race) and action_id==hash("retry") then
         if action.pressed then manual_retry(self) end;return
     end
     if self.paused then
@@ -586,13 +586,13 @@ function fixed_update(self, dt)
         if self.camera_probe then self.camera_probe.fixed(self,state,dt) end
         if self.scenario then self.scenario.check_pose(self,state) end
         race.observe(self,dt)
-        require('main.gym.fuel_runtime').observe(self)
+        require('main.game.fuel_runtime').observe(self)
         if self.race then
             if stations.outside(self.station,state) then race.failed(self,"bounds") end
             if self.sensor_skip==0 and self.crash_enabled and rider.contact(self.vehicle) then race.failed(self,"head") end
             self.attempt_time=self.race.elapsed
         else self.attempt_time=(self.attempt_time or 0)+dt end
-        require('main.gym.coin_runtime').observe(self,state)
+        require('main.game.coin_runtime').observe(self,state)
         check_finish(self,state)
         progress.observe(self,state)
         if self.testcase=="le3" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5d" then
@@ -663,8 +663,8 @@ function fixed_update(self, dt)
         self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
-        require('main.gym.fuel_runtime').command(self,self.last_command,dt)
-        if self.mechanisms then mechanisms.fixed(self.mechanisms,dt,not self.finish_done and not (self.race and require('main.gym.run').terminal(self.race))) end
+        require('main.game.fuel_runtime').command(self,self.last_command,dt)
+        if self.mechanisms then mechanisms.fixed(self.mechanisms,dt,not self.finish_done and not (self.race and require('main.game.run').terminal(self.race))) end
         vehicle.apply(self.vehicle,self.last_command,dt)
         if self.coast_measure then self.coast_measure.after(self) end
         if self.fuel then self.fuel.power=self.vehicle.powered_input or 0 end
@@ -681,7 +681,7 @@ function final(self)
     if self.fps356runtime then self.fps356runtime.restore(self) end
     editor_view.final(self)
     if self.terrain_compare then require("main.terrain_compare.renderer").final(self) end
-    require("main.gym.terrain_mesh").final(self)
+    require("main.game.terrain_mesh").final(self)
     mobile.final()
     audio.stop(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
@@ -737,6 +737,6 @@ function on_message(self,id,data,sender)
         if data.series>1 then self.graph_seen_peak=math.max(self.graph_seen_peak or 0,data.positive_peak) end
     elseif id==hash("hud_probe_result") then self.hud_probe_result=data
     elseif id==hash("measurements_shown") then self.measurements_shown=data
-    elseif id==hash("run_retry") and self.race and data.id==self.race.id and require("main.gym.run").terminal(self.race) then manual_retry(self)
+    elseif id==hash("run_retry") and self.race and data.id==self.race.id and require("main.game.run").terminal(self.race) then manual_retry(self)
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end

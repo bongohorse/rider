@@ -27,7 +27,7 @@
 
 ## Rider calculations and evidence
 
-The actual authored wheel shape is `main/gym/wheel.convexshape`: `TYPE_SPHERE` with radius **22 engine units**. With `physics.scale = 0.01` this is **0.22 m**, and the wheel is a dynamic collision object (`main/gym/wheel.collisionobject`). No-slip linear speed is `v = abs(omega) * r`, evaluated **along the contact tangent**, not simply using horizontal chassis velocity on a slope.
+The actual authored wheel shape is `main/game/wheel.convexshape`: `TYPE_SPHERE` with radius **22 engine units**. With `physics.scale = 0.01` this is **0.22 m**, and the wheel is a dynamic collision object (`main/game/wheel.collisionobject`). No-slip linear speed is `v = abs(omega) * r`, evaluated **along the contact tangent**, not simply using horizontal chassis velocity on a slope.
 
 | Setting | Angular speed | No-slip speed with 0.22 m radius | Status |
 | --- | ---: | ---: | --- |
@@ -38,7 +38,7 @@ The actual authored wheel shape is `main/gym/wheel.convexshape`: `TYPE_SPHERE` w
 | Ordinary Box2D body cap (60 Hz) | 47.1239 rad/s | 10.3673 m/s = 37.32 km/h | **Source-calculated theoretical rolling ceiling** |
 | A18 v2 free-roll observed plateau | — | approximately **9.95 m/s** | **Historic engine measurement ([A18 seam protocol](../A18_SEAM_PROTOCOL.md#engine-boundary-found-during-the-experiment), [engine pitfall 6](../contracts/engine-pitfalls.md#entries)); NOT rerun for this PR** |
 
-In `main/gym/vehicle.lua`, the wheel joint's requested motor speed is set with `b2d.joint.set_motor_speed`. The requested motor speed and maximum motor torque do not bypass a separate body angular-velocity clamp. More drive torque, better throttle UI or render FPS alone cannot lift this limit.
+In `main/game/vehicle.lua`, the wheel joint's requested motor speed is set with `b2d.joint.set_motor_speed`. The requested motor speed and maximum motor torque do not bypass a separate body angular-velocity clamp. More drive torque, better throttle UI or render FPS alone cannot lift this limit.
 
 **Important distinction:** ≈10.37 m/s is not an absolute forward-speed limiter. A downhill vehicle may have chassis speed greater than this, and tires may slip relative to the surface because wheel angular velocity cannot keep up. Whether this produces measurable, objectionable behavior on real Rider tracks still requires a controlled test. The 9.95 m/s figure is a historic observation, **not a fresh CI result or an exact law of motion**.
 
@@ -96,7 +96,7 @@ This PR's own checklist. Implementation acceptance lives in #114.
 - [Box2D 3.1.0 full timestep versus solver substeps](https://github.com/erincatto/box2d/blob/v3.1.0/src/world.c#L700-L756)
 - [Box2D 3.1.0 `allowFastRotation` documentation](https://github.com/erincatto/box2d/blob/v3.1.0/include/box2d/types.h#L236-L241)
 - [Box2D 3.1.0 default body definition](https://github.com/erincatto/box2d/blob/v3.1.0/src/types.c)
-- [Rider `game.project`](../../game.project), [wheel shape](../../main/gym/wheel.convexshape), [wheel collision object](../../main/gym/wheel.collisionobject), [vehicle motor behavior](../../main/gym/vehicle.lua), [preset loader](../../main/gym/feel.lua), [A–F JSON](../../main/gym/presets/)
+- [Rider `game.project`](../../game.project), [wheel shape](../../main/game/wheel.convexshape), [wheel collision object](../../main/game/wheel.collisionobject), [vehicle motor behavior](../../main/game/vehicle.lua), [preset loader](../../main/game/feel.lua), [A–F JSON](../../main/game/presets/)
 
 **HISTORICAL RUNTIME EVIDENCE (not repeated):**
 - [Rider issue #114](https://github.com/bongohorse/rider/issues/114), [A18/PR #113](https://github.com/bongohorse/rider/pull/113), [A18 seam protocol](../A18_SEAM_PROTOCOL.md#engine-boundary-found-during-the-experiment): free-roll approx. 9.95 m/s.

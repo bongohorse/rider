@@ -1,5 +1,5 @@
 -- Loader-owned, single-tab gold/gem bank. Store absolute totals, never replay a delta on retry.
-local custom=require 'main.gym.custom'
+local custom=require 'main.game.custom'
 local M={LIMIT=2147483647,MAX_CLAIMS=4096}
 local function copy(t) local r={};for k,v in pairs(t or {}) do r[k]=v end;return r end
 local function claim(k) return type(k)=='string' and #k<=129 and k:match('^[a-z][a-z0-9%-]*/[a-z][a-z0-9%-]*$')~=nil end

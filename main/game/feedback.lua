@@ -1,4 +1,4 @@
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local M={}
 -- socket.gettime has 1 ms steps on HTML5: never print a sub-step value as zero cost.
 local function ms(v) return not v and "n/a" or v<1 and "<1 ms" or string.format("%.0f ms",v) end
@@ -24,7 +24,7 @@ function M.report(data,preset,modified,tuning,load)
 end
 function M.init()
     if html5 then
-        local source=assert(sys.load_resource("/main/gym/feedback.js"),"Missing feedback helper")
+        local source=assert(sys.load_resource("/main/game/feedback.js"),"Missing feedback helper")
         html5.run(source)
     end
 end

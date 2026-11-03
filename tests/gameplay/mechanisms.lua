@@ -1,4 +1,4 @@
-local D=require 'main.gym.mechanism_data';local L=require 'main.gym.mechanism_logic'
+local D=require 'main.game.mechanism_data';local L=require 'main.game.mechanism_logic'
 local spec={version=1,crates={{id='crate-a',position={6,.65}}},plates={{id='plate-a',position={10,.05},actors={'crate-a','vehicle'}}},gates={{id='gate-a',position={16,1.5},travel=4.5,speed=1.8}},links={{from='plate-a',event='active',to='gate-a',action='open'}}}
 assert(D.validate(spec,{-10,48,-10,20}));local cost=D.cost(spec);assert(cost.bodies==3 and cost.shapes==5 and cost.joints==1 and cost.vertices==20)
 local s=L.new(spec);local empty,occupied={['plate-a']={}},{['plate-a']={['crate-a']=true,vehicle=true}};local y={['gate-a']=0}
@@ -19,7 +19,7 @@ ticks(10,true);assert(s.plates['plate-a'].active);ticks(20,false);assert(s.plate
 spec.plates[1].initial_on=true;L.reset(s);ticks(1,false);assert(s.gates['gate-a'].open)
 -- Pulse expires even if held; a new press after release re-arms. No physical time integration.
 spec.plates[1].mode='pulse';spec.plates[1].pulse_seconds=.2;s=L.new(spec);ticks(10,true);assert(s.plates['plate-a'].active);ticks(40,true);assert(not s.plates['plate-a'].active and s.events==2);ticks(12,false);ticks(6,true);assert(s.plates['plate-a'].active and s.events==3)
-local E=require 'main.gym.editor_doc';local d=E.blank('mechanism-course','Mechanism course');d.editor.objects={{id='o1',type='line',points={{-6,0},{40,0}}}};d.editor.next_id=2;d.editor.start.position={2,1.7};d.editor.mechanisms=spec
+local E=require 'main.editor.editor_doc';local d=E.blank('mechanism-course','Mechanism course');d.editor.objects={{id='o1',type='line',points={{-6,0},{40,0}}}};d.editor.next_id=2;d.editor.start.position={2,1.7};d.editor.mechanisms=spec
 assert(E.validate(d));local compiled=assert(E.compile(d));assert(compiled.schema==5 and compiled.mechanisms.links[1].to=='gate-a');assert(not E.compare(d,compiled));local reopened=assert(E.open_level(compiled));assert(reopened.editor.mechanisms.crates[1].id=='crate-a');local copied=E.copy(d);copied.editor.mechanisms.crates[1].position[1]=7;assert(d.editor.mechanisms.crates[1].position[1]==6)
 d.editor.editor_version=11;d.editor.compiler_version=11;local _,_,unknown=E.validate(d);assert(unknown)
 print('PASS typed bounded mechanisms/source roundtrip, occupancy dedup/debounce, all3 modes, stale/duplicate events, reset, blocked motion and future protection')

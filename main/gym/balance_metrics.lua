@@ -1,6 +1,6 @@
 -- A19d Balance: read-only completed-step observations; no tuning, limits or reset requests.
 -- Lengths in metres, angles in rad, speeds in m/s (converted once via feel.metres).
-local feel=require "main.gym.feel"
+local feel=require "main.game.feel"
 local seams=require "main.gym.seam_metrics"
 local seesaw=require "main.gym.seesaw"
 local M={}
