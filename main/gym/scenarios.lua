@@ -18,6 +18,14 @@ function M.drive(self)
             local audio=require "main.game.audio"
             assert(self.audio_started and self.audio_starts==1 and self.audio_pitch>audio.idle_pitch+0.2,"Wheel pitch did not rise after input")
             assert(math.abs(go.get("#engine","speed")-self.audio_pitch)<0.001,"Audio playback property not updated")
+            -- #438: every one-shot cue resolves to a real sound component and plays (sound.play raises on a bad URL).
+            local played=0
+            for name in pairs(audio.effects) do
+                local before=(self.audio_effects or {})[name] or 0
+                assert(audio.effect(self,name) and self.audio_effects[name]==before+1,"Effect did not play: "..name)
+                played=played+1
+            end
+            self.sfx_played=played
             self.measured_audio_pitch=self.audio_pitch
         end
         self.drive_dx, self.drive_speed = state.x-self.start_x,state.vx
@@ -43,6 +51,7 @@ function M.drive(self)
             self.drive_cases.audio_once=self.audio_starts==1
             self.drive_cases.audio_pitch=self.measured_audio_pitch
             self.drive_cases.no_autoplay=true
+            self.drive_cases.sfx_played=self.sfx_played
         end
         if self.testcase=="a6" then
             self.feel_phase,self.feel_tick= "reverse",0

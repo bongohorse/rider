@@ -88,6 +88,8 @@ s.coins.count=4;sfx.update(s);assert(take()=='#sfx_coin','no cue after resume')
 -- Session end stops the engine and every effect.
 stopped={};audio.stop(s);assert(#stopped==7)
 assert(s.audio_effects.coin==4 and s.audio_effects.crash==3 and s.audio_effects.land==1)
-for _,g2 in ipairs(gains) do assert(g2>0 and g2<=0.3,'per-voice gain out of range') end
-for name,gain in pairs(audio.effects) do assert(gain>0 and gain<=0.3,'gain out of range: '..name) end
+for _,g2 in ipairs(gains) do assert(g2>=5*audio.gain and g2<=0.7,'per-voice gain out of range') end
+-- Audible over the engine loop (drive test 2026-11-03), but no clipping: each cue at least 5x the engine gain, at most 0.7.
+assert(#gains>0)
+for name,gain in pairs(audio.effects) do assert(gain>=5*audio.gain and gain<=0.7,'gain out of range: '..name) end
 print('PASS one-shot cues per pickup/gem/fuel/crash (run and run-less reset)/finish/hard landing, silent landings after an ended run, retry re-baselines, no autoplay, mute/pause silence and drop without replay')
