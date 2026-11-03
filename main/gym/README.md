@@ -79,8 +79,9 @@ Car Feel 3 ([#201](https://github.com/bongohorse/rider/issues/201)): `juice.lua`
 
 - `telemetry.lua` is read-only: speed and signed vx, wheel contacts, signed spring travel along chassis Y (positive = compression; no hard stop exists), FPS/frame interval over 0.25 s and `profile.step` (engine ms, not a device benchmark).
 - `budget.json` (custom resource): 60 FPS / 16.666667 ms target; physics budget unset until Phase E. Breaches show red. Means can hide stutter.
-- `history.lua` keeps at most 301 samples (5 s at 60 Hz) in 50 min/max buckets per signal; retry/preset clears it. Graphs render every bucket spike; FPS colours ≥55 green, 30–54 orange, <30 red.
-- Compact HUD (A13b): FPS, speed, contact dots, spring travel and a 200×80 graph; tuning (T) and help (H) start closed; retry reasons are 1.5 s toasts. In narrow portrait tuning hides the graph.
+- `history.lua` keeps at most 301 samples (5 s at 60 Hz) in 50 min/max buckets per signal; retry/preset clears it. Graphs render every bucket spike.
+- FPS counter ([#417](https://github.com/bongohorse/rider/issues/417)): the top-left reading is the measured update cadence (engine frames per wall second, `fps_counter.lua`, about 1 s smoothing), never the requested cap. A tap or click cycles the frame-rate cap 30 → 60 → 90 → 120 → 144 → Unlimited → 30 live and shows `cap N` for 1 s. Colours are relative to the cap: green ≥ 90 %, orange ≥ 70 %, red below; Unlimited counts against 60. The loader is the only caller of `sys.set_update_frequency`; the cap is a player setting (`player_settings.lua`, save file `player-settings`, default 60, invalid values fall back, a newer file is never overwritten), not level, replay or record data. Physics stays at the fixed 60 Hz tick. Hidden while editing; show/hide and position are #444.
+- Compact HUD (A13b): FPS counter, speed, contact dots, spring travel and a 200×80 graph; tuning (T) and help (H) start closed; retry reasons are 1.5 s toasts. In narrow portrait tuning hides the graph.
 - Debug scenarios (`scenarios.lua`) load only for a configured test; the module is still packaged in release (exclusion is Phase B work).
 
 ## Tuning and presets
@@ -208,7 +209,8 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 | `a12` | Graph spike with disclosed test wheel limits, expiry |
 | `m2feedback` | Ground/air assistance, preset C above 8 m/s |
 | `coast` | Coasting distance and brake-tap settle |
-| `hud` | FPS colour boundaries (55/54/30/29) |
+| `hud` | FPS counter colour boundaries relative to the cap (90 %/70 % at caps 30, 60, 90, 120, 144 and Unlimited against 60) on the live node |
+| `fps417` | FPS counter on Straight: real clicks cycle every cap while driving; per cap fixed physics 60 ticks/s with dt 1/60 and the counter equals the measured update cadence in the cap-relative colour; the cap survives a reload and is applied at startup; an A21 replay recorded at cap 30 MATCHes while all caps are switched during it; mouse and touch taps record no drive command. Headless Chromium paces at 60 Hz, so caps above it read about 60 |
 | `a15` | Speed start (8 ±0.2 m/s), retry, A → B → A, invalid station/URL |
 | `a15a` | Rider lean/bob bounds and return to rest |
 | `a20` | Pause and slow motion: world time vs unscaled engine and wall time at 1.0/0.5/0.25 and paused (no ticks, unchanged pose, rendering continues), input dropped while paused and no stale key after Resume, throttle-from-rest at three factors, overlay buttons, switch and Edit/Play back at 1.0, every built-in station, touch toolbar (synthetic). Every other debug case asserts a 1/60 s step on every tick |
