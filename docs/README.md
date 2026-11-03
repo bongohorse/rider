@@ -45,6 +45,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | First playable run (#279) | [Behavior, scoring, persistence and checks](reports/GAMEPLAY_G1_REPORT.md) |
 | Terrain Look (#278) | [Authoring report](reports/TERRAIN_LOOK_REPORT.md), [shared contract](contracts/road-look.md#editor-authoring) |
 | Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](reports/LE1B_REPORT.md) |
+| Splitting the editor GUI script (#331) | [E0 inventory: state, callbacks, messages, hazards, E1 candidates, Gym coverage](reports/EDITOR_E0_INVENTORY.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
 | Native Bridge | [bridge contract](contracts/bridge.md) |
 | Setup, build, tests, CI, preview | [TOOLING.md](TOOLING.md), [toolchain lock](TOOLCHAIN_LOCK.md); [CI Speed 3 evidence](reports/CI_SPEED_3_REPORT.md) |
@@ -107,6 +108,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Production compatibility · Editor authoring · Consumer boundary |
 | [contracts/evidence.md](contracts/evidence.md) | PASS/FAIL/BLOCKED/NOT RUN and reporting | — |
 | [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints |
+| [EDITOR_E0_INVENTORY.md](reports/EDITOR_E0_INVENTORY.md) | Measured inventory of `editor.gui_script` at `f493a2d` for the #331 split (scanner: `tools/ci/editor_inventory.py`): state, callbacks, messages, hazards, E1 candidates, Gym coverage | Method and limits · Size metrics · Module-local state · Callbacks, input and messages · Dependencies and extraction hazards · Responsibility map · E1 candidates · Test coverage and durations · Appendix: every top-level function |
 | [main/gym/README.md](../main/gym/README.md) | Gym implementation and test protocols | See its Contents line |
 | [ideas/](ideas/README.md) | Unscheduled ideas | Roadmap waves · Vehicle builder |
 
