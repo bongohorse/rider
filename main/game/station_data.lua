@@ -1,5 +1,6 @@
 -- Versions 1 (legacy), 2 (gold coins), 3 (Wonder Gems), 4 (fuel rules/canisters), 5 (mechanisms): world metres, converted once at the engine boundary by stations.lua.
 -- Pure validation: no engine calls, no partially constructed terrain on failure.
+local dense=require "main.game.dense"
 local M={}
 local TEXT_LIMIT=64
 -- Provisional start limit (decisions after LE1b, tightened in LE2): float32 positions keep the
@@ -18,6 +19,17 @@ function M.start_allowed(p,limit)
 end
 -- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
+-- A decoded JSON list that ipairs and `#` will read (#387; #388 reuses it for pickups): n when the keys
+-- are exactly 1..n, else nil and "Invalid <what>: <name> <why>" (main/game/dense.lua). An object
+-- ({"1":x}) would read as empty and a null member would end ipairs early, so neither is admitted.
+-- why can quote a key from the file: it is cut to CAUSE bytes (whole UTF-8 characters).
+M.CAUSE=40
+local function list(t,what,name)
+    local n,why=dense.length(t)
+    if n then return n end
+    if #why>M.CAUSE then why=why:sub(1,M.CAUSE-3):gsub("[\128-\191]*$",""):gsub("[\192-\255]$","").."..." end
+    return nil,"Invalid "..what..": "..name.." "..why
+end
 function M.validate(d)
     if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
     if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 then return nil,"Ordinary coins require station schema 2",true end
@@ -70,9 +82,15 @@ function M.validate(d)
         if count>32 then return nil,"Missing/too many chains" end
     end
     if d.hulls~=nil then
-        if type(d.hulls)~="table" or #d.hulls>64 then return nil,"Invalid hulls" end
-        for _,h in ipairs(d.hulls) do
-            if type(h)~="table" or type(h.vertices)~="table" or #h.vertices<3 or #h.vertices>8 then return nil,"Invalid hull vertices" end
+        if type(d.hulls)~="table" then return nil,"Invalid hulls" end
+        local hulls,err=list(d.hulls,"hulls","hulls")
+        if not hulls then return nil,err end
+        if hulls>64 then return nil,"Invalid hulls" end
+        for i,h in ipairs(d.hulls) do
+            if type(h)~="table" or type(h.vertices)~="table" then return nil,"Invalid hull vertices" end
+            local count,verr=list(h.vertices,"hull vertices","hull "..i.." vertices")
+            if not count then return nil,verr end
+            if count<3 or count>8 then return nil,"Invalid hull vertices" end
             for _,p in ipairs(h.vertices) do if not point(p) then return nil,"Invalid hull point" end end
             objects=objects+#h.vertices
             -- Strict convex CCW hull; reject degenerate/self-intersecting input.
@@ -94,6 +112,8 @@ function M.validate(d)
     end
     if d.labels then
         if type(d.labels)~="table" then return nil,"Invalid labels" end
+        local labels,err=list(d.labels,"labels","labels")
+        if not labels then return nil,err end
         for _,label in ipairs(d.labels) do
             if type(label)~="table" or not point(label.position) or type(label.text)~="string" or #label.text>64 then return nil,"Invalid label" end
         end
