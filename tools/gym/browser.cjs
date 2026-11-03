@@ -151,6 +151,8 @@ async function main() {
     await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
     await page.evaluate(()=>new Promise(requestAnimationFrame));
     await page.screenshot({path:path.join(root,'gym.png')});
+    // The input release and final frame above still drive the game: a failure there fails too (#447).
+    gym.check();
     fs.writeFileSync(path.join(root,'browser-version.txt'),browser.version()+'\n');
   } finally {
     fs.writeFileSync(path.join(root,'runtime.log'),lines.join('\n'));

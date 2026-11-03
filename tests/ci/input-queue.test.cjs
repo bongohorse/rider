@@ -77,3 +77,68 @@ test('a runner failure before suite_end rejects done',()=>noUnhandled(async()=>{
   gym.end({status:'PASS'});
   await assert.rejects(gym.done,/Gym page crashed/);
 }));
+
+// #447: runner failures (console ERROR:SCRIPT, pageerror, crash, foreign evidence) that arrive
+// after suite_end, while queued actions or teardown still run, must not leave a false PASS.
+test('a runner failure before suite_end fails the suite (unchanged)',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement();
+  gym.fail(Error('ERROR:SCRIPT: early'));
+  gym.end({status:'PASS'});
+  assert.equal(await verdict(gym),'FAIL: ERROR:SCRIPT: early');
+}));
+
+test('a runner failure after suite_end fails the suite (#447 false PASS)',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement();
+  gym.end({status:'PASS'});
+  gym.fail(Error('ERROR:SCRIPT: late'));
+  assert.equal(await verdict(gym),'FAIL: ERROR:SCRIPT: late');
+}));
+
+test('a runner failure while complete() waits for a pending action fails the suite',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement(),{blocked,release}=deferred();
+  gym.enqueue(async()=>{await blocked;});
+  gym.end({status:'PASS'});
+  const result=verdict(gym);
+  await tick();
+  gym.fail(Error('Gym page crashed'));
+  release();
+  assert.equal(await result,'FAIL: Gym page crashed');
+}));
+
+test('the first late failure wins over later failures and failed actions',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement(),{blocked,release}=deferred();
+  gym.enqueue(async()=>{await blocked;throw Error('keyboard.up failed');});
+  gym.end({status:'PASS'});
+  gym.fail(Error('Foreign gym evidence'));
+  gym.fail(Error('ERROR:SCRIPT: second'));
+  release();
+  assert.equal(await verdict(gym),'FAIL: Foreign gym evidence');
+}));
+
+test('a failed action before a late runner failure still wins',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement(),{blocked,release}=deferred();
+  gym.enqueue(async()=>{await blocked;throw Error('mouse.up failed');});
+  gym.end({status:'PASS'});
+  const result=verdict(gym);
+  release();
+  await tick();
+  gym.fail(Error('ERROR:SCRIPT: after the action'));
+  assert.equal(await result,'FAIL: mouse.up failed');
+}));
+
+test('a runner failure during teardown after complete() fails the final check',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement();
+  gym.end({status:'PASS'});
+  assert.equal(await verdict(gym),'PASS');
+  gym.fail(Error('pageerror during key release'));
+  gym.fail(Error('second'));
+  assert.throws(()=>gym.check(),/pageerror during key release/);
+}));
+
+test('a clean run passes complete() and the final check',()=>noUnhandled(async()=>{
+  const gym=createGymSettlement(),report={status:'PASS',cases:{}};
+  gym.enqueue(async()=>{});
+  gym.end(report);
+  assert.equal(await gym.complete(await gym.done),report);
+  assert.doesNotThrow(()=>gym.check());
+}));

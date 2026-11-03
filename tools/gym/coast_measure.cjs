@@ -2,6 +2,7 @@
 // No wall-clock drive input, no manual Box2D step, no A18 freewheel surrogate.
 const {configure}=require('./launch.cjs');
 const {verify}=require('./coast_measure_report.cjs');
+const {createGymSettlement}=require('./input_queue.cjs');
 const {chromium}=require('playwright');
 const {presetA}=require('./regress_spec.cjs');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
@@ -39,30 +40,31 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto');
     browser=await chromium.launch();
     page=await browser.newPage({viewport:{width:960,height:540}});
     await configure(page,runId,testcase);
-    let resolveDone,rejectDone;
-    const finished=new Promise((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
-    page.on('pageerror',e=>rejectDone(e));
-    page.on('crash',()=>rejectDone(Error('Gym page crashed')));
+    // Shared settlement (#447): a failure after suite_end is kept and checked below.
+    const gym=createGymSettlement();
+    page.on('pageerror',e=>gym.fail(e));
+    page.on('crash',()=>gym.fail(Error('Gym page crashed')));
     page.on('console',m=>{
       const line=m.text();lines.push(line);
-      if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(line))rejectDone(Error(line));
+      if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(line))gym.fail(Error(line));
       const index=line.indexOf('RIDER_GYM ');
       if(index<0)return;
       try{
         const event=JSON.parse(line.slice(index+'RIDER_GYM '.length));
         if(event.source_sha!==sha||event.run_id!==runId)throw Error('foreign engine evidence');
-        if(event.event==='suite_end')resolveDone(event);
-      }catch(e){rejectDone(e);}
+        if(event.event==='suite_end')gym.end(event);
+      }catch(e){gym.fail(e);}
     });
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
     let timer;
     const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('real fixed-tick measurement timed out')),80000);});
     let event;
-    try{event=await Promise.race([finished,timeout]);}finally{clearTimeout(timer);}
+    try{event=await Promise.race([gym.done,timeout]);}finally{clearTimeout(timer);}
     assert.equal(event.status,'PASS',JSON.stringify(event.cases));
     const result=await page.evaluate(()=>window.riderCoastMeasureResult||null);
     assert.ok(result,'missing engine-owned per-tick artifact');
     verify(result,{source_sha:sha,run_id:runId,config_identity:presetA().identity});
+    gym.check();
     const report={...result,browser:'chromium '+browser.version(),
       platform:'HTML5 debug wasm-web, Playwright headless',real_device:'NOT RUN',
       bundle:{sha256:bundleSha,source_fingerprint:manifest.source_fingerprint,platform:manifest.platform,variant:manifest.variant}};
