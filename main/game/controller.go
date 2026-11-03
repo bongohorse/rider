@@ -15,6 +15,7 @@ components { id: "ghost_chassis" component: "/main/game/ghost_chassis.factory" }
 components { id: "ghost_wheel" component: "/main/game/ghost_wheel.factory" }
 components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory" }
 components { id: "perspective_mesh" component: "/main/terrain_perspective/chunk.factory" }
+components { id: "textured_mesh" component: "/main/terrain_perspective/textured_chunk.factory" }
 components { id: "coin" component: "/main/game/coin.factory" }
 components { id: "mechanism_crate" component: "/main/game/mechanism_crate.factory" }
 components { id: "mechanism_plate" component: "/main/game/mechanism_plate.factory" }

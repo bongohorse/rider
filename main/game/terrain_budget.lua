@@ -4,7 +4,9 @@ local M={MESHES=128,SPRITES=1024,LABELS=1024,INSTANCES=1024,
     PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=2048,RESERVE=64}
 function M.measure(d)
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled(d)
-    local stride,working=projected and 48 or 36,projected and 560 or 512
+    -- #392: the textured route adds one float32 per uploaded vertex (52 B) and one retained Lua number (8 B).
+    local textured=projected and require('main.terrain_perspective.material').spec()~=nil
+    local stride,working=textured and 52 or projected and 48 or 36,textured and 568 or projected and 560 or 512
     local r={stride=stride,sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
     for i,c in ipairs(d.chains) do
@@ -64,7 +66,7 @@ end
 function M.preview(sections,vertices,sprites,labels,document)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled({editor=document})
-    return sections*2<=M.MESHES and vertices*(projected and 48 or 36)<=M.PAYLOAD and
+    return sections*2<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride() or 36)<=M.PAYLOAD and
         2*sprites+12<=M.SPRITES and 2*labels+4<=M.LABELS and
         2*(sections+sprites+labels)+16<=M.INSTANCES
 end

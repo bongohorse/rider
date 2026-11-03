@@ -1,0 +1,754 @@
+{
+ "schema": 1,
+ "issue": 392,
+ "stage": "A",
+ "status": "PASS",
+ "source_sha": "ead905398a6c9e9de37491c32865137e5b5673e6",
+ "browser": "156.0.8078.4",
+ "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+ "station": "first-run",
+ "spec": "grass,stone@40",
+ "expected_section_vertices": [
+  1158,
+  1152,
+  1152,
+  1152,
+  1152,
+  294
+ ],
+ "vertices": 6060,
+ "runner": "tools/terrain_material/observe.cjs (three repeats); raw per-run JSON with every WebGL upload size kept in local artifacts only",
+ "not_measured": [
+  "hardware GPU time and texture memory",
+  "physical phone/touch",
+  "art-direction acceptance (Claudio)"
+ ],
+ "runs": [
+  {
+   "repeat": "final",
+   "textured": false,
+   "query": "?station=first-run",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 278,
+     "p50": 16.700000002980232,
+     "p95": 27.599999994039536,
+     "max": 60.79999999701977,
+     "mean": 17.925539568388206
+    },
+    "drive_frame_ms": {
+     "n": 313,
+     "p50": 17.700000002980232,
+     "p95": 38.79999999701977,
+     "max": 139.79999999701977,
+     "mean": 21.297763578236676
+    },
+    "edit_fit_frame_ms": {
+     "n": 161,
+     "p50": 17.19999998807907,
+     "p95": 26.200000002980232,
+     "max": 44.19999998807907,
+     "mean": 18.567701863298506
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 55584,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 14112,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 290880,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 48,
+    "material": {
+     "stride": 48,
+     "boundary": false,
+     "active": false,
+     "right": false,
+     "text": false,
+     "error": false,
+     "left": false
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 48,
+     "payload": 290880,
+     "cpu_estimate": 4147904,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 36.986815534827,
+    "speed": 6.459278420077,
+    "sequence": 85
+   }
+  },
+  {
+   "repeat": "final",
+   "textured": true,
+   "query": "?station=first-run&terrain_material=grass%2Cstone%4040",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 300,
+     "p50": 16.700000002980232,
+     "p95": 16.80000001192093,
+     "max": 19,
+     "mean": 16.66566666662693
+    },
+    "drive_frame_ms": {
+     "n": 366,
+     "p50": 16.69999998807907,
+     "p95": 16.799999997019768,
+     "max": 21.700000002980232,
+     "mean": 16.66612021857109
+    },
+    "edit_fit_frame_ms": {
+     "n": 180,
+     "p50": 16.69999998807907,
+     "p95": 20.200000002980232,
+     "max": 22.900000005960464,
+     "mean": 16.683333333333334
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 60216,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 15288,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 315120,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 52,
+    "material": {
+     "stride": 52,
+     "boundary": 40,
+     "active": true,
+     "right": "stone",
+     "text": "grass,stone@40",
+     "error": false,
+     "left": "grass"
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 52,
+     "payload": 315120,
+     "cpu_estimate": 4244864,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 35.714491344515,
+    "speed": 6.3648704632028,
+    "sequence": 85
+   }
+  },
+  {
+   "repeat": "final2",
+   "textured": false,
+   "query": "?station=first-run",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 300,
+     "p50": 16.69999998807907,
+     "p95": 16.799999997019768,
+     "max": 19.100000008940697,
+     "mean": 16.665999999990067
+    },
+    "drive_frame_ms": {
+     "n": 369,
+     "p50": 16.700000002980232,
+     "p95": 16.799999997019768,
+     "max": 18.599999994039536,
+     "mean": 16.666124661238538
+    },
+    "edit_fit_frame_ms": {
+     "n": 177,
+     "p50": 16.80000001192093,
+     "p95": 20.5,
+     "max": 25.900000005960464,
+     "mean": 16.86836158193774
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 55584,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 14112,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 290880,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 48,
+    "material": {
+     "stride": 48,
+     "boundary": false,
+     "active": false,
+     "right": false,
+     "text": false,
+     "error": false,
+     "left": false
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 48,
+     "payload": 290880,
+     "cpu_estimate": 4147904,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 36.056632450149,
+    "speed": 6.3660942180583,
+    "sequence": 85
+   }
+  },
+  {
+   "repeat": "final2",
+   "textured": true,
+   "query": "?station=first-run&terrain_material=grass%2Cstone%4040",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 299,
+     "p50": 16.700000002980232,
+     "p95": 16.799999997019768,
+     "max": 16.900000005960464,
+     "mean": 16.665886287605485
+    },
+    "drive_frame_ms": {
+     "n": 369,
+     "p50": 16.700000002980232,
+     "p95": 16.799999997019768,
+     "max": 19.200000002980232,
+     "mean": 16.66856368560455
+    },
+    "edit_fit_frame_ms": {
+     "n": 180,
+     "p50": 16.69999998807907,
+     "p95": 19.100000008940697,
+     "max": 24.799999997019768,
+     "mean": 16.666111111144225
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 60216,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 15288,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 315120,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 52,
+    "material": {
+     "stride": 52,
+     "boundary": 40,
+     "active": true,
+     "right": "stone",
+     "text": "grass,stone@40",
+     "error": false,
+     "left": "grass"
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 52,
+     "payload": 315120,
+     "cpu_estimate": 4244864,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 36.170511842135,
+    "speed": 6.3678013713404,
+    "sequence": 85
+   }
+  },
+  {
+   "repeat": "final3",
+   "textured": false,
+   "query": "?station=first-run",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 299,
+     "p50": 16.69999998807907,
+     "p95": 16.799999997019768,
+     "max": 19.700000002980232,
+     "mean": 16.665886287605485
+    },
+    "drive_frame_ms": {
+     "n": 368,
+     "p50": 16.69999998807907,
+     "p95": 16.80000001192093,
+     "max": 18.80000001192093,
+     "mean": 16.666032608679455
+    },
+    "edit_fit_frame_ms": {
+     "n": 178,
+     "p50": 16.599999994039536,
+     "p95": 21.200000002980232,
+     "max": 36.400000005960464,
+     "mean": 16.807865168522582
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 55584,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 55296,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 14112,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 290880,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 48,
+    "material": {
+     "stride": 48,
+     "boundary": false,
+     "active": false,
+     "right": false,
+     "text": false,
+     "error": false,
+     "left": false
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 48,
+     "payload": 290880,
+     "cpu_estimate": 4147904,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 36.056632450149,
+    "speed": 6.3660942180583,
+    "sequence": 85
+   }
+  },
+  {
+   "repeat": "final3",
+   "textured": true,
+   "query": "?station=first-run&terrain_material=grass%2Cstone%4040",
+   "frame_interval_ms": {
+    "idle_frame_ms": {
+     "n": 299,
+     "p50": 16.69999998807907,
+     "p95": 16.799999997019768,
+     "max": 17.599999994039536,
+     "mean": 16.66588628765532
+    },
+    "drive_frame_ms": {
+     "n": 369,
+     "p50": 16.69999998807907,
+     "p95": 16.799999997019768,
+     "max": 18.200000002980232,
+     "mean": 16.666124661238538
+    },
+    "edit_fit_frame_ms": {
+     "n": 179,
+     "p50": 16.69999998807907,
+     "p95": 20.69999998807907,
+     "max": 22.900000005960464,
+     "mean": 16.759217877045025
+    }
+   },
+   "section_uploads": [
+    {
+     "vertices": 1158,
+     "bytes": 60216,
+     "seen": 2,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 1152,
+     "bytes": 59904,
+     "seen": 5,
+     "other_stride_seen": 0
+    },
+    {
+     "vertices": 294,
+     "bytes": 15288,
+     "seen": 1,
+     "other_stride_seen": 0
+    }
+   ],
+   "fit_payload_bytes": 315120,
+   "texture_uploads_256px_plus": {
+    "textures": [
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 1024,
+      "height": 1024,
+      "format": 6408,
+      "type": 5121
+     },
+     {
+      "level": 0,
+      "internal_format": 6408,
+      "width": 512,
+      "height": 512,
+      "format": 6408,
+      "type": 5121
+     }
+    ],
+    "generate_mipmap_calls": 0
+   },
+   "published": {
+    "stride": 52,
+    "material": {
+     "stride": 52,
+     "boundary": 40,
+     "active": true,
+     "right": "stone",
+     "text": "grass,stone@40",
+     "error": false,
+     "left": "grass"
+    },
+    "sections": 6,
+    "budget": {
+     "stride": 52,
+     "payload": 315120,
+     "cpu_estimate": 4244864,
+     "vertices": 6060,
+     "sections": 6
+    }
+   },
+   "car_at_boundary_shot": {
+    "distance": 36.170511842135,
+    "speed": 6.3678013713404,
+    "sequence": 85
+   }
+  }
+ ]
+}
