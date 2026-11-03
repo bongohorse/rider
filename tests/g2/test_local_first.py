@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 import local  # noqa: E402
 
-RULES = json.loads((ROOT / 'tools/local_affected.json').read_text())
+RULES = json.loads((ROOT / 'tools/local_affected.json').read_text(encoding='utf-8'))
 CLOSURE = local.bootstrap_closure()
 JS_REQUIRE = re.compile(r"""require\(\s*['"](\.{1,2}/[^'"]+)['"]\s*\)""")
 
@@ -34,7 +34,7 @@ def js_closure(entry):
         if rel in seen or not (ROOT / rel).is_file():
             continue
         seen.add(rel)
-        for ref in JS_REQUIRE.findall((ROOT / rel).read_text()):
+        for ref in JS_REQUIRE.findall((ROOT / rel).read_text(encoding='utf-8')):
             target = (ROOT / rel).parent / ref
             target = target if target.suffix in ('.cjs', '.js', '.json') else target.with_name(target.name + '.cjs')
             pending.append(str(target.resolve().relative_to(ROOT)))
@@ -90,7 +90,7 @@ class AffectedTest(unittest.TestCase):
                 self.assertEqual(hits, [], f'narrow rule {rule["name"]!r} matches files every case loads')
 
     def test_every_runner_dependency_selects_the_cases_that_load_it(self):
-        smoke = (ROOT / 'tools/gym/smoke.py').read_text()
+        smoke = (ROOT / 'tools/gym/smoke.py').read_text(encoding='utf-8')
         runners = dict((case, runner) for runner, case in re.findall(r"'([\w.]+\.cjs)' if args\.case=='(\w+)'", smoke))
         self.assertGreater(len(runners), 20)
         for case in self.inventory:
@@ -173,7 +173,7 @@ class GymCasesTest(unittest.TestCase):
             self.assertEqual(sorted(c[0] for c in calls), ['gym_a15', 'gym_a16', 'gym_le3'])
             self.assertEqual({c[1] for c in calls}, {str(output / 'gym' / c) for c in ('a15', 'le3', 'a16')})
             self.assertTrue(all(c[2] for c in calls))  # parallel workers register their processes
-            report = json.loads((output / 'results.json').read_text())
+            report = json.loads((output / 'results.json').read_text(encoding='utf-8'))
             self.assertEqual(len(report['tests']), 3)
 
     def test_single_job_runs_inline_and_evidence_dir_is_not_nested(self):
@@ -270,7 +270,7 @@ class HookTest(unittest.TestCase):
     def test_install_and_remove_own_hook(self):
         with mock.patch.object(local, 'ROOT', self.repo):
             self.assertEqual(local.install_hook(), 0)
-            self.assertIn(local.HOOK_MARKER, self.hook.read_text())
+            self.assertIn(local.HOOK_MARKER, self.hook.read_text(encoding='utf-8'))
             self.assertTrue(os.access(self.hook, os.X_OK))
             self.assertTrue(self.opt_in.is_file())
             self.assertEqual(local.install_hook(), 0)  # idempotent
@@ -301,7 +301,7 @@ class HookTest(unittest.TestCase):
             for remove in (False, True):
                 with self.assertRaisesRegex(RuntimeError, 'not installed by Rider'):
                     local.install_hook(remove)
-        self.assertEqual(self.hook.read_text(), '#!/bin/sh\necho mine\n')
+        self.assertEqual(self.hook.read_text(encoding='utf-8'), '#!/bin/sh\necho mine\n')
         self.assertFalse(self.opt_in.exists())
 
     def test_hook_runs_only_the_gated_fast_check(self):

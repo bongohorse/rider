@@ -38,7 +38,7 @@ LOCAL_SERVER = 'http://127.0.0.1:9000'
 
 def requirements_ready():
     mismatches = []
-    for line in (ROOT / 'requirements-dev.txt').read_text().splitlines():
+    for line in (ROOT / 'requirements-dev.txt').read_text(encoding='utf-8').splitlines():
         if not line.strip() or line.lstrip().startswith('#'):
             continue
         name, expected = line.strip().split('==')
@@ -147,7 +147,7 @@ def fast_check(output, sha):
 def ci_gym_cases():
     """Every Gym case of the required CI matrix, in matrix order (split cases run whole locally)."""
     import yaml
-    workflow = yaml.load((ROOT / '.github/workflows/g1.yml').read_text(), Loader=yaml.BaseLoader)
+    workflow = yaml.load((ROOT / '.github/workflows/g1.yml').read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
     cases = []
     for group in workflow['jobs']['gym']['strategy']['matrix']['include']:
         for case in group['cases'].split():
@@ -182,7 +182,7 @@ def bootstrap_closure():
     app manifest, HTML shell, custom resource files), every resource they reference by literal path
     (components, factories, proxies, GUI, atlases, sys.load_resource), and every Lua module reachable
     through require. A change to any of them can break every case."""
-    project = (ROOT / 'game.project').read_text()
+    project = (ROOT / 'game.project').read_text(encoding='utf-8')
     found = re.search(r'^main_collection\s*=\s*/(\S+)', project, re.M)
     if not found:
         raise RuntimeError('No [bootstrap] main_collection in game.project')
@@ -214,7 +214,7 @@ def affected_cases(paths, rules=None, inventory=None, closure=None):
     Files every case loads and paths without a rule select the whole inventory (fail closed).
     Rules with "cases": "ci" name paths no local command covers; they are returned in ci_only
     so `affected --run` cannot report PASS for them."""
-    rules = rules if rules is not None else json.loads((ROOT / 'tools/local_affected.json').read_text())
+    rules = rules if rules is not None else json.loads((ROOT / 'tools/local_affected.json').read_text(encoding='utf-8'))
     inventory = inventory if inventory is not None else ci_gym_cases()
     closure = closure if closure is not None else bootstrap_closure()
     selected, reasons, ci_only = set(), {}, {}
@@ -365,7 +365,7 @@ def install_hook(remove=False):
     """Opt this worktree in (or out). The shared hook file is a no-op in worktrees without opt-in."""
     hook = git_dir('--git-path', 'hooks') / 'pre-push'
     opt_in = git_dir('--absolute-git-dir') / HOOK_OPT_IN
-    current = hook.read_text() if hook.exists() else None
+    current = hook.read_text(encoding='utf-8') if hook.exists() else None
     if current is not None and HOOK_MARKER not in current:
         raise RuntimeError(f'BLOCKED: {hook} exists and was not installed by Rider; not touching it')
     if remove:
