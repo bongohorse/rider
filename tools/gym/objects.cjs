@@ -203,6 +203,45 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Invalid authoring data opens only as the explicit compiled line copy, never as malformed metadata.
   assert.ok((await doc()).objects.every(o=>typeof o.hidden!=='string'));assert.match(e.message,/visibility|Invalid editor|editable|source/i);
   cases.push('invalid_metadata_preserved_or_refused');
+
+  // #394: mechanism lists must be dense arrays. The pinned engine's json.decode makes a hole of a null
+  // member and string keys of an object. Before the fix [A,null,X] was refused only by chance (with a
+  // wrong cause) while [A,B,null,X] was imported unvalidated; every outcome is collected, then compared.
+  const mech=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../tests/objects/fixtures/base.json'),'utf8'));mech.id='ea2-mechanisms';
+  // Two valid entries in every list, so a hole can follow a dense part of two.
+  mech.mechanisms.crates.push({id:'crate-b',position:[6.5,.65]});mech.mechanisms.gates.push({id:'gate-b',position:[22,1.5],travel:4.5,speed:1.8});
+  mech.mechanisms.plates[0].actors.push('crate-b');mech.mechanisms.links.push({from:'plate-a',event:'active',to:'gate-b',action:'open'});
+  const variant=(edit)=>{const v=JSON.parse(JSON.stringify(mech));edit(v.mechanisms);return v;};
+  const badCrate={id:'Bad ID',position:[0]},badLink={from:'gate-a',event:'active',to:'plate-a',action:'open'};
+  const refused=[
+   ['crates [A,null,invalid]',variant(m=>{m.crates=[m.crates[0],null,badCrate];}),'Mechanism crates has a gap at entry 2'],
+   ['crates [A,B,null,invalid]',variant(m=>{m.crates.push(null,badCrate);}),'Mechanism crates has a gap at entry 3'],
+   ['plate actors [A,null,unknown]',variant(m=>{m.plates[0].actors=['crate-a',null,'ghost'];}),'Plate plate-a actors has a gap at entry 2'],
+   ['plate actors [A,B,null,unknown]',variant(m=>{m.plates[0].actors.push(null,'ghost');}),'Plate plate-a actors has a gap at entry 3'],
+   ['links [L1,null,invalid]',variant(m=>{m.links=[m.links[0],null,badLink];}),'Mechanism links has a gap at entry 2'],
+   ['links [L1,L2,null,invalid]',variant(m=>{m.links.push(null,badLink);}),'Mechanism links has a gap at entry 3'],
+   ['links {"1":L1}',variant(m=>{m.links={'1':m.links[0]};}),'Mechanism links is not a list (key "1")'],
+   ['9 crates',variant(m=>{m.crates=Array.from({length:9},(_,i)=>({id:'crate-'+i,position:[2+i,.65]}));m.plates[0].actors=['vehicle'];}),'Mechanism crates has more than 8 entries']];
+  await page.waitForTimeout(600);
+  const kept=async()=>{const e=await ed();return {doc:JSON.stringify(await doc()),revision:e.revision,undo:e.undo,redo:e.redo,key:e.key,library:JSON.stringify(e.library)};};
+  const baseline=await kept(),outcomes={},expected={};
+  for(const [label,level,reason] of refused){
+   expected[label]={message:'Import failed: '+reason+'. The open level and My levels are unchanged.',unchanged:true};
+   await button('import');await page.waitForFunction(()=>window.riderCustom.visible&&document.getElementById('rider-custom-file'));
+   await page.locator('#rider-custom-file').setInputFiles({name:'ea2-mechanisms.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(level))});
+   // Refused: the panel shows the error. Imported: the panel closes.
+   await page.waitForFunction(()=>document.querySelector('#rider-custom-error')?.textContent||!window.riderCustom.visible,null,{timeout:20000});
+   const message=await page.evaluate(()=>window.riderCustom.visible?document.querySelector('#rider-custom-error').textContent:'imported: '+window.riderEditor.message);
+   if(await page.evaluate(()=>window.riderCustom.visible)){await page.getByRole('button',{name:'Close import',exact:true}).click();await page.waitForFunction(()=>!window.riderCustom.visible);}
+   await refocused();
+   outcomes[label]={message,unchanged:JSON.stringify(await kept())===JSON.stringify(baseline)};
+  }
+  measurements.mechanism_refusals=outcomes;
+  assert.deepEqual(outcomes,expected,'each malformed mechanism list is refused with its cause and changes neither the open level, its Undo history nor My levels');
+  // The unchanged fixture still imports with its mechanisms.
+  await importText(JSON.stringify(mech),'ea2-mechanisms.json');await settle();d=await doc();
+  assert.deepEqual(d.mechanisms,mech.mechanisms);
+  cases.push('sparse_mechanism_lists_refused');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'objects-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));
