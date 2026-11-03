@@ -62,6 +62,7 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto');
     try{event=await Promise.race([gym.done,timeout]);}finally{clearTimeout(timer);}
     assert.equal(event.status,'PASS',JSON.stringify(event.cases));
     const result=await page.evaluate(()=>window.riderCoastMeasureResult||null);
+    gym.check(); // a late script error is the root cause; report it before artifact assertions (#447 review)
     assert.ok(result,'missing engine-owned per-tick artifact');
     verify(result,{source_sha:sha,run_id:runId,config_identity:presetA().identity});
     gym.check();
