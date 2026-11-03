@@ -59,7 +59,7 @@ module.exports=async function(h){
 
  // 2. Configure: every changed field is one Undo step; invalid input fails closed with an actionable reason.
  e=await ed();let u=e.undo;
- await param(crate,'Mass','25');assert.equal((await find(crate)).mass,25);
+ await param(crate,'Mass','9');assert.equal((await find(crate)).mass,9);
  await param(crate,'Rotation','15');assert.ok(Math.abs((await find(crate)).angle-Math.PI/12)<1e-9,'degrees shown, radians stored');
  assert.equal((await ed()).undo,u+2);
  let before=await snapshot();
@@ -82,11 +82,11 @@ module.exports=async function(h){
  cases.push('mechanism_properties_bounded_and_fail_closed');
 
  // 3. The 2-plate / 3-gate example: five directed links; refusals keep the graph.
- for(const [from,gate] of [[plateA,g1],[plateA,g2],[plateA,g3],[plateB,g2],[plateB,g3]]){
+ for(const [from,gate] of [[plateA,g2],[plateA,g3],[plateB,g2],[plateB,g3],[plateA,g1]]){
   const n=(await links()).length;await wire(from,gate);
   await page.waitForFunction(n=>(window.riderEditorDoc.mechanism_links||[]).length===n+1,n);assert.equal((await ed()).wire,false);
  }
- const five=[plateA+'>'+g1,plateA+'>'+g2,plateA+'>'+g3,plateB+'>'+g2,plateB+'>'+g3];
+ const five=[plateA+'>'+g2,plateA+'>'+g3,plateB+'>'+g2,plateB+'>'+g3,plateA+'>'+g1];
  assert.deepEqual(await links(),five);
  e=await ed();assert.equal(e.overlay.links_drawn,5);assert.equal(e.overlay.dropped,0);assert.equal(e.overlay.nodes,628);
  before=await snapshot();
@@ -100,7 +100,11 @@ module.exports=async function(h){
  const pa=await find(plateA),pg=await find(g1),a0=[pa.position[0],pa.position[1]+.05],a1=[pg.position[0],pg.position[1]+1.5];
  const along=[a0[0]+(a1[0]-a0[0])*.7,a0[1]+(a1[1]-a0[1])*.7];
  await key('Escape');await to(along);e=await ed();assert.deepEqual(e.selected_link,{from:plateA,to:g1},'picked link at '+along+' (ppm '+e.screen.ppm_x+')');assert.equal(e.selection,plateA);
- await key('Delete');await settle();assert.deepEqual(await links(),five.slice(1));assert.ok(await find(plateA)&&await find(g1));
+ // Undo of that link's creation drops the stale pick; Redo brings the link back unpicked.
+ await key('z',['Control']);e=await settle();assert.deepEqual(await links(),five.slice(0,4));assert.equal(e.selected_link,false,'stale pick dropped');
+ await key('y',['Control']);await settle();assert.deepEqual(await links(),five);
+ await to(along);assert.deepEqual((await ed()).selected_link,{from:plateA,to:g1});
+ await key('Delete');await settle();assert.deepEqual(await links(),five.slice(0,4));assert.ok(await find(plateA)&&await find(g1));
  await key('z',['Control']);await settle();assert.deepEqual((await links()).sort(),[...five].sort());
  // Disconnect from Properties; Undo / Redo restore exactly that link.
  await select(plateA);await button('unlink_'+plateA+'_'+g2);await settle();assert.ok(!(await links()).includes(plateA+'>'+g2));
@@ -111,16 +115,20 @@ module.exports=async function(h){
 
  // 4. Locks protect settings, position, delete and incident links; hide is editor-only.
  await button('collapse_prefabs');
- await button('object_lock_'+g2);assert.equal((await find(g2)).locked,true);
+ await button('object_lock_'+g1);assert.equal((await find(g1)).locked,true);
  before=await snapshot();
- await select(plateA);await button('unlink_'+plateA+'_'+g2);e=await settle();assert.match(e.message,/Locked: Gate /);
- await select(plateA);await button('wire');await to(centre(await find(g2)));await key('Escape');
- await param(g2,'Speed','1');e=await ed();assert.match(e.message,/Locked: Gate /);await key('Escape');await settle();
- await select(g2);await key('Delete');e=await settle();assert.match(e.message,/Locked: Gate /);
- const ga=await world(centre(await find(g2))),gb=await world([centre(await find(g2))[0]+2,centre(await find(g2))[1]]);
+ await select(plateA);await button('unlink_'+plateA+'_'+g1);e=await settle();assert.match(e.message,/Locked: Gate /);
+ await select(plateB);await button('wire');await to(centre(await find(g1)));assert.match((await ed()).message,/Locked: Gate /);await key('Escape');
+ await param(g1,'Speed','1');e=await ed();assert.match(e.message,/Locked: Gate /);await key('Escape');await settle();
+ await select(g1);await key('Delete');e=await settle();assert.match(e.message,/Locked: Gate /);
+ const ga=await world(centre(await find(g1))),gb=await world([centre(await find(g1))[0]+2,centre(await find(g1))[1]]);
  await page.mouse.move(ga.x,ga.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(gb.x,gb.y,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
  await settle();await unchanged(before,'locked gate: rewire, settings, delete and drag');
- await button('object_lock_'+g2);assert.ok(!(await find(g2)).locked,'unlocked');
+ await button('object_lock_'+g1);assert.ok(!(await find(g1)).locked,'unlocked');
+ // Hiding a picked link's plate drops the pick (the arrow is no longer drawn).
+ await key('Escape');await to(along);assert.deepEqual((await ed()).selected_link,{from:plateA,to:g1});
+ await button('object_eye_'+plateA);e=await settle();assert.equal(e.selected_link,false);assert.equal(e.overlay.links_drawn,2);
+ await key('z',['Control']);e=await settle();assert.equal((await find(plateA)).hidden,undefined);assert.equal(e.overlay.links_drawn,5);
  await button('object_eye_'+plateB);e=await settle();assert.equal((await find(plateB)).hidden,true);assert.equal(e.overlay.links_drawn,3,'links of a hidden plate are not drawn');
  await key('z',['Control']);e=await settle();assert.equal((await find(plateB)).hidden,undefined);assert.equal(e.overlay.links_drawn,5);
  cases.push('mechanism_locks_and_hide');
@@ -137,15 +145,18 @@ module.exports=async function(h){
  await key('z',['Control']);await settle();assert.equal((await doc()).objects.length,n0);
  await select(plateA);await key('c',['Control']);await to([10,6]);await key('v',['Control']);e=await settle();
  d=await doc();const copy=d.objects.at(-1);assert.equal(copy.type,'plate');assert.match(e.message,/4 kept/);
- assert.deepEqual(d.mechanism_links.filter(l=>l.from===copy.id).map(l=>l.to),[g1,g2,g3]);assert.deepEqual(copy.actors,['vehicle',crate]);
+ assert.deepEqual(d.mechanism_links.filter(l=>l.from===copy.id).map(l=>l.to),[g2,g3,g1]);assert.deepEqual(copy.actors,['vehicle',crate]);
  await key('z',['Control']);await settle();assert.equal((await links()).length,5);
  cases.push('mechanism_copy_remaps_and_keeps_external');
 
  // 6. Save/Reload and Export/Import keep stable IDs and the graph; Edit/Play/Retry use the course runtime.
- await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status!=='Unsaved'&&!window.riderEditor.unsynced,null,{timeout:15000});
+ // +-180 deg is stored just inside pi, so the 14-digit JSON encoding of the draft reopens (#281 review).
+ await param(crate,'Rotation','180');const turned=(await find(crate)).angle;assert.ok(turned>3.14159265358&&turned<=Math.PI,String(turned));
+ await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status==='Saved'&&!window.riderEditor.unsynced,null,{timeout:15000});
  const saved=await doc();
  await page.reload();e=await edit();await page.locator('canvas').focus();
  assert.deepEqual((await doc()).objects,saved.objects);assert.deepEqual((await doc()).mechanism_links,saved.mechanism_links);
+ assert.equal((await ed()).revision,saved.revision,'the newest draft reopened (no fallback to an older slot)');
  const file=await exportFile();
  assert.equal(file.schema,5);assert.equal(file.editor.editor_version,13);assert.deepEqual(file.mechanisms,runtime(saved));
  assert.equal(file.mechanisms.links.length,5);assert.equal(file.hulls.length,0);
@@ -154,8 +165,11 @@ module.exports=async function(h){
  // Editor Play from START: the same O1 runtime; repeated Retry and Edit/Play reset cleanly.
  await key('e');await page.waitForFunction(()=>window.riderMechanisms?.gates?.length===3&&window.riderMechanisms.sequence>=2,null,{timeout:20000});
  let m=await page.evaluate(()=>window.riderMechanisms);
- assert.deepEqual(m.gates.map(g=>g.id),[g1,g2,g3]);assert.deepEqual(m.plates.map(p=>p.id),[plateA,plateB]);assert.equal(m.crates[0].id,crate);assert.ok(Math.abs(m.crates[0].mass-25)<.01);
+ assert.deepEqual(m.gates.map(g=>g.id),[g1,g2,g3]);assert.deepEqual(m.plates.map(p=>p.id),[plateA,plateB]);assert.equal(m.crates[0].id,crate);assert.ok(Math.abs(m.crates[0].mass-9)<.01);
  assert.equal(m.plates[1].active,true,'Switch plate starts ON');
+ // Behaviour, not only data: driving pushes the crate / vehicle onto the Button plate and gate 1 opens.
+ await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');
+ try{await page.waitForFunction(()=>window.riderMechanisms.plates[0].active&&window.riderMechanisms.gates[0].open,null,{timeout:20000});}finally{await page.keyboard.up('ArrowUp');}
  const editorPlay=m;
  for(let i=0;i<2;i++){
   await key('r');await page.waitForFunction(g=>window.riderMechanisms?.generation>g&&window.riderMechanisms.sequence>=2,m.generation,{timeout:20000});
@@ -195,7 +209,12 @@ module.exports=async function(h){
   assert.ok(e.ui.boxes<=128&&e.ui.texts<=128,JSON.stringify({size,boxes:e.ui.boxes,texts:e.ui.texts}));
   await target.reveal(page,'unlink_o30_o27');e=await ed();assert.ok(e.visible.includes('unlink_o30_o27'),'last link row reachable at '+size.width+'x'+size.height);
   assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);
-  measurements['o2_largest_plate_'+size.width+'x'+size.height]={boxes:e.ui.boxes,texts:e.ui.texts,overlay_handles:e.overlay.handles};
+  // Combined worst state: a focused number field plus a hovered row with its tooltip.
+  await button('param_1');e=await ed();assert.ok(e.visible.includes('param_2'));const hb=e.buttons.param_2,hp=await canvas(hb.x,hb.y);
+  await page.mouse.move(hp.x,hp.y);await pointer.frames(page,{n:6});e=await ed();assert.ok(e.field!==false,'field focused');
+  assert.ok(e.ui.boxes<=128&&e.ui.texts<=128,JSON.stringify({size,focused_hover_boxes:e.ui.boxes,texts:e.ui.texts}));
+  const worstState={boxes:e.ui.boxes,texts:e.ui.texts};await key('Escape');await settle();
+  measurements['o2_largest_plate_'+size.width+'x'+size.height]={boxes:(await ed()).ui.boxes,texts:(await ed()).ui.texts,focused_hover:worstState,overlay_handles:e.overlay.handles};
   await page.mouse.move(800,90);await pointer.frames(page);await page.screenshot({path:path.join(out,`mechanism-largest-plate-${size.width}x${size.height}.png`)});
  }
  cases.push('mechanism_pools_and_viewports');
