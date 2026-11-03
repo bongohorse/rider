@@ -38,7 +38,7 @@ function M.admitted(e,compiled_budget)
         end
     end
     for _,o in ipairs(e.objects) do
-        if doc.outline(o) then sprites=sprites+#doc.outline(o)
+        if doc.drawn_outline(o) then sprites=sprites+#doc.drawn_outline(o)
         elseif o.type=="label" then labels=labels+1 end
     end
     return require("main.game.terrain_budget").preview(sections,vertices,sprites,labels,e)

@@ -56,7 +56,7 @@ local function objects(v,e)
         end
         v.hidden[id]=hidden
         if o.type~="label" and not r.terrain then
-            local colour=editor.auto_remove and editor.auto_remove[id] and vmath.vector4(1,.25,.25,1) or editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or require("main.game.stations").TERRAIN_TINT
+            local colour=editor.auto_remove and editor.auto_remove[id] and vmath.vector4(1,.25,.25,1) or editor.selected[id] and SELECTED or editor.hover_object==id and HOVER or o.type=='coin' and COIN_TINT or lines.KIND_TINT[o.type] or require("main.game.stations").TERRAIN_TINT
             if r.tint~=colour then lines.tint(r.ids,colour);r.tint=colour end
         end
     end
@@ -100,8 +100,6 @@ function M.build(self)
     v.mesh.resource_serial=self.mesh_serial or 0
     self.view=v
     editor.display_note=nil;editor.drawn_labels=v.label_text;editor.hidden_objects=v.hidden
-    local mechanism_preview=require('main.game.mechanisms').preview(editor.doc.editor.mechanisms)
-    lines.count(v,mechanism_preview,false)
     v.start=lines.start_marker(v,editor.doc.editor.start.position)
     M.refresh(self,true)
 end
