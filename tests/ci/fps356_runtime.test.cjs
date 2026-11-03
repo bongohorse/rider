@@ -63,7 +63,8 @@ test('background pause selects a campaign course admitted by the real loader',()
  assert(admitted.includes(TEST_STATION),'Runtime probe station cannot suspend on focus loss');
  assert.notEqual(TEST_STATION,'straight','Non-campaign Gym station would bypass focus suspend');
  const loader=fs.readFileSync(path.join(root,'main/gym/boot.script'),'utf8');
- assert.match(loader,/id==hash\("run_focus_lost"\)[^\n]*catalog\.index\(self\.station\)~=nil/,
+ // Since #359/#365 the loader suspends every playable station in Play mode (no course restriction).
+ assert.match(loader,/id==hash\("run_focus_lost"\) and not self\.loading and editor\.mode=="play" then\n\s*msg\.post\("#script","time_control",\{action="suspend"\}\)/,
   'Loader focus admission contract changed; revalidate runtime pause');
  const runner=fs.readFileSync(path.join(root,'tools/gym/fps356_runtime.cjs'),'utf8');
  assert.match(runner,/encodeURIComponent\(TEST_STATION\)/,'Runner no longer uses the admitted course');
