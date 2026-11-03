@@ -62,7 +62,9 @@ local function unlink(path)
     if not f then return true end
     f:close()
     local ok,removed,err=pcall(os.remove,path)
-    if not ok or not removed then return nil,tostring(ok and err or removed) end
+    -- Explicit ifs, not `ok and err or removed`: err may be nil (#452).
+    if not ok then return nil,tostring(removed) end
+    if not removed then return nil,tostring(err) end
     if html5 then html5.run("Module.persistentSync()") end
     return true
 end
@@ -139,13 +141,18 @@ local function store(slots,parse,around)
         local current=latest_valid(a,b)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
         local target=current and 3-current.slot or 1
-        local held=target==1 and a or b
-        if held and held.unsupported then
+        -- Slot i of this pair, nil when empty. Not `i==1 and a or b`, which yields b when a is empty (#452).
+        local function held(i)
+            if i==1 then return a end
+            return b
+        end
+        local h=held(target)
+        if h and h.unsupported then
             if current and not around then return nil,M.NEWER_VERSION end
             target=current and current.slot or 3-target
         end
-        held=target==1 and a or b
-        if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
+        h=held(target)
+        if h and h.unsupported then return nil,"Both save slots hold data from a newer version" end
         return target,seq
     end
     -- True when a save would be attempted, else nil, why it is refused; writes nothing.

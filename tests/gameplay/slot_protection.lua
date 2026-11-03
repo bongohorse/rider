@@ -79,3 +79,38 @@ local drafts=custom.drafts(parse)
 assert(drafts.save('edit 1')==12 and files[DA].text=='edit 1' and files[DB]==future)
 assert(drafts.save('edit 2')==13 and files[DA].text=='edit 2' and files[DB]==future)
 print('PASS drafts save around an unsupported draft slot, which stays unchanged')
+
+-- #452: an empty slot next to a newer-version slot is used on either side, by drafts and by every other
+-- store. (Slot a empty used to be refused as "both newer": `target==1 and a or b` yielded b when a was nil.)
+-- The written slot is then the only valid one: other stores refuse the next save, drafts save around again.
+local kinds={
+    {name='store',a=A,b=B,s=store},
+    {name='level',a=LA,b=LB,s=function() return custom.level end},
+    {name='draft',a=DA,b=DB,s=function() return drafts end,around=true},
+}
+for _,k in ipairs(kinds) do
+    for _,side in ipairs({'a','b'}) do
+        local empty,newer=k.a,k.b
+        if side=='b' then empty,newer=k.b,k.a end
+        local case=k.name..' with slot '..side..' empty: '
+        reset()
+        future=put(newer,11,'future')
+        local ok,err=k.s().writable()
+        assert(ok==true and #writes==0,case..'writable() must allow the save without writing: '..tostring(err))
+        local seq
+        seq,err=k.s().save('N')
+        assert(seq==12,case..'the save must succeed with the next sequence: '..tostring(err))
+        assert(#writes==1 and writes[1]==empty and files[empty].text=='N',case..'only the empty slot must be written')
+        assert(files[newer]==future,case..'the newer-version slot must stay unchanged')
+        assert(k.s().restore().text=='N',case..'the save must be restorable')
+        seq,err=k.s().save('M')
+        if k.around then
+            assert(seq==13 and #writes==2 and writes[2]==empty and files[empty].text=='M' and files[newer]==future,
+                case..'a draft keeps saving around the newer-version slot: '..tostring(err))
+        else
+            assert(not seq and err==custom.NEWER_VERSION and #writes==1 and files[empty].text=='N' and files[newer]==future,
+                case..'the only valid slot must then be protected: '..tostring(err))
+        end
+    end
+end
+print('PASS an empty slot next to a newer-version slot is used on either side, by drafts and other stores')
