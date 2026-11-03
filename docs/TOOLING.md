@@ -37,7 +37,7 @@ Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/game
 
 ## Affected suites
 
-Every change runs the baseline: `python tools/bootstrap_check.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. `python tools/local.py check` runs the fast checks in one command ([local commands](LOCAL_T3_SETUP.md)). CI selects suites per diff (fail-closed) and `required` gates them on the PR merge commit.
+Every change runs the baseline: `python tools/bootstrap_check.py`, `python tools/ci/lint_lua.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. `python tools/local.py check` runs the fast checks in one command ([local commands](LOCAL_T3_SETUP.md)). CI selects suites per diff (fail-closed) and `required` gates them on the PR merge commit.
 
 | Changed paths | Local commands |
 | --- | --- |
@@ -123,7 +123,7 @@ gh pr view <PR> --repo bongohorse/rider --json headRefOid,mergeStateStatus
 gh pr checks <PR> --repo bongohorse/rider --required
 ```
 
-A failed/cancelled run, missing checks, a changed head, `BEHIND`/blocked merge state or missing current-head `required` PASS means no merge. On failure read the job logs, fix within scope and watch the new head. When green, merge only with existing authorization and stop at PLAN.md stop points. The watch only resumes a running terminal command; it does not notify a paused chat.
+A failed/cancelled run, missing checks, a changed head, a merge conflict or missing current-head `required` PASS means no merge; being behind `main` alone does not block (branches need not be up to date). On failure read the job logs, fix within scope and watch the new head. When green and reviewed, comment "ready to merge" and stop pushing; the integrator merges ([AGENTS.md](../AGENTS.md#workflow)). Stop at PLAN.md stop points. The watch only resumes a running terminal command; it does not notify a paused chat.
 
 ## Dependencies and Renovate
 

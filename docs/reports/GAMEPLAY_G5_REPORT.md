@@ -26,6 +26,6 @@ Pinned Defold 1.14.0 [sprite API source](https://github.com/defold/defold/blob/a
 
 ## Verification and stop
 
-Production checks cover multiple gems, larger swept radius, counters, stable IDs/paste, old/new schema protection, roundtrip and ordinary-only Auto replacement; actual presentation adapter rise/fade/disable/Retry; bank version-1 migration, queued gold/gems, per-course claims, duplicate/practice/failure/retry/reopen. Real-input editor and release evidence is recorded in [STATUS.md (final version)](https://github.com/bongohorse/rider/blob/2c104402615e0dd70e1c150b4b60b9f0e0407f13/STATUS.md) and the PR as it completes. A build alone is not runtime or device evidence.
+Production checks cover multiple gems, larger swept radius, counters, stable IDs/paste, old/new schema protection, roundtrip and ordinary-only Auto replacement; actual presentation adapter rise/fade/disable/Retry; bank version-1 migration, queued gold/gems, per-course claims, duplicate/practice/failure/retry/reopen. Real-input editor and release evidence is recorded in [STATUS.md (final version)](https://github.com/bongohorse/rider/blob/965b41cc9a4c7fbfdea5a66f2558648a73f06b44/STATUS.md) and the PR as it completes. A build alone is not runtime or device evidence.
 
 Stop at a playable release preview for Claudio's drive test before merge. No subsequent gameplay task is authorized. Physical-device tests are not claimed.
