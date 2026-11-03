@@ -18,7 +18,7 @@ The accepted default remains width 0.9 m, perspective 0.35, angle atan(0.55) = 2
 
 ## Controls and compatibility
 
-The [shared road-look contract](contracts/road-look.md#editor-authoring) defines the five ranges, schema and transitions. The menu uses the existing native GUI pool and shared `projection.CONTROLS`, `projection.RANGES` and validator. There is one projection/material path. No second tuner, shader system, decoration, weather or atmosphere is introduced.
+The [shared road-look contract](../contracts/road-look.md#editor-authoring) defines the five ranges, schema and transitions. The menu uses the existing native GUI pool and shared `projection.CONTROLS`, `projection.RANGES` and validator. There is one projection/material path. No second tuner, shader system, decoration, weather or atmosphere is introduced.
 
 - **Level** changes defaults and the common projection. Existing manual section overrides remain. Any locked terrain blocks a level operation.
 - **Selected sections** means existing source lines, curves and terrain prefabs, with stable IDs. Split source using the existing editor when a finer section is needed. Width, side depth and shading can be local. Perspective strength/view angle stay level-wide, shown disabled in Selected scope, keeping one coherent projection space. A connected run containing locked terrain blocks a selected operation to protect its shared transitions.

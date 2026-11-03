@@ -1,7 +1,8 @@
 // Actual selection, fields, one validated Undo transaction and durable coin source; no state injection.
-const assert=require('node:assert/strict'),path=require('node:path');
+const assert=require('node:assert/strict'),path=require('node:path'),pointer=require('../gym/pointer.cjs');
 module.exports=async function(h){
- const {page,ed,doc,key,button,at,importText,settle,snapshot,unchanged,revision,edit,played,out,cases,measurements}=h;
+ const {page,ed,doc,key,button,at,importText,settle,snapshot,unchanged,revision,edit,played,canvas,out,cases,measurements}=h;
+ async function drag(from,to){const e=await ed(),px=p=>canvas(e.screen.ox+p[0]*e.screen.ppm_x,e.screen.oy+p[1]*e.screen.ppm_y);const a=await px(from),b=await px(to);await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(b.x,b.y,{steps:8});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});await settle();}
  const items=[{id:'o1',type:'line',points:[[-5,0],[12,0],[24,6],[40,6]]},...[['o2',[4,5]],['o3',[8,5]],['o4',[18,12]],['o5',[48,5]]].map(([id,position])=>({id,type:'coin',pickup_id:'drop-'+id,position}))];
  const fixture={schema:2,units:'metres',id:'drop-coins',name:'Drop coins',spawn:[0,2],start_speed:0,run_in:0,run_out:0,bounds:[-15,60,-10,30],chains:[[[40,6],[24,6],[12,0],[-5,0]]],coins:{version:1,items:items.filter(o=>o.type==='coin').map(o=>({id:o.pickup_id,position:o.position}))},editor:{editor_version:9,compiler_version:9,revision:1,next_id:6,sampling:{tolerance:.005,max_segment:.5},objects:items,connections:[],start:{position:[0,2],speed:0},finish:{position:[35,6],direction:1}}};
  await importText(JSON.stringify(fixture),'drop-coins.json');await key('Home');await key('s');await settle();
@@ -21,6 +22,10 @@ module.exports=async function(h){
  assert.match(e.message,/2 moved/);assert.match(e.message,/1 locked/);assert.match(e.message,/1 unsupported/);assert.match(e.message,/1 without a surface/);
  const applied=await snapshot();await button('drop_to_track');await unchanged(applied,'repeat no-op Drop');assert.match((await ed()).message,/0 moved, 2 already aligned/);
  await key('z',['Control']);await revision(before.revision+2);assert.deepEqual((await doc()).objects,original);await key('y',['Control']);await revision(before.revision+3);assert.deepEqual((await doc()).objects,result);
+ // #427: after a coin was dropped and then moved freely, Drop applies the Height setting again instead of the moved offset.
+ await key('Escape');await at([4,.7]);assert.deepEqual([...(await ed()).selected],['o2']);const r0=(await ed()).revision;await height('1.2');e=await settle();assert.equal(e.track_height,1.2);const adjusted=e.revision!==r0;await drag((await doc()).objects.find(o=>o.id==='o2').position,[16,3.5]);let moved=(await doc()).objects.find(o=>o.id==='o2');assert.ok(Math.abs(moved.position[0]-16)<.25&&moved.position[1]>2.9,'coin moved diagonally above the slope');
+ e=await ed();await button('drop_to_track');await revision(e.revision+1);e=await settle();assert.match(e.message,/1 moved/);const redropped=(await doc()).objects.find(o=>o.id==='o2');assert.equal(redropped.position[0],moved.position[0]);assert.ok(Math.abs(redropped.position[1]-(moved.position[0]-12)/2-1.2)<1e-9,'second Drop snaps to the slope plus the Height setting');assert.match(e.message,/at 1\.20 m/);
+ for(let i=1;i<=(adjusted?3:2);i++){await key('z',['Control']);await revision(e.revision+i);}assert.deepEqual((await doc()).objects,result);
  await key('Escape');await at([48,5]);const miss=await snapshot();await button('drop_to_track');await unchanged(miss,'no-hit-only Drop');assert.match((await ed()).message,/1 without a surface/);
  await button('object_select_o3');const locked=await snapshot();await button('drop_to_track');await unchanged(locked,'locked-only Drop');assert.match((await ed()).message,/1 locked/);
  await key('Escape');await at([30,6]);assert.ok(!(await ed()).visible.includes('drop_to_track'),'terrain alone offers pickup projection');
@@ -29,5 +34,5 @@ module.exports=async function(h){
  await page.getByRole('button',{name:'Close export',exact:true}).click();await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&window.riderCustom.syncState()==='saved');
  const reload=new URL(page.url());reload.search='?station=custom';await page.goto(reload.href);await edit();assert.deepEqual((await doc()).objects,result);
  await key('e');await played('drop-coins');assert.equal(await page.evaluate(()=>window.riderCoins.practice),true);await key('e');await edit();assert.deepEqual((await doc()).objects,result);
- measurements.drop_to_track={moved:2,locked:1,unsupported:1,no_surface:1,one_undo:true,selection_retained:true,stable_ids:true,save_reload:true};cases.push('drop_to_track_selection_height_skips_single_undo_and_reload');
+ measurements.drop_to_track={moved:2,locked:1,unsupported:1,no_surface:1,one_undo:true,selection_retained:true,stable_ids:true,save_reload:true,redrop_after_free_move:true};cases.push('drop_to_track_selection_height_skips_single_undo_and_reload');
 };

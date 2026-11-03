@@ -23,7 +23,8 @@ class ParallelInventory(unittest.TestCase):
             if 'part' in group:
                 self.assertEqual(group['cases'].split(), [group['cases']])
                 parts.setdefault(group['cases'], []).append(group['part'])
-        self.assertEqual(parts, SPLIT)
+        # Matrix order follows measured duration (#402); each part still runs exactly once.
+        self.assertEqual({case: sorted(found) for case, found in parts.items()}, SPLIT)
         self.assertEqual(selected, Counter({case: len(SPLIT.get(case, [None])) for case in expected}))
         commands = []
         for step in job['steps']:
@@ -65,7 +66,8 @@ class ParallelInventory(unittest.TestCase):
     def test_release_groups_gate_deployment(self):
         workflow = yaml.load((ROOT / '.github/workflows/preview.yml').read_text(), Loader=yaml.BaseLoader)
         verify = workflow['jobs']['verify']
-        self.assertEqual(verify['strategy']['matrix']['group'], ['desktop-layout', 'desktop-gameplay', 'phone', 'touch', 'stations'])
+        # Longest measured groups first so they get runners before short ones (#402).
+        self.assertEqual(verify['strategy']['matrix']['group'], ['desktop-gameplay-1', 'desktop-gameplay-2', 'phone', 'desktop-layout', 'touch', 'stations'])
         self.assertEqual(verify['needs'], 'build')
         self.assertEqual(verify['strategy']['fail-fast'], 'false')
         run = next(step['run'] for step in verify['steps'] if 'tools/preview/verify.cjs' in step.get('run', ''))
@@ -79,8 +81,9 @@ class ParallelInventory(unittest.TestCase):
         self.assertTrue(any('verify_artifacts.py' in s.get('run', '') for s in gate['steps']))
         plan = (ROOT / 'tools/preview/verification-plan.cjs').read_text()
         self.assertIn("'desktop-layout': ['desktop']", plan)
-        self.assertIn("'desktop-gameplay': ['desktop-gameplay']", plan)
-        self.assertIn("if(plan.includes('desktop-gameplay')", (ROOT / 'tools/preview/verify.cjs').read_text())
+        self.assertIn("'desktop-gameplay-1': ['desktop-gameplay-1']", plan)
+        self.assertIn("'desktop-gameplay-2': ['desktop-gameplay-2']", plan)
+        self.assertIn("if(!plan.includes(shard)", (ROOT / 'tools/preview/verify.cjs').read_text())
         ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
         self.assertIn('preview', ci['jobs']['required']['needs'])
         self.assertIn('physics', ci['jobs']['required']['needs'])

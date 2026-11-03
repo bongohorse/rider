@@ -1,8 +1,8 @@
 # Rider plan
 
-Binding goal, decisions, roadmap and stop points. [STATUS.md](../STATUS.md) holds current progress; GitHub issues hold each task's scope and acceptance; [AGENTS.md](../AGENTS.md) holds the working rules. Historical gate documents do not govern current work.
+Binding goal, decisions, work order, roadmap and stop points. Live state (progress, GOs, blockers, open drive tests) is on GitHub only ([current-state links](README.md#current-state)); GitHub issues hold each task's scope and acceptance; [AGENTS.md](../AGENTS.md) holds the working rules. Historical gate documents do not govern current work.
 
-**Contents:** [Goal](#goal) · [Decisions](#decisions) · [Roadmap](#roadmap) · [Stop points](#stop-points) · [Later phases (no issues yet)](#later-phases-no-issues-yet)
+**Contents:** [Goal](#goal) · [Decisions](#decisions) · [Work order](#work-order) · [Roadmap](#roadmap) · [Stop points](#stop-points) · [Later phases (no issues yet)](#later-phases-no-issues-yet)
 
 ## Goal
 
@@ -12,7 +12,7 @@ Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built
 
 - **D1** Driving Gym instead of an abstract sandbox: checkerboard test level, drivable buggy, test stations.
 - **D2** Rider with a head sensor; crash detection has an on/off switch (key + overlay). Off by default in the gym (crash is only displayed), on in challenges.
-- **D3** GitHub issues + milestones replace gate documents. One issue = one PR, 1–3 testable acceptance criteria ([issue template](../.github/ISSUE_TEMPLATE/task.md)).
+- **D3** GitHub issues + milestones replace gate documents. One issue = one PR, 1–3 testable acceptance criteria; epics group tasks as GitHub sub-issues, labels carry type/area/priority/status and milestones are ordered waves ([issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/)).
 - **D4** The browser (HTML5) is the main test platform; Claudio runs the drive tests.
 - **D5** Public HTML5 preview at `bongohorse.github.io/rider`, deployed automatically on every game/tooling-affecting merge to `main` and manually via `workflow_dispatch`; documentation-only merges keep the deployed build. This deployment authorisation is permanent. (Former D14 merged here.)
 - **D6** Android first; iOS only after the Play Store launch, no iOS builds until then. Keep other exports possible; no platform-specific gameplay logic.
@@ -23,6 +23,21 @@ Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built
 - **D11** All agent-facing documents and the game UI are English.
 - **D12** Reference device: Xiaomi Mi 10T Pro ([platform matrix](PLATFORM_MATRIX.md)).
 - **D13** Frame target 60 FPS (16.67 ms); physics budget stays unset until representative-load measurement in Phase E.
+
+## Work order
+
+Set 2026-11-02 from Claudio's latest priorities: **repo restructure and workflow first** (2026-11-02: "erstmal räumen wir das komplette repo um und verbessern unseren workflow"), then the studio order CI → FPS → camera → audit with physics fixed at 60 Hz and mobile landscape only (#333, 2026-11-01/02, which superseded the 2026-10-30 "O2 then graphics" order and deferred new objects); the terrain-materials GO of 2026-11-02 (#392). New claims take the lowest wave that has a `status: ready` issue, then priority (`P0` → `P3`), then the order inside the epic; if nothing is ready in a wave (blocked, needs GO or drive test), continue with the next. Work already in progress in any wave continues. GOs and the claim rules are in the [issue guide](ISSUES.md#go-owner-and-status).
+
+| Wave | Epics | Why here |
+| --- | --- | --- |
+| **W1 · Data safety and fast feedback** | Data integrity [#418](https://github.com/bongohorse/rider/issues/418) · CI and local verification [#419](https://github.com/bongohorse/rider/issues/419) · Repo restructure [#420](https://github.com/bongohorse/rider/issues/420) | Restructure and workflow first (Claudio 2026-11-02), with CI and the audit's data-loss findings (data-integrity GO 2026-11-02); slow or unstrict feedback costs every later task. The validation fixes touch O2's files, so they merge before O2's PR, coordinated with the #281 owner. |
+| **W2 · Mobile play, FPS and feel** | Display FPS [#356](https://github.com/bongohorse/rider/issues/356) · landscape guard [#359](https://github.com/bongohorse/rider/issues/359) · handling and camera feel [#421](https://github.com/bongohorse/rider/issues/421) · mobile UI [#358](https://github.com/bongohorse/rider/issues/358) | Claudio's order after CI: FPS, then camera. The decisions here need Claudio's phone/drive tests or, for the UI, a new visual proposal. |
+| **W3 · Objects in the editor and terrain materials** | Terrain materials [#392](https://github.com/bongohorse/rider/issues/392) under visual authoring [#121](https://github.com/bongohorse/rider/issues/121) (stage C after O2) | #392 has a GO and its renderer stage is independent, so it is usually the next ready work once W1/W2 wait on Claudio. |
+| **Backlog** | Objects [#120](https://github.com/bongohorse/rider/issues/120) incl. O2 #281 (deferred by Claudio 2026-11-02 until the restructure is done) · Editor B [#168](https://github.com/bongohorse/rider/issues/168), Editor C [#169](https://github.com/bongohorse/rider/issues/169), future editor [#170](https://github.com/bongohorse/rider/issues/170), vehicle editor [#198](https://github.com/bongohorse/rider/issues/198), procedural content [#230](https://github.com/bongohorse/rider/issues/230), release readiness [#422](https://github.com/bongohorse/rider/issues/422) | No GO yet. A task moves to a wave only with Claudio's GO; release readiness becomes W4 before Phase B. |
+
+The task order inside an epic is its sub-issue panel order; which tasks are ready, running or done is shown by labels and milestones, not here.
+
+Independent tracks run in parallel (one writer per issue). Waves are queue order, not roadmap milestones: a wave end is not a stop point, and waiting for a drive test never blocks other waves.
 
 ## Roadmap
 
@@ -41,18 +56,18 @@ Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built
 
 **Product priority (Claudio, 2026-10-30):** after accepted gameplay G7, build the bounded interactive-object slice (#280 runtime, then #281 editor authoring, with existing per-task acceptance stops), then start graphics and atmosphere under #121. Defer the playable introduction until mechanics, content and their adjustments have settled near the end. This is not implementation GO for the full object catalogue or the entire graphics epic; scope each following task from accepted results.
 
-**Delivery snapshot (2026-10-31):** The technical M1–M5 work, Level Editor [#118](https://github.com/bongohorse/rider/issues/118) and Editor A [#167](https://github.com/bongohorse/rider/issues/167) are implemented (milestone drive acceptance remains separately tracked); the G1–G7 gameplay slices ([epic #262](https://github.com/bongohorse/rider/issues/262)) cover timing, progress, medals, coins, Wonder Gems, fuel and durable level selection. Terrain mesh/perspective/authoring slices are delivered; [epic #263](https://github.com/bongohorse/rider/issues/263) stays open for representative device evidence. [Interactive objects #280](https://github.com/bongohorse/rider/issues/280) has its bounded runtime in [PR #322](https://github.com/bongohorse/rider/pull/322); [editor authoring #281](https://github.com/bongohorse/rider/issues/281) depends on it. Editor B/C [#168](https://github.com/bongohorse/rider/issues/168)/[#169](https://github.com/bongohorse/rider/issues/169), visual authoring [#121](https://github.com/bongohorse/rider/issues/121), the vehicle editor [#198](https://github.com/bongohorse/rider/issues/198) and procedural generation [#230](https://github.com/bongohorse/rider/issues/230) are separate open backlogs, **not implicit GOs**. Treat the tables above as milestone definitions, not a current task queue; use [STATUS.md](../STATUS.md) and issue status for live state.
+**Roadmap vs queue:** the roadmap table above holds historical milestone definitions (M1–M5, editor tracks); the current queue is the [work order](#work-order). Open backlog epics are **not implicit GOs**. Milestone outcomes and per-task logs up to the retirement of STATUS.md (#430): [final STATUS.md](https://github.com/bongohorse/rider/blob/965b41cc9a4c7fbfdea5a66f2558648a73f06b44/STATUS.md), [pre-cleanup snapshot](https://github.com/bongohorse/rider/blob/4bef309b3b30b7662d6ca9efe66f417d1a1001ca/STATUS.md).
 
-**Historical scheduling record:** Progress and open drive acceptance are tracked in STATUS.md. Claudio decided on 2026-10-18 to run the Level Editor before the remaining M4 issues; on 2026-10-20 he decided to run the editor and the remaining M4 stations in parallel, and then to let the M4 stations themselves run in parallel (one writing agent per task) to finish M4 sooner. The editor track stays sequential with its per-task stops. A21 follows A20 because both change the tick-command and input path. M4 stops at the milestone end. Shared areas need coordination between parallel tasks: the station registry and validation (`stations.lua`, `station_data.lua`, also used by the editor's templates), CI Gym groups, STATUS.md, and the runtime state that A20's pause/slow-motion and the editor's Edit mode (R15) both touch. Gameplay objects ([#120](https://github.com/bongohorse/rider/issues/120)) and visual authoring ([#121](https://github.com/bongohorse/rider/issues/121)) are later, separate epics. The editor expansion milestones (Editor A–C, Future; planned 2026-10-20) are backlog, not a GO: each task needs Claudio's GO; they continue the editor track after LE6.
+**Historical scheduling record:** Claudio decided on 2026-10-18 to run the Level Editor before the remaining M4 issues; on 2026-10-20 he decided to run the editor and the remaining M4 stations in parallel, and then to let the M4 stations themselves run in parallel (one writing agent per task) to finish M4 sooner. The editor track stays sequential with its per-task stops. A21 follows A20 because both change the tick-command and input path. M4 stops at the milestone end. Shared areas need coordination between parallel tasks: the station registry and validation (`stations.lua`, `station_data.lua`, also used by the editor's templates), CI Gym groups, and the runtime state that A20's pause/slow-motion and the editor's Edit mode (R15) both touch. Gameplay objects ([#120](https://github.com/bongohorse/rider/issues/120)) and visual authoring ([#121](https://github.com/bongohorse/rider/issues/121)) are later, separate epics. The editor expansion milestones (Editor A–C, Future; planned 2026-10-20) are backlog, not a GO: each task needs Claudio's GO; they continue the editor track after LE6.
 
 M4 notes: report measured limits separately from Claudio's drive test; keep station logic outside the controller; measure downhill neutral motor braking at ramps; run [MOBILE_TRIAL](MOBILE_TRIAL.md) before Phase B.
 
 ## Stop points
 
-- **Milestone end:** stop, report the preview URL and ask Claudio for a drive test. Do not start the next milestone until he approves, even if technical dependencies are complete.
+- **Milestone end:** stop, report the preview URL and ask Claudio for a drive test. Do not start the next milestone until he approves, even if technical dependencies are complete. This applies to roadmap milestones (M1–M5, editor tracks), not to the W1–W3 queue waves.
 - **A19b [#55](https://github.com/bongohorse/rider/issues/55):** Claudio's GO adds a drive test after its merge; the other M4 tasks continue.
 - **Level Editor:** additionally stop after **each** task's merge for Claudio's drive test and a new GO. Creating issues authorizes none of them; later tasks are sharpened from preceding results.
-- Explicit GOs are recorded in STATUS.md.
+- Explicit GOs are recorded on the issue ([GO protocol](ISSUES.md#go-owner-and-status)).
 
 ## Later phases (no issues yet)
 

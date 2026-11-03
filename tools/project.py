@@ -19,7 +19,8 @@ from protocol import IDS
 from run import stop
 
 
-def execute(test_id,command,output,timeout,require_tests=False):
+def execute(test_id,command,output,timeout,require_tests=False,on_start=None):
+    """on_start(process) lets a parallel caller stop live process trees on Ctrl-C (#401)."""
     log=output/(test_id+'.log')
     start=time.monotonic()
     status,detail='PASS',''
@@ -27,6 +28,7 @@ def execute(test_id,command,output,timeout,require_tests=False):
         with log.open('w',encoding='utf-8') as stream:
             process=subprocess.Popen(command,cwd=ROOT,stdout=stream,stderr=subprocess.STDOUT,start_new_session=os.name!='nt')
             try:
+                if on_start:on_start(process)
                 code=process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 status,detail='FAIL',f'Timeout after {timeout}s; process tree terminated'

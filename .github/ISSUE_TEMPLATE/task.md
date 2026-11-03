@@ -1,26 +1,36 @@
 ---
-name: Playable or measurable task
-about: One scoped Driving Gym issue with 1–3 testable acceptance criteria
-title: "[A#] "
+name: Task
+about: One reviewable change delivered by exactly one PR (see docs/ISSUES.md)
+title: "[Area] "
+labels: ["feature", "status: needs go"]
 ---
 
 ## Goal
-One sentence: what becomes playable or measurable.
+One or two sentences: what becomes playable, measurable or safer, and why now.
 
 ## Scope
 - …
+- Touches: files/modules, contracts (physics, level-editor, …).
 
 ## Out of scope
-- …
+- … (owned by #…)
 
-## Acceptance (1–3 testable criteria)
-- [ ] …
+## Acceptance
+- [ ] … (observable; name the Gym case, unit test, CI job or drive step)
 
-## Drive test by Claudio needed?
-yes / no
+## Verification
+- Local: `…`
+- CI: `required` (jobs …)
+- NOT RUN / human: …
+
+## Drive test
+no / yes: exact steps for Claudio.
 
 ## Depends on
-#…
+#… / none
+
+## Size
+S / M (L = split)
 
 ## Notes
-Affected contracts (units, lifecycle, ownership), relevant APIs, known risks.
+Risks, engine references, dated scope changes.

@@ -1,0 +1,388 @@
+{
+ "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS; \"also_ci\": true selects the cases and additionally reports BLOCKED, because part of the coverage exists only in CI. A file every case loads is also reported BLOCKED when a \"ci\" or \"also_ci\" rule matches it. Station JSONs are loaded by id (`sys.load_resource` in main/gym/stations.lua) and by many runners, so they have no narrow rule. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
+ "rules": [
+  {
+   "name": "le6 editor gameplay checks (loaded by polish.cjs and editor_ui_checks.cjs)",
+   "cases": [
+    "le6"
+   ],
+   "paths": [
+    "tools/gameplay/check_*_editor.cjs"
+   ]
+  },
+  {
+   "name": "release preview verification (tools/preview/verify.cjs; CI only)",
+   "cases": "ci",
+   "paths": [
+    "tools/gameplay/*.cjs",
+    "tools/preview/*"
+   ]
+  },
+  {
+   "name": "persistence suites in the pinned Defold engine (CI only; check runs only the protocol tests)",
+   "cases": "ci",
+   "paths": [
+    "tools/g2/persistence_385.py",
+    "tests/engine/persistence/persistence.*",
+    "tests/engine/persistence/runner.*"
+   ]
+  },
+  {
+   "name": "workflows, Renovate, workflow lint, Bridge, Android and G1 physics (CI only; G1 also via `tools/local.py physics`)",
+   "cases": "ci",
+   "paths": [
+    ".github/*",
+    "renovate.json",
+    "tools/ci/lint_workflows.py",
+    "tools/ci/actionlint-lock.json",
+    "tools/g2/*",
+    "tools/setup_bridge.py",
+    "main/bridge/*",
+    "main/g1/*.go",
+    "main/g1/*.lua",
+    "main/g1/*.script",
+    "main/g1/*.factory",
+    "main/g1/*.collisionobject",
+    "main/g1/fixture.*",
+    "main/g1/box.*",
+    "main/g1/floor.*"
+   ]
+  },
+  {
+   "name": "engine entry, project settings and G1/release build (all Gym cases locally; G1, release and Android only in CI)",
+   "cases": "all",
+   "also_ci": true,
+   "paths": [
+    "game.project",
+    "main/main.collection",
+    "main/controller.*",
+    "main/g1/*",
+    "tools/g1/*",
+    "tools/project.py"
+   ]
+  },
+  {
+   "name": "unit tests and tooling run by check",
+   "cases": [],
+   "paths": [
+    "tests/bootstrap/*",
+    "tests/ci/*",
+    "tests/g1/*",
+    "tests/g2/*",
+    "tests/mobile/*",
+    "tests/gameplay/*",
+    "tests/preview/*",
+    "tests/engine/persistence/test_protocol.py",
+    "tools/ci/*",
+    "tools/gameplay/lua_tests.py",
+    "tools/gameplay/make_course.lua",
+    "tools/local.py",
+    "tools/local_affected.json",
+    ".luacheckrc",
+    "tools/bootstrap_check.py",
+    "requirements-dev.txt"
+   ]
+  },
+  {
+   "name": "Gym harness shared by every case",
+   "cases": "all",
+   "paths": [
+    "tools/gym/smoke.py",
+    "tools/gym/bundle.py",
+    "tools/gym/launch.cjs",
+    "tools/gym/pointer.cjs",
+    "tools/gym/merge.cjs",
+    "package.json",
+    "package-lock.json"
+   ]
+  },
+  {
+   "name": "ramps station",
+   "cases": [
+    "a16"
+   ],
+   "paths": [
+    "tools/gym/ramps.cjs",
+    "tools/gym/camera352_math.cjs"
+   ]
+  },
+  {
+   "name": "steps station",
+   "cases": [
+    "a17"
+   ],
+   "paths": [
+    "tools/gym/steps.cjs"
+   ]
+  },
+  {
+   "name": "seams station",
+   "cases": [
+    "a18"
+   ],
+   "paths": [
+    "tools/gym/seam*.cjs"
+   ]
+  },
+  {
+   "name": "gaps station",
+   "cases": [
+    "a19"
+   ],
+   "paths": [
+    "tools/gym/gaps.cjs"
+   ]
+  },
+  {
+   "name": "bumps station",
+   "cases": [
+    "a19b"
+   ],
+   "paths": [
+    "tools/gym/bump*.cjs",
+    "tools/gym/bumps-source.json"
+   ]
+  },
+  {
+   "name": "air station",
+   "cases": [
+    "a19c"
+   ],
+   "paths": [
+    "tools/gym/air*.cjs"
+   ]
+  },
+  {
+   "name": "balance station",
+   "cases": [
+    "a19d"
+   ],
+   "paths": [
+    "tools/gym/balance*.cjs"
+   ]
+  },
+  {
+   "name": "pause and slow motion runner",
+   "cases": [
+    "a20"
+   ],
+   "paths": [
+    "tools/gym/pause.cjs"
+   ]
+  },
+  {
+   "name": "record and replay runner",
+   "cases": [
+    "a21"
+   ],
+   "paths": [
+    "tools/gym/replay.cjs"
+   ]
+  },
+  {
+   "name": "regression traces",
+   "cases": [
+    "a22",
+    "coast345"
+   ],
+   "paths": [
+    "tests/regress/*",
+    "tools/gym/regress*.cjs"
+   ]
+  },
+  {
+   "name": "struts runner",
+   "cases": [
+    "cf3"
+   ],
+   "paths": [
+    "tools/gym/struts.cjs"
+   ]
+  },
+  {
+   "name": "coasting measurements",
+   "cases": [
+    "coast345"
+   ],
+   "paths": [
+    "tools/gym/coast*.cjs"
+   ]
+  },
+  {
+   "name": "station switching runner",
+   "cases": [
+    "a15"
+   ],
+   "paths": [
+    "tools/gym/stations.cjs",
+    "main/gym/stations/straight-test.json",
+    "main/gym/stations/invalid-test.json"
+   ]
+  },
+  {
+   "name": "custom level runner",
+   "cases": [
+    "le1a"
+   ],
+   "paths": [
+    "tools/gym/custom.cjs"
+   ]
+  },
+  {
+   "name": "custom level size runner",
+   "cases": [
+    "le1b"
+   ],
+   "paths": [
+    "tools/gym/sizes*.cjs",
+    "tools/gym/levels.cjs"
+   ]
+  },
+  {
+   "name": "default browser runner (controls, HUD, feedback, coasting)",
+   "cases": [
+    "a3",
+    "a6",
+    "coast",
+    "a15a",
+    "hud",
+    "a7",
+    "a8",
+    "m2feedback",
+    "a9",
+    "a9invalid",
+    "a10",
+    "a11",
+    "a12",
+    "coast345"
+   ],
+   "paths": [
+    "tools/gym/browser.cjs"
+   ]
+  },
+  {
+   "name": "station preset helper",
+   "cases": [
+    "a16",
+    "a17",
+    "a18",
+    "a19",
+    "a19b",
+    "a19c",
+    "a19d"
+   ],
+   "paths": [
+    "tools/gym/preset.cjs"
+   ]
+  },
+  {
+   "name": "shared editor UI targeting",
+   "cases": [
+    "le2",
+    "le3",
+    "le4",
+    "le5a",
+    "le5b",
+    "le5c",
+    "le5d",
+    "le6",
+    "ea2",
+    "ea3"
+   ],
+   "paths": [
+    "tools/gym/editor_ui_target.cjs"
+   ]
+  },
+  {
+   "name": "editor shell runner",
+   "cases": [
+    "le2"
+   ],
+   "paths": [
+    "tools/gym/editor.cjs"
+   ]
+  },
+  {
+   "name": "editor draw runner",
+   "cases": [
+    "le3"
+   ],
+   "paths": [
+    "tools/gym/draw.cjs"
+   ]
+  },
+  {
+   "name": "editor library runner",
+   "cases": [
+    "le4"
+   ],
+   "paths": [
+    "tools/gym/library.cjs"
+   ]
+  },
+  {
+   "name": "editor prefab runner",
+   "cases": [
+    "le5a"
+   ],
+   "paths": [
+    "tools/gym/prefab.cjs"
+   ]
+  },
+  {
+   "name": "editor curve runner",
+   "cases": [
+    "le5b"
+   ],
+   "paths": [
+    "tools/gym/curve.cjs"
+   ]
+  },
+  {
+   "name": "editor path runner",
+   "cases": [
+    "le5c"
+   ],
+   "paths": [
+    "tools/gym/path.cjs"
+   ]
+  },
+  {
+   "name": "editor points runner",
+   "cases": [
+    "le5d"
+   ],
+   "paths": [
+    "tools/gym/points.cjs"
+   ]
+  },
+  {
+   "name": "object browser runner",
+   "cases": [
+    "ea2"
+   ],
+   "paths": [
+    "tools/gym/objects.cjs"
+   ]
+  },
+  {
+   "name": "version history runner",
+   "cases": [
+    "ea3"
+   ],
+   "paths": [
+    "tools/gym/versions.cjs"
+   ]
+  },
+  {
+   "name": "editor polish runner",
+   "cases": [
+    "le6"
+   ],
+   "paths": [
+    "tools/gym/polish.cjs",
+    "tools/gym/editor_ui_checks.cjs"
+   ]
+  }
+ ]
+}

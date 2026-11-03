@@ -39,7 +39,7 @@ fs.mkdirSync(out,{recursive:true});
  if(!release){const b=await page.evaluate(()=>window.riderEditor.buttons.undo);const s=await size();await tap(b.x,s.h-b.y);await page.waitForFunction(()=>window.riderEditorDoc.road_profile!=='authored-v1');r.checks.push({name:'gym_apply_is_existing_editor_undo_transaction'});}
  // Legacy 660 m, with full exact collision export comparison and persistence.
  await page.context().close();await fresh();await page.goto(base+'/index.html?station=custom');await page.waitForFunction(()=>window.riderCustom?.visible);
- const fixture=JSON.parse(fs.readFileSync('docs/terrain-p5/mixed-over-budget.json'));delete fixture.editor.road_profile;
+ const fixture=JSON.parse(fs.readFileSync('docs/reports/terrain-p5/mixed-over-budget.json'));delete fixture.editor.road_profile;
  await page.evaluate(body=>window.riderCustom.importFile(new File([body],'gym-legacy-660.json',{type:'application/json'})),JSON.stringify(fixture));await page.waitForFunction(()=>window.riderCustomStatus==='Saved');await ready();await key('e');await page.waitForFunction(()=>window.riderEditing);await page.waitForTimeout(1000);const collisionBaseline=await exported();await playFromEditor();const old=await telemetry();await menu();await sameRun(old);
  if(!release)assert.equal(await page.evaluate(()=>window.riderRoadProjection),null,'Opening converted legacy terrain');const legacySize=await size();await tap(legacySize.w-436+40,16+56);if(!release)assert.equal(await page.evaluate(()=>window.riderRoadProjection),null,'Level scope converted legacy terrain');
  await action('close');await menu();if(!release)assert.equal(await page.evaluate(()=>window.riderRoadProjection),null);

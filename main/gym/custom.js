@@ -161,6 +161,8 @@
   // on success, and a successful sync persists every file written before it. (Reading _syncTries while a
   // retry is still running must not latch the earlier failure.)
   api.syncState = () => {
+    // #399: the initial restore failed; stored saves are intact but unreadable this session.
+    if (window.riderStorageRestoreFailed) return 'failed';
     if (typeof Module === 'undefined' || Module.persistentStorage !== true) return 'session';
     if (api.syncStopped) return 'failed';
     if (api.syncQueued || Module._syncInProgress || Module._syncNeeded) return 'syncing';

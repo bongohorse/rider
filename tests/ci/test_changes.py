@@ -16,14 +16,14 @@ class ClassificationTest(unittest.TestCase):
         self.assertTrue(is_docs_only([".github/PULL_REQUEST_TEMPLATE.md"]))
         self.assertTrue(is_docs_only(["main/gym/stations.md"]))
         self.assertTrue(is_docs_only(["docs/research/evidence/empty.txt"]))
-        self.assertTrue(is_docs_only(["README.md", "docs/README.md", "docs/terrain-p5/native-memory.txt"]))
+        self.assertTrue(is_docs_only(["README.md", "docs/README.md", "docs/reports/terrain-p5/native-memory.txt"]))
 
     def test_not_docs_only(self):
         for paths in (
             [], ["main/buggy.script"], ["docs/README.md", "main/buggy.script"],
             [".github/workflows/ci.yml"], ["tools/preview/verify.cjs"],
             ["tools/ci/classify_changes.py"], [".vscode/settings.json"],
-            ["docs/review.json"], ["docs/terrain-p0/fixture.json"],
+            ["docs/review.json"], ["docs/reports/terrain-p0/fixture.json"],
             ["docs/evidence.csv"], ["docs/data.yaml"], ["tools/trace.txt"],
             ["main/gym/README.txt"], [".github/notes.txt"],
             ["docs/README.md", "docs/extra.py"],
