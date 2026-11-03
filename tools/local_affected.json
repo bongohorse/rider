@@ -1,11 +1,57 @@
 {
- "description": "Changed-path rules for `tools/local.py affected` (#401). First matching rule wins; a path no rule matches selects the whole Gym inventory. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
+ "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
  "rules": [
   {
-   "name": "check-only tooling and unit tests",
-   "cases": [],
+   "name": "le6 editor gameplay checks (loaded by polish.cjs and editor_ui_checks.cjs)",
+   "cases": [
+    "le6"
+   ],
+   "paths": [
+    "tools/gameplay/check_*_editor.cjs"
+   ]
+  },
+  {
+   "name": "release preview verification (tools/preview/verify.cjs; CI only)",
+   "cases": "ci",
+   "paths": [
+    "tools/gameplay/*.cjs",
+    "tools/preview/*"
+   ]
+  },
+  {
+   "name": "persistence suites in the pinned Defold engine (CI only; check runs only the protocol tests)",
+   "cases": "ci",
+   "paths": [
+    "tools/g2/persistence_385.py",
+    "tests/engine/persistence/persistence.*",
+    "tests/engine/persistence/runner.*"
+   ]
+  },
+  {
+   "name": "workflows, Renovate, workflow lint, Bridge, Android and G1 physics (CI only; G1 also via `tools/local.py physics`)",
+   "cases": "ci",
    "paths": [
     ".github/*",
+    "renovate.json",
+    "tools/ci/lint_workflows.py",
+    "tools/ci/actionlint-lock.json",
+    "tools/g2/*",
+    "tools/setup_bridge.py",
+    "main/bridge/*",
+    "main/g1/*.go",
+    "main/g1/*.lua",
+    "main/g1/*.script",
+    "main/g1/*.factory",
+    "main/g1/*.collisionobject",
+    "main/g1/fixture.*",
+    "main/g1/box.*",
+    "main/g1/floor.*"
+   ]
+  },
+  {
+   "name": "unit tests and tooling run by check",
+   "cases": [],
+   "paths": [
     "tests/bootstrap/*",
     "tests/ci/*",
     "tests/g1/*",
@@ -13,16 +59,15 @@
     "tests/mobile/*",
     "tests/gameplay/*",
     "tests/preview/*",
-    "tests/engine/*",
+    "tests/engine/persistence/test_protocol.py",
     "tools/ci/*",
-    "tools/gameplay/*",
-    "tools/preview/*",
+    "tools/gameplay/lua_tests.py",
+    "tools/gameplay/make_course.lua",
     "tools/local.py",
     "tools/local_affected.json",
     ".luacheckrc",
     "tools/bootstrap_check.py",
-    "requirements-dev.txt",
-    "renovate.json"
+    "requirements-dev.txt"
    ]
   },
   {
@@ -44,7 +89,6 @@
     "a16"
    ],
    "paths": [
-    "main/gym/ramp_*.lua",
     "main/gym/stations/ramps*.json",
     "tools/gym/ramps.cjs",
     "tools/gym/camera352_math.cjs"
@@ -56,7 +100,6 @@
     "a17"
    ],
    "paths": [
-    "main/gym/step_metrics.lua",
     "main/gym/stations/steps*.json",
     "tools/gym/steps.cjs"
    ]
@@ -67,7 +110,6 @@
     "a18"
    ],
    "paths": [
-    "main/gym/seam_*.lua",
     "main/gym/stations/seams-*.json",
     "tools/gym/seam*.cjs"
    ]
@@ -78,7 +120,6 @@
     "a19"
    ],
    "paths": [
-    "main/gym/gap_metrics.lua",
     "main/gym/stations/gaps*.json",
     "tools/gym/gaps.cjs"
    ]
@@ -89,7 +130,6 @@
     "a19b"
    ],
    "paths": [
-    "main/gym/bump_metrics.lua",
     "main/gym/stations/bumps.json",
     "tools/gym/bump*.cjs",
     "tools/gym/bumps-source.json"
@@ -101,43 +141,35 @@
     "a19c"
    ],
    "paths": [
-    "main/gym/air_*.lua",
     "main/gym/stations/air.json",
     "tools/gym/air*.cjs"
    ]
   },
   {
-   "name": "balance station and seesaw",
+   "name": "balance station",
    "cases": [
     "a19d"
    ],
    "paths": [
-    "main/gym/balance_*.lua",
-    "main/gym/seesaw*",
     "main/gym/stations/balance.json",
     "tools/gym/balance*.cjs"
    ]
   },
   {
-   "name": "pause and slow motion",
+   "name": "pause and slow motion runner",
    "cases": [
     "a20"
    ],
    "paths": [
-    "main/gym/time_scale.lua",
-    "main/gym/time_probe.lua",
     "tools/gym/pause.cjs"
    ]
   },
   {
-   "name": "record and replay",
+   "name": "record and replay runner",
    "cases": [
     "a21"
    ],
    "paths": [
-    "main/gym/replay.lua",
-    "main/gym/history.lua",
-    "main/gym/ghost_*",
     "tools/gym/replay.cjs"
    ]
   },
@@ -148,18 +180,16 @@
     "coast345"
    ],
    "paths": [
-    "main/gym/regress.lua",
     "tests/regress/*",
     "tools/gym/regress*.cjs"
    ]
   },
   {
-   "name": "struts",
+   "name": "struts runner",
    "cases": [
     "cf3"
    ],
    "paths": [
-    "main/gym/strut*",
     "tools/gym/struts.cjs"
    ]
   },
@@ -178,7 +208,9 @@
     "a15"
    ],
    "paths": [
-    "tools/gym/stations.cjs"
+    "tools/gym/stations.cjs",
+    "main/gym/stations/straight-test.json",
+    "main/gym/stations/invalid-test.json"
    ]
   },
   {
@@ -219,8 +251,7 @@
     "coast345"
    ],
    "paths": [
-    "tools/gym/browser.cjs",
-    "main/gym/coast_measure.lua"
+    "tools/gym/browser.cjs"
    ]
   },
   {
@@ -345,95 +376,6 @@
    "paths": [
     "tools/gym/polish.cjs",
     "tools/gym/editor_ui_checks.cjs"
-   ]
-  },
-  {
-   "name": "level editor",
-   "cases": [
-    "le1a",
-    "le2",
-    "le3",
-    "le4",
-    "le5a",
-    "le5b",
-    "le5c",
-    "le5d",
-    "le6",
-    "ea2",
-    "ea3"
-   ],
-   "paths": [
-    "main/gym/editor*"
-   ]
-  },
-  {
-   "name": "custom levels and samples",
-   "cases": [
-    "le1a",
-    "le1b",
-    "le4"
-   ],
-   "paths": [
-    "main/gym/custom.lua",
-    "main/gym/custom.js",
-    "main/gym/samples/*"
-   ]
-  },
-  {
-   "name": "game loop: run, coins, gems, fuel, medals, progress, levels, objects",
-   "cases": [
-    "a15",
-    "le1a",
-    "le6",
-    "ea2"
-   ],
-   "paths": [
-    "main/gym/coin*",
-    "main/gym/coins.lua",
-    "main/gym/fuel*",
-    "main/gym/medals.lua",
-    "main/gym/run*",
-    "main/gym/course_*",
-    "main/gym/level_*",
-    "main/gym/levels_*",
-    "main/gym/progress_*",
-    "main/gym/mechanism*",
-    "main/gym/juice.lua",
-    "main/gym/level_menu.js",
-    "main/gym/stations/first-run.json",
-    "main/gym/stations/rolling-hills.json",
-    "main/gym/stations/ridge-run.json",
-    "main/gym/stations/objects-demo.json"
-   ]
-  },
-  {
-   "name": "HUD, controls and feedback",
-   "cases": [
-    "a3",
-    "a6",
-    "a15a",
-    "hud",
-    "a7",
-    "a8",
-    "m2feedback",
-    "a9",
-    "a9invalid",
-    "a10",
-    "a11",
-    "a12",
-    "le6"
-   ],
-   "paths": [
-    "main/gym/ui.gui*",
-    "main/gym/layout.lua",
-    "main/gym/mobile.*",
-    "main/gym/tilt.js",
-    "main/gym/feedback.*",
-    "main/gym/graph.lua",
-    "main/gym/telemetry.lua",
-    "main/gym/audio.lua",
-    "main/gym/engine.*",
-    "main/gym/assets/*"
    ]
   }
  ]
