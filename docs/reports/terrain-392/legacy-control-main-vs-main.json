@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "issue": 392,
+ "bundles": {
+  "main": "403e9a3d7e02870c3400231886a30e5b293d79d9",
+  "branch": "403e9a3d7e02870c3400231886a30e5b293d79d9"
+ },
+ "errors": [],
+ "diff": {
+  "first-run": {
+   "differing_pixels": 11,
+   "max_channel_delta": 1,
+   "bbox": [
+    526,
+    374,
+    662,
+    415
+   ]
+  },
+  "gaps-landing": {
+   "differing_pixels": 0,
+   "max_channel_delta": 0,
+   "bbox": null
+  },
+  "rolling-hills": {
+   "differing_pixels": 1216,
+   "max_channel_delta": 17,
+   "bbox": [
+    747,
+    48,
+    749,
+    656
+   ]
+  }
+ }
+}

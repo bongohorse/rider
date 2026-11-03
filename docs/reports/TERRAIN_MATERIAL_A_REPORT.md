@@ -17,21 +17,21 @@ Stage B owns the level-source format, so Stage A selects the material only throu
 - `terrain_material=<family>` — one family for the whole course;
 - `terrain_material=<left>,<right>@<x>` — `<left>` for every sample interval whose midpoint lies left of `x` metres, `<right>` otherwise (constant per interval, never interpolated).
 
-Families: `grass`, `dirt`, `sand`, `snow`, `stone`, `purple`. Invalid text is ignored with one `RIDER_TERRAIN_MATERIAL ignored: …` console line and the course stays untextured. Both Play and Edit build terrain sections through `projection.section`, so the one hook textures both without editor changes. Stage B replaces the parameter with a versioned per-section field.
+Families: `grass`, `dirt`, `sand`, `snow`, `stone`, `purple`. Invalid text is ignored with one `RIDER_TERRAIN_MATERIAL ignored: …` console line and the course stays untextured. Both Play and Edit build terrain sections through `projection.section`, so the one hook textures both without editor changes. The parameter works in debug and release HTML5 builds, deliberately, so Claudio can drive it on the preview; it changes no saved data. While it is active, the textured 52 B stride also applies to level validation and import (`terrain_budget.check`), so a course of 20,165–21,845 vertices is refused only with the parameter; the largest built-in course (`bumps`) has 13,152. Stage B replaces the parameter with a versioned per-section field.
 
 ## Renderer
 
-- **Atlas** (`main/terrain_material/`): 512×512 RGBA, six family rows × four columns (Surface `block_top`, Rim `horizontal_middle`, Side `block_center`, End `vertical_middle`), each 64 px tile in an 80 px cell with an 8 px edge extrusion. Generator `tools/art/terrain_material.py` checks the ZIP SHA-256, reads 24 PNGs and `License.txt` in memory and writes the atlas, `manifest.json` (ids, source SHA-256 per tile, rectangles, raw-pixel SHA-256) and the license. Two builds in separate directories gave byte-identical files. [Provenance](../../main/terrain_material/PROVENANCE.md).
+- **Atlas** (`main/terrain_material/`): 512×512 RGBA, six family rows × four columns (Surface `block_top`, Rim `horizontal_middle`, Side `block_center`, End `vertical_middle`), each 64 px tile in an 80 px cell with an 8 px edge extrusion. Generator `tools/art/terrain_material.py` checks the ZIP SHA-256, reads 24 PNGs and `License.txt` in memory and writes the atlas, `manifest.json` (ids, source SHA-256 per tile, rectangles, raw-pixel SHA-256) and the license. Two builds in separate directories gave byte-identical files (SHA-256 atlas `1260ee17…f543ea`, manifest `bbd8fcb7…91027`, license `f0bc5a99…316077`). [Provenance](../../main/terrain_material/PROVENANCE.md).
 - **Separate route**: `textured_chunk.factory` (load dynamically) → `textured_chunk.go` → `textured_chunk.mesh` (`textures:` the atlas PNG) → `textured.material` (`tex0` sampler, clamp, linear min/mag, no mipmaps) with `textured.vp`/`textured.fp`. The untextured factory, mesh, material and shaders are unchanged.
 - **Vertex stream**: one extra `float32` stream `texture_slot` = family × 4 + face, 48 → 52 bytes per vertex, only on textured sections. Positions, `look_data`, partition and arc-length U stay exactly as built (unit test).
-- **UV**: Surface and Rim keep one cross-section (V clamped; Surface image top at the back edge, Rim image top at the road line), U repeats every 0.9 m of arc length. Side tiles 1 m × 1 m by arc length and world height, computed in the vertex shader after the bottom is resolved and before projection, so tall faces do not stretch. End caps get U 0 → 1 front to back and world-height V.
+- **UV**: Surface and Rim keep one cross-section (V clamped; Surface image top at the back edge, Rim image top at the road line), U repeats every 0.9 m of arc length. Side tiles 1 m × 1 m by arc length and world height, computed in the vertex shader after the bottom is resolved and before projection, so tall faces do not stretch. End caps get U 0 → 1 front to back and world-height V. Tile coordinates are section-local plus the fractional section phase/origin: they differ from the course-wide values by whole tiles (continuous across sections) but stay small, so precision holds far along long courses on GPUs that run fragments at mediump.
 - **Vertical flip**: manifest rectangles use a top-left origin; the fragment shader flips V once (`1.0-px.y/ATLAS`). Screenshots show the Surface outline at the back edge and upright art.
 - **Neutral tint**: textured faces use equal-RGB face shading (Surface 1.0, Rim 1.0, Side 0.86, End 0.74) instead of the green look tint; selection/hover gains in `terrain_mesh.colors` multiply these, and alpha stays the visibility channel.
-- **Admission**: `terrain_budget` uses 52 B and one more retained Lua number per vertex (CPU working estimate 560 → 568 B/vertex) while the pilot is active.
+- **Admission**: `terrain_budget` uses 52 B and one more retained Lua number per vertex (CPU working estimate 560 → 576 B/vertex: one more Lua 5.1 array slot, 16 B on HTML5) while the pilot is active.
 
 ## Measurements
 
-Local runs, source `ead9053` (code identical to the PR head), headless Chromium 156.0.8078.4 on SwiftShader (software GL), 1280×720. Runner: [`tools/terrain_material/observe.cjs`](../../tools/terrain_material/observe.cjs); summary [observe-summary.json](terrain-392/observe-summary.json).
+Local runs, source `81f640d` (code identical to the PR head; only docs and evidence added after), headless Chromium 156.0.8078.4 on SwiftShader (software GL), 1280×720. Runner: [`tools/terrain_material/observe.cjs`](../../tools/terrain_material/observe.cjs); summary [observe-summary.json](terrain-392/observe-summary.json).
 
 **Vertex stride (measured).** The runner computes each section's vertex count from the station JSON and hooks WebGL `bufferData`. Every First run section was uploaded as exactly vertices × 52 B with the pilot and vertices × 48 B without, never the other size:
 
@@ -48,15 +48,17 @@ Local runs, source `ead9053` (code identical to the PR head), headless Chromium 
 
 **Frame intervals** (ms, mean / p95; three repeats, untextured first in each):
 
-| Repeat | Play idle U / T | Play driving U / T | Edit Fit U / T |
+| Repeat | Play idle U · T | Play driving U · T | Edit Fit U · T |
 | --- | --- | --- | --- |
-| 1 | 17.93/27.6 · 16.67/16.8 | 21.30/38.8 · 16.67/16.8 | 18.57/26.2 · 16.68/20.2 |
-| 2 | 16.67/16.8 · 16.67/16.8 | 16.67/16.8 · 16.67/16.8 | 16.87/20.5 · 16.67/19.1 |
-| 3 | 16.67/16.8 · 16.67/16.8 | 16.67/16.8 · 16.67/16.8 | 16.81/21.2 · 16.76/20.7 |
+| 1 | 16.67/16.8 · 16.67/16.8 | 16.66/16.8 · 16.67/16.8 | 16.67/17.8 · 16.66/17.6 |
+| 2 | 16.67/16.8 · 16.67/16.8 | 16.67/16.8 · 16.67/16.8 | 16.64/17.7 · 16.95/20.4 |
+| 3 | 16.72/16.9 · 16.72/16.8 | 16.67/16.8 · 20.30/38.3 | 16.67/17.8 · 17.46/20.9 |
 
-No consistent delta beyond run-to-run noise (repeat 1's untextured pass was the first browser start). Software GL at 60 Hz; this says nothing about phone GPUs.
+No consistent delta: both routes are vsync-bound at 16.67 ms; repeat 3's textured driving outlier has a same-sized untextured counterpart in an earlier run of the previous build (21.30/38.8). Software GL at 60 Hz; this says nothing about phone GPUs. These are local measurements, not desktop CI (see NOT RUN).
 
-**Untextured route unchanged.** [`legacy_compare.cjs`](../../tools/terrain_material/legacy_compare.cjs) renders First run, Gap landings and Rolling hills in Edit after Fit from a `main` build (`403e9a3`) and this build: 125–186 scattered pixels differ, maximum channel delta 1/255, mostly UI text ([legacy-compare.json](terrain-392/legacy-compare.json)).
+**Bundle size.** `game0.arcd` of the debug Gym bundle grows from 781,784 B (`main`) to 805,628 B (+23,844 B, compressed archive); the Wasm engines are unchanged.
+
+**Untextured route unchanged.** [`legacy_compare.cjs`](../../tools/terrain_material/legacy_compare.cjs) renders First run, Gap landings and Rolling hills in Edit after Fit from a `main` build (`403e9a3`) and this build ([legacy-compare.json](terrain-392/legacy-compare.json)): 67 / 117 / 56 differing pixels, maximum channel delta 1/255. A control run of the same `main` bundle against itself ([legacy-control-main-vs-main.json](terrain-392/legacy-control-main-vs-main.json)) gives 11 / 0 / 1,216 pixels (delta up to 17), so frames vary run to run. Inside the terrain band (rows 330–440), First run's 11 differing pixels are at exactly the coordinates of the control's 11, Gap landings has 3 (delta 1) and Rolling hills none. Play was not pixel-compared (the car's settle frames vary); Play screenshots of both routes are in the evidence.
 
 ## Findings for later stages
 
@@ -65,6 +67,7 @@ No consistent delta beyond run-to-run noise (repeat 1's untextured pass was the 
 - The Terrain Look **shading** value does not affect textured faces (neutral shading instead); width/side depth still apply.
 - `main/editor/editor_terrain.lua` still reports `buffer_bytes` with 48 B in its Edit statistics (diagnostic only; admission uses `terrain_budget`). Not changed here because #281 owns the editor files.
 - The first textured section in a world loads the atlas synchronously (~1 MiB decode); not observed as a hitch in these runs.
+- Stage A's #392 acceptance asks for memory/fit and frame-time deltas recorded on desktop CI; these are local runs only. The observer needs a Gym case in `tools/gym/smoke.py`, owned by the open #281 PR, so CI recording is deferred.
 - Not compared: the 128 px/1024² atlas, nearest filtering, Android.
 
 ## Engine sources

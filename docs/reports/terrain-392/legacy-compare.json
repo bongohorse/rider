@@ -3,37 +3,37 @@
  "issue": 392,
  "bundles": {
   "main": "403e9a3d7e02870c3400231886a30e5b293d79d9",
-  "branch": "ead905398a6c9e9de37491c32865137e5b5673e6"
+  "branch": "81f640d771726cf733f94c25db5edc031e0690b7"
  },
  "errors": [],
  "diff": {
   "first-run": {
-   "differing_pixels": 125,
+   "differing_pixels": 67,
    "max_channel_delta": 1,
    "bbox": [
     38,
-    17,
-    1096,
+    19,
+    1073,
     686
    ]
   },
   "gaps-landing": {
-   "differing_pixels": 186,
+   "differing_pixels": 117,
    "max_channel_delta": 1,
    "bbox": [
-    28,
-    19,
-    1096,
+    37,
+    21,
+    1073,
     686
    ]
   },
   "rolling-hills": {
-   "differing_pixels": 125,
+   "differing_pixels": 56,
    "max_channel_delta": 1,
    "bbox": [
     38,
-    17,
-    1096,
+    19,
+    1073,
     686
    ]
   }
