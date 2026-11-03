@@ -221,14 +221,18 @@ def affected_cases(paths, rules=None, inventory=None, closure=None):
     for path in paths:
         if is_docs_only([path]):
             continue
+        matching = [r for r in rules['rules'] if any(fnmatch.fnmatchcase(path, g) for g in r['paths'])]
+        ci_rule = next((r for r in matching if r['cases'] == 'ci' or r.get('also_ci')), None)
         if path in closure:
             rule = {'name': 'loaded by every Gym case (bootstrap resource/require graph)', 'cases': 'all'}
+            if ci_rule:
+                ci_only[path] = ci_rule['name']
         else:
-            rule = next((r for r in rules['rules'] if any(fnmatch.fnmatchcase(path, g) for g in r['paths'])),
-                        {'name': 'no rule: whole Gym inventory', 'cases': 'all'})
+            rule = matching[0] if matching else {'name': 'no rule: whole Gym inventory', 'cases': 'all'}
+            if rule['cases'] == 'ci' or rule.get('also_ci'):
+                ci_only[path] = rule['name']
         reasons[path] = rule['name']
         if rule['cases'] == 'ci':
-            ci_only[path] = rule['name']
             continue
         cases = inventory if rule['cases'] == 'all' else rule['cases']
         unknown = set(cases) - set(inventory)

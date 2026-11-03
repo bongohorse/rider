@@ -99,8 +99,7 @@ class AffectedTest(unittest.TestCase):
 
     def test_specific_paths_select_their_cases(self):
         self.assertEqual(self.pick('tools/gym/ramps.cjs'), ['a16'])
-        self.assertEqual(self.pick('main/gym/stations/seams-chain.json', 'tools/gym/gaps.cjs'),
-                         [c for c in self.inventory if c in ('a18', 'a19')])
+        self.assertEqual(self.pick('tools/gym/gaps.cjs'), ['a19'])
         self.assertEqual(self.pick('tools/gameplay/check_zoom_editor.cjs'), ['le6'])
         self.assertEqual(self.pick('tests/ci/test_changes.py', '.luacheckrc', 'tests/preview/timings.test.cjs'), [])
         self.assertEqual(self.pick('tools/gym/launch.cjs'), self.inventory)
@@ -114,6 +113,23 @@ class AffectedTest(unittest.TestCase):
         self.assertEqual(set(reasons), set(paths))
         self.assertEqual(local.affected_cases(['tests/engine/persistence/test_protocol.py'], RULES,
                                               self.inventory, CLOSURE)[2], {})
+
+    def test_station_json_is_loaded_by_id_and_selects_every_case(self):
+        # stations.lua loads /main/gym/stations/<id>.json by id; editor, pause, struts, replay and
+        # regress runners also open stations, so no station JSON may sit behind a narrow rule.
+        stations = [p for p in tracked('main/gym/stations') if p.endswith('.json')
+                    and p not in ('main/gym/stations/straight-test.json', 'main/gym/stations/invalid-test.json')]
+        self.assertGreater(len(stations), 5)
+        for path in stations:
+            self.assertEqual(self.pick(path), self.inventory, path)
+
+    def test_g1_release_entry_paths_run_gym_and_still_block(self):
+        for path in ('game.project', 'main/main.collection', 'main/controller.script', 'tools/g1/build.py',
+                     'tools/project.py', 'main/g1/wheel.convexshape'):
+            cases, _, ci_only = local.affected_cases([path], RULES, self.inventory, CLOSURE)
+            self.assertEqual(cases, self.inventory, path)
+            self.assertIn(path, ci_only, path)
+        self.assertIn('main/g1/wheel.convexshape', CLOSURE)
 
     def test_unknown_case_in_rules_is_rejected(self):
         rules = {'rules': [{'name': 'bad', 'cases': ['nope'], 'paths': ['x/*']}]}

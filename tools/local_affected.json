@@ -1,5 +1,5 @@
 {
- "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
+ "description": "Changed-path rules for `tools/local.py affected` (#401). Files every Gym case loads (the bootstrap resource/require graph computed by tools/local.py, e.g. main/g1/wheel.convexshape) always select the whole inventory, before any rule, so no narrow rule may match them (tests/g2/test_local_first.py). Otherwise the first matching rule wins; a path no rule matches selects the whole Gym inventory. \"cases\": [] means `check` runs the covering tests; \"cases\": \"ci\" means no local command covers the path, so `affected --run` reports BLOCKED instead of PASS; \"also_ci\": true selects the cases and additionally reports BLOCKED, because part of the coverage exists only in CI. A file every case loads is also reported BLOCKED when a \"ci\" or \"also_ci\" rule matches it. Station JSONs are loaded by id (`sys.load_resource` in main/gym/stations.lua) and by many runners, so they have no narrow rule. Documentation is skipped through tools/ci/classify_changes.py. A suggestion for local runs only: GitHub required still runs every case.",
  "rules": [
   {
    "name": "le6 editor gameplay checks (loaded by polish.cjs and editor_ui_checks.cjs)",
@@ -49,6 +49,19 @@
    ]
   },
   {
+   "name": "engine entry, project settings and G1/release build (all Gym cases locally; G1, release and Android only in CI)",
+   "cases": "all",
+   "also_ci": true,
+   "paths": [
+    "game.project",
+    "main/*.collection",
+    "main/controller.*",
+    "main/g1/*",
+    "tools/g1/*",
+    "tools/project.py"
+   ]
+  },
+  {
    "name": "unit tests and tooling run by check",
    "cases": [],
    "paths": [
@@ -89,7 +102,6 @@
     "a16"
    ],
    "paths": [
-    "main/gym/stations/ramps*.json",
     "tools/gym/ramps.cjs",
     "tools/gym/camera352_math.cjs"
    ]
@@ -100,7 +112,6 @@
     "a17"
    ],
    "paths": [
-    "main/gym/stations/steps*.json",
     "tools/gym/steps.cjs"
    ]
   },
@@ -110,7 +121,6 @@
     "a18"
    ],
    "paths": [
-    "main/gym/stations/seams-*.json",
     "tools/gym/seam*.cjs"
    ]
   },
@@ -120,7 +130,6 @@
     "a19"
    ],
    "paths": [
-    "main/gym/stations/gaps*.json",
     "tools/gym/gaps.cjs"
    ]
   },
@@ -130,7 +139,6 @@
     "a19b"
    ],
    "paths": [
-    "main/gym/stations/bumps.json",
     "tools/gym/bump*.cjs",
     "tools/gym/bumps-source.json"
    ]
@@ -141,7 +149,6 @@
     "a19c"
    ],
    "paths": [
-    "main/gym/stations/air.json",
     "tools/gym/air*.cjs"
    ]
   },
@@ -151,7 +158,6 @@
     "a19d"
    ],
    "paths": [
-    "main/gym/stations/balance.json",
     "tools/gym/balance*.cjs"
    ]
   },
