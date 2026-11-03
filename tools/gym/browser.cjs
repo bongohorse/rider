@@ -131,14 +131,17 @@ async function main() {
     page.on('crash',()=>gym.fail(Error('Gym page crashed')));
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html'+(process.argv[5]==='a9'?'?preset=b':process.argv[5]==='a9invalid'?'?preset=invalid':''));
     let timer;
-    try {result=await Promise.race([gym.done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);}
+    try {
+      result=await Promise.race([gym.done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);
+      clearTimeout(timer);
+      await gym.complete(result);
+    }
     catch(error){
       await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
       fs.writeFileSync(path.join(root,'failed-telemetry.json'),JSON.stringify(await page.evaluate(()=>window.riderTelemetry||null).catch(()=>null),null,2));
       throw error;
     }
     finally {clearTimeout(timer);}
-    await gym.complete(result);
     if(process.argv[5]==='a11'){if(!feedbackChecked)throw Error('Feedback roundtrip not verified');result.cases.clipboard_roundtrip=true;result.cases.denied_fallback=true;}
     if(process.argv[5]==='a10'){
       if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');

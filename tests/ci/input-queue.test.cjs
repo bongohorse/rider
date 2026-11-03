@@ -45,7 +45,7 @@ test('a later successful action does not hide an earlier failure',()=>noUnhandle
   assert.deepEqual(ran,[]);
 }));
 
-test('an early failure with nobody awaiting the queue leaves no unhandled rejection',()=>noUnhandled(async()=>{
+test('an early failure rejects done (guard behaviour; the unhandled case is covered by the first test)',()=>noUnhandled(async()=>{
   const gym=createGymSettlement();
   gym.enqueue(async()=>{throw Error('waitForFunction timeout');});
   await assert.rejects(gym.done,/waitForFunction timeout/);
