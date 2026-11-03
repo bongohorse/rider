@@ -229,20 +229,32 @@ M.LIBRARY_MAX=64
 M.KEY_PROBES=64
 local function parse_index(text)
     local ok,d=pcall(json.decode,text)
-    if not ok or type(d)~="table" then return nil,"The level index is not valid JSON" end
+    -- Errors are short causes: L.index shows them in the Open dialog title (M.index_error).
+    if not ok or type(d)~="table" then return nil,"not valid JSON" end
     if d.format~=1 then return nil,"Unsupported level index format "..tostring(d.format),true end
-    if type(d.next)~="number" or d.next<1 or d.next%1~=0 then return nil,"Invalid level index" end
+    if type(d.next)~="number" or d.next<1 or d.next%1~=0 then return nil,"next is not a positive integer" end
     -- levels must be a dense array (#382): an object or a JSON null hole would hide entries from ipairs,
     -- and the next save would write an index without them.
     local n,why=dense.length(d.levels,M.LIBRARY_MAX)
-    if not n then return nil,"Invalid level index: levels "..why end
+    if not n then return nil,"levels "..why end
     local seen={}
-    for _,l in ipairs(d.levels) do
+    for i,l in ipairs(d.levels) do
         if type(l)~="table" or type(l.key)~="number" or l.key<1 or l.key%1~=0 or l.key>=d.next or seen[l.key]
-            or type(l.id)~="string" or type(l.name)~="string" or type(l.time)~="number" then return nil,"Invalid level index entry" end
+            or type(l.id)~="string" or type(l.name)~="string" or type(l.time)~="number" then return nil,"levels entry "..i.." is invalid" end
         seen[l.key]=true
     end
     return d
+end
+-- Why the My levels index is unusable. The Open dialog title "My levels: <this>" (editor_ui.lua: 14 px in
+-- mw/2-40 = 520 px of the narrowest 1120 px dialog) shows 65 characters, so a cause is cut to INDEX_CAUSE.
+M.INDEX_NEWER="index from a newer Rider version; kept unchanged"
+M.INDEX_CAUSE=31
+function M.index_error(why)
+    why=tostring(why or "cannot be read")
+    if #why>M.INDEX_CAUSE then
+        why=why:sub(1,M.INDEX_CAUSE-3):gsub("[\128-\191]*$",""):gsub("[\192-\255]$","").."..."
+    end
+    return "index kept unchanged ("..why..")"
 end
 function M.library(parse)
     if M.lib then return M.lib end
@@ -262,12 +274,11 @@ function M.library(parse)
         if cached then return cached end
         local newest=index.newest()
         local r,rerr=index.restore()
-        if newest and newest.unsupported then return nil,"the My levels index is from a newer version; it is kept unchanged" end
+        if newest and newest.unsupported then return nil,M.INDEX_NEWER end
         if r and not r.skipped then cached=r.doc
         elseif r or index.exists() then
             -- The parse error of the newest slot, when there is one (none for a file sys.load cannot read).
-            local why=r and r.skipped or rerr
-            return nil,"the My levels index cannot be read"..(why and " ("..tostring(why)..")" or "").."; it is kept unchanged"
+            return nil,M.index_error(r and r.skipped or rerr)
         else cached={format=1,next=1,levels={}} end
         return cached
     end

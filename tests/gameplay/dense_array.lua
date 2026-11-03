@@ -30,6 +30,11 @@ rejects({[0]='z','a'},64,'is not a list','key 0')
 rejects({'a',[-1]='b'},64,'is not a list','key -1')
 rejects({'a',[math.huge]='b'},64,'is not a list','key inf')
 rejects({[true]='b'},64,'is not a list','boolean key')
+-- The reason names the key; a string key is quoted, so "1" is told apart from the number 1.
+assert(select(2,dense.length({['1']='a'}))=='is not a list (key "1")')
+assert(select(2,dense.length({a='a'}))=='is not a list (key "a")')
+assert(select(2,dense.length({[1.5]='a'}))=='is not a list (key 1.5)')
+assert(select(2,dense.length({[0]='a'}))=='is not a list (key 0)')
 print('PASS non-tables, object-shaped tables and non-index keys are rejected')
 
 -- Holes: a JSON null member, a missing first entry, a far key past the end.

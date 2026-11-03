@@ -10,7 +10,10 @@ function M.length(t,max)
     if type(t)~="table" then return nil,"is not a list" end
     local n=0
     for k in pairs(t) do
-        if type(k)~="number" or k<1 or k%1~=0 then return nil,"is not a list (key "..tostring(k)..")" end
+        if type(k)~="number" or k<1 or k%1~=0 then
+            -- A string key is quoted, so "1" is told apart from the number 1.
+            return nil,"is not a list (key "..(type(k)=="string" and string.format("%q",k) or tostring(k))..")"
+        end
         n=n+1
         if max and n>max then return nil,"has more than "..max.." entries" end
     end

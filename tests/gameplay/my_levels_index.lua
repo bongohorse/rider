@@ -17,27 +17,38 @@ local function same(a,b)
     return true
 end
 local function entry(key,id) return {key=key,id=id or 'straight',name='A',time=1} end
--- Malformed index texts and the Lua table Defold json.decode makes of each. One real level (key 1) exists.
+-- Malformed index texts, the Lua table Defold json.decode makes of each and the exact My levels error
+-- (any one of errs: pairs order is unspecified). One real level (key 1) exists.
 local FIXTURES={
     {name='object with key "1" (#382 literal)',
         text='{"format":1,"next":3,"levels":{"1":{"key":1,"id":"straight","name":"A","time":1}}}',
-        shape={format=1,next=3,levels={['1']=entry(1)}}},
+        shape={format=1,next=3,levels={['1']=entry(1)}},
+        errs={'index kept unchanged (levels is not a list (key "1"))'}},
     {name='object with a name key',
         text='{"format":1,"next":3,"levels":{"a":{"key":1,"id":"straight","name":"A","time":1}}}',
-        shape={format=1,next=3,levels={a=entry(1)}}},
+        shape={format=1,next=3,levels={a=entry(1)}},
+        errs={'index kept unchanged (levels is not a list (key "a"))'}},
     {name='object with keys "1" and "2"',
         text='{"format":1,"next":3,"levels":{"1":{"key":1,"id":"straight","name":"A","time":1},"2":{"key":2,"id":"b","name":"A","time":1}}}',
-        shape={format=1,next=3,levels={['1']=entry(1),['2']=entry(2,'b')}}},
+        shape={format=1,next=3,levels={['1']=entry(1),['2']=entry(2,'b')}},
+        errs={'index kept unchanged (levels is not a list (key "1"))','index kept unchanged (levels is not a list (key "2"))'}},
+    {name='object with a long key',
+        text='{"format":1,"next":3,"levels":{"a-very-long-level-key":{"key":1,"id":"straight","name":"A","time":1}}}',
+        shape={format=1,next=3,levels={['a-very-long-level-key']=entry(1)}},
+        errs={'index kept unchanged (levels is not a list (key "a...)'}},
     {name='array with a null hole',
         text='{"format":1,"next":3,"levels":[{"key":1,"id":"straight","name":"A","time":1},null,{"key":2,"id":"b","name":"A","time":1}]}',
-        shape={format=1,next=3,levels={[1]=entry(1),[3]=entry(2,'b')}}},
+        shape={format=1,next=3,levels={[1]=entry(1),[3]=entry(2,'b')}},
+        errs={'index kept unchanged (levels has a gap at entry 2)'}},
     {name='array starting with null',
         text='{"format":1,"next":3,"levels":[null,{"key":1,"id":"straight","name":"A","time":1}]}',
-        shape={format=1,next=3,levels={[2]=entry(1)}}},
+        shape={format=1,next=3,levels={[2]=entry(1)}},
+        errs={'index kept unchanged (levels has a gap at entry 1)'}},
 }
--- Valid control: an empty array (an empty object decodes the same).
+-- Valid controls: an empty array, and an empty object (Defold decodes both to an empty table).
 local EMPTY={name='empty array',text='{"format":1,"next":1,"levels":[]}',shape={format=1,next=1,levels={}}}
-local MODELS={EMPTY};for _,f in ipairs(FIXTURES) do MODELS[#MODELS+1]=f end
+local EMPTY_OBJECT={name='empty object',text='{"format":1,"next":2,"levels":{}}',shape={format=1,next=2,levels={}}}
+local MODELS={EMPTY,EMPTY_OBJECT};for _,f in ipairs(FIXTURES) do MODELS[#MODELS+1]=f end
 local LEVEL,parse
 if engine_json then
     LEVEL=assert(real_sys.load_resource('/main/game/stations/straight.json'),'missing straight.json')
@@ -89,14 +100,16 @@ local function seed()
 end
 -- Every My levels operation on an unusable index: nothing listed, every write refused, no file touched,
 -- and the same after a page reload. The seeded level itself still opens by its key.
-local function refused(label)
+local function refused(label,errs)
     local before=copy(files)
     writes={}
     for round=1,2 do
         local L=page()
         local idx,err=L.index()
         assert(idx==nil,label..': the index must be rejected (round '..round..')')
-        assert(type(err)=='string' and err:match('cannot be read') and err:match('kept unchanged'),label..': unclear error '..tostring(err))
+        local expected=false
+        for _,e in ipairs(errs) do expected=expected or err==e end
+        assert(expected,label..': unexpected error '..tostring(err))
         assert(#L.list()==0 and not L.has(1),label..': nothing may be listed')
         local key,kerr=L.new_key()
         assert(not key and kerr==err,label..': new_key must be refused: '..tostring(key))
@@ -113,7 +126,7 @@ local function refused(label)
 end
 
 -- 1. Positive control: a dense index (written by the real encoder) lists and saves the seeded level, and
--- an empty array loads as an empty library.
+-- an empty array or empty object loads as an empty library.
 local L=seed()
 assert(L.index() and #L.list()==1 and listed(L,1).name=='A' and is_level(L.load(1)))
 assert(L.save(1,LEVEL,'straight','Renamed')==3 and listed(page(),1).name=='Renamed')
@@ -121,7 +134,11 @@ reset()
 files[IA]={format=1,seq=1,text=EMPTY.text}
 L=page()
 assert(L.index() and #L.list()==0 and L.new_key()==1)
-print('PASS a dense index and an empty array load; the seeded level lists, saves and reloads')
+reset()
+files[IA]={format=1,seq=1,text=EMPTY_OBJECT.text}
+L=page()
+assert(L.index() and #L.list()==0 and L.new_key()==2)
+print('PASS a dense index, an empty array and an empty object load; the seeded level lists, saves and reloads')
 
 -- 2. Dense indexes with 1 and 64 entries load; 65 entries are refused like any unusable index.
 for _,n in ipairs({1,64,65}) do
@@ -133,7 +150,7 @@ for _,n in ipairs({1,64,65}) do
     if n<=custom.LIBRARY_MAX then
         assert(L.index() and #L.list()==n and listed(L,n).id=='level-'..n,n..' entries must load')
     else
-        refused(n..' entries')
+        refused(n..' entries',{'index kept unchanged (levels has more than 64 entries)'})
     end
 end
 print('PASS dense indexes with 1 and 64 entries load and 65 entries are refused')
@@ -143,21 +160,43 @@ print('PASS dense indexes with 1 and 64 entries load and 65 entries are refused'
 for _,f in ipairs(FIXTURES) do
     seed()
     files[IB].text=f.text
-    refused(f.name..' in the newest slot')
+    refused(f.name..' in the newest slot',f.errs)
     seed()
     files[IA]=nil;files[IB].text=f.text
-    refused(f.name..' as the only slot')
+    refused(f.name..' as the only slot',f.errs)
 end
 print('PASS object-shaped and holed level lists are refused in the newest or only slot and keep every file')
 
--- 4. The reason reaches the error shown in My levels.
-seed()
-files[IB].text=FIXTURES[1].text
-local _,err=page().index()
-assert(err:match('levels is not a list'),'the error must name the malformed field: '..tostring(err))
-files[IB].text=FIXTURES[4].text
-_,err=page().index()
-assert(err:match('levels has a gap at entry 2'),'the error must name the hole: '..tostring(err))
-print('PASS the My levels error names the malformed levels field')
+-- 4. Every index error fits the Open dialog title "My levels: <error>" whole (cause and "kept unchanged").
+-- Title: editor_ui.lua shortens it to width/(14*.57) characters in mw/2-40 px; mw=min(1120,w-64) and the
+-- logical width w is never below 1280 (editor_ui.size), so the narrowest title shows 65 characters.
+local TITLE_CHARS=math.floor((math.min(1120,1280-64)/2-40)/(14*.57))
+assert(TITLE_CHARS==65)
+local errors={custom.INDEX_NEWER,custom.index_error(nil),custom.index_error('not valid JSON'),
+    custom.index_error('next is not a positive integer'),custom.index_error('levels entry 64 is invalid'),
+    custom.index_error('levels has more than 64 entries'),custom.index_error('levels has a gap at entry 64'),
+    custom.index_error('levels is not a list (key '..string.format('%q','x\226\130\172y-long-key')..')')}
+for _,f in ipairs(FIXTURES) do for _,e in ipairs(f.errs) do errors[#errors+1]=e end end
+for _,e in ipairs(errors) do
+    local title='My levels: '..e
+    assert(#title<=TITLE_CHARS,'"'..title..'" ('..#title..' characters) is cut in the Open dialog title')
+    assert(e:match('kept unchanged'),'"'..e..'" must say the index is kept unchanged')
+end
+assert(custom.index_error(nil)=='index kept unchanged (cannot be read)')
+-- A cut never leaves part of a UTF-8 character.
+assert(custom.index_error('levels is not a list (key "\226\130\172\226\130\172")')=='index kept unchanged (levels is not a list (key "...)')
+-- Drift guard for the width math above (source files are not bundled into the engine run).
+local function source(path) local f=real_open(path,'rb');if not f then return nil end;local t=f:read('*a');f:close();return t end
+local ui,gui=source('main/editor/editor_ui.lua'),source('main/editor/editor.gui_script')
+if ui and gui then
+    for _,needle in ipairs({'text(mx+20,my+24,d.library_title,C.text,14,mw/2-40)','local mw,mh=math.min(1120,w-64)',
+        'math.floor(width/((size or 14)*.57))','math.min(1,math.max(1,w)/density/1280)'}) do
+        assert(ui:find(needle,1,true),'editor_ui.lua changed the Open title width math: '..needle)
+    end
+    assert(gui:find('library_title=self.library_error and "My levels: "..self.library_error',1,true),'editor.gui_script changed the Open title prefix')
+else
+    assert(engine_json,'the editor sources must be readable under LuaJIT')
+end
+print('PASS the My levels error names the malformed levels field and fits the Open dialog title')
 
 io.open,os.remove=real_open,real_remove
