@@ -1,39 +1,38 @@
 {
   "kind": "release",
-  "web": "<local bundle>/RiderG1",
+  "status": "PASS",
+  "browser_url": "?station=ramps-long&section=down-30&preset=<key>&wheel114=1",
   "results": [
     {
       "key": "w26",
       "preset": "a",
-      "modified": false,
-      "probe": null,
-      "debug_report": true,
+      "preset_note": "Invalid URL: A",
       "probe_present": false,
       "probe_radius_u": null,
+      "probe_source_sha": null,
       "after_p": null,
       "errors": []
     },
     {
       "key": "w30",
       "preset": "a",
-      "modified": false,
-      "probe": null,
-      "debug_report": true,
+      "preset_note": "Invalid URL: A",
       "probe_present": false,
       "probe_radius_u": null,
+      "probe_source_sha": null,
       "after_p": null,
       "errors": []
     },
     {
       "key": "a",
       "preset": "a",
-      "modified": false,
-      "probe": null,
-      "debug_report": true,
+      "preset_note": "Presets [P]",
       "probe_present": false,
       "probe_radius_u": null,
+      "probe_source_sha": null,
       "after_p": null,
       "errors": []
     }
-  ]
+  ],
+  "failures": []
 }

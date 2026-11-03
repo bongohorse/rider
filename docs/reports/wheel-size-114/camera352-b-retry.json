@@ -1,0 +1,262 @@
+{
+ "note": "a16 ramps runner (presets_compare at 23b8696), opt-in camera352=b, 1280x720, ramps-long down-30: first camera frame after the page load (trace[0]) and, for A, the passing Retry check summary; W26/W30 failed that check. Verbatim excerpts of local runner output.",
+ "runs": {
+  "a": {
+   "first_frame": {
+    "filtered_vy": 0,
+    "rear": false,
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "dt": 0.033332999795675,
+    "snapping": false,
+    "m11": 0.0037037036381662,
+    "cy": 456,
+    "section": "down-30",
+    "mode": "b",
+    "ground": 326.00000625849,
+    "tick": 2,
+    "scale": 0.0099999997764826,
+    "zoom": 0.99498028161201,
+    "descent": 0,
+    "dir": 1,
+    "sim_time": 0.033333335071802,
+    "resets": 0,
+    "m00": 0.0020833334419876,
+    "cx": 11417.774414062,
+    "y": 370,
+    "x": 11370.752929688,
+    "front": false,
+    "generation": 1,
+    "vx": 100,
+    "frame": 1,
+    "station": "ramps-long",
+    "vy": 0
+   },
+   "summary": {
+    "label": "ramps-long-b-1280x720",
+    "mode": "b",
+    "station": "ramps-long",
+    "viewport": {
+     "width": 1280,
+     "height": 720
+    },
+    "canvas": {
+     "width": 1280,
+     "height": 720,
+     "buffer_width": 1280,
+     "buffer_height": 720
+    },
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "first_projection": {
+     "m00": 0.0020833334419876,
+     "m11": 0.0037037036381662
+    },
+    "frames": 140,
+    "ticks": [
+     2,
+     143
+    ],
+    "valid_downhill": 60,
+    "fixed_ticks": 144,
+    "fixed_window": [
+     1,
+     144
+    ],
+    "valid_fixed_downhill": 60,
+    "mean_screen_y_px": -175.786758684414,
+    "min_bottom_margin_px": 150.4376465732369,
+    "mean_visible_slope_m": 1.2791126700518731,
+    "mean_visible_slope_s": 0.43304662334073385,
+    "fixture_limited": 25,
+    "viewport_truncated": 35,
+    "max_descent_u": 65.95926177562
+   },
+   "camera352_result_case": {
+    "label": "ramps-long-b-1280x720",
+    "mode": "b",
+    "station": "ramps-long",
+    "viewport": {
+     "width": 1280,
+     "height": 720
+    },
+    "canvas": {
+     "width": 1280,
+     "height": 720,
+     "buffer_width": 1280,
+     "buffer_height": 720
+    },
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "first_projection": {
+     "m00": 0.0020833334419876,
+     "m11": 0.0037037036381662
+    },
+    "frames": 140,
+    "ticks": [
+     2,
+     143
+    ],
+    "valid_downhill": 60,
+    "fixed_ticks": 144,
+    "fixed_window": [
+     1,
+     144
+    ],
+    "valid_fixed_downhill": 60,
+    "mean_screen_y_px": -175.786758684414,
+    "min_bottom_margin_px": 150.4376465732369,
+    "mean_visible_slope_m": 1.2791126700518731,
+    "mean_visible_slope_s": 0.43304662334073385,
+    "fixture_limited": 25,
+    "viewport_truncated": 35,
+    "max_descent_u": 65.95926177562,
+    "retry": {
+     "resets": 1,
+     "first_frame_dx_u": -1.276367186999778,
+     "first_frame_dy_u": 29.112060546880002,
+     "descent_u": 0
+    }
+   }
+  },
+  "w26": {
+   "first_frame": {
+    "filtered_vy": 0,
+    "rear": false,
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "dt": 0.033332999795675,
+    "snapping": false,
+    "m11": 0.0037037036381662,
+    "cy": 465,
+    "section": "down-30",
+    "mode": "b",
+    "ground": 335.00000625849,
+    "tick": 2,
+    "scale": 0.0099999997764826,
+    "zoom": 0.99498028161201,
+    "descent": 0,
+    "dir": 1,
+    "sim_time": 0.033333335071802,
+    "resets": 0,
+    "m00": 0.0020833334419876,
+    "cx": 11417.774414062,
+    "y": 370,
+    "x": 11370.752929688,
+    "front": false,
+    "generation": 1,
+    "vx": 100,
+    "frame": 1,
+    "station": "ramps-long",
+    "vy": 0
+   },
+   "summary": {
+    "label": "ramps-long-b-1280x720",
+    "mode": "b",
+    "station": "ramps-long",
+    "viewport": {
+     "width": 1280,
+     "height": 720
+    },
+    "canvas": {
+     "width": 1280,
+     "height": 720,
+     "buffer_width": 1280,
+     "buffer_height": 720
+    },
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "first_projection": {
+     "m00": 0.0020833334419876,
+     "m11": 0.0037037036381662
+    },
+    "frames": 141,
+    "ticks": [
+     2,
+     144
+    ],
+    "valid_downhill": 51,
+    "fixed_ticks": 144,
+    "fixed_window": [
+     1,
+     144
+    ],
+    "valid_fixed_downhill": 51,
+    "mean_screen_y_px": -180.81996376464247,
+    "min_bottom_margin_px": 140.96631764525762,
+    "mean_visible_slope_m": 1.0921865435285087,
+    "mean_visible_slope_s": 0.3570987868281168,
+    "fixture_limited": 21,
+    "viewport_truncated": 30,
+    "max_descent_u": 68.212601233849
+   },
+   "failed": "AssertionError [ERR_ASSERTION]: Retry camera failed to restore initial framing"
+  },
+  "w30": {
+   "first_frame": {
+    "filtered_vy": 0,
+    "rear": false,
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "dt": 0.033332999795675,
+    "snapping": false,
+    "m11": 0.0037037036381662,
+    "cy": 475,
+    "section": "down-30",
+    "mode": "b",
+    "ground": 345.00000625849,
+    "tick": 2,
+    "scale": 0.0099999997764826,
+    "zoom": 0.99498028161201,
+    "descent": 0,
+    "dir": 1,
+    "sim_time": 0.033333335071802,
+    "resets": 0,
+    "m00": 0.0020833334419876,
+    "cx": 11417.774414062,
+    "y": 370,
+    "x": 11370.752929688,
+    "front": false,
+    "generation": 1,
+    "vx": 100,
+    "frame": 1,
+    "station": "ramps-long",
+    "vy": 0
+   },
+   "summary": {
+    "label": "ramps-long-b-1280x720",
+    "mode": "b",
+    "station": "ramps-long",
+    "viewport": {
+     "width": 1280,
+     "height": 720
+    },
+    "canvas": {
+     "width": 1280,
+     "height": 720,
+     "buffer_width": 1280,
+     "buffer_height": 720
+    },
+    "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+    "first_projection": {
+     "m00": 0.0020833334419876,
+     "m11": 0.0037037036381662
+    },
+    "frames": 143,
+    "ticks": [
+     2,
+     146
+    ],
+    "valid_downhill": 53,
+    "fixed_ticks": 147,
+    "fixed_window": [
+     1,
+     147
+    ],
+    "valid_fixed_downhill": 53,
+    "mean_screen_y_px": -188.48425224841878,
+    "min_bottom_margin_px": 132.0620184100825,
+    "mean_visible_slope_m": 0.8991965584946926,
+    "mean_visible_slope_s": 0.2989236144719903,
+    "fixture_limited": 18,
+    "viewport_truncated": 35,
+    "max_descent_u": 69.770032890132
+   },
+   "failed": "AssertionError [ERR_ASSERTION]: Retry camera failed to restore initial framing"
+  }
+ }
+}

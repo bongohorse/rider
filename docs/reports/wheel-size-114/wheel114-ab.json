@@ -1,17 +1,17 @@
 {
   "inputs": [
-    "artifacts/w114/a/wheel114-result.json",
-    "artifacts/w114/w26/wheel114-result.json",
-    "artifacts/w114/w30/wheel114-result.json"
+    "artifacts/r2/w114/a/wheel114-result.json",
+    "artifacts/r2/w114/w26/wheel114-result.json",
+    "artifacts/r2/w114/w30/wheel114-result.json"
   ],
-  "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+  "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
   "runs": [
     {
       "preset": "a",
-      "run_id": "00132fa0-539f-4600-a2fd-773209cce597",
+      "run_id": "635debce-3a63-4ea4-a14a-463df335273d",
       "geometry": {
         "factory": "#wheel",
-        "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
         "preset": "a",
         "wheel_inertia": 0.096799999475479,
         "chassis_mass_kg": 40,
@@ -442,10 +442,10 @@
     },
     {
       "preset": "w26",
-      "run_id": "88993d7c-6146-4c45-b9ea-a5f4efacb3db",
+      "run_id": "e5a6815f-7f3d-4acc-b1a9-de28619bce6c",
       "geometry": {
         "factory": "#wheel26",
-        "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
         "preset": "w26",
         "wheel_inertia": 0.13519997894764,
         "chassis_mass_kg": 40,
@@ -876,10 +876,10 @@
     },
     {
       "preset": "w30",
-      "run_id": "a6a16ff8-f005-4dfc-93e8-c610bc4d3d6e",
+      "run_id": "0c986b5a-9d8e-4311-9bde-bbb1dbf5da88",
       "geometry": {
         "factory": "#wheel30",
-        "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
         "preset": "w30",
         "wheel_inertia": 0.17999997735023,
         "chassis_mass_kg": 40,

@@ -1,6 +1,6 @@
 # Wheel-size A/B (#114 stage 1): A vs W26 vs W30
 
-Source `23b8696a196cec19b204363d786d067c0008ec0f`, 156.0.8078.4, debug HTML5 Gym bundle, fixed 60 Hz physics at time factor 1.0, 4 substeps; synthetic runs, not device or drive evidence.
+Source `a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6`, 156.0.8078.4, debug HTML5 Gym bundle, fixed 60 Hz physics at time factor 1.0, 4 substeps; synthetic runs, not device or drive evidence.
 Values are from the second Retry attempt (R pressed twice after the page load); "Retry" compares the two Retry attempts tick by tick and "Load" the page-load attempt (shifted by its 1-tick probe phase) with the first Retry (A21 tolerances 0.05 m / 0.05 rad; "identical" = every compared value equal). Cap = 47.12 rad/s; "at cap" counts ticks with a wheel within 0.01 rad/s of it, the read-back value can exceed it.
 
 ## Geometry measured in the engine
