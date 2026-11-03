@@ -257,7 +257,8 @@
     "coast345"
    ],
    "paths": [
-    "tools/gym/browser.cjs"
+    "tools/gym/browser.cjs",
+    "tools/gym/input_queue.cjs"
    ]
   },
   {
