@@ -262,8 +262,9 @@ elif args.case in ('a2','a3','a6','a10'):
         expected.update({'reverse_speed','reverse_dx','air_angle','camera_direction_zoom','camera_follow_window'})
         assert cases['reverse_speed'] < -50 and cases['reverse_dx'] < -50 and cases['air_angle']>0.1 and cases['camera_direction_zoom'] is True and cases['camera_follow_window'] is True
     if args.case=='a10':
-        expected.update({'audio_once','audio_pitch','no_autoplay','audio_context_running'})
+        expected.update({'audio_once','audio_pitch','no_autoplay','audio_context_running','sfx_played'})
         assert cases['audio_once'] and cases['no_autoplay'] and cases['audio_context_running'] and cases['audio_pitch']>0.85
+        assert cases['sfx_played']==6, cases['sfx_played']
     assert set(cases)==expected
     assert cases['drive_dx']>150 and cases['drive_speed']>100 and abs(cases['stopped_speed'])<12
     assert cases['max_angle']<0.6 and all(cases[x] is True for x in ['wheel_contact','camera_follow','brake_priority'])

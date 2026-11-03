@@ -210,7 +210,7 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 | `a7` | Head contact off/on via C and overlay click |
 | `a8` | Live spring change without reset, neutral release |
 | `a9`, `a9invalid` | Preset by URL and chips; every registered preset drivable; refusal rules; invalid URL and refused-file fallback |
-| `a10` | Silent before input, one voice, wheel-dependent speed |
+| `a10` | Silent before input, one voice, wheel-dependent speed; every one-shot cue plays (`sfx_played == 6`) |
 | `a11` | Clipboard readback and denial fallback |
 | `a12` | Graph spike with disclosed test wheel limits, expiry |
 | `m2feedback` | Ground/air assistance, preset C above 8 m/s |

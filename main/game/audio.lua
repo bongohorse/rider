@@ -10,7 +10,9 @@ function M.start(self)
     sound.play("#engine")
 end
 -- #438: one-shot effects (sfx_<name>.sound on the controller GO) and their per-voice gain. Presentation only.
-M.effects={coin=0.15,gem=0.18,fuel=0.15,land=0.2,crash=0.2,finish=0.15}
+-- Claudio's 2026-11-03 drive test could not hear 0.15-0.2 (about the engine hum's level, and much shorter);
+-- these sit roughly 10 dB above the engine voice, peak <= 0.42 of full scale (file peak 0.6).
+M.effects={coin=0.5,gem=0.55,fuel=0.5,land=0.6,crash=0.7,finish=0.5}
 -- Plays one voice unless the engine voice has not started (no autoplay before input), the player muted
 -- or the world is paused; a dropped event is not queued. Returns whether it played.
 function M.effect(self,name)
