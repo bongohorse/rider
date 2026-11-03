@@ -73,6 +73,7 @@ Test explicit joint cleanup and deletion of a body or collection with attached j
 - **Slow motion is a time scale with smaller steps, not a replay:** the world keeps 60 fixed callbacks per engine second, each 1/120 or 1/240 s. Per-step limits (Box2D's rotation cap of 0.25π per full step, engine pitfall 6; four solver substeps per step) therefore change with the factor, so trajectories are close to, not identical with, 1.0; `a20` reports a throttle-from-rest comparison at all three factors. Values captured at a factor other than 1.0 are not comparable with the measurement protocols: telemetry, station reports and the feedback copy record the factor and the count of ticks not at 1.0, and every automated debug case except `a20` and `a21` (whose comparable replays assert 0 scaled ticks) asserts a 1/60 s step on every tick. Every world switch (station, Edit/Play, import) starts at 1.0; Edit worlds always run at 1.0.
 - Single-step is not implemented; never fake it in the UI.
 - Live tuning classifies each parameter as LIVE, NEXT_RESET or REBUILD, validates finite values/ranges/units and applies changes atomically at a tick boundary.
+- The camera choice (A/B) and the live camera settings (#443, `camera_settings.lua`) are render-only player settings, not tuning: the controller, the single camera owner, applies them in `update`; they never reach a body, the fixed tick, a replay identity or a record (test `cam443`: identical fixed-tick physics and MATCH replays across live switches).
 
 ## Command playback and ghosts
 

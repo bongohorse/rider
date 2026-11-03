@@ -12,6 +12,10 @@ local controls=require "main.game.controls"
 local telemetry = require "main.game.telemetry"
 local fps_counter=require "main.game.fps_counter"
 local fps_place=require "main.game.fps_place"
+local camera_hud=require "main.game.camera_hud"
+-- ui.gui max_nodes (raised from the default 512 for the #443 camera control and panel); the debug camera state
+-- publishes the nodes in use against it.
+local MAX_NODES=600
 -- #444: DOM controls over the canvas (drive zones, toolbar with Pause, level actions, page buttons) as GUI screen
 -- rectangles (canvas pixels, origin bottom left). Open dialogs and the More menu are transient overlays above
 -- everything and are left out; hidden elements have no box.
@@ -23,6 +27,23 @@ if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue
 if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
 out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
 return JSON.stringify(out)})()]]
+-- #443: one DOM query per placement poll for the controls (as above) and the touch HUD's status line (.readout: not a
+-- control, but above the canvas, so it would hide panel buttons). Its width follows its text, so a ResizeObserver
+-- counts its size changes (seq); the HUD re-places at once when seq moves instead of waiting for the next poll.
+local HUD_LAYOUT=[[(()=>{if(window.riderHudLayout)return;const L=window.riderHudLayout={seq:0,el:null};
+const ro=window.ResizeObserver?new ResizeObserver(()=>{L.seq++;}):null;
+const rects=sel=>{const c=document.querySelector('canvas');if(!c)return [];const r=c.getBoundingClientRect();
+if(!(r.width>0&&r.height>0))return [];const sx=c.width/r.width,sy=c.height/r.height,out=[];
+for(const e of document.querySelectorAll(sel)){
+if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more'))continue;const b=e.getBoundingClientRect();
+if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue;
+if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
+out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
+return out;};
+L.watch=()=>{const e=document.querySelector('#rider-mobile .readout');
+if(e!==L.el){if(L.el&&ro)ro.unobserve(L.el);L.el=e;if(e&&ro)ro.observe(e);L.seq++;}return L.seq;};
+L.query=()=>JSON.stringify({seq:L.watch(),controls:rects('button,select,input,textarea,a[href],[role=button],[data-command]'),
+readouts:rects('#rider-mobile .readout')});})()]]
 -- Visible screen area (safe area where the platform reports one), GUI screen pixels.
 local function fps_area()
     local w,h=window.get_size()
@@ -46,10 +67,34 @@ local function fps_size(self)
     local a,b=gui.get_screen_position(self.fps_corners[1]),gui.get_screen_position(self.fps_corners[2])
     return math.abs(b.x-a.x),math.abs(a.y-b.y)
 end
--- Every visible control the counter must keep clear of: the GUI buttons (Pause, Speed, Record, Replay, Next,
--- Section, T, H, Levels, result buttons, the open tuning panel, the editor's Terrain Look) and the DOM controls
--- (drive zones, Pause, ...).
-local function fps_blocked(self)
+-- The DOM controls over the canvas as GUI screen rectangles (empty outside HTML5).
+local function dom_rects()
+    local rects={}
+    if not html5 then return rects end
+    local ok,dom=pcall(json.decode,html5.run(DOM_CONTROLS))
+    if ok and type(dom)=="table" then
+        for _,d in ipairs(dom) do rects[#rects+1]={x0=d[1],y0=d[2],x1=d[3],y1=d[4]} end
+    end
+    return rects
+end
+-- #443: controls and the touch status line in one query, kept for taps and messages until the next poll.
+local function dom_layout(self)
+    local out={seq=0,controls={},readouts={}}
+    if html5 then
+        local ok,d=pcall(json.decode,html5.run("window.riderHudLayout.query()"))
+        if ok and type(d)=="table" then
+            out.seq=d.seq or 0
+            for _,k in ipairs({"controls","readouts"}) do
+                for _,r in ipairs(d[k] or {}) do out[k][#out[k]+1]={x0=r[1],y0=r[2],x1=r[3],y1=r[4]} end
+            end
+        end
+    end
+    self.dom_cache=out
+    return out
+end
+-- The visible GUI buttons: Pause, Speed, Record, Replay, Next, Section, T, H, Levels, result buttons, the open
+-- tuning panel and the editor's Terrain Look.
+local function gui_controls(self)
     local rects={}
     local r=self.run_ui
     local nodes={self.time_buttons.pause.box,self.time_buttons.step.box,self.replay_buttons.record.box,self.replay_buttons.replay.box,
@@ -64,14 +109,33 @@ local function fps_blocked(self)
     if not editor.play_ui then self.editor_rects=nil
     elseif not editor.play_ui_modal then self.editor_rects=require("main.editor.editor_ui").screen_rects(editor.play_ui) end
     for _,b in ipairs(self.editor_rects or {}) do rects[#rects+1]=b end
+    return rects
+end
+-- Every visible control the counter must keep clear of: the GUI buttons and the DOM controls (drive zones, Pause,
+-- ...). dom: the DOM rectangles of this poll, if already read.
+local function fps_blocked(self,dom)
+    local rects=gui_controls(self)
     -- DOM controls only while the counter is shown (an ON command refreshes them before placing).
     if html5 and self.fps_setting.visible then
-        local ok,dom=pcall(json.decode,html5.run(DOM_CONTROLS))
-        if ok and type(dom)=="table" then
-            for _,d in ipairs(dom) do rects[#rects+1]={x0=d[1],y0=d[2],x1=d[3],y1=d[4]} end
-        end
+        for _,d in ipairs(dom or dom_rects()) do rects[#rects+1]=d end
     end
     return rects
+end
+-- #443: the camera control keeps clear of the same controls, the touch status line and the FPS counter (which does
+-- not move for it).
+local function camera_blocked(self,dom)
+    local rects=gui_controls(self)
+    for _,d in ipairs(dom.controls) do rects[#rects+1]=d end
+    for _,d in ipairs(dom.readouts) do rects[#rects+1]=d end
+    if self.fps_setting.visible and self.fps_placed and self.fps_rect then rects[#rects+1]=self.fps_rect end
+    return rects
+end
+-- dom: this poll's DOM layout; nil reuses the last one (taps, messages: no new DOM query).
+local function place_camera(self,dom,force)
+    dom=dom or self.dom_cache or dom_layout(self)
+    if camera_hud.place(self.camera_hud,fps_area(),camera_blocked(self,dom),fps_place.GAP_CSS_PX*(self.pixel_ratio or 1),dom.seq) or force then
+        camera_hud.publish(self.camera_hud,self.pixel_ratio,{used=layout.created+#self.fps_corners,max=MAX_NODES})
+    end
 end
 local function publish_fps_place(self,clear)
     if not html5 then return end
@@ -307,6 +371,12 @@ function init(self)
     self.progress_ui=progress_ui.new()
     self.levels_ui=levels_ui.new()
     self.mechanism_text=layout.text(vmath.vector3(480,50,0),'','bottom');gui.set_font(self.mechanism_text,'default');gui.set_scale(self.mechanism_text,vmath.vector3(.75,.75,1));gui.set_visible(self.mechanism_text,false)
+    -- #443: camera A/B button and live camera settings panel; shown after its first placement. The debug
+    -- ?camera352=a|b measurement route forces the controller's camera mode, so the button (which would store a choice
+    -- the camera ignores) is hidden there.
+    local forced=html5 and sys.get_engine_info().is_debug and html5.run("new URLSearchParams(location.search).get('camera352') || ''") or ""
+    self.camera_hud=camera_hud.new((forced=="a" or forced=="b") and forced or nil)
+    if html5 then html5.run(HUD_LAYOUT) end
 end
 -- #417: colour relative to the cap (Unlimited against 60); neutral while no reading or the cap label shows.
 local function fps_color(fps,cap)
@@ -407,6 +477,10 @@ function on_message(self,id,data,sender)
         if not self.fps_press then self.fps_blocked=fps_blocked(self);place_fps(self,true) end -- a running drag keeps its place until its own release
         show_fps(self,socket.gettime())
         if html5 then html5.run("window.riderLevelMenu?.setFps?.("..json.encode({visible=data.visible,x=data.x,y=data.y,preset=fps_place.preset_of(data.x,data.y) or false})..")") end
+    elseif id==hash("camera_settings") then
+        -- #443: the loader applied (and stored) the camera choice and settings; the controller got the same.
+        camera_hud.settings(self.camera_hud,data)
+        if self.camera_hud.placed then place_camera(self,nil,true) end
     elseif id==hash("cancel_drag") then cancel_drag(self)
     elseif id==hash("graph") then
         graph.draw(self.graph,data)
@@ -472,6 +546,7 @@ function on_message(self,id,data,sender)
         -- The level editor draws its own panels; the driving HUD stays hidden while editing.
         for _,root in pairs(layout.roots) do gui.set_enabled(root,not data.active) end
         self.editing=data.active
+        if data.active then camera_hud.close(self.camera_hud) end
         cancel_drag(self)
     elseif id==hash("time_state") then
         self.time={paused=data.paused,step=data.step}
@@ -583,6 +658,11 @@ function update(self,dt)
         for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open) end
         gui.set_visible(self.metrics[6],open)
     end
+    -- #443: a resized touch status line re-places the camera control this frame (one counter read, no layout query).
+    if html5 and enabled then
+        local seq=tonumber(html5.run("window.riderHudLayout?window.riderHudLayout.watch():0"))
+        if seq~=self.hud_layout_seq then self.hud_layout_seq=seq;self.feedback_poll=math.max(self.feedback_poll or 0,0.1) end
+    end
     self.feedback_poll=(self.feedback_poll or 0)+dt
     if self.feedback_poll<0.1 then return end
     self.feedback_poll=0
@@ -600,7 +680,10 @@ function update(self,dt)
     layout.readable(base)
     -- #444: re-place the counter when the screen, its size, the controls or the setting changed (not mid-drag).
     self.pixel_ratio=pixel_ratio or 1
-    if not self.fps_press then self.fps_blocked=fps_blocked(self);place_fps(self) end
+    local dom=dom_layout(self)
+    if not self.fps_press then self.fps_blocked=fps_blocked(self,dom.controls);place_fps(self) end
+    -- #443: the camera control (and its open panel) after the counter, clear of it and of every other control.
+    place_camera(self,dom)
     local narrow=html5 and tonumber(html5.run("innerWidth"))<520
     graph.visible(self.graph,not self.run_ui.data and not (open and narrow))
     if html5 then
@@ -652,6 +735,12 @@ function on_input(self,id,action)
         return true
     end
     if self.feedback_open or self.feedback_modal then return true end
+    -- #443: a press on the camera control or its open panel is consumed here (never drive input). Hidden while
+    -- editing (pick_node ignores the disabled roots).
+    if not self.editing and camera_hud.input(self.camera_hud,id,action) then
+        place_camera(self,nil,true)
+        return true
+    end
     -- #417/#444: a press on the FPS counter is consumed here (hidden while editing or switched off; pick_node
     -- ignores enabled and visible state). Its release decides: a tap switches the cap, a drag moves the counter.
     -- Drive input is keyboard or the DOM touch zones, never this node.

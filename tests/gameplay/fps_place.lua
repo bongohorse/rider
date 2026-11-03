@@ -107,13 +107,13 @@ print('PASS fps place keeps clear of pause, drive and other controls at 1080x486
 local path='rider/player-settings'
 local s=settings.load();assert(s.fps_visible==true and s.fps_x==0 and s.fps_y==0 and s.fps_cap==60 and s.status=='default','defaults')
 s.fps_visible,s.fps_x,s.fps_y=false,0.25,0.75;assert(settings.save(s)==true)
-local f=files[path];assert(f.version==2 and f.fps_visible==false and f.fps_x==0.25 and f.fps_y==0.75 and f.fps_cap==60,'version 2 file')
+local f=files[path];assert(f.version==3 and f.fps_visible==false and f.fps_x==0.25 and f.fps_y==0.75 and f.fps_cap==60,'version 3 file')
 local r=settings.load();assert(r.fps_visible==false and r.fps_x==0.25 and r.fps_y==0.75 and r.status=='ok','roundtrip')
--- A #417 version 1 file keeps its cap, gets the defaults and is written as version 2 on the next save.
+-- A #417 version 1 file keeps its cap, gets the defaults and is written as the current version on the next save.
 files[path]={version=1,fps_cap=30};local old=settings.load()
 assert(old.status=='ok' and old.fps_cap==30 and old.fps_visible==true and old.fps_x==0 and old.fps_y==0,'version 1 migration')
 assert(settings.apply(old,{command='bottom_right'}) and settings.save(old)==true)
-f=files[path];assert(f.version==2 and f.fps_cap==30 and f.fps_x==1 and f.fps_y==1 and f.fps_visible==true,'migrated file')
+f=files[path];assert(f.version==3 and f.fps_cap==30 and f.fps_x==1 and f.fps_y==1 and f.fps_visible==true,'migrated file')
 -- Version 1 ignores fields it never had.
 files[path]={version=1,fps_cap=90,fps_visible=false,fps_x=0.5,fps_y=0.5};old=settings.load()
 assert(old.fps_cap==90 and old.fps_visible==true and old.fps_x==0 and old.status=='ok','version 1 must not read version 2 fields')
@@ -132,12 +132,12 @@ files[path]={version=2,fps_cap=59,fps_visible=false,fps_x=0.5,fps_y=1};local v=s
 assert(v.status=='invalid' and v.fps_cap==60 and v.fps_visible==false and v.fps_y==1,'an invalid cap must not drop valid counter values')
 mode='unreadable';v=settings.load();assert(v.status=='invalid' and v.fps_visible==true and v.fps_x==0,'unreadable fallback');mode=nil
 -- A newer file is used where valid and never overwritten, also by counter commands.
-files[path]={version=3,fps_cap=144,fps_visible=false,fps_x=0.5,fps_y=0.5,future='kept'};local n=settings.load()
+files[path]={version=4,fps_cap=144,fps_visible=false,fps_x=0.5,fps_y=0.5,future='kept'};local n=settings.load()
 assert(n.status=='newer' and n.fps_visible==false and n.fps_x==0.5 and n.fps_cap==144,'newer file not read')
 assert(settings.apply(n,{command='on'}));local ok,why=settings.save(n)
 assert(ok==false and why and files[path].fps_visible==false and files[path].future=='kept','newer file overwritten')
 assert(n.fps_visible==true,'the change still lasts for the session')
-files[path]={version=3,fps_cap=144,fps_visible='future',fps_x=2};n=settings.load()
+files[path]={version=4,fps_cap=144,fps_visible='future',fps_x=2};n=settings.load()
 assert(n.status=='newer' and n.fps_visible==true and n.fps_x==0 and n.fps_cap==144,'unknown newer values fall back')
 -- Invalid settings are never written.
 files[path]=nil;local w2=settings.load();w2.fps_x=7;assert(settings.save(w2)==false and files[path]==nil)

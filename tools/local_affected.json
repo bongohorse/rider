@@ -218,6 +218,15 @@
    ]
   },
   {
+   "name": "camera A/B toggle runner",
+   "cases": [
+    "cam443"
+   ],
+   "paths": [
+    "tools/gym/camera443.cjs"
+   ]
+  },
+  {
    "name": "coasting measurements",
    "cases": [
     "coast345"
@@ -332,7 +341,8 @@
     "le6",
     "ea3",
     "fps417",
-    "fps444"
+    "fps444",
+    "cam443"
    ],
    "paths": [
     "tools/gym/storage.cjs"

@@ -258,6 +258,8 @@ jobs:
             cases: 'cf3'
           - group: fps-counter
             cases: 'fps417 fps444'
+          - group: camera
+            cases: 'cam443'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -374,6 +376,9 @@ jobs:
       - name: Place the FPS counter by mouse and touch drag and by Menu presets; ON/OFF, reload, taps and no drive input
         if: contains(format(' {0} ', matrix.cases), ' fps444 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/fps-placement --case fps444
+      - name: Switch camera A/B and step a camera setting while driving; identical physics and replay, reload, reset, no drive input
+        if: contains(format(' {0} ', matrix.cases), ' cam443 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/camera --case cam443
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

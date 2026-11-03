@@ -76,7 +76,7 @@ print('PASS fps counter smoothing window, hitch, rate change, background gap, re
 -- Player settings: default, valid roundtrip, invalid stored values, newer-version protection.
 local path='rider/player-settings'
 local s=settings.load();assert(s.fps_cap==60 and s.status=='default','missing file must load the default')
-s.fps_cap=144;assert(settings.save(s)==true and files[path].version==2 and files[path].fps_cap==144)
+s.fps_cap=144;assert(settings.save(s)==true and files[path].version==3 and files[path].fps_cap==144)
 local r=settings.load();assert(r.fps_cap==144 and r.status=='ok','stored cap not restored')
 for _,stored in ipairs({{version=1,fps_cap=0},{version=1,fps_cap=30},{version=1,fps_cap=90},{version=1,fps_cap=120}}) do
  files[path]=stored;local v=settings.load();assert(v.fps_cap==stored.fps_cap and v.status=='ok')
@@ -93,10 +93,10 @@ mode=nil
 -- An invalid file is replaced by the next valid save.
 files[path]={version=1,fps_cap='bad'};local fixed=settings.load();fixed.fps_cap=30
 assert(settings.save(fixed)==true and settings.load().fps_cap==30)
--- A newer settings file (version 3 since #444) is used where valid but never overwritten.
-files[path]={version=3,fps_cap=120,other='kept'};local n=settings.load();assert(n.fps_cap==120 and n.status=='newer')
+-- A newer settings file (version 4 since #443) is used where valid but never overwritten.
+files[path]={version=4,fps_cap=120,other='kept'};local n=settings.load();assert(n.fps_cap==120 and n.status=='newer')
 n.fps_cap=144;local ok,why=settings.save(n);assert(ok==false and why and files[path].fps_cap==120 and files[path].other=='kept')
-files[path]={version=3,fps_cap='future'};n=settings.load();assert(n.fps_cap==60 and n.status=='newer')
+files[path]={version=4,fps_cap='future'};n=settings.load();assert(n.fps_cap==60 and n.status=='newer')
 -- Write failures are reported, not hidden; invalid caps are never written.
 files[path]=nil;local w=settings.load();w.fps_cap=90
 mode='write';assert(settings.save(w)==false and files[path]==nil)

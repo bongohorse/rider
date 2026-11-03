@@ -10,11 +10,13 @@ local specs={
     top={480,540,gui.ANCHOR_NONE,gui.ANCHOR_TOP},
     bottom={480,0,gui.ANCHOR_NONE,gui.ANCHOR_BOTTOM},
     centre={480,270,gui.ANCHOR_NONE,gui.ANCHOR_NONE}}
-function M.init() M.roots={};M.nodes={};M.parents={};M.text_nodes={};M.authored_scales={} end
+-- created: every node this module made (roots included), for the HUD node budget (#443).
+function M.init() M.roots={};M.nodes={};M.parents={};M.text_nodes={};M.authored_scales={};M.created=0 end
 local function group(name)
     if M.roots[name] then return M.roots[name] end
     local s=specs[name]
     local root=gui.new_box_node(vmath.vector3(s[1],s[2],0),vmath.vector3(1,1,0))
+    M.created=M.created+1
     gui.set_color(root,vmath.vector4(0,0,0,0))
     gui.set_xanchor(root,s[3]);gui.set_yanchor(root,s[4])
     M.roots[name]=root
@@ -29,6 +31,7 @@ local function attach(node,pos,name)
         or pos.x<=320 and (pos.y>=260 and 'left_top' or 'left_bottom')
         or pos.y>=400 and 'top' or pos.y<=40 and 'bottom' or 'centre')
     gui.set_parent(node,group(name),false)
+    M.created=M.created+1
     M.parents[node]=name;M.nodes[#M.nodes+1]=node
     M.position(node,pos)
     return node

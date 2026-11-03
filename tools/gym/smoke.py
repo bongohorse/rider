@@ -78,11 +78,11 @@ else:
     bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
     if not args.bundle:build_bundle(bundle,sha)
     verify_bundle(bundle,sha)
-    runner='wheel114.cjs' if args.case=='w114' else 'fps417.cjs' if args.case=='fps417' else 'fps444.cjs' if args.case=='fps444' else 'coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    runner='wheel114.cjs' if args.case=='w114' else 'fps417.cjs' if args.case=='fps417' else 'fps444.cjs' if args.case=='fps444' else 'camera443.cjs' if args.case=='cam443' else 'coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else []),*(['--record'] if args.record else [])],cwd=ROOT,start_new_session=True,env=env)
-    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3','w114') else 360 if args.case in ('fps417','fps444','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3','w114') else 360 if args.case in ('fps417','fps444','cam443','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
 if args.preset is not None:
@@ -127,6 +127,16 @@ if args.case=='fps444':
     names={'top_left','top','top_right','left','center','right','bottom_left','bottom','bottom_right'}
     assert set(report['cases']['presets_desktop'])==names and set(report['cases']['presets_phone'])==names
     print(json.dumps({k:report['cases'][k] for k in ('mouse_no_drive','touch_no_drive','resolution_change')}));raise SystemExit(0)
+if args.case=='cam443':
+    report=json.loads((out/'cam443-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
+    assert set(report['cases'])=={'ramps-down-30','air-mid','straight-reverse','persist_reload','reset_defaults',
+        'desktop_placement','mouse_no_drive','phone','hud_nodes','camera352_forced'}
+    # Exact physics identity and a MATCH replay in all three driving scenarios.
+    for name in ('ramps-down-30','air-mid','straight-reverse'):
+        c=report['cases'][name]
+        assert c['physics']['max_difference']==0 and c['physics']['ticks']>=300 and c['replay']['verdict']=='MATCH'
+    print(json.dumps({k:{'physics':report['cases'][k]['physics']['modes'],'replay':report['cases'][k]['replay']['verdict']} for k in ('ramps-down-30','air-mid','straight-reverse')}));raise SystemExit(0)
 if args.case=='cf3':
     report=json.loads((out/'struts-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and set(report['cases'])=={'rest','landing','off','toggle'}
