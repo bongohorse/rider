@@ -15,7 +15,7 @@ const R = require('./wheel114_report.cjs');
 const SECTIONS = [
   {id: 'straight', station: 'straight', case: 'w114', query: '&wheel114=throttle', window: 480,
     protocol: 'Straight from rest, constant full throttle (probe driver), no brake/lean', outcome_rule: 'none (top speed only); a bounds reset fails the run'},
-  ...['down-10', 'down-20', 'down-30'].map(section => ({id: 'ramps-long/' + section, station: 'ramps-long', section, case: 'a16', query: '&wheel114=1', window: 150,
+  ...['down-10', 'down-20', 'down-30'].map(section => ({id: 'ramps-long/' + section, station: 'ramps-long', section, case: 'a16', query: '&wheel114=1', window: 210,
     protocol: `ramps-long ${section}: authored neutral start at 1 m/s (a16 driver)`, outcome_rule: 'ramp record status (ACCELERATED or HELD/SLOWED) and its speed gain'})),
   ...['3', '6'].map(section => ({id: 'gaps/' + section, station: 'gaps', section, case: 'a19', query: '&wheel114=1', window: 300,
     protocol: `gaps ${section} m: authored 7 m/s start, full throttle (a19 driver)`, outcome_rule: 'gap record status (CLEARED/MISSED) and jump distance'})),
