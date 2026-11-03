@@ -42,7 +42,7 @@
         21,
         8.5
       ],
-      "text": "Gate pauses when its path is occupied"
+      "text": "Gate closes and pushes, even when its path is occupied"
     }
   ],
   "checkpoints": [],
