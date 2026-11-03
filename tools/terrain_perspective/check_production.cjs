@@ -9,7 +9,7 @@ execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bund
  async function key(k){await page.locator('canvas').focus();await page.keyboard.down(k);await pointer.frames(page);await page.keyboard.up(k);await pointer.frames(page);}
  async function button(name){await page.waitForTimeout(1100);await require('../gym/editor_ui_target.cjs').reveal(page,name);const p=await page.evaluate(name=>{const b=window.riderEditor.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};},name);await pointer.tap(page,p);}
  async function snap(){return page.evaluate(()=>({telemetry:window.riderTelemetry,mesh:window.riderTerrainMesh,projection:window.riderRoadProjection,source:window.riderEditorDoc,editor:window.riderEditor}));}
- async function exported(){await button('export');await page.waitForSelector('#rider-export-text');const d=JSON.parse(await page.locator('#rider-export-text').inputValue());await page.getByRole('button',{name:'Close export',exact:true}).click();return d;}
+ async function exported(){await button('export');await page.waitForSelector('#rider-export-text');const d=JSON.parse(await page.locator('#rider-export-text').inputValue());await page.getByRole('button',{name:'Close export',exact:true}).click();await page.waitForFunction(()=>window.riderEditor.panel_open===false);return d;}
  async function ready(){await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);assert.equal(await page.evaluate(()=>typeof window.riderRoadLook),'undefined');}
  let referenceExport;
  for(const projected of [false,true]){
