@@ -295,6 +295,23 @@
    ]
   },
   {
+   "name": "shared durable-save wait (#411)",
+   "cases": [
+    "le2",
+    "le3",
+    "le4",
+    "le5a",
+    "le5b",
+    "le5c",
+    "le5d",
+    "le6",
+    "ea3"
+   ],
+   "paths": [
+    "tools/gym/storage.cjs"
+   ]
+  },
+  {
    "name": "editor shell runner",
    "cases": [
     "le2"
