@@ -102,7 +102,7 @@ F or Copy feedback formats Markdown with source SHA, preset, station, velocity, 
 
 ## Browser presentation
 
-The page fills the viewport. High DPI ON uses the device pixel ratio, OFF one buffer pixel per CSS pixel (`?dpi=0|1`, reload). Resize, rotation and fullscreen keep the world. Auto Fit keeps world proportions. GUI panel roots own edge anchors and safe-area adjustment; children share their root's FIT space. Slider picking converts `action.screen_x/y` with `gui.screen_to_local`.
+The page fills the viewport. **Quality: High** uses the device pixel ratio, **Low** one buffer pixel per CSS pixel. The page button (and the touch More copy) stores the choice in `localStorage` `rider-quality-v1` and reloads (#440); `?dpi=0|1` overrides it for that visit only. The Pages origin is shared by all previews, so switch back to High after testing Low. Resize, rotation and fullscreen keep the world. Auto Fit keeps world proportions. GUI panel roots own edge anchors and safe-area adjustment; children share their root's FIT space. Slider picking converts `action.screen_x/y` with `gui.screen_to_local`.
 
 ## Touch and tilt
 

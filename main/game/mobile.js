@@ -202,7 +202,8 @@
   button('Measure',overflow,()=>{tiltPanel.classList.remove('open');measure.classList.toggle('open');});
   button('Tilt',overflow,()=>{measure.classList.remove('open');tiltPanel.classList.toggle('open');});
   button('Copy report',overflow,()=>{window.riderFeedback?.copy();});
-  button(document.getElementById('quality')?.textContent||'High DPI',overflow,()=>document.getElementById('quality')?.click());
+  // #440: the page's Quality High/Low switch (High DPI on/off), resolved before the engine started.
+  button(document.getElementById('quality')?.textContent||'Quality',overflow,()=>document.getElementById('quality')?.click());
   button('Fullscreen',overflow,()=>document.getElementById('fullscreen')?.click());
   toolbar.append(overflow);
   root.addEventListener('pointerdown',e=>{

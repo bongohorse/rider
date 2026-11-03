@@ -11,6 +11,7 @@ Device: Xiaomi Mi 10T Pro, Android 12, Android Chrome, [public gym](https://bong
 - Try **Layout A · mirror** and **Layout B · mirror**. Compare comfort, accidental presses and readable space; neither layout is preselected as the winner.
 - Retry while holding a zone; the vehicle must reset and wait for a fresh press. Drag a finger outside a zone and release. Rotate, switch tabs/apps and return; no stuck pedal or lean is allowed.
 - **Import level** opens the custom level Import panel (file or pasted JSON), also when a level is already saved (checked in touch emulation; phone NOT RUN). Opening it leaves fullscreen and cancels a running capture.
+- **Quality: High / Low** in **More** switches the render resolution: High uses the screen's full pixel density (High DPI on), Low renders at one pixel per CSS pixel for weaker phones. The page reloads and the browser remembers the choice (`localStorage` key `rider-quality-v1`); `?dpi=1` or `?dpi=0` overrides it for one visit without changing it (#440).
 - **Tuning** opens the existing editor and hides driving zones. Close tuning to return. The compact HUD shows the FPS counter (tap it to switch the frame-rate cap, #417), speed, contact dots, spring travel and a small graph; the build SHA is dim at the bottom. Tuning contains the preset chips (A–F), crash/sound/copy actions and eleven sliders. P cycles presets; 1–9 select stations. Landscape is recommended for the detailed editor.
 
 ## Coasting and HUD
@@ -22,9 +23,9 @@ Device: Xiaomi Mi 10T Pro, Android 12, Android Chrome, [public gym](https://bong
 ## Comparable phone captures
 
 1. Record the installed full Chrome version from Chrome's About page. The report also requests browser client hints where available; reduced user-agent text alone may omit the full version.
-2. Select 60 Hz in the phone settings. Use preset A and High DPI ON. In **Measure**, label the actual selected mode and press **Record 30 s**. Drive normally, retrying as needed. Copy the report after completion.
+2. Select 60 Hz in the phone settings. Use preset A and **Quality: High**. In **Measure**, label the actual selected mode and press **Record 30 s**. Drive normally, retrying as needed. Copy the report after completion.
 3. Repeat at 144 Hz with the same preset/quality. Confirm what the phone actually permits; an adaptive setting is not a verified locked rate.
-4. Repeat 60 Hz with **High DPI OFF** for a cost comparison. The quality switch reloads the page; it does not change vehicle tuning.
+4. Repeat 60 Hz with **Quality: Low** (High DPI off) for a cost comparison. The quality switch reloads the page and is remembered; it does not change vehicle tuning. Switch back to High afterwards.
 5. Add visible stutter (none / occasional / frequent), responsiveness, layout preference, text readability and any audio issues. Compare both layouts; extra captures are useful only if they answer a concrete question.
 
 Capture time is a measurement window, never a gym deadline. Rotation, focus loss, long frame interruption or opening tuning cancels an active capture. The report retains engine callback intervals (mean/p95/max), engine dt, physics profile, zero-profile counts, over-25-ms intervals, browser/source, viewport/DPR/quality, layout, preset/tuning and reset counts. It does not assert physical refresh, touch quality or fun. Zero profile samples may be below timing resolution.
@@ -36,7 +37,7 @@ The source/build report and actual observations determine concrete phone frame/p
 1. Open **Tilt → Enable tilt**. Allow motion access if Chrome requests it. If the page reports unavailable, denied or no data, use touch and report the exact outcome; that is not a successful tilt trial.
 2. Hold the phone in a comfortable neutral position and tap **Calibrate neutral**. The panel closes; drive with Throttle and tilt gently left/right. The HUD shows normalized tilt input.
 3. Adjust **Full lean angle** (smaller angle = more sensitive) and **Dead zone** if needed; **Invert** reverses the direction. Opening settings suppresses tilt commands while editing; close it to try the change. Touch lean buttons and keyboard lean take priority, including two opposing buttons giving neutral input.
-4. Focus loss, app/tab switching, resize and portrait pause tilt but keep the calibration: back in landscape on the same side, tilt works again without calibrating (tap **Resume** for the game as usual). Retry and turning the phone to the other landscape side ask for **Calibrate neutral** again. Disable tilt to compare directly with touch under the same preset and DPI setting.
+4. Focus loss, app/tab switching, resize and portrait pause tilt but keep the calibration: back in landscape on the same side, tilt works again without calibrating (tap **Resume** for the game as usual). Retry and turning the phone to the other landscape side ask for **Calibrate neutral** again. Disable tilt to compare directly with touch under the same preset and quality setting.
 5. Copy the report and add: tilt direction correct, comfortable full-lean angle/dead zone, accidental leaning, touch vs tilt preference, and **keep / tune / drop** recommendation. The report includes sensor mode, calibration and candidate settings. Default settings are trial values, not a retention decision.
 
 Only initial sensor acquisition times out. Valid orientation may remain unchanged without new events (the W3C event model fires on significant changes), so sample age alone does not prove a failure. Use the stations (1–9, Next station) for ramps and air control. No sensor, actual-device or keep/drop acceptance is inferred from synthetic CI.

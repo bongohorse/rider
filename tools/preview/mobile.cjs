@@ -2,6 +2,74 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
+// #440: Quality High/Low (High = High DPI on) is remembered in localStorage and applied
+// before the engine creates its back-buffer; ?dpi=0|1 overrides; a bad value means High.
+// Own DPR-2 context with fresh storage. Software Chromium: no phone sharpness or frame time.
+const QUALITY_KEY='rider-quality-v1';
+async function quality(browser,url,sha,out,pass){
+  const context=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
+  const more=()=>page.getByRole('button',{name:'More',exact:true});
+  const menu=()=>page.locator('#rider-mobile .toolbar-more');
+  const ready=()=>page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderTelemetry?.sequence>=2&&window.riderMobile?.enabled,sha);
+  // The engine's real back-buffer: the WebGL drawing buffer of the canvas it rendered into.
+  const observe=()=>page.evaluate(key=>{
+    const c=document.querySelector('canvas'),gl=c.getContext('webgl2')||c.getContext('webgl');
+    return {devicePixelRatio,css:[innerWidth,innerHeight],canvas:[c.width,c.height],
+      buffer:gl?[gl.drawingBufferWidth,gl.drawingBufferHeight]:null,dpr:window.riderViewport?.dpr,
+      stored:localStorage.getItem(key),source:window.riderQuality?.source,search:location.search,
+      pageButton:document.getElementById('quality')?.textContent};
+  },QUALITY_KEY);
+  async function expectQuality(high,source,stored,search){
+    const scale=high?2:1,s=await observe();
+    assert.deepEqual(s,{devicePixelRatio:2,css:[1080,486],canvas:[1080*scale,486*scale],buffer:[1080*scale,486*scale],dpr:scale,
+      stored,source,search,pageButton:'Quality: '+(high?'High':'Low')},'Quality '+(high?'High':'Low')+' back-buffer');
+    // The touch Menu (More) shows the same choice, and only that one.
+    await more().tap();
+    assert.equal(await more().getAttribute('aria-expanded'),'true');
+    const shown=menu().getByRole('button',{name:'Quality: '+(high?'High':'Low'),exact:true});
+    await shown.scrollIntoViewIfNeeded();
+    assert.equal(await shown.isVisible(),true,'Menu shows Quality: '+(high?'High':'Low'));
+    assert.equal(await menu().getByRole('button',{name:/^(Quality|High DPI)/}).count(),1,'One quality entry in the Menu');
+    return shown;
+  }
+  async function closeMenu(){await more().tap();assert.equal(await more().getAttribute('aria-expanded'),'false');}
+  async function tapAndReload(control){
+    const loaded=page.waitForEvent('load');
+    await control.tap();await loaded;await ready();
+  }
+  try{
+    const launch=new URL(url);launch.search='?touch=1';
+    await page.goto(launch.href);await ready();
+    const high=await expectQuality(true,'default',null,'?touch=1');
+    await tapAndReload(high);
+    // Set Low in the Menu -> stored, and the same page reloaded at DPR 1.
+    await expectQuality(false,'stored','low','?touch=1');await closeMenu();
+    await page.reload();await ready();
+    await expectQuality(false,'stored','low','?touch=1');await closeMenu();
+    await page.screenshot({path:path.join(out,'mobile-quality-low.png')});
+    pass('quality_low_remembered_after_reload');
+    // ?dpi=1 overrides the stored Low without changing it.
+    const override=new URL(launch.href);override.searchParams.set('dpi','1');
+    await page.goto(override.href);await ready();
+    const fromOverride=await expectQuality(true,'url','low','?touch=1&dpi=1');
+    // The button still switches from an override: Low is stored and ?dpi is dropped.
+    await tapAndReload(fromOverride);
+    await expectQuality(false,'stored','low','?touch=1');await closeMenu();
+    // An invalid stored value falls back to the High default.
+    await page.evaluate(key=>localStorage.setItem(key,'banana'),QUALITY_KEY);
+    await page.goto(launch.href);await ready();
+    await expectQuality(true,'default','banana','?touch=1');await closeMenu();
+    pass('quality_dpi_override_and_invalid_value_fallback');
+    if(errors.length)throw Error(errors.join('\n'));
+  }catch(error){
+    await page.screenshot({path:path.join(out,'mobile-quality-failure.png')}).catch(()=>{});
+    fs.writeFileSync(path.join(out,'mobile-quality-failure-state.json'),JSON.stringify(await observe().catch(()=>null),null,2));
+    throw error;
+  }finally{await context.close();}
+}
 module.exports=async function mobile(browser,url,sha,out){
   const context=await browser.newContext({viewport:{width:1080,height:486},isMobile:true,hasTouch:true});
   const page=await context.newPage(),errors=[],logs=[],cases=[];
@@ -376,6 +444,7 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.getByRole('button',{name:'Back',exact:true}).tap();
     await page.waitForFunction(()=>!window.riderLevels.open&&document.getElementById('rider-levels').hidden);
     pass('portrait_initial_load_blocked_body_overlays_restored');
+    await quality(browser,url,sha,out,pass);
     if(errors.length)throw Error(errors.join('\n'));
     return {name:'mobile-touch-emulation',status:'PASS',cases,physicalDevice:'NOT RUN'};
   }catch(error){
