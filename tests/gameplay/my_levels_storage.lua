@@ -47,12 +47,15 @@ local function reset() files={};save_fault,remove_fault,load_fault=nil,nil,nil;d
 local function doc(key,s) return files['rider/custom-doc-'..key..'-'..s] end
 local function entry(L,key) for _,l in ipairs(L.list()) do if l.key==key then return l end end end
 local function index_fault(kind) return function(path) if path:match('custom%-index%-') then return kind end end end
-local function two_saves(L,name)
+-- n saves of one level; two leave the newest copy in slot b, three in slot a.
+local function saves(L,name,n)
     local key=assert(L.new_key())
-    assert(L.save(key,name..'1','id',name));assert(L.save(key,name..'2','id',name))
-    assert(doc(key,'a').text==name..'1' and doc(key,'b').text==name..'2') -- the older copy is in slot a
+    for i=1,n do assert(L.save(key,name..i,'id',name)) end
+    local newest,older=n%2==1 and 'a' or 'b',n%2==1 and 'b' or 'a'
+    assert(doc(key,newest).text==name..n and doc(key,older).text==name..(n-1))
     return key
 end
+local function two_saves(L,name) return saves(L,name,2) end
 
 -- 1. Delete. Positive control: both files and the entry go, also after a reload.
 local L=reset()
@@ -63,33 +66,50 @@ L=page();assert(not entry(L,k) and not L.load(k))
 print('PASS normal two-slot delete removes both files and the entry, also after reload')
 
 -- A file that stays (removal refused or thrown, older or newer slot) is reported, never acknowledged.
--- The entry stays listed for a retry and opens as its newest copy, never an older one.
+-- The entry stays listed for a retry and opens as its newest copy, never an older one: the older slot
+-- goes first, whether the newest copy is in slot b (two saves) or slot a (three saves).
+for _,n in ipairs({2,3}) do
 for _,slot in ipairs({'a','b'}) do
     for _,fault in ipairs({'refuse','throw'}) do
-        L=reset();k=two_saves(L,'A')
+        L=reset();k=saves(L,'A',n)
         remove_fault=function(path) if path=='rider/custom-doc-'..k..'-'..slot then return fault end end
         local ok,err=L.remove(k)
         assert(not ok and type(err)=='string','a delete whose slot '..slot..' stays ('..fault..') reported success')
         assert(doc(k,slot),'the injected failure must keep its file')
         for _,lib in ipairs({L,page()}) do
             assert(entry(lib,k),'a partly deleted level must stay listed for a retry')
-            assert(lib.load(k).text=='A2','a partly deleted level must open as its newest copy')
+            assert(lib.load(k).text=='A'..n,'a partly deleted level ('..n..' saves, slot '..slot..' stays) must open as its newest copy')
         end
         remove_fault=nil;L=page()
         assert(L.remove(k)==true,'the retried delete must succeed')
         assert(not doc(k,'a') and not doc(k,'b') and not entry(L,k) and not entry(page(),k))
     end
 end
+end
 print('PASS a delete whose file stays is reported, keeps the newest copy listed and retries cleanly')
 
 -- A failed index write during a delete is reported and keeps the entry; the retry completes it.
 L=reset();k=two_saves(L,'A')
 save_fault=index_fault('fail')
-assert(not L.remove(k))
+local ok,derr=L.remove(k)
+assert(not ok and tostring(derr):match('entry could not be removed'),'a failed index write must be reported: '..tostring(derr))
 save_fault=nil;L=page()
 assert(entry(L,k),'a failed index write must keep the entry')
 assert(L.remove(k)==true and not entry(page(),k) and not doc(k,'a') and not doc(k,'b'))
 print('PASS a failed index write during delete is reported and the retry completes it')
+
+-- An index that refuses every write (its older slot holds newer-version data) is checked first: the delete
+-- is refused with the cause, deletes nothing and leaves no listed level without files.
+L=reset();k=two_saves(L,'A')
+local future_index=files['rider/custom-index-a']
+future_index.text=json.encode({format=2,next=9,levels={}})
+L=page()
+assert(entry(L,k),'the newest index slot is valid and lists the level')
+ok,derr=L.remove(k)
+assert(not ok and tostring(derr):match('newer Rider version') and tostring(derr):match('not deleted'),'the refusal must name its cause: '..tostring(derr))
+assert(doc(k,'a') and doc(k,'b') and entry(page(),k) and page().load(k).text=='A2','nothing may be deleted')
+assert(files['rider/custom-index-a']==future_index,'the newer-version index slot must stay unchanged')
+print('PASS a delete against an index with newer-version data is refused with its cause and deletes nothing')
 
 -- 2. Save order. Positive control: valid saves alternate the document slots and update the entry.
 L=reset();k=assert(L.new_key())

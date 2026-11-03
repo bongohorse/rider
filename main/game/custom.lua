@@ -66,10 +66,14 @@ local function unlink(path)
     if html5 then html5.run("Module.persistentSync()") end
     return true
 end
+-- Refusal shown when a save would have to write over the only valid slot next to newer-version data
+-- (UI: "Save failed; the previous saved level is kept (<this>)").
+M.NEWER_VERSION="saved data is from a newer Rider version; this build will not overwrite it. Open the newer version to keep saving"
 -- parse(text) -> doc | nil, error, unsupported. An unsupported slot (unknown editor version) is never
 -- overwritten: its original text stays as it is (contract R1). Nor is the only valid slot next to it: a
 -- failed write would leave nothing this build can restore. around=true (drafts, LE2) saves around an
--- unsupported slot anyway, replacing the only valid draft; the level itself is kept in My levels.
+-- unsupported slot anyway and replaces the only valid draft: a failed write loses that draft, and the
+-- level then survives only where another copy was saved (its My levels copy or the played level).
 local function store(slots,parse,around)
     local S={}
     local protection
@@ -128,20 +132,33 @@ local function store(slots,parse,around)
         end
         return best
     end
-    function S.save(text,key)
-        protection=nil
-        -- One fresh pair supplies both target selection and sequence; readback stays mandatory.
+    -- Target slot and sequence of the next write, or nil, why a write is refused. One fresh pair supplies
+    -- both target selection and sequence.
+    local function plan()
         local a,b=slot(1),slot(2)
         local current=latest_valid(a,b)
         local seq=math.max(a and a.seq or 0,b and b.seq or 0)+1
         local target=current and 3-current.slot or 1
         local held=target==1 and a or b
         if held and held.unsupported then
-            if current and not around then return nil,"The other save slot holds data from a newer version; the only readable save is kept" end
+            if current and not around then return nil,M.NEWER_VERSION end
             target=current and current.slot or 3-target
         end
         held=target==1 and a or b
         if held and held.unsupported then return nil,"Both save slots hold data from a newer version" end
+        return target,seq
+    end
+    -- True when a save would be attempted, else nil, why it is refused; writes nothing.
+    function S.writable()
+        local target,err=plan()
+        if not target then return nil,err end
+        return true
+    end
+    function S.save(text,key)
+        protection=nil
+        -- Readback stays mandatory.
+        local target,seq=plan()
+        if not target then return nil,seq end
         local ok,err=pcall(sys.save,sys.get_save_file(APP,slots[target]),{format=1,seq=seq,text=text,time=os.time(),key=key})
         if not ok then return nil,tostring(err) end
         local back=slot(target)
@@ -305,16 +322,20 @@ function M.library(parse)
         return r.doc
     end
     -- Removes the level's files (older slot first), then its index entry. A failure is reported and keeps
-    -- the entry listed for a retry; a partial removal leaves the newest copy, never an older one.
+    -- the entry listed for a retry; a partial removal leaves the newest copy, never an older one. An index
+    -- that refuses every write (newer-version data) is checked first, so it never leaves a listed level
+    -- without files.
     function L.remove(key)
         local idx,err=L.index()
         if not idx then return nil,err end
+        local writable,werr=index.writable()
+        if not writable then return nil,"the My levels index cannot be changed ("..tostring(werr).."); the level was not deleted" end
         local removed,ferr=doc_store(key).remove()
         if not removed then return nil,"level files: "..tostring(ferr) end
         local next={format=1,next=idx.next,levels={}}
         for _,l in ipairs(idx.levels) do if l.key~=key then next.levels[#next.levels+1]={key=l.key,id=l.id,name=l.name,time=l.time} end end
         local ok,ierr=index.save(json.encode(next))
-        if not ok then return nil,"level index: "..tostring(ierr) end
+        if not ok then return nil,"level index: "..tostring(ierr).."; the level's files are deleted but its entry could not be removed" end
         cached=next
         docs[key]=nil
         return true

@@ -43,18 +43,22 @@ for _,future_seq in ipairs({11,9}) do -- newer-version slot newest, then older t
     reset(true)
     local valid,future=put(LA,10,'A'),put(LB,future_seq,'future B')
     local seq,err=custom.save('N')
-    assert(not seq and type(err)=='string','a save over the only valid slot must be refused')
+    assert(not seq and err==custom.NEWER_VERSION,'a save over the only valid slot must be refused with its cause: '..tostring(err))
+    assert(err:match('newer Rider version') and err:match('will not overwrite') and err:match('Open the newer version'))
     assert(#writes==0,'the only valid slot must not be written (wrote '..tostring(writes[1])..')')
     assert(files[LA]==valid and files[LB]==future,'both slots must stay byte-for-byte unchanged')
     assert(custom.restore().text=='A','the valid level must stay restorable')
-    fail=false;assert(not custom.save('N') and #writes==0,'the refusal must not depend on the write failing')
+    fail=false;seq,err=custom.save('N')
+    assert(not seq and err==custom.NEWER_VERSION and #writes==0,'the refusal must not depend on the write failing')
 end
 print('PASS a custom level save never writes over its only valid slot; the newer-version slot stays unchanged')
 
 -- Every other store (here a generic pair) refuses the same way.
 reset(true)
 local valid,future=put(A,10,'A'),put(B,11,'future B')
-assert(not store().save('N') and #writes==0 and files[A]==valid and files[B]==future)
+local refused,why=store().save('N')
+assert(not refused and why==custom.NEWER_VERSION and #writes==0 and files[A]==valid and files[B]==future)
+assert(select(2,store().writable())==custom.NEWER_VERSION and #writes==0,'writable() reports the refusal without writing')
 assert(store().restore().text=='A')
 print('PASS a slot store save never writes over its only valid slot')
 
