@@ -56,7 +56,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [desktop-layout, desktop-gameplay, phone, touch, stations]
+        # Longest measured groups first: GitHub hands queued jobs to free runners in order (#402).
+        group: [desktop-gameplay-1, desktop-gameplay-2, phone, desktop-layout, touch, stations]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:

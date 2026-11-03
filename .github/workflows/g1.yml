@@ -194,68 +194,70 @@ jobs:
       matrix:
         include:
           # a18, le1b, a19b and le6 run in two independent parts; gym-reports validates full inventories.
+          # Longest-first by median CI duration (six green runs, 2026-11-02): GitHub hands queued
+          # jobs to free runners in order, so long groups must not wait behind short ones (#402).
+          - group: balance
+            cases: 'a19d'
+          - group: bumps-2
+            cases: 'a19b'
+            part: '2/2'
+          - group: versions
+            cases: 'ea3'
+          - group: bumps-1
+            cases: 'a19b'
+            part: '1/2'
+          - group: polish-2
+            cases: 'le6'
+            part: '2/2'
+          - group: editor
+            cases: 'a15 le1a le2'
+          - group: controls
+            cases: 'a3 a6 coast coast345 a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
+          - group: polish-1
+            cases: 'le6'
+            part: '1/2'
           - group: seams-1
             cases: 'a18'
             part: '1/2'
-          - group: seams-2
-            cases: 'a18'
-            part: '2/2'
+          - group: ramps
+            cases: 'a16'
           - group: sizes-1
             cases: 'le1b'
             part: '1/2'
           - group: sizes-2
             cases: 'le1b'
             part: '2/2'
-          - group: ramps
-            cases: 'a16'
-          - group: steps
-            cases: 'a17'
-          - group: gaps
-            cases: 'a19'
-          - group: balance
-            cases: 'a19d'
-          - group: bumps-1
-            cases: 'a19b'
-            part: '1/2'
-          - group: bumps-2
-            cases: 'a19b'
-            part: '2/2'
-          - group: air
-            cases: 'a19c'
-          - group: editor
-            cases: 'a15 le1a le2'
           - group: draw
             cases: 'le3'
+          - group: steps
+            cases: 'a17'
+          - group: seams-2
+            cases: 'a18'
+            part: '2/2'
           - group: library
             cases: 'le4'
-          - group: prefab
-            cases: 'le5a'
           - group: curve
             cases: 'le5b'
-          - group: path
-            cases: 'le5c'
-          - group: pause
-            cases: 'a20'
+          - group: air
+            cases: 'a19c'
           - group: points
             cases: 'le5d'
+          - group: prefab
+            cases: 'le5a'
+          - group: gaps
+            cases: 'a19'
           - group: objects
             cases: 'ea2'
-          - group: versions
-            cases: 'ea3'
-          - group: polish-1
-            cases: 'le6'
-            part: '1/2'
-          - group: polish-2
-            cases: 'le6'
-            part: '2/2'
-          - group: struts
-            cases: 'cf3'
           - group: replay
             cases: 'a21'
+          - group: pause
+            cases: 'a20'
+          - group: path
+            cases: 'le5c'
           - group: regress
             cases: 'a22'
-          - group: controls
-            cases: 'a3 a6 coast coast345 a15a hud a7 a8 m2feedback a9 a9invalid a10 a11 a12'
+          - group: struts
+            cases: 'cf3'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:

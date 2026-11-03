@@ -1,13 +1,14 @@
 """Negative controls for the release matrix's fail-closed artifact gate."""
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/preview'))
-from verify_artifacts import verify, GROUP_CASES, GAMEPLAY, GAMEPLAY_TIMINGS, DESKTOP_SIZES, PHONE_SIZES
+from verify_artifacts import verify, gameplay_timing, GROUP_CASES, GAMEPLAY, GAMEPLAY_SHARDS, DESKTOP_SIZES, PHONE_SIZES
 
 SHA = 'a' * 40
 BUILD = '123456-1'
@@ -36,9 +37,9 @@ class ReleaseVerificationGate(unittest.TestCase):
         cases = [{'name': name, 'status': 'PASS'} for name in expected]
         phases = ['browser/launch', 'final-assertions', 'cleanup/global']
         screenshots = []
-        if mode == 'desktop-gameplay':
-            cases[0]['checks'] = list(GAMEPLAY)
-            phases += list(GAMEPLAY_TIMINGS)
+        if mode in GAMEPLAY_SHARDS:
+            cases[0]['checks'] = list(GAMEPLAY_SHARDS[mode])
+            phases += [gameplay_timing(x) for x in GAMEPLAY_SHARDS[mode]]
         if mode in ('desktop-layout', 'phone'):
             name = 'desktop' if mode == 'desktop-layout' else 'phone-emulation'
             sizes = DESKTOP_SIZES if mode == 'desktop-layout' else PHONE_SIZES
@@ -78,7 +79,7 @@ class ReleaseVerificationGate(unittest.TestCase):
 
     def test_missing_group_fails(self):
         import shutil
-        shutil.rmtree(self.path('desktop-gameplay').parent)
+        shutil.rmtree(self.path('desktop-gameplay-2').parent)
         with self.assertRaisesRegex(ValueError, 'group artifacts'):
             verify(self.root, SHA, BUILD)
 
@@ -91,15 +92,15 @@ class ReleaseVerificationGate(unittest.TestCase):
     def test_wrong_source_or_build_fails(self):
         for field, value in [('source_sha', 'b' * 40), ('build_id', '456-1')]:
             with self.subTest(field=field):
-                self.mutate('desktop-gameplay', 'timings.json',
+                self.mutate('desktop-gameplay-1', 'timings.json',
                             lambda x: x.__setitem__(field, value))
                 with self.assertRaisesRegex(ValueError, 'Wrong'):
                     verify(self.root, SHA, BUILD)
-                self.mutate('desktop-gameplay', 'timings.json',
+                self.mutate('desktop-gameplay-1', 'timings.json',
                             lambda x: x.__setitem__(field, SHA if field == 'source_sha' else BUILD))
 
     def test_failed_group_fails(self):
-        self.mutate('desktop-gameplay', 'result.json',
+        self.mutate('desktop-gameplay-1', 'result.json',
                     lambda x: x.__setitem__('status', 'FAIL'))
         with self.assertRaisesRegex(ValueError, 'Failed'):
             verify(self.root, SHA, BUILD)
@@ -110,9 +111,25 @@ class ReleaseVerificationGate(unittest.TestCase):
             verify(self.root, SHA, BUILD)
 
     def test_missing_gameplay_check_fails(self):
-        self.mutate('desktop-gameplay', 'timings.json',
+        self.mutate('desktop-gameplay-1', 'timings.json',
                     lambda x: x['cases'].pop(3))
         with self.assertRaisesRegex(ValueError, 'Missing desktop gameplay'):
+            verify(self.root, SHA, BUILD)
+
+    def test_shards_cover_all_seven_modules_in_order(self):
+        self.assertEqual([x for checks in GAMEPLAY_SHARDS.values() for x in checks], list(GAMEPLAY))
+        self.assertEqual(len(GAMEPLAY), 7)
+
+    def test_gameplay_module_in_wrong_shard_fails(self):
+        self.mutate('desktop-gameplay-1', 'timings.json',
+                    lambda x: x['cases'].append({'name': 'gameplay/check_progress', 'status': 'PASS'}))
+        with self.assertRaisesRegex(ValueError, 'wrong shard'):
+            verify(self.root, SHA, BUILD)
+
+    def test_gameplay_shard_check_list_must_match(self):
+        self.mutate('desktop-gameplay-2', 'result.json',
+                    lambda x: x['cases'][0]['checks'].pop())
+        with self.assertRaisesRegex(ValueError, 'reordered desktop gameplay checks'):
             verify(self.root, SHA, BUILD)
 
     def test_hidpi_layout_cannot_be_dropped(self):
@@ -125,6 +142,23 @@ class ReleaseVerificationGate(unittest.TestCase):
         (self.path('desktop-layout').parent / 'deployment' / 'phone-emulation.png').unlink()
         with self.assertRaisesRegex(ValueError, 'Missing screenshot'):
             verify(self.root, SHA, BUILD)
+
+
+class GameplayShardInventory(unittest.TestCase):
+    """The Python gate and the JS verifier must agree on the shard split (#402)."""
+
+    def test_python_shards_match_js_verification_plan(self):
+        script = ("const p=require(process.argv[1]);"
+                  "console.log(JSON.stringify({checks:p.DESKTOP_GAMEPLAY_CHECKS,shards:p.DESKTOP_GAMEPLAY_SHARDS}))")
+        out = subprocess.run(['node', '-e', script, str(ROOT / 'tools/preview/verification-plan.cjs')],
+                             check=True, capture_output=True, text=True).stdout
+        js = json.loads(out)
+        self.assertEqual(js['checks'], list(GAMEPLAY))
+        self.assertEqual({k: list(v) for k, v in GAMEPLAY_SHARDS.items()}, js['shards'])
+
+    def test_shards_cover_every_module_once_in_order(self):
+        sharded = [check for checks in GAMEPLAY_SHARDS.values() for check in checks]
+        self.assertEqual(sharded, list(GAMEPLAY))
 
 
 if __name__ == '__main__':
