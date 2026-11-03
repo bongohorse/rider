@@ -14,8 +14,11 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools/g1'))
+from run import stop
 SUITES = 'tests/gameplay'
 TIMEOUT_S = 120
+PASS_TOKEN = 'PASS '
 HOSTS = {('Linux', 'x86_64'): 'x86_64-linux', ('Linux', 'aarch64'): 'arm64-linux',
          ('Darwin', 'x86_64'): 'x86_64-macos', ('Darwin', 'arm64'): 'arm64-macos'}
 
@@ -41,23 +44,40 @@ def discover(root):
     return sorted(p.relative_to(root).as_posix() for p in (root / SUITES).glob('*.lua'))
 
 
+def verdict(returncode, stdout, stderr):
+    """Return (ok, detail): exit 0 and a stdout line with the deliberate 'PASS ' token (#397)."""
+    output = (stdout + stderr).strip()
+    passes = [line for line in stdout.splitlines() if line.startswith(PASS_TOKEN)]
+    if returncode != 0:
+        return False, f'exit {returncode}\n{output}'
+    if not passes:
+        return False, f'no PASS line\n{output}'
+    return True, passes[-1]
+
+
 def run_suite(luajit, root, suite, timeout=TIMEOUT_S):
     """Return (ok, detail, seconds) for one suite run from the repository root."""
     started = time.monotonic()
     env = {'LUA_PATH': './?.lua', 'LUA_CPATH': '', 'PATH': '/usr/bin:/bin'}
+    # Own session/process group so stop() kills and reaps the whole suite tree (#397).
+    process = subprocess.Popen([str(luajit), '-joff', suite], cwd=root, env=env, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, encoding='utf-8', errors='replace',
+                               start_new_session=os.name != 'nt')
     try:
-        done = subprocess.run([str(luajit), '-joff', suite], cwd=root, env=env, capture_output=True,
-                              text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return False, f'TIMEOUT after {timeout} s', time.monotonic() - started
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            stdout = None
+    finally:
+        stop(process)
     seconds = time.monotonic() - started
-    output = (done.stdout + done.stderr).strip()
-    passes = [line for line in done.stdout.splitlines() if line.startswith('PASS')]
-    if done.returncode != 0:
-        return False, f'exit {done.returncode}\n{output}', seconds
-    if not passes:
-        return False, f'no PASS line\n{output}', seconds
-    return True, passes[-1], seconds
+    if stdout is None:
+        # Output is discarded on timeout; never block on a pipe an escaped grandchild may still hold open.
+        for pipe in (process.stdout, process.stderr):
+            if pipe:
+                pipe.close()
+        return False, f'TIMEOUT after {timeout} s', seconds
+    return (*verdict(process.returncode, stdout, stderr), seconds)
 
 
 def run_all(luajit, root):
@@ -83,7 +103,6 @@ def main(argv=None):
     args = parser.parse_args(argv)
     luajit = args.luajit
     if luajit is None:
-        sys.path.insert(0, str(ROOT / 'tools/g1'))
         import build
         luajit = luajit_from_bob(build.bob_jar(), ROOT / '.cache/g1/luajit')
     return run_all(luajit.resolve(), ROOT)
