@@ -44,6 +44,7 @@ KNOWN_REFERENCES = {
     ("tools/gym/smoke.py", "tests/ci/coast_measure.cjs"): "same basename; smoke.py runs tools/gym/coast_measure.cjs",
     ("tools/ci/classify_changes.py", "tools/bootstrap_check.py"): "selection data; only the changes job and local tools run the classifier",
     ("tools/ci/classify_changes.py", "tools/ci/"): "selection data; only the changes job and local tools run the classifier",
+    ("tools/ci/classify_changes.py", "tests/ci/test_repo_tooling.py"): "comment naming the test that keeps FULL_RUN_TOOLING in sync",
     ("tools/project.py", "tools/bootstrap_check.py"): "only under verify --suite bootstrap, which only the Bootstrap job runs",
     ("tests/bootstrap/test_bootstrap.py", "tools/bootstrap_check.py"): "tests/bootstrap runs in the Bootstrap job",
     ("tests/g2/test_local_first.py", "tests/ci/test_changes.py"): "path used as data for local selection; tests/g2 runs in the Bootstrap job",
