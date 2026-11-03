@@ -143,6 +143,16 @@ local function wrap(t,width,size)
     end
     return out
 end
+-- #444: screen rectangles (window pixels, origin bottom left) of the visible buttons of the last render, so the
+-- FPS counter in the driving HUD can keep clear of them.
+function M.screen_rects(u)
+    local out={}
+    for _,name in ipairs(u.visible or {}) do
+        local r=u.rects and u.rects[name]
+        if r and u.scale and u.h then out[#out+1]={x0=r.x*u.scale,y0=(u.h-r.y-r.h)*u.scale,x1=(r.x+r.w)*u.scale,y1=(u.h-r.y)*u.scale} end
+    end
+    return out
+end
 -- Preserve the existing driving-mode entry hint/message using the same text pool.
 function M.play(u,k,message,session,legacy,status)
     M.render(u,{play=true,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,

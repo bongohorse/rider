@@ -209,6 +209,15 @@
    ]
   },
   {
+   "name": "FPS counter placement runner",
+   "cases": [
+    "fps444"
+   ],
+   "paths": [
+    "tools/gym/fps444.cjs"
+   ]
+  },
+  {
    "name": "coasting measurements",
    "cases": [
     "coast345"
@@ -322,7 +331,8 @@
     "le5d",
     "le6",
     "ea3",
-    "fps417"
+    "fps417",
+    "fps444"
    ],
    "paths": [
     "tools/gym/storage.cjs"

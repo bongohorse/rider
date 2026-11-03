@@ -96,7 +96,7 @@ test('fps417 is registered in smoke.py, the CI matrix and the affected rules',()
  const smoke=fs.readFileSync(path.join(root,'tools/gym/smoke.py'),'utf8');
  assert.match(smoke,/'fps417\.cjs' if args\.case=='fps417'/);
  const g1=fs.readFileSync(path.join(root,'.github/workflows/g1.yml'),'utf8');
- assert.match(g1,/cases: 'fps417'/);assert.match(g1,/--case fps417\n/);
+ assert.match(g1,/cases: '(?:[^'\n]* )?fps417(?: [^'\n]*)?'/);assert.match(g1,/--case fps417\n/);
  const rules=JSON.parse(fs.readFileSync(path.join(root,'tools/local_affected.json'),'utf8')).rules;
  assert(rules.some(r=>Array.isArray(r.cases)&&r.cases.includes('fps417')&&r.paths.includes('tools/gym/fps417.cjs')));
 });
