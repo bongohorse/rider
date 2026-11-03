@@ -47,7 +47,7 @@
     "status": "candidate; no JDK 25 build executed"
   },
   "tools": {
-    "renovate": "44.161.0",
+    "renovate": "44.198.3",
     "pyyaml": "6.0.3"
   },
   "actions": {
