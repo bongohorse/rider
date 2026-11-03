@@ -134,3 +134,84 @@ test('a failed read close cannot leave later writes suppressed',async()=>{
  assert.equal(api.syncState(),'syncing');await flush();assert.equal(pending.length,1);
  pending.shift()();assert.equal(api.syncState(),'saved');
 });
+
+// #410: closing the import panel abandons the import. A minimal DOM drives the real panel controls.
+function element(tag){
+ return {tagName:tag.toUpperCase(),id:'',children:[],style:{},listeners:{},textContent:'',value:'',parent:null,
+  setAttribute(){},focus(){},select(){},
+  append(...nodes){for(const n of nodes){n.parent=this;this.children.push(n);}},
+  remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);this.parent=null;},
+  find(match){for(const n of this.children){if(match(n))return n;const hit=n.find(match);if(hit)return hit;}return null;},
+  querySelector(selector){return selector.startsWith('#')?this.find(n=>n.id===selector.slice(1)):null;},
+  addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}};
+}
+function loadPage(){
+ const body=element('body'),window={};
+ const document={body,fullscreenElement:null,createElement:element,addEventListener(){},
+  getElementById:id=>body.querySelector('#'+id),querySelector:selector=>body.querySelector(selector)};
+ vm.runInContext(SOURCE,vm.createContext({window,document,queueMicrotask}));
+ const api=window.riderCustom,panel=()=>body.querySelector('#rider-custom-panel');
+ const button=label=>panel().find(n=>n.tagName==='BUTTON'&&n.textContent===label);
+ return {api,panel,
+  paste(text){panel().querySelector('#rider-custom-text').value=text;button('Import text').onclick();},
+  choose(chosen){const input=panel().querySelector('#rider-custom-file');input.files=[chosen];input.onchange();},
+  close:{
+   'Close':()=>button('Close import').onclick(),
+   'Escape':()=>panel().listeners.keydown.forEach(fn=>fn({key:'Escape'})),
+   'closeEditor()':()=>api.closeEditor()}};
+}
+// closeEditor() only closes the editor's own import (LE4), so that path opens the panel from the editor.
+const CLOSERS=['Close','Escape','closeEditor()'],fromEditor=how=>how==='closeEditor()';
+
+for(const how of CLOSERS){
+ test(`a queued paste is dropped by ${how}`,()=>{
+  const page=loadPage(),{api}=page;
+  api.open('',fromEditor(how));page.paste('A');
+  page.close[how]();
+  assert.equal(api.visible,false);assert.equal(page.panel(),null);
+  assert.equal(api.take(),'');assert.notEqual(api.state,'reading');
+ });
+
+ test(`a file read that finishes after ${how} is not submitted`,async()=>{
+  const page=loadPage(),{api}=page,a=file('A'),b=file('B');
+  api.open('',fromEditor(how));page.choose(a);
+  page.close[how]();
+  a.finish();await flush();
+  assert.equal(api.take(),'');assert.notEqual(api.state,'reading');
+  // A read error after close is not reported either.
+  api.open('',fromEditor(how));page.choose(b);page.close[how]();
+  const before=api.state;b.fail();await flush();
+  assert.equal(api.state,before);assert.equal(api.take(),'');
+ });
+}
+
+test('a normal paste and file import still load',async()=>{
+ const page=loadPage(),{api}=page,a=file('A');
+ api.open();page.paste('P');
+ assert.equal(api.state,'reading');assert.deepEqual(JSON.parse(api.take()),{request:1,text:'P',editor:false});
+ api.result({request:1,state:'loading',message:'Loading P...'});assert.equal(api.visible,true);
+ page.choose(a);a.finish();await flush();
+ assert.deepEqual(JSON.parse(api.take()),{request:2,text:'A',editor:false});
+ api.result({request:2,state:'loaded',message:'Loaded.'});
+ assert.equal(api.state,'loaded');assert.equal(api.visible,false);assert.equal(page.panel(),null);
+});
+
+test('an import taken by Lua before Close still reports its result',()=>{
+ const page=loadPage(),{api}=page;
+ api.open();page.paste('P');const taken=JSON.parse(api.take());
+ page.close.Close();
+ api.result({request:taken.request,state:'loaded',message:'Loaded.'});
+ assert.equal(api.state,'loaded');
+});
+
+for(const how of CLOSERS){
+ test(`a new import after one cancelled by ${how} loads`,async()=>{
+  const page=loadPage(),{api}=page,late=file('late'),next=file('next');
+  api.open('',fromEditor(how));page.paste('cancelled');page.choose(late);page.close[how]();
+  api.open('',fromEditor(how));page.paste('B');
+  assert.deepEqual(JSON.parse(api.take()),{request:3,text:'B',editor:fromEditor(how)});
+  page.choose(next);late.finish();next.finish();await flush();
+  assert.deepEqual(JSON.parse(api.take()),{request:4,text:'next',editor:fromEditor(how)});
+  assert.equal(api.take(),'');
+ });
+}
