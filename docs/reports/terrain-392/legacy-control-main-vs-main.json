@@ -8,29 +8,22 @@
  "errors": [],
  "diff": {
   "first-run": {
-   "differing_pixels": 11,
-   "max_channel_delta": 1,
-   "bbox": [
-    526,
-    374,
-    662,
-    415
-   ]
+   "differing_pixels": 0,
+   "max_channel_delta": 0,
+   "bbox": null,
+   "pixels": []
   },
   "gaps-landing": {
    "differing_pixels": 0,
    "max_channel_delta": 0,
-   "bbox": null
+   "bbox": null,
+   "pixels": []
   },
   "rolling-hills": {
-   "differing_pixels": 1216,
-   "max_channel_delta": 17,
-   "bbox": [
-    747,
-    48,
-    749,
-    656
-   ]
+   "differing_pixels": 0,
+   "max_channel_delta": 0,
+   "bbox": null,
+   "pixels": []
   }
  }
 }
