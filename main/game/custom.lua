@@ -62,9 +62,9 @@ local function unlink(path)
     if not f then return true end
     f:close()
     local ok,removed,err=pcall(os.remove,path)
-    -- Explicit ifs, not `ok and err or removed`: err may be nil (#452).
-    if not ok then return nil,tostring(removed) end
-    if not removed then return nil,tostring(err) end
+    -- Explicit ifs with a fallback message: os.remove may fail without one.
+    if not ok then return nil,tostring(removed or ("could not remove "..path)) end
+    if not removed then return nil,tostring(err or ("could not remove "..path)) end
     if html5 then html5.run("Module.persistentSync()") end
     return true
 end

@@ -90,11 +90,13 @@ local kinds={
 }
 for _,k in ipairs(kinds) do
     for _,side in ipairs({'a','b'}) do
+    for _,fill in ipairs({'empty','corrupt'}) do
         local empty,newer=k.a,k.b
         if side=='b' then empty,newer=k.b,k.a end
-        local case=k.name..' with slot '..side..' empty: '
+        local case=k.name..' with slot '..side..' '..fill..': '
         reset()
         future=put(newer,11,'future')
+        if fill=='corrupt' then files[empty]={junk=true} end
         local ok,err=k.s().writable()
         assert(ok==true and #writes==0,case..'writable() must allow the save without writing: '..tostring(err))
         local seq
@@ -112,5 +114,6 @@ for _,k in ipairs(kinds) do
                 case..'the only valid slot must then be protected: '..tostring(err))
         end
     end
+    end
 end
-print('PASS an empty slot next to a newer-version slot is used on either side, by drafts and other stores')
+print('PASS an empty or corrupt slot next to a newer-version slot is used on either side, by drafts and other stores')
