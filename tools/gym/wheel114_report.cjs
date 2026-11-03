@@ -75,6 +75,18 @@ function section(spec, trace, resets, radius) {
     determinism: {retry_vs_retry: compare(attempts[1], attempts[2]), load_vs_retry: {...compare(load, attempts[1]), load_phase_ticks: LOAD_PHASE}}};
 }
 
+// Samples around the highest wheel |omega| of an attempt window (world frame; cw = chassis omega, w - cw = spin
+// relative to the chassis), for explaining read-backs at or above the cap.
+const PEAK_FIELDS = ['tick', 'w1', 'w2', 'cw', 'm1', 'm2', 's1', 's2', 'slip1', 'slip2', 'hull', 'x', 'y', 'angle', 'vx', 'vy', 'throttle', 'brake', 'lean'];
+function peak(samples, span = 4) {
+  const omega = s => Math.max(Math.abs(s.w1), Math.abs(s.w2));
+  let at = 0;
+  samples.forEach((s, i) => { if (omega(s) > omega(samples[at])) at = i; });
+  const pick = s => Object.fromEntries(PEAK_FIELDS.filter(k => k in s).map(k => [k, s[k]]));
+  return {peak_tick: samples[at].tick, peak_omega_rps: omega(samples[at]), share_of_cap: omega(samples[at]) / CAP,
+    samples: samples.slice(Math.max(0, at - span), at + span + 1).map(pick)};
+}
+
 // --- tables ------------------------------------------------------------------------------------------------
 const f = (v, digits = 2) => v === null || v === undefined || v === false ? '–' : typeof v === 'number' ? v.toFixed(digits) : String(v);
 
@@ -110,7 +122,7 @@ function markdown(runs) {
   return out.join('\n');
 }
 
-module.exports = {CAP, NEAR, TOLERANCE, LOAD_PHASE, attempt, stats, compare, section, markdown, load};
+module.exports = {CAP, NEAR, TOLERANCE, LOAD_PHASE, PEAK_FIELDS, peak, attempt, stats, compare, section, markdown, load};
 
 if (require.main === module) {
   try {
@@ -122,6 +134,18 @@ if (require.main === module) {
     fs.mkdirSync(output, {recursive: true});
     const md = markdown(runs);
     fs.writeFileSync(path.join(output, 'wheel114-ab.md'), md);
+    // Peak-omega excerpts of the measured (second Retry) window from the runner's trace files, when present.
+    const peaks = [];
+    for (const [i, run] of runs.entries()) {
+      const dir = fs.statSync(inputs[i]).isDirectory() ? inputs[i] : path.dirname(inputs[i]);
+      for (const s of run.sections) {
+        const file = path.join(dir, `wheel114-trace-${s.id.replace('/', '-')}.json`);
+        if (!fs.existsSync(file)) continue;
+        const t = JSON.parse(fs.readFileSync(file, 'utf8'));
+        peaks.push({preset: run.preset, section: s.id, attempt_resets: t.resets[2], ...peak(attempt(t.trace, t.resets[2], s.window))});
+      }
+    }
+    if (peaks.length) fs.writeFileSync(path.join(output, 'wheel114-peaks.json'), JSON.stringify({source_sha: runs[0].source_sha, cap_rps: CAP, fields: PEAK_FIELDS, peaks}, null, 1));
     fs.writeFileSync(path.join(output, 'wheel114-ab.json'), JSON.stringify({inputs: runs.map(r => r.file), source_sha: runs[0].source_sha,
       runs: runs.map(r => ({preset: r.preset, run_id: r.run_id, geometry: r.geometry, sections: r.sections.map(s => ({id: s.id, outcomes: s.outcomes, attempt: s.attempts[2], determinism: s.determinism}))}))}, null, 2));
     console.log(md);

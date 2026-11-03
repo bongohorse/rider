@@ -64,7 +64,11 @@ function M.fixed(self,state,dt)
         station=self.station.id,section=section and section.id or false,preset=self.preset,
         x=feel.metres(state.x),y=feel.metres(state.y),angle=state.angle,
         vx=feel.metres(velocity.x),vy=feel.metres(velocity.y),
+        -- World-frame angular velocities (rad/s) of both wheels and the chassis; wheel spin relative to the
+        -- chassis is w - cw. m1/m2: wheel joint motor enabled (drive, brake or coast) in the observed step.
         w1=b2d.body.get_angular_velocity(v.wheels[1]),w2=b2d.body.get_angular_velocity(v.wheels[2]),
+        cw=b2d.body.get_angular_velocity(v.chassis),
+        m1=b2d.joint.is_motor_enabled(v.joints[1]),m2=b2d.joint.is_motor_enabled(v.joints[2]),
         s1=s1~=false,s2=s2~=false,slip1=s1,slip2=s2,
         hull=#b2d.body.get_contact_data(v.chassis)>0,throttle=c.throttle or 0,brake=c.brake_reverse or 0,lean=c.lean or 0}
     html5.run("(function(s){var a=window.riderWheel114Trace||(window.riderWheel114Trace=[]);a.push(s);if(a.length>"..M.KEEP..")a.shift();})("..json.encode(sample)..")")

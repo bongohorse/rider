@@ -459,7 +459,7 @@ function update(self,dt)
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
-            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),preset_note=gui.get_text(self.preset_note),
             record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit),
             fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}}))
     end

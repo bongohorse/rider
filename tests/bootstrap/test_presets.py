@@ -198,7 +198,8 @@ class WheelCandidates(unittest.TestCase):
         g = self.GEOMETRY['default']
         self.assertEqual(g, {'radius': 22, 'radius_m': .22, 'wheel_y': -30, 'factory': '#wheel', 'art_scale': 1, 'camera_rest': 46})
         self.assertEqual((GAME/'wheel.convexshape').read_text(), 'shape_type: TYPE_SPHERE\ndata: 22.0\n')
-        self.assertIn('wheel_y=-30}', (GAME/'feel.lua').read_text().splitlines()[2])
+        values = re.search(r'^M\.values=\{(.*)\}$', (GAME/'feel.lua').read_text(), re.M).group(1)
+        self.assertIn('wheel_y=-30', values)
         self.assertEqual(set(self.GEOMETRY), {'default', *DEBUG})
 
     def test_candidate_resources_match_their_geometry(self):

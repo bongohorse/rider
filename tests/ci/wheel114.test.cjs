@@ -88,3 +88,29 @@ test('markdown table needs the same sections, source and browser from every run'
   fs.writeFileSync(path.join(dir, 'wheel114-result.json'), JSON.stringify(result('a')));
   assert.equal(R.load(dir).preset, 'a');
 });
+
+test('peak excerpt centres on the highest wheel omega and keeps the contact and chassis fields', () => {
+  const list = run(2, 20, t => ({w2: t === 12 ? -54 : -30, cw: t === 12 ? -7 : 0, m2: t >= 11, s2: t >= 11}));
+  const p = R.peak(list, 2);
+  assert.equal(p.peak_tick, 12); assert.equal(p.peak_omega_rps, 54);
+  assert.ok(p.share_of_cap > 1);
+  assert.deepEqual(p.samples.map(s => s.tick), [10, 11, 12, 13, 14]);
+  assert.deepEqual(Object.keys(p.samples[2]).filter(k => ['cw', 'm2', 's2', 'hull'].includes(k)).sort(), ['cw', 'hull', 'm2', 's2']);
+});
+
+test('reachability verdict: release falls back to A with the invalid note, debug loads and refuses P', () => {
+  const {check} = require('../../tools/gym/wheel114_reach.cjs');
+  const ok = {errors: [], probe_present: false, probe_radius_u: null, after_p: null};
+  const release = [{...ok, key: 'w26', preset: 'a', preset_note: 'Invalid URL: A'}, {...ok, key: 'w30', preset: 'a', preset_note: 'Invalid URL: A'}, {...ok, key: 'a', preset: 'a', preset_note: 'Presets [P]'}];
+  assert.deepEqual(check('release', release), []);
+  assert.equal(check('release', [{...release[0], preset: 'w26'}]).length, 1);
+  assert.equal(check('release', [{...release[0], probe_present: true}]).length, 1);
+  assert.equal(check('release', [{...release[0], preset_note: 'Presets [P]'}]).length, 1);
+  const cand = {errors: [], key: 'w26', preset: 'w26', preset_note: 'Debug W26: A + 0.26 m wheels', probe_present: true, probe_radius_u: 26,
+    after_p: {preset: 'w26', reset_count: 0, resets_before: 0, preset_note: 'Debug W26: A + 0.26 m wheels | reload to change'}};
+  assert.deepEqual(check('debug', [cand, {...ok, key: 'a', preset: 'a', preset_note: 'Presets [P]'}]), []);
+  assert.equal(check('debug', [{...cand, after_p: {...cand.after_p, preset: 'a'}}]).length, 1);
+  assert.equal(check('debug', [{...cand, after_p: {...cand.after_p, reset_count: 1}}]).length, 1);
+  assert.equal(check('debug', [{...cand, probe_radius_u: 22}]).length, 1);
+  assert.equal(check('debug', [{...cand, preset: 'a'}]).length, 1);
+});

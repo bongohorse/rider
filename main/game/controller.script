@@ -646,7 +646,7 @@ function fixed_update(self, dt)
             -- #114: the spawned wheels belong to the debug candidate's geometry; another wheel needs a new world
             -- (reload the page without ?preset=). Nothing changes, the HUD says why.
             self.pending_preset=nil
-            msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=false,candidate=true,switch_refused=true})
+            msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=false,candidate=feel.is_candidate(self.preset) or nil,switch_refused=true})
         end
         if self.pending_preset then
             local valid

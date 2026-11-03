@@ -28,7 +28,6 @@ M.wrap=wrap
 -- than 0.1 m below its surface). Returns the slope and that closest point's x (the contact point), or nil.
 -- The wheel radius (m) is the spawned vehicle's: 0.22 for A-F, larger for the #114 debug candidates.
 local function wheel_radius() return feel.values.wheel_radius_m end
-M.wheel_radius=wheel_radius
 function M.ground_slope(chains,x,y)
     local best,slope,contact
     for _,chain in ipairs(chains) do

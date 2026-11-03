@@ -5,7 +5,7 @@ M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 -- A is the measurement baseline; B and C predate the rotation cap (#114); D, E and F are candidates.
 M.order={"a","b","c","d","e","f"}
 -- #114 stage 1: debug-only wheel-size candidates. Not in M.order (no P cycle, no chip, no release build):
--- feel.preset accepts them only in a debug engine, e.g. ?preset=w26 on the debug preview.
+-- feel.preset accepts them only in a debug engine, e.g. ?preset=w26 on a locally served debug Gym bundle.
 M.debug_order={"w26","w30"}
 -- Vehicle wheel geometry per preset key; every key not listed here (A-F) uses `default`, which is the shipped
 -- vehicle and must stay unchanged. Each entry mirrors authored resources: `factory` spawns a wheel game object
