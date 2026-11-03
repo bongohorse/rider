@@ -44,11 +44,9 @@ function M.upload(entry,c,path)
         entry.resource=resource.create_buffer(path,{buffer=b,transfer_ownership=true})
         created=created+1;entry.path=path
     end
-    -- A textured section needs the textured material/vertex layout; never reuse an untextured object for it.
-    if entry.object and entry.textured~=(c.textured==true) then go.delete(entry.object);entry.object=nil end
     if not entry.object then
+        -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
         entry.object=factory.create(c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
-        entry.textured=c.textured==true
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2),entry.object) end
     entry.geometry=c

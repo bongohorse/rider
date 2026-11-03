@@ -4,9 +4,10 @@ local M={MESHES=128,SPRITES=1024,LABELS=1024,INSTANCES=1024,
     PAYLOAD=1024*1024,CPU=16*1024*1024,PHYSICS_VERTICES=2048,RESERVE=64}
 function M.measure(d)
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled(d)
-    -- #392: the textured route adds one float32 per uploaded vertex (52 B) and one retained Lua number (8 B).
+    -- #392: the textured route adds one float32 per uploaded vertex (52 B) and one retained Lua number
+    -- (16 B: a Lua 5.1 array slot on HTML5; 8 B under LuaJIT).
     local textured=projected and require('main.terrain_perspective.material').spec()~=nil
-    local stride,working=textured and 52 or projected and 48 or 36,textured and 568 or projected and 560 or 512
+    local stride,working=textured and 52 or projected and 48 or 36,textured and 576 or projected and 560 or 512
     local r={stride=stride,sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
     for i,c in ipairs(d.chains) do

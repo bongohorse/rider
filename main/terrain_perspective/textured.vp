@@ -24,7 +24,8 @@ void main() {
         else p.xy=mix(look_data.xy/s,p.xy,min(look_shape.z,0.9)/0.9);
     }
     // Side and end faces tile by world height (metres), after the bottom is resolved and before projection.
-    float world_y=p.y*s+look_origin.y;
+    // Section-local plus the fractional origin: same fract() as the world value, small for mediump fragments.
+    float tile_y=p.y*s+fract(look_origin.y);
     float perspective_w=1.0;
     if(depth>0.0 && look_shape.y==0.0) {
         p.xy+=(depth/s)*look_camera.zw;
@@ -41,10 +42,14 @@ void main() {
     var_color=color;
     float id=floor(texture_slot+0.5);
     float face=id-4.0*floor(id*0.25+0.01);
-    float arc=(texcoord0.x+editor_params.x)*4.0; // continuous arc length in metres
+    // Arc length in tile periods: section-local U plus the fractional section phase. This differs from the
+    // course-wide value by a whole number of tiles (continuous across sections) but stays small, so tiling far
+    // along a long course keeps its precision on GPUs that run fragments at mediump.
+    float period=face<1.5?0.9:1.0;
+    float arc=texcoord0.x*4.0/period+fract(editor_params.x*4.0/period);
     // Surface: one cross-section over the depth, image top at the back edge. Rim: image top at the road line.
     // Side: 1 m world tiles. End: U front->back over the cap, V by world height.
-    float u=face<1.5?arc/0.9:face<2.5?arc:texcoord0.x;
-    float v=face<0.5?1.0-texcoord0.y:face<1.5?texcoord0.y:-world_y;
+    float u=face<2.5?arc:texcoord0.x;
+    float v=face<0.5?1.0-texcoord0.y:face<1.5?texcoord0.y:-tile_y;
     var_tile=vec3(u,v,id);
 }

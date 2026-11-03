@@ -81,6 +81,29 @@ local styles={};for i=e.first,e.last do styles[i]=1 end
 local c=projection.section(e.prep,e.first,e.last,e.key,styles)
 assert(math.abs(c.color[1]-material.SHADE[material.SIDE]*1.6)<1e-12 and math.abs(c.color[3]-material.SHADE[material.SIDE]*.5)<1e-12)
 
+-- Saved Terrain Look sections (baked width/side/shading) and an overhang (non-monotone ribbon):
+-- the textured build keeps the baked geometry and look_data and only replaces colours with neutral shading.
+local function compare(prep,first,last,looks,label)
+    material.override=false
+    local q=projection.section(prep,first,last,'k',nil,looks)
+    material.override=assert(material.parse('snow'))
+    local c=projection.section(prep,first,last,'k',nil,looks)
+    assert(c.textured and #c.texture==c.vertices and c.vertices==q.vertices,label)
+    for k,v in ipairs(q.position) do assert(c.position[k]==v,label..': position changed at '..k) end
+    for k,v in ipairs(q.look_data) do assert(c.look_data[k]==v,label..': look_data changed at '..k) end
+    for i=1,c.vertices do
+        local face=c.texture[i]-3*4
+        assert(face>=0 and face<=3,label..': not a snow slot')
+        assert(c.base_colors[(i-1)*4+1]==material.SHADE[face],label..': shading not neutral')
+    end
+end
+local looks={};for i=1,#entries[1].prep.p do looks[i]={width=1.4,side=3,shading=.4} end
+compare(entries[1].prep,entries[1].first,entries[1].last,looks,'Terrain Look sections')
+local curl={{0,0},{2,0},{3,1},{2.5,2.2},{1.2,2},{1,3},{4,4},{6,4}}
+local prep=geometry.prepare(curl,-8,0);assert(not prep.monotone)
+compare(prep,1,#curl,nil,'overhang ribbon')
+print('PASS textured route keeps baked Terrain Look geometry and overhang ribbons; only shading and slots change')
+
 -- 1 MiB Fit: the P5 660 m course (1016 segments in two chains, 17 sections, 18,312 vertices).
 local long={chains={},hulls={},labels={},bounds={-10,700,-40,50}}
 for k,n in ipairs({520,496}) do local chain={};for i=0,n do chain[i+1]={i+(k-1)*600,0} end;long.chains[k]=chain end
