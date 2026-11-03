@@ -18,7 +18,8 @@ function M.drive(self)
             local audio=require "main.game.audio"
             assert(self.audio_started and self.audio_starts==1 and self.audio_pitch>audio.idle_pitch+0.2,"Wheel pitch did not rise after input")
             assert(math.abs(go.get("#engine","speed")-self.audio_pitch)<0.001,"Audio playback property not updated")
-            -- #438: every one-shot cue resolves to a real sound component and plays (sound.play raises on a bad URL).
+            -- #438: every one-shot cue plays through its real sound component; a missing component fails the run via
+            -- the browser runner's ERROR:GAMEOBJECT console filter.
             local played=0
             for name in pairs(audio.effects) do
                 local before=(self.audio_effects or {})[name] or 0
