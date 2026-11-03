@@ -22,9 +22,37 @@ body.rider-editing #page-tools{bottom:max(24px,env(safe-area-inset-bottom))}
   <div id="canvas-container"><canvas id="canvas" tabindex="0" width="{{display.width}}" height="{{display.height}}"></canvas></div>
   <div id="running-from-file-warning" class="warning" style="display:none">Please open Rider through a web server.</div>
   <div id="webgl-not-supported" class="warning" style="display:none">WebGL is unavailable in this browser.</div>
-  <div id="page-tools"><button id="quality" type="button">High DPI</button><button id="fullscreen" type="button">Fullscreen</button></div>
+  <div id="page-tools"><button id="quality" type="button">Quality</button><button id="fullscreen" type="button">Fullscreen</button></div>
 </div>
 <script id="engine-loader" src="dmloader.js"></script>
+<script id="engine-quality">
+// #440: Quality High/Low is the High DPI switch (High = High DPI on), remembered for this
+// browser origin under a Rider-namespaced key. ?dpi=0|1 overrides it for tests and leaves the
+// stored choice alone. A missing, invalid or unreadable value uses the default: High, as
+// game.project display.high_dpi = 1. Resolved here, before the engine creates its canvas.
+window.riderQuality=(()=>{
+  const key='rider-quality-v1';
+  const resolve=(search,stored)=>{
+    const dpi=new URLSearchParams(search).get('dpi');
+    if(dpi==='0'||dpi==='1')return {highDpi:dpi==='1',source:'url'};
+    if(stored==='high'||stored==='low')return {highDpi:stored==='high',source:'stored'};
+    return {highDpi:true,source:'default'};
+  };
+  let stored=null;
+  try{stored=localStorage.getItem(key);}catch{}
+  const {highDpi,source}=resolve(location.search,stored);
+  return {key,resolve,highDpi,source,label:'Quality: '+(highDpi?'High':'Low'),
+    // Store the other choice and reload without ?dpi so it applies. Without writable
+    // storage, fall back to the previous reload with ?dpi for this session.
+    toggle(){
+      const value=highDpi?'low':'high',url=new URL(location.href);
+      let saved=false;
+      try{localStorage.setItem(key,value);saved=localStorage.getItem(key)===value;}catch{}
+      if(saved)url.searchParams.delete('dpi');else url.searchParams.set('dpi',highDpi?'0':'1');
+      if(url.href===location.href)location.reload();else location.href=url.href;
+    }};
+})();
+</script>
 <script id="engine-setup">
 // #399: dmloader's preSync treats an exhausted initial IndexedDB->memory restore like success.
 // The engine would then start on an empty FS and its first sync would delete every stored save.
@@ -52,10 +80,10 @@ body.rider-editing #page-tools{bottom:max(24px,env(safe-area-inset-bottom))}
   };
 })();
 (() => {
-  const highDpi = new URLSearchParams(location.search).get('dpi') !== '0';
+  const highDpi=window.riderQuality.highDpi;
   const quality=document.getElementById('quality');
-  quality.textContent='High DPI: '+(highDpi?'ON':'OFF');
-  quality.onclick=()=>{const url=new URL(location.href);url.searchParams.set('dpi',highDpi?'0':'1');location.href=url.href;};
+  quality.textContent=window.riderQuality.label;
+  quality.onclick=()=>window.riderQuality.toggle();
   CUSTOM_PARAMETERS.engine_arguments.push('--config=display.high_dpi='+(highDpi?'1':'0'));
   CUSTOM_PARAMETERS.full_screen_container='#app-container';
   document.getElementById('fullscreen').onclick=()=>Module.toggleFullscreen();
