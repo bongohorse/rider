@@ -22,7 +22,6 @@ sfx.update(s);assert(take()=='','repeat on unchanged frame')
 s.coins.gems=1;sfx.update(s);assert(take()=='#sfx_gem')
 s.fuel.collected=1;sfx.update(s);assert(take()=='#sfx_fuel')
 s.coins.count,s.fuel.collected=3,2;sfx.update(s);assert(take()=='#sfx_coin,#sfx_fuel','two kinds in one frame')
-for _,g in ipairs(gains) do assert(g>0 and g<=0.3,'per-voice gain out of range') end
 
 -- Retry: a new attempt re-baselines (count drops to 0) without a cue; the next pickup sounds again.
 s.coin_attempt,s.fuel_attempt,s.coins.count,s.coins.gems,s.fuel.collected=2,2,0,0,0;sfx.update(s);assert(take()=='')
@@ -47,6 +46,7 @@ local function flight(seconds,vy,resets_mid)
  end
  sfx.fixed(s,true,0,1/60)
 end
+s.race={id='1:2r',state='running'};sfx.update(s);assert(take()=='')
 flight(0.5,-6);sfx.update(s);assert(take()=='#sfx_land')
 sfx.update(s);assert(take()=='','landing cue repeated')
 flight(0.1,-6);sfx.update(s);assert(take()=='','short hop sounded')
@@ -57,6 +57,21 @@ for _=1,30 do sfx.fixed(s,true,0,1/60) end;sfx.update(s);assert(take()=='','grou
 s.race={id='1:3',state='running'};sfx.update(s)
 flight(0.5,-6);s.race.state='failed';sfx.update(s);assert(take()=='#sfx_crash','landing on top of a crash')
 sfx.update(s);assert(take()=='','dropped landing cue was queued')
+-- After the attempt ended (failed or finished), the tumbling car's landings stay silent.
+flight(0.5,-6);sfx.update(s);assert(take()=='','landing after a failed run')
+s.race={id='1:4',state='running'};sfx.update(s);s.race.state='finished';flight(0.5,-6);sfx.update(s);assert(take()=='','landing after a finished run')
+s.race={id='1:5',state='running'};sfx.update(s)
+
+-- Worlds without a run (gym stations, custom levels): a head or bounds crash resets at once; that is the cue.
+local g={coins=nil,fuel=nil,reset_count=0,audio_started=true}
+sfx.update(g);assert(take()=='')
+g.reset_count,g.last_reset_reason=1,'manual';sfx.update(g);assert(take()=='','manual Retry sounded as a crash')
+g.reset_count,g.last_reset_reason=2,'head';sfx.update(g);assert(take()=='#sfx_crash')
+sfx.update(g);assert(take()=='','reset crash repeated')
+g.reset_count,g.last_reset_reason=3,'bounds';sfx.update(g);assert(take()=='#sfx_crash')
+g.reset_count,g.last_reset_reason=4,'section';sfx.update(g);assert(take()=='')
+-- Same frame as a hard landing: only the crash.
+for _=1,30 do sfx.fixed(g,false,-6,1/60) end;g.reset_count,g.last_reset_reason=5,'head';sfx.fixed(g,true,0,1/60);sfx.update(g);assert(take()=='#sfx_crash')
 
 -- Mute: no cue while muted, ringing voices are stopped, events while muted are not replayed on unmute.
 stopped={};audio.mute(s);assert(#stopped==6,'mute did not stop every effect')
@@ -70,4 +85,6 @@ s.coins.count=4;sfx.update(s);assert(take()=='#sfx_coin','no cue after resume')
 -- Session end stops the engine and every effect.
 stopped={};audio.stop(s);assert(#stopped==7)
 assert(s.audio_effects.coin==4 and s.audio_effects.crash==3 and s.audio_effects.land==1)
-print('PASS one-shot cues per pickup/gem/fuel/crash/finish/hard landing, retry re-baselines, no autoplay, mute/pause silence and drop without replay')
+for _,g2 in ipairs(gains) do assert(g2>0 and g2<=0.3,'per-voice gain out of range') end
+for name,gain in pairs(audio.effects) do assert(gain>0 and gain<=0.3,'gain out of range: '..name) end
+print('PASS one-shot cues per pickup/gem/fuel/crash (run and run-less reset)/finish/hard landing, silent landings after an ended run, retry re-baselines, no autoplay, mute/pause silence and drop without replay')

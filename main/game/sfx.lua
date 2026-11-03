@@ -32,13 +32,17 @@ function M.update(self)
     if c and rose(self,"coin",self.coin_attempt,c.count) then audio.effect(self,"coin") end
     if c and rose(self,"gem",self.coin_attempt,c.gems) then audio.effect(self,"gem") end
     if f and rose(self,"fuel",self.fuel_attempt,f.collected) then audio.effect(self,"fuel") end
+    -- Attempt ended: a level run fails (head or bounds; no automatic reset then). Worlds without a run
+    -- (gym stations, custom levels) reset at once on a head or bounds crash, so that reset is the event.
     local crashed=r and rose(self,"crash",r.id,r.state=="failed" and 1 or 0)
+    local reset=rose(self,"reset",0,self.reset_count or 0)
+    if not r and reset and (self.last_reset_reason=="head" or self.last_reset_reason=="bounds") then crashed=true end
     if crashed then audio.effect(self,"crash") end
     if rose(self,"finish",0,self.finish_count or 0) then audio.effect(self,"finish") end
-    -- A crash on impact already sounds; the landing cue is dropped then, never queued.
+    -- A crash on impact already sounds, and an ended run is over: the landing cue is dropped, never queued.
     if self.sfx_landed then
         self.sfx_landed=false
-        if not crashed then audio.effect(self,"land") end
+        if not crashed and not (r and (r.state=="failed" or r.state=="finished")) then audio.effect(self,"land") end
     end
 end
 return M
