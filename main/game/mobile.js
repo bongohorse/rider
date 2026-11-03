@@ -144,6 +144,7 @@
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
     #rider-mobile.portrait{visibility:hidden}
+    body.rider-portrait>:not(#app-container){visibility:hidden!important}
     #rider-mobile-portrait-block{position:fixed;inset:0;z-index:2147483647;background:transparent;pointer-events:auto;touch-action:none}
     #rider-mobile-portrait-block[hidden]{display:none}
   `;
@@ -307,6 +308,10 @@
   positionOverlays();
   // Portrait shows no prompt (#359, Claudio 2026-11-03): the touch HUD is hidden and a
   // transparent, text-free layer outside the HUD swallows canvas/editor taps.
+  // #app-container is position:fixed, its own stacking context, so the layer cannot cover
+  // overlays appended to <body> (level actions/menu, import, export, feedback). Those are
+  // hidden by a body class instead (visibility: no taps, no focus); their own hidden/open
+  // state is untouched and returns as it was in landscape.
   // The loader already implements an idempotent 'run_focus_lost' suspend; reuse it
   // instead of toggling pause or introducing a second physics/time-step owner.
   const block=document.createElement('div');
@@ -317,11 +322,14 @@
     if(portrait===api.blocked)return;
     api.blocked=portrait;
     abort(portrait?'portrait orientation':'landscape orientation');
-    // Discard any queued Retry/Replay/station commands from before the transition.
+    // Discard any queued Retry/Replay/station commands from before the transition, but keep
+    // an unpolled suspend: portrait→landscape inside one frame must still suspend once.
+    const background=pending.background;
     for(const key of Object.keys(pending))delete pending[key];
     pending.clear=true;
-    if(portrait)pending.background=true;
+    if(portrait||background)pending.background=true;
     block.hidden=!portrait;root.classList.toggle('portrait',portrait);
+    document.body.classList.toggle('rider-portrait',portrait);
     if(portrait)document.activeElement?.blur?.();
     else document.querySelector('canvas')?.focus();
   }
