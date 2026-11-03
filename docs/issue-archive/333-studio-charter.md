@@ -1,6 +1,6 @@
 # Issue #333 archived planning text
 
-Full body of [#333 [RIDER-STUDIO] Autonomous Director, roles, work queue and merge gates](https://github.com/bongohorse/rider/issues/333) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and STATUS.md; superseded parts of this text are history.
+Full body of [#333 [RIDER-STUDIO] Autonomous Director, roles, work queue and merge gates](https://github.com/bongohorse/rider/issues/333) as of 2026-11-02, moved here (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and `status:` labels; superseded parts of this text are history.
 
 **Contents:** [MAINTAINER DIRECTIVE — RIDER STUDIO DEPARTMENTS (2026-11-01)](#maintainer-directive--rider-studio-departments-2026-11-01) · [Binding product decision — 2026-11-01: MOBILE LANDSCAPE ONLY](#binding-product-decision--2026-11-01-mobile-landscape-only) · [Mission and limits](#mission-and-limits) · [Roles / ownership](#roles--ownership) · [Studio queue protocol](#studio-queue-protocol) · [Fast validation policy](#fast-validation-policy) · [Current maintainer priorities (GO 2026-11-01; supersedes earlier O2-first ordering)](#current-maintainer-priorities-go-2026-11-01-supersedes-earlier-o2-first-ordering) · [Human gates](#human-gates)
 
