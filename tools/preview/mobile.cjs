@@ -31,6 +31,57 @@ module.exports=async function mobile(browser,url,sha,out){
     const c=window.riderTelemetry.command;
     return c.throttle===0&&c.brake_reverse===0&&c.lean===0;
   });
+  // #359 (Claudio 2026-11-03): portrait shows no prompt. Only a transparent, text-free,
+  // aria-hidden layer remains; the touch HUD is hidden and every former control spot
+  // (and the centre) hits that layer, so touch cannot reach the HUD, canvas or editor.
+  // Overlays appended to <body> (level actions/menu, import, export, feedback) sit outside
+  // #app-container's stacking context, so they must be hidden too; their spots count here.
+  const bodyControls='body>:not(#app-container) :is(button,input,textarea,select,a)';
+  async function portraitBlocked(){
+    const state=await page.evaluate(selector=>{
+      const block=document.getElementById('rider-mobile-portrait-block'),style=getComputedStyle(block);
+      const centre=node=>{const r=node.getBoundingClientRect();return r.width&&r.height?[r.x+r.width/2,r.y+r.height/2]:null;};
+      const inside=([x,y])=>x>=0&&y>=0&&x<innerWidth&&y<innerHeight;
+      const hud=[...document.querySelectorAll('#rider-mobile button')].map(centre).filter(Boolean).filter(inside);
+      const body=[...document.querySelectorAll(selector)].map(centre).filter(Boolean).filter(inside);
+      const spots=hud.concat(body,[[innerWidth/2,innerHeight/2]]);
+      return {text:block.textContent,children:block.childElementCount,role:block.getAttribute('role'),live:block.getAttribute('aria-live'),
+        hidden:block.getAttribute('aria-hidden'),background:style.backgroundColor,shown:style.display!=='none',
+        bodySpots:body.length,levelSpots:[...document.querySelectorAll('#rider-level-actions button')].map(centre).filter(Boolean).filter(inside).length,
+        bodyVisible:[...document.querySelectorAll(selector)].filter(n=>n.checkVisibility({visibilityProperty:true})).length,
+        spots:spots.length,hits:spots.filter(([x,y])=>document.elementFromPoint(x,y)===block).length,
+        prompt:/rotate|landscape only/i.test(document.body.innerText),
+        alerts:[...document.querySelectorAll('[role=alert],[aria-live=assertive]')].filter(n=>n.getClientRects().length&&getComputedStyle(n).visibility!=='hidden').length};
+    },bodyControls);
+    assert.deepEqual({text:state.text,children:state.children,role:state.role,live:state.live,hidden:state.hidden,background:state.background,prompt:state.prompt,alerts:state.alerts},
+      {text:'',children:0,role:null,live:null,hidden:'true',background:'rgba(0, 0, 0, 0)',prompt:false,alerts:0},'Portrait shows no rotate prompt or message');
+    assert.equal(state.shown,true,'Portrait input block is active');
+    assert(state.spots>1,'Former control spots are checked');
+    assert.equal(state.hits,state.spots,'Portrait block intercepts touch at the centre and every former control spot');
+    assert(state.levelSpots>=1&&state.bodySpots>=state.levelSpots,'Body-level Levels/Next Level spots are checked');
+    assert.equal(state.bodyVisible,0,'No body-level overlay control is visible in portrait');
+    for(const name of ['Retry','Pause','Resume','More'])assert.equal(await page.getByRole('button',{name,exact:true}).isVisible(),false,name+' is not offered in portrait');
+    for(const command of ['left','right','brake','throttle'])assert.equal(await page.locator(`[data-command="${command}"]`).isVisible(),false,'No portrait drive zone '+command);
+    assert.equal(await page.locator('#rider-mobile .zones .held').count(),0,'Rotation releases all held pointers');
+  }
+  // A real tap where Levels sits must not reach the level menu (it used to open it).
+  // Call with no finger held: the tap uses its own touch sequence.
+  async function portraitLevelsTapBlocked(){
+    const levels=await page.evaluate(()=>{
+      let value=window.riderLevelsRequest;window.__levelRequests=[];
+      Object.defineProperty(window,'riderLevelsRequest',{configurable:true,get:()=>value,set:next=>{if(next)window.__levelRequests.push(next);value=next;}});
+      const r=document.querySelector('#rider-level-actions button').getBoundingClientRect();
+      return {x:r.x+r.width/2,y:r.y+r.height/2};
+    });
+    await dispatch('touchStart',[{x:levels.x,y:levels.y,id:30}]);await dispatch('touchEnd',[]);
+    // A click would set the request synchronously; ten frames also cover a delayed click.
+    await page.evaluate(()=>new Promise(resolve=>{let frames=0;const next=()=>++frames>=10?resolve():requestAnimationFrame(next);requestAnimationFrame(next);}));
+    assert.deepEqual(await page.evaluate(()=>{
+      const requests=window.__levelRequests,value=window.riderLevelsRequest;
+      delete window.riderLevelsRequest;window.riderLevelsRequest=value;delete window.__levelRequests;
+      return {requests,open:!!window.riderLevels?.open};
+    }),{requests:[],open:false},'Portrait tap on Levels does not reach the level menu');
+  }
   async function layout(){
     for(const command of ['left','right','brake','throttle']){
       const b=await page.locator(`[data-command="${command}"]`).boundingBox();
@@ -97,12 +148,10 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
     await page.setViewportSize({width:486,height:1080});
     await page.waitForFunction(()=>window.riderMobile.blocked&&window.riderTimeState?.paused);
-    const blocker=page.locator('#rider-mobile-rotate');
-    assert.equal(await blocker.isVisible(),true,'Portrait requires visible rotate instruction');
-    assert.match(await blocker.innerText(),/Rotate your device.*landscape only/);
-    assert.equal(await page.locator('#rider-mobile .zones .held').count(),0,'Rotation releases all held pointers');
-    assert.equal(await page.evaluate(()=>document.elementFromPoint(innerWidth/2,innerHeight/2)?.id),'rider-mobile-rotate','Portrait blocker intercepts touch');
+    const blocker=page.locator('#rider-mobile-portrait-block');
+    await portraitBlocked();
     await dispatch('touchEnd',[]);
+    await portraitLevelsTapBlocked();
     await dispatch('touchStart',[{x:243,y:700,id:8}]);await dispatch('touchEnd',[]);
     await page.keyboard.press('1');
     assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),beforePortrait.loads,'Portrait keyboard cannot switch station');
@@ -113,11 +162,28 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.evaluate(()=>{window.__testAngle=90;window.dispatchEvent(new Event('orientationchange'));});
     await page.waitForFunction(()=>!window.riderMobile.blocked);
     assert.equal(await blocker.isHidden(),true);
+    for(const command of ['left','right','brake','throttle'])assert.equal(await page.locator(`[data-command="${command}"]`).isVisible(),true,'Landscape restores drive zone '+command);
     assert.equal(await page.evaluate(()=>window.riderTimeState.paused),true,'Landscape return must not auto-resume');
     assert.deepEqual(await page.evaluate(()=>({
       resets:window.riderTelemetry.reset_count,loads:window.riderTelemetry.world_loads,
       source:window.riderReady.source_sha
     })),beforePortrait,'Orientation cannot reset, reload or replace build');
+    await page.getByRole('button',{name:'Resume',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+    await neutral();
+    // Landscape → portrait → landscape before the next input poll must still suspend once.
+    await page.evaluate(()=>{
+      const width=innerWidth,height=innerHeight,saved={};
+      for(const [key,value] of [['innerWidth',height],['innerHeight',width]]){
+        saved[key]=Object.getOwnPropertyDescriptor(window,key);
+        Object.defineProperty(window,key,{configurable:true,get:()=>value});
+      }
+      window.dispatchEvent(new Event('resize'));
+      for(const key of Object.keys(saved)){if(saved[key])Object.defineProperty(window,key,saved[key]);else delete window[key];}
+      if(innerWidth!==width||innerHeight!==height)throw Error('viewport override not restored');
+      window.dispatchEvent(new Event('resize'));
+    });
+    await page.waitForFunction(()=>window.riderTimeState?.paused===true&&!window.riderMobile.blocked);
     await page.getByRole('button',{name:'Resume',exact:true}).tap();
     await page.waitForFunction(()=>window.riderTimeState?.paused===false);
     await neutral();
@@ -202,9 +268,20 @@ module.exports=async function mobile(browser,url,sha,out){
         window.riderViewport.width===innerWidth&&window.riderViewport.height===innerHeight,sequence);
       await neutral();await layout();
     }
+    // #359: entering fullscreen requests a landscape lock; a refusal stays silent.
+    // The stub rejects like a browser without lock support (W3C Screen Orientation §5.2).
+    await page.evaluate(()=>{
+      window.__lockCalls=[];window.__lockUnhandled=0;
+      window.addEventListener('unhandledrejection',()=>{window.__lockUnhandled++;});
+      Object.defineProperty(screen.orientation,'lock',{configurable:true,value:type=>{
+        window.__lockCalls.push({type,fullscreen:document.fullscreenElement!==null});
+        return Promise.reject(new DOMException('Injected lock refusal','NotSupportedError'));
+      }});
+    });
     for(let transition=0;transition<3;transition++){
       await tapSecondary('Fullscreen');
       await page.waitForFunction(()=>document.fullscreenElement!==null);
+      await page.waitForFunction(n=>window.__lockCalls.length===n+1,transition);
       await settledViewport();
       await dispatch('touchStart',[await point('throttle',1)]);
       await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
@@ -213,8 +290,11 @@ module.exports=async function mobile(browser,url,sha,out){
       await page.waitForFunction(()=>document.fullscreenElement===null);
       await settledViewport();
     }
+    assert.deepEqual(await page.evaluate(()=>window.__lockCalls),Array(3).fill({type:'landscape',fullscreen:true}),'Each fullscreen entry, and only entry, requests a landscape lock');
+    assert.equal(await page.evaluate(()=>window.__lockUnhandled),0,'A refused lock is swallowed');
+    assert.equal(await page.evaluate(()=>/rotate|orientation|lock/i.test(document.body.innerText)),false,'A refused lock shows no message');
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
-    pass('fullscreen_controls_remain_drivable');
+    pass('fullscreen_controls_remain_drivable_and_landscape_lock_requested');
     await page.screenshot({path:path.join(out,'mobile-landscape.png')});
     // The page tools are hidden in touch mode; the toolbar opens the same LE1a import panel.
     // Imports: from a built-in station, with a saved level, and after a reload of ?station=custom
@@ -272,10 +352,30 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.setViewportSize({width:400,height:896});
     await page.goto(launch.href);
     await page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderMobile?.blocked,sha);
-    assert.equal(await page.locator('#rider-mobile-rotate').isVisible(),true);
-    assert.equal(await page.evaluate(()=>document.elementFromPoint(innerWidth/2,innerHeight/2)?.id),'rider-mobile-rotate');
-    assert.equal(await page.locator('#rider-mobile .zones .held').count(),0);
-    pass('portrait_initial_load_blocked');
+    await portraitBlocked();
+    await portraitLevelsTapBlocked();
+    // Body-level overlays come back unchanged in landscape: an open Import panel is hidden in
+    // portrait (its controls are blocked) and still open afterwards; Levels works again.
+    await page.setViewportSize({width:1080,height:486});
+    await page.waitForFunction(()=>!window.riderMobile.blocked);await layout();
+    await tapSecondary('Import level');
+    await page.waitForFunction(()=>window.riderCustom.visible);
+    await page.locator('#rider-custom-text').fill('{"kept":true}');
+    await page.setViewportSize({width:486,height:1080});
+    await page.waitForFunction(()=>window.riderMobile.blocked);
+    assert.equal(await page.locator('#rider-custom-panel').isVisible(),false,'Import panel is hidden in portrait');
+    await portraitBlocked();
+    await page.setViewportSize({width:1080,height:486});
+    await page.waitForFunction(()=>!window.riderMobile.blocked);
+    assert.equal(await page.locator('#rider-custom-panel').isVisible(),true,'Import panel returns in landscape');
+    assert.equal(await page.locator('#rider-custom-text').inputValue(),'{"kept":true}','Import panel keeps its state');
+    await page.getByRole('button',{name:'Close import',exact:true}).tap();
+    await page.waitForFunction(()=>!window.riderCustom.visible);
+    await page.locator('#rider-level-actions').getByRole('button',{name:'Levels',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderLevels?.open&&!document.getElementById('rider-levels').hidden);
+    await page.getByRole('button',{name:'Back',exact:true}).tap();
+    await page.waitForFunction(()=>!window.riderLevels.open&&document.getElementById('rider-levels').hidden);
+    pass('portrait_initial_load_blocked_body_overlays_restored');
     if(errors.length)throw Error(errors.join('\n'));
     return {name:'mobile-touch-emulation',status:'PASS',cases,physicalDevice:'NOT RUN'};
   }catch(error){
