@@ -8,6 +8,12 @@ local material=require 'main.terrain_perspective.material'
 local projection=require 'main.terrain_perspective.projection'
 local geometry=require 'main.game.terrain_geometry'
 local budget=require 'main.game.terrain_budget'
+-- material.PERIOD must match the shader's tile period (a mismatch would seam every quad).
+do
+    local f=assert(io.open('main/terrain_perspective/textured.vp','r'));local vp=f:read('*a');f:close()
+    local surface,side=vp:match('float period=face<1%.5%?([%d%.]+):([%d%.]+);')
+    assert(surface and tonumber(surface)==material.PERIOD[material.SURFACE] and tonumber(surface)==material.PERIOD[material.RIM] and tonumber(side)==material.PERIOD[material.SIDE],'material.PERIOD differs from textured.vp')
+end
 
 -- Parsing: one family, or left,right@x; anything else is ignored (untextured), never an error at runtime.
 local s=assert(material.parse('stone'));assert(s.left==4 and s.right==4 and s.boundary==math.huge)
@@ -63,6 +69,9 @@ for i,e in ipairs(entries) do
             assert(math.abs(shift-math.floor(shift+.5))<1e-9,'U shift is not whole tiles')
             assert(c.uv[k]*tiles>=-1e-9 and c.uv[k]*tiles<1+(q.uv[(n+(j<=6 and 2 or j<=12 and 8 or 14)-1)*2+1]-q.uv[(n+(j<=6 and 1 or j<=12 and 7 or 13)-1)*2+1])*tiles+1e-9,'per-quad U not bounded')
             assert(c.uv[k+1]==q.uv[k+1])
+            -- All six vertices of a quad share one shift (else U compresses or reverses inside the quad).
+            local a=(n+(j<=6 and 1 or j<=12 and 7 or 13)-1)*2+1
+            assert(math.abs((c.uv[k]-c.uv[a])-(q.uv[k]-q.uv[a]))<1e-12,'per-quad U shift differs inside a quad at interval '..interval..' vertex '..j)
             assert(c.color[(n+j-1)*4+1]==material.SHADE[face],'uploaded colour is not the neutral shade')
         end
     end

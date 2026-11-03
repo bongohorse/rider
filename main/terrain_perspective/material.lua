@@ -53,8 +53,8 @@ function M.describe()
 end
 
 -- Adds one float per vertex (family*4+face) to a perspective section built by projection.section,
--- gives end caps a 0..1 depth U and neutral face shading. Positions, look_data, partition and the
--- arc-length U of the other faces stay exactly as built.
+-- gives end caps a 0..1 depth U and neutral face shading. Positions, look_data and partition stay exactly
+-- as built; the arc-length U of the other faces differs by whole tiles per quad (see bound below).
 function M.apply(c,prep,first,last,spec,styles)
     local p=prep.p
     local slot,uv,base,color={},c.uv,c.base_colors,c.color
