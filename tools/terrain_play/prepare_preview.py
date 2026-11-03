@@ -15,14 +15,14 @@ web = a.output or next(a.bundle.rglob('index.html')).parent
 web.mkdir(parents=True, exist_ok=True)
 (web / 'courses').mkdir(exist_ok=True)
 for name in ('six-anchor', 'long-curves', 'mixed', 'long-over-budget', 'mixed-over-budget'):
-    source = root / ('docs/terrain-p5' if name.endswith('over-budget') else 'docs/terrain-p0') / (name + '.json')
+    source = root / ('docs/reports/terrain-p5' if name.endswith('over-budget') else 'docs/reports/terrain-p0') / (name + '.json')
     if a.perspective_profile:
         d=json.loads(source.read_text()); d['editor']['road_profile']='perspective-v1'
         (web / 'courses' / (name + '.json')).write_text(json.dumps(d)+'\n')
     else:
         shutil.copyfile(source, web / 'courses' / (name + '.json'))
 if a.perspective_profile:
-    shutil.copyfile(root/'docs/terrain-p0/long-curves.json', web/'courses/legacy-long-curves.json')
+    shutil.copyfile(root/'docs/reports/terrain-p0/long-curves.json', web/'courses/legacy-long-curves.json')
 (web / 'terrain-preview.html').write_text('''<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rider — normal Play depth terrain</title>

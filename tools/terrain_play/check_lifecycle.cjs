@@ -20,7 +20,7 @@ function probe(){const p=window.__buffers={live:new Map(),created:0,deleted:0};
  page.on('pageerror',e=>r.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))r.errors.push(m.text());});
  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);
  assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);
- const body=fs.readFileSync('docs/terrain-p0/six-anchor.json','utf8');
+ const body=fs.readFileSync('docs/reports/terrain-p0/six-anchor.json','utf8');
  for(let i=0;i<8;i++){
   const before=await page.evaluate(()=>window.riderTelemetry.session_generation);
   await page.evaluate(body=>{window.riderCustom.open();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();},body);

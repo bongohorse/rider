@@ -17,7 +17,7 @@ execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bund
   await page.goto(base+'/index.html?station=straight');await ready();assert.equal(await page.evaluate(()=>window.riderTerrainMesh.budget.stride),48,'Built-in must use accepted profile');
   // A comparison preference on this origin cannot enable an ordinary-build tuner or override defaults.
   await page.evaluate(()=>localStorage.setItem('rider-road-look-v1',JSON.stringify({version:1,mode:'fixed',width:2,perspective:1,angle:45,side:.25,shading:0})));
-  const d=JSON.parse(fs.readFileSync('docs/terrain-p0/long-curves.json'));if(projected)d.editor.road_profile='perspective-v1';
+  const d=JSON.parse(fs.readFileSync('docs/reports/terrain-p0/long-curves.json'));if(projected)d.editor.road_profile='perspective-v1';
   const row={projected};r.courses.push(row);let generation=await page.evaluate(()=>window.riderTelemetry.session_generation);
   await page.evaluate(body=>{window.riderCustom.open();window.riderCustom.importFile(new File([body],'course.json',{type:'application/json'}));},JSON.stringify(d));await page.waitForFunction(n=>window.riderCustomStatus==='Saved'&&window.riderTelemetry?.session_generation>n&&window.riderTelemetry?.sequence>2,generation);await pointer.frames(page);
   row.play=await snap();assert.equal(row.play.mesh.budget.stride,projected?48:36);assert.equal(row.play.projection?.mode||null,projected?'perspective':null);

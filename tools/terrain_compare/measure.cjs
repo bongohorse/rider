@@ -29,7 +29,7 @@ function probes(){
    const {ctx,page,initial}=await open('?course='+course+'&look='+look);
    if(!report.source_sha){report.source_sha=initial.telemetry.source_sha||initial.ready.source_sha;report.identity=await page.evaluate(()=>{const g=document.createElement('canvas').getContext('webgl2'),i=g.getExtension('WEBGL_debug_renderer_info');return {user_agent:navigator.userAgent,renderer:i&&g.getParameter(i.UNMASKED_RENDERER_WEBGL),timer_query_available:!!g.getExtension('EXT_disjoint_timer_query_webgl2'),cross_origin_isolated:crossOriginIsolated};});}
    const expected=course==='six-anchor'?670:course==='mixed'?712:700;assert.equal(initial.telemetry.terrain_shapes,expected-4);
-   const fixture=JSON.parse(fs.readFileSync(path.join('docs/terrain-p0',course+'.json'),'utf8'));
+   const fixture=JSON.parse(fs.readFileSync(path.join('docs/reports/terrain-p0',course+'.json'),'utf8'));
    assert.equal(initial.telemetry.spawn_x,fixture.spawn[0]);assert.equal(initial.telemetry.spawn_y,fixture.spawn[1]);
    await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');await page.waitForTimeout(1000);const from=await page.evaluate(()=>performance.now());await page.waitForTimeout(6000);await page.keyboard.up('ArrowUp');
    const raw=await page.evaluate(from=>{const p=window.__terrainObservation;return {frames:p.frames.filter(f=>f.at>=from&&f.polled),polls:p.polls.filter(f=>f.at>=from),world:p.world.filter(f=>f.at>=from),telemetry:window.riderTelemetry,stats:window.riderTerrainCompare,wasm_bytes:HEAPU8.length};},from);
