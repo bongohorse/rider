@@ -1,0 +1,75 @@
+name: npm audit
+# Scheduled, non-silent npm audit with reviewed exceptions (#101). Advisory data changes
+# without our commits, so this never runs on pull requests or pushes and never joins
+# `required`; PR CI keeps `npm ci --no-audit`. Policy: docs/TOOLING.md, Dependencies and Renovate.
+on:
+  schedule:
+    - cron: '41 4 * * *' # 04:41 UTC nightly, after the 02:17 full suite
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: npm-audit-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  audit:
+    name: npm audit gate
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    outputs:
+      summary: ${{ steps.gate.outputs.summary }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.21.0'
+          cache: npm
+      # Install scripts never run. The audit is the explicit step below, not an install summary.
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run npm audit (all and production-only) and look up the latest renovate
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts/npm-audit
+          # A non-zero exit means findings or a lookup error; the gate judges the JSON either way.
+          npm audit --json > artifacts/npm-audit/audit.json || echo "npm audit exit $?"
+          npm audit --omit=dev --json > artifacts/npm-audit/audit-prod.json || echo "npm audit --omit=dev exit $?"
+          npm view renovate dist-tags time --json > artifacts/npm-audit/renovate-view.json || echo "npm view renovate exit $?"
+      - name: Compare findings with the reviewed exceptions
+        id: gate
+        run: >-
+          python3 tools/ci/npm_audit_gate.py
+          --audit artifacts/npm-audit/audit.json
+          --audit-prod artifacts/npm-audit/audit-prod.json
+          --renovate-view artifacts/npm-audit/renovate-view.json
+          --report artifacts/npm-audit/report.md
+          --step-summary "$GITHUB_STEP_SUMMARY"
+          --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: npm-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/npm-audit/
+          retention-days: 14
+          if-no-files-found: warn
+  alert:
+    name: npm audit issue alert
+    if: ${{ always() && github.event_name == 'schedule' }}
+    needs: audit
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create/update one tooling issue on failure; close on recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_RESULT: ${{ needs.audit.result }}
+          GATE_SUMMARY: ${{ needs.audit.outputs.summary }}
+        run: python3 tools/ci/npm_audit_alert.py

@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "exceptions": [
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "package": "minimatch",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/minimatch",
+        "node_modules/mv/node_modules/minimatch",
+        "node_modules/rimraf/node_modules/minimatch"
+      ],
+      "dependents": [
+        "renovate"
+      ],
+      "chain": [
+        "renovate@44.198.3 > minimatch@10.2.6 (exact pin; also via editorconfig@3.0.2 and glob@13.0.6)",
+        "renovate > @opentelemetry/resource-detector-gcp@0.58.0 > gcp-metadata@8.1.4 > gaxios@7.1.3 > rimraf@5.0.10 > glob@10.5.0 > minimatch@9.0.9",
+        "renovate > bunyan@1.8.15 > mv@2.1.1 > rimraf@2.4.5 > glob@6.0.4 > minimatch@3.1.5"
+      ],
+      "reason": "Dev-only, under renovate, which runs only as renovate:validate (config validator on our renovate.json) and renovate:scan (--platform=local --dry-run=extract on our own checkout). The ReDoS needs attacker-controlled glob patterns; ours come from Renovate's built-in manager patterns and our renovate.json. The gcp-metadata chain loads only with tracing enabled (no OTEL/RENOVATE_TRACING env is set), and the bunyan > mv chain only for rotating-file streams, which Renovate rejects. Fixed in minimatch 11.0.1, a major for renovate; even renovate 44.206.3 still pins 10.2.6.",
+      "upstream": [
+        "https://github.com/renovatebot/renovate/pull/47609"
+      ],
+      "reviewer": "Claude integration session (triage #101)",
+      "reviewed": "2026-11-03",
+      "expires": "2027-02-01"
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "package": "glob",
+      "severity": "moderate",
+      "nodes": [
+        "node_modules/glob",
+        "node_modules/mv/node_modules/glob",
+        "node_modules/rimraf/node_modules/glob"
+      ],
+      "dependents": [
+        "renovate"
+      ],
+      "chain": [
+        "renovate@44.198.3 > glob@13.0.6 (exact pin; also via cacache@20.0.4)",
+        "renovate > @opentelemetry/resource-detector-gcp@0.58.0 > gcp-metadata@8.1.4 > gaxios@7.1.3 > rimraf@5.0.10 > glob@10.5.0",
+        "renovate > bunyan@1.8.15 > mv@2.1.1 > rimraf@2.4.5 > glob@6.0.4 (flagged through minimatch)"
+      ],
+      "reason": "Dev-only, under renovate, used only for config validation and local extract-only scans of our own checkout. The advisory needs a caller that relies on AbortSignal to bound a traversal of an untrusted tree; our traversal covers our own repository. The gcp-metadata and bunyan > mv chains are not loaded in our use (no tracing env; rotating-file streams rejected). Fixed in glob 14.0.2, a major for renovate.",
+      "upstream": [
+        "https://github.com/renovatebot/renovate/pull/47608"
+      ],
+      "reviewer": "Claude integration session (triage #101)",
+      "reviewed": "2026-11-03",
+      "expires": "2027-02-01"
+    },
+    {
+      "id": "GHSA-gcqx-w48m-w2h4",
+      "package": "deepmerge",
+      "severity": "low",
+      "nodes": [
+        "node_modules/deepmerge"
+      ],
+      "dependents": [
+        "renovate"
+      ],
+      "chain": [
+        "renovate@44.198.3 > deepmerge@4.3.1 (exact pin)"
+      ],
+      "reason": "Dev-only, under renovate. Renovate merges its own internal HTTP option objects (util/http/http.js), not attacker-supplied JSON, and we run it only as a config validator and a local extract-only scan. No patched deepmerge release exists (latest 4.3.1).",
+      "upstream": [
+        "https://github.com/TehShrike/deepmerge/issues/285"
+      ],
+      "reviewer": "Claude integration session (triage #101)",
+      "reviewed": "2026-11-03",
+      "expires": "2027-02-01"
+    }
+  ]
+}

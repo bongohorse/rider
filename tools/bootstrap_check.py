@@ -51,7 +51,8 @@ def validate(root):
                 permissions = job.get('permissions')
                 pages_deploy = (p.name, job_id) in {('ci.yml','pages'),('pages.yml','deploy')}
                 if permissions is not None:
-                    nightly_notifier = (p.name, job_id) == ('ci.yml', 'nightly_alert')
+                    # Scheduled issue notifiers: nightly full suite and npm audit (#101).
+                    nightly_notifier = (p.name, job_id) in {('ci.yml', 'nightly_alert'), ('audit.yml', 'alert')}
                     allowed = ({'contents':'read','pages':'write','id-token':'write'} if pages_deploy
                                else {'contents':'read','issues':'write'} if nightly_notifier
                                else {'contents':'read'})

@@ -40,11 +40,11 @@ def api(token, endpoint, method="GET", payload=None):
     return json.loads(contents) if contents else {}
 
 
-def find_issue(token, repo):
+def find_issue(token, repo, title=TITLE):
     for page in range(1, 21):
         issues = api(token, f"/repos/{repo}/issues?state=all&labels=tooling&per_page=100&page={page}")
         for issue in issues:
-            if issue.get("title") == TITLE and "pull_request" not in issue:
+            if issue.get("title") == title and "pull_request" not in issue:
                 return issue
         if len(issues) < 100:
             return None

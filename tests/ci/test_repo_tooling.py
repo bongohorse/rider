@@ -33,6 +33,13 @@ SHORT_PATH_JOBS = {
     "nightly_alert": "schedule only; scheduled runs are always classified full",
 }
 SKIPPED_JOBS = {"renovate", "physics", "tooling", "bridge", "preview", "pages"}
+# Workflows that only run on schedule or manual dispatch, are never called by another
+# workflow and never feed required: a short-path PR cannot skip them, so they may load
+# repo-tooling files. test_standalone_workflows_never_run_for_changes holds them to that.
+STANDALONE_WORKFLOWS = {
+    "audit.yml": "scheduled npm audit gate (#101); runs on main only, never for a PR or push",
+}
+STANDALONE_TRIGGERS = {"schedule", "workflow_dispatch"}
 SENSITIVE = (".github/workflows/ci.yml", ".github/PULL_REQUEST_TEMPLATE.md",
              "tools/ci/required_gate.py", "tools/ci/classify_changes.py")
 FAST_VERDICTS = {
@@ -283,12 +290,25 @@ class RepoToolingInventory(unittest.TestCase):
             with self.subTest(job=name):
                 self.assertEqual(referenced_paths(text, self.file_set) & self.tooling, set())
         for workflow in sorted((ROOT / ".github/workflows").glob("*.yml")):
-            if workflow.name == "ci.yml":
+            if workflow.name == "ci.yml" or workflow.name in STANDALONE_WORKFLOWS:
                 continue
             text = workflow.read_text(encoding="utf-8")
             with self.subTest(workflow=workflow.name):
                 self.assertEqual(referenced_paths(text, self.file_set) & self.tooling, set())
                 self.assertIsNone(DIR_REFERENCE.search(text))
+
+    def test_standalone_workflows_never_run_for_changes(self):
+        workflows = sorted((ROOT / ".github/workflows").glob("*.yml"))
+        for name in STANDALONE_WORKFLOWS:
+            with self.subTest(workflow=name):
+                self.assertIn(ROOT / ".github/workflows" / name, workflows)
+                data = load(f".github/workflows/{name}")
+                self.assertTrue(data["on"])
+                self.assertLessEqual(set(data["on"]), STANDALONE_TRIGGERS)
+                # Not a reusable workflow, and no other workflow calls it.
+                self.assertNotIn("workflow_call", data["on"])
+                for other in workflows:
+                    self.assertNotIn(f"workflows/{name}", other.read_text(encoding="utf-8"), other.name)
 
 
 class ClassifyStepGuard(unittest.TestCase):
