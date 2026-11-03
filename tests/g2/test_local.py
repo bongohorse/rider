@@ -20,10 +20,40 @@ class LocalCommandTest(unittest.TestCase):
         def failure(name, *args):
             return {'id': name, 'status': 'FAIL' if name == 'unit_ci' else 'PASS',
                     'duration_ms': 1, 'assertions': 1, 'detail': '', 'artifacts': []}
-        with tempfile.TemporaryDirectory() as directory, mock.patch.object(local, 'execute', side_effect=failure) as run:
-            self.assertEqual(local.fast_check(Path(directory), 'fixture'), 1)
-            self.assertEqual(run.call_count, 7)
-            self.assertIn('lint_lua', [call.args[0] for call in run.call_args_list])
+        blocker = 'BLOCKED: no verified Bob at .cache/g1/bob.jar'
+        for bob, count in ((False, 8), (True, 9)):
+            with self.subTest(bob=bob), tempfile.TemporaryDirectory() as directory, \
+                    mock.patch.object(local, 'gameplay_lua_blocker', return_value=None if bob else blocker), \
+                    mock.patch.object(local, 'execute', side_effect=failure) as run:
+                self.assertEqual(local.fast_check(Path(directory), 'fixture'), 1)
+                self.assertEqual(run.call_count, count)
+                names = [call.args[0] for call in run.call_args_list]
+                for name in ('lint_lua', 'unit_engine_persistence', 'node_ci_mobile_preview'):
+                    self.assertIn(name, names)
+                self.assertEqual('gameplay_lua' in names, bob)
+                node = next(call.args[1] for call in run.call_args_list if call.args[0] == 'node_ci_mobile_preview')
+                self.assertTrue(any(arg.endswith('verification-plan.test.cjs') for arg in node))
+                # Without Bob the gameplay Lua suites are reported BLOCKED, never silently omitted.
+                report = json.loads((Path(directory) / 'results.json').read_text())
+                lua = [t for t in report['tests'] if t['id'] == 'gameplay_lua']
+                self.assertEqual(len(lua), 1)
+                self.assertEqual(lua[0]['status'], 'PASS' if bob else 'BLOCKED')
+
+    def test_missing_bob_blocks_only_the_gameplay_lua_entry(self):
+        def passing(name, *args):
+            return {'id': name, 'status': 'PASS', 'duration_ms': 1, 'assertions': 1, 'detail': '', 'artifacts': []}
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(local, 'gameplay_lua_blocker', return_value='BLOCKED: no Bob'), \
+                mock.patch.object(local, 'execute', side_effect=passing):
+            self.assertEqual(local.fast_check(Path(directory), 'fixture'), 2)
+
+    def test_gameplay_lua_blocker_requires_the_pinned_bob(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(local, 'ROOT', Path(directory)):
+            self.assertIn('no verified Bob', local.gameplay_lua_blocker())
+            bob = Path(directory) / '.cache/g1/bob.jar'
+            bob.parent.mkdir(parents=True)
+            bob.write_bytes(b'not bob')
+            self.assertIn('SHA-256', local.gameplay_lua_blocker())
 
     def test_local_default_overrides_inherited_server_and_no_public_url_is_allowed(self):
         with mock.patch.dict(os.environ, RIDER_BUILD_SERVER='https://build.defold.com'):

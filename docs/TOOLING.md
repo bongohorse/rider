@@ -63,7 +63,7 @@ Remove `build/` and `.internal/` before a debug bundle if the checkout produced 
 
 ## Local environment (WSL, VS Code)
 
-The prepared T3 Code workflow, local Extender provisioning, fast/focused commands and activation/rollback checklist are in [LOCAL_T3_SETUP.md](LOCAL_T3_SETUP.md). Host activation is separate from repository preparation. `python tools/local.py check` runs fast checks; `python tools/local.py gym --case le6` uses an explicit loopback Extender and only reuses a source-verified debug bundle. Existing commands opt into loopback builds with `RIDER_BUILD_SERVER=http://127.0.0.1:9000`; absent that override, CI/legacy commands retain the locked public server. No CI coverage or merge gate is changed.
+The prepared T3 Code workflow, local Extender provisioning, fast/focused commands and activation/rollback checklist are in [LOCAL_T3_SETUP.md](LOCAL_T3_SETUP.md). Host activation is separate from repository preparation. `python tools/local.py check` runs fast checks (unit tests, Lua lint, gameplay Lua); `gym --case le6` (or `--case a,b --jobs N`, `--suite` for the whole required Gym matrix) uses an explicit loopback Extender and only reuses a source-verified debug bundle. `affected [--run --jobs N]` maps the branch diff to Gym cases (fail closed; CI-only paths end BLOCKED) and `install-hook` opts the current worktree into a pre-push `check` ([local-first loop](LOCAL_T3_SETUP.md)). Existing commands opt into loopback builds with `RIDER_BUILD_SERVER=http://127.0.0.1:9000`; absent that override, CI/legacy commands retain the locked public server. No CI coverage or merge gate is changed.
 
 The existing editor remains available: development runs in WSL2 Ubuntu (`~/rider`) with Windows VS Code and the **Rider** profile ([`profiles/Rider.code-profile`](../profiles/Rider.code-profile), [`.vscode/settings.json`](../.vscode/settings.json): dark petrol window chrome, built-in AI chat disabled). AI CLIs (Codex, Claude) run in WSL terminals; no editor extensions are required.
 
@@ -75,7 +75,7 @@ Native debug builds need the CI-documented OpenAL/Mesa packages; Bob builds need
 
 ## Worktrees
 
-A worktree separates source trees, not credentials (`~/.config/gh`, `~/.codex`, `~/.claude`). It does not inherit ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`; reuse the main checkout's `.venv` or set `RIDER_BOB_JAR` to a verified Bob. One writing agent per worktree and feature branch.
+A worktree separates source trees, not credentials (`~/.config/gh`, `~/.codex`, `~/.claude`). It does not inherit ignored `.venv/`, `node_modules/`, `.cache/g1/bob.jar`, `automation-bridge-python/` or `artifacts/`; reuse the main checkout's `.venv` or set `RIDER_BOB_JAR` to a verified Bob (`tools/doctor.py`). `tools/local.py` and the gameplay Lua runner read only `.cache/g1/bob.jar`; a symlink to the main checkout's verified Bob works. One writing agent per worktree and feature branch.
 
 ```sh
 git -C ~/rider worktree add -b <branch> ~/rider-worktrees/<name> origin/main
