@@ -14,11 +14,12 @@ module.exports=async function(h){
  // engine in the same frame as late characters confirms a partial value ('101' as '1'). Hold each step until the game's own
  // field text acknowledges it; a field that never does fails as an input-delivery error, never as a wrong Height.
  async function delivered(step,ok,arg){try{await page.waitForFunction(ok,arg,{timeout:5000});}catch(err){throw new Error('Height input delivery failed after '+step+': the game field shows '+JSON.stringify(await page.evaluate(()=>window.riderEditor?.field).catch(()=>'<unreadable>'))+' after 5 s (lost or late keystrokes, not a validation result)',{cause:err});}}
- async function typeHeight(text){await button('track_height');await delivered('opening Height',()=>window.riderEditor.field!==false);await key('Backspace');await delivered('Backspace',()=>window.riderEditor.field==='');
+ async function typeHeight(text){await delivered('closing the previous field',()=>window.riderEditor.field===false);await button('track_height');await delivered('opening Height',()=>window.riderEditor.field!==false);await key('Backspace');await delivered('Backspace',()=>window.riderEditor.field==='');
   if(text)await page.keyboard.type(text,{delay:10});await delivered('typing '+JSON.stringify(text),t=>window.riderEditor.field===t,text);}
- async function height(text,finish='Enter'){await typeHeight(text);await key(finish);return ed();}
+ async function finish(k){await key(k);await delivered(k,k==='Escape'?()=>window.riderEditor.field===false:()=>window.riderEditor.field===false||!!window.riderEditor.ui?.field_error);}
+ async function height(text,done='Enter'){await typeHeight(text);await finish(done);return ed();}
  assert.equal((await ed()).track_height,.7);await height('1.2');assert.equal((await ed()).track_height,1.2);await unchanged(baseline,'prepare Height');
- for(const bad of ['-1','101','bad']){e=await height(bad);assert.notEqual(e.field,false);assert.ok(e.ui.field_error);assert.equal(e.track_height,1.2);await key('Escape');}
+ for(const bad of ['-1','101','bad']){e=await height(bad);assert.notEqual(e.field,false);assert.ok(e.ui.field_error);assert.equal(e.track_height,1.2);await finish('Escape');}
  await height('3','Escape');assert.equal((await ed()).track_height,1.2);await unchanged(baseline,'invalid/cancelled Height');
  // Clicking Drop with a pending valid Height confirms it and projects in one geometry transaction.
  await typeHeight('0.7');const before=await ed();await button('drop_to_track');await revision(before.revision+1);e=await settle();
