@@ -33,7 +33,7 @@ test('defaults and scenarios mirror the game modules',()=>{
 });
 
 const trace=(n,f=s=>s)=>Array.from({length:n},(_,i)=>f({tick:i+1,engine_tick:i+5,resets:0,generation:1,dt:1/60,x:i*2,y:-i,vx:120,vy:-60,
- rear:true,front:true,throttle:0,brake_reverse:0,allow_reverse:false,reverse_engaged:false,mode:'a'}));
+ angle:i*0.01,omega:0.5,rear_angle:i*0.2,rear_omega:12,front_angle:i*0.2,front_omega:12,rear:true,front:true,throttle:0,brake_reverse:0,allow_reverse:false,reverse_engaged:false,mode:'a'}));
 
 test('physics identity is exact over every compared tick and every field',()=>{
  const a=trace(120),b=trace(120,s=>({...s,engine_tick:s.engine_tick+1,mode:s.tick>20?'b':'a'}));

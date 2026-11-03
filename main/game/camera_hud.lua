@@ -41,9 +41,10 @@ local function text(group,ox,oy,value,scale,left)
     if left then gui.set_pivot(n,gui.PIVOT_W) end
     return element(group,n,ox,oy)
 end
-function M.new()
-    local h={control={},panel={},rows={},open=false,placed=false,taps=0,seq=0,place_seq=0,
-        settings=camera_settings.defaults(),status=false,saved=false,settings_seq=0}
+-- forced: "a"/"b" when the debug ?camera352 route forces the camera mode; the control then stays hidden.
+function M.new(forced)
+    local h={control={},panel={},rows={},open=false,placed=false,taps=0,seq=0,place_seq=0,forced=forced or false,
+        settings=camera_settings.defaults(),status=false,saved=false,settings_seq=0,layout_seq=0}
     local c=h.control
     h.hit=box(c,66,22,132,44,vmath.vector4(0,0,0,0))
     h.toggle=box(c,38,22,76,40,COLOR)
@@ -109,10 +110,24 @@ local function move(group,left,top,ux,uy,visible)
         end
     end
 end
-local function key(r) return r and string.format("%.0f,%.0f,%.0f,%.0f",r.x0,r.y0,r.x1,r.y1) or "-" end
+-- Flat numeric signature of a placement (no strings): changed when any value moved by half a pixel or more.
+local function push(sig,r)
+    if r then sig[#sig+1]=r.x0;sig[#sig+1]=r.y0;sig[#sig+1]=r.x1;sig[#sig+1]=r.y1 else sig[#sig+1]=-1 end
+end
+local function same(a,b)
+    if not a or #a~=#b then return false end
+    for i=1,#a do if math.abs(a[i]-b[i])>=0.5 then return false end end
+    return true
+end
 -- Place the control (and the open panel) in the visible area, clear of `blocked` (screen rectangles of every other
--- control) with `gap` pixels. Returns true when the placement changed.
-function M.place(h,area,blocked,gap)
+-- control) with `gap` pixels. layout_seq: the DOM layout count this placement used. Returns true when the placement
+-- (or what it avoided) changed.
+function M.place(h,area,blocked,gap,layout_seq)
+    if h.forced then
+        for _,g in ipairs({h.control,h.panel}) do for _,e in ipairs(g) do gui.set_visible(e.node,false) end end
+        local changed=not h.forced_published;h.forced_published=true
+        return changed
+    end
     local ux,uy=units(h.hit)
     if not ux then return false end
     local w,hh=M.CONTROL.w*ux,M.CONTROL.h*uy
@@ -138,19 +153,19 @@ function M.place(h,area,blocked,gap)
     end
     h.panel_rect,h.panel_clear=panel_rect,panel_clear
     h.placed=true
-    local parts={key(h.rect),key(panel_rect),tostring(clear),tostring(panel_clear)}
-    for _,b in ipairs(blocked) do parts[#parts+1]=key(b) end
-    local signature=table.concat(parts,"|")
-    h.blocked=blocked
-    if signature==h.signature then return false end
-    h.signature=signature
+    local sig={clear and 1 or 0,panel_clear and 1 or 0,layout_seq or 0}
+    push(sig,h.rect);push(sig,panel_rect or nil)
+    for _,b in ipairs(blocked) do push(sig,b) end
+    h.blocked,h.layout_seq=blocked,layout_seq or 0
+    if same(h.signature,sig) then return false end
+    h.signature=sig
     h.place_seq=h.place_seq+1
     return true
 end
 local function send(command) msg.post("#script","camera_set",command) end
 -- A press on the control or the open panel. Returns true when consumed (always for a press inside them).
 function M.input(h,id,action)
-    if id~=hash("ui_pointer") or not action.pressed or not h.placed then return false end
+    if h.forced or id~=hash("ui_pointer") or not action.pressed or not h.placed then return false end
     if gui.pick_node(h.toggle,action.x,action.y) then
         h.taps=h.taps+1;send({command="toggle"});return true
     end
@@ -175,7 +190,8 @@ function M.close(h)
     if h.open then h.open=false;h.signature=nil;M.show(h) end
 end
 -- Debug/test state (HTML5): settings, placement rectangles (GUI screen pixels, origin bottom left) and taps.
-function M.publish(h,pixel_ratio)
+-- nodes: {used, max} of the HUD GUI (debug budget check).
+function M.publish(h,pixel_ratio,nodes)
     if not html5 then return end
     h.seq=h.seq+1
     local s=h.settings
@@ -200,6 +216,6 @@ function M.publish(h,pixel_ratio)
         control=h.rect or false,toggle=rect_of(h.toggle) or false,set=rect_of(h.set) or false,
         toggle_screen=(function() local p=gui.get_screen_position(h.toggle);return {x=p.x,y=p.y} end)(),
         panel=h.panel_rect or false,reset=h.open and rect_of(h.reset) or false,close=h.open and rect_of(h.close) or false,
-        rows=rows,blocked=h.blocked or {}}))
+        rows=rows,blocked=h.blocked or {},layout_seq=h.layout_seq,forced=h.forced,nodes=nodes or false}))
 end
 return M

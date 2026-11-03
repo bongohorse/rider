@@ -131,7 +131,7 @@ if args.case=='cam443':
     report=json.loads((out/'cam443-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
     assert set(report['cases'])=={'ramps-down-30','air-mid','straight-reverse','persist_reload','reset_defaults',
-        'desktop_placement','mouse_no_drive','phone'}
+        'desktop_placement','mouse_no_drive','phone','hud_nodes','camera352_forced'}
     # Exact physics identity and a MATCH replay in all three driving scenarios.
     for name in ('ramps-down-30','air-mid','straight-reverse'):
         c=report['cases'][name]

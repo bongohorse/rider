@@ -97,7 +97,11 @@ function M.fixed(self,state,dt)
         throttle=self.last_command and self.last_command.throttle or 0,
         brake_reverse=self.last_command and self.last_command.brake_reverse or 0,
         allow_reverse=self.last_command and self.last_command.allow_reverse or false,
-        reverse_engaged=self.vehicle.reversing or false
+        reverse_engaged=self.vehicle.reversing or false,
+        -- #443 review: rotation too (chassis and both wheels), so an airborne lean divergence shows on its own tick.
+        angle=b2d.body.get_angle(self.vehicle.chassis),omega=b2d.body.get_angular_velocity(self.vehicle.chassis),
+        rear_angle=b2d.body.get_angle(self.vehicle.wheels[1]),rear_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[1]),
+        front_angle=b2d.body.get_angle(self.vehicle.wheels[2]),front_omega=b2d.body.get_angular_velocity(self.vehicle.wheels[2])
     }
     html5.run("(function(s){var a=window.riderCamera352PhysicsTrace||(window.riderCamera352PhysicsTrace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(sample)..")")
 end

@@ -27,9 +27,11 @@ const SCENARIOS=[
  {name:'straight-reverse',station:'straight',query:'station=straight&drive443=reverse',ticks:420,toggleAt:20,
   setting:{key:'look',dir:-1,taps:4},effect:'cx',reverse:true},
 ];
-// Every fixed-owner field that must not depend on the camera (engine_tick may start one step apart per page; mode
+// Every fixed-owner field that must not depend on the camera (rotation included: chassis and wheel angle, rad, and
+// angular velocity, rad/s) (engine_tick may start one step apart per page; mode
 // is the camera itself).
-const PHYSICS_KEYS=['resets','generation','dt','x','y','vx','vy','rear','front','throttle','brake_reverse','allow_reverse','reverse_engaged'];
+const PHYSICS_KEYS=['resets','generation','dt','x','y','vx','vy','angle','omega','rear_angle','rear_omega','front_angle','front_omega',
+ 'rear','front','throttle','brake_reverse','allow_reverse','reverse_engaged'];
 const DEFAULTS={mode:'a',follow:1,look:1,zoom:1,offset:0,descent_response:0,descent_rise_limit:240};
 function parseArgs(args){
  const usage='Usage: node tools/gym/camera443.cjs OUT SHA RUN_ID cam443 VERIFIED_DEBUG_BUNDLE';
@@ -42,7 +44,7 @@ function byTick(trace,label){
  const out=new Map();
  for(const s of trace){
   assert(Number.isSafeInteger(s.tick)&&s.tick>=1,label+': invalid vehicle tick');
-  for(const k of ['x','y','vx','vy'])assert(Number.isFinite(s[k]),label+': non-finite '+k+' at tick '+s.tick);
+  for(const k of ['x','y','vx','vy','angle','omega','rear_angle','rear_omega','front_angle','front_omega'])assert(Number.isFinite(s[k]),label+': non-finite '+k+' at tick '+s.tick);
   if(out.has(s.tick)){
    const prior=out.get(s.tick);
    assert(PHYSICS_KEYS.every(k=>Object.is(prior[k],s[k])),label+': conflicting duplicate fixed tick '+s.tick);
@@ -148,7 +150,7 @@ if(require.main===module){
    }
    async function ready(p){
     await p.waitForFunction(({sha,runId})=>window.riderReady?.source_sha===sha&&window.riderReady?.run_id===runId&&
-     window.riderReplay?.frames>10&&window.riderCamera443?.control&&window.riderCameraOwner?.seq>=1&&window.riderCamera352PhysicsTrace?.length>=1,
+     window.riderReplay?.frames>10&&(window.riderCamera443?.control||window.riderCamera443?.forced)&&window.riderCameraOwner?.seq>=1&&window.riderCamera352PhysicsTrace?.length>=1,
      {sha,runId},{polling:50,timeout:30000});
     await pointer.frames(p,{counter:FRAMES,n:3,label:'ready'});
    }
@@ -229,13 +231,21 @@ if(require.main===module){
     const gui=touch||!unit?[]:[['pause',92],['step',100],['record',84],['replay',84]].filter(([k])=>H[k]).map(([k,w])=>{const q=pt(H[k]);
      return {name:k,left:q.x-w*unit/2,right:q.x+w*unit/2,top:q.y-12*unit,bottom:q.y+12*unit};});
     const node=pt(C.toggle_screen);
-    return {canvas:{left:r.left,top:r.top,right:r.right,bottom:r.bottom},touch,clear:C.clear,panel_clear:C.panel_clear,open:C.open,
+    // The game re-places when the touch status line resizes (ResizeObserver count): measure only a placement made
+    // after the latest resize, read in this same evaluation as the DOM.
+    const synced=!window.riderHudLayout||C.layout_seq===window.riderHudLayout.seq;
+    return {synced,layout_seq:C.layout_seq,canvas:{left:r.left,top:r.top,right:r.right,bottom:r.bottom},touch,clear:C.clear,panel_clear:C.panel_clear,open:C.open,
      control:css(C.control),toggle:css(C.toggle),set:css(C.set),panel:C.panel?css(C.panel):null,toggle_node:node,
      buttons:C.open?[css(C.reset),css(C.close),...C.rows.flatMap(x=>[css(x.minus),css(x.plus)])]:[],
      blocked:(C.blocked||[]).map(css),dom,gui,fps,label:C.label};
    });
    async function checkPlacement(p,label){
-    const s=await placement(p);
+    let s;
+    for(let i=0;;i++){
+     s=await placement(p);if(s.synced)break;
+     assert(i<20,label+': the camera control never re-placed after the status line resized');
+     await p.waitForFunction(()=>!window.riderHudLayout||window.riderCamera443.layout_seq===window.riderHudLayout.seq,null,{polling:20,timeout:5000});
+    }
     const others=[...s.dom,...s.gui,...(s.fps?[s.fps]:[])];
     assert.equal(s.clear,true,label+': no clear place for the camera control');
     assert(inside(s.control,s.canvas),`${label}: control ${JSON.stringify(s.control)} leaves the canvas`);
@@ -377,6 +387,11 @@ if(require.main===module){
    {
     const {ctx,p}=await open('desktop-taps','station=straight');
     cases.desktop_placement={closed:await checkPlacement(p,'desktop closed')};
+    // HUD GUI node budget: nodes in use against ui.gui max_nodes (the file and the game agree).
+    const nodes=(await cam(p)).nodes,fileMax=Number(/max_nodes: (\d+)/.exec(fs.readFileSync(path.join(__dirname,'../../main/game/ui.gui'),'utf8'))[1]);
+    assert(nodes&&Number.isSafeInteger(nodes.used)&&nodes.max===fileMax,'HUD node budget not published: '+JSON.stringify(nodes));
+    assert(nodes.used<=nodes.max,'HUD GUI over its node budget: '+JSON.stringify(nodes));
+    cases.hud_nodes={used:nodes.used,max:nodes.max,free:nodes.max-nodes.used};
     await record(p,true);
     const x0=await p.evaluate(()=>window.riderReplay.x);
     await command(p,'toggle',null,'desktop toggle',{mode:'b'});
@@ -399,6 +414,17 @@ if(require.main===module){
     await p.keyboard.down('ArrowUp');
     try{await p.waitForFunction(x=>window.riderReplay?.command?.throttle===1&&window.riderReplay.x>x+0.2,x1,{polling:50,timeout:5000});}
     finally{await p.keyboard.up('ArrowUp');}
+    await ctx.close();
+   }
+   // 4b. The debug ?camera352 route forces the mode: the HUD control is hidden (it would store an ignored choice).
+   {
+    const {ctx,p}=await open('camera352-forced','station=straight&camera352=b');
+    const c=await cam(p);
+    assert.equal(c.forced,'b','?camera352=b not recognised by the HUD');
+    assert.equal(c.control,false,'camera control shown although ?camera352 forces the mode');
+    const frame=await p.evaluate(()=>window.riderCamera352Trace.at(-1));
+    assert.equal(frame.mode,'b','?camera352=b does not force camera B');
+    cases.camera352_forced={forced:c.forced,control:c.control,mode:frame.mode};
     await ctx.close();
    }
    // 5. Phone 1080x486 with touch controls: CDP touch taps, no drive, placement clear of the drive zones.
