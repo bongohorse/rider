@@ -76,11 +76,11 @@ else:
     bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
     if not args.bundle:build_bundle(bundle,sha)
     verify_bundle(bundle,sha)
-    runner='coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    runner='fps417.cjs' if args.case=='fps417' else 'coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else []),*(['--record'] if args.record else [])],cwd=ROOT,start_new_session=True,env=env)
-    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3') else 360 if args.case in ('a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3') else 360 if args.case in ('fps417','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
 if args.preset is not None:
@@ -100,6 +100,15 @@ if args.case=='a20':
     report=json.loads((out/'pause-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==12
     print(json.dumps(report['cases']));raise SystemExit(0)
+if args.case=='fps417':
+    report=json.loads((out/'fps417-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
+    assert set(report['cases'])=={'default_cap_60','counter_reports_measured','physics_fixed_60_all_caps','persisted_reload',
+        'replay_match_across_caps','cap_label_after_tap','tap_no_drive_mouse','tap_no_drive_touch'}
+    # Every cap measured (0 = Unlimited) and the default measured again after the 30 -> 60 wrap.
+    assert set(report['cases']['counter_reports_measured'])=={'30','60','90','120','144','0','60_after_wrap'}
+    assert report['cases']['replay_match_across_caps']['verdict']=='MATCH' and report['cases']['persisted_reload']['cap']==30
+    print(json.dumps({k:report['cases'][k] for k in ('counter_reports_measured','physics_fixed_60_all_caps')}));raise SystemExit(0)
 if args.case=='cf3':
     report=json.loads((out/'struts-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and set(report['cases'])=={'rest','landing','off','toggle'}
@@ -254,8 +263,11 @@ elif args.case=='m2feedback':
     assert cases['ground_left']>0.03 and cases['ground_right'] < -0.03
     assert all(cases[k] is True for k in ['reset_neutral','no_reload','expanded_controls','ground_disabled'])
 elif args.case=='hud':
-    assert set(cases)=={'fps_green_55','fps_orange_54','fps_orange_30','fps_red_29'}
-    assert all(cases.values())
+    # #417: FPS counter colour relative to the cap (Unlimited against 60); see HUD_CASES in main/gym/scenarios.lua.
+    assert set(cases)=={'cap60_54_green','cap60_53_orange','cap60_42_orange','cap60_41_red','cap30_27_green','cap30_26_orange','cap30_20_red',
+        'cap144_130_green','cap144_129_orange','cap144_101_orange','cap144_100_red','cap90_60_red','cap120_108_green',
+        'unlimited_54_green','unlimited_53_orange','unlimited_41_red'}
+    assert all(value is True for value in cases.values())
 elif args.case=='a15a':
     assert set(cases)=={'lean_back','lean_forward','landing_squash','bounded','rest','physics_unchanged'}
     assert cases['lean_back']>=0.05 and cases['lean_forward']<=-0.05 and cases['landing_squash']<=-2

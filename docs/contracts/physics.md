@@ -33,6 +33,7 @@ Binding rules for all physics and gameplay-simulation work on pinned Defold 1.14
 - Baseline: 60 Hz fixed timestep (`physics.use_fixed_timestep = true`, `engine.fixed_update_frequency = 60`) and four solver substeps. Substeps are not gameplay ticks; `physics.max_fixed_timesteps` is 3D-only.
 - One tick owner: capture input, apply one normalized command per physics tick, let Defold simulate, read state at the verified callback point. No second loop; never assume ordering between script instances.
 - Measure render frequency, fixed callbacks and physical progress separately. A 30 FPS render fallback does not change 60 Hz physics. Changing the physics basis needs a documented comparison and approval.
+- The player frame-rate cap (#417: 30/60/90/120/144/Unlimited) is one `sys.set_update_frequency` request owned by the loader; it changes `update()`/render cadence only, never `fixed_update` (test `fps417`).
 - Never create/destroy bodies or joints in contact callbacks; queue mutations into a proven safe window.
 - On stalls/background: no unlimited catch-up, clear held input after inactivity, resume without forced extra steps. Visual interpolation stays unchanged unless measured pacing problems require it ([platform matrix](../PLATFORM_MATRIX.md)).
 

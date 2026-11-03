@@ -14,6 +14,13 @@ local time_scale=require "main.game.time_scale"
 local OWNER="gym:/owner#script"
 local catalog=require "main.game.course_catalog"
 local levels=require "main.game.levels_runtime"
+local player_settings=require "main.game.player_settings"
+local fps_counter=require "main.game.fps_counter"
+-- #417: the loader is the only owner of the update-rate request (sys.set_update_frequency). It changes the
+-- update()/render cadence only; fixed_update physics stays at engine.fixed_update_frequency = 60.
+local function send_fps_cap(self,changed,saved)
+    msg.post("#ui","fps_cap",{cap=self.settings.fps_cap,changed=changed,saved=saved,status=self.settings.status})
+end
 local function switch(self,request)
     require('main.editor.editor_look').clear_play()
     self.station,self.speed=request.id,request.speed or ""
@@ -175,6 +182,12 @@ function init(self)
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
     local case=sys.get_config_string("rider.gym_test","")
+    self.settings=player_settings.load()
+    -- The #356/#372 debug probes set their own startup/runtime rate; every other start applies the stored cap.
+    if not (sys.get_engine_info().is_debug and (case=="fps356" or case=="fps356runtime")) then
+        sys.set_update_frequency(self.settings.fps_cap)
+    end
+    send_fps_cap(self,false,false)
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
     self.coin_bank=require('main.game.coin_bank').new()
@@ -302,6 +315,13 @@ function update(self,dt)
     end
 end
 function on_message(self,id,data,sender)
+    if id==hash("fps_cap_next") then
+        -- Tap on the FPS counter: next cap live (no reload), then persist it as a player setting.
+        self.settings.fps_cap=fps_counter.next_cap(self.settings.fps_cap)
+        sys.set_update_frequency(self.settings.fps_cap)
+        send_fps_cap(self,true,player_settings.save(self.settings))
+        return
+    end
     if id==hash('level_finish') then
         if sender==msg.url(OWNER) and data.generation==self.generation and not self.loading and not self.edit and catalog.index(self.station) then
             self.level_finished=data.official==true

@@ -225,11 +225,13 @@ function init(self)
     self.run_id = sys.get_config_string("rider.run_id", "interactive")
     self.testcase = sys.get_config_string("rider.gym_test", "")
     -- #356/#372: debug-only observer; the runtime experiment uses the same read-only fixed-step probe.
-    if self.testcase=="fps356" or self.testcase=="fps356runtime" then
+    -- #417 (fps417): the same read-only observer measures fixed ticks while the player cap is switched by taps.
+    if self.testcase=="fps356" or self.testcase=="fps356runtime" or self.testcase=="fps417" then
         assert(sys.get_engine_info().is_debug and html5,"FPS cadence probe needs debug HTML5")
         self.fps356=require "main.gym.fps_probe356"
         self.fps356_state=self.fps356.new()
     end
+    if self.testcase=="fps417" then self.replay_debug=true end -- read-only A21 replay verdict across cap switches
     if self.testcase=="fps356runtime" then
         self.fps356runtime=require "main.gym.fps_runtime356"
         self.fps356runtime_state=self.fps356runtime.new(self)
