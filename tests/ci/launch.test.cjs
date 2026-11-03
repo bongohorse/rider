@@ -74,3 +74,33 @@ test('only a GET is retried', async () => {
   assert.equal(calls.fetch, 1);assert.deepEqual(calls.abort, ['failed']);
   assert.deepEqual(logged, ['Gym index request failed: route.fetch: read ECONNRESET']);
 });
+
+// #356: optional startup override is only for the isolated debug FPS matrix.
+// All existing callers must retain exactly their previous launch arguments.
+test('FPS356 startup override is injected before engine start for 0, 30 and 60', () => {
+  for (const hz of [0, 30, 60]) {
+    const html = inject('<script id="engine-start">start();</script>', 'fps356-run', 'fps356', hz);
+    const context = {CUSTOM_PARAMETERS: {engine_arguments: ['--config=display.high_dpi=1']}};
+    context.start = () => assert.deepEqual(Array.from(context.CUSTOM_PARAMETERS.engine_arguments), [
+      '--config=display.high_dpi=1', '--config=rider.run_id=fps356-run',
+      '--config=rider.gym_test=fps356', '--config=display.update_frequency=' + hz
+    ]);
+    for (const [, script] of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) vm.runInNewContext(script, context);
+  }
+});
+
+test('FPS356 startup override rejects unsupported rates and unsafe types', () => {
+  for (const value of [-1, 15, 90, 120, 144, '30', NaN, Infinity, undefined]) {
+    if (value === undefined) continue; // omitted is the backward-compatible default
+    assert.throws(() => inject('<script id="engine-start">', 'run', 'fps356', value), /Unsupported debug startup/);
+  }
+});
+
+test('FPS356 handler applies startup override without changing normal launch behavior', async () => {
+  const {calls, route} = fakeRoute([response(200, page)]);
+  await handler('fps356-run', 'fps356', () => {}, async () => {}, 30)(route);
+  assert.equal(calls.fetch, 1);
+  assert.match(calls.fulfill[0].body, /--config=display.update_frequency=30/);
+  const normal = await run([response(200, page)]);
+  assert.doesNotMatch(normal.calls.fulfill[0].body, /--config=display.update_frequency=/);
+});
