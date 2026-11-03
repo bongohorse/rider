@@ -7,7 +7,7 @@ local TEXT_LIMIT=64
 -- and at 1000 m in y. Applies to both coordinates of the station start and every section start.
 M.START_LIMIT_DEFAULT=500
 M.START_LIMIT=M.START_LIMIT_DEFAULT
--- A19d: balance section types and the plank built by main/gym/seesaw.collisionobject (metres, kg).
+-- A19d: balance section types and the plank built by main/game/seesaw.collisionobject (metres, kg).
 M.BALANCE_TYPES={beam=true,up=true,down=true,seesaw=true}
 M.SEESAW_PLANK={length=4,thickness=0.08,taper=0.3,mass=20}
 local function finite(x) return type(x)=="number" and x==x and math.abs(x)<100000 end

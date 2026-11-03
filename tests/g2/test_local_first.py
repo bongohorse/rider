@@ -71,7 +71,7 @@ class AffectedTest(unittest.TestCase):
 
     def test_bootstrap_graph_follows_collections_resources_and_requires(self):
         for path in ('main/game/boot.script', 'main/game/controller.script', 'main/game/ui.gui_script',
-                     'main/editor/editor.gui_script', 'main/game/time_scale.lua', 'main/gym/seam_metrics.lua',
+                     'main/editor/editor.gui_script', 'main/game/time_scale.lua', 'main/game/seam_metrics.lua',
                      'main/game/replay.lua', 'main/game/history.lua', 'main/game/custom.lua', 'main/game/custom.js',
                      'main/game/mobile.js', 'main/editor/editor_ui.lua', 'main/terrain_perspective/look.lua'):
             self.assertIn(path, CLOSURE)

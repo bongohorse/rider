@@ -1,8 +1,8 @@
 -- A19d Balance: read-only completed-step observations; no tuning, limits or reset requests.
 -- Lengths in metres, angles in rad, speeds in m/s (converted once via feel.metres).
 local feel=require "main.game.feel"
-local seams=require "main.gym.seam_metrics"
-local seesaw=require "main.gym.seesaw"
+local seams=require "main.game.seam_metrics"
+local seesaw=require "main.game.seesaw"
 local M={}
 -- Declared before evidence runs (README "Balance").
 M.protocol={stop_speed=0.05,stop_pitch=0.6,stop_hold_s=1.0,fall_drop=0.35,flip_pitch=1.6,timeout_s=30,

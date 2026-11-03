@@ -8,8 +8,8 @@
 local feel=require "main.game.feel"
 local replay=require "main.game.replay"
 local air_trial=require "main.gym.air_trial"
-local gaps=require "main.gym.gap_metrics"
-local air=require "main.gym.air_metrics"
+local gaps=require "main.game.gap_metrics"
+local air=require "main.game.air_metrics"
 local M={TUNE=15,START=30}
 
 function M.new() return {ticks=0,phase="waiting",run_ticks=0} end

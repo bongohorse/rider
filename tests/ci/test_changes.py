@@ -14,7 +14,7 @@ class ClassificationTest(unittest.TestCase):
         self.assertTrue(is_docs_only(["README.md", "STATUS.md", "AGENTS.md", "docs/PLAN.md"]))
         self.assertTrue(is_docs_only(["main/gym/README.md", "main/README.md"]))
         self.assertTrue(is_docs_only([".github/PULL_REQUEST_TEMPLATE.md"]))
-        self.assertTrue(is_docs_only(["main/gym/stations.md"]))
+        self.assertTrue(is_docs_only(["main/game/stations.md"]))
         self.assertTrue(is_docs_only(["docs/research/evidence/empty.txt"]))
         self.assertTrue(is_docs_only(["README.md", "docs/README.md", "docs/reports/terrain-p5/native-memory.txt"]))
 
@@ -80,7 +80,7 @@ class ClassificationTest(unittest.TestCase):
         self.assertEqual(selection(["main/gym/game.script", "docs/evidence.txt"])[1], "true")
         # #405 split main/gym into game, editor and gym; all three keep the same selection.
         self.assertEqual(selection(["main/game/controller.script", "main/editor/editor.lua",
-                                    "main/gym/ramp_metrics.lua"])[1], "true")
+                                    "main/game/ramp_metrics.lua"])[1], "true")
         self.assertFalse(is_gym_only(["main/games/x.lua"]))
         for path in (
             "tools/project.py", ".github/workflows/ci.yml", "game.project",

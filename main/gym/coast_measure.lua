@@ -4,7 +4,7 @@ local feel=require "main.game.feel"
 local vehicle=require "main.game.vehicle"
 local stations=require "main.game.stations"
 local replay=require "main.game.replay"
-local seam_metrics=require "main.gym.seam_metrics"
+local seam_metrics=require "main.game.seam_metrics"
 local M={SETTLE=90,CAP=1200,ORDER={"coast","brake","coast"}}
 local emit,request_reset
 function M.bind(emitter,resetter) emit,request_reset=emitter,resetter end

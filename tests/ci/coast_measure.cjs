@@ -56,7 +56,7 @@ test('rejects foreign source, time scaling, missing run and changed command',()=
 test('observer reuses genuine loaded-contact predicate and does not claim measured render FPS',()=>{
   const fs=require('node:fs'),path=require('node:path');
   const observer=fs.readFileSync(path.join(__dirname,'../../main/gym/coast_measure.lua'),'utf8');
-  assert.match(observer,/require "main\.gym\.seam_metrics"/);
+  assert.match(observer,/require "main\.game\.seam_metrics"/);
   assert.match(observer,/seam_metrics\.supported\(v\.wheels\[1\]\)/);
   assert.match(observer,/seam_metrics\.supported\(v\.wheels\[2\]\)/);
   assert.doesNotMatch(observer,/get_contact_data/);

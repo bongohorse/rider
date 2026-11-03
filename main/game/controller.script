@@ -8,7 +8,7 @@ local audio=require "main.game.audio"
 -- are engine units. create_chain applies physics.scale once in the binding.
 local vehicle = require "main.game.vehicle"
 -- A19d seesaw: per-session dynamic obstacle owned here (see seesaw.lua for its lifecycle).
-local seesaw = require "main.gym.seesaw"
+local seesaw = require "main.game.seesaw"
 local mechanisms=require "main.game.mechanisms"
 local socket = require "socket"
 local rider = require "main.game.rider"
@@ -260,7 +260,7 @@ function init(self)
     if self.testcase=="le1b" then assert(sys.get_engine_info().is_debug,"Size report requires debug engine") end
     if self.testcase=="le2" or self.testcase=="le3" or self.testcase=="le4" or self.testcase=="le5a" or self.testcase=="le5b" or self.testcase=="le5c" or self.testcase=="le5d" or self.testcase=="le6" then
         assert(sys.get_engine_info().is_debug,"Editor probes require debug engine")
-        if self.testcase=="le5b" or self.testcase=="le5d" then seam_metrics=require "main.gym.seam_metrics" end
+        if self.testcase=="le5b" or self.testcase=="le5d" then seam_metrics=require "main.game.seam_metrics" end
     end
     if self.testcase=="le1a" then
         assert(sys.get_engine_info().is_debug,"Custom level probes require debug engine")

@@ -1,7 +1,7 @@
 -- Read-only completed-step observations (A19b); no tuning, limits or reset requests.
 local feel=require "main.game.feel"
 -- Speculative manifolds alone are not loaded contact (A18/A19 rule).
-local supported=require("main.gym.seam_metrics").supported
+local supported=require("main.game.seam_metrics").supported
 local M={}
 -- Window of a feature, chassis centre in metres: from 0.5 m before its start (the front wheel is
 -- 0.46 m ahead) to 1.5 m after its end (the rear wheel past it plus 1 m).

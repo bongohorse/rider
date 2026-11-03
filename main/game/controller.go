@@ -7,7 +7,7 @@ components { id: "rider" component: "/main/game/rider.factory" }
 components { id: "marker" component: "/main/game/marker.factory" }
 components { id: "engine" component: "/main/game/engine.sound" }
 components { id: "line" component: "/main/game/line.factory" }
-components { id: "seesaw" component: "/main/gym/seesaw.factory" }
+components { id: "seesaw" component: "/main/game/seesaw.factory" }
 components { id: "strut" component: "/main/game/strut.factory" }
 components { id: "ghost_chassis" component: "/main/game/ghost_chassis.factory" }
 components { id: "ghost_wheel" component: "/main/game/ghost_wheel.factory" }
