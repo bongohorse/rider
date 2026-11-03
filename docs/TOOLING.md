@@ -45,6 +45,7 @@ Every change runs the baseline: `python tools/bootstrap_check.py` and `python -m
 | `.github/workflows/` | the `tests/ci` row plus `python tools/ci/lint_workflows.py` (hash-verified actionlint) |
 | `tools/g1/`, `tools/gameplay/lua_tests.py`, build, engine guard, Bob/extender handling | `python -m unittest discover -s tests/g1 -v` |
 | `tools/g2/`, CLI, Bridge install | `python -m unittest discover -s tests/g2 -v` |
+| Any Lua source (`.lua`, `.script`, `.gui_script`, …), `.luacheckrc` | `python tools/ci/lint_lua.py` |
 | Gameplay or editor Lua under `main/`, `tests/gameplay/*.lua` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
 | Storage, best time, level progress, coin bank, `tests/engine/persistence/` | `python -m unittest discover -s tests/engine/persistence -v` · `python tools/g2/persistence_385.py --output <fresh dir>` on a clean tree ([harness](ci/persistence-engine-harness.md)) |
 | Vehicle, physics, presets, stations, editor UI, `main/gym/` | the affected [Gym cases](#gym-tests); `a22` replays `tests/regress/` (regenerate only for an intended physics change) |
