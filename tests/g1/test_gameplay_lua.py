@@ -129,21 +129,30 @@ class GameplayLuaRunnerTest(unittest.TestCase):
         self.suite('hang.lua', 'sleep 5 & echo $! > childpid; wait\n')
         child = None
         try:
-            ok, detail, seconds = lua_tests.run_suite(self.luajit, self.root, 'tests/gameplay/hang.lua', timeout=0.25)
+            ok, detail, seconds = lua_tests.run_suite(self.luajit, self.root, 'tests/gameplay/hang.lua', timeout=1)
             child = int((self.root / 'childpid').read_text(encoding='utf-8'))
             self.assertFalse(ok)
-            self.assertEqual(detail, 'TIMEOUT after 0.25 s')
+            self.assertEqual(detail, 'TIMEOUT after 1 s')
             self.assertLess(seconds, 5)
             deadline = time.monotonic() + 1
             while alive(child) and time.monotonic() < deadline:
                 time.sleep(0.02)
             self.assertFalse(alive(child), f'suite child {child} survived the timeout')
         finally:
-            if child is not None:
+            if child is not None and alive(child):
                 try:
                     os.kill(child, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX sessions')
+    def test_timeout_does_not_wait_for_an_escaped_grandchild_holding_the_pipe(self):
+        # A double-forked setsid grandchild escapes the process group but keeps stdout open; the timeout must stay hard.
+        self.suite('escape.lua', '(setsid sleep 4 &) ; sleep 30\n')
+        ok, detail, seconds = lua_tests.run_suite(self.luajit, self.root, 'tests/gameplay/escape.lua', timeout=0.5)
+        self.assertFalse(ok)
+        self.assertEqual(detail, 'TIMEOUT after 0.5 s')
+        self.assertLess(seconds, 3)
 
     def test_only_top_level_lua_files_are_suites(self):
         (self.root / lua_tests.SUITES / 'fixtures').mkdir()

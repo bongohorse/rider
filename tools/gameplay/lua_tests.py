@@ -72,7 +72,10 @@ def run_suite(luajit, root, suite, timeout=TIMEOUT_S):
         stop(process)
     seconds = time.monotonic() - started
     if stdout is None:
-        process.communicate()
+        # Output is discarded on timeout; never block on a pipe an escaped grandchild may still hold open.
+        for pipe in (process.stdout, process.stderr):
+            if pipe:
+                pipe.close()
         return False, f'TIMEOUT after {timeout} s', seconds
     return (*verdict(process.returncode, stdout, stderr), seconds)
 
