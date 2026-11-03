@@ -1,16 +1,18 @@
-# Wheel rotation cap: Box2D 3.1.0 findings and Codex 6.1 review (#114)
+# Wheel rotation cap: Box2D 3.1.0 findings and solution review (#114)
 
-**Purpose:** a research-only, reviewable handoff to **Codex 6.1** for [issue #114](https://github.com/bongohorse/rider/issues/114). This document proposes NO engine/physics change. Current runtime validation at this PR HEAD: **NOT RUN**. Historic measurements are clearly marked.
+**Purpose:** research record for [issue #114](https://github.com/bongohorse/rider/issues/114): why the wheels cannot roll faster than about 10 m/s and which fixes exist. This document proposes NO engine/physics change. Current runtime validation at this PR HEAD: **NOT RUN**. Historic measurements are clearly marked.
 
-**Contents:** [Decision summary](#decision-summary) · [Source-backed mechanism](#source-backed-mechanism) · [Rider calculations and evidence](#rider-calculations-and-evidence) · [Solutions and tradeoffs](#solutions-and-tradeoffs) · [Codex 6.1 investigation order](#codex-61-investigation-order) · [Reproducible test protocol](#reproducible-test-protocol) · [Acceptance and stop points](#acceptance-and-stop-points) · [References and evidence status](#references-and-evidence-status)
+**Decision (Claudio, 2026-11-03, recorded in #114):** the ~10 m/s rolling cap is not acceptable. Stage 1 is a debug-only larger-wheel experiment (option D below); stage 2 is an upstream Defold request for wheel-only `allowFastRotation` (option B). Options A and E are declined, C is rejected under the [physics contract](../contracts/physics.md), F stays out of scope. The investigation order and stop points below are the pre-decision research handoff; #114's scope and acceptance supersede them.
+
+**Contents:** [Decision summary](#decision-summary) · [Source-backed mechanism](#source-backed-mechanism) · [Rider calculations and evidence](#rider-calculations-and-evidence) · [Solutions and tradeoffs](#solutions-and-tradeoffs) · [Investigation order (pre-decision)](#investigation-order-pre-decision) · [Reproducible test protocol](#reproducible-test-protocol) · [Acceptance and stop points](#acceptance-and-stop-points) · [References and evidence status](#references-and-evidence-status)
 
 ## Decision summary
 
-- **Not a 10 m/s vehicle speed limit.** Box2D clamps the **angular velocity of an ordinary dynamic body**. The car chassis can travel faster; a wheel may then be unable to roll without slip at the chassis's ground-relative speed, affecting traction and feel. The wheel limit and the motor's requested speed are separate controls.
+- **Not a 10 m/s vehicle speed limit.** Box2D clamps the **angular velocity of an ordinary dynamic body**. The car chassis can, in principle, travel faster (not yet measured in a controlled test); a wheel may then be unable to roll without slip at the chassis's ground-relative speed, affecting traction and feel. The wheel limit and the motor's requested speed are separate controls.
 - **Not set by Rider.** The cap comes from the pinned Box2D solver. Rider does set per-preset wheel-joint motor targets, but it does not set `B2_MAX_ROTATION`.
 - **Upstream offers a wheel-specific escape hatch:** `b2BodyDef.allowFastRotation`, documented for circular shapes such as wheels. In pinned Defold 1.14.0 the native body-creation path takes `b2DefaultBodyDef()` and does **not** assign this field; the current `b2d.body` Lua binding does not expose a corresponding toggle. Do **not** claim this is already available to Rider without an exact-version engine/binding proof.
-- **Preferred direction to investigate, not yet approved:** find a supported **Defold-side, wheel-only** way to set the creation-time field. If unavailable, prepare an upstream API proposal and a separately approved, isolated experimental build. Avoid global solver changes, a second physics world, a third-party Box2D implementation or per-frame angular-velocity overrides.
-- **Codex stop point:** produce a feasibility verdict and one strictly gated A/B plan. No engine patch, wheel resizing, production motor retune or gameplay-default switch without an explicit maintainer GO and real Defold/phone evidence.
+- **Preferred direction (stage 2 of #114):** find a supported **Defold-side, wheel-only** way to set the creation-time field. If unavailable, prepare an upstream API proposal (now stage 2 of #114). Avoid global solver changes, a second physics world, a third-party Box2D implementation or per-frame angular-velocity overrides.
+- **Stop point:** no engine patch, production motor retune or gameplay-default switch without an explicit maintainer GO and real Defold/phone evidence. The larger-wheel experiment has its GO as stage 1 of #114; switching the default preset still needs Claudio's drive choice.
 
 ## Source-backed mechanism
 
@@ -21,7 +23,7 @@
 5. The pinned Defold 1.14.0 physics backend `engine/physics/src/physics/box2d/box2d_physics.cpp` creates bodies via `b2DefaultBodyDef()`, populates fields such as type, damping, fixed rotation, bullet and enabled, then calls `b2CreateBody`. It **does not** populate `def.allowFastRotation` in that path. The pinned `b2d.body` Lua methods expose angular-velocity getters/setters, which are **not** a fast-rotation capability toggle. A Lua call to set angular velocity does not make the solver's cap disappear on subsequent steps.
 6. Rider's `game.project` uses `engine.fixed_update_frequency=60`, `physics.use_fixed_timestep=1`, `physics.scale=0.01` and `box2d.sub_step_count=4`. Defold owns the body/world/tick. Any solution must preserve this ownership and the deterministic reset/replay contract.
 
-**Scope caveat:** The above proves the code path of the pinned engine. It does **not** prove what any unpublished future Defold fork or a native-extension experiment could expose. Codex must verify current pinned capabilities before proposing implementation.
+**Scope caveat:** The above proves the code path of the pinned engine. It does **not** prove what any unpublished future Defold fork or a native-extension experiment could expose. Any implementation must re-verify the current pinned capabilities first.
 
 ## Rider calculations and evidence
 
@@ -34,7 +36,7 @@ The actual authored wheel shape is `main/gym/wheel.convexshape`: `TYPE_SPHERE` w
 | Preset B motor target | 64 rad/s | 14.08 m/s = 50.69 km/h | **Requested speed exceeds ordinary-body cap** |
 | Preset C motor target | 96 rad/s | 21.12 m/s = 76.03 km/h | **Requested speed exceeds ordinary-body cap** |
 | Ordinary Box2D body cap (60 Hz) | 47.1239 rad/s | 10.3673 m/s = 37.32 km/h | **Source-calculated theoretical rolling ceiling** |
-| A18 v2 free-roll observed plateau | — | approximately **9.95 m/s** | **Historic engine measurement referenced by #114 / PR #113; NOT rerun for this PR** |
+| A18 v2 free-roll observed plateau | — | approximately **9.95 m/s** | **Historic engine measurement ([A18 seam protocol](../A18_SEAM_PROTOCOL.md#engine-boundary-found-during-the-experiment), [engine pitfall 6](../contracts/engine-pitfalls.md#entries)); NOT rerun for this PR** |
 
 In `main/gym/vehicle.lua`, the wheel joint's requested motor speed is set with `b2d.joint.set_motor_speed`. The requested motor speed and maximum motor torque do not bypass a separate body angular-velocity clamp. More drive torque, better throttle UI or render FPS alone cannot lift this limit.
 
@@ -44,24 +46,24 @@ In `main/gym/vehicle.lua`, the wheel joint's requested motor speed is set with `
 
 | Option | Potential benefit | Implementation/technical cost | Recommendation |
 | --- | --- | --- | --- |
-| **A. Leave the cap in place** | No new instability or maintenance burden; fine if the desired game speed stays below the rolling ceiling | High-speed downhill contact/traction may remain artificial | **Valid product choice** if measured driving feel is acceptable |
-| **B. Wheel-only `allowFastRotation` via a supported Defold API** | Uses the upstream intended escape hatch; keeps ordinary chassis cap and 60-Hz timing | No such public Lua setter is established for the pinned integration; property likely must be provided when bodies are created | **First feasibility investigation**; ask Defold upstream if an official solution is available |
-| **C. Small, explicit upstream/engine integration experiment** | Enables an instrumented A/B of normal vs fast wheels without changing wheel geometry | Modifies/extends the pinned native backend or build; per-platform risk, upgrades and QA; requires separate owner and explicit GO | **Experimental only after B is unavailable and maintainer approves**; no unreviewed engine patch |
-| **D. Increase the actual physical wheel radius** | Higher no-slip speed at the same angular cap (e.g. 0.30 m → ~14.14 m/s) | Changes collision shape, suspension travel, ride height, torque-to-force mapping, slope handling, art alignment, handling and presets | **A full vehicle-design change**, not a transparent fix; separate A/B and approval |
-| **E. Constrain gameplay speeds** | Avoids operating in the capped-slip regime with minimal engine work | Limits downhill excitement/top-end handling; does not solve the underlying mechanics | Fallback only if the player experience supports it |
+| **A. Leave the cap in place** | No new instability or maintenance burden; fine if the desired game speed stays below the rolling ceiling | High-speed downhill contact/traction may remain artificial | **Declined** by Claudio 2026-11-03 |
+| **B. Wheel-only `allowFastRotation` via a supported Defold API** | Uses the upstream intended escape hatch; keeps ordinary chassis cap and 60-Hz timing | No such public Lua setter is established for the pinned integration; property likely must be provided when bodies are created | **Stage 2 of #114:** upstream Defold request; adopt via a normal toolchain update once released |
+| **C. Small, explicit upstream/engine integration experiment** | Enables an instrumented A/B of normal vs fast wheels without changing wheel geometry | Modifies/extends the pinned native backend or build; per-platform risk, upgrades and QA; requires separate owner and explicit GO | **Rejected** under the current physics contract (no custom physics extension or backend substitution); would need a contract change first |
+| **D. Increase the actual physical wheel radius** | Higher no-slip speed at the same angular cap (e.g. 0.30 m → ~14.14 m/s) | Changes collision shape, suspension travel, ride height, torque-to-force mapping, slope handling, art alignment, handling and presets | **Stage 1 of #114:** debug-only candidate presets (0.26 m / 0.30 m), real-engine A/B, Claudio picks |
+| **E. Constrain gameplay speeds** | Avoids operating in the capped-slip regime with minimal engine work | Limits downhill excitement/top-end handling; does not solve the underlying mechanics | **Declined** by Claudio 2026-11-03 |
 | **F. Change global `B2_MAX_ROTATION` / physics tick / manual angular velocity overrides** | Can appear to move the threshold | Risks CCD, joint/contact stability, determinism, ownership, replay and platform parity; substeps do not raise the full-step clamp | **Not recommended; out of scope** |
 
 A purely visual wheel-spin animation can hide visible mismatch but does **not** restore physical rolling traction. `isBullet` and generic CCD settings are not a substitute for `allowFastRotation`.
 
-## Codex 6.1 investigation order
+## Investigation order (pre-decision)
 
-**Codex 6.1 is the requested technical reviewer for this PR**. This is a research handoff, not an authorization to edit production physics.
+**Superseded by the two-stage scope in #114.** Kept as the original research handoff; it is not an authorization to edit production physics. Steps 1–2 were confirmed by an independent read-only review on 2026-11-03 (pinned sources match).
 
 1. **Reproduce the source proof on pinned versions.** Confirm Rider's lock (`docs/TOOLCHAIN_LOCK.md` / `tools/toolchain-lock.json`), exact Defold 1.14.0 `box2d_physics.cpp` body constructor, `b2d.body` Lua binding surface, Box2D 3.1.0 `constants.h` / `solver.c` / `world.c` and `types.h`. Explicitly distinguish 60-Hz outer timestep from 4 solver substeps. List any version discrepancies.
 2. **Determine API feasibility before coding.** Check whether Defold supports a creation-time fast-rotation property on the collision object, a sanctioned physics extension point, a public C API surface for these existing Defold-owned bodies, or an upstream feature request. If **not supported**, say so and stop at an upstream interface/design proposal; do not invent a Lua method or use private handles.
 3. **Recommend the smallest safe interface**, if possible: opt-in **per dynamic circular wheel**, false for chassis, terrain, rider limbs and other objects; no implicit global switch. State when the flag must be set (body creation) and whether it survives spawn/reset/reload. Verify any changes against the Defold engine's component lifecycle and save/replay ownership.
 4. **Prepare an isolated real-engine A/B experiment, pending separate GO.** Compare unchanged Rider baseline (all normal bodies) against a build with **only both physical wheels** flagged. Match source SHA/build, seeded station, preset, initial pose/velocity, input sequence, 60-Hz fixed-tick trace, four substeps and contact qualification. Do not retune motor, wheel radius, gravity, mass or friction at the same time.
-5. **Make a decision, not a blind patch:** present exact feasibility, performance, high-speed rolling/traction benefit, risk and minimal changes; let maintainer choose A/B/C/D/E. If the accepted path requires an engine change, use a **separate implementation PR** and exact-head CI. This documentation PR should remain research-only.
+5. **Make a decision, not a blind patch:** present exact feasibility, performance, high-speed rolling/traction benefit, risk and minimal changes. (Claudio chose on 2026-11-03; see the decision at the top.) If the accepted path requires an engine change, use a **separate implementation PR** and exact-head CI. This documentation PR should remain research-only.
 
 ## Reproducible test protocol
 
@@ -75,7 +77,9 @@ A purely visual wheel-spin animation can hide visible mismatch but does **not** 
 
 ## Acceptance and stop points
 
-- [ ] Codex 6.1 independently confirms each pinned-source finding; marks any unsupported assertion **UNRESOLVED**, not PASS.
+This PR's own checklist. Implementation acceptance lives in #114.
+
+- [x] An independent reviewer confirms each pinned-source finding (2026-11-03); marks any unsupported assertion **UNRESOLVED**, not PASS.
 - [ ] A supported-wheel-only path is found **or** an explicit "unavailable without Defold native change" verdict is documented.
 - [ ] Clearly ranked options, risk/cost, a bounded experiment proposal and maintainer decision are supplied.
 - [ ] The PR changes **documentation and index only**. No engine patch, Defold extension, gameplay code, motor preset, 60-Hz settings, shader, art, UI or CI test is changed.
@@ -84,7 +88,7 @@ A purely visual wheel-spin animation can hide visible mismatch but does **not** 
 
 ## References and evidence status
 
-**PINNED SOURCE VERIFIED (read directly):**
+**PINNED SOURCE VERIFIED (read directly):** the Box2D links point to upstream v3.1.0; the same lines were cross-checked against Defold's pinned copy `external/box2d/Box2D/src/` at `a81dbb0`.
 - [Defold 1.14.0 physics body creation: `b2DefaultBodyDef` and `b2CreateBody`](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/physics/src/physics/box2d/box2d_physics.cpp#L1478-L1558)
 - [Pinned Defold Lua body binding](https://github.com/defold/defold/blob/a81dbb0478e8b73931dc2d671563204f6ac0ef82/engine/gamesys/src/gamesys/scripts/box2d/v3/script_box2d_body_v3.cpp)
 - [Box2D 3.1.0 rotation constant/warning](https://github.com/erincatto/box2d/blob/v3.1.0/src/constants.h#L30-L33)
@@ -95,7 +99,7 @@ A purely visual wheel-spin animation can hide visible mismatch but does **not** 
 - [Rider `game.project`](../../game.project), [wheel shape](../../main/gym/wheel.convexshape), [wheel collision object](../../main/gym/wheel.collisionobject), [vehicle motor behavior](../../main/gym/vehicle.lua), [preset loader](../../main/gym/feel.lua), [A–F JSON](../../main/gym/presets/)
 
 **HISTORICAL RUNTIME EVIDENCE (not repeated):**
-- [Rider issue #114](https://github.com/bongohorse/rider/issues/114), [A18/PR #113](https://github.com/bongohorse/rider/pull/113): free-roll approx. 9.95 m/s.
+- [Rider issue #114](https://github.com/bongohorse/rider/issues/114), [A18/PR #113](https://github.com/bongohorse/rider/pull/113), [A18 seam protocol](../A18_SEAM_PROTOCOL.md#engine-boundary-found-during-the-experiment): free-roll approx. 9.95 m/s.
 - [Existing buggy baseline and limitations](buggy-baseline.md): earlier fixed-tick station outcomes; current PR engine run **NOT RUN**.
 
 **OPEN / NOT RUN:** exact current-main A/B, supported Defold API route, real HTML5/Android measurement, high-speed contact stability and player feel acceptance.
