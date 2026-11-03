@@ -8,6 +8,12 @@ components { id: "wheel30" component: "/main/game/wheel30.factory" }
 components { id: "rider" component: "/main/game/rider.factory" }
 components { id: "marker" component: "/main/game/marker.factory" }
 components { id: "engine" component: "/main/game/engine.sound" }
+components { id: "sfx_coin" component: "/main/game/sfx_coin.sound" }
+components { id: "sfx_gem" component: "/main/game/sfx_gem.sound" }
+components { id: "sfx_fuel" component: "/main/game/sfx_fuel.sound" }
+components { id: "sfx_land" component: "/main/game/sfx_land.sound" }
+components { id: "sfx_crash" component: "/main/game/sfx_crash.sound" }
+components { id: "sfx_finish" component: "/main/game/sfx_finish.sound" }
 components { id: "line" component: "/main/game/line.factory" }
 components { id: "seesaw" component: "/main/game/seesaw.factory" }
 components { id: "strut" component: "/main/game/strut.factory" }

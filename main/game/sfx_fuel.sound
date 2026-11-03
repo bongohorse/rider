@@ -1,0 +1,4 @@
+sound: "/main/game/assets/sfx_fuel.wav"
+looping: 0
+gain: 1.0
+speed: 1.0
