@@ -135,6 +135,18 @@ async function main() {
       result=await Promise.race([gym.done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);
       clearTimeout(timer);
       await gym.complete(result);
+      if(process.argv[5]==='a11'){if(!feedbackChecked)throw Error('Feedback roundtrip not verified');result.cases.clipboard_roundtrip=true;result.cases.denied_fallback=true;}
+      if(process.argv[5]==='a10'){
+        if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');
+        result.cases.audio_context_running=true;
+      }
+      await page.mouse.up();
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+      await page.screenshot({path:path.join(root,'gym.png')});
+      // Inside the try so late failures get the same gym-failed.png/telemetry diagnostics (#447 review).
+      // The input release and final frame above still drive the game: a failure there fails too (#447).
+      gym.check();
     }
     catch(error){
       await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
@@ -142,15 +154,6 @@ async function main() {
       throw error;
     }
     finally {clearTimeout(timer);}
-    if(process.argv[5]==='a11'){if(!feedbackChecked)throw Error('Feedback roundtrip not verified');result.cases.clipboard_roundtrip=true;result.cases.denied_fallback=true;}
-    if(process.argv[5]==='a10'){
-      if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');
-      result.cases.audio_context_running=true;
-    }
-    await page.mouse.up();
-    await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowDown');
-    await page.evaluate(()=>new Promise(requestAnimationFrame));
-    await page.screenshot({path:path.join(root,'gym.png')});
     fs.writeFileSync(path.join(root,'browser-version.txt'),browser.version()+'\n');
   } finally {
     fs.writeFileSync(path.join(root,'runtime.log'),lines.join('\n'));
