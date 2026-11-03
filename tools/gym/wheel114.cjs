@@ -75,7 +75,8 @@ function outcome(spec, report) {
           await page.keyboard.up('r');
         }
         resets.push(r);
-        await page.waitForFunction(({r, w}) => window.riderWheel114Trace.filter(s => s.resets === r).length >= w, {r, w: spec.window}, {timeout: 30000, polling: 100});
+        // The page-load attempt is compared one probe tick later (wheel114_report.cjs LOAD_PHASE): keep one more sample.
+        await page.waitForFunction(({r, w}) => window.riderWheel114Trace.filter(s => s.resets === r).length >= w, {r, w: spec.window + (n === 0 ? R.LOAD_PHASE : 0)}, {timeout: 30000, polling: 100});
         const t = await page.evaluate(() => window.riderTelemetry);
         assert.equal(t?.preset, P.key, 'telemetry preset'); assert.equal(t.modified, false, 'telemetry not modified');
         if (n === 0 && (spec.id === 'straight' || spec.id === 'air/big')) await page.screenshot({path: path.join(out, `wheel114-${spec.id.replace('/', '-')}.png`)});

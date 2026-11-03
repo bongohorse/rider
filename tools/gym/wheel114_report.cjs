@@ -63,10 +63,16 @@ function compare(a, b) {
     verdict: position <= TOLERANCE.position_m && d.angle <= TOLERANCE.angle_rad ? 'MATCH' : 'DIVERGED'};
 }
 
+// The page-load start resets in update(), so the probe's first sample of that attempt is the unstepped start pose;
+// a Retry resets inside fixed_update after the probe has read, so its first sample is already one step later.
+// Load vs Retry therefore compares the load attempt shifted by this phase (measured 2026-11-03: shifted, identical).
+const LOAD_PHASE = 1;
+
 function section(spec, trace, resets, radius) {
   const attempts = resets.map(r => attempt(trace, r, spec.window));
+  const load = attempt(trace, resets[0], spec.window + LOAD_PHASE).slice(LOAD_PHASE);
   return {attempts: attempts.map(list => stats(list, radius)),
-    determinism: {retry_vs_retry: compare(attempts[1], attempts[2]), load_vs_retry: compare(attempts[0], attempts[1])}};
+    determinism: {retry_vs_retry: compare(attempts[1], attempts[2]), load_vs_retry: {...compare(load, attempts[1]), load_phase_ticks: LOAD_PHASE}}};
 }
 
 // --- tables ------------------------------------------------------------------------------------------------
@@ -84,7 +90,7 @@ function markdown(runs) {
   if (shas.size !== 1 || browsers.size !== 1) throw Error('runs come from different sources or browsers');
   const out = [`# Wheel-size A/B (#114 stage 1): ${runs.map(r => r.preset.toUpperCase()).join(' vs ')}`, '',
     `Source \`${runs[0].source_sha}\`, ${runs[0].browser}, debug HTML5 Gym bundle, fixed 60 Hz physics at time factor 1.0, 4 substeps; synthetic runs, not device or drive evidence.`,
-    `Values are from the second Retry attempt (R pressed twice after the page load); "Retry" compares the two Retry attempts tick by tick (A21 tolerances ${TOLERANCE.position_m} m / ${TOLERANCE.angle_rad} rad; "identical" = every compared value equal). Cap = ${CAP.toFixed(2)} rad/s; "at cap" counts ticks with a wheel within ${NEAR} rad/s of it.`, '',
+    `Values are from the second Retry attempt (R pressed twice after the page load); "Retry" compares the two Retry attempts tick by tick and "Load" the page-load attempt (shifted by its ${LOAD_PHASE}-tick probe phase) with the first Retry (A21 tolerances ${TOLERANCE.position_m} m / ${TOLERANCE.angle_rad} rad; "identical" = every compared value equal). Cap = ${CAP.toFixed(2)} rad/s; "at cap" counts ticks with a wheel within ${NEAR} rad/s of it, the read-back value can exceed it.`, '',
     '## Geometry measured in the engine', '',
     '| Preset | Wheel shape radius | Wheel mass | Wheel inertia | Joint anchor | No-slip ceiling |', '| --- | --- | --- | --- | --- | --- |',
     ...runs.map(r => `| ${r.preset.toUpperCase()} | ${f(r.geometry.radius_u, 1)} u (${f(r.geometry.radius_m)} m) | ${f(r.geometry.wheel_mass_kg, 3)} kg | ${f(r.geometry.wheel_inertia, 4)} | ${r.geometry.wheel_y_u} u | ${f(CAP * r.geometry.radius_m)} m/s |`), ''];
@@ -92,18 +98,19 @@ function markdown(runs) {
     const rows = runs.map(r => ({run: r, s: r.sections.find(x => x.id === id)}));
     const spec = rows[0].s;
     out.push(`## ${id}`, '', `${spec.protocol}; window ${spec.window} fixed ticks (${f(spec.window / 60, 2)} s) per attempt. Outcome: ${spec.outcome_rule}.`, '',
-      '| Preset | Top speed (m/s) | Top vx (m/s) | Peak wheel ω (rad/s) | ω / cap | Ticks at cap | Max slip (m/s) | Mean slip (m/s) | Wheel support | Chassis contact ticks | Outcome (load / R1 / R2) | Retry |',
-      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+      '| Preset | Top speed (m/s) | Top vx (m/s) | Peak wheel ω (rad/s) | ω / cap | Ticks at cap | Max slip (m/s) | Mean slip (m/s) | Wheel support | Chassis contact ticks | Outcome (load / R1 / R2) | Retry | Load |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |');
     for (const {run, s} of rows) {
-      const a = s.attempts[2], d = s.determinism.retry_vs_retry;
-      out.push(`| ${run.preset.toUpperCase()} | ${f(a.top_speed_mps)} | ${f(a.top_vx_mps)} | ${f(a.peak_omega_rps)} | ${f(a.peak_omega_share_of_cap * 100, 0)} % | ${a.ticks_at_cap} | ${f(a.max_slip_mps)} | ${f(a.mean_slip_mps, 3)} | ${f(a.supported_share * 100, 0)} % | ${a.hull_contact_ticks} | ${s.outcomes.join(' / ')} | ${d.verdict}${d.identical ? ' (identical)' : ` (Δpos ${f(d.max_position_delta_m, 4)} m)`} |`);
+      const a = s.attempts[2], d = s.determinism.retry_vs_retry, l = s.determinism.load_vs_retry;
+      const verdict = x => `${x.verdict}${x.identical ? ' (identical)' : ` (Δpos ${f(x.max_position_delta_m, 4)} m)`}`;
+      out.push(`| ${run.preset.toUpperCase()} | ${f(a.top_speed_mps)} | ${f(a.top_vx_mps)} | ${f(a.peak_omega_rps)} | ${f(a.peak_omega_share_of_cap * 100, 0)} % | ${a.ticks_at_cap} | ${f(a.max_slip_mps)} | ${f(a.mean_slip_mps, 3)} | ${f(a.supported_share * 100, 0)} % | ${a.hull_contact_ticks} | ${s.outcomes.join(' / ')} | ${verdict(d)} | ${verdict(l)} |`);
     }
     out.push('');
   }
   return out.join('\n');
 }
 
-module.exports = {CAP, NEAR, TOLERANCE, attempt, stats, compare, section, markdown, load};
+module.exports = {CAP, NEAR, TOLERANCE, LOAD_PHASE, attempt, stats, compare, section, markdown, load};
 
 if (require.main === module) {
   try {

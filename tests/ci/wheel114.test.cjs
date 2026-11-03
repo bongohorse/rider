@@ -57,15 +57,31 @@ test('section uses the same window from the load and both Retry attempts', () =>
   assert.throws(() => R.section({window: 26}, trace, [0, 1, 2], .26), /25 of 26/);
 });
 
+test('load attempt is compared one probe tick later than a Retry (reset in update vs fixed_update)', () => {
+  assert.equal(R.LOAD_PHASE, 1);
+  // Same motion; the page-load attempt starts one sample earlier (its tick 1 is the unstepped start pose).
+  const pose = k => ({x: k * k * .01, angle: k * .001, w1: -k, w2: -k, vx: k * .1});
+  const trace = [...run(0, 22, t => pose(t - 1)), ...run(1, 21, t => pose(t)), ...run(2, 21, t => pose(t))];
+  const d = R.section({window: 20}, trace, [0, 1, 2], .22).determinism;
+  assert.equal(d.load_vs_retry.identical, true);
+  assert.equal(d.load_vs_retry.load_phase_ticks, 1);
+  assert.equal(d.load_vs_retry.ticks, 20);
+  assert.equal(d.retry_vs_retry.identical, true);
+  // Unshifted, the same traces differ: the phase is what aligns them.
+  assert.equal(R.compare(R.attempt(trace, 0, 20), R.attempt(trace, 1, 20)).identical, false);
+  // The load attempt needs one sample beyond the window.
+  assert.throws(() => R.section({window: 22}, trace, [0, 1, 2], .22), /21 of 22|22 of 23/);
+});
+
 test('markdown table needs the same sections, source and browser from every run', () => {
-  const trace = [...run(0, 10), ...run(1, 10), ...run(2, 10)];
+  const trace = [...run(0, 11, t => ({x: (t - 1) * .1})), ...run(1, 10), ...run(2, 10)];
   const sec = {id: 'straight', protocol: 'p', outcome_rule: 'o', window: 10, outcomes: ['n/a', 'n/a', 'n/a'], ...R.section({window: 10}, trace, [0, 1, 2], .22)};
   const result = preset => ({preset, source_sha: 'abc', browser: 'b', run_id: preset, sections: [sec],
     geometry: {radius_u: 22, radius_m: .22, wheel_mass_kg: 4, wheel_inertia: .1, wheel_y_u: -30}});
   const md = R.markdown([result('a'), result('w26')]);
   assert.match(md, /A vs W26/);
   assert.match(md, /\| W26 \| 6\.00 \|/);
-  assert.match(md, /MATCH \(identical\)/);
+  assert.match(md, /MATCH \(identical\) \| MATCH \(identical\) \|/);
   assert.throws(() => R.markdown([result('a'), {...result('w26'), source_sha: 'other'}]), /different sources/);
   assert.throws(() => R.markdown([result('a'), {...result('w26'), sections: [{...sec, id: 'x'}]}]), /different sections/);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wheel114-'));
