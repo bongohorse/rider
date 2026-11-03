@@ -7,6 +7,7 @@ local edit=require "main.editor.editor_edit"
 local prefab=require "main.editor.editor_prefab"
 local snap_lib=require "main.editor.editor_snap"
 local geometry=require "main.editor.editor_geometry"
+local props=require "main.editor.editor_props"
 local overlay=require "main.editor.editor_overlay"
 local editor_ui=require "main.editor.editor_ui"
 local zoom_policy=require "main.editor.editor_zoom"
@@ -934,16 +935,10 @@ local function confirm_label(self,closing)
     end
 end
 -- Number fields edit the same parameters as the handles; a choice field steps to its next value.
-local function number_text(v) return (string.format("%.4f",v):gsub("0+$",""):gsub("%.$","")) end
-local function param_rows(o)
-    if o.type=="label" then return {{key="text",label="Text"}} end
-    if o.type=="curve" then
-        local a=editor.anchor
-        local inner=a and a.id==o.id and a.i>1 and a.i<#o.anchors and o.anchors[a.i].mode~="corner"
-        return inner and {{key="mode",label="Tangents",choices={"free","smooth","symmetric"}}} or {}
-    end
-    return prefab.fields(o.kind,o.params,true)
-end
+-- Formatting, property rows and stepping live in editor_props.lua (#331 E2); the current anchor is
+-- passed in at call time.
+local number_text=props.number_text
+local function param_rows(o) return props.param_rows(o,editor.anchor) end
 -- A curve anchor's tangent mode (LE5b): free tangents move independently; smooth keeps them on one line
 -- (each keeps its length); symmetric mirrors them. Switching applies the mode to the in tangent.
 local MODES={free="smooth",smooth="symmetric",symmetric="free"}
@@ -1016,11 +1011,7 @@ local function import(self)
     custom.open("Import a level file into the editor. It opens as a copy in My levels; nothing is overwritten.",true)
 end
 -- Rename (LE4): a text field. While it is focused every key acts on the field only (contract controls).
-local function drop_char(t)
-    local i=#t
-    while i>0 and t:byte(i)>=128 and t:byte(i)<192 do i=i-1 end
-    return t:sub(1,math.max(0,i-1))
-end
+local drop_char=props.drop_char
 -- Temporary per-coin references; rebuilding is deferred until a coin control actually needs them.
 local function track_context(self)
     local e=editor.doc.editor
@@ -1319,14 +1310,7 @@ local function open_help(self)
     self.help_open,self.warnings_open,self.open_dialog=true,false,false
     editor.message=""
 end
-local function stepped_params(self,o,index,sign,params)
-    local fd=param_rows(o)[index]
-    if not fd or fd.choices then return nil,"This field cannot be stepped." end
-    local step=fd.integer and 1 or fd.unit=="deg" and 1 or .1
-    if not fd.integer then step=step*(self.held.shift and 10 or self.held.alt and .1 or 1) end
-    params=params or o.params
-    return prefab.set(o.kind,params,fd.key,number_text(params[fd.key]+sign*step))
-end
+local function stepped_params(self,o,index,sign,params) return props.stepped_params(self.held,o,index,sign,params,editor.anchor) end
 -- A pending edit plus a step is one user gesture and one commit, never two Undo entries.
 local function step_focused(self,name)
     local f=self.field
