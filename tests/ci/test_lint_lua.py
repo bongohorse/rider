@@ -46,6 +46,51 @@ class LockTest(unittest.TestCase):
                 urlopen.assert_not_called()
             self.assertEqual(target.read_bytes(), b'not luacheck')
 
+    def _http_error(self, code):
+        return lint_lua.urllib.error.HTTPError('https://example.invalid', code, 'x', {}, None)
+
+    def _response(self, data):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = data
+        return response
+
+    def test_download_retries_transient_server_errors(self):
+        sleeps = []
+        with mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                               side_effect=[self._http_error(500), lint_lua.urllib.error.URLError('reset'),
+                                            self._response(b'ok')]) as urlopen:
+            self.assertEqual(lint_lua.download('https://example.invalid', sleep=sleeps.append), b'ok')
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(len(sleeps), 2)
+
+    def test_download_gives_up_after_three_server_errors_and_main_blocks(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(lint_lua, 'binary_path', return_value=Path(directory) / 'luacheck'), \
+                mock.patch.object(lint_lua.time, 'sleep'), \
+                mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                                  side_effect=[self._http_error(503)] * 3) as urlopen, \
+                mock.patch.object(lint_lua, 'host_key', return_value='linux-x86_64'):
+            self.assertEqual(lint_lua.main([]), 2)
+            self.assertEqual(urlopen.call_count, 3)
+            self.assertFalse((Path(directory) / 'luacheck').exists())
+
+    def test_download_does_not_retry_client_errors(self):
+        with mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                               side_effect=[self._http_error(404)]) as urlopen:
+            with self.assertRaises(lint_lua.urllib.error.HTTPError):
+                lint_lua.download('https://example.invalid', sleep=lambda _: None)
+        self.assertEqual(urlopen.call_count, 1)
+
+    def test_downloaded_hash_mismatch_is_not_retried(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(lint_lua, 'binary_path', return_value=Path(directory) / 'luacheck'), \
+                mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                                  return_value=self._response(b'tampered')) as urlopen:
+            with self.assertRaisesRegex(RuntimeError, 'downloaded luacheck SHA-256 mismatch'):
+                lint_lua.ensure_binary('linux-x86_64')
+            self.assertEqual(urlopen.call_count, 1)
+            self.assertFalse((Path(directory) / 'luacheck').exists())
+
     def test_tracked_inventory_covers_every_defold_lua_kind(self):
         files = lint_lua.tracked_lua_files()
         suffixes = {Path(name).suffix for name in files}

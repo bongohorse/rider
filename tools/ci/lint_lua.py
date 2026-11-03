@@ -12,10 +12,14 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCK = json.loads(Path(__file__).with_name('luacheck-lock.json').read_text())
+DOWNLOAD_ATTEMPTS = 3
+DOWNLOAD_BACKOFF_S = 2.0
 LUA_SUFFIXES = ('.lua', '.script', '.gui_script', '.render_script', '.editor_script')
 
 
@@ -31,6 +35,30 @@ def binary_path(key):
     return ROOT / '.cache/ci' / f"luacheck-{LOCK['version']}{suffix}"
 
 
+def download(url, attempts=DOWNLOAD_ATTEMPTS, sleep=time.sleep):
+    """Fetch url; retry transient failures (HTTP 5xx, network errors, timeouts) only (#434).
+
+    A 4xx answer is not retried. The caller still verifies the SHA-256 and fails closed.
+    """
+    request = urllib.request.Request(url, headers={'User-Agent': 'Rider-CI'})
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code < 500 or attempt == attempts:
+                raise
+            reason = f'HTTP {exc.code}'
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == attempts:
+                raise
+            reason = str(exc)
+        print(f'lint_lua: download attempt {attempt}/{attempts} failed ({reason}); retrying',
+              file=sys.stderr)
+        sleep(DOWNLOAD_BACKOFF_S * attempt)
+    raise AssertionError('unreachable')
+
+
 def ensure_binary(key=None):
     key = key or host_key()
     entry = LOCK['binaries'].get(key)
@@ -42,9 +70,7 @@ def ensure_binary(key=None):
         if hashlib.sha256(data).hexdigest() != entry['sha256']:
             raise RuntimeError(f'cached {target.name} SHA-256 mismatch; delete it to re-download')
     else:
-        request = urllib.request.Request(entry['url'], headers={'User-Agent': 'Rider-CI'})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            data = response.read()
+        data = download(entry['url'])
         if hashlib.sha256(data).hexdigest() != entry['sha256']:
             raise RuntimeError('downloaded luacheck SHA-256 mismatch')
         target.parent.mkdir(parents=True, exist_ok=True)
