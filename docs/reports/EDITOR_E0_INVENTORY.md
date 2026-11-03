@@ -1,14 +1,14 @@
 # Editor GUI script inventory (E0, #331)
 
-Read-only inventory of `main/editor/editor.gui_script` for the behavior-preserving split in [#331](https://github.com/bongohorse/rider/issues/331). It records what E1–E3 must preserve; it changes no code and approves no slice. Line numbers are for main at `b2bf34c` (2026-11-03) and move with every editor change: re-run the [method](#method-and-limits) before relying on them.
+Read-only inventory of `main/editor/editor.gui_script` for the behavior-preserving split in [#331](https://github.com/bongohorse/rider/issues/331). It records what E1–E3 must preserve; it changes no code and approves no slice. Line numbers are for main at `f493a2d` (2026-11-03) and move with every editor change: re-run the [scanner](#method-and-limits) before relying on them.
 
 **Contents:** [Method and limits](#method-and-limits) · [Size metrics](#size-metrics) · [Module-local state](#module-local-state) · [Callbacks, input and messages](#callbacks-input-and-messages) · [Dependencies and extraction hazards](#dependencies-and-extraction-hazards) · [Responsibility map](#responsibility-map) · [E1 candidates](#e1-candidates) · [Test coverage and durations](#test-coverage-and-durations) · [Appendix: every top-level function](#appendix-every-top-level-function)
 
 ## Method and limits
 
-- Source: `git rev-parse HEAD` = `b2bf34c058235e55a19082261a6567872a38c1df` (= `origin/main` when measured).
+- Source: main at `f493a2d48558eba5317abd5d0ace9aef67ac825c`. The scan was first made at `b2bf34c`; `git diff --quiet b2bf34c f493a2d -- main/editor` is empty, so every `main/editor` figure holds at `f493a2d`. Of the other cited files only `main/game/controller.script` changed in between (#456); its lines below are re-pinned to `f493a2d`.
 - Sizes: `wc -l -c`; function counts: every `function` keyword outside comments (all definitions, including anonymous closures) and named definitions (`function x`, `local function x`, `x=function`, any depth).
-- State, calls and dependencies: a lexical scope scan (helper kept outside the repository, `/tmp/p331/lua_inventory.py`). It tokenizes Lua 5.1, tracks `function`/`do`/`then`/`repeat` blocks, locals, parameters and `for` variables, and records per top-level function the file-scope locals it reads, assigns or field-writes, `self.<field>` and `editor.<field>` reads/writes, Defold globals and calls to other top-level functions. Cross-check: it finds the same 146 top-level functions as `grep -cE '^(local function |function |[a-z_]+=function)'`.
+- State, calls and dependencies: `python tools/ci/editor_inventory.py [FILE] --section summary|functions|locals|self|editor|complexity [--json OUT]` (stdlib only; FILE defaults to `main/editor/editor.gui_script`; tested by `tests/ci/test_editor_inventory.py`). It is a lexical scope scan: it tokenizes Lua 5.1, tracks `function`/`do`/`then`/`repeat` blocks, locals, parameters and `for` variables, and records per top-level function the file-scope locals it reads, assigns or field-writes, `self.<field>` and `editor.<field>` reads/writes, Defold globals and calls to other top-level functions. Cross-check: it finds the same 146 top-level functions as `grep -cE '^(local function |function |[a-z_]+=function)'`.
 - Scan limits: writes through an alias (`local c=editor.camera; c.x=...`), dynamic keys (`self[key]` L2326, `self.ui[key]` L1466) and deeper chains are not attributed automatically; the ones that matter are listed by hand below. "Complexity" is an approximation: 1 + `if`/`elseif`/`for`/`while`/`repeat`/`and`/`or` tokens; Lua `a and b or c` idioms inflate it.
 - Gym coverage is mapped from the runners' case names, buttons and keys (`grep` of `tools/gym/*.cjs` and `tools/gameplay/check_*_editor.cjs`), not from instrumented Lua coverage, which the HTML5 build does not provide.
 
@@ -36,7 +36,7 @@ Read-only inventory of `main/editor/editor.gui_script` for the behavior-preservi
 | `editor_zoom.lua` | 21 | 910 | 3 | 3 | — |
 | **All 18 files** | **7,704** | **452,887** | | | |
 
-In the module rows the longest-definition column covers file-scope `local function` bodies only; `function M.x` bodies are not measured separately. The issue's earlier figure (3,153 lines / 191,053 bytes at `7061496`) is now 3,143 / 190,884.
+In the module rows the longest-definition column covers file-scope `local function` bodies only; `function M.x` bodies are not measured separately. The issue's earlier figure (3,153 lines / 191,053 bytes at `7061496`) is 3,143 / 190,884 at `f493a2d`.
 
 Top-level functions of `editor.gui_script` by length, with upvalue count (distinct file-scope locals referenced, including nested closures) and approximate complexity:
 
@@ -113,7 +113,7 @@ Only three data locals are mutable state; everything else is a constant or a mod
 - `ui` (L26): the DPR/panel scale, assigned every edit frame by `draw_overlay` (L2633: `o.s=self.ui.scale or 1;ui=o.s`) and read by `tolerance` and the canvas handlers. Pick and snap tolerances therefore use the scale of the **last drawn frame**; an extracted `tolerance` must take it as an argument.
 - `cache` (L316) and `corner_cache` (L779): memo tables rebuilt by `anchors` (key: document, revision, skip set, drawn-point count/last point) and `corner_summary`.
 
-Per-instance state lives in `self`: **89 fields**, used by 65 of 146 functions. The widest are `self.ui` (the `editor_ui` node pools and scroll state; read by 15 functions), `self.field` (focused text/number field; written by 11, read by 10), `self.drag`/`pan`/`box`/`pending` (gesture state, cleared together by `cancel` L162–167), `self.held` (modifier keys; replaced by `init`/`cancel`, its keys set by `on_input` L2182, read by 13), `self.drawing` (unfinished piece; written by 6, read by 13), dialog flags (`open_dialog`, `version_dialog`, `warnings_open`, `help_open`) and caches keyed by document revision (`library_*`, `bounds*`, `ghost_*`, `auto_*`, `track_*`, `attention_key`, `seen`, `published`). Full per-field writer/reader lists come from the same scan (helper `/tmp/p331/report.py`, not committed).
+Per-instance state lives in `self`: **89 fields**, used by 65 of 146 functions. The widest are `self.ui` (the `editor_ui` node pools and scroll state; read by 15 functions), `self.field` (focused text/number field; written by 11, read by 10), `self.drag`/`pan`/`box`/`pending` (gesture state, cleared together by `cancel` L162–167), `self.held` (modifier keys; replaced by `init`/`cancel`, its keys set by `on_input` L2182, read by 13), `self.drawing` (unfinished piece; written by 6, read by 13), dialog flags (`open_dialog`, `version_dialog`, `warnings_open`, `help_open`) and caches keyed by document revision (`library_*`, `bounds*`, `ghost_*`, `auto_*`, `track_*`, `attention_key`, `seen`, `published`). Full per-field writer/reader lists: `python tools/ci/editor_inventory.py --section self` (and `--section editor`).
 
 Shared state lives in the `editor` module (`main/editor/editor.lua`, "Defold 1.14 runs every script in one Lua context"): the same table is required by `main/game/boot.script` (mode, Play, import), `main/game/ui.gui_script`, `editor_view.lua`/`editor_lines.lua` (edit world; they write `editor.screen`) and `editor_look.lua`. The GUI script references it in **105 functions**, writes its fields in **56**, and touches **71 fields**; `editor.message` alone is written by 43 functions.
 
@@ -132,12 +132,12 @@ Input actions handled by `on_input`: `ui_pointer`, `editor_text`, `editor_ctrl`,
 | Message | Direction | Sender (line) | Receiver |
 | --- | --- | --- | --- |
 | `acquire_input_focus` | sent | `init` L146, `update` L3063, `on_message` L3141 | `.` (this game object) |
-| `run_focus_lost` | sent | window listener L151 | `main:/loader#script` (`boot.script` L382; also sent by `controller.script` L367) |
+| `run_focus_lost` | sent | window listener L151 | `main:/loader#script` (`boot.script` L382; also sent by `controller.script` L372) |
 | `editor_play` `{test}` | sent | `play` L486 | loader (`boot.script` L402–404) |
 | `editor_enter` | sent | `on_input` L2168 | loader (`boot.script` L399–403) |
 | `terrain_look_open` | sent | `on_input` L2164 | loader (`boot.script` L394) |
 | `clear_color` `{color}` | sent | `update` L3069 | `@render:` |
-| `terrain_look_capture` `{active}` | sent | `update` L3076 | `gym:/owner#script` (`controller.script` L734) |
+| `terrain_look_capture` `{active}` | sent | `update` L3076 | `gym:/owner#script` (`controller.script` L746) |
 | `editor_mode` `{mode}` | received | `boot.script` `set_mode` L48 (to `main:/editor#gui`) | `on_message` L3132 |
 
 JavaScript bridge (`html5.run`): reads `document.hidden`/focus (L151), `riderFeedback`/`riderCustom` visibility (L2161, L3066); calls `window.riderCustom.exportLevel` (L1019); debug only, writes `window.riderEditor` (L3026), `window.riderEditorDoc` and `window.riderEditorPaths` (L3052–3056, on document revision change). `import` opens the HTML panel through `custom.open` (L1025).
@@ -178,7 +178,7 @@ Hazards an extraction must respect:
 
 ## Responsibility map
 
-The issue's map with current line ranges (`/tmp/p331/groups.py`; the ranges tile the file without gaps):
+The issue's map with line ranges at `f493a2d`. The ranges were drawn by hand along function boundaries and tile the file without gaps; the function counts come from `--section functions`:
 
 | Responsibility | Lines | Size | Functions | Was (2026-11-01) | Risk (issue) |
 | --- | --- | --- | --- | --- | --- |
@@ -231,15 +231,15 @@ Ranked by how provably side-effect-free they are. Evidence for every function: t
 **Recommendation for E1: the geometry core**, moved verbatim into a new `main/editor/editor_geometry.lua` (pure, metres, like `editor_snap.lua`/`editor_sample.lua`), bound back with `local to_px,dist,length,seg_t,seg_dist=geometry.to_px,…` at L177–187 and `local curve_nearest=geometry.curve_nearest` at L1793. Why:
 
 - **Provably pure**: no upvalues outside the group, Std `math` only, no argument mutation (unlike `grow`), no state, so the move cannot change evaluation order or shared state; aliases at the same lines keep every caller, the definition order and the 52/60 `on_button` upvalues unchanged (no caller is `on_button`), at a cost of one main-chunk local (181 → 182 of 200).
-- **Highest value for the risk**: 63 call sites outside the group in the high-risk picking, drag, overlay and readout code (`candidates`, `canvas_press/move/release`, `connect_target`, `draw_overlay`, `describe`, …). Today these locals cannot be unit-tested; in a module they get a fast LuaJIT suite in `tests/gameplay/` (run by `tools/gameplay/lua_tests.py`, like `editor_zoom.lua`) pinning their numbers, including the 63-step Bézier search in `curve_nearest`.
+- **Highest value for the risk**: 63 call sites outside the group in the high-risk picking, drag, overlay and readout code (`candidates`, `canvas_press/move/release`, `connect_target`, `draw_overlay`, `describe`, …). At `f493a2d` these locals cannot be unit-tested; in a module they get a fast LuaJIT suite in `tests/gameplay/` (run by `tools/gameplay/lua_tests.py`, like `editor_zoom.lua`) pinning their numbers, including the 63-step Bézier search in `curve_nearest`.
 - **Covered by real input**: `le3`, `le5b`, `le5c`, `le5d` and `le6` pick, snap, drag and draw handles through these helpers; `curve_nearest` runs on the double-click insert in `le5b` (Bézier branch, `insert_delete_split_anchors`) and `le5c` (straight-chord corner branch, `tools/gym/path.cjs` L145–149).
-- Duplicates exist (`editor_sample.lua` L15 `length(a,b)` and L48 `dist(px,…)`, `main/game/course_progress.lua` L7 `dist`) with other signatures; merging them would be a logic change and stays out of E1.
+- Related helpers exist: `main/game/course_progress.lua` L7 `dist(a,b)` has the same two-point signature (it subtracts `b-a`; squared, the value is the same); in `editor_sample.lua`, L15 `length(a,b)` is a two-point distance under another name and L48 `dist(px,py,ax,ay,bx,by)` a point-to-segment distance on scalars. Sharing one implementation would add game→editor or new module dependencies and stays out of E1.
 
 The text group is the equally pure alternative (smaller, but its main consumer is `on_button`, the most crowded function, and its results are UI strings checked only indirectly); it fits a later slice or E1b.
 
 ## Test coverage and durations
 
-Durations from one local run at `b2bf34c` on a clean working tree (`python tools/local.py gym --case le3,le4,le5b,le5c,le5d,le6,ea2,ea3 --jobs 1`; run `711305a2`, Chromium 156, cached bundle, no build in the wall time): **PASS, 8/8 cases, 653.1 s case time, 10 min 53 s wall time**. Single-run local figures on a WSL2 host, not CI timings; a first run minutes earlier passed every runner too but was marked FAIL by the tool's source-change guard because this document's index entry was edited during it, so it is not used.
+Durations from one local run at `b2bf34c` (before #456, which changed `main/game` but not `main/editor`; not repeated at `f493a2d`) on a clean working tree (`python tools/local.py gym --case le3,le4,le5b,le5c,le5d,le6,ea2,ea3 --jobs 1`; run `711305a2`, Chromium 156, cached bundle, no build in the wall time): **PASS, 8/8 cases, 653.1 s case time, 10 min 53 s wall time**. Single-run local figures on a WSL2 host, not CI timings; a first run minutes earlier passed every runner too but was marked FAIL by the tool's source-change guard because this document's index entry was edited during it, so it is not used.
 
 | Case | Runner cases | Duration | Notes |
 | --- | --- | --- | --- |
