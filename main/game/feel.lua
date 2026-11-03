@@ -4,6 +4,30 @@ M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 -- Preset registry (#199): the only list of selectable presets, in P-cycle and chip order.
 -- A is the measurement baseline; B and C predate the rotation cap (#114); D, E and F are candidates.
 M.order={"a","b","c","d","e","f"}
+-- #114 stage 1: debug-only wheel-size candidates. Not in M.order (no P cycle, no chip, no release build):
+-- feel.preset accepts them only in a debug engine, e.g. ?preset=w26 on a locally served debug Gym bundle.
+M.debug_order={"w26","w30"}
+-- Vehicle wheel geometry per preset key; every key not listed here (A-F) uses `default`, which is the shipped
+-- vehicle and must stay unchanged. Each entry mirrors authored resources: `factory` spawns a wheel game object
+-- whose convex shape has radius `radius` (engine units) and whose sprite is the default wheel art times
+-- `art_scale`. `radius_m` is the same radius in metres at physics.scale 0.01, written out (not converted at run
+-- time) so the default stays the literal 0.22 the metrics always used. `wheel_y` is the wheel joint anchor below
+-- the chassis centre; candidates scale it with the radius (-30 x r/22, rounded), so ride height and chassis
+-- clearance grow with the wheel and the suspension keeps proportional free travel before the underbody touches
+-- flat ground (there is no travel stop). `camera_rest` is the camera's chassis-centre rest height (radius - wheel_y
+-- - 6 u static sag, as the default's 46).
+M.geometry={
+    default={radius=22,radius_m=.22,wheel_y=-30,factory="#wheel",art_scale=1,camera_rest=46},
+    w26={radius=26,radius_m=.26,wheel_y=-35,factory="#wheel26",art_scale=26/22,camera_rest=55},
+    w30={radius=30,radius_m=.30,wheel_y=-41,factory="#wheel30",art_scale=30/22,camera_rest=65}
+}
+function M.geometry_of(key) return M.geometry[key] or M.geometry.default end
+function M.is_candidate(key)
+    for _,k in ipairs(M.debug_order) do if k==key then return true end end
+    return false
+end
+-- Whether switching from preset a to preset b keeps the spawned wheel bodies (same authored wheel).
+function M.same_geometry(a,b) return M.geometry_of(a)==M.geometry_of(b) end
 M.preset_keys={"spring_hz","damping","motor_speed","drive_torque","brake_torque","coast_torque","rolling_resistance","reverse_speed","reverse_threshold","reverse_delay","lean_torque","lean_rate_max","ground_lean_torque","ground_rate_max","camera_height","camera_lift","camera_response","camera_look_seconds","camera_look_max","camera_zoom","camera_zoom_min","camera_zoom_speed","air_pitch_damping"}
 -- Optional preset keys and their defaults (#211): a file may omit them, so A/B/C stay byte-identical and
 -- behave as before. Every other key in preset_keys is required.
@@ -66,7 +90,8 @@ end
 -- Unknown keys and refused files fall back to A; values are replaced only after full validation.
 -- Returns the applied key, whether the request was honoured, and the refusal note (or nil).
 function M.preset(requested)
-    local valid=M.index(requested)~=nil
+    -- Debug candidates (#114) are refused like an unknown key in a release engine: A, flagged invalid.
+    local valid=M.index(requested)~=nil or (M.is_candidate(requested) and sys.get_engine_info().is_debug==true)
     local key=valid and requested or "a"
     local data,reason=M.load(key)
     if not data then
@@ -82,6 +107,11 @@ function M.preset(requested)
         if value==nil then value=M.optional[name] end
         M.values[name]=value
     end
+    -- Wheel geometry (#114) is not tuning: it takes effect when the vehicle is spawned (a new world).
+    local g=M.geometry_of(key)
+    M.values.wheel_y,M.values.wheel_radius,M.values.wheel_radius_m=g.wheel_y,g.radius,g.radius_m
+    M.values.wheel_factory,M.values.wheel_art_scale=g.factory,g.art_scale
+    M.follow.rest=g.camera_rest
     return key,valid,nil
 end
 -- Visual-only rider reaction (A15a); not a preset key, never touches physics.
@@ -98,7 +128,7 @@ function M.clamp(v,lo,hi) return math.max(lo,math.min(hi,v)) end
 -- the vertical ground window suppresses suspension motion, yielding to signed vertical speed.
 -- Engine units throughout. Rotation never enters the follow calculation.
 M.follow={
-    rest=46,           -- chassis centre above flat ground at rest (wheel radius 22 + anchor 30 - sag)
+    rest=46,           -- chassis centre above flat ground at rest (wheel radius 22 + anchor 30 - sag); feel.preset sets it from M.geometry
     snap_window=40,    -- grounded height changes within this (springs, small bumps) keep the view still
     snap_done=3,       -- a realignment ends this close to the new framing
     focus_switch=60,   -- travel against the look-ahead side before it switches sides (0.6 m)

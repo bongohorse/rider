@@ -271,6 +271,9 @@ function on_message(self,id,data,sender)
         end
         -- A refused preset file must never pass silently for A (#199).
         gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A"..(data.modified and " | Modified" or "")) or data.invalid and "Invalid URL: A"
+            -- #114 debug wheel candidates (debug engine only): their wheels stay until the page is reloaded.
+            or data.candidate and string.format("Debug %s: A + %.2f m wheels%s%s",string.upper(data.key),feel.geometry_of(data.key).radius_m,
+                data.modified and " | Modified" or "",data.switch_refused and " | reload to change" or "")
             or data.modified and "Modified - select "..string.upper(table.concat(feel.order,"/")) or "Presets [P]")
     elseif id==hash("tuning") then
         self.owner=sender
@@ -456,7 +459,7 @@ function update(self,dt)
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
-            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
+            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),preset_note=gui.get_text(self.preset_note),
             record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit),
             fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}}))
     end

@@ -1,0 +1,1312 @@
+{
+  "inputs": [
+    "artifacts/r2/w114/a/wheel114-result.json",
+    "artifacts/r2/w114/w26/wheel114-result.json",
+    "artifacts/r2/w114/w30/wheel114-result.json"
+  ],
+  "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
+  "runs": [
+    {
+      "preset": "a",
+      "run_id": "635debce-3a63-4ea4-a14a-463df335273d",
+      "geometry": {
+        "factory": "#wheel",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
+        "preset": "a",
+        "wheel_inertia": 0.096799999475479,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 4,
+        "radius_m": 0.22,
+        "art_scale": 1,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 46,
+        "radius_u": 22,
+        "wheel_y_u": -30
+      },
+      "sections": [
+        {
+          "id": "straight",
+          "outcomes": [
+            "n/a",
+            "n/a",
+            "n/a"
+          ],
+          "attempt": {
+            "ticks": 480,
+            "top_speed_mps": 6.95698549654894,
+            "top_speed_tick": 147,
+            "top_vx_mps": 6.9569810456712,
+            "end_x_m": 46.49929583566,
+            "peak_omega_rps": 33.624195098877,
+            "peak_omega_share_of_cap": 0.7135275809963408,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 926,
+            "supported_share": 0.9645833333333333,
+            "max_slip_mps": 2.6062853070328,
+            "mean_slip_mps": 0.08735460233867215,
+            "slip_over_0_5_mps_ticks": 15,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-10",
+          "outcomes": [
+            "ACCELERATED +1.17",
+            "ACCELERATED +1.17",
+            "ACCELERATED +1.17"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 2.9539148521393286,
+            "top_speed_tick": 17,
+            "top_vx_mps": 2.2862954200887,
+            "end_x_m": 37.788234018648,
+            "peak_omega_rps": 10.735189437866,
+            "peak_omega_share_of_cap": 0.22780779520857056,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 384,
+            "supported_share": 0.9142857142857143,
+            "max_slip_mps": 0.091359570397619,
+            "mean_slip_mps": 0.030000742982099458,
+            "slip_over_0_5_mps_ticks": 0,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-20",
+          "outcomes": [
+            "ACCELERATED +2.53",
+            "ACCELERATED +2.53",
+            "ACCELERATED +2.53"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 3.85854649105254,
+            "top_speed_tick": 100,
+            "top_vx_mps": 3.6273992109135,
+            "end_x_m": 82.130808711108,
+            "peak_omega_rps": 19.135459899902,
+            "peak_omega_share_of_cap": 0.4060670708541531,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 382,
+            "supported_share": 0.9095238095238095,
+            "max_slip_mps": 0.32409518575376,
+            "mean_slip_mps": 0.08015014494882762,
+            "slip_over_0_5_mps_ticks": 0,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-30",
+          "outcomes": [
+            "ACCELERATED +3.10",
+            "ACCELERATED +3.10",
+            "ACCELERATED +3.10"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 4.917235464626655,
+            "top_speed_tick": 85,
+            "top_vx_mps": 4.2678856467928,
+            "end_x_m": 124.07353238299,
+            "peak_omega_rps": 25.772493362427,
+            "peak_omega_share_of_cap": 0.546909295257776,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 380,
+            "supported_share": 0.9047619047619048,
+            "max_slip_mps": 1.3434306244348,
+            "mean_slip_mps": 0.13465919320728736,
+            "slip_over_0_5_mps_ticks": 16,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/3",
+          "outcomes": [
+            "CLEARED 3.32 m",
+            "CLEARED 3.32 m",
+            "CLEARED 3.32 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 7.6378916334546405,
+            "top_speed_tick": 286,
+            "top_vx_mps": 6.9997453269419,
+            "end_x_m": 108.73572999144,
+            "peak_omega_rps": 40.781543731689,
+            "peak_omega_share_of_cap": 0.8654112362422139,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 379,
+            "supported_share": 0.6316666666666667,
+            "max_slip_mps": 1.9261511676324,
+            "mean_slip_mps": 0.23539566400903564,
+            "slip_over_0_5_mps_ticks": 42,
+            "hull_contact_ticks": 11
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/6",
+          "outcomes": [
+            "MISSED",
+            "MISSED",
+            "MISSED"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 10.100183292776245,
+            "top_speed_tick": 113,
+            "top_vx_mps": 6.9997483786997,
+            "end_x_m": 154.55216451424,
+            "peak_omega_rps": 34.603210449219,
+            "peak_omega_share_of_cap": 0.7343029319789771,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 253,
+            "supported_share": 0.4216666666666667,
+            "max_slip_mps": 4.8738460214321,
+            "mean_slip_mps": 0.1984529449431043,
+            "slip_over_0_5_mps_ticks": 27,
+            "hull_contact_ticks": 176
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps-landing/down",
+          "outcomes": [
+            "CLEARED 2.24 m",
+            "CLEARED 2.24 m",
+            "CLEARED 2.24 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 7.416943926913738,
+            "top_speed_tick": 15,
+            "top_vx_mps": 6.9997483786997,
+            "end_x_m": 51.65750861099,
+            "peak_omega_rps": 43.910354614258,
+            "peak_omega_share_of_cap": 0.9318066653036234,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 449,
+            "supported_share": 0.7483333333333333,
+            "max_slip_mps": 1.9271733451868,
+            "mean_slip_mps": 0.20750406809543326,
+            "slip_over_0_5_mps_ticks": 38,
+            "hull_contact_ticks": 3
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/big",
+          "outcomes": [
+            "CRASHED -94°",
+            "CRASHED -94°",
+            "CRASHED -94°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 16.61212844080797,
+            "top_speed_tick": 159,
+            "top_vx_mps": 11.907354470178,
+            "end_x_m": 32.396713143065,
+            "peak_omega_rps": 47.123889923096,
+            "peak_omega_share_of_cap": 1.0000000025305447,
+            "ticks_at_cap": 1,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 75,
+            "supported_share": 0.125,
+            "max_slip_mps": 4.7507790426682,
+            "mean_slip_mps": 0.42781532625374885,
+            "slip_over_0_5_mps_ticks": 10,
+            "hull_contact_ticks": 66
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/mid",
+          "outcomes": [
+            "CRASHED -69°",
+            "CRASHED -69°",
+            "CRASHED -69°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 12.404959744955468,
+            "top_speed_tick": 131,
+            "top_vx_mps": 9.2748209596838,
+            "end_x_m": 91.679167872686,
+            "peak_omega_rps": 54.448333740234,
+            "peak_omega_share_of_cap": 1.155429527716729,
+            "ticks_at_cap": 3,
+            "no_slip_ceiling_mps": 10.367255756846317,
+            "supported_wheel_ticks": 183,
+            "supported_share": 0.305,
+            "max_slip_mps": 3.028525116334,
+            "mean_slip_mps": 0.15685323412678012,
+            "slip_over_0_5_mps_ticks": 6,
+            "hull_contact_ticks": 128
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "preset": "w26",
+      "run_id": "e5a6815f-7f3d-4acc-b1a9-de28619bce6c",
+      "geometry": {
+        "factory": "#wheel26",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
+        "preset": "w26",
+        "wheel_inertia": 0.13519997894764,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 3.9999997615814,
+        "radius_m": 0.26,
+        "art_scale": 1.1818181818182,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 55,
+        "radius_u": 26,
+        "wheel_y_u": -35
+      },
+      "sections": [
+        {
+          "id": "straight",
+          "outcomes": [
+            "n/a",
+            "n/a",
+            "n/a"
+          ],
+          "attempt": {
+            "ticks": 480,
+            "top_speed_mps": 8.246425682838487,
+            "top_speed_tick": 194,
+            "top_vx_mps": 8.2464219348187,
+            "end_x_m": 52.370472462241,
+            "peak_omega_rps": 32.943740844727,
+            "peak_omega_share_of_cap": 0.6990878932502232,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 930,
+            "supported_share": 0.96875,
+            "max_slip_mps": 5.038833965072,
+            "mean_slip_mps": 0.08601524928233871,
+            "slip_over_0_5_mps_ticks": 8,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-10",
+          "outcomes": [
+            "ACCELERATED +1.42",
+            "ACCELERATED +1.42",
+            "ACCELERATED +1.42"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 2.5685573175611083,
+            "top_speed_tick": 15,
+            "top_vx_mps": 2.5017310537011,
+            "end_x_m": 38.325506955858,
+            "peak_omega_rps": 10.080716133118,
+            "peak_omega_share_of_cap": 0.21391944033225957,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 389,
+            "supported_share": 0.9261904761904762,
+            "max_slip_mps": 0.080773783830149,
+            "mean_slip_mps": 0.024538489184718733,
+            "slip_over_0_5_mps_ticks": 0,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-20",
+          "outcomes": [
+            "ACCELERATED +2.71",
+            "ACCELERATED +2.71",
+            "ACCELERATED +2.71"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 4.044348001017514,
+            "top_speed_tick": 98,
+            "top_vx_mps": 3.8018752201972,
+            "end_x_m": 82.810955180281,
+            "peak_omega_rps": 17.493810653687,
+            "peak_omega_share_of_cap": 0.3712301918730596,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 387,
+            "supported_share": 0.9214285714285714,
+            "max_slip_mps": 0.4055111843202,
+            "mean_slip_mps": 0.06762076477493958,
+            "slip_over_0_5_mps_ticks": 0,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-30",
+          "outcomes": [
+            "ACCELERATED +3.24",
+            "ACCELERATED +3.24",
+            "ACCELERATED +3.24"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 5.074580340990746,
+            "top_speed_tick": 84,
+            "top_vx_mps": 4.40704091712,
+            "end_x_m": 124.78510463271,
+            "peak_omega_rps": 22.94891166687,
+            "peak_omega_share_of_cap": 0.48699103071488375,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 375,
+            "supported_share": 0.8928571428571429,
+            "max_slip_mps": 1.7625821197039,
+            "mean_slip_mps": 0.09357980865634524,
+            "slip_over_0_5_mps_ticks": 3,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/3",
+          "outcomes": [
+            "CLEARED 3.99 m",
+            "CLEARED 3.99 m",
+            "CLEARED 3.99 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 8.394599040534906,
+            "top_speed_tick": 258,
+            "top_vx_mps": 8.2446842639591,
+            "end_x_m": 113.86783925173,
+            "peak_omega_rps": 37.916454315186,
+            "peak_omega_share_of_cap": 0.8046121505039837,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 416,
+            "supported_share": 0.6933333333333334,
+            "max_slip_mps": 1.8633799300143,
+            "mean_slip_mps": 0.2977818524942129,
+            "slip_over_0_5_mps_ticks": 60,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/6",
+          "outcomes": [
+            "MISSED",
+            "MISSED",
+            "MISSED"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 9.63638545895997,
+            "top_speed_tick": 103,
+            "top_vx_mps": 6.9937199364516,
+            "end_x_m": 154.51923482748,
+            "peak_omega_rps": 34.651863098145,
+            "peak_omega_share_of_cap": 0.7353353732551221,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 104,
+            "supported_share": 0.17333333333333334,
+            "max_slip_mps": 8.336227230663,
+            "mean_slip_mps": 1.6419110858432018,
+            "slip_over_0_5_mps_ticks": 46,
+            "hull_contact_ticks": 181
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps-landing/down",
+          "outcomes": [
+            "CLEARED 3.49 m",
+            "CLEARED 3.49 m",
+            "CLEARED 3.49 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 8.217601022531955,
+            "top_speed_tick": 134,
+            "top_vx_mps": 8.2175974725724,
+            "end_x_m": 55.015823965613,
+            "peak_omega_rps": 38.010803222656,
+            "peak_omega_share_of_cap": 0.8066142965038732,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 405,
+            "supported_share": 0.675,
+            "max_slip_mps": 1.901836347333,
+            "mean_slip_mps": 0.2602615807198212,
+            "slip_over_0_5_mps_ticks": 52,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0.00012207030999888957,
+              "max_angle_delta_rad": 0.00010091066361000989,
+              "max_vx_delta_mps": 0.0005218505742003998,
+              "max_omega_delta_rps": 0.017246246337997206,
+              "identical": false,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/big",
+          "outcomes": [
+            "CRASHED -136°",
+            "CRASHED -136°",
+            "CRASHED -136°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 18.44930295625441,
+            "top_speed_tick": 168,
+            "top_vx_mps": 8.7881785145064,
+            "end_x_m": 27.844608752624,
+            "peak_omega_rps": 45.042762756348,
+            "peak_omega_share_of_cap": 0.9558371124251078,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 73,
+            "supported_share": 0.12166666666666667,
+            "max_slip_mps": 4.3202765527024,
+            "mean_slip_mps": 0.28745787224467534,
+            "slip_over_0_5_mps_ticks": 2,
+            "hull_contact_ticks": 83
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/mid",
+          "outcomes": [
+            "LANDED -96°",
+            "LANDED -96°",
+            "LANDED -96°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 13.993803495944254,
+            "top_speed_tick": 138,
+            "top_vx_mps": 8.7106217535446,
+            "end_x_m": 104.28699962213,
+            "peak_omega_rps": 43.100269317627,
+            "peak_omega_share_of_cap": 0.9146161213989719,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 12.252211349000193,
+            "supported_wheel_ticks": 299,
+            "supported_share": 0.49833333333333335,
+            "max_slip_mps": 4.9164858410967,
+            "mean_slip_mps": 0.1856035075075723,
+            "slip_over_0_5_mps_ticks": 11,
+            "hull_contact_ticks": 4
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "preset": "w30",
+      "run_id": "0c986b5a-9d8e-4311-9bde-bbb1dbf5da88",
+      "geometry": {
+        "factory": "#wheel30",
+        "source_sha": "a447c06a1a2b0c6e8b7ad17e5d5c5f5af1a9b5b6",
+        "preset": "w30",
+        "wheel_inertia": 0.17999997735023,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 4,
+        "radius_m": 0.3,
+        "art_scale": 1.3636363636364,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 65,
+        "radius_u": 29.999998092651,
+        "wheel_y_u": -41
+      },
+      "sections": [
+        {
+          "id": "straight",
+          "outcomes": [
+            "n/a",
+            "n/a",
+            "n/a"
+          ],
+          "attempt": {
+            "ticks": 480,
+            "top_speed_mps": 9.533113867397093,
+            "top_speed_tick": 256,
+            "top_vx_mps": 9.5331131902386,
+            "end_x_m": 56.022884489978,
+            "peak_omega_rps": 32.264736175537,
+            "peak_omega_share_of_cap": 0.6846789666523478,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 936,
+            "supported_share": 0.975,
+            "max_slip_mps": 1.8110313097661,
+            "mean_slip_mps": 0.09084953748290442,
+            "slip_over_0_5_mps_ticks": 1,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 480,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-10",
+          "outcomes": [
+            "ACCELERATED +1.56",
+            "ACCELERATED +1.56",
+            "ACCELERATED +1.56"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 2.681078150378095,
+            "top_speed_tick": 127,
+            "top_vx_mps": 2.6411492329579,
+            "end_x_m": 38.741642200463,
+            "peak_omega_rps": 9.4709386825562,
+            "peak_omega_share_of_cap": 0.20097956093987498,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 394,
+            "supported_share": 0.9380952380952381,
+            "max_slip_mps": 0.071205286318559,
+            "mean_slip_mps": 0.02006882245848342,
+            "slip_over_0_5_mps_ticks": 0,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-20",
+          "outcomes": [
+            "ACCELERATED +2.80",
+            "ACCELERATED +2.80",
+            "ACCELERATED +2.80"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 4.160249298018365,
+            "top_speed_tick": 96,
+            "top_vx_mps": 3.9205147439126,
+            "end_x_m": 83.322000090733,
+            "peak_omega_rps": 16.162832260132,
+            "peak_omega_share_of_cap": 0.3429859531420212,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 389,
+            "supported_share": 0.9261904761904762,
+            "max_slip_mps": 0.54932243079334,
+            "mean_slip_mps": 0.056185213143302326,
+            "slip_over_0_5_mps_ticks": 1,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "ramps-long/down-30",
+          "outcomes": [
+            "ACCELERATED +3.33",
+            "ACCELERATED +3.33",
+            "ACCELERATED +3.33"
+          ],
+          "attempt": {
+            "ticks": 210,
+            "top_speed_mps": 5.169281975236817,
+            "top_speed_tick": 83,
+            "top_vx_mps": 4.5266170252871,
+            "end_x_m": 125.33546594853,
+            "peak_omega_rps": 20.981935501099,
+            "peak_omega_share_of_cap": 0.44525050008469735,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 379,
+            "supported_share": 0.9023809523809524,
+            "max_slip_mps": 1.4050644911895,
+            "mean_slip_mps": 0.0732067439039201,
+            "slip_over_0_5_mps_ticks": 2,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 210,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/3",
+          "outcomes": [
+            "CLEARED 4.28 m",
+            "CLEARED 4.28 m",
+            "CLEARED 4.28 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 9.532869637774494,
+            "top_speed_tick": 176,
+            "top_vx_mps": 9.5328684392675,
+            "end_x_m": 117.27439190996,
+            "peak_omega_rps": 34.187549591064,
+            "peak_omega_share_of_cap": 0.7254823346156188,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 398,
+            "supported_share": 0.6633333333333333,
+            "max_slip_mps": 2.8423564412112,
+            "mean_slip_mps": 0.3636520437997876,
+            "slip_over_0_5_mps_ticks": 47,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps/6",
+          "outcomes": [
+            "MISSED",
+            "MISSED",
+            "MISSED"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 9.414421714562032,
+            "top_speed_tick": 100,
+            "top_vx_mps": 7.1430686879962,
+            "end_x_m": 154.08634421215,
+            "peak_omega_rps": 33.907375335693,
+            "peak_omega_share_of_cap": 0.7195368522597007,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 385,
+            "supported_share": 0.6416666666666667,
+            "max_slip_mps": 7.87210736799,
+            "mean_slip_mps": 0.27518095140558435,
+            "slip_over_0_5_mps_ticks": 37,
+            "hull_contact_ticks": 2
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "gaps-landing/down",
+          "outcomes": [
+            "CLEARED 3.86 m",
+            "CLEARED 3.86 m",
+            "CLEARED 3.86 m"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 9.541939317778938,
+            "top_speed_tick": 152,
+            "top_vx_mps": 9.5418985904329,
+            "end_x_m": 58.327884438458,
+            "peak_omega_rps": 34.564914703369,
+            "peak_omega_share_of_cap": 0.7334902710121213,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 394,
+            "supported_share": 0.6566666666666666,
+            "max_slip_mps": 3.8260537914678,
+            "mean_slip_mps": 0.35334934584383537,
+            "slip_over_0_5_mps_ticks": 54,
+            "hull_contact_ticks": 0
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/big",
+          "outcomes": [
+            "CRASHED 175°",
+            "CRASHED 175°",
+            "CRASHED 175°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 19.032414419346217,
+            "top_speed_tick": 171,
+            "top_vx_mps": 7.8262620321007,
+            "end_x_m": 22.000824703556,
+            "peak_omega_rps": 34.2375831604,
+            "peak_omega_share_of_cap": 0.7265440799329995,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 66,
+            "supported_share": 0.11,
+            "max_slip_mps": 4.5923814756191,
+            "mean_slip_mps": 0.31896028623422507,
+            "slip_over_0_5_mps_ticks": 3,
+            "hull_contact_ticks": 129
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        },
+        {
+          "id": "air/mid",
+          "outcomes": [
+            "CRASHED -129°",
+            "CRASHED -129°",
+            "CRASHED -129°"
+          ],
+          "attempt": {
+            "ticks": 300,
+            "top_speed_mps": 14.636425405512917,
+            "top_speed_tick": 141,
+            "top_vx_mps": 7.8262394490934,
+            "end_x_m": 90.176677671894,
+            "peak_omega_rps": 34.237545013428,
+            "peak_omega_share_of_cap": 0.7265432704291118,
+            "ticks_at_cap": 0,
+            "no_slip_ceiling_mps": 14.137166941154067,
+            "supported_wheel_ticks": 151,
+            "supported_share": 0.25166666666666665,
+            "max_slip_mps": 3.5075443964119,
+            "mean_slip_mps": 0.14348939056268098,
+            "slip_over_0_5_mps_ticks": 2,
+            "hull_contact_ticks": 132
+          },
+          "determinism": {
+            "retry_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH"
+            },
+            "load_vs_retry": {
+              "ticks": 300,
+              "max_position_delta_m": 0,
+              "max_angle_delta_rad": 0,
+              "max_vx_delta_mps": 0,
+              "max_omega_delta_rps": 0,
+              "identical": true,
+              "verdict": "MATCH",
+              "load_phase_ticks": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

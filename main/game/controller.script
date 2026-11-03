@@ -140,7 +140,8 @@ local function emit(self, event, data)
     end
 end
 local function show_preset(self)
-    msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=self.invalid_preset or false,refused=self.preset_refused})
+    msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=self.invalid_preset or false,refused=self.preset_refused,
+        candidate=feel.is_candidate(self.preset) or nil})
     -- Imports reload the world from the loader, which must keep the current preset like a station switch.
     msg.post("main:/loader#script","preset_changed",{key=self.preset,refused=self.preset_refused})
     msg.post("main:/loader#ui","tuning",feel.snapshot())
@@ -244,6 +245,10 @@ function init(self)
             self.camera352_mode=mode
             self.camera_probe=require "main.gym.camera_probe352"
         end
+        -- #114: opt-in read-only wheel observer (and Straight full-throttle driver) for the wheel-size A/B.
+        local wheel114=require "main.gym.wheel_probe114"
+        self.wheel114_mode=wheel114.mode()
+        if self.wheel114_mode then self.wheel_probe=wheel114 end
     end
     self.test = self.testcase == "a1"
     if self.testcase == "a1" or self.testcase == "a2" or self.testcase == "a3" or self.testcase == "a6" or self.testcase == "a7" or self.testcase == "a8" or self.testcase == "a9" or self.testcase=="a9invalid" or self.testcase=="a10" or self.testcase=="a11" or self.testcase=="a12" or self.testcase=="m2feedback" or self.testcase=="coast" or self.testcase=="hud" or self.testcase=="a15a" then
@@ -586,6 +591,7 @@ function fixed_update(self, dt)
     if self.vehicle and self.vehicle.ready then
         local state = vehicle.state(self.vehicle)
         if self.camera_probe then self.camera_probe.fixed(self,state,dt) end
+        if self.wheel_probe then self.wheel_probe.fixed(self,state,dt) end
         if self.scenario then self.scenario.check_pose(self,state) end
         race.observe(self,dt)
         require('main.game.fuel_runtime').observe(self)
@@ -636,6 +642,12 @@ function fixed_update(self, dt)
             self.head_seen=true
             if self.crash_enabled then request_reset(self,"head") end
         end
+        if self.pending_preset and not feel.same_geometry(self.pending_preset,self.preset) then
+            -- #114: the spawned wheels belong to the debug candidate's geometry; another wheel needs a new world
+            -- (reload the page without ?preset=). Nothing changes, the HUD says why.
+            self.pending_preset=nil
+            msg.post("main:/loader#ui","preset",{key=self.preset,modified=self.modified or false,invalid=false,candidate=feel.is_candidate(self.preset) or nil,switch_refused=true})
+        end
         if self.pending_preset then
             local valid
             self.preset,valid,self.preset_refused=feel.preset(self.pending_preset)
@@ -662,7 +674,7 @@ function fixed_update(self, dt)
             end
         end
         if self.coast_measure then self.coast_measure.before(self,dt) end
-        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or command(self)
+        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or self.wheel_probe and self.wheel_probe.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         require('main.game.fuel_runtime').command(self,self.last_command,dt)

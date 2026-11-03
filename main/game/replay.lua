@@ -84,6 +84,9 @@ end
 local function ghost_create(r,rec)
     ghost_delete(r)
     r.ghost={factory.create("#ghost_chassis"),factory.create("#ghost_wheel"),factory.create("#ghost_wheel")}
+    -- #114 debug wheel candidates: the ghost wheels match the larger wheel art (A-F keep the default scale).
+    local art=feel.values.wheel_art_scale
+    if art~=1 then for k=2,3 do go.set_scale(vmath.vector3(art,art,1),r.ghost[k]) end end
     for k,id in ipairs(r.ghost) do
         go.set(msg.url(nil,id,"sprite"),"tint",GHOST_TINT)
         if k==1 then go.set(msg.url(nil,id,"rider"),"tint",GHOST_TINT) end

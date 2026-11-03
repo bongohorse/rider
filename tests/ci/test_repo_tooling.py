@@ -50,6 +50,7 @@ KNOWN_REFERENCES = {
     (".luacheckrc", "tools/ci/luacheck-lock.json"): "comment naming the lock lint_lua verifies",
     ("main/editor/editor.gui_script", "tests/ci/test_editor_help.py"): "comment naming the test that reads this script",
     ("tools/gym/regress_spec.cjs", "tests/ci/regress.test.cjs"): "comment naming the test that pins these tolerances",
+    ("tools/gym/wheel114_reach.cjs", "tests/ci/wheel114.test.cjs"): "comment naming the test of its verdict; the opt-in #114 runner is not in any workflow",
     ("tools/gym/smoke.py", "tests/ci/coast_measure.cjs"): "same basename; smoke.py runs tools/gym/coast_measure.cjs",
     ("tools/ci/classify_changes.py", "tools/bootstrap_check.py"): "selection data; only the changes job and local tools run the classifier",
     ("tools/ci/classify_changes.py", "tools/ci/"): "selection data; only the changes job and local tools run the classifier",

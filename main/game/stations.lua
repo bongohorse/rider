@@ -139,8 +139,9 @@ function M.start(v,d)
     b2d.body.set_linear_velocity(v.chassis,vmath.vector3(speed,0,0))
     for _,wheel in ipairs(v.wheels) do
         b2d.body.set_linear_velocity(wheel,vmath.vector3(speed,0,0))
-        -- The authored wheel radius is 22 engine units (same geometry as wheel art).
-        b2d.body.set_angular_velocity(wheel,-speed/22)
+        -- Rolling spin for the authored wheel radius in engine units (22 for A-F, feel.geometry for the #114
+        -- debug candidates; same geometry as the wheel art).
+        b2d.body.set_angular_velocity(wheel,-speed/feel.values.wheel_radius)
     end
 end
 -- Highest chain or hull edge at x not above y (metres), or nil: the surface a start falls onto (camera only).

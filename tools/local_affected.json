@@ -271,6 +271,13 @@
    ]
   },
   {
+   "name": "wheel-size A/B runner (#114; opt-in `--case w114`, report only, not in CI; check runs its unit tests)",
+   "cases": [],
+   "paths": [
+    "tools/gym/wheel114*.cjs"
+   ]
+  },
+  {
    "name": "station preset helper",
    "cases": [
     "a16",

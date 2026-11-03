@@ -3,6 +3,8 @@ components { id: "checker" component: "/main/game/checker.factory" }
 components { id: "probe" component: "/main/gym/probe.factory" }
 components { id: "chassis" component: "/main/game/chassis.factory" }
 components { id: "wheel" component: "/main/game/wheel.factory" }
+components { id: "wheel26" component: "/main/game/wheel26.factory" }
+components { id: "wheel30" component: "/main/game/wheel30.factory" }
 components { id: "rider" component: "/main/game/rider.factory" }
 components { id: "marker" component: "/main/game/marker.factory" }
 components { id: "engine" component: "/main/game/engine.sound" }

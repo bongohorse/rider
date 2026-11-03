@@ -1,0 +1,1144 @@
+{
+  "status": "FAIL",
+  "source_sha": "23b8696a196cec19b204363d786d067c0008ec0f",
+  "baseline": "a",
+  "runs": [
+    {
+      "key": "a",
+      "label": "0-a",
+      "preset_checks": {
+        "ramps": 25,
+        "gaps": 27,
+        "air": 20
+      },
+      "run_ids": {
+        "ramps": "2bcbf983-41a7-4c22-bc18-84504bc4d004",
+        "gaps": "abc030e7-eca5-412f-95c8-621baf8cd386",
+        "air": "f0172186-bf9e-4054-80f3-a9e27f2668ce"
+      }
+    },
+    {
+      "key": "w26",
+      "label": "1-w26",
+      "preset_checks": {
+        "ramps": null,
+        "gaps": 27,
+        "air": 20
+      },
+      "run_ids": {
+        "ramps": null,
+        "gaps": "e88abdf7-41f7-49be-906c-b1a1dc8a651c",
+        "air": "95009a7d-066f-4308-8f13-3eb83c463fdb"
+      }
+    },
+    {
+      "key": "w30",
+      "label": "2-w30",
+      "preset_checks": {
+        "ramps": null,
+        "gaps": 27,
+        "air": 20
+      },
+      "run_ids": {
+        "ramps": null,
+        "gaps": "dfab17d4-fb94-4a72-9d2b-61da05fed736",
+        "air": "89a32d36-0606-46e6-9e55-5b8ebc923b82"
+      }
+    }
+  ],
+  "browser": "156.0.8078.4",
+  "tuning": [],
+  "stations": [
+    {
+      "station": "ramps",
+      "case": "a16",
+      "declared_tolerances": "none declared; statuses must match",
+      "failed": [
+        null,
+        {
+          "status": "FAIL",
+          "exit": 1,
+          "out": "artifacts/presets114/runs/1-w26/ramps"
+        },
+        {
+          "status": "FAIL",
+          "exit": 1,
+          "out": "artifacts/presets114/runs/2-w30/ramps"
+        }
+      ],
+      "rows": [
+        {
+          "metric": "ramps highest climbed",
+          "unit": "°",
+          "tolerance": 0,
+          "values": [
+            45,
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "ramps per-angle status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "5 C, 10 C, 15 C, 20 C, 25 C, 30 C, 35 C, 40 C, 45 C, 60 F, 90 F",
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "ramps-long highest climbed",
+          "unit": "°",
+          "tolerance": 0,
+          "values": [
+            35,
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "ramps-long per-angle status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "5 C, 10 C, 15 C, 20 C, 25 C, 30 C, 35 C, 40 F, 45 F, 60 F, 90 F",
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "descent down-10 speed gain",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            1.1680352522127,
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "descent down-20 speed gain",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            2.5264271743649,
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "descent down-30 speed gain",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            3.1031341622069,
+            "FAIL",
+            "FAIL"
+          ],
+          "deltas": [
+            "n/a",
+            "n/a"
+          ],
+          "within": [
+            null,
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "station": "gaps",
+      "case": "a19",
+      "declared_tolerances": "jump 0.05 m, takeoff 0.02 m/s, compression 0.005 m",
+      "failed": [
+        null,
+        null,
+        null
+      ],
+      "rows": [
+        {
+          "metric": "widest cleared at 7 m/s",
+          "unit": "m",
+          "tolerance": 0,
+          "values": [
+            3,
+            4,
+            4
+          ],
+          "deltas": [
+            1,
+            1
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "7 m/s ladder status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 M, 5 M, 6 M, 8 M, 10 M",
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 C, 5 M, 6 M, 8 M, 10 M",
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 C, 5 M, 6 M, 8 M, 10 M"
+          ],
+          "deltas": [
+            "changed",
+            "changed"
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "7 m/s takeoff speed",
+          "unit": "m/s",
+          "tolerance": 0.02,
+          "values": [
+            6.0151945676984,
+            6.6328117413935,
+            6.7463688677616
+          ],
+          "deltas": [
+            0.6176171736950993,
+            0.7311743000631994
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "widest cleared at 9 m/s",
+          "unit": "m",
+          "tolerance": 0,
+          "values": [
+            4,
+            4,
+            5
+          ],
+          "deltas": [
+            0,
+            1
+          ],
+          "within": [
+            true,
+            false
+          ]
+        },
+        {
+          "metric": "9 m/s ladder status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 C, 5 M, 6 M, 8 M, 10 M",
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 C, 5 M, 6 M, 8 M, 10 M",
+            "1 C, 1.5 C, 2 C, 2.5 C, 3 C, 4 C, 5 C, 6 M, 8 M, 10 M"
+          ],
+          "deltas": [
+            "same",
+            "changed"
+          ],
+          "within": [
+            true,
+            false
+          ]
+        },
+        {
+          "metric": "9 m/s takeoff speed",
+          "unit": "m/s",
+          "tolerance": 0.02,
+          "values": [
+            6.3715043741873,
+            7.2429362394749,
+            7.7216123762366
+          ],
+          "deltas": [
+            0.8714318652876001,
+            1.3501080020493
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "landing flat status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CLEARED",
+            "CLEARED",
+            "CLEARED"
+          ],
+          "deltas": [
+            "same",
+            "same"
+          ],
+          "within": [
+            true,
+            true
+          ]
+        },
+        {
+          "metric": "landing flat touchdown vy",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            -3.9002034650698,
+            -4.0160130938289,
+            -4.2611491967481
+          ],
+          "deltas": [
+            -0.11580962875910039,
+            -0.36094573167830024
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "landing flat peak compression",
+          "unit": "m",
+          "tolerance": 0.005,
+          "values": [
+            0.27322859630223,
+            0.27764961098918,
+            0.30036516471881
+          ],
+          "deltas": [
+            0.004421014686949998,
+            0.027136568416579965
+          ],
+          "within": [
+            true,
+            false
+          ]
+        },
+        {
+          "metric": "landing flat landing angle",
+          "unit": "rad",
+          "tolerance": null,
+          "values": [
+            -0.99530029296875,
+            -0.65350866317749,
+            -0.57288455963135
+          ],
+          "deltas": [
+            0.34179162979126,
+            0.4224157333374
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "landing down status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CLEARED",
+            "CLEARED",
+            "CLEARED"
+          ],
+          "deltas": [
+            "same",
+            "same"
+          ],
+          "within": [
+            true,
+            true
+          ]
+        },
+        {
+          "metric": "landing down touchdown vy",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            -1.7331414407535,
+            -3.187967763216,
+            -3.599834514264
+          ],
+          "deltas": [
+            -1.4548263224625002,
+            -1.8666930735104998
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "landing down peak compression",
+          "unit": "m",
+          "tolerance": 0.005,
+          "values": [
+            0.17606875979747,
+            0.21057122713541,
+            0.23594747015951
+          ],
+          "deltas": [
+            0.03450246733793999,
+            0.05987871036204001
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "landing down landing angle",
+          "unit": "rad",
+          "tolerance": null,
+          "values": [
+            -0.48442861437798,
+            -0.51551908254623,
+            -0.47274625301361
+          ],
+          "deltas": [
+            -0.031090468168250007,
+            0.011682361364370009
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "landing up status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CLEARED",
+            "CLEARED",
+            "CLEARED"
+          ],
+          "deltas": [
+            "same",
+            "same"
+          ],
+          "within": [
+            true,
+            true
+          ]
+        },
+        {
+          "metric": "landing up touchdown vy",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            -3.2350859872605,
+            -3.1879811909501,
+            -3.1035735390282
+          ],
+          "deltas": [
+            0.04710479631039988,
+            0.13151244823229957
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "landing up peak compression",
+          "unit": "m",
+          "tolerance": 0.005,
+          "values": [
+            0.29539610083261,
+            0.33417200891289,
+            0.32071746109312
+          ],
+          "deltas": [
+            0.03877590808028003,
+            0.025321360260510017
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "landing up landing angle",
+          "unit": "rad",
+          "tolerance": null,
+          "values": [
+            -0.85296624898911,
+            -0.53370714187622,
+            -0.41360947489738
+          ],
+          "deltas": [
+            0.31925910711288996,
+            0.43935677409173
+          ],
+          "within": [
+            null,
+            null
+          ]
+        }
+      ]
+    },
+    {
+      "station": "air",
+      "case": "a19c",
+      "declared_tolerances": "takeoff 0.02 m/s, airtime 0.034 s, rotation 5°, landing angle 5°, compression 0.005 m",
+      "failed": [
+        null,
+        null,
+        null
+      ],
+      "rows": [
+        {
+          "metric": "big lean 0 status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CRASHED",
+            "CRASHED",
+            "CRASHED"
+          ],
+          "deltas": [
+            "same",
+            "same"
+          ],
+          "within": [
+            true,
+            true
+          ]
+        },
+        {
+          "metric": "big lean 0 takeoff speed",
+          "unit": "m/s",
+          "tolerance": 0.02,
+          "values": [
+            5.5927877021996,
+            6.796545306443,
+            7.2717196642427
+          ],
+          "deltas": [
+            1.2037576042433997,
+            1.6789319620430998
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean 0 airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.7333334237337,
+            1.9833334367722,
+            2.0500001069158
+          ],
+          "deltas": [
+            0.25000001303850006,
+            0.3166666831821001
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean 0 rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -151.18685626413,
+            -179.65122993673,
+            -216.99015997908
+          ],
+          "deltas": [
+            -28.464373672600004,
+            -65.80330371495
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean 0 landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -94.440234873319,
+            -136.3528391643,
+            175.29830031211
+          ],
+          "deltas": [
+            -41.91260429098101,
+            269.738535185429
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean 0 impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            7.3558175737878,
+            12.455822177379,
+            14.980431538044
+          ],
+          "deltas": [
+            5.1000046035911994,
+            7.624613964256199
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "big lean +1 (back) status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CRASHED",
+            "CRASHED",
+            "CRASHED"
+          ],
+          "deltas": [
+            "same",
+            "same"
+          ],
+          "within": [
+            true,
+            true
+          ]
+        },
+        {
+          "metric": "big lean +1 (back) airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.7500000912696,
+            1.9833334367722,
+            2.0500001069158
+          ],
+          "deltas": [
+            0.23333334550259988,
+            0.30000001564619994
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean +1 (back) rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            422.22519790029,
+            517.7667403454,
+            507.59985008658
+          ],
+          "deltas": [
+            95.54154244510994,
+            85.37465218628995
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean +1 (back) landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            116.47180579203,
+            -158.93486888217,
+            -175.11171663517
+          ],
+          "deltas": [
+            -275.4066746742,
+            -291.5835224272
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean +1 (back) impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            8.3662063335996,
+            12.053528591685,
+            13.556934344867
+          ],
+          "deltas": [
+            3.6873222580854,
+            5.190728011267401
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "big lean -1 (front) status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CRASHED",
+            "LANDED",
+            "LANDED"
+          ],
+          "deltas": [
+            "changed",
+            "changed"
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean -1 (front) airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.7500000912696,
+            1.9666667692363,
+            2.016666771844
+          ],
+          "deltas": [
+            0.21666667796669992,
+            0.2666666805744
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean -1 (front) rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -639.00271018484,
+            -729.71538615327,
+            -760.04460509429
+          ],
+          "deltas": [
+            -90.71267596842995,
+            -121.04189490944998
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean -1 (front) landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            135.2438977069,
+            33.583004619166,
+            -2.7561718160376
+          ],
+          "deltas": [
+            -101.660893087734,
+            -138.0000695229376
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "big lean -1 (front) impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            7.7956109272456,
+            11.891071660168,
+            13.481677763315
+          ],
+          "deltas": [
+            4.0954607329224,
+            5.6860668360694
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "mid lean 0 status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CRASHED",
+            "LANDED",
+            "CRASHED"
+          ],
+          "deltas": [
+            "changed",
+            "same"
+          ],
+          "within": [
+            false,
+            true
+          ]
+        },
+        {
+          "metric": "mid lean 0 takeoff speed",
+          "unit": "m/s",
+          "tolerance": 0.02,
+          "values": [
+            5.5927503022307,
+            6.796503673201,
+            7.2716453847813
+          ],
+          "deltas": [
+            1.2037533709703006,
+            1.6788950825506
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean 0 airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.2666667327285,
+            1.4833334106952,
+            1.5500000808388
+          ],
+          "deltas": [
+            0.21666667796670014,
+            0.2833333481103
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean 0 rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -113.17758948589,
+            -128.86777966516,
+            -161.40025413478
+          ],
+          "deltas": [
+            -15.69019017926999,
+            -48.22266464889
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean 0 landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -68.929502326432,
+            -95.567952278911,
+            -129.10988431163
+          ],
+          "deltas": [
+            -26.638449952478993,
+            -60.180381985198
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean 0 impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            6.5390001248808,
+            9.9693219137283,
+            10.374173678973
+          ],
+          "deltas": [
+            3.4303217888474995,
+            3.8351735540922
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "mid lean +1 (back) status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "CRASHED",
+            "LANDED",
+            "LANDED"
+          ],
+          "deltas": [
+            "changed",
+            "changed"
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean +1 (back) airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.2833334002644,
+            1.4833334106952,
+            1.516666745767
+          ],
+          "deltas": [
+            0.20000001043080018,
+            0.2333333455026001
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean +1 (back) rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            221.99773963605,
+            315.49089639624,
+            290.21129052323
+          ],
+          "deltas": [
+            93.49315676018998,
+            68.21355088717999
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean +1 (back) landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -93.754173204491,
+            -11.209276217513,
+            -42.498324924763
+          ],
+          "deltas": [
+            82.54489698697799,
+            51.255848279728
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean +1 (back) impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            6.2026934904158,
+            9.7241284270254,
+            10.381817402786
+          ],
+          "deltas": [
+            3.5214349366096,
+            4.1791239123701995
+          ],
+          "within": [
+            null,
+            null
+          ]
+        },
+        {
+          "metric": "mid lean -1 (front) status",
+          "unit": "",
+          "tolerance": 0,
+          "values": [
+            "LANDED",
+            "CRASHED",
+            "CRASHED"
+          ],
+          "deltas": [
+            "changed",
+            "changed"
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean -1 (front) airtime",
+          "unit": "s",
+          "tolerance": 0.034,
+          "values": [
+            1.3000000678003,
+            1.4833334106952,
+            1.5500000808388
+          ],
+          "deltas": [
+            0.1833333428949,
+            0.25000001303849984
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean -1 (front) rotation",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -429.5562106912,
+            -502.89662622034,
+            -548.34190799514
+          ],
+          "deltas": [
+            -73.34041552913999,
+            -118.78569730393997
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean -1 (front) landing angle",
+          "unit": "°",
+          "tolerance": 5,
+          "values": [
+            -30.308087091864,
+            -104.59679592508,
+            -161.05152344313
+          ],
+          "deltas": [
+            -74.288708833216,
+            -130.743436351266
+          ],
+          "within": [
+            false,
+            false
+          ]
+        },
+        {
+          "metric": "mid lean -1 (front) impact normal speed",
+          "unit": "m/s",
+          "tolerance": null,
+          "values": [
+            7.8114881539131,
+            9.4965440121676,
+            11.473410079707
+          ],
+          "deltas": [
+            1.6850558582545005,
+            3.6619219257938997
+          ],
+          "within": [
+            null,
+            null
+          ]
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "station": "ramps",
+      "run": "1-w26",
+      "status": "FAIL",
+      "exit": 1,
+      "out": "artifacts/presets114/runs/1-w26/ramps"
+    },
+    {
+      "station": "ramps",
+      "run": "2-w30",
+      "status": "FAIL",
+      "exit": 1,
+      "out": "artifacts/presets114/runs/2-w30/ramps"
+    }
+  ],
+  "repeats": [],
+  "follow_ups": [
+    "throttle 0 to 5 m/s time and braking distance from 7 m/s: telemetry samples every 0.25 s and the straight station records no brake entry speed, so both need a small game-side read"
+  ],
+  "real_device": "NOT RUN"
+}
