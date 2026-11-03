@@ -14,6 +14,7 @@ class PagesGate(unittest.TestCase):
         )
         pages = workflow['jobs']['pages']
         self.assertEqual(set(pages['needs']), {'changes', 'required'})
+        # The repo-tooling short path (#437) builds no release, so there is nothing to deploy.
         # Without a status function GitHub adds success(), which also checks
         # skipped ancestors (e.g. Bridge on the gameplay fast path, issue #242).
         # Keep the explicit gate: always() alone could publish a failed build.
@@ -21,6 +22,7 @@ class PagesGate(unittest.TestCase):
             pages['if'],
             "always() && github.ref == 'refs/heads/main' "
             "&& needs.changes.outputs.docs_only != 'true' "
+            "&& needs.changes.outputs.repo_tooling != 'true' "
             "&& needs.required.result == 'success'",
         )
         self.assertEqual(pages['uses'], './.github/workflows/pages.yml')

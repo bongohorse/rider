@@ -1,6 +1,6 @@
-"""Exercise the real required job script in full and docs-only modes.
+"""Exercise the real required job script in full, docs-only, gym and repo-tooling modes.
 
-Docs-only must skip expensive suites deliberately; all other cases fail closed.
+Fast paths must skip expensive suites deliberately; all other cases fail closed.
 """
 import json
 import os
@@ -17,6 +17,11 @@ def load_workflow():
     return yaml.load((ROOT / ".github/workflows/ci.yml").read_text(), Loader=yaml.BaseLoader)
 
 
+FULL = {"docs_only": "false", "skip_special": "false", "repo_tooling": "false",
+        "selection_reason": "unknown-or-shared-change-full"}
+HEAVY = ("renovate", "physics", "tooling", "bridge", "preview")
+
+
 def run_required(job, needs):
     # Run the exact script configured in the required workflow job.
     assert job["steps"][-1]["run"] == "python3 tools/ci/required_gate.py"
@@ -31,10 +36,11 @@ class RequiredCheck(unittest.TestCase):
     def test_dependency_results_fail_closed_in_full_mode(self):
         job = load_workflow()["jobs"]["required"]
         self.assertEqual(job["if"], "${{ always() }}")
-        expected = {"changes", "bootstrap", "renovate", "physics", "tooling", "bridge", "preview"}
+        expected = {"changes", "bootstrap", "ci_node", "renovate", "physics", "tooling", "bridge",
+                    "preview"}
         self.assertEqual(set(job["needs"]), expected)
         baseline = {name: {"result": "success"} for name in expected}
-        baseline["changes"]["outputs"] = {"docs_only": "false"}
+        baseline["changes"]["outputs"] = dict(FULL)
         self.assertEqual(run_required(job, baseline).returncode, 0)
         for dependency in job["needs"]:
             for state in ("failure", "cancelled", "skipped"):
@@ -47,7 +53,8 @@ class RequiredCheck(unittest.TestCase):
     def test_docs_only_mode_requires_exactly_skipped_heavy_jobs(self):
         job = load_workflow()["jobs"]["required"]
         others = {name: {"result": "skipped"} for name in job["needs"] if name != "changes"}
-        expected = {"changes": {"result": "success", "outputs": {"docs_only": "true"}}, **others}
+        outputs = {**FULL, "docs_only": "true", "selection_reason": "docs-text-only"}
+        expected = {"changes": {"result": "success", "outputs": outputs}, **others}
         self.assertEqual(run_required(job, expected).returncode, 0)
         for dependency in others:
             for state in ("success", "failure", "cancelled"):
@@ -67,11 +74,14 @@ class RequiredCheck(unittest.TestCase):
         workflow = load_workflow()
         self.assertIn("pull_request", workflow["on"])
         self.assertIn("main", workflow["on"]["push"]["branches"])
-        self.assertEqual(workflow["jobs"]["changes"]["outputs"]["docs_only"],
-                         "${{ steps.classify.outputs.docs_only }}")
-        for job in ("bootstrap", "renovate", "physics", "tooling", "bridge", "preview"):
+        for output in FULL:
+            self.assertEqual(workflow["jobs"]["changes"]["outputs"][output],
+                             f"${{{{ steps.classify.outputs.{output} }}}}")
+        for job in ("bootstrap", "ci_node") + HEAVY:
             self.assertEqual(workflow["jobs"][job]["needs"], "changes")
             expected = "needs.changes.outputs.docs_only != 'true'"
+            if job in HEAVY:
+                expected += " && needs.changes.outputs.repo_tooling != 'true'"
             if job == "bridge":
                 expected += " && needs.changes.outputs.skip_special != 'true'"
             self.assertEqual(workflow["jobs"][job]["if"], expected)
@@ -87,12 +97,33 @@ class RequiredCheck(unittest.TestCase):
     def test_gameplay_mode_omits_only_explicit_special_jobs(self):
         job = load_workflow()["jobs"]["required"]
         baseline = {name: {"result": "success"} for name in job["needs"]}
-        baseline["changes"]["outputs"] = {"docs_only": "false", "skip_special": "true"}
+        baseline["changes"]["outputs"] = {**FULL, "skip_special": "true",
+                                          "selection_reason": "gym-and-docs-only"}
         baseline["bridge"]["result"] = "skipped"
         self.assertEqual(run_required(job, baseline).returncode, 0)
-        for name in ("physics", "tooling", "preview", "bootstrap", "renovate"):
+        for name in ("physics", "tooling", "preview", "bootstrap", "ci_node", "renovate"):
             tampered = json.loads(json.dumps(baseline))
             tampered[name]["result"] = "skipped"
+            self.assertNotEqual(run_required(job, tampered).returncode, 0)
+
+    def test_repo_tooling_mode_skips_only_heavy_jobs(self):
+        job = load_workflow()["jobs"]["required"]
+        baseline = {name: {"result": "skipped" if name in HEAVY else "success"} for name in job["needs"]}
+        baseline["changes"]["outputs"] = {**FULL, "repo_tooling": "true",
+                                          "selection_reason": "repo-tooling-and-docs-only"}
+        self.assertEqual(run_required(job, baseline).returncode, 0)
+        for name in job["needs"]:
+            for state in ("success", "failure", "cancelled", "skipped"):
+                if state == baseline[name]["result"] or (name == "changes" and state == "success"):
+                    continue
+                with self.subTest(name=name, state=state):
+                    tampered = json.loads(json.dumps(baseline))
+                    tampered[name]["result"] = state
+                    self.assertNotEqual(run_required(job, tampered).returncode, 0)
+        for outputs in ({**baseline["changes"]["outputs"], "selection_reason": "unknown-or-shared-change-full"},
+                        {k: v for k, v in baseline["changes"]["outputs"].items() if k != "repo_tooling"}):
+            tampered = json.loads(json.dumps(baseline))
+            tampered["changes"]["outputs"] = outputs
             self.assertNotEqual(run_required(job, tampered).returncode, 0)
 
     def test_g1_keeps_linux_and_conditionally_selects_windows(self):
@@ -122,6 +153,7 @@ class RequiredCheck(unittest.TestCase):
         self.assertEqual(deploy["if"],
                          "always() && github.ref == 'refs/heads/main' "
                          "&& needs.changes.outputs.docs_only != 'true' "
+                         "&& needs.changes.outputs.repo_tooling != 'true' "
                          "&& needs.required.result == 'success'")
         self.assertEqual(deploy["uses"], "./.github/workflows/pages.yml")
         self.assertIn("workflow_dispatch", workflow["on"])

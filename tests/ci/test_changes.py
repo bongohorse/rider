@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "ci"))
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "ci"))
 from classify_changes import bundled_paths, is_docs_only, read_paths
 
 
@@ -68,14 +69,14 @@ class ClassificationTest(unittest.TestCase):
             f.write_bytes(b"")
             self.assertEqual(read_paths(f), [])
             self.assertFalse(is_docs_only(read_paths(f)))
-    
+
     def test_gym_selection_and_conservative_fallback(self):
         from classify_changes import is_gym_only, selection
         self.assertTrue(is_gym_only(["main/gym/game.script", "docs/TOOLING.md"]))
         self.assertEqual(selection(["main/gym/game.script"])[1], "true")
         self.assertEqual(selection(["docs/README.md"])[0], "true")
         self.assertEqual(selection(["docs/README.md", "docs/research/evidence/empty.txt"]),
-                         ("true", "false", "docs-text-only"))
+                         ("true", "false", "false", "docs-text-only"))
         self.assertEqual(selection(["docs/samples.json"])[0], "false")
         self.assertEqual(selection(["main/gym/game.script", "docs/evidence.txt"])[1], "true")
         # #405 split main/gym into game, editor and gym; all three keep the same selection.
@@ -91,6 +92,99 @@ class ClassificationTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertFalse(is_gym_only(["main/gym/game.script", path]))
                 self.assertEqual(selection(["main/gym/game.script", path])[1], "false")
+
+
+FULL = ("false", "false", "false", "unknown-or-shared-change-full")
+TOOLING = ("false", "false", "true", "repo-tooling-and-docs-only")
+
+
+class RepoToolingSelection(unittest.TestCase):
+    """#437: only repo tooling plus non-runtime docs takes the short path; all else is full."""
+
+    def test_tooling_only_and_with_docs(self):
+        from classify_changes import selection
+        for paths in (
+            ["tools/bootstrap_check.py"],
+            ["tools/ci/lint_lua.py"], ["tools/ci/luacheck-lock.json"],
+            ["tools/ci/lint_workflows.py", "tools/ci/actionlint-lock.json"],
+            ["tools/ci/check_docs_links.py", "tools/ci/nightly_alert.py"],
+            ["tests/ci/test_changes.py"], ["tests/ci/levels.test.cjs"],
+            ["tests/ci/test_required_gate.py", "tests/ci/playwright-setup.test.cjs"],
+            ["tools/bootstrap_check.py", "docs/TOOLING.md", "README.md"],
+            ["tests/ci/test_lint_lua.py", "docs/reports/notes.txt"],
+        ):
+            with self.subTest(paths=paths):
+                self.assertEqual(selection(paths), TOOLING)
+
+    def test_negative_controls_select_full(self):
+        from classify_changes import selection
+        for paths in (
+            # empty or unknown
+            [], ["tools/ci"], ["tools/ci/sub/helper.py"], ["tests/ci/fixtures/case.json"],
+            ["tools/cix.py"], ["tools/ci.py"], ["tests/cifoo/x.py"], ["tools/bootstrap_check.pyc"],
+            ["tests/bootstrap/test_required.py"], ["tools/local.py"],
+            # tooling plus one game or gameplay-loaded file
+            ["tools/ci/lint_lua.py", "main/game/controller.script"],
+            ["tests/ci/levels.test.cjs", "main/gym/game.script"],
+            ["tools/bootstrap_check.py", "tools/gym/smoke.py"],
+            ["tools/ci/lint_lua.py", "tools/project.py"],
+            ["tools/ci/lint_lua.py", "tools/preview/verify.cjs"],
+            ["tools/ci/lint_lua.py", "tools/g1/run.py"],
+            ["tools/ci/lint_lua.py", "tools/gameplay/lua_tests.py"],
+            ["tools/ci/lint_lua.py", "game.project"],
+            ["tools/ci/lint_lua.py", "package-lock.json"],
+            ["tools/ci/lint_lua.py", "docs/data.json"],
+            # workflows, including workflow-adjacent Markdown
+            [".github/workflows/ci.yml"],
+            [".github/workflows/ci.yml", "tools/ci/lint_lua.py"],
+            [".github/workflows/g1.yml", "tests/ci/levels.test.cjs"],
+            [".github/PULL_REQUEST_TEMPLATE.md", "tools/ci/lint_lua.py"],
+            # the selection and the required gate themselves
+            ["tools/ci/classify_changes.py"],
+            ["tools/ci/classify_changes.py", "tests/ci/test_changes.py"],
+            ["tools/ci/required_gate.py"],
+            ["tools/ci/required_gate.py", "tests/ci/test_required_gate.py", "docs/TOOLING.md"],
+            # loaded by G1 HTML5, Gym and release verification
+            ["tools/ci/setup_playwright.cjs"],
+            ["tools/ci/setup_playwright.cjs", "tests/ci/playwright-setup.test.cjs"],
+        ):
+            with self.subTest(paths=paths):
+                self.assertEqual(selection(paths), FULL)
+
+    def test_docs_and_gym_selection_unchanged(self):
+        from classify_changes import selection
+        self.assertEqual(selection(["docs/TOOLING.md"]), ("true", "false", "false", "docs-text-only"))
+        self.assertEqual(selection(["main/game/controller.script", "docs/TOOLING.md"]),
+                         ("false", "true", "false", "gym-and-docs-only"))
+
+    def test_bundled_or_unreadable_project_fails_closed(self):
+        from classify_changes import is_repo_tooling
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "game.project"
+            project.write_text("[project]\ncustom_resources = /tests/ci\n", encoding="utf-8")
+            self.assertFalse(is_repo_tooling(["tests/ci/levels.test.cjs"], project))
+            self.assertTrue(is_repo_tooling(["tools/ci/lint_lua.py"], project))
+            self.assertFalse(is_repo_tooling(["tools/ci/lint_lua.py"], Path(tmp) / "missing.project"))
+
+    def test_full_run_exclusions_are_explained(self):
+        from classify_changes import FULL_RUN_TOOLING
+        self.assertEqual(set(FULL_RUN_TOOLING), {
+            "tools/ci/classify_changes.py", "tools/ci/required_gate.py",
+            "tools/ci/setup_playwright.cjs"})
+        for path, reason in FULL_RUN_TOOLING.items():
+            self.assertTrue((ROOT / path).is_file(), path)
+            self.assertGreater(len(reason), 20, path)
+
+    def test_cli_prints_every_selection_output(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "paths"
+            f.write_bytes(b"tools/ci/lint_lua.py\0docs/TOOLING.md\0")
+            out = subprocess.run([sys.executable, str(ROOT / "tools/ci/classify_changes.py"), str(f)],
+                                 capture_output=True, text=True, check=True).stdout
+            self.assertEqual(out.splitlines(), ["docs_only=false", "skip_special=false",
+                                                "repo_tooling=true",
+                                                "selection_reason=repo-tooling-and-docs-only"])
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ jobs:
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
       skip_special: ${{ steps.classify.outputs.skip_special }}
+      repo_tooling: ${{ steps.classify.outputs.repo_tooling }}
       selection_reason: ${{ steps.classify.outputs.selection_reason }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,7 +53,7 @@ jobs:
         run: python3 tools/ci/lint_lua.py
       - name: Check fast-path classification rules
         run: python3 -m unittest discover -s tests/ci -v
-      - name: Detect Markdown-only change (fail closed)
+      - name: Classify the change (fail closed)
         id: classify
         shell: bash
         env:
@@ -66,6 +67,7 @@ jobs:
             *) {
               echo "docs_only=false"
               echo "skip_special=false"
+              echo "repo_tooling=false"
               echo "selection_reason=scheduled-or-manual-full"
             } >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
@@ -73,18 +75,29 @@ jobs:
             {
               echo "docs_only=false"
               echo "skip_special=false"
+              echo "repo_tooling=false"
               echo "selection_reason=missing-base-full"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git cat-file -e "$BASE^{commit}"
           git diff --no-renames --name-only -z "$BASE" HEAD -- > "$RUNNER_TEMP/changed-paths"
-          python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" >> "$GITHUB_OUTPUT"
+          python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" > "$RUNNER_TEMP/selection"
+          cat "$RUNNER_TEMP/selection"
+          # The classifier under test never decides alone that its own change, the required
+          # gate or a workflow may skip jobs (#437): such a verdict fails this job.
+          if grep -qx 'repo_tooling=true' "$RUNNER_TEMP/selection" &&
+             grep -qzE '^(\.github/.*|tools/ci/classify_changes\.py|tools/ci/required_gate\.py)$' "$RUNNER_TEMP/changed-paths"; then
+            echo "::error::repo-tooling short path selected for a classifier, required gate or .github change"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/selection" >> "$GITHUB_OUTPUT"
       - name: Explain CI selection
         if: always()
         env:
           DOCS_ONLY: ${{ steps.classify.outputs.docs_only }}
           SKIP_SPECIAL: ${{ steps.classify.outputs.skip_special }}
+          REPO_TOOLING: ${{ steps.classify.outputs.repo_tooling }}
           REASON: ${{ steps.classify.outputs.selection_reason }}
         shell: bash
         run: |
@@ -93,10 +106,11 @@ jobs:
             echo "- Reason: $REASON"
             echo "- Docs-only: $DOCS_ONLY"
             echo "- Windows/Bridge/negative-build skipped: $SKIP_SPECIAL"
+            echo "- Repo-tooling short path (only Bootstrap and CI tests; no gameplay, Gym, release, Renovate, Android or Bridge): $REPO_TOOLING"
             echo "- Linux native, HTML5 and Android stay selected for gameplay."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Validate changed Markdown relative links
-        if: steps.classify.outputs.docs_only == 'true'
+        if: steps.classify.outputs.docs_only == 'true' || steps.classify.outputs.repo_tooling == 'true'
         run: python3 tools/ci/check_docs_links.py "$RUNNER_TEMP/changed-paths"
   bootstrap:
     needs: changes
@@ -139,9 +153,28 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./tools/doctor.ps1 --json
-  renovate:
+  ci_node:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
+    name: CI Node tests
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.21.0'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      # Unit tests only: no build, browser or Gym bundle. Every selection except docs-only
+      # runs them, so the repo-tooling short path keeps them (#437).
+      - name: CI, Gym report and release plan Node unit tests
+        run: node --test tests/ci/*.cjs
+  renovate:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true'
     name: Renovate validation and scan
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -154,8 +187,6 @@ jobs:
           node-version: '24.21.0'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Verify split LE6 Gym report identity and exact case inventory
-        run: node --test tests/ci/test_polish_merge.cjs
       - run: npm run renovate:validate
       - name: Real dependency extraction scan
         env:
@@ -174,7 +205,7 @@ jobs:
           if-no-files-found: warn
   physics:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true'
     uses: ./.github/workflows/g1.yml
     with:
       caller_managed_concurrency: true
@@ -182,23 +213,23 @@ jobs:
       cold_browser_cache: ${{ inputs.cold_browser_cache || false }}
   tooling:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true'
     uses: ./.github/workflows/g2.yml
     with:
       caller_managed_concurrency: true
       run_negative: ${{ needs.changes.outputs.skip_special != 'true' }}
   bridge:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.skip_special != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true' && needs.changes.outputs.skip_special != 'true'
     uses: ./.github/workflows/bridge.yml
     with:
       caller_managed_concurrency: true
   preview:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true'
     uses: ./.github/workflows/preview.yml
   pages:
-    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.docs_only != 'true' && needs.required.result == 'success'
+    if: always() && github.ref == 'refs/heads/main' && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.repo_tooling != 'true' && needs.required.result == 'success'
     needs: [changes, required]
     permissions:
       contents: read
@@ -208,7 +239,7 @@ jobs:
   required:
     name: required
     if: ${{ always() }}
-    needs: [changes, bootstrap, renovate, physics, tooling, bridge, preview]
+    needs: [changes, bootstrap, ci_node, renovate, physics, tooling, bridge, preview]
     runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:

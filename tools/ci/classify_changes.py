@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify Git NUL-delimited paths; allow only non-runtime Markdown and docs text."""
+"""Classify Git NUL-delimited paths into docs-only, gym, repo-tooling or full CI selection."""
 import sys
 from pathlib import Path
 
@@ -67,18 +67,58 @@ def is_gym_only(paths):
     )
 
 
+# Repo-only tooling (#437): files that only the change classification, Bootstrap and
+# CI Node test jobs load. Direct children of the directories only; anything deeper is full.
+REPO_TOOLING_FILES = ("tools/bootstrap_check.py",)
+REPO_TOOLING_DIRS = ("tools/ci/", "tests/ci/")
+# Tooling-directory files that always select the full run. tests/ci/test_repo_tooling.py fails
+# when a file the skipped jobs load is missing here.
+FULL_RUN_TOOLING = {
+    "tools/ci/classify_changes.py":
+        "the selection itself: a classifier change must never pick its own short path",
+    "tools/ci/required_gate.py":
+        "the required gate decides which skips are allowed; a change must face every job",
+    "tools/ci/setup_playwright.cjs":
+        "G1 HTML5, every Gym group and every release verify group install Chromium with it",
+}
+
+
+def is_repo_tooling_path(path, bundled):
+    if path in FULL_RUN_TOOLING or is_bundled(path, bundled):
+        return False
+    if path in REPO_TOOLING_FILES:
+        return True
+    return any(path.startswith(d) and "/" not in path[len(d):] and path != d
+               for d in REPO_TOOLING_DIRS)
+
+
+def is_repo_tooling(paths, project=PROJECT):
+    """Repo tooling plus non-runtime docs, never .github/ (not even its Markdown)."""
+    bundled = bundled_paths(project)
+    if bundled is None or not paths or any(path.startswith(".github/") for path in paths):
+        return False
+    tooling = [is_repo_tooling_path(path, bundled) for path in paths]
+    return any(tooling) and all(
+        is_tool or is_docs_only([path], project) for path, is_tool in zip(paths, tooling)
+    )
+
+
 def selection(paths):
+    """Return (docs_only, skip_special, repo_tooling, selection_reason); unknown is full."""
     if is_docs_only(paths):
-        return "true", "false", "docs-text-only"
+        return "true", "false", "false", "docs-text-only"
     if is_gym_only(paths):
-        return "false", "true", "gym-and-docs-only"
-    return "false", "false", "unknown-or-shared-change-full"
+        return "false", "true", "false", "gym-and-docs-only"
+    if is_repo_tooling(paths):
+        return "false", "false", "true", "repo-tooling-and-docs-only"
+    return "false", "false", "false", "unknown-or-shared-change-full"
 
 
 if __name__ == "__main__":
     paths = read_paths(sys.argv[1])
     print(f"Changed paths: {len(paths)}", file=sys.stderr)
-    docs_only, skip_special, reason = selection(paths)
+    docs_only, skip_special, repo_tooling, reason = selection(paths)
     print(f"docs_only={docs_only}")
     print(f"skip_special={skip_special}")
+    print(f"repo_tooling={repo_tooling}")
     print(f"selection_reason={reason}")
