@@ -128,6 +128,33 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   t=await state();assert.equal(t.station,'rolling-hills');assert.equal(t.world_loads,before.world_loads);assert.deepEqual(counts(t),a1);
   cases.push('malformed_lists_refused');
 
+  // #388: a sparse or object-shaped coin/gem/canister list and a scalar coins (which threw before) are
+  // refused by the real json.decode import with a normal error and no world load. Base: First run
+  // (schema 4: gold, gems, canisters and fuel settings); the reload below proves the save.
+  const first=JSON.parse(fs.readFileSync(path.join(ROOT,'main/game/stations/first-run.json'),'utf8'));
+  const gold=first.coins.items.filter(p=>!p.kind),gem=first.coins.items.find(p=>p.kind==='gem'),can=first.coins.items.find(p=>p.kind==='fuel');
+  assert(gold.length>=2&&gem&&can,'First run lost its gold, gem or canister pickups');
+  const pickups=coins=>JSON.stringify({...first,id:'malformed-pickups',coins});
+  const items=list=>pickups({version:3,items:list});
+  const notObject='Invalid coins: coins is not an object';
+  const badPickups=[
+   // A null hole followed by a valid gem and an invalid canister (position not two numbers).
+   [items([gold[0],gold[1],null,gem,{...can,position:[can.position[0],'x']}]),'Invalid pickups: coins.items has a gap at entry 3'],
+   [items([gem,null,can]),'Invalid pickups: coins.items has a gap at entry 2'],
+   [items({'1':gold[0]}),'Invalid pickups: coins.items is not a list (key "1")'],
+   [pickups(42),notObject],[pickups(true),notObject],[pickups('bad'),notObject],
+  ];
+  measurements.malformed_pickups=[];
+  for(const [value,reason] of badPickups){
+   await importText(value);
+   const message='Import failed: '+reason+'. The current level and its save are unchanged.';
+   await page.waitForFunction(m=>document.querySelector('#rider-custom-error')?.textContent===m,message);
+   measurements.malformed_pickups.push(message);
+  }
+  t=await state();assert.equal(t.station,'rolling-hills');assert.equal(t.world_loads,before.world_loads);assert.deepEqual(counts(t),a1);
+  assert.deepEqual(errors,[],'A malformed pickup import raised a script error');
+  cases.push('malformed_pickups_refused');
+
   // Reload restores the last valid level.
   await page.goto(url);t=await ready('rolling-hills',1,null);assert.deepEqual(counts(t),a1);
   assert.equal(await page.evaluate(()=>window.riderCustom.visible),false);cases.push('reload_restores_last_valid');
