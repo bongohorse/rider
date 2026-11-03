@@ -1,5 +1,7 @@
 -- All gym driving/camera tuning. Geometry remains in the authored body resources.
 local M = {}
+-- #443: the player's live camera settings (pure module); its defaults reproduce this file's camera exactly.
+local camera_settings=require "main.game.camera_settings"
 M.values={spawn_x=0,spawn_y=170,wheel_x={-46,46},wheel_y=-30}
 -- Preset registry (#199): the only list of selectable presets, in P-cycle and chip order.
 -- A is the measurement baseline; B and C predate the rotation cap (#114); D, E and F are candidates.
@@ -139,11 +141,12 @@ M.follow={
     vertical_deadband=40, -- ignore brief suspension/crest motion below 0.4 m/s
     vertical_full=300, -- sustained 3 m/s vertical motion fully yields to movement direction
     sink_rate=1.5,     -- 1/s: hold the framing through short rises, dips and landings
-    -- #352: opt-in debug A/B only. Never persisted or used by the production camera default.
+    -- #352/#443: camera B only (A stays the default; the player picks B with the HUD camera button). B's live
+    -- descent_response (0: no extra pan-rate surge at landing, #374) and descent_rise_limit (240 u/s: bound on
+    -- new lead after touchdown, decay stays immediate, #374) are camera settings (camera_settings.lua).
     descent_rate=8,    -- 1/s: fast separate downhill signal, not the ground-window filter
     descent_seconds=0.35, -- seconds of raw downward travel to reserve below the chassis
     descent_max=120,   -- u: cap extra vertical lead before the existing safe-edge clamp
-    descent_response=4, -- 1/s: additional render-only downward pan responsiveness
     vertical_response_scale=0.6, -- vertical pans ease more slowly than horizontal follow
     settle_speed=20,   -- a realignment ends only below this vertical speed (u/s)
     margin_bottom=100,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
@@ -155,27 +158,34 @@ local function camera_frame(half)
     if half then frame=math.min(frame,math.max(half-M.follow.margin_bottom-M.follow.snap_window,0)) end
     return frame
 end
--- Look-ahead length (u) for a smoothed speed vx on side dir.
-local function look_ahead(vx,dir)
+-- Look-ahead length (u) for a smoothed speed vx on side dir; t: camera settings (look multiplies look_scale).
+local function look_ahead(vx,dir,t)
     local c,f=M.values,M.follow
-    return math.min(math.max(vx*dir,0)*c.camera_look_seconds*f.look_scale,c.camera_look_max*f.look_scale)
+    local scale=f.look_scale*t.look
+    return math.min(math.max(vx*dir,0)*c.camera_look_seconds*scale,c.camera_look_max*scale)
 end
 -- Follow state for a start at (x, y) above the ground surface ground_y (nil: the 0.9 m start clearance of the
 -- stations) with start speed speed (u/s); returns the state and the camera position, so a start already shows
 -- the view it settles on, looking ahead (inside the hard edges of a view of half height half, so a high drop
--- start does not jump a frame later).
-function M.camera_start(x,y,ground_y,speed,half)
+-- start does not jump a frame later). tune: the player's camera settings (#443; nil = defaults).
+function M.camera_start(x,y,ground_y,speed,half,tune)
     local f=M.follow
+    local t=tune or camera_settings.DEFAULTS
     local dir=speed<0 and -1 or 1
-    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,descent=0,look=dir*look_ahead(speed,dir)}
+    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,descent=0,look=dir*look_ahead(speed,dir,t)}
     local cy=s.ground+camera_frame(half)
     if half then cy=M.clamp(cy,y-math.max(half-f.margin_top,half*0.3),y+math.max(half-f.margin_bottom,half*0.3)) end
     return s,vmath.vector3(x+s.look,cy,500)
 end
 -- s: state from camera_start (updated in place); velocity: chassis velocity; grounded: a wheel or the chassis
 -- touches something; half, half_x: the view's current half height and width (nil skips the edge limits).
-function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experiment)
+-- experiment: "b" selects camera B; tune: the player's live camera settings (#443, camera_settings.lua; nil =
+-- defaults). Render-only: nothing here reads or writes a body, the fixed tick or a replay.
+function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experiment,tune)
     local c,f=M.values,M.follow
+    local t=tune or camera_settings.DEFAULTS
+    -- Follow speed: the preset's response times the setting (x * 1 is exact, so the default is unchanged).
+    local response=c.camera_response*t.follow
     -- Dual forward focus: the look-ahead keeps its side until the chassis has travelled focus_switch against
     -- it, so a short roll back does not swing the view. The smoothed speed sets how far it looks. The signed
     -- look-ahead eases in when it grows or changes side, so speeding up and turning round pan smoothly and
@@ -183,12 +193,12 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
     if velocity.x*s.dir<0 then s.against=s.against-velocity.x*s.dir*dt else s.against=0 end
     if s.against>f.focus_switch then s.dir,s.against=-s.dir,0 end
     s.vx=s.vx+(velocity.x-s.vx)*(1-math.exp(-f.speed_rate*dt))
-    local look=s.dir*look_ahead(s.vx,s.dir)
+    local look=s.dir*look_ahead(s.vx,s.dir,t)
     local rate=(look*s.look>=0 and math.abs(look)<math.abs(s.look)) and f.speed_rate or f.look_rate
     s.look=s.look+(look-s.look)*(1-math.exp(-rate*dt))
     -- The smoothing lags a moving chassis by speed / camera_response; leading by that lag keeps the
     -- look-ahead in front of the chassis instead of eating it up at speed.
-    local x=target.x+s.look+s.vx/c.camera_response
+    local x=target.x+s.look+s.vx/response
     -- Platform snapping: a grounded chassis further than snap_window from the snapped height starts a
     -- realignment that tracks the ground (long climbs and descents, a landing elsewhere) until it settles.
     -- Preserve the prior terrain-follow height. Suspension compression can create
@@ -199,14 +209,14 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
         s.ground=s.ground+(target.y-s.ground)*(1-math.exp(-f.sink_rate*dt))
     end
     local frame=camera_frame(half)
-    local vertical_response=c.camera_response*f.vertical_response_scale
+    local vertical_response=response*f.vertical_response_scale
     -- Keep the calm ground window at rest. Both climbing and falling override that framing
     -- progressively: a fixed upward lift must not cancel the downward look-ahead on a slope.
     s.vy=s.vy+(velocity.y-s.vy)*(1-math.exp(-f.sink_rate*dt))
     local speed=math.max(math.abs(s.vy)-f.vertical_deadband,0)
     local weight=M.clamp(speed/(f.vertical_full-f.vertical_deadband),0,1)
     weight=weight*weight*(3-2*weight)
-    local look_y=(s.vy<0 and -1 or 1)*look_ahead(speed,1)
+    local look_y=(s.vy<0 and -1 or 1)*look_ahead(speed,1,t)
     local lift=math.min(c.camera_lift,frame-f.snap_window)
     local window=math.max(s.ground+frame,target.y+lift)
     if not grounded then window=math.min(window,target.y+frame+f.snap_window) end
@@ -223,10 +233,16 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
         local downhill=grounded and terrain_descending and
             velocity.x*s.dir>f.vertical_deadband and velocity.y < -f.vertical_deadband
         local requested=downhill and math.min((-velocity.y-f.vertical_deadband)*f.descent_seconds,f.descent_max) or 0
-        s.descent=(s.descent or 0)+(requested-(s.descent or 0))*(1-math.exp(-f.descent_rate*dt))
+        local previous=s.descent or 0
+        local filtered=previous+(requested-previous)*(1-math.exp(-f.descent_rate*dt))
+        -- #374: avoid a sudden extra downward pan when the wheels first touch a slope (bounded growth).
+        -- Do not slow release when the terrain stops descending or direction reverses.
+        s.descent=math.min(filtered,previous+t.descent_rise_limit*dt)
         descent=s.descent
         y=y-descent
     end
+    -- #443 height setting (y + 0 is exact, so the default is unchanged); the hard edges below still apply.
+    y=y+t.offset
     -- Hard edges (a narrow view, the smoothing lag): the chassis never leaves the safe part of the view.
     local function inside(v)
         if not half then return v end
@@ -237,16 +253,16 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
         local room=math.max(half_x-f.margin_side,half_x*0.3)
         return M.clamp(v,target.x-room,target.x+room)
     end
-    local alpha=1-math.exp(-c.camera_response*dt)
+    local alpha=1-math.exp(-response*dt)
     -- Clamp the final position on both axes: clamping the target would consume the lag compensation.
     local pos=position+(vmath.vector3(x,y,500)-position)*alpha
-    local down_response=experiment=="b" and f.descent_response*M.clamp(descent/f.descent_max,0,1) or 0
+    local down_response=experiment=="b" and t.descent_response*M.clamp(descent/f.descent_max,0,1) or 0
     pos.y=position.y+(y-position.y)*(1-math.exp(-(vertical_response+down_response)*dt))
     pos.x,pos.y=inside_x(pos.x),inside(pos.y)
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
     if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(s.ground-target.y)<f.snap_done
         and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
-    local wanted=c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1)
+    local wanted=(c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1))*t.zoom
     return pos,zoom+(wanted-zoom)*alpha
 end
 M.sliders={

@@ -16,6 +16,7 @@ local catalog=require "main.game.course_catalog"
 local levels=require "main.game.levels_runtime"
 local player_settings=require "main.game.player_settings"
 local fps_counter=require "main.game.fps_counter"
+local camera_settings=require "main.game.camera_settings"
 -- #417: the loader is the only owner of the update-rate request (sys.set_update_frequency). It changes the
 -- update()/render cadence only; fixed_update physics stays at engine.fixed_update_frequency = 60.
 local function send_fps_cap(self,changed,saved)
@@ -26,8 +27,22 @@ local function send_fps_counter(self,saved)
     local s=self.settings
     msg.post("#ui","fps_counter",{visible=s.fps_visible,x=s.fps_x,y=s.fps_y,saved=saved,status=s.status})
 end
+-- #443: the camera choice and its live settings, from the same player-settings file, to the HUD and to the
+-- controller (the single camera owner). The world gets them again on every load (proxy_loaded).
+local function send_camera(self,saved)
+    local c=self.settings.camera
+    self.camera_seq=(self.camera_seq or 0)+1
+    local ui=camera_settings.copy(c)
+    ui.saved,ui.status,ui.seq=saved,self.settings.status,self.camera_seq
+    msg.post("#ui","camera_settings",ui)
+    if self.world_alive then
+        local owner=camera_settings.copy(c);owner.seq=self.camera_seq
+        msg.post(OWNER,"camera_settings",owner)
+    end
+end
 local function switch(self,request)
     require('main.editor.editor_look').clear_play()
+    self.world_alive=false
     self.station,self.speed=request.id,request.speed or ""
     self.run_terminal=nil;self.level_finished=nil
     self.snapshot,self.note,self.import=request.snapshot,request.note,request.import
@@ -194,6 +209,7 @@ function init(self)
     end
     send_fps_cap(self,false,false)
     send_fps_counter(self,false)
+    send_camera(self,false)
     self.debug_editor=html5 and sys.get_engine_info().is_debug and (case=="ea3" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.debug_le3=self.debug_editor and case=="le3"
     self.coin_bank=require('main.game.coin_bank').new()
@@ -334,6 +350,11 @@ function on_message(self,id,data,sender)
         if player_settings.apply(self.settings,data) then send_fps_counter(self,player_settings.save(self.settings)) end
         return
     end
+    if id==hash("camera_set") then
+        -- #443: HUD camera button and live panel (toggle, step, reset): applied live and stored at once.
+        if player_settings.apply_camera(self.settings,data) then send_camera(self,player_settings.save(self.settings)) end
+        return
+    end
     if id==hash('level_finish') then
         if sender==msg.url(OWNER) and data.generation==self.generation and not self.loading and not self.edit and catalog.index(self.station) then
             self.level_finished=data.official==true
@@ -435,6 +456,10 @@ function on_message(self,id,data,sender)
             msg.post("gym:/owner#script","configure_station",{id=self.station,speed=self.speed,preset=self.preset,preset_refused=self.preset_refused,generation=self.generation,
                 snapshot=self.snapshot,note=self.note,requested=self.requested,parse_ms=self.parse_ms,edit=self.edit})
         end
+        -- #443: every new world starts with the stored camera choice and settings.
+        self.world_alive=true
+        local camera=camera_settings.copy(self.settings.camera);camera.seq=self.camera_seq or 0
+        msg.post("gym:/owner#script","camera_settings",camera)
         msg.post(sender,"enable")
     elseif id==hash("gym_ready") and data.generation==self.generation then
         self.loading=false

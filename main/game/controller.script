@@ -13,6 +13,8 @@ local mechanisms=require "main.game.mechanisms"
 local socket = require "socket"
 local rider = require "main.game.rider"
 local feel = require "main.game.feel"
+-- #443: the player's camera choice (A/B) and live camera settings; render-only, applied by this camera owner.
+local camera_settings=require "main.game.camera_settings"
 local telemetry = require "main.game.telemetry"
 local editor_view = require "main.editor.editor_view"
 -- Car Feel 3 struts: render-only visuals on the chassis; never touches bodies or the fixed tick.
@@ -42,6 +44,13 @@ local function manual_retry(self)
         msg.post(LOADER,"run_retry_resume",{generation=self.session_generation,id=self.race.id})
     end
 end
+-- #443: the camera mode and settings this frame. The debug ?camera352=a|b measurement route (#352) forces its mode
+-- with the default settings; otherwise the player's stored choice and settings apply (camera A until they arrive).
+local function active_camera(self)
+    if self.camera352_mode then return self.camera352_mode,camera_settings.DEFAULTS end
+    local c=self.camera_settings or camera_settings.DEFAULTS
+    return c.mode,c
+end
 -- Follow camera at the start of an attempt (first start, Retry, section): the view it will settle on,
 -- over the station surface below the start. The look-ahead starts on the start speed's side.
 local function start_camera(self)
@@ -54,7 +63,8 @@ local function start_camera(self)
         self.camera_ground_key,self.camera_ground=key,ground and ground/scale
     end
     local pos
-    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,1/camera.get_projection("/camera#camera").m11)
+    local _,tune=active_camera(self)
+    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,1/camera.get_projection("/camera#camera").m11,tune)
     go.set_position(pos,"/camera")
 end
 local function reset(self)
@@ -85,7 +95,8 @@ local function reset(self)
         assert(b2d.shape.is_valid(shape.shape_id) and b2d.shape.are_sensor_events_enabled(shape.shape_id),"Retry lost chain/sensor handle")
     end
     start_camera(self)
-    self.camera_zoom=feel.values.camera_zoom
+    local _,tune=active_camera(self)
+    self.camera_zoom=feel.values.camera_zoom*tune.zoom
     go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1
@@ -235,6 +246,14 @@ function init(self)
     if self.testcase=="fps417" then self.replay_debug=true end -- read-only A21 replay verdict across cap switches
     -- #444 (fps444): the read-only A21 recording proves that counter drags give no drive command on any tick.
     if self.testcase=="fps444" then assert(sys.get_engine_info().is_debug and html5,"fps444 needs debug HTML5");self.replay_debug=true end
+    -- #443 (cam443): the read-only camera probe traces the live A/B choice; a scripted per-tick drive (URL drive443)
+    -- makes A and B runs comparable tick for tick; the A21 recording proves camera taps give no drive command.
+    if self.testcase=="cam443" then
+        assert(sys.get_engine_info().is_debug and html5,"cam443 needs debug HTML5")
+        self.replay_debug=true
+        self.camera_probe=require "main.gym.camera_probe352"
+        self.drive443=require("main.gym.camera_drive443").new()
+    end
     if self.testcase=="fps356runtime" then
         self.fps356runtime=require "main.gym.fps_runtime356"
         self.fps356runtime_state=self.fps356runtime.new(self)
@@ -431,8 +450,12 @@ function update(self, dt)
         -- width); they include the zoom.
         local projection=camera.get_projection("/camera#camera")
         local velocity=b2d.body.get_linear_velocity(self.vehicle.chassis)
+        local mode,tune=active_camera(self)
+        -- A switch between A and B drops B's downhill lead, so switching back never starts from a stale lead.
+        if mode~=self.camera_active_mode then self.camera_follow.descent=0 end
+        self.camera_active_mode=mode
         local pos,zoom=feel.camera(self.camera_follow,target,velocity,vehicle.touching(self.vehicle),
-            go.get_position("/camera"),self.camera_zoom,1/projection.m11,dt,1/projection.m00,self.camera352_mode)
+            go.get_position("/camera"),self.camera_zoom,1/projection.m11,dt,1/projection.m00,mode=="b" and "b" or nil,tune)
         go.set_position(pos,"/camera")
         self.camera_zoom=zoom
         go.set("/camera#camera","orthographic_zoom",zoom)
@@ -676,7 +699,7 @@ function fixed_update(self, dt)
             end
         end
         if self.coast_measure then self.coast_measure.before(self,dt) end
-        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or self.wheel_probe and self.wheel_probe.command(self) or command(self)
+        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or self.wheel_probe and self.wheel_probe.command(self) or self.drive443 and self.drive443.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         require('main.game.fuel_runtime').command(self,self.last_command,dt)
@@ -745,6 +768,15 @@ function on_message(self,id,data,sender)
     elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then race.practice(self,"Live tuning");self.pending_tuning=data
+    elseif id==hash("camera_settings") then
+        -- #443: render-only camera choice and settings from the loader (player settings). Not tuning: the run stays
+        -- comparable, replays and records are untouched, nothing reaches a body or the fixed tick.
+        self.camera_settings=camera_settings.sanitize(data)
+        self.camera_settings_seq=data.seq
+        if html5 and sys.get_engine_info().is_debug then
+            local c=camera_settings.copy(self.camera_settings);c.seq=data.seq or false;c.generation=self.session_generation
+            html5.run("window.riderCameraOwner="..json.encode(c))
+        end
     elseif id==hash("terrain_look_capture") then self.look_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("levels_capture") then self.levels_captured=data.active;self.held={};self.mobile={};mobile.clear()
     elseif id==hash("ui_capture") then self.ui_captured=data.active;self.held={};self.mobile={};mobile.clear()

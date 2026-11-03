@@ -2,6 +2,11 @@
 -- Never writes physics bodies, messages, tuning, game save data or production telemetry.
 local M={}
 local contacts=require "main.game.seam_metrics"
+-- #443: the live camera mode, as the controller's active_camera picks it (?camera352 forces it; else the player's
+-- stored choice, A until it arrives).
+local function mode(self)
+    return self.camera352_mode or (self.camera_settings and self.camera_settings.mode) or "a"
+end
 function M.sample(self,target,velocity,position,projection,dt)
     assert(sys.get_engine_info().is_debug and html5,"camera352 requires debug HTML5")
     assert(projection and projection.m00>0 and projection.m11>0,"camera352: missing live orthographic projection")
@@ -9,9 +14,19 @@ function M.sample(self,target,velocity,position,projection,dt)
     assert(math.abs(scale-0.01)<1e-7,"camera352: unexpected physics scale")
     local section=self.station.sections and self.station.sections[self.station.section_index]
     local follow=self.camera_follow
+    -- #370: identify actual A19c lip flight and the first 0.5 s after
+    -- touchdown from the existing air observer; no new physics/contact owner.
+    local flight=self.station.kind=="air" and self.air and self.air.flight
+    local landing
+    if self.station.kind=="air" and self.air and self.air.jumps then
+        for i=#self.air.jumps,1,-1 do
+            if self.air.jumps[i].from_lip then landing=self.air.jumps[i];break end
+        end
+    end
+    local tune=self.camera352_mode==nil and self.camera_settings or nil
     local s={
         source_sha=sys.get_config_string("rider.source_sha","development"),
-        mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
+        mode=mode(self),station=self.station.id,section=section and section.id or "",
         frame=(self.camera352_frames or 0)+1,tick=self.fixed_ticks,sim_time=self.world_time,
         generation=self.generation,resets=self.reset_count,dt=dt,
         x=target.x,y=target.y,vx=velocity.x,vy=velocity.y,
@@ -20,7 +35,13 @@ function M.sample(self,target,velocity,position,projection,dt)
         ground=follow.ground,filtered_vy=follow.vy,descent=follow.descent or 0,
         snapping=follow.snapping,dir=follow.dir,
         rear=contacts.supported(self.vehicle.wheels[1]),
-        front=contacts.supported(self.vehicle.wheels[2])
+        front=contacts.supported(self.vehicle.wheels[2]),
+        air_from_lip=flight and flight.from_lip or false,
+        air_landing_age_s=landing and self.air.elapsed-landing.touchdown_at or -1,
+        -- #443: the live settings this frame was framed with (sequence from the loader; false = defaults).
+        cam_seq=tune and self.camera_settings_seq or false,
+        cam_follow=tune and tune.follow or 1,cam_look=tune and tune.look or 1,cam_zoom=tune and tune.zoom or 1,
+        cam_offset=tune and tune.offset or 0
     }
     self.camera352_frames=s.frame
     -- #352 CI failure triage: the straight B control has a strict 5-u descent
@@ -65,12 +86,18 @@ function M.fixed(self,state,dt)
     self.camera352_vehicle_tick=(self.camera352_vehicle_tick or 0)+1
     local sample={
         source_sha=sys.get_config_string("rider.source_sha","development"),
-        mode=self.camera352_mode,station=self.station.id,section=section and section.id or "",
+        mode=mode(self),station=self.station.id,section=section and section.id or "",
         tick=self.camera352_vehicle_tick,engine_tick=self.fixed_ticks,
         resets=self.reset_count,generation=self.generation,dt=dt,
         x=state.x,y=state.y,vx=velocity.x,vy=velocity.y,
         rear=contacts.supported(self.vehicle.wheels[1]),
-        front=contacts.supported(self.vehicle.wheels[2])
+        front=contacts.supported(self.vehicle.wheels[2]),
+        -- #370: read the already-applied previous fixed-owner command and
+        -- reverse latch; do not send input or change the motor/physics owner.
+        throttle=self.last_command and self.last_command.throttle or 0,
+        brake_reverse=self.last_command and self.last_command.brake_reverse or 0,
+        allow_reverse=self.last_command and self.last_command.allow_reverse or false,
+        reverse_engaged=self.vehicle.reversing or false
     }
     html5.run("(function(s){var a=window.riderCamera352PhysicsTrace||(window.riderCamera352PhysicsTrace=[]);a.push(s);if(a.length>480)a.shift();})("..json.encode(sample)..")")
 end
