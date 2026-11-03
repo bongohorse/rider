@@ -26,7 +26,7 @@ Rider is a 2D mobile driving game inspired by Trials and early TrackMania, built
 
 ## Work order
 
-Set 2026-11-02 from Claudio's latest priorities: **repo restructure and workflow first** (2026-11-02: "erstmal räumen wir das komplette repo um und verbessern unseren workflow"), then the studio order CI → FPS → camera → audit with physics fixed at 60 Hz and mobile landscape only (#333, 2026-11-01/02, which superseded the 2026-10-30 "O2 then graphics" order and deferred new objects); the terrain-materials GO of 2026-11-02 (#392). New claims take the lowest wave that has a `status: ready` issue, then priority (`P0` → `P3`), then the order inside the epic; if nothing is ready in a wave (blocked, needs GO or drive test), continue with the next. Work already in progress in any wave continues. GOs and the claim rules are in the [issue guide](ISSUES.md#go-owner-and-status).
+Set 2026-11-02 from Claudio's latest priorities: **repo restructure and workflow first** (2026-11-02: "erstmal räumen wir das komplette repo um und verbessern unseren workflow"), then the studio order CI → FPS → camera → audit with physics fixed at 60 Hz and mobile landscape only (Claudio's order of 2026-11-01/02, which superseded the 2026-10-30 "O2 then graphics" order and deferred new objects); the terrain-materials GO of 2026-11-02 (#392). New claims take the lowest wave that has a `status: ready` issue, then priority (`P0` → `P3`), then the order inside the epic; if nothing is ready in a wave (blocked, needs GO or drive test), continue with the next. Work already in progress in any wave continues. GOs and the claim rules are in the [issue guide](ISSUES.md#go-owner-and-status).
 
 | Wave | Epics | Why here |
 | --- | --- | --- |
