@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Scheduled npm audit gate (#101): every finding needs a reviewed, unexpired exception.
 
-Fails on an advisory without an exception (or excepted for another package), an expired
-exception, any production (--omit=dev) finding, and a malformed exceptions file or audit
-report. Also reports how far the hand-pinned renovate devDependency is behind npm latest.
+Fails on an advisory without an exception (or excepted for another package), a severity
+above the reviewed one, an install path or top-level dependency the exception did not review,
+an expired exception, any production (--omit=dev) finding, and a malformed exceptions file,
+audit report or lockfile. Also reports how far the hand-pinned renovate devDependency is behind npm latest.
 Policy: docs/TOOLING.md, "Dependencies and Renovate".
 """
 import argparse
@@ -20,10 +21,15 @@ MAX_EXCEPTION_DAYS = 90
 WARN_DAYS = 14
 TRIAGE_DAYS = {"critical": 7, "high": 7, "moderate": 30, "low": 30, "info": 30}
 SEVERITY_ORDER = ("critical", "high", "moderate", "low", "info")
-FIELDS = ("id", "package", "chain", "reason", "upstream", "reviewer", "reviewed", "expires")
+FIELDS = ("id", "package", "severity", "nodes", "dependents", "chain", "reason", "upstream",
+          "reviewer", "reviewed", "expires")
 GHSA = re.compile(r"GHSA(?:-[0-9a-z]{4}){3}")
 ADVISORY_URL = re.compile(r"https://github\.com/advisories/(GHSA(?:-[0-9a-z]{4}){3})")
 PACKAGE = re.compile(r"(?:@[a-z0-9][\w.-]*/)?[a-z0-9][\w.-]*", re.IGNORECASE)
+_SEGMENT = r"node_modules/(?:@[a-z0-9][\w.-]*/)?[a-z0-9][\w.-]*"
+NODE = re.compile(rf"{_SEGMENT}(?:/{_SEGMENT})*", re.IGNORECASE)
+DEPENDENCY_KEYS = ("dependencies", "optionalDependencies", "peerDependencies")
+ROOT_DEPENDENCY_KEYS = ("dependencies", "devDependencies", "optionalDependencies")
 URL = re.compile(r"https://[^\s/]+/\S+")
 VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
@@ -72,7 +78,7 @@ def load_exceptions(data, today):
     """Validate the reviewed exceptions file; return {GHSA id: entry}."""
     if not isinstance(data, dict) or set(data) != {"schema", "exceptions"}:
         raise Malformed("exceptions file: expected exactly the keys 'schema' and 'exceptions'")
-    if data["schema"] != 1:
+    if type(data["schema"]) is not int or data["schema"] != 1:
         raise Malformed(f"exceptions file: unsupported schema {data['schema']!r}")
     if not isinstance(data["exceptions"], list):
         raise Malformed("exceptions file: 'exceptions' must be a list")
@@ -91,8 +97,20 @@ def load_exceptions(data, today):
         where = f"exceptions[{index}] {ghsa}"
         if ghsa in loaded:
             raise Malformed(f"{where}: duplicate id")
-        if not PACKAGE.fullmatch(text(item["package"], f"{where}.package")):
+        package = text(item["package"], f"{where}.package")
+        if not PACKAGE.fullmatch(package):
             raise Malformed(f"{where}.package: not an npm package name")
+        if item["severity"] not in TRIAGE_DAYS:
+            raise Malformed(f"{where}.severity: expected one of {list(SEVERITY_ORDER)}")
+        nodes = text_list(item["nodes"], f"{where}.nodes")
+        for node in nodes:
+            if not NODE.fullmatch(node) or not node.endswith("node_modules/" + package):
+                raise Malformed(f"{where}.nodes: not an install path of {package}: {node!r}")
+        dependents = text_list(item["dependents"], f"{where}.dependents")
+        if not all(PACKAGE.fullmatch(name) for name in dependents):
+            raise Malformed(f"{where}.dependents: expected top-level npm package names")
+        if len(set(nodes)) != len(nodes) or len(set(dependents)) != len(dependents):
+            raise Malformed(f"{where}: duplicate nodes or dependents")
         text_list(item["chain"], f"{where}.chain")
         text(item["reason"], f"{where}.reason")
         for url in text_list(item["upstream"], f"{where}.upstream"):
@@ -137,9 +155,14 @@ def advisories(report, label):
             if not match or not isinstance(package, str) or not PACKAGE.fullmatch(package) \
                     or severity not in TRIAGE_DAYS:
                 raise Malformed(f"{label}: unreadable advisory in {name!r}: {json.dumps(via)[:300]}")
+            nodes = vulns.get(package, {}).get("nodes") if isinstance(vulns.get(package), dict) else None
+            if not isinstance(nodes, list) or not nodes or not all(
+                    isinstance(node, str) and NODE.fullmatch(node) for node in nodes):
+                raise Malformed(f"{label}: no install paths ('nodes') for vulnerable package {package!r}")
             entry = found.setdefault(match.group(1), {"packages": set(), "severity": severity,
-                                                      "title": str(via.get("title", ""))[:200]})
+                                                      "nodes": set(), "title": str(via.get("title", ""))[:200]})
             entry["packages"].add(package)
+            entry["nodes"].update(nodes)
             if SEVERITY_ORDER.index(severity) < SEVERITY_ORDER.index(entry["severity"]):
                 entry["severity"] = severity
     if vulns and not found:
@@ -147,11 +170,70 @@ def advisories(report, label):
     return found
 
 
-def evaluate(full_report, prod_report, exceptions_data, today):
+def lock_closures(lock):
+    """{top-level dependency: every install path it pulls in}, from package-lock.json v2/v3."""
+    packages = lock.get("packages") if isinstance(lock, dict) else None
+    if not isinstance(lock, dict) or lock.get("lockfileVersion") not in (2, 3) \
+            or not isinstance(packages, dict) or not isinstance(packages.get(""), dict):
+        raise Malformed("package-lock.json: expected lockfileVersion 2 or 3 with a root package")
+
+    def names(entry, keys):
+        if not isinstance(entry, dict):
+            raise Malformed("package-lock.json: package entry is not an object")
+        found = []
+        for key in keys:
+            value = entry.get(key, {})
+            if not isinstance(value, dict):
+                raise Malformed(f"package-lock.json: {key} is not an object")
+            found += value
+        return found
+
+    def resolve(location, name):
+        # Node resolution: the nearest node_modules/<name> from `location` up to the root.
+        base = location
+        while True:
+            candidate = f"{base}/node_modules/{name}" if base else f"node_modules/{name}"
+            if candidate in packages:
+                entry = packages[candidate]
+                return entry.get("resolved") if isinstance(entry, dict) and entry.get("link") else candidate
+            if not base:
+                return None  # an absent optional or peer dependency
+            base = base[:base.rfind("node_modules/")].rstrip("/")
+
+    closures = {}
+    for top in names(packages[""], ROOT_DEPENDENCY_KEYS):
+        start = resolve("", top)
+        seen, stack = set(), [start] if start else []
+        while stack:
+            location = stack.pop()
+            if location in seen or location not in packages:
+                continue
+            seen.add(location)
+            stack += [t for t in (resolve(location, n) for n in names(packages[location], DEPENDENCY_KEYS)) if t]
+        closures[top] = seen
+    return closures
+
+
+def top_level_dependents(closures, nodes, lock_packages):
+    missing = sorted(node for node in nodes if node not in lock_packages)
+    if missing:
+        raise Malformed(f"npm audit reports install paths missing from package-lock.json: {missing}")
+    return {top for top, reached in closures.items() if reached & nodes}
+
+
+def evaluate(full_report, prod_report, exceptions_data, today, lock):
     """Compare both audit reports with the exceptions; raises Malformed on bad input."""
     excepted = load_exceptions(exceptions_data, today)
     found = advisories(full_report, "npm audit")
     prod = advisories(prod_report, "npm audit --omit=dev")
+    audited = full_report["metadata"].get("dependencies")
+    if not isinstance(audited, dict) or type(audited.get("dev")) is not int or audited["dev"] <= 0:
+        raise Malformed("npm audit: the full report audited no dev dependencies "
+                        "(an omit=dev npm setting?); refusing to pass a partial audit")
+    if not set(prod) <= set(found):
+        raise Malformed(f"npm audit --omit=dev reports advisories missing from the full audit: "
+                        f"{sorted(set(prod) - set(found))}")
+    closures = lock_closures(lock)
     result = Result(production=prod)
     for ghsa in sorted(found, key=lambda g: (SEVERITY_ORDER.index(found[g]["severity"]), g)):
         info = found[ghsa]
@@ -170,16 +252,33 @@ def evaluate(full_report, prod_report, exceptions_data, today):
             expires = dt.date.fromisoformat(exception["expires"])
             left = (expires - today).days
             row["expires"] = exception["expires"]
+            problems = []
+            reviewed_severity = exception["severity"]
+            if SEVERITY_ORDER.index(severity) < SEVERITY_ORDER.index(reviewed_severity):
+                problems.append(("severity raised", f"SEVERITY {ghsa} ({packages}, {reviewed_severity} to {severity})",
+                                 f"exception {ghsa} ({packages}) was reviewed at {reviewed_severity}, now "
+                                 f"{severity}: re-triage within {TRIAGE_DAYS[severity]} days"))
+            new_nodes = sorted(info["nodes"] - set(exception["nodes"]))
+            dependents = top_level_dependents(closures, info["nodes"], lock["packages"])
+            new_dependents = sorted(dependents - set(exception["dependents"]))
+            if new_nodes or new_dependents:
+                detail = "; ".join(part for part in (
+                    f"install paths {', '.join(new_nodes)}" if new_nodes else "",
+                    f"top-level dependencies {', '.join(new_dependents)}" if new_dependents else "") if part)
+                problems.append(("new path", f"NEW PATH {ghsa} ({packages})",
+                                 f"exception {ghsa} ({packages}) was not reviewed for {detail}: "
+                                 "check reachability and update the entry with a new review"))
             if left <= 0:
-                row["status"] = "expired"
-                result.failures.append(f"exception {ghsa} ({packages}) expired on {expires}: "
-                                       "re-triage and renew it with a new review, or fix")
-                result.tags.append(f"EXPIRED {ghsa} ({packages})")
-            else:
-                row["status"] = "excepted"
-                if left <= WARN_DAYS:
-                    result.warnings.append(f"exception {ghsa} ({packages}) expires {expires} "
-                                           f"({left} days): re-triage before then")
+                problems.append(("expired", f"EXPIRED {ghsa} ({packages})",
+                                 f"exception {ghsa} ({packages}) expired on {expires}: "
+                                 "re-triage and renew it with a new review, or fix"))
+            for _, tag, failure in problems:
+                result.failures.append(failure)
+                result.tags.append(tag)
+            row["status"] = ", ".join(status for status, _, _ in problems) or "excepted"
+            if not problems and left <= WARN_DAYS:
+                result.warnings.append(f"exception {ghsa} ({packages}) expires {expires} "
+                                       f"({left} days): re-triage before then")
         result.rows.append(row)
     for ghsa in sorted(set(excepted) - set(found)):
         result.notes.append(f"exception {ghsa} ({excepted[ghsa]['package']}) is no longer reported; "
@@ -276,6 +375,7 @@ def main(argv=None):
     parser.add_argument("--renovate-view", help="npm view renovate dist-tags time --json output")
     parser.add_argument("--package-json", default=str(ROOT / "package.json"))
     parser.add_argument("--renovate-config", default=str(ROOT / "renovate.json"))
+    parser.add_argument("--package-lock", default=str(ROOT / "package-lock.json"))
     parser.add_argument("--today", type=dt.date.fromisoformat, help="YYYY-MM-DD (default: now, UTC)")
     parser.add_argument("--report", help="write the Markdown report here")
     parser.add_argument("--step-summary", help="append the Markdown report (GITHUB_STEP_SUMMARY)")
@@ -289,7 +389,8 @@ def main(argv=None):
     result, error = Result(), None
     try:
         result = evaluate(read_json(args.audit, "npm audit"), read_json(args.audit_prod, "npm audit --omit=dev"),
-                          read_json(args.exceptions, "exceptions file"), args.today)
+                          read_json(args.exceptions, "exceptions file"), args.today,
+                          read_json(args.package_lock, "package-lock.json"))
     except Malformed as exc:
         error = str(exc)
     failed = bool(error or result.failures)

@@ -15,10 +15,12 @@ def plan(existing, outcome, url, sha, summary):
             return None
         old = existing.get("body") or ""
         return "PATCH", {"state": "closed", "body": old + f"\n\nRecovered: {url} ({sha})."}
-    gate = re.sub(r"\s+", " ", summary or "").strip()[:1000] or "no gate verdict (see the run)"
+    # One line in a code span: package names like @scope/pkg or #12 must not mention or link.
+    # Backticks are removed, so the text cannot close the span.
+    gate = re.sub(r"\s+", " ", (summary or "").replace("`", "")).strip()[:1000] or "no gate verdict (see the run)"
     body = (
         "The scheduled npm audit gate did not pass.\n\n"
-        f"- Audit job: {outcome}\n- Gate: {gate}\n- Run: {url}\n- Commit: {sha}\n\n"
+        f"- Audit job: {outcome}\n- Gate: `{gate}`\n- Run: {url}\n- Commit: {sha}\n\n"
         f"Triage per `{POLICY}`: high/critical within 7 days, moderate/low within 30 days. "
         "Fix with a reviewed dependency PR, or add a reviewed exception with evidence and an "
         "expiry of at most 90 days. Never `npm audit fix --force`, unreviewed overrides or "

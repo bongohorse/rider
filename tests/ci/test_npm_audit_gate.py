@@ -22,10 +22,13 @@ SEEDED = ROOT / "tools/ci/npm-audit-exceptions.json"
 TODAY = dt.date(2026, 11, 3)
 
 
-def entry(ghsa, package, expires="2027-02-01", reviewed="2026-11-03"):
+def entry(ghsa, package, expires="2027-02-01", reviewed="2026-11-03", severity="moderate"):
     return {
         "id": ghsa,
         "package": package,
+        "severity": severity,
+        "nodes": [f"node_modules/{package}"],
+        "dependents": ["renovate"],
         "chain": [f"renovate > {package}"],
         "reason": f"{package} only sees trusted, repo-controlled input in our use.",
         "upstream": [f"https://github.com/example/{package}/issues/1"],
@@ -65,12 +68,26 @@ def audit(*findings):
 SEEDED_FINDINGS = (("GHSA-g3hv-75wg-m249", "minimatch", "moderate"),
                    ("GHSA-3g3m-2fjr-6pw4", "glob", "moderate"),
                    ("GHSA-gcqx-w48m-w2h4", "deepmerge", "low"))
-SEEDED_EXCEPTIONS = exceptions(*(entry(g, p) for g, p, _ in SEEDED_FINDINGS))
+SEEDED_EXCEPTIONS = exceptions(*(entry(g, p, severity=s) for g, p, s in SEEDED_FINDINGS))
+LOCK_PACKAGES = ("minimatch", "glob", "deepmerge", "undici", "lodash", "x")
+
+
+def lock(extra_top=None, extra_packages=None):
+    """package-lock.json v3: renovate pulls every test package; playwright pulls none."""
+    top = {"renovate": "1.0.0", "playwright": "1.0.0", **(extra_top or {})}
+    packages = {"": {"name": "t", "devDependencies": top},
+                "node_modules/renovate": {"version": "1.0.0", "dev": True,
+                                          "dependencies": {p: "*" for p in LOCK_PACKAGES}},
+                "node_modules/playwright": {"version": "1.0.0", "dev": True}}
+    packages.update({f"node_modules/{p}": {"version": "1.0.0", "dev": True} for p in LOCK_PACKAGES})
+    packages.update(extra_packages or {})
+    return {"name": "t", "lockfileVersion": 3, "requires": True, "packages": packages}
 
 
 class GateVerdicts(unittest.TestCase):
-    def run_gate(self, full, prod=None, exc=SEEDED_EXCEPTIONS, today=TODAY):
-        return gate.evaluate(full, prod if prod is not None else audit(), exc, today)
+    def run_gate(self, full, prod=None, exc=SEEDED_EXCEPTIONS, today=TODAY, lockfile=None):
+        return gate.evaluate(full, prod if prod is not None else audit(), exc, today,
+                             lockfile if lockfile is not None else lock())
 
     def test_all_excepted_and_current_passes(self):
         result = self.run_gate(audit(*SEEDED_FINDINGS))
@@ -129,6 +146,68 @@ class GateVerdicts(unittest.TestCase):
         self.assertIn("production", result.failures[0])
         self.assertIn("PRODUCTION", result.summary)
 
+    def test_severity_above_the_reviewed_one_fails(self):
+        raised = audit(("GHSA-g3hv-75wg-m249", "minimatch", "moderate"),
+                       ("GHSA-3g3m-2fjr-6pw4", "glob", "moderate"),
+                       ("GHSA-gcqx-w48m-w2h4", "deepmerge", "critical"))
+        result = self.run_gate(raised)
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn("reviewed at low, now critical", result.failures[0])
+        self.assertIn("7 days", result.failures[0])
+        self.assertIn("SEVERITY GHSA-gcqx-w48m-w2h4 (deepmerge, low to critical)", result.summary)
+        self.assertEqual(result.rows[0]["status"], "severity raised")
+        # A lower severity than reviewed stays covered.
+        lowered = audit(("GHSA-g3hv-75wg-m249", "minimatch", "low"), ("GHSA-3g3m-2fjr-6pw4", "glob", "info"),
+                        ("GHSA-gcqx-w48m-w2h4", "deepmerge", "low"))
+        self.assertEqual(self.run_gate(lowered).failures, [])
+
+    def test_unreviewed_install_path_fails(self):
+        full = audit(*SEEDED_FINDINGS)
+        full["vulnerabilities"]["minimatch"]["nodes"].append("node_modules/foo/node_modules/minimatch")
+        lockfile = lock({"foo": "1.0.0"}, {
+            "node_modules/foo": {"version": "1.0.0", "dev": True, "dependencies": {"minimatch": "^3"}},
+            "node_modules/foo/node_modules/minimatch": {"version": "3.0.0", "dev": True}})
+        result = self.run_gate(full, lockfile=lockfile)
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn("install paths node_modules/foo/node_modules/minimatch", result.failures[0])
+        self.assertIn("top-level dependencies foo", result.failures[0])
+        self.assertIn("NEW PATH GHSA-g3hv-75wg-m249 (minimatch)", result.summary)
+
+    def test_new_top_level_dependency_reaching_a_deduped_node_fails(self):
+        # The review's case: a new devDependency reuses node_modules/minimatch, so the audit's
+        # nodes do not change; only the lockfile shows the new path.
+        lockfile = lock({"foo": "1.0.0"}, {
+            "node_modules/foo": {"version": "1.0.0", "dev": True, "dependencies": {"bar": "1"}},
+            "node_modules/bar": {"version": "1.0.0", "dev": True, "dependencies": {"minimatch": "*"}}})
+        result = self.run_gate(audit(*SEEDED_FINDINGS), lockfile=lockfile)
+        self.assertEqual(len(result.failures), 1)
+        self.assertIn("GHSA-g3hv-75wg-m249", result.failures[0])
+        self.assertIn("top-level dependencies foo", result.failures[0])
+        self.assertNotIn("install paths", result.failures[0])
+        # A new top-level dependency that does not reach a vulnerable node is fine.
+        harmless = lock({"foo": "1.0.0"}, {"node_modules/foo": {"version": "1.0.0", "dev": True}})
+        self.assertEqual(self.run_gate(audit(*SEEDED_FINDINGS), lockfile=harmless).failures, [])
+
+    def test_partial_audits_fail_closed(self):
+        no_dev = audit(*SEEDED_FINDINGS)
+        no_dev["metadata"]["dependencies"]["dev"] = 0
+        missing = audit(*SEEDED_FINDINGS)
+        del missing["metadata"]["dependencies"]
+        for report in (no_dev, missing):
+            with self.subTest(report=report["metadata"].get("dependencies")), self.assertRaises(gate.Malformed):
+                self.run_gate(report)
+        with self.assertRaises(gate.Malformed):
+            self.run_gate(audit(*SEEDED_FINDINGS), prod=audit(("GHSA-aaaa-bbbb-cccc", "x", "low")))
+
+    def test_audit_path_missing_from_lockfile_fails(self):
+        full = audit(*SEEDED_FINDINGS)
+        full["vulnerabilities"]["glob"]["nodes"] = ["node_modules/zz/node_modules/glob"]
+        with self.assertRaises(gate.Malformed):
+            self.run_gate(full)
+        for broken in ({}, {"lockfileVersion": 1, "dependencies": {}}, {"lockfileVersion": 3, "packages": {}}):
+            with self.subTest(lockfile=broken), self.assertRaises(gate.Malformed):
+                self.run_gate(audit(*SEEDED_FINDINGS), lockfile=broken)
+
     def test_failed_or_inconsistent_audit_report_fails(self):
         broken = audit(*SEEDED_FINDINGS)
         broken["metadata"]["vulnerabilities"]["total"] = 2
@@ -154,12 +233,23 @@ class ExceptionsFile(unittest.TestCase):
         cases = {
             "not an object": [],
             "wrong schema": {"schema": 2, "exceptions": []},
+            "boolean schema": {"schema": True, "exceptions": []},
+            "string schema": {"schema": "1", "exceptions": []},
             "unknown top-level key": {"schema": 1, "exceptions": [], "extra": 1},
             "exceptions not a list": {"schema": 1, "exceptions": {}},
             "duplicate id": exceptions(good, dict(good)),
         }
         bad_entries = {
             "missing reviewer": {k: v for k, v in good.items() if k != "reviewer"},
+            "missing severity": {k: v for k, v in good.items() if k != "severity"},
+            "unknown severity": {**good, "severity": "medium"},
+            "missing nodes": {k: v for k, v in good.items() if k != "nodes"},
+            "empty nodes": {**good, "nodes": []},
+            "node of another package": {**good, "nodes": ["node_modules/y"]},
+            "node not an install path": {**good, "nodes": ["x"]},
+            "duplicate node": {**good, "nodes": ["node_modules/x", "node_modules/x"]},
+            "empty dependents": {**good, "dependents": []},
+            "dependent not a package": {**good, "dependents": ["renovate > x"]},
             "unknown field": {**good, "expiry": "2027-01-01"},
             "bad id": {**good, "id": "CVE-2026-1"},
             "lowercase id": {**good, "id": "ghsa-aaaa-bbbb-cccc"},
@@ -186,7 +276,7 @@ class ExceptionsFile(unittest.TestCase):
 
     def test_malformed_file_fails_the_gate(self):
         with self.assertRaises(gate.Malformed):
-            gate.evaluate(audit(), audit(), {"schema": 1}, TODAY)
+            gate.evaluate(audit(), audit(), {"schema": 1}, TODAY, lock())
 
     def test_seeded_file_is_valid_and_covers_the_triaged_advisories(self):
         data = json.loads(SEEDED.read_text(encoding="utf-8"))
@@ -194,10 +284,13 @@ class ExceptionsFile(unittest.TestCase):
         # Validate as of its own review date, so this test does not age.
         loaded = gate.load_exceptions(data, reviewed)
         self.assertEqual(sorted(loaded), sorted(g for g, _, _ in SEEDED_FINDINGS))
-        for ghsa, package, _ in SEEDED_FINDINGS:
+        for ghsa, package, severity in SEEDED_FINDINGS:
             self.assertEqual(loaded[ghsa]["package"], package)
             self.assertEqual(loaded[ghsa]["reviewer"], "Claude integration session (triage #101)")
             self.assertEqual(loaded[ghsa]["expires"], "2027-02-01")
+            self.assertEqual(loaded[ghsa]["severity"], severity)
+            self.assertEqual(loaded[ghsa]["dependents"], ["renovate"])
+            self.assertIn(f"node_modules/{package}", loaded[ghsa]["nodes"])
 
 
 class RenovateLag(unittest.TestCase):
@@ -232,6 +325,34 @@ class RenovateLag(unittest.TestCase):
         self.assertEqual(gate.release_age_days(ROOT / "renovate.json"), 3)
 
 
+class LockfileClosures(unittest.TestCase):
+    def test_node_resolution_walks_up_and_handles_scopes(self):
+        packages = {
+            "": {"devDependencies": {"a": "1", "@s/b": "1"}, "dependencies": {"c": "1"}},
+            "node_modules/a": {"dependencies": {"d": "1"}, "optionalDependencies": {"missing": "1"}},
+            "node_modules/a/node_modules/d": {"dependencies": {"e": "1"}},
+            "node_modules/d": {},
+            "node_modules/e": {},
+            "node_modules/@s/b": {"dependencies": {"d": "2"}, "peerDependencies": {"a": "1"}},
+            "node_modules/c": {},
+        }
+        closures = gate.lock_closures({"lockfileVersion": 3, "packages": packages})
+        self.assertEqual(closures["a"], {"node_modules/a", "node_modules/a/node_modules/d", "node_modules/e"})
+        self.assertEqual(closures["@s/b"], {"node_modules/@s/b", "node_modules/d", "node_modules/a",
+                                            "node_modules/a/node_modules/d", "node_modules/e"})
+        self.assertEqual(closures["c"], {"node_modules/c"})
+        self.assertEqual(gate.top_level_dependents(closures, {"node_modules/d"}, packages), {"@s/b"})
+
+    def test_real_lockfile_reaches_every_installed_package(self):
+        lockfile = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))
+        closures = gate.lock_closures(lockfile)
+        root = lockfile["packages"][""]
+        self.assertEqual(set(closures), set(root.get("devDependencies", {})) | set(root.get("dependencies", {})))
+        reached = set().union(*closures.values())
+        installed = {p for p, e in lockfile["packages"].items() if p and not e.get("extraneous")}
+        self.assertEqual(installed - reached, set())
+
+
 class GateCommandLine(unittest.TestCase):
     def run_cli(self, full, prod, exc, extra=()):
         with tempfile.TemporaryDirectory() as tmp:
@@ -242,11 +363,13 @@ class GateCommandLine(unittest.TestCase):
                 paths[name].write_text(data if isinstance(data, str) else json.dumps(data))
             view = tmp / "view.json"
             view.write_text(json.dumps(RenovateLag.VIEW))
+            lockfile = tmp / "package-lock.json"
+            lockfile.write_text(json.dumps(lock()))
             out, summary, report = tmp / "out", tmp / "summary.md", tmp / "report.md"
             result = subprocess.run(
                 [sys.executable, str(GATE), "--audit", str(paths["audit"]), "--audit-prod", str(paths["prod"]),
                  "--exceptions", str(paths["exc"]), "--renovate-view", str(view), "--today", "2026-11-03",
-                 "--report", str(report), "--step-summary", str(summary), "--github-output", str(out), *extra],
+                 "--package-lock", str(lockfile), "--report", str(report), "--step-summary", str(summary), "--github-output", str(out), *extra],
                 capture_output=True, text=True, timeout=60)
             texts = {p.name: p.read_text() if p.exists() else "" for p in (out, summary, report)}
             return result, texts
@@ -263,7 +386,8 @@ class GateCommandLine(unittest.TestCase):
     def test_failures_exit_one_with_a_one_line_summary(self):
         cases = {
             "new": (audit(*SEEDED_FINDINGS, ("GHSA-aaaa-bbbb-cccc", "undici", "high")), audit(), SEEDED_EXCEPTIONS),
-            "production": (audit(*SEEDED_FINDINGS), audit(("GHSA-aaaa-bbbb-cccc", "x", "low")), SEEDED_EXCEPTIONS),
+            "production": (audit(*SEEDED_FINDINGS), audit(("GHSA-gcqx-w48m-w2h4", "deepmerge", "low")),
+                           SEEDED_EXCEPTIONS),
             "malformed exceptions": (audit(*SEEDED_FINDINGS), audit(), "{not json"),
             "malformed audit": ('{"error": {"code": "ENOTFOUND"}}', audit(), SEEDED_EXCEPTIONS),
         }
@@ -312,6 +436,13 @@ class AlertPlan(unittest.TestCase):
         line = next(l for l in body["body"].splitlines() if l.startswith("- Gate:"))
         self.assertLess(len(line), 1100)
         self.assertNotIn("\nb", body["body"])
+
+    def test_gate_text_is_a_code_span_without_mentions_or_breakout(self):
+        summary = "FAIL: NEW GHSA-aaaa-bbbb-cccc (@scope/pkg, high) see #12 `x` @someone"
+        _, body = npm_audit_alert.plan(None, "failure", "u", "s", summary)
+        line = next(l for l in body["body"].splitlines() if l.startswith("- Gate:"))
+        self.assertEqual(line, "- Gate: `FAIL: NEW GHSA-aaaa-bbbb-cccc (@scope/pkg, high) see #12 x @someone`")
+        self.assertEqual(line.count("`"), 2)
 
     def test_title_differs_from_the_nightly_issue(self):
         import nightly_alert
