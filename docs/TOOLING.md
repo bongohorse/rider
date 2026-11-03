@@ -37,14 +37,14 @@ Gameplay Lua suites: `python tools/gameplay/lua_tests.py` runs every `tests/game
 
 ## Affected suites
 
-Every change runs the baseline: `python tools/bootstrap_check.py`, `python tools/ci/lint_lua.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. `python tools/local.py check` runs the fast checks in one command ([local commands](LOCAL_T3_SETUP.md)). CI selects suites per diff (fail-closed) and `required` gates them on the PR merge commit.
+Every change runs the baseline: `python tools/bootstrap_check.py`, `python tools/ci/lint_lua.py` and `python -m unittest discover -s tests/bootstrap -v`. Then run each row whose paths the change touches; when in doubt, run the row. `python tools/local.py check` runs the fast checks in one command, and `python tools/local.py affected --run` picks and runs the Gym cases for the branch diff, ending BLOCKED for CI-only paths ([local commands](LOCAL_T3_SETUP.md)). CI selects suites per diff (fail-closed) and `required` gates them on the PR merge commit.
 
 | Changed paths | Local commands |
 | --- | --- |
 | `tools/ci/`, `tools/gym/`, `tools/preview/`, `tools/gameplay/`, `main/gym/`, `tests/ci/` | `python -m unittest discover -s tests/ci -v` · `node --test tests/ci/*.cjs` |
 | `.github/workflows/` | the `tests/ci` row plus `python tools/ci/lint_workflows.py` (hash-verified actionlint) |
 | `tools/g1/`, `tools/gameplay/lua_tests.py`, build, engine guard, Bob/extender handling | `python -m unittest discover -s tests/g1 -v` |
-| `tools/g2/`, CLI, Bridge install | `python -m unittest discover -s tests/g2 -v` |
+| `tools/g2/`, CLI, Bridge install, `tools/local.py`, `tools/local_affected.json` | `python -m unittest discover -s tests/g2 -v` |
 | Any Lua source (`.lua`, `.script`, `.gui_script`, …), `.luacheckrc` | `python tools/ci/lint_lua.py` |
 | Gameplay or editor Lua under `main/`, `tests/gameplay/*.lua` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
 | Storage, best time, level progress, coin bank, `tests/engine/persistence/` | `python -m unittest discover -s tests/engine/persistence -v` · `python tools/g2/persistence_385.py --output <fresh dir>` on a clean tree ([harness](ci/persistence-engine-harness.md)) |
