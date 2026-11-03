@@ -1,4 +1,5 @@
 const {configure}=require('./launch.cjs');
+const {createGymSettlement}=require('./input_queue.cjs');
 const {chromium} = require('playwright');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -30,16 +31,14 @@ async function main() {
     await configure(page, runId, process.argv[5]);
     if(process.argv[5]==='a11')await page.context().grantPermissions(['clipboard-read','clipboard-write']);
     let feedbackChecked=false;
-    let resolveDone, rejectDone;
-    let input = Promise.resolve();
-    const done=new Promise((resolve,reject)=>{resolveDone=resolve;rejectDone=reject;});
+    const gym=createGymSettlement();
     page.on('console',message=>{
       const line=message.text();lines.push(line);
-      if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(line))rejectDone(Error(line));
+      if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(line))gym.fail(Error(line));
       if(line.includes('RIDER_GYM ')) {
         const data=JSON.parse(line.split('RIDER_GYM ')[1]);
-        if(data.source_sha!==expected||data.run_id!==runId)rejectDone(Error('Foreign gym evidence'));
-        if(data.event==='phase') input=input.then(async()=>{
+        if(data.source_sha!==expected||data.run_id!==runId)gym.fail(Error('Foreign gym evidence'));
+        if(data.event==='phase') gym.enqueue(async()=>{
           if(data.name==='coast_brake')await page.keyboard.down('ArrowDown');
           if(data.name==='coast_release')await page.keyboard.up('ArrowDown');
           if(data.name==='throttle')await page.keyboard.down('ArrowUp');
@@ -124,23 +123,22 @@ async function main() {
           if(data.name==='screenshot'&&/^[a-z0-9-]+\.png$/.test(data.file))await page.screenshot({path:path.join(root,data.file)});
           if(data.name==='graph_spike')await page.screenshot({path:path.join(root,'suspension-spike.png')});
           if(data.name==='redrive')await page.keyboard.down('ArrowUp');
-        }).catch(rejectDone);
-        if(data.event==='suite_end')resolveDone(data);
+        });
+        if(data.event==='suite_end')gym.end(data);
       }
     });
-    page.on('pageerror',e=>rejectDone(e));
-    page.on('crash',()=>rejectDone(Error('Gym page crashed')));
+    page.on('pageerror',e=>gym.fail(e));
+    page.on('crash',()=>gym.fail(Error('Gym page crashed')));
     await page.goto('http://127.0.0.1:'+server.address().port+'/index.html'+(process.argv[5]==='a9'?'?preset=b':process.argv[5]==='a9invalid'?'?preset=invalid':''));
     let timer;
-    try {result=await Promise.race([done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);}
+    try {result=await Promise.race([gym.done,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Gym suite timeout')),60000))]);}
     catch(error){
       await page.screenshot({path:path.join(root,'gym-failed.png')}).catch(()=>{});
       fs.writeFileSync(path.join(root,'failed-telemetry.json'),JSON.stringify(await page.evaluate(()=>window.riderTelemetry||null).catch(()=>null),null,2));
       throw error;
     }
     finally {clearTimeout(timer);}
-    if(result.status!=='PASS')throw Error('Gym test failed');
-    await input;
+    await gym.complete(result);
     if(process.argv[5]==='a11'){if(!feedbackChecked)throw Error('Feedback roundtrip not verified');result.cases.clipboard_roundtrip=true;result.cases.denied_fallback=true;}
     if(process.argv[5]==='a10'){
       if(await page.evaluate(()=>window._dmJSDeviceShared?.audioCtx?.state)!=='running')throw Error('AudioContext stopped');
