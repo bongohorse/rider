@@ -10,7 +10,6 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 
 | Question | Where |
 | --- | --- |
-| Who coordinates, what authority is delegated | Pinned [#333](https://github.com/bongohorse/rider/issues/333) |
 | What may be worked on (GO recorded, dependencies done) | [`status: ready`](https://github.com/bongohorse/rider/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+ready%22) |
 | What is in progress | [`status: in progress`](https://github.com/bongohorse/rider/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+in+progress%22) · [open PRs](https://github.com/bongohorse/rider/pulls) |
 | What Claudio has to drive or test | [`status: needs drive test`](https://github.com/bongohorse/rider/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs+drive+test%22) |
