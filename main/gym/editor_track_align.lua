@@ -47,8 +47,8 @@ function M.apply(e,p)
     for _,m in ipairs(p.moves) do edit.find(e,m.id).position={m.position[1],m.position[2]} end
     return true
 end
-function M.summary(p)
-    return string.format('Drop to Track: %d moved, %d already aligned; skipped %d locked, %d unsupported, %d without a surface.',#p.moves,p.unchanged,p.locked,p.unsupported,p.no_surface)
+function M.summary(p,height)
+    return string.format('Drop to Track at %.2f m: %d moved, %d already aligned; skipped %d locked, %d unsupported, %d without a surface.',height or M.DEFAULT,#p.moves,p.unchanged,p.locked,p.unsupported,p.no_surface)
 end
 function M.distance(text)
     local n=tonumber(text)
