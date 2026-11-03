@@ -54,7 +54,7 @@
    "also_ci": true,
    "paths": [
     "game.project",
-    "main/*.collection",
+    "main/main.collection",
     "main/controller.*",
     "main/g1/*",
     "tools/g1/*",

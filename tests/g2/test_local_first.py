@@ -130,6 +130,9 @@ class AffectedTest(unittest.TestCase):
             self.assertEqual(cases, self.inventory, path)
             self.assertIn(path, ci_only, path)
         self.assertIn('main/g1/wheel.convexshape', CLOSURE)
+        # Gym-only collections must not be flagged CI-only (fnmatch '*' crosses '/').
+        for path in ('main/gym/boot.collection', 'main/gym/world.collection'):
+            self.assertNotIn(path, local.affected_cases([path], RULES, self.inventory, CLOSURE)[2], path)
 
     def test_unknown_case_in_rules_is_rejected(self):
         rules = {'rules': [{'name': 'bad', 'cases': ['nope'], 'paths': ['x/*']}]}
