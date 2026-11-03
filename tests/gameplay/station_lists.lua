@@ -3,7 +3,7 @@
 -- from the budget, physics and render while the import succeeds. Cases go through the import path
 -- (custom.parse: JSON text -> json.decode -> station_data.validate) with a decoder that gives the
 -- Defold json.decode shapes (tests/gameplay/lib/json.lua); the real engine import is the le1a Gym case.
--- #388 (coins, gems, fuel) adds its lists to CASES the same way.
+-- Coin, gem and canister pickups (#388): tests/gameplay/pickup_lists.lua.
 local J=require 'tests.gameplay.lib.json'
 json={decode=J.decode}
 sys={get_save_file=function(app,name) return app..'/'..name end,get_engine_info=function() return {is_debug=true} end,

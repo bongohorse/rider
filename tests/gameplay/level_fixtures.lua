@@ -41,7 +41,7 @@ end
 for path in pairs(REJECTED) do local found;for _,f in ipairs(files) do found=found or f.path==path end;assert(found,'missing '..path) end
 
 local function count(t) local n=0;for _ in ipairs(t) do n=n+1 end;return n end
--- What the level builds (ipairs) is the whole list and the budget counts exactly that.
+-- What the level builds (ipairs) is the whole list and the budget counts exactly that (#387 hulls/labels, #388 pickups).
 local function consistent(d,path)
     local hulls,labels=d.hulls or {},d.labels or {}
     assert(count(hulls)==#hulls and count(labels)==#labels,path..': hulls or labels are not whole lists')
@@ -49,6 +49,11 @@ local function consistent(d,path)
     for i,h in ipairs(hulls) do assert(count(h.vertices)==#h.vertices,path..': hull '..i..' vertices are not a whole list');vertices=vertices+#h.vertices end
     local r=budget.measure(d)
     assert(r.hull_vertices==vertices,path..': the budget counts '..r.hull_vertices..' hull vertices, the level builds '..vertices)
+    -- #388: coin, gem and canister pickups are one whole list, and the budget counts each of them once.
+    local pickups=d.coins and d.coins.items or {}
+    assert(count(pickups)==#pickups,path..': coin pickups are not a whole list')
+    local coins=d.coins;d.coins=nil;local without=budget.measure(d).sprites;d.coins=coins
+    assert(r.sprites-without==count(pickups),path..': the budget counts '..(r.sprites-without)..' pickups, the level builds '..count(pickups))
 end
 local loaded,refused,stations=0,0,0
 for _,f in ipairs(files) do

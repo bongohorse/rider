@@ -19,7 +19,7 @@ function M.start_allowed(p,limit)
 end
 -- Ids and names travel in every telemetry message; msg.post data is capped at 2048 bytes.
 local function text(s) return type(s)=="string" and #s<=TEXT_LIMIT end
--- A decoded JSON list that ipairs and `#` will read (#387; #388 reuses it for pickups): n when the keys
+-- A decoded JSON list that ipairs and `#` will read (#387; coin_data.validate checks pickups alike, #388): n when the keys
 -- are exactly 1..n, else nil and "Invalid <what>: <name> <why>" (main/game/dense.lua). An object
 -- ({"1":x}) would read as empty and a null member would end ipairs early, so neither is admitted.
 -- why can quote a key from the file: it is cut to CAUSE bytes (whole UTF-8 characters).
@@ -33,6 +33,8 @@ end
 function M.validate(d)
     if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
     if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 then return nil,"Ordinary coins require station schema 2",true end
+    -- The schema gates below read coins.version: a scalar coins is refused first (#388), not indexed.
+    if d.coins~=nil and type(d.coins)~="table" then return nil,require('main.game.coin_data').NOT_OBJECT end
     if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 and d.schema~=5 then return nil,'Wonder Gems require station schema 3',true end
     if d.fuel~=nil or d.coins and d.coins.version==3 then
         if d.schema~=4 and d.schema~=5 then return nil,'Fuel requires station schema 4',true end
