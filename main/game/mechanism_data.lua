@@ -1,8 +1,11 @@
 -- O1: bounded typed crate/plate/gate data. Metres, seconds and SI motor force at the source boundary.
+-- Every list (crates, plates, gates, plate actors, links) must be a dense array (#394): a JSON null member
+-- decodes to a hole that ipairs stops at, so entries after it would skip validation while `#t` (M.cost)
+-- still counted them. main.game.dense checks the shape without `#t`; {} is a valid empty list.
+local dense=require 'main.game.dense'
 local M={MAX=8,MAX_LINKS=32,MAX_COORD=600,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
 local function finite(n) return type(n)=='number' and n==n and math.abs(n)<100000 end
 local function point(p) return type(p)=='table' and #p==2 and finite(p[1]) and finite(p[2]) and math.abs(p[1])<=M.MAX_COORD and math.abs(p[2])<=M.MAX_COORD end
-local function dense(t,max) if type(t)~='table' or #t>max then return false end;for k in pairs(t) do if type(k)~='number' or k%1~=0 or k<1 or k>#t then return false end end;return true end
 local function fields(t,allowed) for k in pairs(t) do if not allowed[k] then return nil,'Unsupported mechanism field '..tostring(k),true end end;return true end
 local function id(v) return type(v)=='string' and #v<=64 and v:match('^[a-z][a-z0-9%-]*$') and v~='vehicle' end
 function M.extents(d)
@@ -18,7 +21,7 @@ function M.validate(d,bounds)
  local ok,err,unknown=fields(d,{version=true,crates=true,plates=true,gates=true,links=true});if not ok then return nil,err,unknown end
  local ids={vehicle='actor'}
  for _,kind in ipairs({'crates','plates','gates'}) do
-  if not dense(d[kind],M.MAX) then return nil,'Mechanisms allow at most '..M.MAX..' '..kind end
+  local n,why=dense.length(d[kind],M.MAX);if not n then return nil,'Mechanism '..kind..' '..why end
   for _,v in ipairs(d[kind]) do
    if type(v)~='table' or not id(v.id) or ids[v.id] or not point(v.position) then return nil,'Invalid/duplicate mechanism ID or position (within 600 m)' end
    ids[v.id]=kind
@@ -35,10 +38,11 @@ function M.validate(d,bounds)
   end
  end
  for _,v in ipairs(d.plates) do
-  if not dense(v.actors,M.MAX+1) or #v.actors==0 then return nil,'Plate needs explicit accepted actor IDs' end
+  local n,why=dense.length(v.actors,M.MAX+1);if not n then return nil,'Plate '..v.id..' actors '..why end
+  if n==0 then return nil,'Plate needs explicit accepted actor IDs' end
   local seen={};for _,actor in ipairs(v.actors) do if (actor~='vehicle' and ids[actor]~='crates') or seen[actor] then return nil,'Unknown/duplicate plate actor' end;seen[actor]=true end
  end
- if not dense(d.links,M.MAX_LINKS) then return nil,'At most '..M.MAX_LINKS..' plate-to-gate links' end
+ local links,why=dense.length(d.links,M.MAX_LINKS);if not links then return nil,'Mechanism links '..why end
  local pairs_seen={}
  for _,v in ipairs(d.links) do
   if type(v)~='table' then return nil,'Invalid mechanism link' end
