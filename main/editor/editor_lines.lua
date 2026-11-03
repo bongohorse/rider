@@ -11,6 +11,8 @@ local M={}
 local SELECTED=vmath.vector4(1,0.7765,0.4275,1)
 local COIN_TINT=vmath.vector4(1,1,1,1)
 local HOVER=vmath.vector4(0.8353,0.9529,0.9137,1)
+-- Crate, plate and gate outlines (O2) in the runtime colours of their kind; never bodies or sensors.
+local KIND_TINT={crate=vmath.vector4(.85,.55,.3,1),plate=vmath.vector4(.4,.8,.9,1),gate=vmath.vector4(.95,.7,.3,1)}
 local START_TINT,BLOCKED_TINT=vmath.vector4(0.4,0.75,1,1),vmath.vector4(1,0.35,0.3,1)
 -- Lines and labels keep a readable screen size at any editor zoom (world-sized at zoom 1).
 local function count(v,ids,label)
@@ -43,7 +45,7 @@ end
 local RESERVE,WORLD_OBJECTS=12,4
 local function segments(o)
     if o.type=='coin' then return 1,1 end
-    local closed=doc_lib.outline(o)
+    local closed=doc_lib.drawn_outline(o)
     if closed then return #closed,1 end
     local c,parts=0,doc_lib.parts(o)
     for _,part in ipairs(parts) do c=c+#part-1 end
@@ -87,7 +89,7 @@ local function draw(v,o,k)
         v.coin_sources=v.coin_sources or {};v.coin_sources[o.id]=true
         v.sprites=v.sprites+1;v.zoom=nil;return {id},{}
     end
-    local closed=doc_lib.outline(o)
+    local closed=doc_lib.drawn_outline(o)
     if closed then return outline(v,closed,true,k) end
     local parts=doc_lib.parts(o)
     if #parts==1 then return outline(v,parts[1],false,k) end
@@ -157,7 +159,7 @@ local function refresh(v,e)
             elseif o.type=="label" then
                 go.set_position(vmath.vector3(pts[1][1]/scale,pts[1][2]/scale,0),v.labels_by[o.id])
             else
-                local closed=editor.outline(o)
+                local closed=editor.outline(o) or (doc_lib.drawn_outline(o) and pts)
                 local lists=closed and {closed} or editor.parts(o)
                 local ranges=v.ranges[o.id]
                 if not closed and #lists==1 and #lists[1]~=v.counts[o.id] then respread(v.objects[o.id],lists[1],scale)
@@ -184,18 +186,18 @@ end
 local function signature(e)
     local t={}
     for _,o in ipairs(e.objects) do
-        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or (o.type=="prefab" or o.type=="curve") and (o.kind or "curve")..(o.params and o.params.facing or "")..#doc_lib.path(o) or o.type=="coin" and 1 or #(o.points or o.vertices))
+        t[#t+1]=o.id..o.type..(o.type=="label" and "\0"..o.text or (o.type=="prefab" or o.type=="curve") and (o.kind or "curve")..(o.params and o.params.facing or "")..#doc_lib.path(o) or o.type=="coin" and 1 or #(o.points or doc_lib.drawn_outline(o)))
     end
     return table.concat(t,"|")
 end
 function M.build(self)
-    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},label_text={},live="",shapes={},tints={},hidden={},geometry=editor.geometry_version}
+    local v={gos={},line_ids={},label_ids={},sprites=0,labels=0,objects={},ranges={},counts={},labels_by={},label_text={},live="",shapes={},tints={},kind_tints={},hidden={},geometry=editor.geometry_version}
     local e=editor.doc.editor
     local k,simplified=allocation(e)
     editor.display_note=simplified and string.format("Display simplified: %d segments exceed the editor's budget of %d line sprites. Geometry and handles are exact; see Problems for the limiting Play resource.",
         simplified.segments,simplified.sprites) or nil
     for _,o in ipairs(e.objects) do
-        if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id]);v.counts[o.id]=#doc_lib.path(o)
+        if o.type~="label" then v.objects[o.id],v.ranges[o.id]=draw(v,o,k[o.id]);v.counts[o.id]=#doc_lib.path(o);v.kind_tints[o.id]=KIND_TINT[o.type]
         else
             local id=stations.marker(o.position,o.text);count(v,{id},true);v.objects[o.id]={};v.labels_by[o.id]=id;v.label_text[o.id]=o.text
         end
@@ -279,7 +281,7 @@ function M.update(self)
         v.drawn=editor.view_version
         -- Only objects whose highlight changed are re-tinted (hover changes on mouse moves).
         for id,ids in pairs(v.objects) do
-            local state=editor.auto_remove and editor.auto_remove[id] and BLOCKED_TINT or (editor.auto_range or editor.selected)[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or stations.TERRAIN_TINT
+            local state=editor.auto_remove and editor.auto_remove[id] and BLOCKED_TINT or (editor.auto_range or editor.selected)[id] and SELECTED or editor.hover_object==id and HOVER or v.coin_sources and v.coin_sources[id] and COIN_TINT or v.kind_tints[id] or stations.TERRAIN_TINT
             if v.tints[id]~=state then v.tints[id]=state;tint(ids,state) end
         end
         local blocked=doc_lib.blocked(e,start)
@@ -290,5 +292,5 @@ function M.update(self)
 end
 -- Shared source-marker/outline helpers; the mesh view keeps the same editor affordances.
 M.count,M.readable,M.draw,M.start_marker,M.finish_marker=count,readable,draw,start_marker,finish_marker
-M.move,M.place_line,M.tint,M.mapping=move,place_line,tint,mapping
+M.move,M.place_line,M.tint,M.mapping,M.KIND_TINT=move,place_line,tint,mapping,KIND_TINT
 return M

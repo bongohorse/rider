@@ -82,7 +82,7 @@ else:
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else []),*(['--record'] if args.record else [])],cwd=ROOT,start_new_session=True,env=env)
-    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3','w114') else 360 if args.case in ('fps417','fps444','cam443','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea2','ea3','w114') else 360 if args.case in ('fps417','fps444','cam443','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea3','cf3') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
 if args.preset is not None:
@@ -192,7 +192,7 @@ if args.case=='ea3':
 if args.case=='ea2':
     report=json.loads((out/'objects-result.json').read_text())
     identity(report)
-    expected='list_selection_search_naming hide_undo_export_geometry lock_direct_and_connected_changes copy_mirror_new_ids_unlocked_visible save_reload_import_drive_roundtrip bounded_list_and_viewports invalid_metadata_preserved_or_refused sparse_mechanism_lists_refused'.split()
+    expected='list_selection_search_naming hide_undo_export_geometry lock_direct_and_connected_changes copy_mirror_new_ids_unlocked_visible save_reload_import_drive_roundtrip bounded_list_and_viewports invalid_metadata_preserved_or_refused sparse_mechanism_lists_refused mechanism_blank_course_places_one_undo_each mechanism_properties_bounded_and_fail_closed mechanism_two_plates_three_gates_five_links mechanism_locks_and_hide mechanism_copy_remaps_and_keeps_external mechanism_save_reload_export_import_play_retry mechanism_pools_and_viewports'.split()
     assert sorted(report['cases'])==sorted(expected), 'ea2 inventory missing or duplicated'
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':

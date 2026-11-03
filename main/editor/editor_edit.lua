@@ -2,13 +2,14 @@
 -- of a document copy in place; the caller validates and commits the result as one Undo step.
 local doc_lib=require "main.editor.editor_doc"
 local prefab=require "main.editor.editor_prefab"
+local mechanisms=require "main.editor.editor_mechanisms"
 local M={}
 local function find(e,id) for i,o in ipairs(e.objects) do if o.id==id then return o,i end end end
 M.find=find
 local function new_id(e) local id="o"..e.next_id;e.next_id=e.next_id+1;return id end
 local function shift(p,d) p[1],p[2]=p[1]+d[1],p[2]+d[2] end
 local function translate_object(o,d)
-    if (o.type=="label" or o.type=="coin") then shift(o.position,d)
+    if o.type=="label" or o.type=="coin" or mechanisms.is(o) then shift(o.position,d)
     elseif o.type=="prefab" then shift(o.at,d)
     elseif o.type=="curve" then for _,a in ipairs(o.anchors) do shift(a.p,d) end
     else for _,p in ipairs(o.type=="line" and o.points or o.vertices) do shift(p,d) end end
@@ -217,6 +218,8 @@ function M.disconnect(e,id,index)
     end
     return nil,"The point is not a connection"
 end
+-- Removed crates, plates and gates also drop their typed links and plate actor entries (O2); returns
+-- those counts (links, actors, plates reset to the vehicle) for the caller's message.
 function M.remove(e,ids)
     local set={};for _,id in ipairs(ids) do set[id]=true end
     for i=#e.objects,1,-1 do if set[e.objects[i].id] then table.remove(e.objects,i) end end
@@ -224,6 +227,7 @@ function M.remove(e,ids)
         local c=e.connections[i]
         if set[c.from] or set[c.to] then table.remove(e.connections,i) end
     end
+    return mechanisms.remove(e,set)
 end
 -- A drawn polyline becomes one new piece. Starting or finishing on a free end, which the editor shows
 -- as a connect preview, connects it there (R5: deliberate placement confirms). Returns id, note.
@@ -253,9 +257,12 @@ end
 -- Copy/paste (R17, LE4). The clipboard holds authoring data only: the copied objects and the
 -- connections between them. Paste allocates new ids, keeps those internal connections and drops every
 -- connection to an object outside the copy. START and FINISH are singletons and never copied.
+-- Typed mechanism links (O2) are kept the same way; a link with one copied end is carried as external and
+-- kept on paste while its other end exists (editor_mechanisms.paste).
 function M.copy(e,ids)
     local set={};for _,id in ipairs(ids) do set[id]=true end
     local clip={objects={},connections={}}
+    clip.mechanism_links,clip.external_links=mechanisms.copy(e,set)
     for _,o in ipairs(e.objects) do if set[o.id] then clip.objects[#clip.objects+1]=doc_lib.copy(o) end end
     for _,c in ipairs(e.connections) do
         if set[c.from] and set[c.to] then clip.connections[#clip.connections+1]={from=c.from,to=c.to} end
@@ -272,9 +279,10 @@ function M.bbox(objects)
     end
     return b
 end
--- Pastes the clipboard moved by d; returns the new ids in clipboard order. Connected ends get the same
--- displacement, so they stay exactly equal.
-function M.paste(e,clip,d)
+-- Pastes the clipboard moved by d (foreign: it was copied in another document, see
+-- editor_mechanisms.paste); returns the new ids in clipboard order and the kept and dropped
+-- external mechanism references. Connected ends get the same displacement, so they stay exactly equal.
+function M.paste(e,clip,d,foreign)
     local map,ids={},{}
     for _,o in ipairs(clip.objects) do
         local n=doc_lib.copy(o)
@@ -285,7 +293,8 @@ function M.paste(e,clip,d)
         e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
     end
     for _,c in ipairs(clip.connections) do e.connections[#e.connections+1]={from=map[c.from],to=map[c.to]} end
-    return ids
+    local kept,dropped=mechanisms.paste(e,clip,map,ids,foreign)
+    return ids,kept,dropped
 end
 -- A prefab parameter change (R4): the entry stays fixed and the whole downstream run moves by the
 -- displacement of the exit; upstream pieces never move. Invalid parameters are refused unchanged.
@@ -341,13 +350,15 @@ function M.mirror(e,ids,side)
         local n=doc_lib.copy(o)
         if o.type=="line" then n.points=reflect(o.points)
         elseif o.type=="hull" then n.vertices=reflect(o.vertices) -- reversed order keeps it counter-clockwise
-        elseif o.type=="label" or o.type=="coin" then n.position={c2-o.position[1],o.position[2]}
+        elseif o.type=="label" or o.type=="coin" or mechanisms.is(o) then
+            n.position={c2-o.position[1],o.position[2]}
+            if o.type=="crate" then n.angle=-(o.angle or 0) end
         elseif o.type=="curve" then n=M.mirror_curve(o,c2)
         else n=prefab.mirror(o,c2) end
         n.name=o.name;n.road_look=doc_lib.copy(o.road_look)
         objects[i]=n
     end
-    local mirrored={objects=objects,connections={}}
+    local mirrored={objects=objects,connections={},mechanism_links=clip.mechanism_links,external_links=clip.external_links}
     for _,c in ipairs(clip.connections) do mirrored.connections[#mirrored.connections+1]={from=c.to,to=c.from} end
     -- The mirrored copy spans c2-b[2]..c2-b[1]; it moves until it is at least 1 m clear of the original.
     local shift=side>0 and math.ceil((b[2]+1-(c2-b[2]))*2)/2 or -math.ceil(((c2-b[1])-(b[1]-1))*2)/2

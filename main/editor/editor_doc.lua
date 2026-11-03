@@ -3,6 +3,7 @@
 local data=require "main.game.station_data"
 local prefab=require "main.editor.editor_prefab"
 local sample=require "main.editor.editor_sample"
+local dense=require "main.game.dense"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
 -- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
@@ -16,7 +17,11 @@ local sample=require "main.editor.editor_sample"
 -- Version 10 adds optional gem kinds to existing coin objects; compiled gems require schema 3.
 -- Version 11 adds course-wide fuel rules and shared-refill canisters; compiled fuel uses schema 4.
 -- Version 12 preserves validated O1 mechanism data read-only through source, compilation and storage.
-local M={EDITOR_VERSION=12,COMPILER_VERSION=12}
+-- Version 13 (O2, #281) holds crates, plates and gates as ordinary source objects and their typed links
+-- in mechanism_links (editor_mechanisms); a version-12 e.mechanisms block opens migrated, same IDs and
+-- settings. The compiled O1 mechanisms (station schema 5) are unchanged.
+local mechanisms=require "main.editor.editor_mechanisms"
+local M={EDITOR_VERSION=13,COMPILER_VERSION=13}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -110,6 +115,7 @@ function M.parts(o)
     return {}
 end
 function M.path(o)
+    if mechanisms.is(o) then return mechanisms.outline(o) end
     if o.type=="line" then return o.points end
     if o.type=="curve" then return curve_samples(o).points end
     if o.type=="hull" then return o.vertices end
@@ -121,6 +127,9 @@ function M.outline(o)
     if o.type=="hull" then return o.vertices end
     if o.type=="prefab" and o.kind=="platform" then return prefab.path(o) end
 end
+-- What the editor views draw for an object as one closed outline: a hull or Platform, or a crate, plate
+-- or gate body box (drawing and picking only; mechanisms are no terrain or hull, see M.outline).
+function M.drawn_outline(o) return M.outline(o) or (mechanisms.is(o) and mechanisms.outline(o)) or nil end
 -- Line sprites an object draws in a compiled level (render budget, R7): one per segment or outline edge.
 function M.drawn(o)
     local outline=M.outline(o)
@@ -148,7 +157,12 @@ end
 function M.lock_conflict(before,after)
     local ids={};for _,o in ipairs(after.objects) do ids[o.id]=o end
     local function incident(e,id)
-        local t={};for _,c in ipairs(e.connections or {}) do if c.from==id or c.to==id then t[c.from..":"..c.to]=true end end;return t
+        -- Terrain connections and typed mechanism links (O2) both belong to their locked ends.
+        local t={}
+        for kind,list in pairs({c=e.connections or {},m=e.mechanism_links or {}}) do
+            for _,c in ipairs(list) do if c.from==id or c.to==id then t[kind..":"..tostring(c.from)..":"..tostring(c.to)]=true end end
+        end
+        return t
     end
     for _,o in ipairs(before.objects) do
         if o.locked then
@@ -156,8 +170,8 @@ function M.lock_conflict(before,after)
             local changed=not n
             for k,v in pairs(o) do if k~="hidden" and k~="locked" and not equal(v,n and n[k]) then changed=true;break end end
             for k in pairs(n or {}) do if k~="hidden" and k~="locked" and o[k]==nil then changed=true;break end end
-            if changed or (before.connections~=after.connections and not equal(incident(before,o.id),incident(after,o.id))) then
-                return "Locked: "..M.label(o)..". Unlock it before changing this object or its connected run."
+            if changed or ((before.connections~=after.connections or before.mechanism_links~=after.mechanism_links) and not equal(incident(before,o.id),incident(after,o.id))) then
+                return "Locked: "..M.label(o)..". Unlock it before changing this object, its connected run or its connections."
             end
         end
     end
@@ -182,6 +196,8 @@ local function from_station(d,id,name)
     if type(d.finish)=="table" and point(d.finish.position) and type(d.finish.direction)=="table" then
         e.finish={position={d.finish.position[1],d.finish.position[2]},direction=d.finish.direction[1]<0 and -1 or 1}
     end
+    -- The station's validated mechanisms become source objects after the other objects took their IDs.
+    mechanisms.migrate(e)
     return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
@@ -192,7 +208,6 @@ function M.template(d)
     if #name>64 then name=d.name:sub(1,59).." copy" end
     local note=d.seesaw and "Template copy without the seesaw: it is a dynamic station object that the editor cannot hold yet. Drive it in the station itself."
     if require("main.terrain_perspective.look").authored(d) then return {schema=1,units="metres",id="my-"..d.id,name=name,editor=copy(d.editor)},note end
-    if d.mechanisms then note=(note and note..' ' or '')..'Mechanisms are preserved read-only in this runtime preview.' end
     return from_station(d,"my-"..d.id,name),note
 end
 -- New empty level (LE4): no terrain yet (an unplayable draft, R9), START at the origin.
@@ -210,7 +225,7 @@ end
 -- * an unsupported or invalid block: never recompiled; the compiled geometry opens as an editable line
 --   copy with a note. The file and its unknown data stay unchanged.
 function M.open_level(d)
-    if d.editor==nil then return from_station(d,d.id,d.name),d.mechanisms and 'Mechanisms are preserved read-only in this runtime preview.' or nil end
+    if d.editor==nil then return from_station(d,d.id,d.name) end
     local doc={schema=1,units="metres",id=d.id,name=d.name,editor=copy(d.editor)}
     local ok,err,unsupported=M.validate(doc)
     if not ok then
@@ -227,8 +242,14 @@ end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
 local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms"}
+-- An O1 block without any crate, plate, gate or link compiles to no block (editor 13): compare them as equal.
+local function mechanism_block(m)
+    if type(m)=='table' and type(m.crates)=='table' and next(m.crates)==nil and type(m.plates)=='table' and next(m.plates)==nil
+        and type(m.gates)=='table' and next(m.gates)==nil and type(m.links)=='table' and next(m.links)==nil then return nil end
+    return m
+end
 local function compiled(d)
-    local t={mechanisms=d.mechanisms,fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -277,11 +298,15 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
     if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
+    -- #394 for version 13: crates, plates and gates live in this list, so a JSON null member (a hole) or an
+    -- object in place of the list must not hide entries from validation, compilation or the 8-per-kind cap.
+    local listed,why=dense.length(e.objects,M.MAX_OBJECTS)
+    if not listed then return nil,"Editor objects "..why end
     if e.editor_version>=4 then
         local s=e.sampling
         if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then
@@ -289,7 +314,11 @@ function M.validate(doc)
         end
     elseif e.sampling~=nil then return nil,"Sampling settings need editor version 4" end
     if e.mechanisms~=nil and e.editor_version<12 then return nil,'Mechanisms need editor/compiler 12',true end
-    local mech_ok,mech_err,mech_unknown=require('main.game.mechanism_data').validate(e.mechanisms)
+    if e.mechanisms~=nil and e.editor_version>=13 then return nil,'Editor/compiler 13 holds mechanisms as objects, not an editor.mechanisms block',true end
+    if e.mechanism_links~=nil and e.editor_version<13 then return nil,'Mechanism links need editor/compiler 13',true end
+    -- Version 13: the same O1 validator checks the data the objects compile to (IDs, settings, actors,
+    -- links, limits); the object loop below checks their source fields.
+    local mech_ok,mech_err,mech_unknown=require('main.game.mechanism_data').validate(mechanisms.runtime(e))
     if not mech_ok then return nil,mech_err,mech_unknown end
     if #e.objects+require('main.game.mechanism_data').cost(e.mechanisms).bodies>M.MAX_OBJECTS then return nil,'Source object limit is 256; remove objects or split the document' end
     if e.fuel~=nil and e.editor_version<11 then return nil,'Fuel needs editor/compiler 11',true end
@@ -304,14 +333,19 @@ function M.validate(doc)
     for _,o in ipairs(e.objects) do
         if type(o)~="table" or type(o.id)~="string" then return nil,"Invalid editor object" end
         local n=tonumber(o.id:match("^o(%d+)$"))
-        if not n or n>=e.next_id then return nil,"Invalid object id "..o.id end
+        -- Migrated O1 mechanisms keep their station IDs (e.g. crate-a); every other object is oN.
+        if (not n and not mechanisms.is(o)) or (n and n>=e.next_id) then return nil,"Invalid object id "..o.id end
         if ids[o.id] then return nil,"Duplicate object id "..o.id end
         ids[o.id]=true
         if o.name~=nil and (type(o.name)~="string" or #o.name>64 or o.name:find("[%z\1-\31\127]")) then return nil,"Object name is limited to 64 bytes without control characters: "..o.id end
         if (o.hidden~=nil and type(o.hidden)~="boolean") or (o.locked~=nil and type(o.locked)~="boolean") then return nil,"Invalid visibility/lock: "..o.id end
         if e.editor_version<7 and (o.name~=nil or o.hidden~=nil or o.locked~=nil) then return nil,"Object metadata needs editor version 7: "..o.id end
         local list=o.type=="line" and o.points or o.type=="hull" and o.vertices
-        if o.type=='coin' then
+        if mechanisms.is(o) then
+            if e.editor_version<13 then return nil,'Crates, plates and gates need editor/compiler 13',true end
+            local ok,err,future=mechanisms.source_fields(o)
+            if not ok then return nil,err,future end
+        elseif o.type=='coin' then
             if e.editor_version<9 then return nil,'Ordinary coins require editor/compiler version 9',true end
             if o.kind~=nil and not (o.kind=='gem' and e.editor_version>=10 or o.kind=='fuel' and e.editor_version>=11) then return nil,'Unsupported pickup kind/version',true end
             if o.kind=='fuel' then
@@ -385,6 +419,7 @@ function M.validate(doc)
         for _,o in ipairs(e.objects) do if o.type=="curve" then e.compiled_revision=nil end end
         e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
     end
+    mechanisms.migrate(e)
     e.editor_version,e.compiler_version=M.EDITOR_VERSION,M.COMPILER_VERSION
     return doc
 end
@@ -614,7 +649,8 @@ end
 -- Clearance for the complete upright vehicle (R10): no terrain edge in its box, not inside a hull.
 function M.blocked(e,p)
     local box={p[1]+M.VEHICLE[1],p[1]+M.VEHICLE[2],p[2]+M.VEHICLE[3],p[2]+M.VEHICLE[4]}
-    for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(e.mechanisms and e.mechanisms[kind] or {}) do
+    local spec=mechanisms.runtime(e)
+    for _,kind in ipairs({'crates','plates','gates'}) do for _,o in ipairs(spec and spec[kind] or {}) do
         local w,h=kind=='crates' and (.6*(math.abs(math.cos(o.angle or 0))+math.abs(math.sin(o.angle or 0)))) or kind=='plates' and (o.width or 3)/2 or .3,kind=='crates' and (.6*(math.abs(math.cos(o.angle or 0))+math.abs(math.sin(o.angle or 0)))) or kind=='plates' and .05 or 1.5
         local y=o.position[2]+(kind=='gates' and o.initial_open and o.travel or 0)
         if o.position[1]+w>box[1] and o.position[1]-w<box[2] and y+h>box[3] and y-h<box[4] then return {type=kind=='crates' and 'crate' or kind=='plates' and 'plate' or 'gate',id=o.id} end
@@ -647,7 +683,7 @@ local function extent(e)
     -- Both ends of every edge: an open line's last point is no edge's start.
     each_segment(e,function(a,b) add(a[1],a[2]);add(b[1],b[2]) end)
     for _,o in ipairs(e.objects) do if o.type=='label' or o.type=='coin' then add(o.position[1],o.position[2]);if o.type=='coin' then local r=require('main.game.coin_data').radius(o);add(o.position[1]-r,o.position[2]-r);add(o.position[1]+r,o.position[2]+r) end end end
-    for _,r in ipairs(require('main.game.mechanism_data').extents(e.mechanisms)) do add(r[1],r[3]);add(r[2],r[4]) end
+    for _,r in ipairs(require('main.game.mechanism_data').extents(mechanisms.runtime(e))) do add(r[1],r[3]);add(r[2],r[4]) end
     local s=e.start.position
     add(s[1]+M.VEHICLE[1],s[2]+M.VEHICLE[3]);add(s[1]+M.VEHICLE[2],s[2]+M.VEHICLE[4])
     if e.finish then local f=e.finish.position;add(f[1],f[2]-M.FINISH_BELOW);add(f[1],f[2]+M.FINISH_ABOVE) end
@@ -699,7 +735,7 @@ function M.compile(doc,test,errors)
     end
     if d.coins then d.schema=d.coins.version==2 and 3 or 2 end
     d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version==3 then d.schema=4 end
-    d.mechanisms=copy(e.mechanisms);if d.mechanisms then d.schema=5 end
+    d.mechanisms=mechanisms.runtime(e);if d.mechanisms then d.schema=5 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)

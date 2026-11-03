@@ -56,6 +56,8 @@ end
 function M.line(o,a,b,color,width,pool)
     local n=take(o,pool or "lines")
     if not n then return end
+    -- Handle-pool nodes may carry the ring texture from M.endpoint (O2 links and gate travel use them).
+    if pool=="handles" then gui.set_size_mode(n,gui.SIZE_MODE_MANUAL);gui.set_texture(n,"editor_solid") end
     local dx,dy=b[1]-a[1],b[2]-a[2]
     gui.set_screen_position(n,vmath.vector3((a[1]+b[1])/2,(a[2]+b[2])/2,0))
     gui.set_size(n,vmath.vector3(math.sqrt(dx*dx+dy*dy)/o.k,(width or 2)*o.s/o.k,0))

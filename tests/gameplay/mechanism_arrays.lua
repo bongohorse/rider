@@ -85,7 +85,16 @@ print('PASS sparse, object-shaped and over-limit gate-link lists are rejected wi
 -- the 256-object source cap reads M.cost).
 local E=require 'main.editor.editor_doc'
 local doc=E.blank('mechanism-arrays','Mechanism arrays');doc.editor.objects={{id='o1',type='line',points={{-6,0},{40,0}}}};doc.editor.next_id=2;doc.editor.start.position={2,1.7}
-doc.editor.mechanisms=spec();assert(E.validate(doc))
+-- A version-12 block holds the O1 data in editor.mechanisms (validate migrates a valid one to objects,
+-- so each check validates a copy).
+doc.editor.editor_version,doc.editor.compiler_version=12,12
+doc.editor.mechanisms=spec();assert(E.validate(E.copy(doc)))
 doc.editor.mechanisms.crates={doc.editor.mechanisms.crates[1],nil,invalid_crate}
 local ok,why=E.validate(doc);assert(not ok and why=='Mechanism crates has a gap at entry 2','editor source: '..tostring(why))
-print('PASS editor source validation refuses a sparse mechanism list with the same cause')
+-- Version 13 (O2) keeps the links in editor.mechanism_links: the same dense-list rule applies there.
+local v13=E.copy(doc);v13.editor.mechanisms=spec();assert(E.validate(v13) and v13.editor.editor_version==13 and #v13.editor.mechanism_links==2)
+local holed=E.copy(v13);holed.editor.mechanism_links={holed.editor.mechanism_links[1],nil,holed.editor.mechanism_links[2]}
+ok,why=E.validate(holed);assert(not ok and why=='Mechanism links has a gap at entry 2','editor source links: '..tostring(why))
+local keyed=E.copy(v13);keyed.editor.mechanism_links={['1']=keyed.editor.mechanism_links[1]}
+ok,why=E.validate(keyed);assert(not ok and why:find('Mechanism links is not a list',1,true),'object-shaped links: '..tostring(why))
+print('PASS editor source validation refuses a sparse mechanism list (version 12) and sparse or object-shaped mechanism_links (version 13) with the same cause')

@@ -303,7 +303,7 @@ end
 function M.set_preview(objects)
     if objects then
         local current=M.doc.editor
-        local e={objects={},connections=current.connections}
+        local e={objects={},connections=current.connections,mechanism_links=current.mechanism_links}
         for i,o in ipairs(current.objects) do e.objects[i]=objects[o.id] or o end
         local err=doc_lib.lock_conflict(M.doc.editor,e)
         if err then objects=nil;M.message=err end
