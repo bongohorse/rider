@@ -6,6 +6,7 @@ cached file is a failure, never silently replaced. Exit 0 clean, 1 findings, 2 b
 """
 import argparse
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -35,11 +36,12 @@ def binary_path(key):
     return ROOT / '.cache/ci' / f"luacheck-{LOCK['version']}{suffix}"
 
 
-def download(url, attempts=DOWNLOAD_ATTEMPTS, sleep=time.sleep):
-    """Fetch url; retry transient failures (HTTP 5xx, network errors, timeouts) only (#434).
-
-    A 4xx answer is not retried. The caller still verifies the SHA-256 and fails closed.
+def download(url, attempts=DOWNLOAD_ATTEMPTS, sleep=None):
+    """Fetch url; retry transient failures (HTTP 5xx, network errors, resets, truncated bodies,
+    timeouts) only (#434). A 4xx answer is not retried. The caller still verifies the SHA-256
+    and fails closed.
     """
+    sleep = sleep or time.sleep
     request = urllib.request.Request(url, headers={'User-Agent': 'Rider-CI'})
     for attempt in range(1, attempts + 1):
         try:
@@ -48,11 +50,16 @@ def download(url, attempts=DOWNLOAD_ATTEMPTS, sleep=time.sleep):
         except urllib.error.HTTPError as exc:
             if exc.code < 500 or attempt == attempts:
                 raise
+            exc.close()
             reason = f'HTTP {exc.code}'
-        except (urllib.error.URLError, TimeoutError) as exc:
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             if attempt == attempts:
                 raise
             reason = str(exc)
+        except http.client.HTTPException as exc:
+            if attempt == attempts:
+                raise OSError(f'download failed: {exc!r}') from exc
+            reason = repr(exc)
         print(f'lint_lua: download attempt {attempt}/{attempts} failed ({reason}); retrying',
               file=sys.stderr)
         sleep(DOWNLOAD_BACKOFF_S * attempt)

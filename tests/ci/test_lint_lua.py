@@ -1,6 +1,8 @@
 """Pinned luacheck runner and configuration (#400)."""
 import hashlib
+import http.client
 import importlib.util
+import io
 import json
 from pathlib import Path
 import re
@@ -47,7 +49,7 @@ class LockTest(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b'not luacheck')
 
     def _http_error(self, code):
-        return lint_lua.urllib.error.HTTPError('https://example.invalid', code, 'x', {}, None)
+        return lint_lua.urllib.error.HTTPError('https://example.invalid', code, 'x', {}, io.BytesIO(b''))
 
     def _response(self, data):
         response = mock.MagicMock()
@@ -61,17 +63,31 @@ class LockTest(unittest.TestCase):
                                             self._response(b'ok')]) as urlopen:
             self.assertEqual(lint_lua.download('https://example.invalid', sleep=sleeps.append), b'ok')
         self.assertEqual(urlopen.call_count, 3)
-        self.assertEqual(len(sleeps), 2)
+        self.assertEqual(sleeps, [2.0, 4.0])
+
+    def test_download_retries_timeouts_resets_and_truncated_bodies(self):
+        for error in (TimeoutError('slow'), ConnectionResetError('reset'), http.client.IncompleteRead(b'x', 5)):
+            with mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                                   side_effect=[error, self._response(b'ok')]) as urlopen:
+                self.assertEqual(lint_lua.download('https://example.invalid', sleep=lambda _: None), b'ok')
+            self.assertEqual(urlopen.call_count, 2, error)
+
+    def test_truncated_body_on_every_attempt_blocks(self):
+        with mock.patch.object(lint_lua.urllib.request, 'urlopen',
+                               side_effect=[http.client.IncompleteRead(b'x', 5)] * 3):
+            with self.assertRaises(OSError):
+                lint_lua.download('https://example.invalid', sleep=lambda _: None)
 
     def test_download_gives_up_after_three_server_errors_and_main_blocks(self):
         with tempfile.TemporaryDirectory() as directory, \
                 mock.patch.object(lint_lua, 'binary_path', return_value=Path(directory) / 'luacheck'), \
-                mock.patch.object(lint_lua.time, 'sleep'), \
+                mock.patch.object(lint_lua.time, 'sleep') as sleep, \
                 mock.patch.object(lint_lua.urllib.request, 'urlopen',
                                   side_effect=[self._http_error(503)] * 3) as urlopen, \
                 mock.patch.object(lint_lua, 'host_key', return_value='linux-x86_64'):
             self.assertEqual(lint_lua.main([]), 2)
             self.assertEqual(urlopen.call_count, 3)
+            self.assertEqual(sleep.call_count, 2)
             self.assertFalse((Path(directory) / 'luacheck').exists())
 
     def test_download_does_not_retry_client_errors(self):
