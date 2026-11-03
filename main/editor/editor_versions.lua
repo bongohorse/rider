@@ -1,7 +1,14 @@
 -- A3: immutable source snapshots, paired index and deferred garbage collection.
 -- Never remove a retired file until BOTH index slots and their browser sync succeeded.
 local custom=require "main.game.custom"
-local M={MAX_AUTO=10,MAX_NAMED=10,CAP=16*1024*1024}
+local dense=require "main.game.dense"
+-- INDEX_MAX: at most 1280 entries and as many retired ids (64 My levels x (10 automatic + 10 named)).
+local M={MAX_AUTO=10,MAX_NAMED=10,CAP=16*1024*1024,INDEX_MAX=1280}
+-- H.index errors. The editor shows them as "Save failed (versions: <this>)" in the status bar, whose
+-- narrowest width (editor_ui.lua: 12 px in w-384-sx with w>=1280 and a 280 px title) shows 73 characters,
+-- so each fits there whole; the Versions dialog shows them in a 1080 px paragraph.
+M.INDEX_NEWER="Version index from a newer editor; kept unchanged"
+M.INDEX_UNREADABLE="Version index cannot be read; kept unchanged"
 local function copy(v) if type(v)~="table" then return v end;local t={};for k,x in pairs(v) do t[k]=copy(x) end;return t end
 function M.create(parse)
     local H={generation=0}
@@ -16,7 +23,13 @@ function M.create(parse)
         local ok,d=pcall(json.decode,text)
         if #text>512*1024 or not ok or type(d)~="table" then return nil,"Unreadable version index" end
         if d.format~=1 then return nil,"Unsupported version index",true end
-        if not integer(d.next) or type(d.entries)~="table" or #d.entries>1280 or type(d.garbage)~="table" or #d.garbage>1280 then return nil,"Invalid version index" end
+        if not integer(d.next) then return nil,"Invalid version index" end
+        -- entries and garbage must be dense arrays (#386): an object ({"1":...}) or a JSON null hole would
+        -- hide references from ipairs, and the next H.add would write an index without them.
+        local n,why=dense.length(d.entries,M.INDEX_MAX)
+        if not n then return nil,"entries "..why end
+        n,why=dense.length(d.garbage,M.INDEX_MAX)
+        if not n then return nil,"garbage "..why end
         local seen,counts={},{}
         for _,v in ipairs(d.entries) do
             if type(v)~="table" or not integer(v.id) or v.id>=d.next or seen[v.id] or not integer(v.key)
@@ -30,12 +43,14 @@ function M.create(parse)
         return d
     end
     local index=custom.slot_store({"custom-versions-a","custom-versions-b"},index_parse)
+    -- The index, or nil, a short message (shown in the status bar and the Versions dialog) and the parse
+    -- error of the newest slot when there is one (for tests and diagnostics; nil for an unloadable file).
     function H.index()
         if cached then return cached end
-        local newest=index.newest();local r=index.restore()
-        if newest and newest.unsupported then return nil,"Version index from a newer editor; kept unchanged" end
+        local newest=index.newest();local r,rerr=index.restore()
+        if newest and newest.unsupported then return nil,M.INDEX_NEWER end
         if r and not r.skipped then cached=r.doc
-        elseif r or index.exists() then return nil,"Version index cannot be read; kept unchanged"
+        elseif r or index.exists() then return nil,M.INDEX_UNREADABLE,r and r.skipped or rerr
         else cached={format=1,next=1,entries={},garbage={}} end
         return cached
     end
