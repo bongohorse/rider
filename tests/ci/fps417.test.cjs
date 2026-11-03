@@ -3,7 +3,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
-const {parseArgs,level,verifyCounter,verifyNoDrive,nextCap,CAPS,DEFAULT_CAP,capLabel}=require('../../tools/gym/fps417.cjs');
+const {parseArgs,level,verifyCounter,verifyNoDrive,verifyHitArea,verifyHeldThrottle,nextCap,CAPS,DEFAULT_CAP,capLabel,MIN_TAP_PX}=require('../../tools/gym/fps417.cjs');
 const root=path.resolve(__dirname,'../..');
 
 test('CLI accepts exactly the fps417 case',()=>{
@@ -20,12 +20,41 @@ test('cycle, default and labels match the game module',()=>{
  const lua=fs.readFileSync(path.join(root,'main/game/fps_counter.lua'),'utf8');
  assert.match(lua,/M\.CAPS=\{30,60,90,120,144,0\}/);assert.match(lua,/M\.DEFAULT_CAP=60/);assert.match(lua,/M\.UNLIMITED_REFERENCE=60/);
  assert.match(lua,/fps\*100>=90\*ref/);assert.match(lua,/fps\*100>=70\*ref/);
+ assert.match(lua,/fps=M\.rounded\(fps\)/,'the colour must use the rounded value the text shows');
 });
 
 test('colour level is relative to the cap, Unlimited against 60',()=>{
- for(const [fps,cap,want] of [[54,60,'green'],[53.9,60,'orange'],[42,60,'orange'],[41.9,60,'red'],[60,144,'red'],[130,144,'green'],
+ for(const [fps,cap,want] of [[54,60,'green'],[53,60,'orange'],[42,60,'orange'],[41,60,'red'],[60,144,'red'],[130,144,'green'],
   [101,144,'orange'],[27,30,'green'],[54,0,'green'],[41,0,'red'],[240,0,'green']])assert.equal(level(fps,cap),want,`${fps}@${cap}`);
  assert.equal(level(null,60),null);assert.equal(level(NaN,60),null);
+});
+
+test('colour follows the rounded value the text shows',()=>{
+ // "54 fps" at cap 60 is green, "53 fps" orange; the same rounding as the text (Math.floor(fps+0.5)).
+ for(const [fps,cap,want] of [[53.5,60,'green'],[53.99,60,'green'],[53.49,60,'orange'],[41.5,60,'orange'],[41.49,60,'red'],[129.5,144,'green'],[129.49,144,'orange']])
+  assert.equal(level(fps,cap),want,`${fps}@${cap}`);
+ const c={cap:60,label:false,fps:53.6,buckets:4,text:'54 fps',level:'green',color:[0.3,0.9,0.6]};
+ assert.equal(verifyCounter(c,{world_update_callback_hz:53.7,fixed_tick_wall_hz:60,fixed_dt_s:1/60,elapsed_s:4.3},60).level,'green');
+ assert.throws(()=>verifyCounter({...c,level:'orange',color:[1,0.65,0.2]},{world_update_callback_hz:53.7},60),/colour level/);
+});
+
+test('tap area must be at least 44 CSS px and clear of controls',()=>{
+ assert.equal(MIN_TAP_PX,44);
+ assert.deepEqual(verifyHitArea({x0:0,y0:0,x1:112,y1:46},[{name:'pause',x:482,y:150}]),{width_css_px:112,height_css_px:46});
+ assert.throws(()=>verifyHitArea({x0:0,y0:0,x1:112,y1:34}),/under 44 px/);
+ assert.throws(()=>verifyHitArea({x0:0,y0:0,x1:40,y1:46}),/under 44 px/);
+ assert.throws(()=>verifyHitArea({x0:0,y0:0,x1:112,y1:46},[{name:'pause',x:50,y:20}]),/covers control pause/);
+ assert.throws(()=>verifyHitArea({x0:0,y0:NaN,x1:112,y1:46}),/Missing/);
+});
+
+test('a counter tap during held throttle must leave exactly the throttle',()=>{
+ const held={throttle:1,brake_reverse:0,lean:0},rec={ended:'stopped',error:false,ticks:90,commands:{throttle:80,brake:0,lean:0}};
+ assert.equal(verifyHeldThrottle([held,held,held,held],rec).samples,4);
+ assert.throws(()=>verifyHeldThrottle([held,{...held,throttle:0},held],rec),/changed the held throttle/);
+ assert.throws(()=>verifyHeldThrottle([held,{...held,lean:1},held],rec),/changed the held throttle/);
+ assert.throws(()=>verifyHeldThrottle([held,held,held],{...rec,commands:{throttle:80,brake:3,lean:0}}),/Extra drive input/);
+ assert.throws(()=>verifyHeldThrottle([held,held,held],{...rec,commands:{throttle:0,brake:0,lean:0}}),/Extra drive input/);
+ assert.throws(()=>verifyHeldThrottle([held],rec),/Too few/);
 });
 
 const window60={world_update_callback_hz:59.8,fixed_tick_wall_hz:60.01,fixed_dt_s:1/60,elapsed_s:4.3};

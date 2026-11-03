@@ -14,10 +14,11 @@ function parseArgs(args){
 }
 const nextCap=cap=>CAPS[(CAPS.indexOf(cap)+1)%CAPS.length];
 const reference=cap=>cap===0?60:cap;
-// Mirror of main/game/fps_counter.lua (green >= 90 %, orange >= 70 %, red below; Unlimited against 60).
+// Mirror of main/game/fps_counter.lua (green >= 90 %, orange >= 70 %, red below; Unlimited against 60),
+// applied to the whole number the counter shows.
 function level(fps,cap){
  if(typeof fps!=='number'||!Number.isFinite(fps))return null;
- const ref=reference(cap);
+ const ref=reference(cap);fps=Math.floor(fps+0.5);
  return fps*100>=90*ref?'green':fps*100>=70*ref?'orange':'red';
 }
 const COLORS={green:[0.3,0.9,0.6],orange:[1,0.65,0.2],red:[1,0.25,0.25]};
@@ -53,7 +54,26 @@ function verifyNoDrive(recording,taps){
  assert.deepEqual(recording.commands,{throttle:0,brake:0,lean:0},'A counter tap produced drive input');
  return {ticks:recording.ticks,taps,commands:recording.commands};
 }
-module.exports={parseArgs,level,verifyCounter,verifyNoDrive,nextCap,CAPS,DEFAULT_CAP,STATION,capLabel};
+// The invisible tap area (CSS px) must meet the 44 px touch minimum and stay clear of DOM and HUD controls.
+const MIN_TAP_PX=44;
+function verifyHitArea(rect,controls=[]){
+ assert(rect&&[rect.x0,rect.y0,rect.x1,rect.y1].every(Number.isFinite),'Missing counter tap area');
+ const width=rect.x1-rect.x0,height=rect.y1-rect.y0;
+ assert(width>=MIN_TAP_PX&&height>=MIN_TAP_PX,`Counter tap area ${width.toFixed(1)}x${height.toFixed(1)} CSS px is under ${MIN_TAP_PX} px`);
+ for(const c of controls){
+  assert(!(c.x>=rect.x0&&c.x<=rect.x1&&c.y>=rect.y0&&c.y<=rect.y1),'Counter tap area covers control '+c.name);
+ }
+ return {width_css_px:width,height_css_px:height};
+}
+// While a Throttle zone is held by another finger, the counter tap must leave exactly that drive command.
+function verifyHeldThrottle(samples,recording){
+ assert(Array.isArray(samples)&&samples.length>=3,'Too few drive samples during the multi-touch tap');
+ for(const c of samples)assert(c&&c.throttle===1&&c.brake_reverse===0&&c.lean===0,'Counter tap changed the held throttle: '+JSON.stringify(c));
+ assert(recording&&recording.ended==='stopped'&&recording.error===false,'Multi-touch recording not cleanly stopped');
+ assert(recording.commands.throttle>0&&recording.commands.brake===0&&recording.commands.lean===0,'Extra drive input during the multi-touch tap: '+JSON.stringify(recording.commands));
+ return {samples:samples.length,commands:recording.commands,ticks:recording.ticks};
+}
+module.exports={parseArgs,level,verifyCounter,verifyNoDrive,verifyHitArea,verifyHeldThrottle,nextCap,CAPS,DEFAULT_CAP,STATION,capLabel,MIN_TAP_PX};
 if(require.main===module){
  const {configure}=require('./launch.cjs');
  const pointer=require('./pointer.cjs');
@@ -118,8 +138,8 @@ if(require.main===module){
      state:async()=>JSON.stringify(await counter(p))});
     return labelSeen(p,expected);
    }
-   async function tapTouch(p,session,expected){
-    const before=await counter(p),point=await pointer.hudPoint(p,'fps');
+   async function tapTouch(p,session,expected,at=null){
+    const before=await counter(p),point=at||await pointer.hudPoint(p,'fps');
     const target=await p.evaluate(({x,y})=>document.elementFromPoint(x,y)?.id||document.elementFromPoint(x,y)?.tagName,point);
     assert.equal(target,'canvas','A DOM overlay covers the counter at phone size');
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y,id:1}]});
@@ -133,6 +153,23 @@ if(require.main===module){
     const c=await counter(p);
     assert.equal(c.saved,true,'Tapped cap was not stored in player settings');
     return {cap,label:c.label,text:c.text};
+   }
+   // CSS-pixel rectangle of the invisible tap area from its two corner probes (GUI pixels, origin bottom left).
+   async function hitArea(p){
+    return p.evaluate(()=>{
+     const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),q=window.riderHud.fps_rect;
+     const css=v=>({x:r.x+v.x/c.width*r.width,y:r.y+(1-v.y/c.height)*r.height});
+     const a=css(q.top_left),b=css(q.bottom_right);
+     const controls=['pause','step','record','replay','crash','struts'].map(name=>({name,...css(window.riderHud[name])}))
+      .concat(Object.entries(window.riderHud.presets).map(([k,v])=>({name:'preset '+k,...css(v)})));
+     return {rect:{x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)},controls};
+    });
+   }
+   // Every corner of the tap area must hit the canvas, not a DOM control of the touch overlay.
+   async function canvasAt(p,rect){
+    const ids=await p.evaluate(r=>[[r.x0+2,r.y0+2],[r.x1-2,r.y0+2],[r.x0+2,r.y1-2],[r.x1-2,r.y1-2]]
+     .map(([x,y])=>document.elementFromPoint(x,y)?.id||document.elementFromPoint(x,y)?.tagName),rect);
+    assert(ids.every(id=>id==='canvas'),'A DOM element covers the counter tap area: '+ids.join(','));
    }
    // "cap N" shows briefly after a tap, then the measured reading returns.
    async function labelCleared(p,cap,shown){
@@ -192,15 +229,23 @@ if(require.main===module){
    // 4. A21 record at cap 30, then replay while every cap is switched by taps: the replay must MATCH.
    const beforeRecord=(await replayState(page)).resets;
    await page.keyboard.down('b');await page.waitForFunction(n=>window.riderReplay?.recording?.active&&window.riderReplay.resets===n+1,beforeRecord);await page.keyboard.up('b');
+   // About 6 s of driving (3 s throttle, 3 s brake/reverse, staying inside the Straight bounds), so six taps fit
+   // into the replay with a wide margin on a loaded runner.
    await page.keyboard.down('ArrowUp');
    await page.waitForFunction(()=>window.riderReplay?.command?.throttle===1,null,{polling:50,timeout:10000});
    await page.waitForTimeout(3000);
    await page.keyboard.up('ArrowUp');
-   await page.waitForFunction(()=>window.riderReplay?.command?.throttle===0,null,{polling:50,timeout:10000});
+   await page.keyboard.down('ArrowDown');
+   await page.waitForFunction(()=>window.riderReplay?.command?.brake_reverse===1,null,{polling:50,timeout:10000});
+   await page.waitForTimeout(3000);
+   await page.keyboard.up('ArrowDown');
+   await page.waitForFunction(()=>window.riderReplay?.command?.throttle===0&&window.riderReplay.command.brake_reverse===0,null,{polling:50,timeout:10000});
    await page.keyboard.down('b');await page.waitForFunction(()=>window.riderReplay?.recording?.active===false);await page.keyboard.up('b');
    await page.waitForFunction(()=>window.riderReplay?.recording?.trailing===true,null,{polling:50,timeout:10000});
    const recorded=await page.evaluate(()=>window.riderReplay.recording);
    assert.equal(recorded.commands.throttle>90,true,'Recording has too little throttle');
+   assert.equal(recorded.commands.brake>90,true,'Recording has too little brake/reverse');
+   assert(recorded.ticks>=330,'Recording too short for the replay tap margin: '+recorded.ticks);
    const beforePlay=(await replayState(page)).resets;
    await page.keyboard.down('g');await page.waitForFunction(n=>window.riderReplay?.play?.active&&window.riderReplay.resets===n+1,beforePlay);await page.keyboard.up('g');
    const duringReplay=[];
@@ -208,7 +253,7 @@ if(require.main===module){
     cap=nextCap(cap);
     const shown=await tapMouse(page,cap);
     const r=await replayState(page);
-    duringReplay.push({cap,active:r.play.active,index:r.play.index});
+    duringReplay.push({cap,active:r.play.active,index:r.play.index,ticks:r.play.ticks});
     assert.equal(r.play.active,true,'Replay ended before every cap was switched');
     evidence.labels.push({cap,text:shown.text,during_replay:true});
    }
@@ -231,6 +276,7 @@ if(require.main===module){
    const startX=(await replayState(page)).x;
    for(let i=0;i<CAPS.length;i++){cap=nextCap(cap);await tapMouse(page,cap);}
    assert.equal(cap,60);
+   await page.waitForFunction(()=>window.riderReplay?.recording?.ticks>=60,null,{polling:50,timeout:10000}); // at least 1 s recorded
    await page.keyboard.down('b');await page.waitForFunction(()=>window.riderReplay?.recording?.active===false);await page.keyboard.up('b');
    const tapRecording=await page.evaluate(()=>window.riderReplay.recording);
    const endX=(await replayState(page)).x;
@@ -242,6 +288,8 @@ if(require.main===module){
    cases.counter_reports_measured=Object.fromEntries(Object.entries(measured).map(([k,w])=>[k,{counter_fps:w.counter_fps,update_callback_hz:w.update_callback_hz,level:w.level,text:w.counter_text}]));
    cases.physics_fixed_60_all_caps=Object.fromEntries(Object.entries(measured).map(([k,w])=>[k,{fixed_tick_wall_hz:w.fixed_tick_wall_hz,fixed_dt_s:w.fixed_dt_s}]));
    cases.cap_label_after_tap=evidence.labels.filter(l=>!l.during_replay);
+   const desktopArea=await hitArea(page);
+   evidence.hit_area={desktop:{...verifyHitArea(desktopArea.rect,desktopArea.controls),rect:desktopArea.rect}};
    await page.screenshot({path:path.join(out,'fps417-desktop.png')});
 
    // 7. Phone emulation with touch controls: a touch tap on the counter switches the cap, no drive command.
@@ -254,11 +302,46 @@ if(require.main===module){
    const session=await mobile.newCDPSession(phone);
    const beforeTouch=(await replayState(phone)).resets;
    await phone.keyboard.down('b');await phone.waitForFunction(n=>window.riderReplay?.recording?.active&&window.riderReplay.resets===n+1,beforeTouch);await phone.keyboard.up('b');
+   // The tap area is at least 44 CSS px and works up to its edges: centre, top-left and bottom-right taps.
+   const phoneArea=await hitArea(phone),r=phoneArea.rect;
+   evidence.hit_area.phone={...verifyHitArea(r,phoneArea.controls),rect:r};
+   await canvasAt(phone,r);
    let touchCap=DEFAULT_CAP;
-   for(let i=0;i<3;i++){touchCap=nextCap(touchCap);await tapTouch(phone,session,touchCap);}
+   for(const at of [null,{x:r.x0+4,y:r.y0+4},{x:r.x1-4,y:r.y1-4}]){touchCap=nextCap(touchCap);await tapTouch(phone,session,touchCap,at);}
+   await phone.waitForFunction(()=>window.riderReplay?.recording?.ticks>=60,null,{polling:50,timeout:10000}); // at least 1 s recorded
    await phone.keyboard.down('b');await phone.waitForFunction(()=>window.riderReplay?.recording?.active===false);await phone.keyboard.up('b');
-   cases.tap_no_drive_touch={...verifyNoDrive(await phone.evaluate(()=>window.riderReplay.recording),3),cap:(await counter(phone)).cap};
+   cases.tap_no_drive_touch={...verifyNoDrive(await phone.evaluate(()=>window.riderReplay.recording),3),cap:(await counter(phone)).cap,
+    hit_area_css_px:{width:evidence.hit_area.phone.width_css_px,height:evidence.hit_area.phone.height_css_px},edge_taps:true};
    assert.equal(cases.tap_no_drive_touch.cap,144);
+
+   // Multi-touch: finger 1 holds the Throttle zone, finger 2 taps the counter. Throttle must stay exactly as held.
+   const throttleBox=await phone.locator('#rider-mobile [data-command="throttle"]').boundingBox();
+   assert(throttleBox,'No Throttle zone');
+   const hold={x:throttleBox.x+throttleBox.width/2,y:throttleBox.y+throttleBox.height/2,id:1};
+   const counterPoint=await pointer.hudPoint(phone,'fps');
+   const beforeMulti=(await replayState(phone)).resets;
+   await phone.keyboard.down('b');await phone.waitForFunction(n=>window.riderReplay?.recording?.active&&window.riderReplay.resets===n+1,beforeMulti);await phone.keyboard.up('b');
+   const multiSamples=[];const sample=async()=>multiSamples.push((await replayState(phone)).command);
+   let multiCap;
+   try{
+    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hold]});
+    await phone.waitForFunction(()=>window.riderReplay?.command?.throttle===1,null,{polling:50,timeout:5000});
+    await sample();
+    const seq=(await counter(phone)).cap_seq;multiCap=nextCap(touchCap);
+    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hold,{x:counterPoint.x,y:counterPoint.y,id:2}]});
+    await phone.waitForFunction(({seq,cap})=>window.riderFpsCounter?.cap_seq>seq&&window.riderFpsCounter.cap===cap,{seq,cap:multiCap},{polling:50,timeout:5000});
+    await sample();
+    // Lift only finger 2 (a touch move listing the remaining point releases the missing one).
+    await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[hold]});
+    await pointer.frames(phone,{counter:'window.riderReplay.frames',label:'second finger release'});
+    await sample();
+    await phone.waitForTimeout(300);await sample();
+    assert.equal(await phone.evaluate(()=>document.querySelector('#rider-mobile [data-command="throttle"]').classList.contains('held')),true,'Throttle zone released by the counter tap');
+   }finally{await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+   await phone.waitForFunction(()=>window.riderReplay?.command?.throttle===0,null,{polling:50,timeout:5000});
+   await phone.keyboard.down('b');await phone.waitForFunction(()=>window.riderReplay?.recording?.active===false);await phone.keyboard.up('b');
+   cases.tap_no_drive_touch.multi_touch_held_throttle={...verifyHeldThrottle(multiSamples,await phone.evaluate(()=>window.riderReplay.recording)),cap:multiCap};
+   assert.equal((await counter(phone)).cap,0,'Multi-touch counter tap did not switch the cap');
    await phone.screenshot({path:path.join(out,'fps417-phone.png')});
 
    assert.equal(errors.length,0,'Defold errors: '+errors.join('; '));

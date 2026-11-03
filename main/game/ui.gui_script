@@ -152,9 +152,16 @@ function init(self)
         gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W);gui.set_scale(n,vmath.vector3(0.48,0.48,1))
     end
     gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
-    -- #417: metrics[4] is the tap-to-switch FPS counter; this transparent box is its tap target.
-    self.fps_hit=layout.box(vmath.vector3(56,521,0),vmath.vector3(112,34,0),"left_top")
+    -- #417: metrics[4] is the tap-to-switch FPS counter; this transparent box is its tap target. 46 units tall
+    -- from the top edge: the update loop scales left_top to at least 1 CSS px per unit, so it is never under the
+    -- 44 px touch minimum. It covers only HUD text (counter, speed row), no control. Corner probes measure it.
+    self.fps_hit=layout.box(vmath.vector3(56,517,0),vmath.vector3(112,46,0),"left_top")
     gui.set_color(self.fps_hit,vmath.vector4(0,0,0,0))
+    self.fps_corners={}
+    for i,offset in ipairs({vmath.vector3(-56,23,0),vmath.vector3(56,-23,0)}) do
+        local n=gui.new_box_node(offset,vmath.vector3(1,1,0))
+        gui.set_parent(n,self.fps_hit,false);gui.set_color(n,vmath.vector4(0,0,0,0));self.fps_corners[i]=n
+    end
     self.fps=fps_counter.new();self.fps_cap=fps_counter.DEFAULT_CAP;self.fps_label_until=0;self.fps_seq=0;self.fps_cap_seq=0
     self.reason = layout.text(vmath.vector3(480,498,0), "")
     gui.set_font(self.reason,"default");gui.set_scale(self.reason,vmath.vector3(0.55,0.55,1))
@@ -295,16 +302,17 @@ function on_message(self,id,data,sender)
             string.format("%.2f m/s | %.1f km/h",feel.metres(data.speed),feel.metres(data.speed)*3.6),
             "",
             string.format("L %+.1f   R %+.1f u",data.travel1,data.travel2),
-            string.format("%.0f fps / %.1f ms",data.fps,data.frame_ms),
+            false, -- metrics[4] is the FPS counter (#417): it shows its own measured cadence, not this telemetry value
             string.format("Frame %.2f ms / %.2f (mean)",data.frame_ms,b.frame_ms_max),
             string.format("Physics %.3f ms / %s",data.physics_ms,b.physics_ms_max and tostring(b.physics_ms_max) or "unset")}
-        for i,text in ipairs(values) do
-            -- metrics[4] is the FPS counter: it shows its own measured cadence (#417), not this telemetry value.
-            if i~=4 then gui.set_text(self.metrics[i],text) end
-            local over = i==4 and telemetry.over(data.fps,b.fps_min,true)
-                or i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
-                or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
-            if i~=4 then gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1)) end
+        for i=1,#self.metrics do
+            local text=values[i]
+            if text then
+                local over = i==5 and telemetry.over(data.frame_ms,b.frame_ms_max)
+                    or i==6 and telemetry.over(data.physics_ms,b.physics_ms_max)
+                gui.set_text(self.metrics[i],text)
+                gui.set_color(self.metrics[i],over and vmath.vector4(1,0.25,0.25,1) or vmath.vector4(0.86,0.95,0.91,1))
+            end
         end
         msg.post(sender,"measurements_shown",{fps=data.fps,speed=data.speed,physics_ms=data.physics_ms,
             contact1=data.contact1,contact2=data.contact2,head_contact=data.head_contact,crash_enabled=data.crash_enabled,preset=data.preset,modified=data.modified,travel1=data.travel1,travel2=data.travel2,
@@ -449,7 +457,8 @@ function update(self,dt)
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
             pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),
-            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit)}))
+            record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit),
+            fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}}))
     end
     if html5 then
         local status,visible=feedback.state()
