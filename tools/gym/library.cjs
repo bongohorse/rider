@@ -316,10 +316,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('new');await page.waitForFunction(k=>window.riderEditor.key!==k,kicker.key);
   await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('index cannot be read'));
   e=await ed();assert.equal(e.key,0);
-  await storage.durable(page);
+  await storage.durable(page,{label:'unreadable index settles'});
   // Observing an unreadable index, including its Open dialog, must let IndexedDB settle.
   await openDialog();
-  await storage.durable(page);
+  await storage.durable(page,{label:'unreadable index Open dialog settles'});
   assert.deepEqual((await ed()).library,[]);
   await key('Escape');
   const after=await page.evaluate(()=>({index:['a','b'].map(s=>new TextDecoder().decode(FS.readFile('/data/.rider/custom-index-'+s))),

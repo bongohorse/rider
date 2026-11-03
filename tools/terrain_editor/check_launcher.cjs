@@ -1,6 +1,6 @@
 // Focused draft-reload check: actual editor input, same artifact launcher, verified ordinary debug bundle.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
-const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs');
+const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs'),storage=require('../gym/storage.cjs');
 const [bundleArg,launcherArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),launcher=path.resolve(launcherArg),out=path.resolve(outArg);fs.mkdirSync(out,{recursive:true});
 const sha=JSON.parse(fs.readFileSync(path.join(bundle,'bundle.json'))).source_sha;
 execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bundle import verify_bundle;verify_bundle(sys.argv[1],sys.argv[2])',bundle,sha]);
@@ -21,7 +21,7 @@ const r={schema:1,status:'INCOMPLETE',source_sha:sha,course,errors:[]};
  await page.keyboard.type('1',{delay:40});await frame.waitForFunction(()=>window.riderEditor.field==='1');
  await page.keyboard.down('Enter');await frame.waitForFunction(n=>window.riderEditor.revision>n&&window.riderEditor.start.speed===1,before.editor.revision);await page.keyboard.up('Enter');
  await frame.waitForFunction(n=>window.riderEditor.revision>n&&window.riderEditor.start.speed===1&&window.riderEditor.status==='Saved',before.editor.revision,{timeout:30000});
- await frame.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+ await storage.durable(frame,{label:'launcher edit before reload'});
  const edited=await frame.evaluate(()=>({revision:window.riderEditor.revision,speed:window.riderEditor.start.speed,objects:window.riderEditorDoc.objects}));r.edited={revision:edited.revision,speed:edited.speed};assert.deepEqual(edited.objects,before.objects);
  await page.reload();await page.waitForFunction(()=>document.querySelector('#state').dataset.resumed==='true');frame=page.frames().find(f=>f.url().includes('/index.html'));
  await frame.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.view);const restored=await frame.evaluate(()=>({revision:window.riderEditor.revision,speed:window.riderEditor.start.speed,objects:window.riderEditorDoc.objects}));
