@@ -388,7 +388,7 @@ Implemented in `main/editor/editor_doc.lua` (pure document rules), `editor.lua` 
 
 ### Draw tool and connections (LE3)
 
-Implemented in `main/editor/editor_edit.lua` (pure edit operations), `editor_snap.lua` (R6), `editor_doc.lua` (connections, runs, terrain domain), `editor_overlay.lua` (GUI overlays) and `editor.gui_script`. Debug case `le3` ([gym notes](../../main/gym/README.md#level-editor)).
+Implemented in `main/editor/editor_edit.lua` (pure edit operations), `editor_snap.lua` (R6), `editor_geometry.lua` (pure point, segment and curve-nearest helpers), `editor_doc.lua` (connections, runs, terrain domain), `editor_overlay.lua` (GUI overlays) and `editor.gui_script`. Debug case `le3` ([gym notes](../../main/gym/README.md#level-editor)).
 
 - **Document version 2 (R1, R4):** `editor_version` and `compiler_version` 2 add `connections`, a list of `{from, to}`: the last point of line `from` is connected to the first point of line `to`. The source validator requires existing lines, each end used at most once, equal end points and no loop. Version 1 documents open upgraded with no connections; their lines compile unchanged. Unknown versions are refused as in LE2.
 - **Logical order:** lines are stored left to right where their ends allow it (templates are reversed when opened, Connect reorients a run). "Downstream" therefore means towards the right end of a run. Logical order never decides collision.
