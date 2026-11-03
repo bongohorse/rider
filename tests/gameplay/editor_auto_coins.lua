@@ -1,4 +1,4 @@
-local D=require 'main.gym.editor_doc';local A=require 'main.gym.editor_auto_coins';local T=require 'main.gym.editor_track_align';local R=require 'main.gym.editor_coin_route'
+local D=require 'main.gym.editor_doc';local A=require 'main.gym.editor_auto_coins';local T=require 'main.gym.editor_track_align';require 'main.gym.editor_coin_route'
 local function level(points)
  local d=D.blank('auto-test','Auto test');local e=d.editor;e.start.position={-2,3};e.objects={{id='o1',type='line',points=points or {{-5,0},{30,0}}}};e.next_id=2;return d
 end

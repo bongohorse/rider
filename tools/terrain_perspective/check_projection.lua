@@ -4,7 +4,7 @@ local proj=require 'main.terrain_perspective.projection'
 local doc=require 'main.gym.editor_doc'
 local budget=require 'main.gym.terrain_budget'
 local function check(d)
- local es,stats=geom.describe(d)
+ local es=geom.describe(d)
  for _,e in ipairs(es) do
   local g=proj.section(e.prep,e.first,e.last,e.key)
   assert(g.vertices==e.vertices and g.bytes==g.vertices*48 and #g.look_data==g.vertices*3)

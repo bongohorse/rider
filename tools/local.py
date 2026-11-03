@@ -97,7 +97,8 @@ def doctor(output):
 
 
 def fast_check(output, sha):
-    commands = [('bootstrap', [sys.executable, 'tools/bootstrap_check.py'], False)]
+    commands = [('bootstrap', [sys.executable, 'tools/bootstrap_check.py'], False),
+                ('lint_lua', [sys.executable, 'tools/ci/lint_lua.py'], False)]
     for name in ('bootstrap', 'g1', 'g2', 'ci'):
         commands.append(('unit_' + name, [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/' + name, '-v'], True))
     node_tests = sorted(glob.glob(str(ROOT / 'tests/ci/*.cjs')) + glob.glob(str(ROOT / 'tests/mobile/*.cjs')))

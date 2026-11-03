@@ -87,6 +87,59 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.setViewportSize({width:1080,height:486});await layout();
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('mirrored_drive_rotation_no_reload');
+    // Unsupported portrait must cancel a held real pointer and suspend through the
+    // existing loader path, without resetting/replaying or auto-resuming on rotation.
+    const beforePortrait=await page.evaluate(()=>({
+      resets:window.riderTelemetry.reset_count,loads:window.riderTelemetry.world_loads,
+      source:window.riderReady.source_sha
+    }));
+    await dispatch('touchStart',[await point('throttle',1)]);
+    await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+    await page.setViewportSize({width:486,height:1080});
+    await page.waitForFunction(()=>window.riderMobile.blocked&&window.riderTimeState?.paused);
+    const blocker=page.locator('#rider-mobile-rotate');
+    assert.equal(await blocker.isVisible(),true,'Portrait requires visible rotate instruction');
+    assert.match(await blocker.innerText(),/Rotate your device.*landscape only/);
+    assert.equal(await page.locator('#rider-mobile .zones .held').count(),0,'Rotation releases all held pointers');
+    assert.equal(await page.evaluate(()=>document.elementFromPoint(innerWidth/2,innerHeight/2)?.id),'rider-mobile-rotate','Portrait blocker intercepts touch');
+    await dispatch('touchEnd',[]);
+    await dispatch('touchStart',[{x:243,y:700,id:8}]);await dispatch('touchEnd',[]);
+    await page.keyboard.press('1');
+    assert.equal(await page.evaluate(()=>window.riderTelemetry.world_loads),beforePortrait.loads,'Portrait keyboard cannot switch station');
+    assert.equal(await page.evaluate(()=>window.riderTimeState.paused),true,'Portrait touch cannot resume gameplay');
+    await page.evaluate(()=>{window.__testAngle=180;Object.defineProperty(screen.orientation,'angle',{configurable:true,get:()=>window.__testAngle});window.dispatchEvent(new Event('orientationchange'));});
+    assert.equal(await page.evaluate(()=>window.riderMobile.blocked),true,'Portrait at 180 degrees remains blocked');
+    await page.setViewportSize({width:960,height:540});
+    await page.evaluate(()=>{window.__testAngle=90;window.dispatchEvent(new Event('orientationchange'));});
+    await page.waitForFunction(()=>!window.riderMobile.blocked);
+    assert.equal(await blocker.isHidden(),true);
+    assert.equal(await page.evaluate(()=>window.riderTimeState.paused),true,'Landscape return must not auto-resume');
+    assert.deepEqual(await page.evaluate(()=>({
+      resets:window.riderTelemetry.reset_count,loads:window.riderTelemetry.world_loads,
+      source:window.riderReady.source_sha
+    })),beforePortrait,'Orientation cannot reset, reload or replace build');
+    await page.getByRole('button',{name:'Resume',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+    await neutral();
+    for(const [viewport,angle] of [[{width:1080,height:486},270],[{width:896,height:400},90]]){
+      await page.setViewportSize(viewport);
+      await page.evaluate(value=>{window.__testAngle=value;window.dispatchEvent(new Event('orientationchange'));},angle);
+      await page.waitForFunction(()=>!window.riderMobile.blocked);
+      await layout();
+      await dispatch('touchStart',[await point('throttle',1)]);
+      await page.waitForFunction(()=>window.riderTelemetry.command.throttle===1);
+      // A 90↔270 flip can leave viewport dimensions unchanged; it must still cancel.
+      await page.evaluate(value=>{window.__testAngle=value;window.dispatchEvent(new Event('orientationchange'));},angle===270?90:270);
+      await neutral();
+      assert.equal(await page.locator('#rider-mobile .zones .held').count(),0);
+      await dispatch('touchEnd',[]);
+    }
+    const resetAfterOrientation=await page.evaluate(()=>window.riderTelemetry.reset_count);
+    await page.getByRole('button',{name:'Retry',exact:true}).tap();
+    await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resetAfterOrientation);
+    await neutral();
+    await page.setViewportSize({width:1080,height:486});await layout();
+    pass('portrait_held_input_suspend_no_auto_resume_and_both_landscape_sides');
     // Closing tuning with another pointer must release an active editor drag.
     const editorSequence=await page.evaluate(()=>window.riderTelemetry.sequence);
     await page.getByRole('button',{name:'Tuning',exact:true}).click();
@@ -123,6 +176,8 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(()=>window.riderMobile.recording);
     await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
     await page.waitForFunction(()=>!window.riderMobile.recording);assert.equal(await page.evaluate(()=>window.riderMobile.report),null);
+    // Focus loss must suspend the actual Defold world, not only cancel browser capture.
+    await page.waitForFunction(()=>window.riderTimeState?.paused===true);
     pass('interrupted_capture_cancelled');
     await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new DOMException('Injected denial','NotAllowedError'));});
     await tapSecondary('Copy report');
@@ -132,6 +187,12 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.getByRole('button',{name:'Close',exact:true}).click();
     await page.waitForFunction(()=>!window.riderFeedback.visible&&!window.riderTelemetry.ui_captured);
     pass('mobile_report_fallback');
+    // The new all-play-world focus-loss guard correctly leaves the game paused.
+    // Resume explicitly through real touch before testing drivable fullscreen transitions.
+    assert.equal(await page.evaluate(()=>window.riderTimeState?.paused),true,'Feedback must not auto-resume after focus loss');
+    await page.getByRole('button',{name:'Resume',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+    await neutral();
     assert.equal(await page.locator('#app-container #rider-mobile').count(),1);
     async function settledViewport(){
       // fullscreenElement changes before the asynchronous viewport/input
@@ -207,6 +268,14 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(await more().getAttribute('aria-expanded'),'false','More closes with real touch');
     await page.setViewportSize({width:1080,height:486});await layout();
     pass('touch_import_entry_with_saved_level');
+    // Initial portrait load is blocked as well, not only a landscape-to-portrait resize.
+    await page.setViewportSize({width:400,height:896});
+    await page.goto(launch.href);
+    await page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderMobile?.blocked,sha);
+    assert.equal(await page.locator('#rider-mobile-rotate').isVisible(),true);
+    assert.equal(await page.evaluate(()=>document.elementFromPoint(innerWidth/2,innerHeight/2)?.id),'rider-mobile-rotate');
+    assert.equal(await page.locator('#rider-mobile .zones .held').count(),0);
+    pass('portrait_initial_load_blocked');
     if(errors.length)throw Error(errors.join('\n'));
     return {name:'mobile-touch-emulation',status:'PASS',cases,physicalDevice:'NOT RUN'};
   }catch(error){

@@ -231,7 +231,7 @@ end
 local function candidates(p)
     local e=editor.doc.editor
     local tol=tolerance(PICK_PX)
-    local next,prev=doc_lib.links(e)
+    local _,prev=doc_lib.links(e)
     local list,seen={},{}
     local function add(c) if not seen[c.key] then seen[c.key]=true;list[#list+1]=c end end
     for _,o in ipairs(e.objects) do
@@ -336,14 +336,6 @@ local function anchors(skip,extra)
     for _,q in ipairs(extra or {}) do list[#list+1]={p=q} end
     cache={doc=editor.doc,revision=e.revision,skip=skip,extra=extra and #extra or 0,last=extra and extra[#extra],list=list}
     return list
-end
-local function snap_mode(self)
-    if self.held.ctrl then return "Snap off (Ctrl)" end
-    local parts={}
-    if self.held.alt then parts[#parts+1]="grid 0.1 m (Alt)" elseif editor.grid then parts[#parts+1]="grid 0.5 m" else parts[#parts+1]="grid off [G]" end
-    parts[#parts+1]="anchors"
-    if self.held.shift then parts[#parts+1]="15 deg (Shift)" end
-    return "Snap: "..table.concat(parts," + ")
 end
 local function snap(self,p,skip,from,extra)
     local q,kind,anchor=snap_lib.snap(p,{off=self.held.ctrl,grid=editor.grid,fine=self.held.alt,from=self.held.shift and from or nil,
@@ -1065,17 +1057,14 @@ local function adjust_track(self,delta,height)
 end
 local function drop_track(self,height)
     local c=track_context(self)
-    if height==nil then
-        if c.active and not c.error then
-            if c.mixed then editor.message='Mixed heights: enter a Height before Drop to Track.';return end
-            height=c.height
-        else height=self.track_height or track_align.DEFAULT end
-    end
+    -- #427: Drop always applies the Height setting. A bound selection's displayed offset follows free moves,
+    -- so using it would turn a second Drop after moving a coin into a no-op.
+    if height==nil then height=self.track_height or track_align.DEFAULT end
     local plan,err=track_align.plan(editor.doc.editor,c.ids,height)
     if not plan then editor.message=err;return end
     if #plan.moves>0 and not editor.commit(function(e)return track_align.apply(e,plan)end,true) then return end
     self.track_height=height;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
-    track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan)
+    track_align.attach(editor.doc.editor,self.track_session,plan.targets);self.track_cache=nil;editor.message=track_align.summary(plan,height)
 end
 local function auto_context(self)
     if self.auto_opened~=editor.opened then
@@ -1118,9 +1107,10 @@ local function apply_auto(self)
     if not ok then clear_auto(self);return end
     editor.selected={};for _,id in ipairs(p.ids) do editor.selected[id]=true end
     editor.selection=p.ids[#p.ids];editor.vertex,editor.vertex2,editor.vertices=nil,nil,{}
-    if self.track_opened~=editor.opened then self.track_session=nil end -- never inherit another document's temporary routes
+    if self.track_opened~=editor.opened then self.track_session=nil;self.track_height=track_align.DEFAULT end -- never inherit another document's temporary routes or Height
     self.track_opened=editor.opened;self.track_session=track_align.refresh(editor.doc.editor,self.track_session)
     track_align.attach(editor.doc.editor,self.track_session,p.targets);self.track_cache=nil
+    if self.auto_settings and self.auto_settings.height then self.track_height=self.auto_settings.height end -- #427: Drop keeps the applied Auto height
     clear_auto(self);editor.tool='select';self.ui.scroll=0;editor.touch()
     editor.message=string.format('Applied %d new coins; %d removed. Selection retained: adjust Height / Along track or drag. One Undo.',#p.ids,p.removed)
 end
@@ -2418,7 +2408,7 @@ end
 local function describe(self)
     local e=editor.doc.editor
     local s=editor.selection
-    local lines={}
+    local lines
     local ids=editor.selected_ids()
     local v=editor.vertex
     if s=="start" then
