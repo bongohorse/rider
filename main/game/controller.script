@@ -233,6 +233,8 @@ function init(self)
         self.fps356_state=self.fps356.new()
     end
     if self.testcase=="fps417" then self.replay_debug=true end -- read-only A21 replay verdict across cap switches
+    -- #444 (fps444): the read-only A21 recording proves that counter drags give no drive command on any tick.
+    if self.testcase=="fps444" then assert(sys.get_engine_info().is_debug and html5,"fps444 needs debug HTML5");self.replay_debug=true end
     if self.testcase=="fps356runtime" then
         self.fps356runtime=require "main.gym.fps_runtime356"
         self.fps356runtime_state=self.fps356runtime.new(self)

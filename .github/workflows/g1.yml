@@ -257,7 +257,7 @@ jobs:
           - group: struts
             cases: 'cf3'
           - group: fps-counter
-            cases: 'fps417'
+            cases: 'fps417 fps444'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -371,6 +371,9 @@ jobs:
       - name: Tap the FPS counter through every cap while driving; fixed 60 Hz physics, measured reading, reload and replay
         if: contains(format(' {0} ', matrix.cases), ' fps417 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/fps-counter --case fps417
+      - name: Place the FPS counter by mouse and touch drag and by Menu presets; ON/OFF, reload, taps and no drive input
+        if: contains(format(' {0} ', matrix.cases), ' fps444 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/fps-placement --case fps444
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

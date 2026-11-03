@@ -15,15 +15,36 @@
  #rider-levels article button{margin:0 16px 16px}#rider-levels button:disabled,#rider-level-actions button:disabled{background:#263d43;border-color:#46616a;color:#abc2c8;cursor:default}
  #rider-level-actions{position:fixed;right:12px;bottom:60px;z-index:450;display:flex;gap:8px}
  #rider-level-actions.touch-driving{bottom:calc(clamp(64px,18vh,100px) + max(8px,env(safe-area-inset-bottom)) + 12px)}
+ #rider-levels .level-fps{max-width:1000px;margin:24px auto 8px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+ #rider-levels .level-fps h2{width:100%;margin:0}#rider-levels .level-fps p{width:100%;margin:0;color:#9ec8c7}
+ #rider-levels .fps-grid{display:grid;grid-template-columns:repeat(3,44px);gap:6px}#rider-levels .fps-grid button{min-width:44px;padding:0}
+ #rider-levels .level-fps button[aria-pressed=true]{background:#277b67}
  @media(max-width:650px){#rider-levels .level-grid{grid-template-columns:1fr}#rider-levels{padding-top:12px}#rider-levels h1{font-size:22px}#rider-levels svg{height:80px}#rider-level-actions{bottom:150px;right:8px}#rider-level-actions button{font-size:13px;padding:8px 12px}}
  `;document.head.append(style);
  const root=document.createElement('section');root.id='rider-levels';root.hidden=true;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','Choose a level');
  const heading=document.createElement('div');heading.className='level-heading';const title=document.createElement('h1');title.textContent='Choose a level';heading.append(title);
  const close=document.createElement('button');close.textContent='Back';close.onclick=()=>request('close');heading.append(close);root.append(heading);
  const status=document.createElement('p');status.className='level-status';root.append(status);const grid=document.createElement('div');grid.className='level-grid';root.append(grid);
+ // #444: FPS counter ON/OFF, nine positions and a reset. The loader stores them with the cap (player settings);
+ // dragging the counter on screen stores the same normalised position.
+ const fps=document.createElement('section');fps.className='level-fps';fps.setAttribute('aria-label','FPS counter');
+ const fpsTitle=document.createElement('h2');fpsTitle.textContent='FPS counter';
+ const fpsToggle=document.createElement('button');fpsToggle.type='button';fpsToggle.dataset.fps='toggle';
+ fpsToggle.onclick=()=>request('fps_counter',fpsToggle.getAttribute('aria-pressed')==='true'?'off':'on');
+ const fpsGrid=document.createElement('div');fpsGrid.className='fps-grid';fpsGrid.setAttribute('role','group');fpsGrid.setAttribute('aria-label','Counter position');
+ const PRESETS=[['top_left','Top left','\u2196'],['top','Top','\u2191'],['top_right','Top right','\u2197'],['left','Left','\u2190'],['center','Centre','\u2022'],
+  ['right','Right','\u2192'],['bottom_left','Bottom left','\u2199'],['bottom','Bottom','\u2193'],['bottom_right','Bottom right','\u2198']];
+ const fpsPresets=PRESETS.map(([id,label,mark])=>{const b=document.createElement('button');b.type='button';b.dataset.fpsPreset=id;b.textContent=mark;
+  b.setAttribute('aria-label',label);b.title=label;b.onclick=()=>request('fps_counter',id);fpsGrid.append(b);return b;});
+ const fpsReset=document.createElement('button');fpsReset.type='button';fpsReset.textContent='Reset position';fpsReset.onclick=()=>request('fps_counter','reset');
+ const fpsNote=document.createElement('p');fpsNote.textContent='Or drag the counter on screen. A short tap on it still switches the frame-rate cap.';
+ fps.append(fpsTitle,fpsToggle,fpsGrid,fpsReset,fpsNote);root.append(fps);
+ const showFps=s=>{fpsToggle.textContent='Counter '+(s.visible?'ON':'OFF');fpsToggle.setAttribute('aria-pressed',String(!!s.visible));
+  for(const b of fpsPresets)b.setAttribute('aria-pressed',String(b.dataset.fpsPreset===s.preset));};
+ showFps({visible:true,preset:'top_left'});
  const actions=document.createElement('div');actions.id='rider-level-actions';const open=document.createElement('button');open.textContent='Levels';open.onclick=()=>request('open');const next=document.createElement('button');next.textContent='Next Level';next.hidden=true;next.onclick=()=>request('next');actions.append(open,next);document.body.append(root,actions);
  let signature='',wasOpen=false;
- const api=window.riderLevelMenu={render(view){
+ const api=window.riderLevelMenu={setFps(s){if(s&&typeof s==='object')showFps(s);},render(view){
   actions.classList.toggle('touch-driving',!!window.riderMobile?.enabled);
   root.hidden=!view.open;actions.hidden=view.open||view.loading||!!window.riderEditing;
   next.hidden=!view.next_enabled;status.textContent=view.status==='saved'?'Finish a level to unlock the next. Medals and Wonder Gems are optional.':view.status;
