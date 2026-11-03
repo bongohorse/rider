@@ -50,7 +50,10 @@ test('placement verification: inside, clear of controls, measured where placed, 
  assert.throws(()=>verifyPlacement(s,'out'),/leaves the canvas/);
  const z=snapshot();z.place.css={left:20,top:400,right:132,bottom:446};z.place.hit_css=z.hud_css={...z.place.css};
  assert.throws(()=>verifyPlacement(z,'zone'),/covers drive:brake/);
- const g=snapshot({gui:[{name:'pause',x:50,y:30}]});assert.throws(()=>verifyPlacement(g,'pause'),/GUI button pause/);
+ const g=snapshot({gui:[{name:'pause',left:100,top:40,right:192,bottom:64}]});g.place.blocked_css.push({left:100,top:40,right:192,bottom:64});
+ assert.throws(()=>verifyPlacement(g,'pause'),/covers the GUI button pause/,'edge overlap, centre outside the counter');
+ const ga=snapshot({gui:[{name:'pause',left:130,top:40,right:222,bottom:64}]});assert.throws(()=>verifyPlacement(ga,'pause'),/does not avoid the GUI button pause/);
+ ga.place.blocked_css.push({left:130,top:40,right:222,bottom:64});assert.doesNotThrow(()=>verifyPlacement(ga,'clear'));
  const m=snapshot();m.hud_css={left:30,top:10,right:142,bottom:56};assert.throws(()=>verifyPlacement(m,'moved'),/corner probes left/);
  const u=snapshot();u.place.blocked_css=[];assert.throws(()=>verifyPlacement(u,'unknown'),/does not avoid drive:brake/);
  const c=snapshot();c.place.clear=false;assert.throws(()=>verifyPlacement(c,'crowded'),/no clear position/);

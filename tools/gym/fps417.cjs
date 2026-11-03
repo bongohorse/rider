@@ -318,33 +318,42 @@ if(require.main===module){
     hit_area_css_px:{width:evidence.hit_area.phone.width_css_px,height:evidence.hit_area.phone.height_css_px},edge_taps:true};
    assert.equal(cases.tap_no_drive_touch.cap,144);
 
-   // Multi-touch: finger 1 holds the Throttle zone, finger 2 presses the counter. Throttle must stay exactly as held.
-   // Since #444 a press on the counter is not yet a tap (it may become a drag): the cap switches on its release.
-   // CDP cannot lift one finger alone in the pinned headless Chromium: a touchMove that omits finger 2 dispatches no
-   // touchend until every finger ends (checked in #444, touches.length stays 2), so both fingers lift together here.
-   // A real single-finger lift is part of the drive test.
+   // Multi-touch: finger 1 holds the Throttle zone, finger 2 taps the counter. Since #444 a press on the counter is
+   // not yet a tap (it may become a drag): the cap switches when finger 2 lifts, while finger 1 still holds Throttle.
+   // Finger 2 alone is lifted with a CDP touchEnd listing only it (the canvas gets touchend with one touch left; a
+   // touchMove that omits it sends nothing). Pinned library_glfw.js touchWasFinished releases the mouse button for
+   // the touch acting as the mouse, so the engine sees the release while Throttle stays held.
    const throttleBox=await phone.locator('#rider-mobile [data-command="throttle"]').boundingBox();
    assert(throttleBox,'No Throttle zone');
    const hold={x:throttleBox.x+throttleBox.width/2,y:throttleBox.y+throttleBox.height/2,id:1};
    const counterPoint=await pointer.hudPoint(phone,'fps');
+   const finger2={x:counterPoint.x,y:counterPoint.y,id:2};
    const beforeMulti=(await replayState(phone)).resets;
    await phone.keyboard.down('b');await phone.waitForFunction(n=>window.riderReplay?.recording?.active&&window.riderReplay.resets===n+1,beforeMulti);await phone.keyboard.up('b');
    const multiSamples=[];const sample=async()=>multiSamples.push((await replayState(phone)).command);
+   const throttleHeld=()=>phone.evaluate(()=>document.querySelector('#rider-mobile [data-command="throttle"]').classList.contains('held'));
    const multiCap=nextCap(touchCap);let multiSeq;
    try{
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hold]});
     await phone.waitForFunction(()=>window.riderReplay?.command?.throttle===1,null,{polling:50,timeout:5000});
     await sample();
     multiSeq=(await counter(phone)).cap_seq;
-    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hold,{x:counterPoint.x,y:counterPoint.y,id:2}]});
+    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hold,finger2]});
     await pointer.frames(phone,{counter:'window.riderReplay.frames',label:'second finger press'});
     await sample();
-    await phone.waitForTimeout(300);await sample();
     assert.equal((await counter(phone)).cap_seq,multiSeq,'A held press on the counter switched the cap before its release');
-    assert.equal(await phone.evaluate(()=>document.querySelector('#rider-mobile [data-command="throttle"]').classList.contains('held')),true,'Throttle zone released by the counter press');
+    // Lift finger 2 only: the tap. The cap switches while finger 1 still holds Throttle.
+    await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[finger2]});
+    await phone.waitForFunction(({seq,cap})=>window.riderFpsCounter?.cap_seq===seq+1&&window.riderFpsCounter.cap===cap,{seq:multiSeq,cap:multiCap},{polling:50,timeout:5000});
+    await pointer.frames(phone,{counter:'window.riderReplay.frames',label:'second finger release'});
+    assert.equal((await replayState(phone)).command.throttle,1,'Throttle dropped when finger 2 lifted');
+    assert.equal(await throttleHeld(),true,'Throttle zone released by the counter tap');
+    await sample();
+    await phone.waitForTimeout(300);await sample();
+    assert.equal(await throttleHeld(),true,'Throttle zone released after the counter tap');
    }finally{await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
-   await phone.waitForFunction(({seq,cap})=>window.riderFpsCounter?.cap_seq===seq+1&&window.riderFpsCounter.cap===cap,{seq:multiSeq,cap:multiCap},{polling:50,timeout:5000});
    await phone.waitForFunction(()=>window.riderReplay?.command?.throttle===0,null,{polling:50,timeout:5000});
+   assert.equal((await counter(phone)).cap_seq,multiSeq+1,'Lifting finger 1 switched the cap again');
    await phone.keyboard.down('b');await phone.waitForFunction(()=>window.riderReplay?.recording?.active===false);await phone.keyboard.up('b');
    cases.tap_no_drive_touch.multi_touch_held_throttle={...verifyHeldThrottle(multiSamples,await phone.evaluate(()=>window.riderReplay.recording)),cap:multiCap};
    assert.equal((await counter(phone)).cap,0,'Multi-touch counter tap did not switch the cap');

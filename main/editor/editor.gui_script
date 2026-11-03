@@ -3066,16 +3066,16 @@ function update(self,dt)
     if not edit_mode then
         local a,b=gui.get_screen_position(self.overlay.probe0),gui.get_screen_position(self.overlay.probe1)
         self.overlay.k=math.max(1e-6,(b.x-a.x)/100)
-        if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui);editor.play_controls={}
+        if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui);editor.play_ui=nil
         else
             editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session and terrain_look.session.play_generation and terrain_look.session,
                 editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status)
             self.buttons=self.ui.buttons
-            -- #444: the driving HUD's FPS counter (same GUI Lua state) keeps clear of these play buttons (Terrain Look);
-            -- the open Terrain Look panel is a transient modal and is left out.
-            if not (terrain_look.session and terrain_look.session.open) then editor.play_controls=editor_ui.screen_rects(self.ui) end
+            -- #444: the driving HUD's FPS counter (same GUI Lua state) reads these play buttons (Terrain Look) on demand
+            -- (editor_ui.screen_rects); the open Terrain Look panel is a transient modal and is left out.
+            editor.play_ui,editor.play_ui_modal=self.ui,terrain_look.session and terrain_look.session.open or false
         end
-    end
+    else editor.play_ui=nil end
     -- Test state (debug only): every frame while editing; while driving only on a mode, message or save
     -- change or every 0.25 s, so the published state costs the driven world little.
     if self.debug then

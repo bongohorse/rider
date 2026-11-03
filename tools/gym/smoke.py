@@ -120,7 +120,9 @@ if args.case=='fps444':
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id
     assert set(report['cases'])=={'default_top_left','mouse_drag','threshold','drag_to_corner','drag_onto_pause','mouse_no_drive',
         'mouse_drag_reload','menu_on_off_reload','presets_desktop','preset_reload','reset_top_left','resolution_change',
-        'touch_drag','touch_drag_onto_drive_zone','touch_no_drive','touch_drag_reload','rotation','presets_phone'}
+        'touch_drag','touch_drag_onto_drive_zone','touch_no_drive','touch_drag_reload','rotation','presets_phone',
+        'drop_on_levels_keeps_keys','drag_with_throttle_held','dense_dpr'}
+    assert report['cases']['dense_dpr']['pixel_ratio']>2.5
     # All nine presets at 1280x720 and at 1080x486 (phone, touch controls).
     names={'top_left','top','top_right','left','center','right','bottom_left','bottom','bottom_right'}
     assert set(report['cases']['presets_desktop'])==names and set(report['cases']['presets_phone'])==names

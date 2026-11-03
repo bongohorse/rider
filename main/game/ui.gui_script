@@ -58,9 +58,14 @@ local function fps_blocked(self)
     for _,n in ipairs(nodes) do
         if gui.get_visible(n) then rects[#rects+1]=gui_rect(n) end
     end
-    -- Play-mode buttons of the editor GUI (Terrain Look), published by editor.gui_script in this shared GUI state.
-    for _,b in ipairs(require("main.editor.editor").play_controls or {}) do rects[#rects+1]={x0=b.x0,y0=b.y0,x1=b.x1,y1=b.y1} end
-    if html5 then
+    -- Play-mode buttons of the editor GUI (Terrain Look), from its last render in this shared GUI state; kept from
+    -- before while the Terrain Look panel is open (a transient modal).
+    local editor=require "main.editor.editor"
+    if not editor.play_ui then self.editor_rects=nil
+    elseif not editor.play_ui_modal then self.editor_rects=require("main.editor.editor_ui").screen_rects(editor.play_ui) end
+    for _,b in ipairs(self.editor_rects or {}) do rects[#rects+1]=b end
+    -- DOM controls only while the counter is shown (an ON command refreshes them before placing).
+    if html5 and self.fps_setting.visible then
         local ok,dom=pcall(json.decode,html5.run(DOM_CONTROLS))
         if ok and type(dom)=="table" then
             for _,d in ipairs(dom) do rects[#rects+1]={x0=d[1],y0=d[2],x1=d[3],y1=d[4]} end
@@ -124,6 +129,9 @@ local function fps_pointer(self,id,action)
             msg.post("#script","fps_counter_set",{x=x,y=y})
             publish_fps_place(self,true)
         else msg.post("#script","fps_cap_next") end
+        -- A release over a DOM button (Levels, page tools) focuses that button in the engine's mouse-up handler;
+        -- give the canvas its keys back, as mobile.js and level_menu.js do after their buttons.
+        if html5 then html5.run("document.querySelector('canvas')?.focus()") end
     end
     return true
 end
@@ -396,7 +404,7 @@ function on_message(self,id,data,sender)
         self.fps_pos_saved,self.fps_pos_status=data.saved,data.status
         self.fps_pos_seq=self.fps_pos_seq+1
         if not self.fps_setting.visible then cancel_fps_press(self) end
-        if not self.fps_press then place_fps(self,true) end -- a running drag keeps its place until its own release
+        if not self.fps_press then self.fps_blocked=fps_blocked(self);place_fps(self,true) end -- a running drag keeps its place until its own release
         show_fps(self,socket.gettime())
         if html5 then html5.run("window.riderLevelMenu?.setFps?.("..json.encode({visible=data.visible,x=data.x,y=data.y,preset=fps_place.preset_of(data.x,data.y) or false})..")") end
     elseif id==hash("cancel_drag") then cancel_drag(self)
