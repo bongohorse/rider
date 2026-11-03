@@ -204,6 +204,32 @@ test('an import taken by Lua before Close still reports its result',()=>{
  assert.equal(api.state,'loaded');
 });
 
+test('a taken import still reports its result after a later import was cancelled',async()=>{
+ const page=loadPage(),{api}=page,f=file('F');
+ api.open();page.paste('P');const taken=JSON.parse(api.take());
+ api.result({request:taken.request,state:'loading',message:'Loading P...'});
+ page.choose(f);page.close.Close();f.finish();await flush();
+ assert.equal(api.take(),'');
+ api.result({request:taken.request,state:'loaded',message:'Loaded.'});
+ assert.equal(api.state,'loaded');
+});
+
+test('a newer live import still supersedes the result of an older taken one',async()=>{
+ const page=loadPage(),{api}=page;
+ api.open();page.paste('P');const old=JSON.parse(api.take());page.paste('Q');
+ api.result({request:old.request,state:'loaded',message:'Loaded.'});
+ assert.equal(api.visible,true);assert.deepEqual(JSON.parse(api.take()).text,'Q');
+});
+
+for(const how of CLOSERS){
+ test(`a read cancelled by ${how} stays dropped after the panel reopens`,async()=>{
+  const page=loadPage(),{api}=page,late=file('late');
+  api.open('',fromEditor(how));page.choose(late);page.close[how]();
+  api.open('',fromEditor(how));late.finish();await flush();
+  assert.equal(api.take(),'');assert.notEqual(api.state,'reading');
+ });
+}
+
 for(const how of CLOSERS){
  test(`a new import after one cancelled by ${how} loads`,async()=>{
   const page=loadPage(),{api}=page,late=file('late'),next=file('next');

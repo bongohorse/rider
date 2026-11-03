@@ -14,16 +14,20 @@
   // Each import takes its request number when it starts, so a slower older file read cannot win.
   function submit(text, request = ++api.request) {
     if (request !== api.request) return;
+    accepted = request;
     if (text.length > limit) {reject('The level file is larger than 256 KiB.');return;}
     // editor: opened by the level editor's Import (LE4); Lua routes it by this flag, not by the mode.
     api.pending = {request, text, editor: api.editorImport};
     api.state = 'reading';api.message = 'Checking level...';status(api.message);
   }
   // Closing the panel abandons its import (#410): every close starts a new generation, so a file read
-  // that finishes afterwards is dropped. A request Lua already took keeps its number and its result.
-  let generation = 0;
+  // that finishes afterwards is dropped. Results are accepted for `accepted`: the newest import while
+  // one is live, and after a close the last request Lua took, so its result still lands even when a
+  // cancelled import had already taken a newer number.
+  let generation = 0, taken = 0, accepted = 0;
   api.importFile = async chosen => {
     const request = ++api.request, opened = generation;
+    accepted = request;
     if (chosen.size > limit) {reject('The level file is larger than 256 KiB.');return;}
     let text;
     try {text = await chosen.text();}
@@ -101,7 +105,7 @@
   api.closeEditor = () => {closeExport();if (panel && api.editorImport) api.close();};
   // Every close path (Close, Escape, closeEditor, export, a loaded result) ends here.
   api.close = () => {
-    generation++;
+    generation++;accepted = taken;
     if (api.pending) {api.pending = null;api.state = '';api.message = '';}
     api.visible = false;
     if (panel) panel.remove();panel = null;
@@ -109,10 +113,11 @@
   };
   api.take = () => {
     const pending = api.pending;api.pending = null;
+    if (pending) taken = pending.request;
     return pending ? JSON.stringify(pending) : '';
   };
   api.result = result => {
-    if (result.request !== api.request) return; // a newer import superseded this one
+    if (result.request !== accepted) return; // a newer live import superseded this one
     api.state = result.state;api.message = result.message;
     if (result.state === 'loaded') api.close();
     else status(result.message, result.state === 'error');
