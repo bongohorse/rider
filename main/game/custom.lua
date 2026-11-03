@@ -2,6 +2,7 @@
 -- Defold 1.14 runs every script in one Lua context, so this module outlives
 -- proxied world reloads. The world receives only a snapshot id + generation.
 local data=require "main.game.station_data"
+local dense=require "main.game.dense"
 local M={limit=256*1024}
 local snapshots,serial={},0
 -- Two alternating save slots: a write only ever replaces the older slot, so a
@@ -230,7 +231,11 @@ local function parse_index(text)
     local ok,d=pcall(json.decode,text)
     if not ok or type(d)~="table" then return nil,"The level index is not valid JSON" end
     if d.format~=1 then return nil,"Unsupported level index format "..tostring(d.format),true end
-    if type(d.next)~="number" or d.next<1 or d.next%1~=0 or type(d.levels)~="table" or #d.levels>M.LIBRARY_MAX then return nil,"Invalid level index" end
+    if type(d.next)~="number" or d.next<1 or d.next%1~=0 then return nil,"Invalid level index" end
+    -- levels must be a dense array (#382): an object or a JSON null hole would hide entries from ipairs,
+    -- and the next save would write an index without them.
+    local n,why=dense.length(d.levels,M.LIBRARY_MAX)
+    if not n then return nil,"Invalid level index: levels "..why end
     local seen={}
     for _,l in ipairs(d.levels) do
         if type(l)~="table" or type(l.key)~="number" or l.key<1 or l.key%1~=0 or l.key>=d.next or seen[l.key]
@@ -256,10 +261,13 @@ function M.library(parse)
     function L.index()
         if cached then return cached end
         local newest=index.newest()
-        local r=index.restore()
+        local r,rerr=index.restore()
         if newest and newest.unsupported then return nil,"the My levels index is from a newer version; it is kept unchanged" end
         if r and not r.skipped then cached=r.doc
-        elseif r or index.exists() then return nil,"the My levels index cannot be read; it is kept unchanged"
+        elseif r or index.exists() then
+            -- The parse error of the newest slot, when there is one (none for a file sys.load cannot read).
+            local why=r and r.skipped or rerr
+            return nil,"the My levels index cannot be read"..(why and " ("..tostring(why)..")" or "").."; it is kept unchanged"
         else cached={format=1,next=1,levels={}} end
         return cached
     end
