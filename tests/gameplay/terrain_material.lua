@@ -91,9 +91,13 @@ assert(math.abs(c.color[1]-material.SHADE[material.SIDE]*1.6)<1e-12 and math.abs
 local function compare(prep,first,last,looks,label)
     material.override=false
     local q=projection.section(prep,first,last,'k',nil,looks)
+    if looks then
+        local plain=projection.section(prep,first,last,'k',nil,nil)
+        assert(q.baked and not plain.baked,label..': looks were not applied')
+    end
     material.override=assert(material.parse('snow'))
     local c=projection.section(prep,first,last,'k',nil,looks)
-    assert(c.textured and #c.texture==c.vertices and c.vertices==q.vertices,label)
+    assert(c.textured and #c.texture==c.vertices and c.vertices==q.vertices and c.baked==q.baked,label)
     for k,v in ipairs(q.position) do assert(c.position[k]==v,label..': position changed at '..k) end
     for k,v in ipairs(q.look_data) do assert(c.look_data[k]==v,label..': look_data changed at '..k) end
     for i=1,c.vertices do

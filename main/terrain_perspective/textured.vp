@@ -43,8 +43,9 @@ void main() {
     float id=floor(texture_slot+0.5);
     float face=id-4.0*floor(id*0.25+0.01);
     // Arc length in tile periods: per-quad U (material.lua drops whole tiles) plus the fractional section phase.
-    // It differs from the course-wide value by whole tiles only (continuous), and stays below about
-    // 1 + segment/period, so fract() keeps its precision even where fragments run at mediump.
+    // It differs from the course-wide value by whole tiles only (continuous) and is bounded by the section's
+    // own arc length, not the course length. Long sections still reach a few hundred periods, so var_tile
+    // needs highp (declared in both shaders; WebGL2/ES 3.0 guarantee highp fragments).
     float period=face<1.5?0.9:1.0;
     float arc=texcoord0.x*4.0/period+fract(editor_params.x*4.0/period);
     // Surface: one cross-section over the depth, image top at the back edge. Rim: image top at the road line.
