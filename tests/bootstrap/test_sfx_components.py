@@ -21,7 +21,8 @@ def effect_names():
 
 def components(go_file):
     text = go_file.read_text()
-    return dict(re.findall(r'components \{ id: "([^"]+)" component: "([^"]+)" \}', text))
+    # Single-line or editor multi-line component blocks.
+    return dict(re.findall(r'components\s*\{\s*id:\s*"([^"]+)"\s*component:\s*"([^"]+)"\s*\}', text, re.S))
 
 
 class SfxComponents(unittest.TestCase):
@@ -29,7 +30,7 @@ class SfxComponents(unittest.TestCase):
         names = effect_names()
         self.assertEqual(names, ['coin', 'crash', 'finish', 'fuel', 'gem', 'land'])
         owners = [p for p in sorted((ROOT / 'main').rglob('*.go')) if components(p).get('script') == CONTROLLER]
-        self.assertGreaterEqual(len(owners), 2, owners)
+        self.assertEqual([p.relative_to(ROOT).as_posix() for p in owners], ['main/game/controller.go', 'main/terrain_compare/controller.go'])
         for owner in owners:
             found = components(owner)
             for name in names:

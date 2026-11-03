@@ -71,7 +71,10 @@ sfx.update(g);assert(take()=='','reset crash repeated')
 g.reset_count,g.last_reset_reason=3,'bounds';sfx.update(g);assert(take()=='#sfx_crash')
 g.reset_count,g.last_reset_reason=4,'section';sfx.update(g);assert(take()=='')
 -- Same frame as a hard landing: only the crash.
-for _=1,30 do sfx.fixed(g,false,-6,1/60) end;g.reset_count,g.last_reset_reason=5,'head';sfx.fixed(g,true,0,1/60);sfx.update(g);assert(take()=='#sfx_crash')
+-- Controller order in one tick: sfx.fixed sees the touchdown, then reset() runs (reset_count, reason).
+local function hard_landing(o) for _=1,30 do sfx.fixed(o,false,-6,1/60) end;sfx.fixed(o,true,0,1/60);assert(o.sfx_landed,'no landing to drop') end
+hard_landing(g);g.reset_count,g.last_reset_reason=5,'head';sfx.update(g);assert(take()=='#sfx_crash','landing on top of a reset crash')
+hard_landing(g);g.reset_count,g.last_reset_reason=6,'manual';sfx.update(g);assert(take()=='#sfx_land','control: a landing with a manual Retry')
 
 -- Mute: no cue while muted, ringing voices are stopped, events while muted are not replayed on unmute.
 stopped={};audio.mute(s);assert(#stopped==6,'mute did not stop every effect')
