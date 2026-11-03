@@ -8,6 +8,7 @@ local prefab=require "main.editor.editor_prefab"
 local snap_lib=require "main.editor.editor_snap"
 local geometry=require "main.editor.editor_geometry"
 local props=require "main.editor.editor_props"
+local mui=require "main.editor.editor_mechanism_ui"
 local overlay=require "main.editor.editor_overlay"
 local editor_ui=require "main.editor.editor_ui"
 local zoom_policy=require "main.editor.editor_zoom"
@@ -162,6 +163,7 @@ local function clear_auto(self)
     if editor.auto_range or editor.auto_remove then editor.auto_range,editor.auto_remove=nil,nil;editor.touch() end
 end
 local function cancel(self)
+    self.wire,self.selected_link=nil,nil
     clear_auto(self)
     self.drag,self.pan,self.box,self.held,self.pending=nil,nil,nil,{},nil
     if editor.preview then editor.preview=nil;editor.touch() end
@@ -258,7 +260,10 @@ local function candidates(p)
     end
     for _,o in ipairs(e.objects) do
         local d,segment
-        if o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.game.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
+        -- A crate, plate or gate picks inside its body box and ranks with labels, so a thin plate on the
+        -- ground is picked before the line under it (Tab reaches the line).
+        if mui.is(o) then d=require("main.editor.editor_mechanisms").distance(o,p)
+        elseif o.type=='coin' then d=math.max(0,dist(p,o.position)-require('main.game.coin_data').radius(o)*math.max(1,.5/editor.camera.zoom))
         elseif o.type=="label" then
             -- The drawn text's box (LE6b): editor_view scales labels by max(1, 0.5 / zoom); the builtin
             -- font is about 7.9 x 14 units per character at scale 1 (1 unit = 1 cm).
@@ -276,7 +281,7 @@ local function candidates(p)
                 end
             end
         end
-        if not o.hidden and d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=o.type=="label" and 3 or 4,key="o:"..o.id}) end
+        if not o.hidden and d and d<=tol then add({kind="object",id=o.id,type=o.type,segment=segment,d=d,rank=(o.type=="label" or mui.is(o)) and 3 or 4,key="o:"..o.id}) end
     end
     table.sort(list,function(a,b) if a.rank~=b.rank then return a.rank<b.rank end;if a.d~=b.d then return a.d<b.d end;return a.key<b.key end)
     return list
@@ -339,6 +344,7 @@ local function selected_object()
     for _,o in ipairs(editor.doc.editor.objects) do if o.id==editor.selection then return o end end
 end
 local function delete(self)
+    if mui.delete(self) then return end
     if editor.point_count()>=2 then editor.message="Delete works on one point at a time: click one of the selected points first.";return end
     local s=editor.selection
     local v=editor.vertex
@@ -359,7 +365,8 @@ local function delete(self)
     if s=="start" then editor.message="START cannot be deleted; move it instead.";return end
     if s=="finish" then editor.commit(function(e) e.finish=nil end);return end
     local ids=editor.selected_ids()
-    if #ids>0 then editor.commit(function(e) edit.remove(e,ids) end,true) end
+    local removed
+    if #ids>0 and editor.commit(function(e) removed={edit.remove(e,ids)} end,true) then editor.message=mui.removed(unpack(removed)) or editor.message end
 end
 local function place(target,p)
     editor.commit(function(e)
@@ -581,13 +588,13 @@ local function copy_selection()
 end
 local function paste_by(d)
     local clip=editor.clipboard
-    local ids
-    if editor.commit(function(e) ids=edit.paste(e,clip,d) end,true) then
+    local ids,kept,dropped
+    if editor.commit(function(e) ids,kept,dropped=edit.paste(e,clip,d) end,true) then
         editor.select(nil)
         for _,id in ipairs(ids) do editor.selected[id]=true end
         editor.selection=ids[1];editor.touch()
         local n=#ids
-        editor.message="Pasted "..n.." object"..(n==1 and "" or "s")..(#clip.connections>0 and " with their connections" or "")..". Connections to other pieces are not copied."
+        editor.message="Pasted "..n.." object"..(n==1 and "" or "s")..(#clip.connections>0 and " with their connections" or "")..". Connections to other pieces are not copied."..mui.pasted(kept,dropped)
     end
 end
 -- The copy's centre lands on the cursor; the offset keeps the active grid, so on-grid points stay on it.
@@ -938,7 +945,7 @@ end
 -- Formatting, property rows and stepping live in editor_props.lua (#331 E2); the current anchor is
 -- passed in at call time.
 local number_text=props.number_text
-local function param_rows(o) return props.param_rows(o,editor.anchor) end
+local function param_rows(o) if mui.is(o) then return mui.rows(o) end;return props.param_rows(o,editor.anchor) end
 -- A curve anchor's tangent mode (LE5b): free tangents move independently; smooth keeps them on one line
 -- (each keeps its length); symmetric mirrors them. Switching applies the mode to the in tangent.
 local MODES={free="smooth",smooth="symmetric",symmetric="free"}
@@ -964,6 +971,7 @@ local function param_click(self,i)
     local o=find(editor.selection)
     if o and o.type=="label" then edit_label(self,o.id);return end
     if o and o.type=="curve" then if editor.anchor then anchor_mode(o.id,editor.anchor.i) end;return end
+    if mui.is(o) then mui.click(self,o,i);return end
     local f=o and o.type=="prefab" and param_rows(o)[i]
     if not f then return end
     if f.choices then
@@ -981,6 +989,7 @@ end
 local function confirm_param(self,closing)
     local f=self.field
     local o=find(f.id)
+    if mui.is(o) then mui.confirm(self,closing);return end
     if not o or f.text==f.initial then self.field=nil;editor.message="";return end
     local params,err=prefab.set(o.kind,o.params,f.param,f.text)
     if not params then
@@ -1422,6 +1431,7 @@ local function on_button(self,name)
     elseif name=='zoom_in' or name=='zoom_out' then
         set_zoom(self,zoom_policy.step(editor.camera.zoom,name=='zoom_in' and 1 or -1));editor.message='';return
     end
+    if mui.button(self,name) then return end
     if name=="collapse_objects" then self.ui.objects_collapsed=not self.ui.objects_collapsed;return
     elseif name=="object_search" then
         self.field={search=true,text=self.ui.object_query or "",all=true};return
@@ -1527,7 +1537,7 @@ local function on_button(self,name)
     elseif name=="smooth" then smooth_point(self)
     elseif name=="convert" then convert_prefab(self)
     elseif name=="smooth_all" or name=="corner_all" then bulk_corner(self,name=="smooth_all")
-    elseif name:match("^param_%d$") then param_click(self,tonumber(name:sub(7)))
+    elseif name:match("^param_%d+$") then param_click(self,tonumber(name:sub(7)))
     elseif name:match("^kind_") then editor.prefab_kind=name:sub(6);set_tool(self,"prefab")
     elseif name=="paste" then paste_at(self,{editor.camera.x,editor.camera.y})
     elseif name=="dialog_close" then self.open_dialog=false
@@ -1606,7 +1616,7 @@ local function offered_buttons(self)
         if page>0 then list[#list+1]="warn_prev" end
         if (page+1)*WARN_ROWS<#rows then list[#list+1]="warn_next" end
     end
-    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","tool_fuel","warnings"}) do list[#list+1]=name end
+    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_coin","tool_gem","tool_fuel","tool_crate","tool_plate","tool_gate","warnings"}) do list[#list+1]=name end
     for _,v in ipairs(VIEW) do list[#list+1]=v[1] end
     if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
@@ -1625,7 +1635,7 @@ local function offered_buttons(self)
     if editor.point_count()>=2 or (not st and object_corner_mode()) then list[#list+1]="smooth_all";list[#list+1]="corner_all"
     elseif st then list[#list+1]="smooth" end
     if o and o.type=="prefab" and doc_lib.terrain(o) and #editor.selected_ids()==1 then list[#list+1]="convert" end
-    if o and (o.type=="prefab" or o.type=="curve" or o.type=="label") and #editor.selected_ids()==1 then
+    if o and (o.type=="prefab" or o.type=="curve" or o.type=="label" or mui.is(o)) and #editor.selected_ids()==1 then
         for i=1,#param_rows(o) do list[#list+1]="param_"..i end
     end
     if next(editor.selected) then list[#list+1]="mirror_left";list[#list+1]="mirror_right" end
@@ -1798,6 +1808,10 @@ local function canvas_press(self,action)
         end,true) then editor.select(id) end
         return
     end
+    if mui.KINDS[editor.tool] then
+        if mui.place(editor.tool,snap(self,p)) then set_tool(self,"select") end
+        return
+    end
     if editor.tool=="label" then place_label(self,p);return end
     local now=socket.gettime()
     local px=self.cursor_px
@@ -1825,6 +1839,7 @@ local function canvas_press(self,action)
     local list=candidates(p)
     set_hover(self,list)
     local c=list[self.hover_index]
+    if mui.press(self,p,list,c,tolerance(8)) then self.last_press=nil;return end
     if double and c and c.kind=="object" and c.type=="label" then
         -- Double-click on a label edits its text (LE6b).
         editor.select(c.id);edit_label(self,c.id)
@@ -2034,7 +2049,7 @@ local function box_select(self,b)
     -- An object is picked when the box contains one of its points or one of its edges crosses the box.
     local box={x0,x1,y0,y1}
     for _,o in ipairs(editor.doc.editor.objects) do
-        local closed=doc_lib.outline(o)
+        local closed=doc_lib.drawn_outline(o)
         local hit=false
         for _,pts in ipairs(closed and {closed} or (o.type=="label" or o.type=="coin") and {{o.position}} or doc_lib.parts(o)) do
             for i,q in ipairs(pts) do
@@ -2215,7 +2230,7 @@ function on_input(self,action_id,action)
             confirm_name(self)
             if not self.field then
                 local o=editor.selection and find(editor.selection)
-                if old and o and o.type=="prefab" then
+                if old and o and (o.type=="prefab" or mui.is(o)) then
                     local list=param_rows(o);local index
                     for i,fd in ipairs(list) do if fd.key==old then index=i end end
                     if index then
@@ -2349,6 +2364,7 @@ function on_input(self,action_id,action)
         elseif self.drawing then self.drawing=nil;editor.touch()
         elseif self.open_dialog then self.open_dialog=false
         elseif self.warnings_open then self.warnings_open=false
+        elseif self.wire or self.selected_link then self.wire,self.selected_link=nil,nil;editor.message=""
         else editor.select(nil) end
     end
     return true
@@ -2419,6 +2435,7 @@ local function describe(self)
                 #run>1 and "Run of "..#run.." pieces: "..table.concat(run," > ",1,math.min(#run,4))..(#run>4 and " ..." or "") or "Not connected",
                 one_sided(e,run) and "Solid below (one-sided)" or "Turns back: two-sided collision",
                 "Drag moves the whole run","Double-click inserts a point"}
+        elseif mui.is(o) then lines=mui.describe(o)
         elseif o.type=='coin' then
             lines={(o.kind=='fuel' and 'Fuel canister ' or o.kind=='gem' and 'Wonder Gem ' or 'Gold coin ')..o.id,'Pickup ID: '..o.pickup_id,string.format('At x %.2f m  y %.2f m',o.position[1],o.position[2]),'Drag to move; copy/paste to duplicate.','Delete removes it. Undo restores it.'}
         elseif o.type=="hull" then
@@ -2600,6 +2617,9 @@ local function draw_overlay(self)
         overlay.snap(o,nil);gui.set_enabled(o.readout,false);self.readout_text='Coin preview: cyan additions, red removals'
         show_silhouette(o,self.ghost,nil);show_silhouette(o,self.last_ghost,nil);overlay.finish(o);return
     end
+    -- O2 links and gate travel first: they always fit the handle pool (32 links x 3 + 8 gates of 192).
+    local missing=mui.draw(self,o,s)
+    if missing>0 and editor.message=="" then editor.message=missing.." connections are not drawn (overlay limit); zoom in to see them." end
     local hover=editor.hover
     local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
     local hover_point=hovered and editor.shape(hovered)[hover.index]
@@ -2820,7 +2840,8 @@ local function render_ui(self)
     local tc=has_track and track_context(self) or nil
     local track_active=tc and tc.active and not tc.error
     local fields,actions,disabled={},{},{}
-    if sel and (sel.type=="prefab" or sel.type=="curve" or sel.type=="label") and #editor.selected_ids()==1 then
+    if mui.is(sel) and #editor.selected_ids()==1 then mui.fields(self,sel,fields,actions)
+    elseif sel and (sel.type=="prefab" or sel.type=="curve" or sel.type=="label") and #editor.selected_ids()==1 then
         for i,fd in ipairs(param_rows(sel)) do
             local name="param_"..i
             local value=sel.type=="prefab" and (fd.choices and sel.params[fd.key] or fd.integer and string.format("%d",sel.params[fd.key]) or string.format(fd.unit=="deg" and "%.1f" or "%.2f",sel.params[fd.key])) or sel.type=="label" and sel.text or (editor.anchor and sel.anchors[editor.anchor.i].mode or "")
@@ -2939,7 +2960,7 @@ local function published_handles()
 end
 local function published_rows(self)
     local o=editor.selection and editor.doc and find(editor.selection)
-    if not (o and (o.type=="prefab" or o.type=="curve" or o.type=="label") and #editor.selected_ids()==1) then return {} end
+    if not (o and (o.type=="prefab" or o.type=="curve" or o.type=="label" or mui.is(o)) and #editor.selected_ids()==1) then return {} end
     if o.type=="curve" then
         if #param_rows(o)==0 then return {} end
         return {"Anchor "..editor.anchor.i.." tangents: "..o.anchors[editor.anchor.i].mode.."  (click)"}
@@ -2948,7 +2969,7 @@ local function published_rows(self)
     for i,fd in ipairs(param_rows(o)) do
         -- A logical row is label + displayed value + unit; it remains queryable while scrolled out.
         local f=self.field
-        local value=o.type=="prefab" and prefab.value(fd,o.params) or o.type=="label" and o.text or editor.anchor and o.anchors[editor.anchor.i].mode or ""
+        local value=mui.is(o) and require("main.editor.editor_mechanisms").display(o,fd.key) or o.type=="prefab" and prefab.value(fd,o.params) or o.type=="label" and o.text or editor.anchor and o.anchors[editor.anchor.i].mode or ""
         local focused=f and f.param==fd.key and f.id==o.id
         list[i]=fd.label..": "..(focused and (f.all and "["..f.text.."] " or f.text.."_ ")..(fd.unit or "") or value..(fd.choices and "  (click)" or ""))
     end
@@ -2987,7 +3008,7 @@ local function publish(self)
         selected=editor.doc and editor.selected_ids() or {},vertex=editor.vertex or false,hover=editor.hover and editor.hover.key or "",hover_count=self.candidates and #self.candidates or 0,
         drawing=self.drawing and #self.drawing.points or 0,snap=self.snapped and {kind=self.snapped.kind,p=self.snapped.p} or false,grid=editor.grid,
         readout=self.readout_text or "",errors=editor.errors,warnings=editor.warnings,display_note=editor.display_note or "",vertex2=editor.vertex2 or false,warnings_open=self.warnings_open or false,chains=editor.chains or 0,
-        overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0},
+        overlay={nodes=self.gui_nodes,max_nodes=MAX_NODES,grid=o.used.grid,handles=o.used.handles,lines=o.used.lines,bounds=o.used.bounds,dropped=o.dropped,spacing=o.spacing or 0,links_drawn=#(self.drawn_links or {})},wire=self.wire or false,selected_link=self.selected_link or false,
         look=terrain_look.session,visible=visible_buttons(self),ui={boxes=self.ui.nb,texts=self.ui.nt,scroll=self.ui.scroll,max_scroll=self.ui.max_scroll,tools_collapsed=self.ui.tools,properties_collapsed=self.ui.properties,rects=self.ui.rects,scale=self.ui.scale,tools_panel=self.ui.tools_rect,properties_panel=self.ui.properties_rect,tool_scroll=self.ui.tool_scroll,tool_max_scroll=self.ui.tool_max_scroll,object_scroll=self.ui.object_scroll or 0,object_max_scroll=self.ui.object_max_scroll or 0,object_query=self.ui.object_query or "",objects_collapsed=self.ui.objects_collapsed or false,scrollbars=self.ui.scrollbars,problem_colour=self.ui.problem_colour,error_banner=self.ui.error_text or false,field_error=self.field and self.field.error or self.ui_error and self.ui_error.message or false},hidden_objects=editor.hidden_objects or {},key=editor.key() or 0,stored=editor.store[editor.opened] or false,library=library_snapshot(self),page=self.page or 0,
         conflict=editor.conflict and editor.conflict.summary or false,field=self.field and self.field.text or false,panel_open=self.panel_open or false,field_all=self.field and self.field.all or false,unsynced=editor.unsynced or false,
         versions=self.version_rows or {},versions_open=self.open_dialog and self.version_dialog or false,versions_busy=editor.versions.busy(),version_error=editor.version_error or false,

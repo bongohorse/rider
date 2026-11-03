@@ -93,13 +93,13 @@ function M.travel(o)
     return {x,y},{x,y+o.travel}
 end
 -- Property rows (editor_props format): only O1-supported settings with their validator bounds.
-local function number(key,label,min,max,unit,step) return {key=key,label=label,min=min,max=max,unit=unit or '',step=step or .1} end
+local function number(key,label,min,max,unit) return {key=key,label=label,min=min,max=max,unit=unit or ''} end
 local function crate_label(o) return o.name and o.name~='' and o.name..' ('..o.id..')' or 'crate '..o.id end
 function M.rows(o,e)
     local list={number('x','Position X',-data.MAX_COORD,data.MAX_COORD,'m'),number('y','Position Y',-data.MAX_COORD,data.MAX_COORD,'m')}
     local function add(f) list[#list+1]=f end
     if o.type=='crate' then
-        add(number('angle','Rotation',-180,180,'deg',1));add(number('mass','Mass',1,40,'kg',1));add(number('friction','Friction',0,1.5));add(number('restitution','Bounce',0,.5))
+        add(number('angle','Rotation',-180,180,'deg'));add(number('mass','Mass',1,40,'kg'));add(number('friction','Friction',0,1.5));add(number('restitution','Bounce',0,.5))
     elseif o.type=='plate' then
         add(number('width','Width',1,8,'m'));add({key='mode',label='Mode',choices={'hold','pulse','toggle'}})
         if o.mode=='pulse' then add(number('pulse_seconds','Button time',.1,30,'s')) end

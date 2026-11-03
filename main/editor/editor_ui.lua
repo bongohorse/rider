@@ -29,6 +29,9 @@ local ICONS={
  tool_prefab={{3,7,12,3},{12,3,21,7},{21,7,21,18},{21,18,12,22},{12,22,3,18},{3,18,3,7},{3,7,12,12},{12,12,21,7},{12,12,12,22}},
  tool_start={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12}},
  tool_finish={{5,22,5,3},{5,3,20,3},{20,3,20,12},{20,12,5,12},{10,3,10,12},{15,3,15,12},{5,7,20,7}},
+ tool_crate={{3,3,21,3},{21,3,21,21},{21,21,3,21},{3,21,3,3},{5,5,19,19},{5,19,19,5}},
+ tool_plate={{2,17,22,17},{22,17,22,21},{22,21,2,21},{2,21,2,17},{12,2,12,13},{8,9,12,13},{12,13,16,9}},
+ tool_gate={{3,22,3,2},{3,2,21,2},{21,2,21,22},{7,6,7,22},{12,6,12,22},{17,6,17,22}},
  tool_fuel={{6,4,16,4},{16,4,20,8},{20,8,20,22},{20,22,4,22},{4,22,4,8},{4,8,6,4},{7,12,17,12},{7,12,17,20},{17,12,7,20}},
  tool_gem={{12,1,22,10},{22,10,12,23},{12,23,2,10},{2,10,12,1},{2,10,22,10}},
  tool_coin={{12,2,19,5},{19,5,22,12},{22,12,19,19},{19,19,12,22},{12,22,5,19},{5,19,2,12},{2,12,5,5},{5,5,12,2},{12,7,12,17}},
@@ -51,6 +54,9 @@ for kind,paths in pairs(THUMBS) do
     for _,p in ipairs(paths) do lines[#lines+1]={p[1]*.5+1,p[2]*.5+6,p[3]*.5+1,p[4]*.5+6} end
     ICONS['thumb_'..kind]=lines
 end
+-- Gameplay tools (O2 added Crate, Plate and Gate) bake control and icon into one 48 x 32 quad, so the
+-- eight tiles take fewer pooled boxes than the five separate control + icon pairs did (Codex a10d648).
+local TILES={tool_start=true,tool_finish=true,tool_coin=true,tool_gem=true,tool_fuel=true,tool_crate=true,tool_plate=true,tool_gate=true}
 local function inside(r,x,y) return x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
 function M.init()
     -- Three tiny code-native UI masks, uploaded once. Direct textures avoid sampling adjacent
@@ -84,6 +90,16 @@ function M.init()
             bytes[#bytes+1]=string.char(a,a,a,a)
         end end
         assert(gui.new_texture('editor_icon_'..name,24,24,'rgba',table.concat(bytes),false))
+        if TILES[name] then for _,active in ipairs({false,true}) do
+            -- Control colour (C.control / C.active) with the icon in the text colour, rounded 4 px corners.
+            local tile={};local bg=active and {141,224,197} or {34,59,71};local fg=active and {16,30,38} or {237,244,246}
+            for y=0,31 do for x=0,47 do
+                local ix,iy=x-12,y-4;local mask=ix>=0 and ix<24 and iy>=0 and iy<24 and bytes[iy*24+ix+1]:byte(1)/255 or 0
+                local dx,dy=math.max(4-x,0,x-43),math.max(4-y,0,y-27);local alpha=dx*dx+dy*dy<=16 and 255 or 0
+                tile[#tile+1]=string.char(math.floor(bg[1]+(fg[1]-bg[1])*mask),math.floor(bg[2]+(fg[2]-bg[2])*mask),math.floor(bg[3]+(fg[3]-bg[3])*mask),alpha)
+            end end
+            assert(gui.new_texture('editor_tile_'..(active and 'active_' or '')..name,48,32,'rgba',table.concat(tile),false))
+        end end
     end
     local u={boxes={},texts={},buttons={},visible={},rects={},scroll=0,tool_scroll=0,tools=false,properties=false,prefabs=false}
     for i=1,M.BOXES do u.boxes[i]=gui.new_box_node(vmath.vector3(),vmath.vector3(1,1,0));gui.set_size_mode(u.boxes[i],gui.SIZE_MODE_MANUAL);gui.set_enabled(u.boxes[i],false) end
@@ -217,7 +233,9 @@ function M.render(u,d)
         local danger=name=='delete' or name:match('^libdel_') or label:match('^Sure%?')
         local fg=blocked and C.canvas or danger and C.error or disabled and colour('b0c3cc',.6) or active and C.canvas or C.text
         local t
-        if icon then
+        if icon and TILES[icon_name] then
+            gui.set_texture(b,'editor_tile_'..(active and 'active_' or '')..icon_name);gui.set_slice9(b,vmath.vector4());gui.set_color(b,vmath.vector4(1,1,1,1))
+        elseif icon then
             local n=box(x+(bw-24)/2,y+(bh-24)/2,24,24,fg)
             gui.set_texture(n,'editor_icon_'..icon_name)
         else t=text(x+8,y+bh/2,label,fg,14,bw-12) end
@@ -266,7 +284,9 @@ function M.render(u,d)
         button('play',commands+80,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
         local gameplay_top=152+(u.tool_category and 0 or 80)
-        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 144)
+        -- Gameplay: Start, Finish, Coin / Gem, Fuel, Crate / Plate, Gate and the live pickup counts in the
+        -- free third cell (three rows of three; the Prefabs heading stays reachable in short windows).
+        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 176)
         local objects_top=prefabs_top+40+(u.prefabs and 0 or math.ceil(#d.kinds/2)*56+8)
         local tools_end=u.tools and 160 or objects_top
         local object_rows=math.min(4,math.max(1,#d.objects))
@@ -305,7 +325,7 @@ function M.render(u,d)
             local gy=gameplay_top-u.tool_scroll
             if shown(gy,32) then button('collapse_gameplay',28,gy,152,u.gameplay and 'GAMEPLAY  >' or 'GAMEPLAY  v',false,'Collapse or expand Gameplay') end
             if not u.gameplay then
-                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'},{'fuel','Fuel'}}) do
+                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'},{'fuel','Fuel'},{'crate','Crate'},{'plate','Plate'},{'gate','Gate'}}) do
                     local x,y=28+(i-1)%3*52,gameplay_top+40+math.floor((i-1)/3)*56-u.tool_scroll
                     if shown(y,52) then
                         button('tool_'..tool[1],x,y,48,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
@@ -314,8 +334,11 @@ function M.render(u,d)
                 end
             end
             if not u.gameplay then
-                local cy=gameplay_top+160-u.tool_scroll
-                if shown(cy,20) then local gold,gems=require('main.game.coin_data').counts(require('main.editor.editor').doc.editor.objects);text(28,cy,string.format('Gold %d  |  Gems %d',gold,gems),C.secondary,12) end
+                local cy=gameplay_top+152-u.tool_scroll
+                if shown(cy,48) then
+                    local gold,gems=require('main.game.coin_data').counts(require('main.editor.editor').doc.editor.objects)
+                    text(134,cy+14,'Gold '..gold,C.secondary,12,60);text(134,cy+34,'Gems '..gems,C.secondary,12,60)
+                end
             end
             local py=prefabs_top-u.tool_scroll
             if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end
@@ -371,7 +394,9 @@ function M.render(u,d)
         u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}
         button('collapse_properties',rx+(u.properties and 4 or 12),112,u.properties and 32 or 256,u.properties and '<' or 'PROPERTIES  >',false,'Collapse or expand Properties')
         if not u.properties then
-            local clip={156,h-96};local start=170;local y=start-u.scroll
+            -- The inspector ends where a 1080-pixel-high window ends it (984): taller windows scroll it instead
+            -- of showing more rows, so its worst content (e.g. the largest O2 plate) fits the fixed pools.
+            local clip={156,math.min(h-96,984)};local start=170;local y=start-u.scroll
             local function row(name,label,unit,value,err,choices)
                 local rowh=unit~=nil and 66 or 44
                 if u.reveal==name then
@@ -474,7 +499,7 @@ function M.render(u,d)
                 elseif v.name~='mirror_right' then row(v.name,v.label,nil,nil,nil,v.tip) end
             end
             local content_end=y+u.scroll+8
-            local panel_end=math.min(h-80,math.max(160,content_end+16))
+            local panel_end=math.min(clip[2]+16,math.max(160,content_end+16))
             u.properties_rect.h=panel_end-104
             gui.set_screen_position(property_panel,vmath.vector3((rx+140)*u.scale,(h-104-u.properties_rect.h/2)*u.scale,0))
             gui.set_size(property_panel,vmath.vector3(280*u.scale/u.k,u.properties_rect.h*u.scale/u.k,0))
