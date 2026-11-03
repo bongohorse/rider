@@ -44,11 +44,39 @@ module.exports=async function tilt(browser,url,sha,out){
     else await page.waitForFunction(value=>window.riderTelemetry.command.lean===value,lean);
   }
   const release=()=>session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  // #439: what every engine poll actually hands to the Lua tick owner while away.
+  async function polledTiltZero(label){
+    await page.evaluate(()=>{window.__polledTilt=[];});
+    await page.waitForFunction(()=>window.__polledTilt.length>=5);
+    assert.deepEqual([...new Set(await page.evaluate(()=>window.__polledTilt))],[0],label);
+  }
+  const leanNear=(min,max)=>page.waitForFunction(([a,b])=>window.riderTelemetry.command.lean>a&&window.riderTelemetry.command.lean<b,[min,max]);
+  // A real sensor keeps streaming after a return; a late view change (the emulated screen
+  // orientation 'change' follows the resize) correctly drops older samples.
+  const stream=(beta,gamma)=>page.evaluate(({beta,gamma})=>{clearInterval(window.__tiltStream);
+    window.__tiltStream=setInterval(()=>window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta,gamma,alpha:0})),16);},{beta,gamma});
+  const stopStream=()=>page.evaluate(()=>clearInterval(window.__tiltStream));
+  // Tilt is live again (the poll carries it) while the suspended game stays paused.
+  async function gameStaysPaused(label){
+    await page.evaluate(()=>{window.__polledTilt=[];});
+    await page.waitForFunction(()=>window.__polledTilt.length>=5&&window.__polledTilt.at(-1)<-.39&&window.__polledTilt.at(-1)>-.42);
+    assert.equal(await page.evaluate(()=>window.riderTimeState?.paused),true,label);
+  }
+  async function resumeGame(){
+    assert.equal(await page.evaluate(()=>window.riderTimeState?.paused),true,'Tilt resume must not resume the game');
+    await page.getByRole('button',{name:'Resume',exact:true}).tap();
+    await page.waitForFunction(()=>window.riderTimeState?.paused===false);
+  }
   async function calibrate(){await open();await page.getByRole('button',{name:'Calibrate neutral',exact:true}).click();await page.waitForFunction(()=>window.riderTilt.mode==='active'&&!document.querySelector('.tilt-panel').classList.contains('open'));}
   try{
     const launch=new URL(url);launch.search='?touch=1';await page.goto(launch.href);
     await page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderTelemetry?.sequence>=2&&window.riderTilt?.mode==='off',sha);
     const identity=await page.evaluate(()=>JSON.stringify(window.riderReady));
+    await page.evaluate(()=>{
+      const poll=window.riderMobile.poll;window.__polledTilt=[];
+      window.riderMobile.poll=(...args)=>{const out=poll(...args);window.__polledTilt.push(JSON.parse(out).tilt);
+        if(window.__polledTilt.length>600)window.__polledTilt.shift();return out;};
+    });
     await page.evaluate(()=>{
       window.__orientationCtor=window.DeviceOrientationEvent;
       window.__permissionDescriptor=Object.getOwnPropertyDescriptor(DeviceOrientationEvent,'requestPermission');
@@ -103,14 +131,69 @@ module.exports=async function tilt(browser,url,sha,out){
     await open();await page.getByRole('button',{name:'Invert OFF',exact:true}).click();await close();
     await page.waitForFunction(()=>window.riderTelemetry.command.lean<-.39&&window.riderTelemetry.command.lean>-.42);
     pass('inverted_direction');
-    // Exercise 90-degree sensor-axis normalization without enabling unsupported portrait gameplay.
+    // #439: focus loss and a hidden page keep the calibrated neutral; no lean while away.
+    // Return to a visible, focused view resumes tilt, never the suspended game.
+    const kept=await page.evaluate(()=>({neutral:window.riderTilt.neutral,neutralAngle:window.riderTilt.neutralAngle}));
+    assert.equal(kept.neutralAngle,0);
+    await page.evaluate(()=>{
+      window.__focus=true;window.__hidden=false;document.hasFocus=()=>window.__focus;
+      Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.__hidden});
+      Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>window.__hidden?'hidden':'visible'});
+      window.__focus=false;window.dispatchEvent(new Event('blur'));
+      window.__hidden=true;document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await page.waitForFunction(n=>window.riderTilt.mode==='paused'&&window.riderTilt.neutral===n&&window.riderTimeState?.paused===true,kept.neutral);
+    await emit(0,-40);await polledTiltZero('No lean while hidden');
+    assert.equal(await page.evaluate(()=>window.riderTilt.lean()),0);
+    await page.evaluate(()=>{window.__hidden=false;document.dispatchEvent(new Event('visibilitychange'));});
+    await emit(0,-40);await polledTiltZero('No lean while visible but unfocused');
+    assert.equal(await page.evaluate(()=>window.riderTilt.mode),'paused');
+    await page.evaluate(()=>{window.__focus=true;window.dispatchEvent(new Event('focus'));});
+    await page.waitForFunction(n=>window.riderTilt.mode==='active'&&window.riderTilt.neutral===n&&window.riderTilt.neutralAngle===0,kept.neutral);
+    await stream(0,-20);
+    await page.waitForFunction(()=>window.riderTilt.lean()<-.39&&window.riderTilt.lean()>-.42);
+    await gameStaysPaused('Tilt resume does not resume the game');
+    await resumeGame();await leanNear(-.42,-.39);await stopStream();
+    await page.evaluate(()=>{delete document.hasFocus;delete document.hidden;delete document.visibilityState;});
+    pass('calibration_kept_across_focus_loss_and_hidden_page');
+    // #439: a same-side landscape resize keeps the neutral; the next sample leans again.
     await page.setViewportSize({width:960,height:540});await neutral();
-    await page.waitForFunction(()=>window.riderTilt.mode==='calibrate');
+    await page.waitForFunction(n=>window.riderTilt.mode==='active'&&window.riderTilt.neutral===n,kept.neutral);
+    await stream(0,-20);await leanNear(-.42,-.39);await stopStream();
+    pass('same_side_view_change_keeps_calibration');
+    // Exercise 90-degree sensor-axis normalization without enabling unsupported portrait gameplay.
+    // A sample on another screen angle than the calibration drops the neutral.
     await page.evaluate(()=>{window.__tiltScreenAngle=90;});
-    await emit(0,0);await calibrate();await emit(20,0);
+    await emit(0,0);
+    await page.waitForFunction(()=>window.riderTilt.mode==='calibrate'&&window.riderTilt.neutral===null);
+    await calibrate();await emit(20,0);
     await page.waitForFunction(()=>window.riderTelemetry.command.lean<-.39&&window.riderTelemetry.command.lean>-.42);
     assert.equal(await page.evaluate(()=>JSON.stringify(window.riderReady)),identity);
     pass('screen_axis_rotation_no_reload');
+    // #439 with #359: portrait pauses tilt and suspends the game. The same landscape side
+    // resumes tilt with the kept neutral; the game still waits for Resume.
+    await page.setViewportSize({width:540,height:960});
+    await page.waitForFunction(()=>window.riderMobile.blocked&&window.riderTilt.mode==='paused'&&window.riderTilt.neutral===0&&window.riderTimeState?.paused===true);
+    await emit(40,0);await polledTiltZero('No lean in portrait');
+    assert.equal(await page.evaluate(()=>window.riderTilt.lean()),0,'Tilt itself is paused in portrait');
+    await page.setViewportSize({width:960,height:540});
+    await page.waitForFunction(()=>!window.riderMobile.blocked&&window.riderTilt.mode==='active'&&window.riderTilt.neutral===0&&window.riderTilt.neutralAngle===90);
+    await stream(20,0);
+    await page.waitForFunction(()=>window.riderTilt.lean()<-.39&&window.riderTilt.lean()>-.42);
+    await gameStaysPaused('Landscape tilt resume does not resume the game');
+    await resumeGame();await leanNear(-.42,-.39);await stopStream();
+    pass('portrait_keeps_calibration_game_waits_for_resume');
+    // #439 decision: a landscape side flip (90 <-> 270) requires a new calibration. The old
+    // neutral is never applied on the other side; Calibrate neutral re-centres there.
+    for(const [to,beta] of [[270,-20],[90,20]]){
+      await page.evaluate(value=>{window.__tiltScreenAngle=value;window.dispatchEvent(new Event('orientationchange'));},to);
+      await page.waitForFunction(()=>window.riderTilt.mode==='calibrate'&&window.riderTilt.neutral===null&&/side/i.test(window.riderTilt.reason));
+      await emit(beta,0);await polledTiltZero('No lean with the old neutral after a side flip');
+      await neutral();
+      await emit(0,0);await calibrate();await emit(beta,0);await leanNear(-.42,-.39);
+      assert.equal(await page.evaluate(()=>window.riderTilt.neutralAngle),to);
+    }
+    pass('landscape_side_flip_requires_recalibration');
     await emit(null,null);await page.waitForFunction(()=>window.riderTilt.mode==='fallback');await neutral();
     await touch('throttle');await release();await neutral();pass('invalid_data_touch_fallback');
     await open();await page.getByRole('button',{name:'Enable tilt',exact:true}).click();

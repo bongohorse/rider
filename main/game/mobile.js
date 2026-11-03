@@ -10,18 +10,21 @@
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
   api.cancel=()=>{api.closeMore?.();api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}if(api.blocked){pending.clear=true;pending.background=true;}};
-  api.clear=(preserveTilt=false)=>{
-    if(!preserveTilt)window.riderTilt?.pause("Input cleared — calibrate to resume");
+  // away (#439: focus, visibility, viewport or orientation change) pauses tilt but keeps its
+  // calibrated neutral; any other clear (reset, UI capture) asks for a new calibration.
+  api.clear=(preserveTilt=false,away=false)=>{
+    if(away)window.riderTilt?.suspend("Input released");
+    else if(!preserveTilt)window.riderTilt?.pause("Input cleared — calibrate to resume");
     pointers.clear();
     root?.querySelectorAll('[data-command]').forEach(b=>b.classList.remove('held'));
   };
-  const abort=reason=>{
-    api.closeMore?.();api.clear();pending.clear=true;lastFrame=undefined;
+  const abort=(reason,away=false)=>{
+    api.closeMore?.();api.clear(false,away);pending.clear=true;lastFrame=undefined;
     if(trial){trial=null;api.recording=false;status.textContent='Capture cancelled: '+reason;}
   };
-  window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden');}});
-  window.addEventListener('resize',()=>{abort('viewport changed; restart capture');if(enabled)syncOrientation();});
+  window.addEventListener('blur',()=>{pending.background=true;abort('focus lost',true);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden',true);}});
+  window.addEventListener('resize',()=>{abort('viewport changed; restart capture',true);if(enabled)syncOrientation();});
   // #359: the picture stays landscape. Browsers allow screen.orientation.lock() only in
   // fullscreen and drop the lock again when fullscreen ends (W3C Screen Orientation §9).
   // Absent API, refusal (desktop, iOS, unsupported) or a synchronous throw is ignored
@@ -321,7 +324,7 @@
     const portrait=window.innerHeight>window.innerWidth;
     if(portrait===api.blocked)return;
     api.blocked=portrait;
-    abort(portrait?'portrait orientation':'landscape orientation');
+    abort(portrait?'portrait orientation':'landscape orientation',true);
     // Discard any queued Retry/Replay/station commands from before the transition, but keep
     // an unpolled suspend: portrait→landscape inside one frame must still suspend once.
     const background=pending.background;
@@ -339,7 +342,7 @@
   },true);
   // Landscape 90↔270 can keep the same viewport dimensions: still release
   // pointers and tilt so the opposite side never inherits held controls.
-  const orientationChanged=()=>{abort('orientation changed');syncOrientation();};
+  const orientationChanged=()=>{abort('orientation changed',true);syncOrientation();};
   window.addEventListener('orientationchange',orientationChanged);
   screen.orientation?.addEventListener?.('change',orientationChanged);
   syncOrientation();
