@@ -31,6 +31,8 @@ function M.resource(id)
     local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/game/stations/"..id..".json"))) end)
     if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     if not ok or not data.validate(d) then return nil,"Unreadable station file" end
+    -- Same identity check as load(): a resource never loads under another station's id (#412).
+    if d.id~=id then return nil,"Station id mismatch" end
     return d
 end
 function M.load(id,speed,section,snapshot)
