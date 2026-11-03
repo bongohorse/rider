@@ -43,6 +43,7 @@ class BootstrapContract(unittest.TestCase):
     def test_pages_write_permission_requires_main_guard(self):
         for guard in ("github.ref == 'refs/heads/main'",
                       "needs.changes.outputs.docs_only != 'true'",
+                      "needs.changes.outputs.repo_tooling != 'true'",
                       "needs.required.result == 'success'",
                       "always()"):
             with self.subTest(guard=guard), tempfile.TemporaryDirectory() as directory:
