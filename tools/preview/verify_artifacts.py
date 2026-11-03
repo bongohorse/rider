@@ -27,7 +27,6 @@ def gameplay_timing(check):
     return 'gameplay/' + ('check_levels/desktop' if check == 'check_levels' else check)
 
 
-GAMEPLAY_TIMINGS = tuple(gameplay_timing(x) for x in GAMEPLAY)
 DESKTOP_SIZES = ((1920, 1080), (2560, 1440), (1280, 720))
 PHONE_SIZES = ((1080, 486), (486, 1080), (896, 400), (1080, 486))
 
@@ -129,8 +128,6 @@ def verify(root, sha, build_id):
         check_group(directory, mode, expected, sha, build_id)
         all_cases.extend(expected)
     require(len(all_cases) == len(set(all_cases)), 'Case assigned to multiple release groups')
-    sharded = [check for checks in GAMEPLAY_SHARDS.values() for check in checks]
-    require(sharded == list(GAMEPLAY), 'Desktop gameplay shards must cover every module exactly once, in order')
     deployment = root / f'preview-verification-desktop-layout-{build_id}' / 'deployment'
     check_group(deployment, 'deployment', ('desktop', 'phone-emulation'), sha, build_id)
     check_screenshots(deployment, ['desktop.png', 'phone-emulation.png'])

@@ -1,6 +1,7 @@
 """Negative controls for the release matrix's fail-closed artifact gate."""
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -141,6 +142,23 @@ class ReleaseVerificationGate(unittest.TestCase):
         (self.path('desktop-layout').parent / 'deployment' / 'phone-emulation.png').unlink()
         with self.assertRaisesRegex(ValueError, 'Missing screenshot'):
             verify(self.root, SHA, BUILD)
+
+
+class GameplayShardInventory(unittest.TestCase):
+    """The Python gate and the JS verifier must agree on the shard split (#402)."""
+
+    def test_python_shards_match_js_verification_plan(self):
+        script = ("const p=require(process.argv[1]);"
+                  "console.log(JSON.stringify({checks:p.DESKTOP_GAMEPLAY_CHECKS,shards:p.DESKTOP_GAMEPLAY_SHARDS}))")
+        out = subprocess.run(['node', '-e', script, str(ROOT / 'tools/preview/verification-plan.cjs')],
+                             check=True, capture_output=True, text=True).stdout
+        js = json.loads(out)
+        self.assertEqual(js['checks'], list(GAMEPLAY))
+        self.assertEqual({k: list(v) for k, v in GAMEPLAY_SHARDS.items()}, js['shards'])
+
+    def test_shards_cover_every_module_once_in_order(self):
+        sharded = [check for checks in GAMEPLAY_SHARDS.values() for check in checks]
+        self.assertEqual(sharded, list(GAMEPLAY))
 
 
 if __name__ == '__main__':
