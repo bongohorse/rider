@@ -184,6 +184,11 @@ function M.draw(self,o,s)
         end
     end
     self.drawn_links=drawn
+    -- A picked link that is no longer drawn (Undo removed it, an end was hidden or deleted) is dropped, so
+    -- Delete falls back to the selection instead of failing on a stale pair.
+    local l=self.selected_link;local still=false
+    for _,x in ipairs(drawn) do still=still or (l and x.from==l.from and x.to==l.to) end
+    if l and not still then self.selected_link=nil end
     local plate=self.wire and find(self.wire)
     if plate and self.cursor then overlay.line(o,to_px(mech.port(plate),s),to_px(self.cursor,s),C.selected,2,'handles') end
     return missing

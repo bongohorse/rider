@@ -15,6 +15,9 @@ M.FIELDS=FIELDS
 local DEFAULTS={angle=0,mass=data.CRATE_MASS,friction=.5,restitution=0,width=3,mode='hold',pulse_seconds=4,initial_on=false,initial_open=false,condition='any'}
 -- Placement puts the object's bottom (a plate's top: it lies flush in the ground) on the clicked point.
 local LIFT={crate=data.CRATE_HALF,plate=-.05,gate=data.GATE_HEIGHT/2}
+-- Largest |radians| that survives the engine's 14-significant-digit json.encode (lua-cjson %.14g) and
+-- still passes the O1 |angle| <= pi check on reload: pi itself encodes as 3.1415926535898 > pi.
+M.MAX_ANGLE=3.1415926535897
 local function copy(v) if type(v)~='table' then return v end;local t={};for k,x in pairs(v) do t[k]=copy(x) end;return t end
 function M.is(o) return type(o)=='table' and M.kinds[o.type]~=nil end
 -- Source fields of a mechanism object: O1 settings plus the editor metadata. Anything else is an unknown
@@ -149,7 +152,7 @@ function M.set(e,id,key,value)
         end
     end
     if key=='x' or key=='y' then o.position[key=='x' and 1 or 2]=value
-    elseif key=='angle' then o.angle=value*math.pi/180
+    elseif key=='angle' then o.angle=math.max(-M.MAX_ANGLE,math.min(M.MAX_ANGLE,value*math.pi/180))
     elseif key:sub(1,6)=='actor:' then
         local actor=key:sub(7);local list={}
         for _,a in ipairs(o.actors) do if a~=actor then list[#list+1]=a end end
@@ -212,10 +215,13 @@ end
 -- Paste: map is old id -> new id of the pasted objects (ids: new ids). Internal links and copied crate
 -- actors are remapped. An external reference is kept while its other end still exists in this course
 -- with the right kind (the copy shares that gate, plate or crate); otherwise it is dropped and counted,
--- never silently lost. Returns kept, dropped.
-function M.paste(e,clip,map,ids)
+-- never silently lost. foreign: the clipboard comes from another document, whose IDs mean nothing here
+-- (oN IDs repeat between levels), so every outside reference is dropped. A link to a locked object is
+-- dropped too: it would change the locked object's connections. Returns kept, dropped.
+function M.paste(e,clip,map,ids,foreign)
     local kept,dropped=0,0
-    local function kind(id) local o=object(e,id);return o and o.type end
+    local function kind(id) if foreign then return nil end;local o=object(e,id);return o and o.type end
+    local function open(id) local o=object(e,id);return o and not o.locked end
     for _,id in ipairs(ids) do
         local o=object(e,id)
         if o and o.type=='plate' then
@@ -236,7 +242,7 @@ function M.paste(e,clip,map,ids)
     end
     for _,l in ipairs(clip.external_links or {}) do
         local from,to=map[l.from] or l.from,map[l.to] or l.to
-        if kind(from)=='plate' and kind(to)=='gate' then
+        if kind(from)=='plate' and kind(to)=='gate' and open(from) and open(to) then
             e.mechanism_links[#e.mechanism_links+1]={from=from,event='active',to=to,action='open'};kept=kept+1
         else dropped=dropped+1 end
     end

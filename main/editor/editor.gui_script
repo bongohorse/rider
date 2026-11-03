@@ -581,7 +581,8 @@ local function copy_selection()
         editor.message=(editor.selection=="start" or editor.selection=="finish") and "START and FINISH are not copied: a level has one of each." or "Select objects to copy first."
         return false
     end
-    editor.clipboard=edit.copy(editor.doc.editor,ids)
+    -- The clipboard survives opening another level; source tells paste whether outside IDs mean anything.
+    editor.clipboard=edit.copy(editor.doc.editor,ids);editor.clipboard.source=editor.opened
     editor.message="Copied "..#ids.." object"..(#ids==1 and "" or "s")..". Ctrl+V pastes at the cursor."
     editor.touch()
     return true
@@ -589,7 +590,7 @@ end
 local function paste_by(d)
     local clip=editor.clipboard
     local ids,kept,dropped
-    if editor.commit(function(e) ids,kept,dropped=edit.paste(e,clip,d) end,true) then
+    if editor.commit(function(e) ids,kept,dropped=edit.paste(e,clip,d,clip.source~=editor.opened) end,true) then
         editor.select(nil)
         for _,id in ipairs(ids) do editor.selected[id]=true end
         editor.selection=ids[1];editor.touch()
@@ -2862,6 +2863,7 @@ local function render_ui(self)
     local labels={direction="Flip direction",delete="Delete [Del]",split="Split here [K]",connect="Connect [J]",disconnect="Disconnect [J]",
         smooth="Make smooth",smooth_all="Make smooth",corner_all="Make corner",convert="Convert to editable path",mirror_left="Mirror <",mirror_right="Mirror >",paste="Paste [Ctrl+V]"}
     local st=smooth_state();labels.smooth=st and not st.corner and "Make corner" or "Make smooth"
+    if self.selected_link then labels.delete="Delete link [Del]" end
     if self.confirm_convert and (self.confirm_convert~=editor.selection or self.confirm_revision~=e.revision) then self.confirm_convert=nil end
     if self.confirm_bulk and (self.confirm_bulk.key~=table.concat(editor.selected_ids(),",") or self.confirm_bulk.revision~=e.revision or editor.point_count()>=2) then self.confirm_bulk=nil end
     if self.confirm_convert then labels.convert="Sure? Convert" end

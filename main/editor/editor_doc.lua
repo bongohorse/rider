@@ -3,6 +3,7 @@
 local data=require "main.game.station_data"
 local prefab=require "main.editor.editor_prefab"
 local sample=require "main.editor.editor_sample"
+local dense=require "main.game.dense"
 -- Version 2 (LE3) adds explicit connections and compiles each connected run into one chain.
 -- Version 3 (LE5a) adds parametric prefab objects; a Kicker + landing splits its run's chain at its gap.
 -- Version 4 (LE5b) adds Bezier curves, the Bump/wave prefab, the recorded sampling settings and the
@@ -241,8 +242,14 @@ end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
 local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms"}
+-- An O1 block without any crate, plate, gate or link compiles to no block (editor 13): compare them as equal.
+local function mechanism_block(m)
+    if type(m)=='table' and type(m.crates)=='table' and next(m.crates)==nil and type(m.plates)=='table' and next(m.plates)==nil
+        and type(m.gates)=='table' and next(m.gates)==nil and type(m.links)=='table' and next(m.links)==nil then return nil end
+    return m
+end
 local function compiled(d)
-    local t={mechanisms=d.mechanisms,fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -296,6 +303,10 @@ function M.validate(doc)
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
     if type(e.objects)~="table" or #e.objects>M.MAX_OBJECTS then return nil,"Source object limit is 256; remove objects or split the document" end
+    -- #394 for version 13: crates, plates and gates live in this list, so a JSON null member (a hole) or an
+    -- object in place of the list must not hide entries from validation, compilation or the 8-per-kind cap.
+    local listed,why=dense.length(e.objects,M.MAX_OBJECTS)
+    if not listed then return nil,"Editor objects "..why end
     if e.editor_version>=4 then
         local s=e.sampling
         if type(s)~="table" or s.tolerance~=M.SAMPLING.tolerance or s.max_segment~=M.SAMPLING.max_segment then

@@ -279,9 +279,10 @@ function M.bbox(objects)
     end
     return b
 end
--- Pastes the clipboard moved by d; returns the new ids in clipboard order and the kept and dropped
+-- Pastes the clipboard moved by d (foreign: it was copied in another document, see
+-- editor_mechanisms.paste); returns the new ids in clipboard order and the kept and dropped
 -- external mechanism references. Connected ends get the same displacement, so they stay exactly equal.
-function M.paste(e,clip,d)
+function M.paste(e,clip,d,foreign)
     local map,ids={},{}
     for _,o in ipairs(clip.objects) do
         local n=doc_lib.copy(o)
@@ -292,7 +293,7 @@ function M.paste(e,clip,d)
         e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
     end
     for _,c in ipairs(clip.connections) do e.connections[#e.connections+1]={from=map[c.from],to=map[c.to]} end
-    local kept,dropped=mechanisms.paste(e,clip,map,ids)
+    local kept,dropped=mechanisms.paste(e,clip,map,ids,foreign)
     return ids,kept,dropped
 end
 -- A prefab parameter change (R4): the entry stays fixed and the whole downstream run moves by the

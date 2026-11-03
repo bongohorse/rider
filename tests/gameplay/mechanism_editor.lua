@@ -150,3 +150,52 @@ local out=A.outline(gate);assert(math.abs(out[1][2]-4)<1e-9 and math.abs(out[3][
 local a1,a2=A.travel(gate);assert(a1[2]==3 and a2[2]==7)
 assert(#E.path(gate)==4 and E.outline(gate)==nil and #E.drawn_outline(gate)==4,'no hull semantics for mechanisms')
 print('PASS picking distance, outlines, link ports and gate travel shapes')
+
+-- Review fixes (#281). The engine's json.encode writes numbers with 14 significant digits (lua-cjson %.14g):
+-- a stored crate rotation of exactly +-pi would read back as 3.1415926535898 > pi and fail the O1 check.
+local function json14(v)
+    if type(v)=='number' then return tonumber(string.format('%.14g',v)) end
+    if type(v)~='table' then return v end
+    local t={};for k,x in pairs(v) do t[k]=json14(x) end;return t
+end
+assert(not E.validate(json14((function() local r=E.copy(base);X.find(r.editor,c).angle=math.pi;return r end)())),'unclamped pi does not survive the 14-digit round trip')
+for _,deg in ipairs({'180','-180','179.9999999','-180.0'}) do
+    local r=E.copy(base);assert(A.set(r.editor,c,'angle',deg))
+    assert(math.abs(X.find(r.editor,c).angle)<=math.pi and math.abs(math.abs(X.find(r.editor,c).angle)-math.pi)<1e-8)
+    local reopened=json14(r);assert(E.validate(reopened),'rotation '..deg..' reopens after the 14-digit round trip')
+    assert(E.compile(reopened),'and still compiles')
+end
+local mr=E.copy(base);assert(A.set(mr.editor,c,'angle','180'));local mm=X.mirror(mr.editor,{c},1);assert(E.validate(json14(mr)) and X.find(mr.editor,mm[1]).angle<0)
+print('PASS crate rotation +-180 deg survives the 14-digit JSON round trip (clamped below pi)')
+
+-- Cross-level paste: another level reuses the same oN IDs, so a foreign clipboard drops every outside
+-- reference instead of wiring the copy to unrelated objects.
+d=E.copy(base);e=d.editor
+local foreign_clip=X.copy(e,{p});local other_doc=E.copy(base);local oe=other_doc.editor
+for _,o in ipairs(oe.objects) do if o.id==g then o.name='Unrelated gate in another level' end end
+local wired,wk=X.paste(E.copy(other_doc).editor,foreign_clip,{0,5},false);assert(wk==4,'same-ID objects exist in the other level (the collision)')
+local fids,fkept,fdropped=X.paste(oe,foreign_clip,{0,5},true)
+assert(fkept==0 and fdropped==4 and #A.links_of(oe,fids[1])==0 and same(X.find(oe,fids[1]).actors,{'vehicle'}))
+assert(E.validate(other_doc))
+print('PASS a clipboard from another level drops all outside references (oN collisions never wire)')
+
+-- A copy linked to a locked gate: that link is dropped and counted; the rest of the paste is kept.
+d=E.copy(base);e=d.editor;X.find(e,g).locked=true
+local before_lock=E.copy(d);local lids,lkept,ldropped=X.paste(e,X.copy(e,{p}),{0,5})
+assert(lkept==3 and ldropped==1 and #A.links_of(e,lids[1])==2 and not E.lock_conflict(before_lock.editor,e) and E.validate(d))
+print('PASS paste drops a link to a locked gate instead of refusing the whole paste')
+
+-- #394 for version 13: the object list itself must be dense.
+local holed=E.copy(base);holed.editor.objects={holed.editor.objects[1],nil,X.find(holed.editor,c)}
+local okh,whyh=E.validate(holed);assert(not okh and whyh=='Editor objects has a gap at entry 2',tostring(whyh))
+local keyed=E.copy(base);keyed.editor.objects={['1']=keyed.editor.objects[1]};okh,whyh=E.validate(keyed);assert(not okh and whyh:find('Editor objects is not a list',1,true))
+local empty=E.copy(base);empty.editor.objects={};empty.editor.mechanism_links={};assert(E.validate(empty))
+print('PASS editor.objects with a hole or string keys is refused with its cause')
+
+-- An O1 source with an empty mechanisms block opens without a false source/compiled conflict.
+local v12e=E.blank('empty-block','Empty block');v12e.editor.editor_version,v12e.editor.compiler_version=12,12
+v12e.editor.objects={{id='o1',type='line',points={{-5,0},{40,0}}}};v12e.editor.next_id=2;v12e.editor.start.position={0,1.7}
+v12e.editor.mechanisms={version=1,crates={},plates={},gates={},links={}};v12e.editor.revision=3;v12e.editor.compiled_revision=3
+local st=assert(E.compile(E.copy(v12e)));st.schema=5;st.mechanisms={version=1,crates={},plates={},gates={},links={}};st.editor=E.copy(v12e.editor)
+local od,onote,oconflict=E.open_level(st);assert(od and not oconflict,'no false conflict: '..tostring(oconflict and oconflict.summary))
+print('PASS an empty O1 mechanisms block compares equal to none')
