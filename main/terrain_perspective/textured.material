@@ -1,0 +1,18 @@
+name: "terrain_textured"
+tags: "tile"
+vertex_program: "/main/terrain_perspective/textured.vp"
+fragment_program: "/main/terrain_perspective/textured.fp"
+vertex_space: VERTEX_SPACE_LOCAL
+vertex_constants { name: "world_view_proj" type: CONSTANT_TYPE_WORLDVIEWPROJ }
+vertex_constants { name: "editor_params" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: 0 w: 0 } }
+vertex_constants { name: "look_origin" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: -10 w: 0.01 } }
+vertex_constants { name: "look_shape" type: CONSTANT_TYPE_USER value { x: 0.9 y: 0 z: 64 w: 1 } }
+vertex_constants { name: "look_camera" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: 0.18 w: 0.55 } }
+samplers {
+  name: "tex0"
+  wrap_u: WRAP_MODE_CLAMP_TO_EDGE
+  wrap_v: WRAP_MODE_CLAMP_TO_EDGE
+  filter_min: FILTER_MODE_MIN_LINEAR
+  filter_mag: FILTER_MODE_MAG_LINEAR
+  max_anisotropy: 0.0
+}

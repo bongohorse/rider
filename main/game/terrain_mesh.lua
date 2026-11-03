@@ -24,8 +24,11 @@ function M.buffer(c)
     local scale=sys.get_config_number("physics.scale",0.01)
     local streams={{name=hash("position"),type=buffer.VALUE_TYPE_FLOAT32,count=3},{name=hash("color"),type=buffer.VALUE_TYPE_FLOAT32,count=4},{name=hash("texcoord0"),type=buffer.VALUE_TYPE_FLOAT32,count=2}}
     if c.look_data then streams[#streams+1]={name=hash("look_data"),type=buffer.VALUE_TYPE_FLOAT32,count=3} end
+    -- #392 Stage A textured route: one float per vertex (family*4+face), 48 -> 52 bytes.
+    if c.texture then streams[#streams+1]={name=hash("texture_slot"),type=buffer.VALUE_TYPE_FLOAT32,count=1} end
     local b=buffer.create(c.vertices,streams)
     if c.look_data then local stream=buffer.get_stream(b,"look_data");for i,v in ipairs(c.look_data) do stream[i]=v end end
+    if c.texture then local stream=buffer.get_stream(b,"texture_slot");for i,v in ipairs(c.texture) do stream[i]=v end end
     local p,col,uv=buffer.get_stream(b,"position"),buffer.get_stream(b,"color"),buffer.get_stream(b,"texcoord0")
     for j,v in ipairs(c.position) do p[j]=v/scale end
     for j,v in ipairs(c.color) do col[j]=v end
@@ -42,7 +45,8 @@ function M.upload(entry,c,path)
         created=created+1;entry.path=path
     end
     if not entry.object then
-        entry.object=factory.create(c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
+        -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
+        entry.object=factory.create(c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2),entry.object) end
     entry.geometry=c
@@ -77,7 +81,7 @@ function M.build(self,d)
     local started=socket.gettime()
     local look=require "main.terrain_perspective.look"
     local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d)};self.terrain_mesh=state
-    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*48 end;stats.budget=require("main.game.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
+    local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*require("main.terrain_perspective.projection").stride() end;stats.budget=require("main.game.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
     local mapping=look.mapping(d);if mapping then for _,e in ipairs(entries) do e.looks=mapping[e.chain] end end
     if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
     M.update(self)
@@ -148,7 +152,7 @@ local function live_look(self,state)
         e.looks=values
     end
     state.perspective,state.params,state.baked=projected,look.params(d),look.has_sections(d)
-    state.stats.buffer_bytes=state.stats.vertices*(projected and 48 or 36)
+    state.stats.buffer_bytes=state.stats.vertices*(projected and require("main.terrain_perspective.projection").stride() or 36)
     state.stats.budget=budget
     state.look_source=d;state.revision=(state.revision or 0)+1
 end

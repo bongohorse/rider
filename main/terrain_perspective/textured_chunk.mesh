@@ -1,0 +1,5 @@
+material: "/main/terrain_perspective/textured.material"
+vertices: "/main/terrain_perspective/textured_empty.buffer"
+textures: "/main/terrain_material/kenney_terrain_64.png"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"

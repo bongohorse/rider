@@ -1,6 +1,7 @@
 -- Versioned visual-only contract for #290; #278 can reuse it after visual acceptance.
 -- World metres. The z=0 collision plane is invariant under this central projection.
 local geometry=require 'main.game.terrain_geometry'
+local material=require 'main.terrain_perspective.material'
 local M={VERSION=1,FOCAL=40,STRIDE=48,WORKING=560}
 M.DEFAULT={version=1,mode='perspective',width=.9,perspective=.35,angle=math.atan(.55)*180/math.pi,side=64,shading=1}
 M.RANGES={width={.25,2},perspective={0,1},angle={10,45},side={.25,64},shading={0,1}}
@@ -34,6 +35,8 @@ function M.bounds(base,c,p,width)
     end end
     return {b[1]-.01,b[2]-.01,b[3]+.01,b[4]+.01}
 end
+-- Bytes per uploaded vertex: 48 untextured, 52 with the #392 texture slot stream.
+function M.stride() return material.stride() end
 function M.section(prep,first,last,key,styles,looks)
     -- Retain the accepted builder, partition, front contour, colors and UV phase.
     local c=geometry.section(prep,first,last,key,true,styles)
@@ -82,6 +85,9 @@ function M.section(prep,first,last,key,styles,looks)
         end end
     end
     c.bytes,c.perspective,c.lower=c.vertices*M.STRIDE,true,prep.lower
+    -- #392 Stage A: textured route only when the temporary pilot selection is active.
+    local spec=material.spec()
+    if spec then material.apply(c,prep,first,last,spec,styles) end
     return c
 end
 return M

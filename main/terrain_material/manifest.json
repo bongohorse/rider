@@ -1,0 +1,375 @@
+{
+ "schema": 1,
+ "issue": 392,
+ "source": {
+  "name": "Kenney New Platformer Pack",
+  "version": "1.1",
+  "page": "https://kenney.nl/assets/new-platformer-pack",
+  "archive": "kenney_new-platformer-pack-1.1.zip",
+  "archive_sha256": "553b907f3f0e505ab65f56f245ccaff3123c8fe3f3a0dfce9373b996bfc18cc2",
+  "license": "CC0 1.0 Universal (see License.txt)",
+  "license_sha256": "f0bc5a99a4710f75a2d507e2ab153025af203d9a6b5a698df737a47684316077"
+ },
+ "atlas": {
+  "file": "kenney_terrain_64.png",
+  "width": 512,
+  "height": 512,
+  "tile": 64,
+  "padding": 8,
+  "cell": 80,
+  "origin": "top-left pixels; the shader flips V once",
+  "pixels_sha256": "f255ac24ea949e941b66a32a9bd8cf1835ba2991f22be4447e1cd63ba3246ae4"
+ },
+ "families": [
+  "grass",
+  "dirt",
+  "sand",
+  "snow",
+  "stone",
+  "purple"
+ ],
+ "slots": [
+  "surface",
+  "rim",
+  "side",
+  "end"
+ ],
+ "entries": [
+  {
+   "id": "kenney-v1/grass/surface",
+   "family": "grass",
+   "slot": "surface",
+   "index": 0,
+   "source": "Sprites/Tiles/Default/terrain_grass_block_top.png",
+   "source_sha256": "4eae0c24b3cac19c77025c789d9b6fcb9c1a98cdffe2a8375b32c86ebfcbdcc6",
+   "rect": [
+    8,
+    8,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/grass/rim",
+   "family": "grass",
+   "slot": "rim",
+   "index": 1,
+   "source": "Sprites/Tiles/Default/terrain_grass_horizontal_middle.png",
+   "source_sha256": "86783ffa474a524bc3f83eaf698e21aa1eec821ef911f9bc45f9099a90b7918b",
+   "rect": [
+    88,
+    8,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/grass/side",
+   "family": "grass",
+   "slot": "side",
+   "index": 2,
+   "source": "Sprites/Tiles/Default/terrain_grass_block_center.png",
+   "source_sha256": "5b8f08b5a557ce0600ae48f6702b0f3ec799484083faeca259cb7ef181ecc03b",
+   "rect": [
+    168,
+    8,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/grass/end",
+   "family": "grass",
+   "slot": "end",
+   "index": 3,
+   "source": "Sprites/Tiles/Default/terrain_grass_vertical_middle.png",
+   "source_sha256": "6eab0b0cbd00cca897afd56ba2282f5acc31665f97e391ef4d033dbb7728f7ee",
+   "rect": [
+    248,
+    8,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/dirt/surface",
+   "family": "dirt",
+   "slot": "surface",
+   "index": 4,
+   "source": "Sprites/Tiles/Default/terrain_dirt_block_top.png",
+   "source_sha256": "97d0f3db40814a56c03f9dcd5019586d248f2aab679d5489f4a6987508f1f1fe",
+   "rect": [
+    8,
+    88,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/dirt/rim",
+   "family": "dirt",
+   "slot": "rim",
+   "index": 5,
+   "source": "Sprites/Tiles/Default/terrain_dirt_horizontal_middle.png",
+   "source_sha256": "79c3022625710f0455c06c9977efcd2c5b59749c087b74b9388931fa4f03d099",
+   "rect": [
+    88,
+    88,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/dirt/side",
+   "family": "dirt",
+   "slot": "side",
+   "index": 6,
+   "source": "Sprites/Tiles/Default/terrain_dirt_block_center.png",
+   "source_sha256": "45212bc8b38c6e5f584059123355467f291bfe1d0fe28ba46e059e64e26658ea",
+   "rect": [
+    168,
+    88,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/dirt/end",
+   "family": "dirt",
+   "slot": "end",
+   "index": 7,
+   "source": "Sprites/Tiles/Default/terrain_dirt_vertical_middle.png",
+   "source_sha256": "36f3ac93092495502744275df5d8f84a21a66433ff5bcce3a39b014013f1c265",
+   "rect": [
+    248,
+    88,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/sand/surface",
+   "family": "sand",
+   "slot": "surface",
+   "index": 8,
+   "source": "Sprites/Tiles/Default/terrain_sand_block_top.png",
+   "source_sha256": "47768de322ddeb85b33fec957963e0d1fff3011a7e768ab4586773b1c8e2a52a",
+   "rect": [
+    8,
+    168,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/sand/rim",
+   "family": "sand",
+   "slot": "rim",
+   "index": 9,
+   "source": "Sprites/Tiles/Default/terrain_sand_horizontal_middle.png",
+   "source_sha256": "72165469ada1cdc6a661ae0d899fb5a8f689cebb45798d4de9f67df27206b2dd",
+   "rect": [
+    88,
+    168,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/sand/side",
+   "family": "sand",
+   "slot": "side",
+   "index": 10,
+   "source": "Sprites/Tiles/Default/terrain_sand_block_center.png",
+   "source_sha256": "8d880630ca501347410740f6ac3bbb07c825c163b1f3b586e31d033eb6996f0f",
+   "rect": [
+    168,
+    168,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/sand/end",
+   "family": "sand",
+   "slot": "end",
+   "index": 11,
+   "source": "Sprites/Tiles/Default/terrain_sand_vertical_middle.png",
+   "source_sha256": "cbab79c92c441c1fb67c948946cb120b68f079220adf43e3f72921d584e41931",
+   "rect": [
+    248,
+    168,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/snow/surface",
+   "family": "snow",
+   "slot": "surface",
+   "index": 12,
+   "source": "Sprites/Tiles/Default/terrain_snow_block_top.png",
+   "source_sha256": "51009f4ec1ce8d0b20f8b414efc1717a25c433fe7a211925cba388a34af0e4d5",
+   "rect": [
+    8,
+    248,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/snow/rim",
+   "family": "snow",
+   "slot": "rim",
+   "index": 13,
+   "source": "Sprites/Tiles/Default/terrain_snow_horizontal_middle.png",
+   "source_sha256": "699b1665ebf8e96cd361518f15cac332c6f2bb9f55ec039147a3b06455793139",
+   "rect": [
+    88,
+    248,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/snow/side",
+   "family": "snow",
+   "slot": "side",
+   "index": 14,
+   "source": "Sprites/Tiles/Default/terrain_snow_block_center.png",
+   "source_sha256": "33586434753a5acfd48bd22237501d73378256095c11b570cea5bcd2a37bbbf3",
+   "rect": [
+    168,
+    248,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/snow/end",
+   "family": "snow",
+   "slot": "end",
+   "index": 15,
+   "source": "Sprites/Tiles/Default/terrain_snow_vertical_middle.png",
+   "source_sha256": "9f850dbbbbb6a84da8e22fc47c260378f0fbc6f92bdf4e9dcac798275cad6716",
+   "rect": [
+    248,
+    248,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/stone/surface",
+   "family": "stone",
+   "slot": "surface",
+   "index": 16,
+   "source": "Sprites/Tiles/Default/terrain_stone_block_top.png",
+   "source_sha256": "e6ede2e9dbd6beec89b2b4fc13f798183ad002e1c8a1eb6692192bcd5a161101",
+   "rect": [
+    8,
+    328,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/stone/rim",
+   "family": "stone",
+   "slot": "rim",
+   "index": 17,
+   "source": "Sprites/Tiles/Default/terrain_stone_horizontal_middle.png",
+   "source_sha256": "85aa3aaeb9bb0c1ac42c07a72066eb0e8bf3edec589dcabd6ae1ae6bf2678a00",
+   "rect": [
+    88,
+    328,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/stone/side",
+   "family": "stone",
+   "slot": "side",
+   "index": 18,
+   "source": "Sprites/Tiles/Default/terrain_stone_block_center.png",
+   "source_sha256": "d9f7523736b7b28fbf5c3e9d6694a8585ca4d443c4050fee89de85ccebade222",
+   "rect": [
+    168,
+    328,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/stone/end",
+   "family": "stone",
+   "slot": "end",
+   "index": 19,
+   "source": "Sprites/Tiles/Default/terrain_stone_vertical_middle.png",
+   "source_sha256": "a5898bccb38cfd2897d4662172a8cedeafe974588e28e7a263bfea3c3dd504af",
+   "rect": [
+    248,
+    328,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/purple/surface",
+   "family": "purple",
+   "slot": "surface",
+   "index": 20,
+   "source": "Sprites/Tiles/Default/terrain_purple_block_top.png",
+   "source_sha256": "eef7ee42963dbbe0cd2763be52c6bedc79244848790cfce62d52a3501ffbd609",
+   "rect": [
+    8,
+    408,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/purple/rim",
+   "family": "purple",
+   "slot": "rim",
+   "index": 21,
+   "source": "Sprites/Tiles/Default/terrain_purple_horizontal_middle.png",
+   "source_sha256": "cd2a4b870a52d44bd2c70942805a2f3b5f5d0e2f5c5b7bf0dbee262fbd5c9ded",
+   "rect": [
+    88,
+    408,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/purple/side",
+   "family": "purple",
+   "slot": "side",
+   "index": 22,
+   "source": "Sprites/Tiles/Default/terrain_purple_block_center.png",
+   "source_sha256": "426b45eb90138b721dda2f37f503fb6faa8ee57ba3f35cbcd5261a15aca0de0c",
+   "rect": [
+    168,
+    408,
+    64,
+    64
+   ]
+  },
+  {
+   "id": "kenney-v1/purple/end",
+   "family": "purple",
+   "slot": "end",
+   "index": 23,
+   "source": "Sprites/Tiles/Default/terrain_purple_vertical_middle.png",
+   "source_sha256": "186c228b952511eb978010ef7407ca41c72bebda3188b8fdd3582cdd8882da1f",
+   "rect": [
+    248,
+    408,
+    64,
+    64
+   ]
+  }
+ ]
+}

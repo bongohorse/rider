@@ -74,7 +74,7 @@ function M.apply(state,set_bounds)
     if html5 and sys.get_engine_info().is_debug then
         local entries={}
         for _,e in ipairs(state.entries) do entries[#entries+1]={key=e.key,bounds=e.bounds,allocated=e.resource~=nil,enabled=e.enabled==true,bytes=e.geometry and e.geometry.bytes or 0} end
-        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,params=p,baked=state.baked==true,mode=p.mode,camera=c,stride=projection.STRIDE,sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
+        html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,params=p,baked=state.baked==true,mode=p.mode,camera=c,stride=projection.stride(),material=require('main.terrain_perspective.material').describe(),sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
     end
 end
 return M

@@ -43,6 +43,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | Course progress (#296) | [Route, limits, HUD and verification](reports/GAMEPLAY_G2_REPORT.md) |
 | First playable run (#279) | [Behavior, scoring, persistence and checks](reports/GAMEPLAY_G1_REPORT.md) |
 | Terrain Look (#278) | [Authoring report](reports/TERRAIN_LOOK_REPORT.md), [shared contract](contracts/road-look.md#editor-authoring) |
+| Terrain materials (#392) | [Stage A renderer spike: Kenney atlas, textured route, temporary URL pilot, measurements](reports/TERRAIN_MATERIAL_A_REPORT.md); atlas [provenance](../main/terrain_material/PROVENANCE.md) |
 | Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](reports/LE1B_REPORT.md) |
 | Splitting the editor GUI script (#331) | [E0 inventory: state, callbacks, messages, hazards, E1 candidates, Gym coverage](reports/EDITOR_E0_INVENTORY.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
@@ -103,6 +104,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [GAMEPLAY_G2_REPORT.md](reports/GAMEPLAY_G2_REPORT.md) | #296 current terrain-route position, reverse/Retry and unsupported topology | Route definition and limits · Lifecycle and display · Verification · Preview and stop point · Engine evidence |
 | [GAMEPLAY_G1_REPORT.md](reports/GAMEPLAY_G1_REPORT.md) | #279 short official course/run timer/result/best/Retry | Behavior · Scoring and storage · Verification · Preview and limits · Engine evidence |
 | [TERRAIN_LOOK_REPORT.md](reports/TERRAIN_LOOK_REPORT.md) | #278 shared Editor/Gym live menu, source styling and evidence | Authorization and preview · Controls and compatibility · Rendering and budgets · Verification · Reproduction · Limits and stop point |
+| [TERRAIN_MATERIAL_A_REPORT.md](reports/TERRAIN_MATERIAL_A_REPORT.md) | #392 Stage A textured terrain route (Kenney 1.1 atlas, 52 B vertices) and evidence | Result · Temporary pilot selection · Renderer · Measurements · Findings for later stages · Engine sources · Verification and NOT RUN |
 | [TERRAIN_PERSPECTIVE_REPORT.md](reports/TERRAIN_PERSPECTIVE_REPORT.md) | Gated #290 fixed/perspective comparison and evidence | Scope and preview · Projection and resources · Measurements · Verification · Limits and stop point · Engine sources |
 | [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Production compatibility · Editor authoring · Consumer boundary |
 | [contracts/evidence.md](contracts/evidence.md) | PASS/FAIL/BLOCKED/NOT RUN and reporting | — |
