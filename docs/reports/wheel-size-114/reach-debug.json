@@ -1,0 +1,86 @@
+{
+  "kind": "debug",
+  "web": "<local bundle>/RiderG1",
+  "results": [
+    {
+      "key": "w26",
+      "preset": "w26",
+      "modified": false,
+      "probe": {
+        "factory": "#wheel26",
+        "source_sha": "cf089ca49cf36f689970668c09aa3d01908ffdd1",
+        "preset": "w26",
+        "wheel_inertia": 0.13519997894764,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 3.9999997615814,
+        "radius_m": 0.26,
+        "art_scale": 1.1818181818182,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 55,
+        "radius_u": 26,
+        "wheel_y_u": -35
+      },
+      "debug_report": true,
+      "probe_present": true,
+      "probe_radius_u": 26,
+      "after_p": {
+        "preset": "w26",
+        "reset_count": 0,
+        "resets_before": 0
+      },
+      "errors": []
+    },
+    {
+      "key": "w30",
+      "preset": "w30",
+      "modified": false,
+      "probe": {
+        "factory": "#wheel30",
+        "source_sha": "cf089ca49cf36f689970668c09aa3d01908ffdd1",
+        "preset": "w30",
+        "wheel_inertia": 0.17999997735023,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 4,
+        "radius_m": 0.3,
+        "art_scale": 1.3636363636364,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 65,
+        "radius_u": 29.999998092651,
+        "wheel_y_u": -41
+      },
+      "debug_report": true,
+      "probe_present": true,
+      "probe_radius_u": 29.999998092651,
+      "after_p": {
+        "preset": "w30",
+        "reset_count": 0,
+        "resets_before": 0
+      },
+      "errors": []
+    },
+    {
+      "key": "a",
+      "preset": "a",
+      "modified": false,
+      "probe": {
+        "factory": "#wheel",
+        "source_sha": "cf089ca49cf36f689970668c09aa3d01908ffdd1",
+        "preset": "a",
+        "wheel_inertia": 0.096799999475479,
+        "chassis_mass_kg": 40,
+        "wheel_mass_kg": 4,
+        "radius_m": 0.22,
+        "art_scale": 1,
+        "cap_rps": 47.123889803847,
+        "camera_rest_u": 46,
+        "radius_u": 22,
+        "wheel_y_u": -30
+      },
+      "debug_report": true,
+      "probe_present": true,
+      "probe_radius_u": 22,
+      "after_p": null,
+      "errors": []
+    }
+  ]
+}

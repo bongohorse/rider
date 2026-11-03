@@ -1,0 +1,39 @@
+{
+  "kind": "release",
+  "web": "<local bundle>/RiderG1",
+  "results": [
+    {
+      "key": "w26",
+      "preset": "a",
+      "modified": false,
+      "probe": null,
+      "debug_report": true,
+      "probe_present": false,
+      "probe_radius_u": null,
+      "after_p": null,
+      "errors": []
+    },
+    {
+      "key": "w30",
+      "preset": "a",
+      "modified": false,
+      "probe": null,
+      "debug_report": true,
+      "probe_present": false,
+      "probe_radius_u": null,
+      "after_p": null,
+      "errors": []
+    },
+    {
+      "key": "a",
+      "preset": "a",
+      "modified": false,
+      "probe": null,
+      "debug_report": true,
+      "probe_present": false,
+      "probe_radius_u": null,
+      "after_p": null,
+      "errors": []
+    }
+  ]
+}

@@ -157,4 +157,23 @@ This work added new Defold API uses: the read-only debug probe and dynamic facto
 
 ## Verification
 
-VERIFICATION_PLACEHOLDER
+All local, WSL2 Ubuntu, pinned toolchain, loopback Extender. Evidence directories under `artifacts/` are local and not committed; committed summaries are in [reports/wheel-size-114/](../reports/wheel-size-114/).
+
+| Check | Source | Result |
+| --- | --- | --- |
+| `tools/local.py check` (bootstrap, Lua lint, Python G1/G2/CI, Node CI/mobile/preview units, gameplay Lua) | `cf089ca` | PASS |
+| `tools/ci/lint_lua.py` | `cf089ca` | PASS (141 files) |
+| `tools/gameplay/lua_tests.py` (incl. new `wheel_candidates.lua`) | `cf089ca` | PASS 26/26 |
+| `unittest discover` bootstrap / ci / g1 / g2 | `cf089ca` | PASS (58 / 66 / 61 / 38 tests) |
+| `node --test tests/ci/*.cjs` (incl. new `wheel114.test.cjs`) · `tests/mobile/*.cjs` | `cf089ca` | PASS 237/237 · 3/3 |
+| `tools/local.py gym --case a22,a16,a19,a19c,a21,a20,a15,a17,a18,a19b,a19d,a9,a9invalid,a3,a6,coast,coast345,cf3,le2 --jobs 1` (preset A, CI protocols, one fresh debug bundle) | `cf089ca` | PASS 19/19 |
+| `a22` measured fields vs main CI artifact (`f3f793b`) | `23b8696` | identical except render `frames_per_tick` |
+| `smoke.py --case w114 --preset a / w26 / w30` + `wheel114_report.cjs` | `23b8696` | PASS ×3 (tables above) |
+| `presets_compare.cjs --candidates w26,w30 --stations ramps,gaps,air` | `23b8696` | FAIL overall: ramps W26/W30 stop at the camera352 B Retry-framing check ([above](#existing-station-runners)); gaps and air PASS for all |
+| `tools/local.py physics --target html5` (G1, both scales, isolated and players modes) | `cf089ca` | first run FAIL ("Missing browser completion" in every config, directly after a local release build left `build/` and `.internal/`); after removing those ignored directories PASS 32/32 |
+| `tools/local.py build --target html5 --configuration release` | `cf089ca` | PASS (engine guard) |
+| Ad-hoc reachability check (Playwright, bundle served without Gym injection, `?preset=w26/w30/a&wheel114=1`) | `cf089ca` | release: preset `a` for all three, HUD "Invalid URL: A", no debug probe ([JSON](../reports/wheel-size-114/reach-release.json), [screenshot](../reports/wheel-size-114/release-w26-falls-back-to-a.png)); debug: `w26`/`w30` active, shape radius read back 26 / 30 u, P refused without reset, HUD "reload to change" ([JSON](../reports/wheel-size-114/reach-debug.json), [screenshot](../reports/wheel-size-114/debug-w30-p-refused.png)) |
+
+`cf089ca` adds only this report and its evidence to `23b8696`; the game and tool sources measured at `23b8696` are unchanged.
+
+**NOT RUN:** GitHub CI / `required` (no push in this task), Android build and device, real touch, human drive (pending: [drive test](#drive-test)), A21 ghost replay with a candidate, candidates on a17/a18/a19b/a19d, the editor Play path with a candidate.
