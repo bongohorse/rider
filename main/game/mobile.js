@@ -22,6 +22,14 @@
   window.addEventListener('blur',()=>{pending.background=true;abort('focus lost');});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){pending.background=true;abort('page hidden');}});
   window.addEventListener('resize',()=>{abort('viewport changed; restart capture');if(enabled)syncOrientation();});
+  // #359: the picture stays landscape. Browsers allow screen.orientation.lock() only in
+  // fullscreen and drop the lock again when fullscreen ends (W3C Screen Orientation §9).
+  // Absent API, refusal (desktop, iOS, unsupported) or a synchronous throw is ignored
+  // without any message; the portrait guard below still blocks input where no lock holds.
+  document.addEventListener('fullscreenchange',()=>{
+    if(!document.fullscreenElement)return;
+    try{screen.orientation?.lock?.('landscape')?.catch?.(()=>{});}catch{}
+  });
   function summary(values){
     const sorted=[...values].sort((a,b)=>a-b);
     return {samples:sorted.length,mean:values.reduce((a,b)=>a+b,0)/values.length,
@@ -135,8 +143,9 @@
     #rider-mobile.editing .readout{display:none}
     #rider-mobile.editing .measure,#rider-mobile.editing .tilt-panel{display:none}
     #app-container.mobile-driving #page-tools{display:none}
-    #rider-mobile-rotate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:#101820;color:#fff;text-align:center;font:600 20px system-ui;pointer-events:auto;touch-action:none}
-    #rider-mobile-rotate[hidden]{display:none}
+    #rider-mobile.portrait{visibility:hidden}
+    #rider-mobile-portrait-block{position:fixed;inset:0;z-index:2147483647;background:transparent;pointer-events:auto;touch-action:none}
+    #rider-mobile-portrait-block[hidden]{display:none}
   `;
   document.head.append(style);
   document.getElementById('app-container')?.classList.add('mobile-driving');
@@ -296,14 +305,13 @@
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
   window.addEventListener('resize',positionOverlays);
   positionOverlays();
-  // The overlay is deliberately outside the HUD so it also blocks canvas/editor taps.
+  // Portrait shows no prompt (#359, Claudio 2026-11-03): the touch HUD is hidden and a
+  // transparent, text-free layer outside the HUD swallows canvas/editor taps.
   // The loader already implements an idempotent 'run_focus_lost' suspend; reuse it
   // instead of toggling pause or introducing a second physics/time-step owner.
-  const rotate=document.createElement('div');
-  rotate.id='rider-mobile-rotate';rotate.hidden=true;rotate.tabIndex=-1;
-  rotate.setAttribute('role','alert');rotate.setAttribute('aria-live','assertive');
-  rotate.textContent='Rotate your device — Rider is landscape only';
-  (document.getElementById('app-container')||document.body).append(rotate);
+  const block=document.createElement('div');
+  block.id='rider-mobile-portrait-block';block.hidden=true;block.setAttribute('aria-hidden','true');
+  (document.getElementById('app-container')||document.body).append(block);
   function syncOrientation(){
     const portrait=window.innerHeight>window.innerWidth;
     if(portrait===api.blocked)return;
@@ -313,12 +321,11 @@
     for(const key of Object.keys(pending))delete pending[key];
     pending.clear=true;
     if(portrait)pending.background=true;
-    rotate.hidden=!portrait;
-    if(portrait){
-      document.activeElement?.blur?.();rotate.focus({preventScroll:true});
-    }else document.querySelector('canvas')?.focus();
+    block.hidden=!portrait;root.classList.toggle('portrait',portrait);
+    if(portrait)document.activeElement?.blur?.();
+    else document.querySelector('canvas')?.focus();
   }
-  // Do not allow keyboard gameplay shortcuts to bypass the portrait touch blocker.
+  // Do not allow keyboard gameplay shortcuts to bypass the portrait input block.
   for(const type of ['keydown','keyup'])window.addEventListener(type,e=>{
     if(api.blocked){e.preventDefault();e.stopImmediatePropagation();}
   },true);
