@@ -203,7 +203,7 @@ class WheelCandidates(unittest.TestCase):
         self.assertEqual(set(self.GEOMETRY), {'default', *DEBUG})
 
     def test_candidate_resources_match_their_geometry(self):
-        wheel_go = (GAME/'wheel.go').read_text()
+        wheel_go = (GAME/'wheel_view.go').read_text()
         base = float(re.search(r'scale \{ x: ([\d.]+)', wheel_go).group(1))
         controller = (GAME/'controller.go').read_text()
         for key in DEBUG:
@@ -219,12 +219,15 @@ class WheelCandidates(unittest.TestCase):
                 # Same body as the shipped wheel (mass, friction, filter); only the shape differs.
                 self.assertEqual((GAME/f'wheel{r}.collisionobject').read_text(),
                                  (GAME/'wheel.collisionobject').read_text().replace('wheel.convexshape', f'wheel{r}.convexshape'))
-                go = (GAME/f'wheel{r}.go').read_text()
-                self.assertIn(f'"/main/game/wheel{r}.collisionobject"', go)
+                self.assertIn(f'"/main/game/wheel{r}.collisionobject"', (GAME/f'wheel{r}.go').read_text())
+                # #479: the sprite lives on the sprite-only visual twin (wheel{r}_view), spawned beside the body.
+                go = (GAME/f'wheel{r}_view.go').read_text()
                 self.assertIn('"/main/game/wheel.sprite"', go)
                 self.assertAlmostEqual(float(re.search(r'scale \{ x: ([\d.]+)', go).group(1)), base*r/22, places=8)
                 self.assertEqual((GAME/f'wheel{r}.factory').read_text(), f'prototype: "/main/game/wheel{r}.go"\nload_dynamically: true\n')
                 self.assertIn(f'components {{ id: "wheel{r}" component: "/main/game/wheel{r}.factory" }}', controller)
+                self.assertEqual((GAME/f'wheel{r}_view.factory').read_text(), f'prototype: "/main/game/wheel{r}_view.go"\nload_dynamically: true\n')
+                self.assertIn(f'components {{ id: "wheel{r}_view" component: "/main/game/wheel{r}_view.factory" }}', controller)
 
 
 if __name__ == '__main__':

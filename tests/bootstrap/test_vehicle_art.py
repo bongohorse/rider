@@ -41,7 +41,7 @@ class VehicleArt(unittest.TestCase):
         sprite = (ROOT/'main/game/wheel.sprite').read_text()
         size = float(re.search(r'size\s*\{\s*x:\s*([0-9.]+)', sprite)[1])
         radius = float(re.search(r'^data:\s*([0-9.]+)', (ROOT/'main/game/wheel.convexshape').read_text(), re.M)[1])
-        for name in ('wheel', 'ghost_wheel'):
+        for name in ('wheel_view', 'ghost_wheel'):
             source = (ROOT/f'main/game/{name}.go').read_text()
             scale = re.search(r'scale \{ x: ([0-9.]+) y: ([0-9.]+)', source)
             self.assertEqual(scale[1], scale[2])
@@ -56,6 +56,28 @@ class VehicleArt(unittest.TestCase):
                     cx = sum(x*alpha.getpixel((x,y)) for y in range(h) for x in range(w))/mass
                     cy = sum(y*alpha.getpixel((x,y)) for y in range(h) for x in range(w))/mass
                     self.assertLessEqual(max(abs(cx-(w-1)/2), abs(cy-(h-1)/2)), 0.25)
+
+    def test_physics_objects_carry_no_sprite_and_views_keep_the_old_ones(self):
+        # #479: the physics game objects keep only their collision object; each sprite moved unchanged (same component,
+        # offset and scale) to a sprite-only visual twin spawned by its own factory on the controller.
+        sprites = {
+            'chassis': 'components { id: "sprite" component: "/main/game/chassis.sprite" position { x: 0 y: -4 z: 0 } }\n',
+            'wheel': 'components { id: "sprite" component: "/main/game/wheel.sprite" scale { x: 0.919791667 y: 0.919791667 z: 1 } }\n',
+            'wheel26': 'components { id: "sprite" component: "/main/game/wheel.sprite" scale { x: 1.087026516 y: 1.087026516 z: 1 } }\n',
+            'wheel30': 'components { id: "sprite" component: "/main/game/wheel.sprite" scale { x: 1.254261364 y: 1.254261364 z: 1 } }\n',
+        }
+        controller = (ROOT/'main/game/controller.go').read_text()
+        for name, sprite in sprites.items():
+            with self.subTest(object=name):
+                self.assertEqual((ROOT/f'main/game/{name}.go').read_text(),
+                                 f'components {{ id: "body" component: "/main/game/{name}.collisionobject" }}\n')
+                self.assertEqual((ROOT/f'main/game/{name}_view.go').read_text(), sprite)
+                factory = (ROOT/f'main/game/{name}_view.factory').read_text()
+                self.assertTrue(factory.startswith(f'prototype: "/main/game/{name}_view.go"\n'))
+                # The view loads like its physics twin (the debug wheel candidates load dynamically).
+                self.assertEqual('load_dynamically: true' in factory,
+                                 'load_dynamically: true' in (ROOT/f'main/game/{name}.factory').read_text())
+                self.assertIn(f'components {{ id: "{name}_view" component: "/main/game/{name}_view.factory" }}', controller)
 
     def test_body_and_rider_preserve_aspect_ratio(self):
         for sprite, name in [('chassis', 'body'), ('rider', 'rider')]:

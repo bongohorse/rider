@@ -21,6 +21,8 @@ local camera_settings=require "main.game.camera_settings"
 -- update()/render cadence only; fixed_update physics stays at engine.fixed_update_frequency = 60.
 local function send_fps_cap(self,changed,saved)
     msg.post("#ui","fps_cap",{cap=self.settings.fps_cap,changed=changed,saved=saved,status=self.settings.status})
+    -- #479: the controller interpolates its presentation at every cap except 60 (render-only, never physics).
+    if self.world_alive then msg.post(OWNER,"fps_cap",{cap=self.settings.fps_cap}) end
 end
 -- #444: counter ON/OFF and normalised position, from the same player-settings file.
 local function send_fps_counter(self,saved)
@@ -460,6 +462,7 @@ function on_message(self,id,data,sender)
         self.world_alive=true
         local camera=camera_settings.copy(self.settings.camera);camera.seq=self.camera_seq or 0
         msg.post("gym:/owner#script","camera_settings",camera)
+        msg.post("gym:/owner#script","fps_cap",{cap=self.settings.fps_cap}) -- #479: every new world starts with the cap
         msg.post(sender,"enable")
     elseif id==hash("gym_ready") and data.generation==self.generation then
         self.loading=false

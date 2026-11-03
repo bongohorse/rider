@@ -10,7 +10,7 @@ M.center_y,M.radius=56,12
 M.base=vmath.vector3(0,20,-0.1)
 function M.spawn(v)
     v.ids.rider=factory.create("#rider",M.base)
-    go.set_parent(v.ids.rider,v.ids.chassis,false)
+    go.set_parent(v.ids.rider,v.view.chassis,false) -- #479: the visual chassis, never the physics game object
 end
 function M.attach(v)
     local mass=b2d.body.get_mass(v.chassis)

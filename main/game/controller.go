@@ -5,6 +5,10 @@ components { id: "chassis" component: "/main/game/chassis.factory" }
 components { id: "wheel" component: "/main/game/wheel.factory" }
 components { id: "wheel26" component: "/main/game/wheel26.factory" }
 components { id: "wheel30" component: "/main/game/wheel30.factory" }
+components { id: "chassis_view" component: "/main/game/chassis_view.factory" }
+components { id: "wheel_view" component: "/main/game/wheel_view.factory" }
+components { id: "wheel26_view" component: "/main/game/wheel26_view.factory" }
+components { id: "wheel30_view" component: "/main/game/wheel30_view.factory" }
 components { id: "rider" component: "/main/game/rider.factory" }
 components { id: "marker" component: "/main/game/marker.factory" }
 components { id: "engine" component: "/main/game/engine.sound" }

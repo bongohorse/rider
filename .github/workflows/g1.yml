@@ -260,6 +260,8 @@ jobs:
             cases: 'fps417 fps444'
           - group: camera
             cases: 'cam443'
+          - group: interpolation
+            cases: 'interp479'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -379,6 +381,9 @@ jobs:
       - name: Switch camera A/B and step a camera setting while driving; identical physics and replay, reload, reset, no drive input
         if: contains(format(' {0} ', matrix.cases), ' cam443 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/camera --case cam443
+      - name: Replay one drive at every FPS cap; identical physics, exact presentation at 60, interpolated and smoother elsewhere
+        if: contains(format(' {0} ', matrix.cases), ' interp479 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/interpolation --case interp479
       - name: Measure ramp ladders and neutral downhill starts
         if: contains(format(' {0} ', matrix.cases), ' a16 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/ramps --case a16

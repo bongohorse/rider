@@ -21,6 +21,8 @@ local editor_view = require "main.editor.editor_view"
 local juice = require "main.game.juice"
 -- A21 record and replay: one more command source in this tick owner; the recording lives on self.replay.
 local replay=require "main.game.replay"
+-- #479: render-only interpolation of the visual vehicle (and ghost) between the last two fixed ticks.
+local present=require "main.game.present"
 local race=require "main.game.run_runtime"
 local progress=require "main.game.progress_runtime"
 -- A20 pause/slow motion: the loader owns the proxy time step; this owner clears input on every pause change.
@@ -50,6 +52,12 @@ local function active_camera(self)
     if self.camera352_mode then return self.camera352_mode,camera_settings.DEFAULTS end
     local c=self.camera_settings or camera_settings.DEFAULTS
     return c.mode,c
+end
+-- #479: interpolate at every player cap except 60 (where the presentation stays exactly the physics transform); off
+-- until the loader reports the cap. The debug HTML5 URL `interp479=on|off` forces it for the interp479 measurement.
+local function interpolating(self)
+    if self.interp479_force~=nil then return self.interp479_force end
+    return self.fps_cap~=nil and self.fps_cap~=60
 end
 -- Follow camera at the start of an attempt (first start, Retry, section): the view it will settle on,
 -- over the station surface below the start. The look-ahead starts on the start speed's side.
@@ -222,6 +230,9 @@ local function setup(self)
     if self.testcase ~= "a1" then
         local spawned,spawn_err=pcall(function()
             self.vehicle = vehicle.spawn()
+            local v=self.vehicle
+            present.track(self.present,v.ids.chassis,v.view.chassis)
+            for i=1,2 do present.track(self.present,v.ids[i],v.view[i]) end
             if self.station.seesaw then self.seesaw=seesaw.spawn(self.station.seesaw) end
             if self.station.mechanisms then self.mechanisms=mechanisms.spawn(self.station.mechanisms) end
         end)
@@ -253,6 +264,17 @@ function init(self)
         self.replay_debug=true
         self.camera_probe=require "main.gym.camera_probe352"
         self.drive443=require("main.gym.camera_drive443").new()
+    end
+    self.present=present.new()
+    -- #479 (interp479): debug-only scripted drive and read-only presentation probe; `interp479=on|off` forces the mode.
+    if sys.get_engine_info().is_debug and html5 then
+        local force=html5.run("new URLSearchParams(location.search).get('interp479') || ''")
+        if force=="on" or force=="off" then self.interp479_force=force=="on" end
+    end
+    if self.testcase=="interp479" then
+        assert(sys.get_engine_info().is_debug and html5,"interp479 needs debug HTML5")
+        self.replay_debug=true
+        self.interp479=require("main.gym.interp_probe479").new()
     end
     if self.testcase=="fps356runtime" then
         self.fps356runtime=require "main.gym.fps_runtime356"
@@ -355,6 +377,7 @@ function init(self)
     msg.post(".", "acquire_input_focus")
 end
 function update(self, dt)
+    present.frame(self.present,dt)
     if self.fps356 then self.fps356.update(self.fps356_state,self,dt) end
     if not self.ready then setup(self); return end
     if self.edit then editor_view.update(self);return end
@@ -420,13 +443,14 @@ function update(self, dt)
             stations.restart(self)
         end)
         if not placed then fail_placement(self,err);return end
+        present.snap(self.present)
         start_camera(self)
         self.finish_prev,self.finish_done,self.attempt_time=nil,false,0
         race.ready(self)
         require('main.game.coin_runtime').reset(self)
         progress.reset(self)
         msg.post("main:/loader#script","gym_ready",{ok=true,generation=self.session_generation})
-        self.target = self.vehicle.ids.chassis
+        self.target = self.vehicle.view.chassis -- #479: the camera follows the presented (visual) chassis
         if self.load.requested then self.load.switch_ms=(socket.gettime()-self.load.requested)*1000 end
         -- Load timings use socket.gettime (1 ms steps on HTML5); switch is absent without a trigger (page load).
         -- A separate message keeps the measurements payload clear of msg.post's 2 KiB cap.
@@ -443,6 +467,12 @@ function update(self, dt)
             stations.restart(self)
             html5.run("window.riderSweep="..json.encode(result))
         end
+    end
+    if self.vehicle then
+        -- #479: place the visual vehicle and ghost before the camera, rider and struts read them.
+        local on=interpolating(self)
+        present.show(self.present,on)
+        replay.show_ghost(self,self.present.u,on)
     end
     local target = go.get_position(self.target)
     if self.vehicle and self.vehicle.ready then
@@ -462,6 +492,7 @@ function update(self, dt)
         if self.camera_probe then
             self.camera_probe.sample(self,target,velocity,pos,camera.get_projection("/camera#camera"),dt)
         end
+        if self.interp479 then self.interp479.frame(self,dt,interpolating(self)) end
     elseif self.station then
         -- Until the vehicle is ready the view waits where its start will settle, following the focus in x.
         start_camera(self)
@@ -608,6 +639,7 @@ function on_input(self, action_id, action)
     if self.scenario then self.scenario.input(self,action_id,action) end
 end
 function fixed_update(self, dt)
+    present.tick(self.present,dt)
     if self.measure_case then assert(math.abs(dt*60-1)<1e-4,"Measurement case ticked at time factor "..dt*60) end
     self.world_time,self.fixed_ticks=self.world_time+dt,self.fixed_ticks+1
     if self.fps356 then self.fps356.fixed(self.fps356_state,dt) end
@@ -617,6 +649,7 @@ function fixed_update(self, dt)
         local state = vehicle.state(self.vehicle)
         if self.camera_probe then self.camera_probe.fixed(self,state,dt) end
         if self.wheel_probe then self.wheel_probe.fixed(self,state,dt) end
+        if self.interp479 then self.interp479.fixed(self,state) end
         if self.scenario then self.scenario.check_pose(self,state) end
         race.observe(self,dt)
         require('main.game.fuel_runtime').observe(self)
@@ -699,7 +732,7 @@ function fixed_update(self, dt)
             end
         end
         if self.coast_measure then self.coast_measure.before(self,dt) end
-        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or self.wheel_probe and self.wheel_probe.command(self) or self.drive443 and self.drive443.command(self) or command(self)
+        self.last_command = replay.command(self,dt) or self.coast_measure and self.coast_measure.command(self) or self.balance_trial and self.balance_trial.command(self) or self.seam_trial and self.seam_trial.command(self.station,self.testcase=="a18") or self.ramp_trial and self.ramp_trial.command(self.station) or self.air_trial and self.air_trial.command(self) or self.regress and self.regress.command(self) or self.wheel_probe and self.wheel_probe.command(self) or self.drive443 and self.drive443.command(self) or self.interp479 and self.interp479.command(self) or command(self)
         self.last_command=race.command(self,self.last_command,dt)
         replay.after_command(self,self.last_command,dt)
         require('main.game.fuel_runtime').command(self,self.last_command,dt)
@@ -715,6 +748,7 @@ function fixed_update(self, dt)
     end
     if self.scenario then self.scenario.fixed(self,dt) end
     if self.time_probe then self.time_probe.fixed(self,dt) end
+    if self.vehicle then present.capture(self.present) end
 end
 function final(self)
     if self.fps356runtime then self.fps356runtime.restore(self) end
@@ -768,6 +802,7 @@ function on_message(self,id,data,sender)
     elseif id==hash("clear_input") then self.held={};self.mobile={};mobile.clear();msg.post("main:/loader#ui","cancel_drag")
     elseif id==hash("feedback_status") then self.feedback_status=data.status;self.feedback_visible=data.visible
     elseif id==hash("tune") then race.practice(self,"Live tuning");self.pending_tuning=data
+    elseif id==hash("fps_cap") then self.fps_cap=data.cap -- #479: the player's cap, from the loader (render-only)
     elseif id==hash("camera_settings") then
         -- #443: render-only camera choice and settings from the loader (player settings). Not tuning: the run stays
         -- comparable, replays and records are untouched, nothing reaches a body or the fixed tick.

@@ -69,19 +69,25 @@ local function clear_input(self) self.held={};self.mobile={};mobile.clear(true) 
 -- Ghost: sprite-only game objects (no collision object, no body); 4 sprites while a replay exists.
 local function ghost_delete(r)
     if r.ghost then for _,id in ipairs(r.ghost) do go.delete(id) end end
-    r.ghost=nil
+    r.ghost,r.ghost_from,r.ghost_to=nil,nil,nil
 end
-local function ghost_place(r,rec,index)
+-- Placed in the fixed tick at the recorded post-step pose. #479: the previous placement is kept, so the render frame
+-- can show the ghost between the same two ticks as the live vehicle (M.show_ghost).
+local function ghost_place(r,rec,index,tick)
     if not r.ghost then return end
     local s=scale()
     local base=M.POSE*(index-1)
+    local poses={}
     for k,id in ipairs(r.ghost) do
         local o=base+3*(k-1)
-        go.set_position(vmath.vector3(rec.pose[o+1]/s,rec.pose[o+2]/s,GHOST_Z+(k>1 and 0.1 or 0)),id)
-        go.set_rotation(vmath.quat_rotation_z(rec.pose[o+3]),id)
+        local p,q=vmath.vector3(rec.pose[o+1]/s,rec.pose[o+2]/s,GHOST_Z+(k>1 and 0.1 or 0)),vmath.quat_rotation_z(rec.pose[o+3])
+        go.set_position(p,id)
+        go.set_rotation(q,id)
+        poses[k]={p,q}
     end
+    r.ghost_from,r.ghost_to,r.ghost_tick=r.ghost_to or poses,poses,tick
 end
-local function ghost_create(r,rec)
+local function ghost_create(r,rec,tick)
     ghost_delete(r)
     r.ghost={factory.create("#ghost_chassis"),factory.create("#ghost_wheel"),factory.create("#ghost_wheel")}
     -- #114 debug wheel candidates: the ghost wheels match the larger wheel art (A-F keep the default scale).
@@ -92,7 +98,7 @@ local function ghost_create(r,rec)
         if k==1 then go.set(msg.url(nil,id,"rider"),"tint",GHOST_TINT) end
     end
     r.ghost_sprites=4
-    ghost_place(r,rec,1)
+    ghost_place(r,rec,1,tick)
 end
 
 local function store_pose(rec,k,q)
@@ -205,7 +211,7 @@ function M.on_reset(self,reason)
         local t=tuning()
         r.play={rec=rec,first=self.fixed_ticks,index=0,preset=self.preset,modified=self.modified or false,same=identity(t)==rec.identity,
             max_position_m=0,max_angle_rad=0,final_dx_m=0,final_position_m=0,mismatches=0,scaled_ticks=0,fault=debug_spec(self).fault}
-        ghost_create(r,rec)
+        ghost_create(r,rec,self.fixed_ticks)
         clear_input(self)
     end
 end
@@ -246,7 +252,7 @@ function M.after_command(self,command,dt)
             p.mismatches=p.mismatches+1
         end
         p.applied=k
-        ghost_place(r,rec,math.min(k+1,poses(rec)))
+        ghost_place(r,rec,math.min(k+1,poses(rec)),self.fixed_ticks)
     end
     local rec=r.rec
     if not (rec and rec.active) then return end
@@ -308,6 +314,19 @@ function M.tuned(self)
     if r.play and not r.play.ended then r.play.tuning_changed=true end
 end
 function M.replaying(self) local p=self.replay.play;return p~=nil and not p.ended end
+-- #479, render frame: with interpolation on, the ghost is shown at the same fraction u of the last fixed step as the
+-- live vehicle, between its previous and current placement, if the last tick placed it; otherwise (and with
+-- interpolation off) exactly at its last placement, as before. Sprite-only game objects, no body.
+function M.show_ghost(self,u,on)
+    local r=self.replay
+    if not (r.ghost and r.ghost_to) then return end
+    local blend=on and u<1 and r.ghost_tick==self.fixed_ticks
+    for k,id in ipairs(r.ghost) do
+        local a,b=r.ghost_from[k],r.ghost_to[k]
+        if blend then go.set_position(vmath.lerp(u,a[1],b[1]),id);go.set_rotation(vmath.slerp(u,a[2],b[2]),id)
+        else go.set_position(b[1],id);go.set_rotation(b[2],id) end
+    end
+end
 
 -- Short HUD line (well under msg.post's 2 KiB cap).
 function M.status(self,dt)

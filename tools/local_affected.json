@@ -227,6 +227,15 @@
    ]
   },
   {
+   "name": "render interpolation runner",
+   "cases": [
+    "interp479"
+   ],
+   "paths": [
+    "tools/gym/interp479.cjs"
+   ]
+  },
+  {
    "name": "coasting measurements",
    "cases": [
     "coast345"

@@ -6,21 +6,29 @@ local feel = require "main.game.feel"
 M.config = feel.values
 function M.spawn()
     local c = M.config
-    local v = {ids = {}, wheels = {}, joints = {}}
-    v.ids.chassis = factory.create("#chassis", vmath.vector3(c.spawn_x, c.spawn_y, 0))
+    local v = {ids = {}, view = {}, wheels = {}, joints = {}}
+    -- #479: ids are the physics game objects (collision objects only); view holds the sprite-only visual game objects
+    -- at the same poses, which the owner moves in update (present.lua). The rider and struts are children of view.chassis.
+    local at=vmath.vector3(c.spawn_x, c.spawn_y, 0)
+    v.ids.chassis = factory.create("#chassis", at)
+    v.view.chassis = factory.create("#chassis_view", at)
     rider.spawn(v)
     -- The wheel factory follows the preset's wheel geometry (feel.geometry, #114): "#wheel" for A-F, an authored
-    -- larger wheel for the debug-only candidates. A world keeps its wheels; another geometry needs a new world.
+    -- larger wheel for the debug-only candidates (each with its "_view" sprite twin). A world keeps its wheels;
+    -- another geometry needs a new world.
     v.wheel_factory=c.wheel_factory
     for i,x in ipairs(c.wheel_x) do
-        v.ids[i] = factory.create(c.wheel_factory, vmath.vector3(c.spawn_x+x, c.spawn_y+c.wheel_y, 1))
+        at=vmath.vector3(c.spawn_x+x, c.spawn_y+c.wheel_y, 1)
+        v.ids[i] = factory.create(c.wheel_factory, at)
+        v.view[i] = factory.create(c.wheel_factory.."_view", at)
     end
     return v
 end
 -- Removes a vehicle that could not be placed; its bodies and joints go with the game objects.
 function M.remove(v)
     go.delete(v.ids.chassis,true)
-    for i=1,2 do go.delete(v.ids[i]) end
+    go.delete(v.view.chassis,true)
+    for i=1,2 do go.delete(v.ids[i]);go.delete(v.view[i]) end
 end
 local function body(id) return b2d.get_body(msg.url(nil,id,"body")) end
 local function joints(v)
