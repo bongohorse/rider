@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
-const {configure}=require('./launch.cjs'),pointer=require('./pointer.cjs'),ui=require('./editor_ui_target.cjs');
+const {configure}=require('./launch.cjs'),pointer=require('./pointer.cjs'),ui=require('./editor_ui_target.cjs'),storage=require('./storage.cjs');
 const [bundleArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg);
 fs.mkdirSync(out,{recursive:true});
 if(bundleArg==='--fixtures'){
@@ -94,7 +94,7 @@ function probes(){
   await button('import');await page.waitForFunction(()=>window.riderCustom.visible);
   await page.locator('#rider-custom-file').setInputFiles({name:'long-over-budget.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(over))});
   await page.waitForFunction(()=>!window.riderCustom.visible);await page.waitForTimeout(1100);await editReady();
-  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()!=='syncing');
+  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()!=='syncing');await storage.durable(page);
   const rejected=await ed();assert.ok(!legacy?rejected.errors.length===0:rejected.errors.some(e=>e.includes('Station render budget exceeds 800 objects')),JSON.stringify(rejected.errors));
   report.rejected={id:'long-over-budget',source_bytes:Buffer.byteLength(JSON.stringify(over)),errors:rejected.errors,view:rejected.view,source_saved:true,paths:await page.evaluate(()=>window.riderEditorPaths)};
   if(legacy){await key('e');await pointer.frames(page);const still=await ed();assert.equal(still.mode,'edit');assert.equal(still.view.generation,rejected.view.generation);report.rejected.play_refused=true;}else report.rejected.now_admitted=true;
@@ -148,7 +148,7 @@ function probes(){
    for(let i=0;i<6;i++){
     if(!await page.evaluate(()=>window.riderCustom.visible))await page.evaluate(()=>window.riderCustom.open());
     const t=await page.evaluate(body=>{const p=window.__p0,before=p.ready.length,at=performance.now();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();return {at,before};},body);
-    await page.waitForFunction(n=>window.__p0.ready.length>n,t.before);await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry?.session_generation&&window.riderTelemetry.sequence>2);await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+    await page.waitForFunction(n=>window.__p0.ready.length>n,t.before);await page.waitForFunction(()=>window.riderCustomStatus==='Saved'&&window.riderLoad?.generation===window.riderTelemetry?.session_generation&&window.riderTelemetry.sequence>2);await storage.durable(page);
     r.imports.push(await page.evaluate(t=>({ready_ms:window.__p0.ready[t.before].at-t.at,callback_max_ms:Math.max(...window.__p0.frames.filter(f=>f.at>=t.at&&f.at<=window.__p0.ready[t.before].at).map(f=>f.work)),lua:window.riderLoad,counts:{shapes:window.riderTelemetry.terrain_shapes,sprites:window.riderTelemetry.decor_sprites,labels:window.riderTelemetry.decor_labels,meshes:window.riderTerrainMesh?.chunks,buffer_bytes:window.riderTerrainMesh?.buffer_bytes},mesh:window.riderTerrainMesh,residency:window.riderTerrainResources,lifecycle:window.riderTerrainMeshLifecycle,webgl_buffers:{created:window.__p0.gl_created,deleted:window.__p0.gl_deleted,live:window.__p0.gl_live.size,bytes:[...window.__p0.gl_sizes.values()].reduce((n,b)=>n+b,0)}}),t));
    }
    assert.ok(r.imports.every(x=>x.counts.shapes===r.segments+r.hulls),'shape count');for(const x of r.imports)assert.deepEqual(x.counts,r.imports[0].counts,'stable repeated allocation');assert.equal(r.imports[0].counts.sprites,(mesh?0:r.segments)+r.hull_vertices+1);if(mesh){for(const x of r.imports){assert.equal(x.mesh.generation,x.lua.generation);assert.equal(x.lifecycle.owned,resident?x.residency.counts.allocated:x.mesh.chunks);if(resident){assert.ok(x.residency.counts.cached<=2);assert.ok(x.residency.counts.allocated<=x.mesh.chunks);}assert.equal(x.mesh.buffer_bytes,(r.segments*18+r.chains*12)*36);}assert.equal(r.imports[0].counts.meshes,JSON.parse(body).chains.reduce((n,c)=>n+Math.ceil((c.length-1)/64),0));}assert.equal(r.imports[0].counts.labels,r.labels+1);

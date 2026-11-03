@@ -1,6 +1,7 @@
 // LE3: draw tool, connections, snapping and live validation in the debug HTML5 gym (level-editor contract R4-R7, R16, R17).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -342,8 +343,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.waitForFunction(()=>window.riderDebugDraft===null);
    // sys.save only writes the in-memory file system; wait for the IndexedDB sync before reloading.
    // The write starts its sync synchronously on file close, so 'syncing' is already visible here.
-   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
-   assert.equal(await page.evaluate(()=>window.riderCustom.syncState()),'saved','injected draft sync');
+   await storage.durable(page,{label:'injected draft sync'});
    await page.goto(base+'?station=custom');e=await edit();
    assert.equal(e.id,'big');
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'||!window.riderEditor.dirty);assert.equal(e.objects,lines.length);

@@ -1,6 +1,7 @@
 // LE4: My levels, export/import, copy/paste and compatibility in the debug HTML5 gym (level-editor contract R1, R3, R12, R14, R17).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -55,7 +56,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   // Saved = the draft and the My levels copy are written and the IndexedDB sync is idle.
   async function saved(){
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+   await storage.durable(page);
    return ed();
   }
   // After a DOM panel closes, the canvas regains focus; the first press within 1 s is ignored (R15).
@@ -307,7 +308,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   e=await saved();
   const levelFiles=await page.evaluate(()=>Object.fromEntries(FS.readdir('/data/.rider').filter(n=>n.startsWith('custom-doc-')).map(n=>[n,Array.from(FS.readFile('/data/.rider/'+n)).join(',')])));
   await page.evaluate(()=>{for(const s of ['a','b'])FS.writeFile('/data/.rider/custom-index-'+s,'not a save file');});
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page);
   await page.goto(base+'?station=custom');e=await edit();assert.equal(e.key,kicker.key);assert.deepEqual(e.library,[]);
   s=(await doc()).start.position;await drag(s,[s[0],s[1]+1]);
   await page.waitForFunction(()=>window.riderEditor.status.includes('index cannot be read'));
@@ -315,10 +316,10 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await button('new');await page.waitForFunction(k=>window.riderEditor.key!==k,kicker.key);
   await page.waitForFunction(()=>!window.riderEditor.dirty&&window.riderEditor.status.includes('index cannot be read'));
   e=await ed();assert.equal(e.key,0);
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page,{label:'unreadable index settles'});
   // Observing an unreadable index, including its Open dialog, must let IndexedDB settle.
   await openDialog();
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page,{label:'unreadable index Open dialog settles'});
   assert.deepEqual((await ed()).library,[]);
   await key('Escape');
   const after=await page.evaluate(()=>({index:['a','b'].map(s=>new TextDecoder().decode(FS.readFile('/data/.rider/custom-index-'+s))),

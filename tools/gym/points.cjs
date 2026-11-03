@@ -2,6 +2,7 @@
 // conversion to the fewest anchors in the debug HTML5 gym (level-editor contract R4, R17, LE3b, LE5c, LE5d).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 // Sampling settings of compiler versions 4 and 5 (main/gym/editor_sample.lua).
@@ -58,7 +59,7 @@ const TOL=0.005,SEG=0.5;
   async function revision(n){await page.waitForFunction(n=>window.riderEditor.revision===n&&window.riderEditorDoc?.revision===n,n);return ed();}
   async function saved(){
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+   await storage.durable(page);
    return ed();
   }
   const refocused=()=>page.waitForTimeout(1100);

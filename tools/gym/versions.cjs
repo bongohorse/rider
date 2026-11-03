@@ -1,6 +1,7 @@
 // Editor A2 (#172): exercise the actual object-list controls, source protection and persistence.
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -55,7 +56,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   const canon=v=>Array.isArray(v)?v.map(canon):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canon(v[k])])):v;
   const shape=d=>JSON.stringify(canon({objects:d.objects,connections:d.connections,start:d.start,finish:d.finish??null}));
-  const idle=async()=>{const start=Date.now();await page.waitForFunction(()=>!window.riderEditor?.versions_busy&&window.riderCustom.syncState()!=='syncing');measurements.longestVersionWaitMs=Math.max(measurements.longestVersionWaitMs||0,Date.now()-start);};
+  const idle=async()=>{const start=Date.now();await page.waitForFunction(()=>!window.riderEditor?.versions_busy&&window.riderCustom.syncState()!=='syncing');await storage.durable(page,{label:'versions idle'});measurements.longestVersionWaitMs=Math.max(measurements.longestVersionWaitMs||0,Date.now()-start);};
   async function saved(){await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&!window.riderEditor.versions_busy);await idle();return ed();}
   async function versions(){if(!(await ed()).versions_open)await button('versions');await page.waitForTimeout(120);return (await ed()).versions;}
   async function close(){if((await ed()).open_dialog)await button('dialog_close');}

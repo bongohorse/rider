@@ -4,6 +4,7 @@
 // history stay unchanged.
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -369,7 +370,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Delete');e=await revision(rev+10);assert.deepEqual(labels(await doc()).map(o=>o.id),[lid]);
   // Reload: the unplayed draft reopens with the label.
   await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page);
   await page.goto(base+'?station=custom');e=await edit();
   assert.equal(e.id,'le6-labels');assert.deepEqual(label(await doc(),lid),{id:lid,type:'label',position:[10,4],text:'Gap 3 m'});
   // Play compiles the label; the played file imported again is an independent copy.
@@ -395,7 +396,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('l');await at([8,6]);e=await revision(rev+1);await key('Enter');await key('s');e=await settle();
   assert.equal(e.revision,rev+1);
   await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page);
   await page.goto(base+'?station=custom');e=await edit();
   d=await doc();assert.equal(e.name,'LE6 empty label');
   assert.deepEqual(label(d,'o2'),{id:'o2',type:'label',position:[3,3],text:''});assert.deepEqual(d.objects[0].points,[[0,0],[40,0]]);

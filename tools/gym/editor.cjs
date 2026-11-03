@@ -1,6 +1,7 @@
 // LE2: editor shell and Edit <-> Play loop in the debug HTML5 gym (level-editor contract R3, R9-R13, R15-R17).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -282,8 +283,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:999,text};},unknown);
   await page.waitForFunction(()=>window.riderDebugDraft===null);
   // sys.save only writes the in-memory file system: reload after the IndexedDB sync, or the draft is lost.
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
-  assert.equal(await page.evaluate(()=>window.riderCustom.syncState()),'saved','injected draft sync');
+  await storage.durable(page,{label:'injected draft sync'});
   await page.goto(base+'?station=custom');t=await played('flat-ltr');
   await page.locator('canvas').focus();await key('e');
   e=await edit();assert.ok(e.message.includes('unsupported editor'),e.message);assert.equal(e.id,'flat-ltr');

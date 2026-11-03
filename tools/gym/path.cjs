@@ -1,6 +1,7 @@
 // LE5c: Corner/Smooth points on existing terrain and Convert prefab to editable path in the debug HTML5 gym (level-editor contract R1, R4, R8, R16, R17).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 // Sampling settings of compiler version 4 (main/gym/editor_sample.lua).
@@ -57,7 +58,7 @@ const TOL=0.005,SEG=0.5,MAX_POINTS=2048;
   async function revision(n){await page.waitForFunction(n=>window.riderEditor.revision===n&&window.riderEditorDoc?.revision===n,n);return ed();}
   async function saved(){
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+   await storage.durable(page);
    return ed();
   }
   const refocused=()=>page.waitForTimeout(1100);

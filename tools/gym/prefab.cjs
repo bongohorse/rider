@@ -1,6 +1,7 @@
 // LE5a: parametric prefabs and Mirror in the debug HTML5 gym (level-editor contract R1, R4-R7, R9, R12, R16, R17).
 const {configure}=require('./launch.cjs');
 const pointer=require('./pointer.cjs');
+const storage=require('./storage.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 (async()=>{
@@ -55,7 +56,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   async function revision(n){await page.waitForFunction(n=>window.riderEditor.revision===n&&window.riderEditorDoc?.revision===n,n);return ed();}
   async function saved(){
    await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty);
-   await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+   await storage.durable(page);
    return ed();
   }
   const refocused=()=>page.waitForTimeout(1100);
@@ -319,7 +320,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await saved();
   await page.evaluate(text=>{window.riderDebugDraft={slot:1,seq:100000,text,now:true};},JSON.stringify(budgetDoc));
   await page.waitForFunction(()=>window.riderDebugDraft===null);
-  await page.waitForFunction(()=>window.riderCustom.syncState()!=='syncing');
+  await storage.durable(page);
   await page.goto(base+'?station=custom');e=await edit();
   assert.equal(e.id,'prefab-budget');assert.equal(e.objects,255);
   await hover([21,5.2]);for(let i=0;i<3;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(80);}
