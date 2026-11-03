@@ -26,7 +26,9 @@ M.wrap=wrap
 -- Slope (rad) of the authored chain segment touched by a body (centre in metres): the non-vertical segment
 -- whose closest point lies nearest one wheel radius from the centre (at most 0.9 m away, centre not more
 -- than 0.1 m below its surface). Returns the slope and that closest point's x (the contact point), or nil.
-M.WHEEL_RADIUS=0.22
+-- The wheel radius (m) is the spawned vehicle's: 0.22 for A-F, larger for the #114 debug candidates.
+local function wheel_radius() return feel.values.wheel_radius_m end
+M.wheel_radius=wheel_radius
 function M.ground_slope(chains,x,y)
     local best,slope,contact
     for _,chain in ipairs(chains) do
@@ -41,7 +43,7 @@ function M.ground_slope(chains,x,y)
                 if ny<0 then nx,ny=-nx,-ny end -- upward surface normal
                 local above=(x-px)*nx+(y-py)*ny
                 local distance=math.sqrt((x-px)^2+(y-py)^2)
-                local miss=math.abs(distance-M.WHEEL_RADIUS)
+                local miss=math.abs(distance-wheel_radius())
                 if above>-0.1 and distance<0.9 and (not best or miss<best) then best,slope,contact=miss,math.atan(dy/dx),px end
             end
         end
@@ -86,7 +88,7 @@ function M.observe(self,state,dt,sample)
         local wx={feel.metres(b2d.body.get_position(v.wheels[1]).x),feel.metres(b2d.body.get_position(v.wheels[2]).x)}
         -- A lip takeoff: both wheel centres within one wheel radius of the lip or past it, chassis within 2 m.
         -- A wheel leaves the convex lip slightly before lip_x; later steps can still confirm it (below).
-        local from_lip=s~=nil and math.min(wx[1],wx[2])>=s.lip_x-M.WHEEL_RADIUS and x<=s.lip_x+2
+        local from_lip=s~=nil and math.min(wx[1],wx[2])>=s.lip_x-wheel_radius() and x<=s.lip_x+2
         f={start=a.elapsed,lip=s,angle=state.angle,takeoff_angle_rad=state.angle,rotation=0,takeoff_x=x,takeoff_y=y,apex_y=y,
             takeoff_vx_mps=vx,takeoff_vy_mps=vy,takeoff_speed_mps=math.sqrt(vx*vx+vy*vy),section=s and s.id or "",from_lip=from_lip,
             throttle_max=0,brake_max=0,damped_ticks=0, -- this step's command was issued before the takeoff was seen

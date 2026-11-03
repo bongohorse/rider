@@ -22,7 +22,7 @@ function M.observe(self,state)
     local head=require 'main.game.rider'
     local offset=feel.metres(head.center_y)
     parts[#parts+1]={parts[1][1]-math.sin(state.angle)*offset,parts[1][2]+math.cos(state.angle)*offset,radius=feel.metres(head.radius)}
-    for _,body in ipairs(self.vehicle.wheels) do local p=b2d.body.get_position(body);parts[#parts+1]={feel.metres(p.x),feel.metres(p.y),radius=.22} end
+    for _,body in ipairs(self.vehicle.wheels) do local p=b2d.body.get_position(body);parts[#parts+1]={feel.metres(p.x),feel.metres(p.y),radius=feel.values.wheel_radius_m} end -- 0.22 m for A-F (#114)
     local active=self.race and self.race.state=='running' or not self.race and not self.finish_done and not self.paused
     local before=c.count
     local found=coins.observe(c,parts,active)

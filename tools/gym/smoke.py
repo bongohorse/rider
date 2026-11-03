@@ -51,7 +51,9 @@ parser.add_argument('--part', help='Run one CI part (1/2 or 2/2) of a18, le1b, a
 parser.add_argument('--merge', nargs='+', metavar='PART_OUTPUT', help='Merge every part output of a18, le1b, a19b or le6')
 # Car Feel 2 (#200): a measurement station run with another preset; its runner asserts the preset per trial.
 # Without --preset the case is unchanged (preset A, no URL parameter). One entry per station: case -> result file.
-PRESET_CASES={'a16':'ramps-result.json','a17':'steps-result.json','a18':'seams-result.json','a19':'gaps-result.json','a19c':'air-result.json','a19b':'bumps-result.json','a19d':'balance-result.json'}
+PRESET_CASES={'a16':'ramps-result.json','a17':'steps-result.json','a18':'seams-result.json','a19':'gaps-result.json','a19c':'air-result.json','a19b':'bumps-result.json','a19d':'balance-result.json',
+    # #114 stage 1 wheel-size A/B (opt-in, report only, not in CI): needs --preset (a, w26 or w30).
+    'w114':'wheel114-result.json'}
 parser.add_argument('--preset', help='Run a station case ('+', '.join(PRESET_CASES)+') with this preset key, e.g. b')
 # A22 (#37): deliberate regeneration of the regression traces (tests/regress/); never used by CI.
 parser.add_argument('--record', action='store_true', help='a22 only: re-record every regression trace, then check them')
@@ -76,11 +78,11 @@ else:
     bundle=Path(args.bundle).resolve() if args.bundle else out/'bundle'
     if not args.bundle:build_bundle(bundle,sha)
     verify_bundle(bundle,sha)
-    runner='fps417.cjs' if args.case=='fps417' else 'coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
+    runner='wheel114.cjs' if args.case=='w114' else 'fps417.cjs' if args.case=='fps417' else 'coast_measure.cjs' if args.case=='coast345' else 'versions.cjs' if args.case=='ea3' else 'objects.cjs' if args.case=='ea2' else 'regress.cjs' if args.case=='a22' else 'replay.cjs' if args.case=='a21' else 'pause.cjs' if args.case=='a20' else 'struts.cjs' if args.case=='cf3' else 'editor.cjs' if args.case=='le2' else 'draw.cjs' if args.case=='le3' else 'library.cjs' if args.case=='le4' else 'prefab.cjs' if args.case=='le5a' else 'curve.cjs' if args.case=='le5b' else 'path.cjs' if args.case=='le5c' else 'points.cjs' if args.case=='le5d' else 'polish.cjs' if args.case=='le6' else 'sizes.cjs' if args.case=='le1b' else 'custom.cjs' if args.case=='le1a' else 'gaps.cjs' if args.case=='a19' else 'air.cjs' if args.case=='a19c' else 'bumps.cjs' if args.case=='a19b' else 'balance.cjs' if args.case=='a19d' else 'seams.cjs' if args.case=='a18' else 'steps.cjs' if args.case=='a17' else 'ramps.cjs' if args.case=='a16' else 'stations.cjs' if args.case=='a15' else 'browser.cjs'
     # The runner selects its part only from GYM_PART; a stray value must not shrink a full run.
     env={k:v for k,v in os.environ.items() if k!='GYM_PART'}|({'GYM_PART':args.part} if args.part else {})
     process=subprocess.Popen(['node',str(ROOT/'tools/gym'/runner),str(out),sha,run_id,args.case,str(bundle),*(['--preset',args.preset] if args.preset is not None else []),*(['--record'] if args.record else [])],cwd=ROOT,start_new_session=True,env=env)
-    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3') else 360 if args.case in ('fps417','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
+    try: code=process.wait(timeout=600 if args.case in ('a18','le1b','a19b','ea3','w114') else 360 if args.case in ('fps417','a16','a17','a19','a19c','a19d','a20','a21','a22','le1a','le2','le3','le4','le5a','le5b','le5c','le5d','le6','ea2','ea3','cf3') else 90)
     finally: stop(process)
 if code:raise SystemExit(code)
 if args.preset is not None:
@@ -96,6 +98,10 @@ if args.case=='le1b':
     assert all(r.get('outcome')=='drive_ready' for r in report['results'] if r.get('expect')!='rejected')
     assert sum(r.get('expect')=='rejected' for r in report['results'])==rejected
     print(json.dumps({'status':report['status'],'elapsed_s':report['elapsed_s'],'switch_ms':{r['id']:r['switch']['median_ms'] for r in report['results'] if 'switch' in r}}));raise SystemExit(0)
+if args.case=='w114':
+    report=json.loads((out/'wheel114-result.json').read_text())
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['sections'])==9
+    print(json.dumps({s['id']:s['outcomes'] for s in report['sections']}));raise SystemExit(0)
 if args.case=='a20':
     report=json.loads((out/'pause-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==12

@@ -24,6 +24,8 @@ def feel_tables():
     """Read the registry, keys and ranges from feel.lua, the single source the game validates with."""
     lua = (ROOT/'main/game/feel.lua').read_text()
     order = re.findall(r'"(\w+)"', re.search(r'^M\.order=\{([^}]*)\}', lua, re.M).group(1))
+    # #114: debug-only wheel-size candidates, outside the P cycle and chips.
+    debug = re.findall(r'"(\w+)"', re.search(r'^M\.debug_order=\{([^}]*)\}', lua, re.M).group(1))
     keys = re.findall(r'"(\w+)"', re.search(r'^M\.preset_keys=\{([^}]*)\}', lua, re.M).group(1))
     # Optional keys (#211) and their defaults: a preset file may omit them.
     optional = {k: float(v) for k, v in re.findall(r'(\w+)=(-?[\d.]+)', re.search(r'^M\.optional=\{([^}]*)\}', lua, re.M).group(1))}
@@ -40,10 +42,10 @@ def feel_tables():
     for key, lo, hi in re.findall(r'(\w+)=\{min='+num+r',max='+num+r'\}', explicit):
         assert key not in ranges, key
         ranges[key] = (float(lo), float(hi), 1)
-    return order, keys, optional, ranges
+    return order, debug, keys, optional, ranges
 
 
-ORDER, KEYS, OPTIONAL, RANGES = feel_tables()
+ORDER, DEBUG, KEYS, OPTIONAL, RANGES = feel_tables()
 REQUIRED = [k for k in KEYS if k not in OPTIONAL]
 
 
@@ -81,7 +83,8 @@ class Presets(unittest.TestCase):
     def test_registry_matches_files(self):
         self.assertEqual(ORDER[:3], ['a', 'b', 'c'])
         self.assertEqual(len(set(ORDER)), len(ORDER))
-        self.assertEqual(sorted(p.stem for p in PRESETS.glob('*.json')), sorted(ORDER))
+        self.assertEqual(sorted(p.stem for p in PRESETS.glob('*.json')), sorted(ORDER+DEBUG))
+        self.assertFalse(set(ORDER) & set(DEBUG))
 
     def test_every_key_has_one_range(self):
         # 22 required keys (unchanged since #199) plus the optional ones (#211), each with its default.
@@ -152,6 +155,75 @@ class Presets(unittest.TestCase):
         for bad in (float('nan'), float('inf'), '5', True, None):
             data['values']['damping'] = bad
             self.assertIsNotNone(validate(data, 'a'))
+
+
+
+GAME = ROOT/'main/game'
+
+
+def geometry_table():
+    """M.geometry from feel.lua: key -> {radius, radius_m, wheel_y, factory, art_scale, camera_rest}."""
+    lua = (ROOT/'main/game/feel.lua').read_text()
+    block = lua[lua.index('M.geometry={'):]
+    block = block[:block.index('\n}')]
+    table = {}
+    for key, body in re.findall(r'(\w+)=\{(radius=[^}]*)\}', block):
+        fields = dict(re.findall(r'(\w+)=("[^"]*"|[-\d./]+)', body))
+        table[key] = {k: v.strip('"') if v.startswith('"') else number(v) for k, v in fields.items()}
+    return table
+
+
+def number(text):
+    """A Lua number literal or a quotient of two (art_scale=26/22)."""
+    if '/' in text:
+        a, b = text.split('/')
+        return number(a)/number(b)
+    value = float(text)
+    return int(value) if value.is_integer() and '.' not in text else value
+
+
+class WheelCandidates(unittest.TestCase):
+    """#114 stage 1: debug-only larger-wheel candidates are preset A plus authored wheel geometry only."""
+    GEOMETRY = geometry_table()
+
+    def test_candidates_are_a_with_another_key(self):
+        a = json.loads((PRESETS/'a.json').read_text())
+        self.assertEqual(DEBUG, ['w26', 'w30'])
+        for key in DEBUG:
+            data = json.loads((PRESETS/f'{key}.json').read_text())
+            self.assertEqual(data['key'], key)
+            self.assertEqual(data['values'], a['values'], key)
+
+    def test_default_geometry_is_the_shipped_wheel(self):
+        g = self.GEOMETRY['default']
+        self.assertEqual(g, {'radius': 22, 'radius_m': .22, 'wheel_y': -30, 'factory': '#wheel', 'art_scale': 1, 'camera_rest': 46})
+        self.assertEqual((GAME/'wheel.convexshape').read_text(), 'shape_type: TYPE_SPHERE\ndata: 22.0\n')
+        self.assertIn('wheel_y=-30}', (GAME/'feel.lua').read_text().splitlines()[2])
+        self.assertEqual(set(self.GEOMETRY), {'default', *DEBUG})
+
+    def test_candidate_resources_match_their_geometry(self):
+        wheel_go = (GAME/'wheel.go').read_text()
+        base = float(re.search(r'scale \{ x: ([\d.]+)', wheel_go).group(1))
+        controller = (GAME/'controller.go').read_text()
+        for key in DEBUG:
+            g, r = self.GEOMETRY[key], self.GEOMETRY[key]['radius']
+            with self.subTest(candidate=key):
+                self.assertEqual(g['factory'], f'#wheel{r}')
+                self.assertAlmostEqual(g['radius_m'], r*0.01, places=12)
+                self.assertAlmostEqual(g['art_scale'], r/22, places=12)
+                # Ride height and clearance scale with the radius (wheel_y = -30 x r/22, rounded to whole units).
+                self.assertEqual(g['wheel_y'], -round(30*r/22))
+                self.assertEqual(g['camera_rest'], r-g['wheel_y']-6)
+                self.assertEqual((GAME/f'wheel{r}.convexshape').read_text(), f'shape_type: TYPE_SPHERE\ndata: {r}.0\n')
+                # Same body as the shipped wheel (mass, friction, filter); only the shape differs.
+                self.assertEqual((GAME/f'wheel{r}.collisionobject').read_text(),
+                                 (GAME/'wheel.collisionobject').read_text().replace('wheel.convexshape', f'wheel{r}.convexshape'))
+                go = (GAME/f'wheel{r}.go').read_text()
+                self.assertIn(f'"/main/game/wheel{r}.collisionobject"', go)
+                self.assertIn('"/main/game/wheel.sprite"', go)
+                self.assertAlmostEqual(float(re.search(r'scale \{ x: ([\d.]+)', go).group(1)), base*r/22, places=8)
+                self.assertEqual((GAME/f'wheel{r}.factory').read_text(), f'prototype: "/main/game/wheel{r}.go"\nload_dynamically: true\n')
+                self.assertIn(f'components {{ id: "wheel{r}" component: "/main/game/wheel{r}.factory" }}', controller)
 
 
 if __name__ == '__main__':

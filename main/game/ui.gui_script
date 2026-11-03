@@ -271,6 +271,9 @@ function on_message(self,id,data,sender)
         end
         -- A refused preset file must never pass silently for A (#199).
         gui.set_text(self.preset_note,data.refused and ("Preset "..data.refused.." - using A"..(data.modified and " | Modified" or "")) or data.invalid and "Invalid URL: A"
+            -- #114 debug wheel candidates (debug engine only): their wheels stay until the page is reloaded.
+            or data.candidate and string.format("Debug %s: A + %.2f m wheels%s%s",string.upper(data.key),feel.geometry_of(data.key).radius_m,
+                data.modified and " | Modified" or "",data.switch_refused and " | reload to change" or "")
             or data.modified and "Modified - select "..string.upper(table.concat(feel.order,"/")) or "Presets [P]")
     elseif id==hash("tuning") then
         self.owner=sender

@@ -9,8 +9,11 @@ function M.spawn()
     local v = {ids = {}, wheels = {}, joints = {}}
     v.ids.chassis = factory.create("#chassis", vmath.vector3(c.spawn_x, c.spawn_y, 0))
     rider.spawn(v)
+    -- The wheel factory follows the preset's wheel geometry (feel.geometry, #114): "#wheel" for A-F, an authored
+    -- larger wheel for the debug-only candidates. A world keeps its wheels; another geometry needs a new world.
+    v.wheel_factory=c.wheel_factory
     for i,x in ipairs(c.wheel_x) do
-        v.ids[i] = factory.create("#wheel", vmath.vector3(c.spawn_x+x, c.spawn_y+c.wheel_y, 1))
+        v.ids[i] = factory.create(c.wheel_factory, vmath.vector3(c.spawn_x+x, c.spawn_y+c.wheel_y, 1))
     end
     return v
 end
@@ -45,6 +48,7 @@ function M.attach(v)
 end
 function M.reset(v)
     assert(b2d.shape.is_valid(v.head),"Head sensor lost before reset")
+    assert(v.wheel_factory==M.config.wheel_factory,"Wheel geometry changed without a new world (#114)")
     for _,joint in ipairs(v.joints) do
         assert(b2d.joint.is_valid(joint), "Invalid joint before reset")
         b2d.joint.destroy(joint)
