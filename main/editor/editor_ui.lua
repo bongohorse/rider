@@ -54,7 +54,7 @@ for kind,paths in pairs(THUMBS) do
     for _,p in ipairs(paths) do lines[#lines+1]={p[1]*.5+1,p[2]*.5+6,p[3]*.5+1,p[4]*.5+6} end
     ICONS['thumb_'..kind]=lines
 end
--- Gameplay tools (O2 added Crate, Plate and Gate) bake control and icon into one 48 x 32 quad, so the
+-- Gameplay tools (O2 added Crate, Plate and Gate) bake control and icon into one 36 x 32 quad, so the
 -- eight tiles take fewer pooled boxes than the five separate control + icon pairs did (Codex a10d648).
 local TILES={tool_start=true,tool_finish=true,tool_coin=true,tool_gem=true,tool_fuel=true,tool_crate=true,tool_plate=true,tool_gate=true}
 local function inside(r,x,y) return x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
@@ -93,12 +93,12 @@ function M.init()
         if TILES[name] then for _,active in ipairs({false,true}) do
             -- Control colour (C.control / C.active) with the icon in the text colour, rounded 4 px corners.
             local tile={};local bg=active and {141,224,197} or {34,59,71};local fg=active and {16,30,38} or {237,244,246}
-            for y=0,31 do for x=0,47 do
-                local ix,iy=x-12,y-4;local mask=ix>=0 and ix<24 and iy>=0 and iy<24 and bytes[iy*24+ix+1]:byte(1)/255 or 0
-                local dx,dy=math.max(4-x,0,x-43),math.max(4-y,0,y-27);local alpha=dx*dx+dy*dy<=16 and 255 or 0
+            for y=0,31 do for x=0,35 do
+                local ix,iy=x-6,y-4;local mask=ix>=0 and ix<24 and iy>=0 and iy<24 and bytes[iy*24+ix+1]:byte(1)/255 or 0
+                local dx,dy=math.max(4-x,0,x-31),math.max(4-y,0,y-27);local alpha=dx*dx+dy*dy<=16 and 255 or 0
                 tile[#tile+1]=string.char(math.floor(bg[1]+(fg[1]-bg[1])*mask),math.floor(bg[2]+(fg[2]-bg[2])*mask),math.floor(bg[3]+(fg[3]-bg[3])*mask),alpha)
             end end
-            assert(gui.new_texture('editor_tile_'..(active and 'active_' or '')..name,48,32,'rgba',table.concat(tile),false))
+            assert(gui.new_texture('editor_tile_'..(active and 'active_' or '')..name,36,32,'rgba',table.concat(tile),false))
         end end
     end
     local u={boxes={},texts={},buttons={},visible={},rects={},scroll=0,tool_scroll=0,tools=false,properties=false,prefabs=false}
@@ -284,9 +284,10 @@ function M.render(u,d)
         button('play',commands+80,56,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
         local gameplay_top=152+(u.tool_category and 0 or 80)
-        -- Gameplay: Start, Finish, Coin / Gem, Fuel, Crate / Plate, Gate and the live pickup counts in the
-        -- free third cell (three rows of three; the Prefabs heading stays reachable in short windows).
-        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 176)
+        -- Gameplay: eight 36 x 32 tiles in two rows of four (Start, Finish, Coin, Fuel / Gem, Crate, Plate,
+        -- Gate), so the section keeps its pre-O2 height and every prefab kind stays visible at 1280 x 720.
+        -- Gem keeps its first-column place in the second row.
+        local prefabs_top=gameplay_top+40+(u.gameplay and 0 or 144)
         local objects_top=prefabs_top+40+(u.prefabs and 0 or math.ceil(#d.kinds/2)*56+8)
         local tools_end=u.tools and 160 or objects_top
         local object_rows=math.min(4,math.max(1,#d.objects))
@@ -325,20 +326,17 @@ function M.render(u,d)
             local gy=gameplay_top-u.tool_scroll
             if shown(gy,32) then button('collapse_gameplay',28,gy,152,u.gameplay and 'GAMEPLAY  >' or 'GAMEPLAY  v',false,'Collapse or expand Gameplay') end
             if not u.gameplay then
-                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'gem','Gem'},{'fuel','Fuel'},{'crate','Crate'},{'plate','Plate'},{'gate','Gate'}}) do
-                    local x,y=28+(i-1)%3*52,gameplay_top+40+math.floor((i-1)/3)*56-u.tool_scroll
+                for i,tool in ipairs({{'start','Start'},{'finish','Finish'},{'coin','Coin'},{'fuel','Fuel'},{'gem','Gem'},{'crate','Crate'},{'plate','Plate'},{'gate','Gate'}}) do
+                    local x,y=28+(i-1)%4*39,gameplay_top+40+math.floor((i-1)/4)*56-u.tool_scroll
                     if shown(y,52) then
-                        button('tool_'..tool[1],x,y,48,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
-                        text(x+4,y+44,tool[2],d.tool==tool[1] and C.active or C.secondary,12)
+                        button('tool_'..tool[1],x,y,36,tool[2],d.tool==tool[1],'Place '..tool[2]..(tool[1]=='coin' and '; Select [S] to move, copy or delete' or ''))
+                        text(x,y+44,tool[2],d.tool==tool[1] and C.active or C.secondary,11,39)
                     end
                 end
             end
             if not u.gameplay then
-                local cy=gameplay_top+152-u.tool_scroll
-                if shown(cy,48) then
-                    local gold,gems=require('main.game.coin_data').counts(require('main.editor.editor').doc.editor.objects)
-                    text(134,cy+14,'Gold '..gold,C.secondary,12,60);text(134,cy+34,'Gems '..gems,C.secondary,12,60)
-                end
+                local cy=gameplay_top+160-u.tool_scroll
+                if shown(cy,20) then local gold,gems=require('main.game.coin_data').counts(require('main.editor.editor').doc.editor.objects);text(28,cy,string.format('Gold %d  |  Gems %d',gold,gems),C.secondary,12) end
             end
             local py=prefabs_top-u.tool_scroll
             if shown(py,32) then button('collapse_prefabs',28,py,152,u.prefabs and 'PREFABS  >' or 'PREFABS  v',false,'Collapse or expand the prefab library') end
