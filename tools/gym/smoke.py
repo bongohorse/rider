@@ -192,7 +192,7 @@ if args.case=='ea3':
 if args.case=='ea2':
     report=json.loads((out/'objects-result.json').read_text())
     identity(report)
-    expected='list_selection_search_naming hide_undo_export_geometry lock_direct_and_connected_changes copy_mirror_new_ids_unlocked_visible save_reload_import_drive_roundtrip bounded_list_and_viewports invalid_metadata_preserved_or_refused sparse_mechanism_lists_refused'.split()
+    expected='list_selection_search_naming hide_undo_export_geometry lock_direct_and_connected_changes copy_mirror_new_ids_unlocked_visible save_reload_import_drive_roundtrip bounded_list_and_viewports invalid_metadata_preserved_or_refused sparse_mechanism_lists_refused mechanism_blank_course_places_one_undo_each mechanism_properties_bounded_and_fail_closed mechanism_two_plates_three_gates_five_links mechanism_locks_and_hide mechanism_copy_remaps_and_keeps_external mechanism_save_reload_export_import_play_retry mechanism_pools_and_viewports'.split()
     assert sorted(report['cases'])==sorted(expected), 'ea2 inventory missing or duplicated'
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le6':

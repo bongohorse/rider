@@ -239,9 +239,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   measurements.mechanism_refusals=outcomes;
   assert.deepEqual(outcomes,expected,'each malformed mechanism list is refused with its cause and changes neither the open level, its Undo history nor My levels');
   // The unchanged fixture still imports with its mechanisms.
+  // Editor/compiler 13 (O2) opens them as crate/plate/gate objects that compile to exactly that data.
+  const o2=require('./mechanism_editor.cjs');
   await importText(JSON.stringify(mech),'ea2-mechanisms.json');await settle();d=await doc();
-  assert.deepEqual(d.mechanisms,mech.mechanisms);
+  assert.equal(d.mechanisms,undefined);assert.deepEqual(o2.runtime(d),mech.mechanisms);
   cases.push('sparse_mechanism_lists_refused');
+  const authored=await o2({page,ed,doc,key,button,at,world,canvas,settle,snapshot,unchanged,edit,importText,exportFile,out,measurements});
+  cases.push(...authored.cases);
   assert.deepEqual(errors,[]);
   fs.writeFileSync(path.join(out,'objects-result.json'),JSON.stringify({source_sha:sha,run_id:runId,browser:browser.version(),status:'PASS',cases,measurements},null,2));
   console.log(JSON.stringify({status:'PASS',cases,measurements}));
