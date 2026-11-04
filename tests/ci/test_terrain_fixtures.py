@@ -1,6 +1,7 @@
 """Retained terrain tools consume repository-owned fixtures, never retired report inputs."""
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,6 +58,33 @@ class TerrainFixtures(unittest.TestCase):
             capture_output=True, text=True, timeout=20)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Terrain fixture missing-507-fixture is unavailable:', result.stderr)
+
+    def test_every_browser_entry_preflights_before_loading_playwright(self):
+        # Isolated copies retain the real entry/helper code but have neither fixtures nor Playwright.
+        # Removing an entry's preflight would reach MODULE_NOT_FOUND instead of the named input error.
+        entries = {
+            'terrain_compare/measure.cjs': 'six-anchor',
+            'terrain_play/check_lifecycle.cjs': 'six-anchor',
+            'terrain_play/check_far_course.cjs': 'mixed-over-budget',
+            'terrain_play/observe_resources.cjs': 'six-anchor',
+            'terrain_perspective/check_gym_menu.cjs': 'mixed-over-budget',
+            'terrain_perspective/check_menu.cjs': 'long-curves',
+            'terrain_perspective/check_menu_release.cjs': 'long-curves',
+            'terrain_perspective/check_production.cjs': 'long-curves',
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            for relative in (*entries, 'terrain_play/fixtures.cjs'):
+                target = base / 'tools' / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / 'tools' / relative, target)
+            for relative, missing in entries.items():
+                with self.subTest(entry=relative):
+                    result = subprocess.run(['node', str(base / 'tools' / relative), 'unused', 'unused'],
+                                            cwd=base, capture_output=True, text=True, timeout=20)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(f'Terrain fixture {missing} is unavailable:', result.stderr)
+                    self.assertNotIn('MODULE_NOT_FOUND', result.stderr)
 
 
 if __name__ == '__main__':
