@@ -27,6 +27,9 @@ jobs:
     name: Change classification
     runs-on: ubuntu-26.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
       skip_special: ${{ steps.classify.outputs.skip_special }}
@@ -59,17 +62,23 @@ jobs:
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          date +%s > "$RUNNER_TEMP/classification-start"
           full() {
             printf 'docs_only=false\nskip_special=false\nrepo_tooling=false\nselection_reason=%s\n' "$1" >> "$GITHUB_OUTPUT"
           }
           case "$GITHUB_EVENT_NAME" in
             pull_request) BASE="$PR_BASE" ;;
-            # A newer push replaces a pending main run, so a later fast-path push would skip
-            # the replaced change's suites and Pages deploy: main pushes always run full.
-            push) [[ "$GITHUB_REF" != refs/heads/main ]] || { full main-push-full; exit 0; }
-                  BASE="$PUSH_BEFORE" ;;
+            # Compare main against completed successful CI (including Pages), never just
+            # PUSH_BEFORE: pending runs may be replaced by a newer docs push.
+            push) BASE="$PUSH_BEFORE"
+                  if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+                    BASE=$(python3 tools/ci/classify_changes.py --main-base)
+                    [[ -n "$BASE" ]] || { full main-push-full; exit 0; }
+                    echo "Cumulative main baseline: $BASE"
+                  fi ;;
             *) full scheduled-or-manual-full; exit 0 ;;
           esac
           if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
@@ -79,6 +88,13 @@ jobs:
           git cat-file -e "$BASE^{commit}"
           git diff --no-renames --name-only -z "$BASE" HEAD -- > "$RUNNER_TEMP/changed-paths"
           python3 tools/ci/classify_changes.py "$RUNNER_TEMP/changed-paths" > "$RUNNER_TEMP/selection"
+          # Only cumulative docs may skip main's regression/deploy. Repo-tooling and Gym
+          # remain full on main. A missing API baseline also remains full.
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]] &&
+             ! grep -qx 'docs_only=true' "$RUNNER_TEMP/selection"; then
+            full main-push-full
+            exit 0
+          fi
           cat "$RUNNER_TEMP/selection"
           # The classifier under test never decides alone that its own change, the required
           # gate or a .github change may skip jobs (#437): any fast-path verdict fails this job.
@@ -100,6 +116,16 @@ jobs:
           {
             echo "### CI selection"
             echo "- Reason: $REASON"
+            if [[ -f "$RUNNER_TEMP/classification-start" ]]; then
+              echo "- Classification elapsed: $(($(date +%s) - $(cat "$RUNNER_TEMP/classification-start")))s (job setup excluded)"
+            fi
+            echo "- Classification, workflow/Lua lint, CI Python tests and required: selected"
+            if [[ "$DOCS_ONLY" == true || "$REPO_TOOLING" == true ]]; then
+              echo "- Markdown and changed-asset link checks: selected"
+            fi
+            if [[ "$DOCS_ONLY" == true ]]; then
+              echo "- Bootstrap, CI Node, Renovate, physics/Gym, Android, Bridge, release and Pages: skipped (docs only)"
+            fi
             echo "- Docs-only: $DOCS_ONLY"
             echo "- Gym-only (Windows native, Bridge and negative build skipped; Linux native, HTML5, Gym, Android and release kept): $SKIP_SPECIAL"
             echo "- Repo-tooling short path (only classification, Bootstrap and CI Node tests; G1, Gym, release, Renovate, Android, Bridge and Pages skipped): $REPO_TOOLING"

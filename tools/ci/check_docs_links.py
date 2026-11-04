@@ -3,9 +3,10 @@
 from pathlib import Path
 import re
 import sys
+import subprocess
 from urllib.parse import unquote, urlsplit
 
-from classify_changes import read_paths
+from classify_changes import is_doc_asset, read_paths
 
 ROOT = Path(__file__).resolve().parents[2]
 INLINE = re.compile(r"!?\[[^\]\n]*\]\(\s*(<[^>]+>|[^\s)]+)")
@@ -94,11 +95,32 @@ def check_paths(root, paths):
     return errors
 
 
+def check_asset_references(root, paths, markdown):
+    """An asset-only removal/rename must not leave links in unchanged Markdown."""
+    assets = {(root / p).resolve() for p in paths if is_doc_asset(p)}
+    errors = []
+    for name in markdown:
+        file = root / name
+        if not file.is_file():
+            continue
+        for line, dest in targets(file.read_text(encoding="utf-8")):
+            url = urlsplit(dest.strip().strip("<>"))
+            if url.scheme or url.netloc or not url.path or url.path.startswith("/"):
+                continue
+            target = (file.parent / unquote(url.path)).resolve()
+            if target in assets and not target.exists():
+                errors.append(f"{name}:{line}: missing relative asset target {dest}")
+    return errors
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("usage: check_docs_links.py <NUL-delimited-git-path-file>")
     paths = read_paths(sys.argv[1])
     errors = check_paths(ROOT, paths)
+    if any(is_doc_asset(p) for p in paths):
+        markdown = subprocess.check_output(["git", "ls-files", "-z", "--", "*.md"], cwd=ROOT).decode().strip("\0").split("\0")
+        errors += check_asset_references(ROOT, paths, markdown)
     for error in errors:
         print(f"FAIL: {error}", file=sys.stderr)
     print(f"Markdown links: {len(paths)} changed paths, {len(errors)} errors")

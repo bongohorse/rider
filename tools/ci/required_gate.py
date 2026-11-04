@@ -12,6 +12,7 @@ FULL = (("false", "false", "false"), ())
 # selection_reason -> (exact FLAGS values, jobs that must be skipped). Every other job must
 # succeed. An unknown reason or contradicting flags is a classification error and fails.
 SELECTIONS = {
+    "docs-assets-and-text-only": (("true", "false", "false"), NAMES),
     "docs-text-only": (("true", "false", "false"), NAMES),
     "gym-and-docs-only": (("false", "true", "false"), ("bridge",)),
     "repo-tooling-and-docs-only": (("false", "false", "true"), HEAVY),

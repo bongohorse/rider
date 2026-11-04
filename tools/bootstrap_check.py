@@ -55,6 +55,7 @@ def validate(root):
                     nightly_notifier = (p.name, job_id) in {('ci.yml', 'nightly_alert'), ('audit.yml', 'alert')}
                     allowed = ({'contents':'read','pages':'write','id-token':'write'} if pages_deploy
                                else {'contents':'read','issues':'write'} if nightly_notifier
+                               else {'contents':'read','actions':'read'} if (p.name, job_id) == ('ci.yml', 'changes')
                                else {'contents':'read'})
                     if permissions != allowed:
                         errors.append(f'{p.name}/{job_id}: unexpected job permissions')
