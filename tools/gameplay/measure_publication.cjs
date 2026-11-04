@@ -13,14 +13,14 @@ const PLAN={schema:1,warmup_s:5,sample_s:20,repetitions:3,viewport:{width:1280,h
 function percentile(values,p){assert(values.length,'No samples');const a=[...values].sort((x,y)=>x-y);return a[Math.max(0,Math.ceil(a.length*p)-1)];}
 const median=a=>percentile(a,.5);
 const mad=a=>median(a.map(x=>Math.abs(x-median(a))));
-function distribution(a){return {count:a.length,p50_ms:percentile(a,.5),p95_ms:percentile(a,.95),max_ms:Math.max(...a)};}
+function distribution(a){assert(a.every(x=>Number.isFinite(x)&&x>=0),'Invalid or negative timing sample');return {count:a.length,p50_ms:percentile(a,.5),p95_ms:percentile(a,.95),max_ms:Math.max(...a)};}
 function compare(off,on,resolutions=[]){
  assert.equal(off.length,PLAN.repetitions);assert.equal(on.length,PLAN.repetitions);
- const noise=Math.max(mad(off),mad(on)),resolution=Math.max(0,...resolutions.filter(Number.isFinite));
- const threshold=Math.max(PLAN.floor_ms,PLAN.noise_factor*noise,PLAN.resolution_factor*resolution);
+ const noise=Math.max(mad(off),mad(on)),clocks=resolutions.filter(x=>Number.isFinite(x)&&x>0),resolution=clocks.length?Math.max(...clocks):null;
+ const threshold=resolution===null?null:Math.max(PLAN.floor_ms,PLAN.noise_factor*noise,PLAN.resolution_factor*resolution);
  const delta=median(on)-median(off);
  return {off_median_p95_ms:median(off),on_median_p95_ms:median(on),delta_ms:delta,noise_mad_ms:noise,resolution_ms:resolution,
-  threshold_ms:threshold,material_observer_effect:Math.abs(delta)>=threshold};
+  threshold_ms:threshold,material_observer_effect:threshold===null?null:Math.abs(delta)>=threshold};
 }
 function fixtures(){
  const load=rel=>JSON.parse(fs.readFileSync(path.join(ROOT,rel),'utf8'));

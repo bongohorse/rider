@@ -35,7 +35,7 @@ assert(state.buckets['html5.run:riderTest'].returned_bytes==#'native return')
 assert(state.command_samples==1 and not state.nonzero_command)
 local b={fixed_ticks=0};wrapped(b,2)
 assert(b.publication516.on~=state and b.publication516.on.buckets.callback.count==1,'owners share the window but retain isolated samples')
-a.fail=true;assert(not pcall(wrapped,a,1));a.fail=nil
+a.fail=true;local success,reason=pcall(wrapped,a,1);assert(not success and reason:find('original callback failure',1,true));a.fail=nil
 local count=state.buckets['json.encode'].count
 html5.run('window.unrelated=1');assert(state.buckets['json.encode'].count==count)
 -- The inactive control keeps the callback's environment and omits per-publication observers.

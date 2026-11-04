@@ -3,15 +3,17 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {PLAN,distribution,compare,fixtures,expectedRuns}=require('../../tools/gameplay/measure_publication.cjs');
 test('fixed window and material-effect threshold retain the declared floor, dispersion and clock limits',()=>{
  assert.deepEqual([PLAN.warmup_s,PLAN.sample_s,PLAN.repetitions,PLAN.dpr],[5,20,3,1]);
- assert(!compare([1,1,1],[1.1,1.1,1.1]).material_observer_effect);
- assert(compare([1,1,1],[2,2,2]).material_observer_effect);
- assert(!compare([1,2,3],[2,3,4]).material_observer_effect,'dispersion must dominate a smaller apparent effect');
+ assert(!compare([1,1,1],[1.1,1.1,1.1],[.001]).material_observer_effect);
+ assert(compare([1,1,1],[2,2,2],[.001]).material_observer_effect);
+ assert(!compare([1,2,3],[2,3,4],[.001]).material_observer_effect,'dispersion must dominate a smaller apparent effect');
  assert(!compare([1,1,1],[2,2,2],[.3,.3]).material_observer_effect,'clock floor must dominate a sub-resolution effect');
  assert.throws(()=>compare([1,1],[2,2,2]));
+ assert.equal(compare([1,1,1],[2,2,2],[false]).material_observer_effect,null,'missing clock resolution cannot become zero-cost precision');
 });
 test('callback percentiles preserve tails and reject empty samples',()=>{
  assert.deepEqual(distribution([0,2,1,100]),{count:4,p50_ms:1,p95_ms:100,max_ms:100});
  assert.throws(()=>distribution([]),/No samples/);
+ for(const value of [-1,NaN,Infinity])assert.throws(()=>distribution([value]),/timing sample/);
 });
 test('retained course geometry stays unchanged; only the declared long-course appearance is derived',()=>{
  const root=path.resolve(__dirname,'../..'),rows=fixtures();assert.deepEqual(rows.map(x=>x.name),['short','long','mechanism']);
