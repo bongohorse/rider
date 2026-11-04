@@ -3,7 +3,7 @@
 -- decodes to a hole that ipairs stops at, so entries after it would skip validation while `#t` (M.cost)
 -- still counted them. main.game.dense checks the shape without `#t`; {} is a valid empty list.
 local dense=require 'main.game.dense'
-local M={MAX=8,MAX_LINKS=32,MAX_COORD=600,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=500}
+local M={MAX=8,MAX_LINKS=32,MAX_COORD=600,CRATE_HALF=.6,CRATE_MASS=8,PLATE_HALF=1.5,GATE_HALF=.3,GATE_HEIGHT=3,GUARD=1,FORCE=250}
 local function finite(n) return type(n)=='number' and n==n and math.abs(n)<100000 end
 local function point(p) return type(p)=='table' and #p==2 and finite(p[1]) and finite(p[2]) and math.abs(p[1])<=M.MAX_COORD and math.abs(p[2])<=M.MAX_COORD end
 local function fields(t,allowed) for k in pairs(t) do if not allowed[k] then return nil,'Unsupported mechanism field '..tostring(k),true end end;return true end
