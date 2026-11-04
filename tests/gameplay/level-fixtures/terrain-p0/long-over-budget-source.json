@@ -1,0 +1,460 @@
+{
+  "schema": 1,
+  "units": "metres",
+  "id": "p0-long-over-budget",
+  "name": "P0 long-over-budget",
+  "spawn": [
+    2,
+    2
+  ],
+  "start_speed": 0,
+  "run_in": 0,
+  "run_out": 0,
+  "bounds": [
+    -10,
+    680,
+    -40,
+    50
+  ],
+  "chains": [
+    [
+      [
+        10,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  ],
+  "hulls": [],
+  "labels": [],
+  "checkpoints": [],
+  "editor": {
+    "editor_version": 7,
+    "compiler_version": 7,
+    "revision": 1,
+    "next_id": 13,
+    "sampling": {
+      "tolerance": 0.005,
+      "max_segment": 0.5
+    },
+    "objects": [
+      {
+        "type": "line",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            24,
+            0
+          ]
+        ],
+        "name": "Flat run-in",
+        "id": "o1"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              24,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              38.333333333333336,
+              3.3333333333333335
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              139,
+              10
+            ],
+            "in": [
+              -38.333333333333336,
+              0
+            ],
+            "out": [
+              38.333333333333336,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              254,
+              0
+            ],
+            "in": [
+              -38.333333333333336,
+              3.3333333333333335
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Wide hill",
+        "id": "o2"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            254,
+            0
+          ],
+          [
+            278,
+            0
+          ]
+        ],
+        "name": "Flat approach",
+        "id": "o3"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              278,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              1,
+              1
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              281,
+              3
+            ],
+            "in": [
+              -1,
+              0
+            ],
+            "out": [
+              1,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              284,
+              0
+            ],
+            "in": [
+              -1,
+              1
+            ],
+            "out": [
+              1,
+              -1
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              287,
+              -3
+            ],
+            "in": [
+              -1,
+              0
+            ],
+            "out": [
+              1,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              290,
+              0
+            ],
+            "in": [
+              -1,
+              -1
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Tight S bends",
+        "id": "o4"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            290,
+            0
+          ],
+          [
+            310,
+            20
+          ]
+        ],
+        "name": "45 degree climb",
+        "id": "o5"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              310,
+              20
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              2,
+              0.6666666666666666
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              316,
+              22
+            ],
+            "in": [
+              -2,
+              0
+            ],
+            "out": [
+              2,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              322,
+              20
+            ],
+            "in": [
+              -2,
+              0.6666666666666666
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Rounded crest",
+        "id": "o6"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            322,
+            20
+          ],
+          [
+            342,
+            0
+          ]
+        ],
+        "name": "45 degree descent",
+        "id": "o7"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            342,
+            0
+          ],
+          [
+            366,
+            0
+          ]
+        ],
+        "name": "Flat jump approach",
+        "id": "o8"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            366,
+            0
+          ],
+          [
+            374,
+            4
+          ]
+        ],
+        "name": "Jump lip",
+        "id": "o9"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            381,
+            2
+          ],
+          [
+            393,
+            0
+          ]
+        ],
+        "name": "Landing",
+        "id": "o10"
+      },
+      {
+        "type": "curve",
+        "anchors": [
+          {
+            "p": [
+              393,
+              0
+            ],
+            "in": [
+              0,
+              0
+            ],
+            "out": [
+              38.333333333333336,
+              -3.3333333333333335
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              508,
+              -10
+            ],
+            "in": [
+              -38.333333333333336,
+              0
+            ],
+            "out": [
+              38.333333333333336,
+              0
+            ],
+            "mode": "smooth"
+          },
+          {
+            "p": [
+              623,
+              0
+            ],
+            "in": [
+              -38.333333333333336,
+              -3.3333333333333335
+            ],
+            "out": [
+              0,
+              0
+            ],
+            "mode": "smooth"
+          }
+        ],
+        "name": "Wide valley",
+        "id": "o11"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            623,
+            0
+          ],
+          [
+            660,
+            0
+          ]
+        ],
+        "name": "Flat run-out",
+        "id": "o12"
+      }
+    ],
+    "connections": [
+      {
+        "from": "o1",
+        "to": "o2"
+      },
+      {
+        "from": "o2",
+        "to": "o3"
+      },
+      {
+        "from": "o3",
+        "to": "o4"
+      },
+      {
+        "from": "o4",
+        "to": "o5"
+      },
+      {
+        "from": "o5",
+        "to": "o6"
+      },
+      {
+        "from": "o6",
+        "to": "o7"
+      },
+      {
+        "from": "o7",
+        "to": "o8"
+      },
+      {
+        "from": "o8",
+        "to": "o9"
+      },
+      {
+        "from": "o10",
+        "to": "o11"
+      },
+      {
+        "from": "o11",
+        "to": "o12"
+      }
+    ],
+    "start": {
+      "position": [
+        2,
+        2
+      ],
+      "speed": 0
+    },
+    "finish": {
+      "position": [
+        655,
+        0
+      ],
+      "direction": 1
+    }
+  }
+}

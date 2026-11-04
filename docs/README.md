@@ -25,7 +25,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | What is next, what is open | [Current state](#current-state) (GitHub) |
 | Open maintainer drive tests | [`status: needs drive test` issues](#current-state); sessions of 2026-11-02 in [ACCEPTANCE.md](ACCEPTANCE.md) |
 | Decisions, work order, roadmap, stop points | [PLAN.md](PLAN.md) |
-| Writing, labelling, ordering or closing issues | [issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/); archived long issue texts in [issue-archive/](issue-archive/) |
+| Writing, labelling, ordering or closing issues | [issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/); migrated issue-planning references in [ideas](ideas/README.md), with compatibility pointers under [issue-archive/](issue-archive/) |
 | Gameplay intent, open design choices | [GAME_DESIGN.md](GAME_DESIGN.md), [vehicle contract](contracts/vehicle.md) |
 | Buggy handling baseline and A/B experiment plan (#339) | [Feel evidence and protocols](feel/buggy-baseline.md) |
 | Wheel rolling-speed ceiling / fast-rotation review (#114) | [Box2D 3.1.0 findings, solutions and the 2026-11-03 decision](feel/wheel-rotation-cap-114.md) |
@@ -57,7 +57,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [ACCEPTANCE.md](ACCEPTANCE.md) | Record of the 2026-11-02 drive-test sessions (#404); open items are issues | How to run a session · Results 2026-11-02 · Session 1: desktop editor · Session 2: desktop driving and stations · Session 3: phone · Session 4: vehicle feel (deferred) · Recording results |
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, work order, roadmap | Goal · Decisions · Work order · Roadmap · Stop points · Later phases |
 | [ISSUES.md](ISSUES.md) | Issue kinds, sub-issues, required sections, length, labels, waves, GO/owner/status | Kinds and hierarchy · Required sections · Length · Labels · Milestones and order · GO, owner and status · Titles · Updating and closing · Checklist |
-| [issue-archive/](issue-archive/) | Full former bodies of long epics/issues (#120, #121, #198, #230, #262, #263, #333, #356, #358, #392), moved 2026-11-02 | Background only, not a GO |
+| [issue-archive/](issue-archive/) | Legacy link compatibility; eight long briefs now live under [ideas](ideas/README.md), while #120/#198 are separately consolidated in PRs [#488](https://github.com/bongohorse/rider/pull/488) / [#489](https://github.com/bongohorse/rider/pull/489) | Historical only; use the live issue for status and scope |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Design brief | Core loop and duration · Controls and feel trials · Crash, recovery and checkpoints · Identity and fun acceptance |
 | [feel/buggy-baseline.md](feel/buggy-baseline.md) | Historical vs missing feel evidence, preset A–F, two reproducible protocols (#339) | System and preset inventory · Evidence and gaps · Two reproducible protocols · Candidate hypotheses and stop points · Verification and limitations |
 | [feel/wheel-rotation-cap-114.md](feel/wheel-rotation-cap-114.md) | Pinned 60-Hz wheel rotation cap, upstream/Defold API gap, options and the two-stage fix decided 2026-11-03 (#114) | Decision summary · Source-backed mechanism · Rider calculations and evidence · Solutions and tradeoffs · Investigation order (pre-decision) · Reproducible test protocol · Acceptance and stop points · References and evidence status |
@@ -83,6 +83,6 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [contracts/evidence.md](contracts/evidence.md) | PASS/FAIL/BLOCKED/NOT RUN and reporting | — |
 | [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints |
 | [main/gym/README.md](../main/gym/README.md) | Gym implementation and test protocols | See its Contents line |
-| [ideas/](ideas/README.md) | Unscheduled ideas | Roadmap waves · Vehicle builder |
+| [ideas/](ideas/README.md) | Feature ideas, archived plans, active-issue reference briefs and closed-epic history | Roadmap · vehicle builder · procedural generation · feature briefs · history |
 
 Superseded gate records (G0–G3), the v1.4.1 masterplan and the VS Code migration dossier were removed on 2026-10-18; they remain in [git history](https://github.com/bongohorse/rider/tree/764cc01dc94d56448921191405c7f5c601ba42b6/docs/history).
