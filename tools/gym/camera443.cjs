@@ -34,6 +34,26 @@ const SCENARIOS=[
 const PHYSICS_KEYS=['resets','generation','dt','x','y','vx','vy','angle','omega','rear_angle','rear_omega','front_angle','front_omega',
  'rear','front','throttle','brake_reverse','allow_reverse','reverse_engaged'];
 const DEFAULTS={mode:'a',follow:1,look:1,zoom:1,offset:0,descent_response:0,descent_rise_limit:240};
+// Keep the measurement gates and their failure evidence together; these are vehicle ticks, not wall time.
+function measurementBudget(scn){
+ return {scenario:scn.name,requested_toggle_tick:scn.toggleAt,toggle_tick:null,
+  required_hold_until_tick:scn.bOnlyUntil??null,hold_tick:null,step_tick:null,
+  horizon_tick:scn.ticks,required_b_only_span:scn.b_lead?60:null,required_post_step_ticks:90,probe_capacity:480};
+}
+function verifyMeasurementWindow(budget,phase){
+ if(phase==='toggle')assert(budget.toggle_tick<budget.required_hold_until_tick-60,
+  budget.scenario+': toggle too late for the B-only window; budget='+JSON.stringify(budget));
+ else if(phase==='step')assert(budget.step_tick<budget.horizon_tick-90,
+  budget.scenario+': taps took too long to leave a measured window ('+budget.step_tick+'); budget='+JSON.stringify(budget));
+ else throw Error('Unknown camera measurement phase: '+phase);
+}
+// Evaluate in the page only on failure. Preserve all available bounded probe samples, including incomplete runs.
+function failurePageState(){
+ return {camera:window.riderCamera443??null,owner:window.riderCameraOwner??null,
+  replay:window.riderReplay?{recording:window.riderReplay.recording,play:window.riderReplay.play,x:window.riderReplay.x}:null,
+  ticks:window.riderCamera352PhysicsTrace?.at(-1)?.tick??null,
+  partial_trace:{physics:window.riderCamera352PhysicsTrace?.slice()??[],render:window.riderCamera352Trace?.slice()??[]}};
+}
 function parseArgs(args){
  const usage='Usage: node tools/gym/camera443.cjs OUT SHA RUN_ID cam443 VERIFIED_DEBUG_BUNDLE';
  if(!Array.isArray(args)||args.length!==5||args.some(v=>typeof v!=='string'||!v)||args[3]!=='cam443')throw Error(usage);
@@ -125,7 +145,7 @@ const overlap=(a,b,tol=0.5)=>a.left<b.right-tol&&a.right>b.left+tol&&a.top<b.bot
 const inside=(r,c,tol=0.5)=>r.left>=c.left-tol&&r.top>=c.top-tol&&r.right<=c.right+tol&&r.bottom<=c.bottom+tol;
 const sameValues=(a,b)=>Object.keys(DEFAULTS).every(k=>a[k]===b[k]);
 module.exports={parseArgs,byTick,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
- SCENARIOS,PHYSICS_KEYS,DEFAULTS};
+ SCENARIOS,PHYSICS_KEYS,DEFAULTS,measurementBudget,verifyMeasurementWindow,failurePageState};
 
 if(require.main===module){
  const {configure}=require('./launch.cjs');
@@ -148,7 +168,7 @@ if(require.main===module){
   fs.createReadStream(file).pipe(res);
  });
  (async()=>{
-  let browser;const errors=[],cases={},pages={};
+  let browser,measurement=null;const errors=[],cases={},pages={};
   const FRAMES='window.riderReplay.frames';
   const watch=(p,name)=>{pages[name]=p;p.on('pageerror',e=>{if(errors.length<20)errors.push(name+': '+e.message);});
    p.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT|ERROR:GUI/.test(m.text())&&errors.length<20)errors.push(name+': '+m.text());});};
@@ -287,6 +307,7 @@ if(require.main===module){
    // 1. Each driving scenario: a camera-A run and a live-switched run on identical scripted commands.
    for(const scn of SCENARIOS){
     const label=scn.name;
+    measurement=measurementBudget(scn);
     const a=await open(label+'-a',scn.query);
     const fresh=await cam(a.p);
     assert.equal(fresh.mode,'a','Camera A is not the default');assert.equal(fresh.status,'default');
@@ -297,12 +318,14 @@ if(require.main===module){
     await waitTick(t.p,scn.toggleAt);
     const toggled=await command(t.p,'toggle',null,label+' Cam A -> B',{mode:'b'});
     const toggleSeq=toggled.settings_seq;
+    measurement.toggle_tick=await tick(t.p);
     if(scn.b_lead){
      // #486: a fast host used to step the height after only ~28 B ticks. Give the
      // unmodified B camera a fixed vehicle-tick window to develop its downhill lead.
      // Fail a late toggle instead of silently measuring a shorter interval.
-     assert(await tick(t.p)<scn.bOnlyUntil-60,label+': toggle too late for the B-only window');
+     verifyMeasurementWindow(measurement,'toggle');
      await waitTick(t.p,scn.bOnlyUntil);
+     measurement.hold_tick=await tick(t.p);
     }
     await panel(t.p,true,label+' open panel');
     let last;
@@ -311,7 +334,8 @@ if(require.main===module){
     assert.notEqual(stepped,DEFAULTS[scn.setting.key],label+': the setting did not change');
     await panel(t.p,false,label+' close panel');
     const switchedAt=await tick(t.p);
-    assert(switchedAt<scn.ticks-90,label+': taps took too long to leave a measured window ('+switchedAt+')');
+    measurement.step_tick=switchedAt;
+    verifyMeasurementWindow(measurement,'step');
     await waitTick(t.p,scn.ticks);const T=await traces(t.p);T.report=await result(t.p,scn);
     await t.p.screenshot({path:path.join(out,`cam443-${label}-switched.png`)});
     // Physics: exact on every vehicle tick 1..ticks, with B in use for most of them.
@@ -354,6 +378,7 @@ if(require.main===module){
      summary.reverse_tick=rev;
     }
     fs.writeFileSync(path.join(out,`cam443-${label}-traces.json`),JSON.stringify({a:A,switched:T},null,1));
+    measurement=null;
     // 2. A21: record on camera B (stepped), replay on camera A, switch back to B and step again mid-replay: MATCH.
     await record(t.p,true);
     await t.p.waitForFunction(n=>window.riderReplay?.recording?.ticks>=n,scn.ticks-60,{polling:50,timeout:20000});
@@ -477,6 +502,7 @@ if(require.main===module){
     await ctx.close();
    }
 
+   measurement=null;
    assert.equal(errors.length,0,'Defold errors: '+errors.join('; '));
    const report={status:'PASS',source_sha:sha,build_source_fingerprint:metadata.source_fingerprint,run_id:runId,
     browser:browser.version(),platform:'real-debug-defold-html5-chromium-headless',cases,
@@ -486,12 +512,10 @@ if(require.main===module){
    fs.writeFileSync(path.join(out,'cam443-result.json'),JSON.stringify(report,null,2)+'\n');
    console.log('CAM443_RESULT '+JSON.stringify({status:report.status,source_sha:sha,run_id:runId,cases:Object.keys(cases)}));
   }catch(e){
-   const diag={status:'FAIL',source_sha:sha,run_id:runId,error:String(e),cases,browser_errors:errors};
+   const diag={status:'FAIL',source_sha:sha,run_id:runId,error:String(e),measurement_budget:measurement,cases,browser_errors:errors};
    for(const [name,p] of Object.entries(pages)){
     if(p.isClosed())continue;
-    diag[name]=await p.evaluate(()=>({camera:window.riderCamera443??null,owner:window.riderCameraOwner??null,
-     replay:window.riderReplay?{recording:window.riderReplay.recording,play:window.riderReplay.play,x:window.riderReplay.x}:null,
-     ticks:window.riderCamera352PhysicsTrace?.at(-1)?.tick??null})).catch(err=>({capture_error:String(err)}));
+    diag[name]=await p.evaluate(failurePageState).catch(err=>({capture_error:String(err)}));
     await p.screenshot({path:path.join(out,`cam443-${name}-failed.png`),timeout:5000}).catch(()=>{});
    }
    fs.writeFileSync(path.join(out,'cam443-failed.json'),JSON.stringify(diag,null,2)+'\n');
