@@ -126,7 +126,7 @@ class AffectedTest(unittest.TestCase):
     def test_browser_provisioning_is_ci_only_and_affected_run_is_blocked(self):
         from classify_changes import selection
         path = 'tools/ci/setup_playwright.cjs'
-        self.assertEqual(selection([path]), 'full')
+        self.assertEqual(selection([path])[:3], ('false', 'false', 'false'))
         cases, _, ci_only = local.affected_cases([path], RULES, self.inventory, CLOSURE)
         self.assertEqual(cases, [])
         self.assertIn(path, ci_only, 'Unit tests do not provision/probe the browser host')
