@@ -3,8 +3,9 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
+const vm=require('node:vm');
 const {parseArgs,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
- SCENARIOS,PHYSICS_KEYS,DEFAULTS}=require('../../tools/gym/camera443.cjs');
+ SCENARIOS,PHYSICS_KEYS,DEFAULTS,measurementBudget,verifyMeasurementWindow,failurePageState}=require('../../tools/gym/camera443.cjs');
 const root=path.resolve(__dirname,'../..');
 
 test('CLI accepts exactly the cam443 case',()=>{
@@ -107,4 +108,38 @@ test('ramp horizon accommodates the observed tick-229 setting completion',()=>{
  assert(observedStepTick<ramp.ticks-90,
   'observed CI taps must leave the unchanged 90-tick post-step measurement window');
  assert(ramp.ticks<=440,'horizon must retain margin inside the 480-entry probe buffer');
+});
+
+test('late transitions retain their exact gate and named measurement budget',()=>{
+ const ramp=SCENARIOS.find(s=>s.b_lead),budget=measurementBudget(ramp);
+ assert.equal(budget.probe_capacity,480);
+ const probe=fs.readFileSync(path.join(root,'main/gym/camera_probe352.lua'),'utf8');
+ assert.equal((probe.match(/if\(a.length>480\)a.shift\(\)/g)||[]).length,2,'diagnostic capacity must match both probes');
+ budget.toggle_tick=59;
+ verifyMeasurementWindow(budget,'toggle');
+ budget.toggle_tick=60;
+ assert.throws(()=>verifyMeasurementWindow(budget,'toggle'),/toggle too late for the B-only window; budget=/);
+ budget.toggle_tick=23;budget.hold_tick=121;budget.step_tick=329;
+ verifyMeasurementWindow(budget,'step');
+ budget.step_tick=330;
+ let failure;
+ try{verifyMeasurementWindow(budget,'step');}catch(e){failure=e;}
+ assert(failure,'the exact 90-tick boundary must still fail');
+ const recorded=JSON.parse(failure.message.split('budget=')[1]);
+ assert.deepEqual(recorded,{scenario:'ramps-down-30',requested_toggle_tick:2,toggle_tick:23,
+  required_hold_until_tick:120,hold_tick:121,step_tick:330,horizon_tick:420,
+  required_b_only_span:60,required_post_step_ticks:90,probe_capacity:480});
+ assert.throws(()=>verifyMeasurementWindow(budget,'unknown'),/Unknown camera measurement phase/);
+});
+
+test('failure capture serializes the available partial traces even before readiness',()=>{
+ const capture=window=>JSON.parse(JSON.stringify(vm.runInNewContext('('+failurePageState.toString()+')()', {window})));
+ const physics=trace(330),render=[{tick:334,cx:12,cy:8,zoom:1,mode:'b'}];
+ const page={riderCamera352PhysicsTrace:physics,riderCamera352Trace:render,
+  riderCamera443:{settings_seq:5,mode:'b'},riderCameraOwner:{seq:5},riderReplay:{x:2,recording:null,play:null}};
+ const state=capture(page);
+ assert.equal(state.ticks,330);assert.equal(JSON.stringify(state.partial_trace),JSON.stringify({physics,render}));
+ assert.deepEqual(state.camera,page.riderCamera443);assert.deepEqual(state.owner,page.riderCameraOwner);
+ const empty=capture({});
+ assert.equal(empty.ticks,null);assert.deepEqual(empty.partial_trace,{physics:[],render:[]});
 });
