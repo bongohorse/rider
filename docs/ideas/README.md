@@ -27,5 +27,5 @@ A library of **unscheduled ideas** and **historical issue planning references**.
 | Idea | Status | File |
 |---|---|---|
 | Future feature roadmap (waves, smaller ideas) | worked out | [roadmap.md](roadmap.md) |
-| Build your own vehicle | worked out | [vehicle-builder.md](vehicle-builder.md) |
+| Vehicle builder / car editor ([epic #198](https://github.com/bongohorse/rider/issues/198)) | worked out (backlog; no GO) | [vehicle-builder.md](vehicle-builder.md) |
 | Interactive objects and gameplay catalogue | worked out | [interactive-objects/README.md](interactive-objects/README.md) |
