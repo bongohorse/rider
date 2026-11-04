@@ -20,7 +20,8 @@ const DESKTOP={width:1280,height:720},PHONE={width:1080,height:486},TOL_PX=1.5;
 // toggleAt: the vehicle tick after which the camera is switched; ticks: the compared window (vehicle ticks from the
 // first drive-ready tick; under the probe's 480-entry page buffer); setting: the live step after the switch.
 const SCENARIOS=[
- {name:'ramps-down-30',station:'ramps-long',query:'station=ramps-long&section=down-30&drive443=ramp',ticks:300,toggleAt:2,
+ {name:'ramps-down-30',station:'ramps-long',query:'station=ramps-long&section=down-30&drive443=ramp',ticks:420,toggleAt:2,
+  // #499: leave the same post-step coverage after the fixed B-only hold, even with CI UI latency.
   setting:{key:'offset',dir:1,taps:3},effect:'cy',b_lead:true,bOnlyUntil:120},
  {name:'air-mid',station:'air',query:'station=air&section=mid&lean=-1&drive443=air',ticks:420,toggleAt:20,
   setting:{key:'zoom',dir:1,taps:3},effect:'zoom',air:true},

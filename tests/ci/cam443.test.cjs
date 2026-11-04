@@ -98,3 +98,13 @@ test('downhill lead needs a full B-only window and excludes later height setting
  const noDescent=new Map([...b].map(([t,s])=>[t,{...s,descent:0}]));
  assert.throws(()=>downhillLead(a,noDescent,2,120,'ramp'),/built no downhill lead/);
 });
+
+// #499: preserve the post-step window when normal CI UI latency follows the B-only hold.
+test('ramp horizon accommodates the observed tick-229 setting completion',()=>{
+ const ramp=SCENARIOS.find(s=>s.b_lead);
+ const observedStepTick=229; // main run 41833511759, camera job 126587266958
+ assert(observedStepTick>ramp.bOnlyUntil,'fixture must follow the fixed B-only measurement');
+ assert(observedStepTick<ramp.ticks-90,
+  'observed CI taps must leave the unchanged 90-tick post-step measurement window');
+ assert(ramp.ticks<=440,'horizon must retain margin inside the 480-entry probe buffer');
+});
