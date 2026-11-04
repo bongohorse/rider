@@ -26,6 +26,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | Open maintainer drive tests | [`status: needs drive test` issues](#current-state); sessions of 2026-11-02 in [ACCEPTANCE.md](ACCEPTANCE.md) |
 | Decisions, work order, roadmap, stop points | [PLAN.md](PLAN.md) |
 | Writing, labelling, ordering or closing issues | [issue guide](ISSUES.md), [templates](../.github/ISSUE_TEMPLATE/); migrated issue-planning references in [ideas](ideas/README.md), with compatibility pointers under [issue-archive/](issue-archive/) |
+| Engineering skills: tracker, triage and domain exploration | [Issue tracker](agents/issue-tracker.md) · [triage roles](agents/triage-labels.md) · [domain docs](agents/domain.md) |
 | Gameplay intent, open design choices | [GAME_DESIGN.md](GAME_DESIGN.md), [vehicle contract](contracts/vehicle.md) |
 | Buggy handling baseline and A/B experiment plan (#339) | [Feel evidence and protocols](feel/buggy-baseline.md) |
 | Wheel rolling-speed ceiling / fast-rotation review (#114) | [Box2D 3.1.0 findings, solutions and the 2026-11-03 decision](feel/wheel-rotation-cap-114.md) |
@@ -53,7 +54,10 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 
 | Document | Purpose | Sections |
 | --- | --- | --- |
-| [AGENTS.md](../AGENTS.md) | Rules for every AI agent; [CLAUDE.md](../CLAUDE.md) and [GEMINI.md](../GEMINI.md) only import it | Start · Project state · Workflow · Technical boundaries · Verification |
+| [AGENTS.md](../AGENTS.md) | Rules for every AI agent; [CLAUDE.md](../CLAUDE.md) and [GEMINI.md](../GEMINI.md) only import it | Start · Project state · Workflow · Technical boundaries · Verification · Agent skills |
+| [agents/issue-tracker.md](agents/issue-tracker.md) | GitHub tracker operations for engineering skills; issue-guide authority and PR purpose | — |
+| [agents/triage-labels.md](agents/triage-labels.md) | Skill triage roles mapped to Rider's existing labels and workflow | — |
+| [agents/domain.md](agents/domain.md) | Single-context domain documentation consumer rules; create files only when needed | — |
 | [ACCEPTANCE.md](ACCEPTANCE.md) | Record of the 2026-11-02 drive-test sessions (#404); open items are issues | How to run a session · Results 2026-11-02 · Session 1: desktop editor · Session 2: desktop driving and stations · Session 3: phone · Session 4: vehicle feel (deferred) · Recording results |
 | [PLAN.md](PLAN.md) | Goal, decisions D1–D13, work order, roadmap | Goal · Decisions · Work order · Roadmap · Stop points · Later phases |
 | [ISSUES.md](ISSUES.md) | Issue kinds, sub-issues, required sections, length, labels, waves, GO/owner/status | Kinds and hierarchy · Required sections · Length · Labels · Milestones and order · GO, owner and status · Titles · Updating and closing · Checklist |
