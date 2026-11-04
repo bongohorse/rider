@@ -44,7 +44,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | First playable run (#279) | [Behavior, scoring, persistence and checks](reports/GAMEPLAY_G1_REPORT.md) |
 | Terrain Look (#278) | [Authoring report](reports/TERRAIN_LOOK_REPORT.md), [shared contract](contracts/road-look.md#editor-authoring) |
 | Terrain materials (#392) | [Stage A renderer spike: Kenney atlas, textured route, temporary URL pilot, measurements](reports/TERRAIN_MATERIAL_A_REPORT.md); atlas [provenance](../main/terrain_material/PROVENANCE.md) |
-| Level editor | [Editor A layout previews](editor-a/README.md) · [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](reports/LE1B_REPORT.md) |
+| Level editor | [level-editor contract](contracts/level-editor.md) (epic [#118](https://github.com/bongohorse/rider/issues/118)); custom level cost: [LE1b report](reports/LE1B_REPORT.md) |
 | Splitting the editor GUI script (#331) | [E0 inventory: state, callbacks, messages, hazards, E1 candidates, Gym coverage](reports/EDITOR_E0_INVENTORY.md) |
 | Test CLI, runner protocol, release boundary | [automation contract](contracts/automation.md) |
 | Native Bridge | [bridge contract](contracts/bridge.md) |
