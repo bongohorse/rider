@@ -23,9 +23,10 @@ local function add(state,name,elapsed,bytes,returned)
  b.sum_ms=b.sum_ms+ms;b.max_ms=math.max(b.max_ms,ms)
  if #b.samples_ms<M.CAP then b.samples_ms[#b.samples_ms+1]=ms else state.overflow=true end
 end
-function M.wrap(fn,label,helpers)
- local selected=mode();if not selected then return fn end
- local env=getfenv(fn);local real_html5,real_json=env.html5,env.json
+function M.group(functions,helpers)
+ local selected=mode();if not selected then return functions end
+ local _,first=next(functions);assert(first,"No publication callbacks")
+ local env=getfenv(first);local real_html5,real_json=env.html5,env.json
  local active
  if selected=='on' then
   local function observed(kind,f,...)
@@ -43,10 +44,13 @@ function M.wrap(fn,label,helpers)
    html5=setmetatable({run=function(...)return observed('html5.run',real_html5.run,...)end},{__index=real_html5}),
    json=setmetatable({encode=function(...)return observed('json.encode',real_json.encode,...)end},{__index=real_json}),
   },{__index=env,__newindex=env})
-  setfenv(fn,private)
+  for _,fn in pairs(functions)do assert(getfenv(fn)==env,"Publication callbacks need one source environment");setfenv(fn,private)end
   for _,helper in ipairs(helpers or {})do setfenv(helper,private)end
  end
- return function(self,...)
+ local wrapped={}
+ for name,callback in pairs(functions)do
+  local label,fn=name,callback
+  wrapped[label]=function(self,...)
   local now=socket.gettime()
   self.publication516=self.publication516 or {}
   local p=self.publication516[label]
@@ -81,7 +85,9 @@ function M.wrap(fn,label,helpers)
   end
   if p.finish and now>=p.finish and not p.sent then
    p.sent=true
+   local engine=sys.get_engine_info()
    local report={schema=1,owner=label,mode=selected,run_id=sys.get_config_string('rider.run_id',''),
+    engine={version=engine.version,commit=engine.version_sha1,is_debug=engine.is_debug},
     begin_unix_ms=p.begin*1000,end_unix_ms=p.finish*1000,warmup_s=M.WARMUP,sample_s=M.SECONDS,
     buckets=p.buckets,overflow=p.overflow or false,resolution_ms=p.resolution_ms,
     fixed_tick_begin=p.tick_begin,fixed_tick_end=p.tick_end,command_samples=p.command_samples or 0,nonzero_command=p.nonzero_command or false,
@@ -90,6 +96,9 @@ function M.wrap(fn,label,helpers)
   end
   if not result[1] then error(result[2],0)end
   return unpack(result,2,result.n)
+  end
  end
+ return wrapped
 end
+function M.wrap(fn,label,helpers)return M.group({[label]=fn},helpers)[label]end
 return M

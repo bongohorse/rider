@@ -50,4 +50,15 @@ selected='on';now=6.1
 for _=1,P.CAP+2 do wrapped(a,1)end
 assert(state.overflow and #state.buckets.callback.samples_ms==P.CAP and state.buckets.callback.count>P.CAP)
 now=27;wrapped(a,1);assert(state.sent and state.tick_end>state.tick_begin)
+-- Shared HUD helpers must be attributed to whichever callback invoked them, not the last wrapper installed.
+now=10
+local function helper()return html5.run('window.shared=1'),json.encode({})end
+local function update(self)self.fixed_ticks=self.fixed_ticks+1;return helper()end
+local function message(self)self.fixed_ticks=self.fixed_ticks+1;return helper()end
+local group=P.group({['hud.update']=update,['hud.on_message']=message},{helper})
+local owner={fixed_ticks=0};group['hud.update'](owner);group['hud.on_message'](owner)
+for _,label in ipairs({'hud.update','hud.on_message'})do
+ local bucket=owner.publication516[label].buckets
+ assert(bucket['html5.run:shared'].count==1 and bucket['json.encode'].count==1)
+end
 print('PASS publication observer: original returns/errors, release identity, private APIs, isolated windows, off control and explicit overflow')

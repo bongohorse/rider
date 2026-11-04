@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {PLAN,distribution,compare,fixtures}=require('../../tools/gameplay/measure_publication.cjs');
+const {PLAN,distribution,compare,fixtures,expectedRuns}=require('../../tools/gameplay/measure_publication.cjs');
 test('fixed window and material-effect threshold retain the declared floor, dispersion and clock limits',()=>{
  assert.deepEqual([PLAN.warmup_s,PLAN.sample_s,PLAN.repetitions,PLAN.dpr],[5,20,3,1]);
  assert(!compare([1,1,1],[1.1,1.1,1.1]).material_observer_effect);
@@ -24,4 +24,10 @@ test('retained course geometry stays unchanged; only the declared long-course ap
   }else assert.deepEqual(derived,original);
  }
  assert(JSON.parse(rows[2].text).mechanisms);
+});
+test('mandatory matrix is declared independently of results and rejects zero/duplicate identities',()=>{
+ const courses=fixtures(),all=expectedRuns(courses,false);
+ assert.equal(all.length,27);assert.equal(new Set(all).size,27);assert.equal(all.filter(x=>x.includes('-release-')).length,9);
+ assert.deepEqual(expectedRuns(courses,true),['long-on-0']);
+ assert.throws(()=>expectedRuns([],false),/inventory/);assert.throws(()=>expectedRuns([courses[0],courses[0]],false),/inventory/);
 });
