@@ -11,13 +11,13 @@ A categorized catalogue of future Rider 2D physics interactions, challenges and 
 | Document | Covers |
 | --- | --- |
 | [foundations.md](./foundations.md) | Historical scope, ownership and delivery rules |
-| [physics-and-structures.md](./physics-and-structures.md) | Kisten, Kugeln, Wippen, flexible und zerstörbare Strukturen |
-| [triggers-and-machinery.md](./triggers-and-machinery.md) | Schalter, Tore, Aufzüge, Förderbänder, Greifarme und Maschinen |
-| [surfaces-and-hazards.md](./surfaces-and-hazards.md) | Untergründe, Gefahren, Laser, Raketen, Explosionen und Schäden |
-| [objectives-and-courses.md](./objectives-and-courses.md) | Ziele, Ringe, Belohnungen, Gameplay-Challenges und Beispiellevel |
-| [vehicle-modifiers-and-modes.md](./vehicle-modifiers-and-modes.md) | Fahrzeuggröße, Räder, Nitro und alternative Fahrzeugtypen |
-| [advanced-experiments.md](./advanced-experiments.md) | Portale, Portal Gun, Zeitmanipulation und aufwendige Experimente |
-| [runtime-and-editor-guidelines.md](./runtime-and-editor-guidelines.md) | Box2D, Events, Reset, Editor, Validierung und Performance |
+| [physics-and-structures.md](./physics-and-structures.md) | Crates, balls, seesaws, yielding and breakable structures |
+| [triggers-and-machinery.md](./triggers-and-machinery.md) | Switches, gates, lifts, conveyors, grab arms and machinery |
+| [surfaces-and-hazards.md](./surfaces-and-hazards.md) | Driving surfaces, hazards, lasers, missiles, explosions and damage |
+| [objectives-and-courses.md](./objectives-and-courses.md) | Objectives, hoops, rewards, gameplay challenges and sample levels |
+| [vehicle-modifiers-and-modes.md](./vehicle-modifiers-and-modes.md) | Vehicle size, wheels, nitro and alternative vehicle types |
+| [advanced-experiments.md](./advanced-experiments.md) | Portals, Portal Gun, time manipulation and advanced experiments |
+| [runtime-and-editor-guidelines.md](./runtime-and-editor-guidelines.md) | Box2D, events, reset, editor, validation and performance |
 
 ## How to use these ideas
 
