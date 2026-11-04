@@ -19,4 +19,4 @@ A place to collect and work out ideas that are **not decided and not scheduled**
 | Idea | Status | File |
 |---|---|---|
 | Future feature roadmap (waves, smaller ideas) | worked out | [roadmap.md](roadmap.md) |
-| Build your own vehicle | worked out | [vehicle-builder.md](vehicle-builder.md) |
+| Vehicle builder / car editor ([epic #198](https://github.com/bongohorse/rider/issues/198)) | worked out (backlog; no GO) | [vehicle-builder.md](vehicle-builder.md) |
