@@ -3,7 +3,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
-const {parseArgs,identicalPhysics,renderByTick,cameraDelta,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
+const {parseArgs,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
  SCENARIOS,PHYSICS_KEYS,DEFAULTS}=require('../../tools/gym/camera443.cjs');
 const root=path.resolve(__dirname,'../..');
 
@@ -80,4 +80,21 @@ test('placement helpers and settings comparison',()=>{
  assert(inside(a,c)&&!inside({...a,right:1281},c));
  assert(overlap(a,{left:100,top:50,right:200,bottom:90})&&!overlap(a,{left:110,top:0,right:200,bottom:60}),'touching is not overlapping');
  assert(sameValues({...DEFAULTS},DEFAULTS)&&!sameValues({...DEFAULTS,zoom:1.05},DEFAULTS)&&!sameValues({...DEFAULTS,mode:'b'},DEFAULTS));
+});
+
+// #486: a brief pre-step glimpse must never stand in for a developed downhill view.
+test('downhill lead needs a full B-only window and excludes later height settings',()=>{
+ const a=new Map(),b=new Map();
+ for(let t=1;t<=180;t++){
+  a.set(t,{cx:0,cy:0,zoom:1,descent:0,mode:'a'});
+  b.set(t,{cx:0,cy:t>=90?8:2.81,zoom:1,descent:10,mode:'b',cam_seq:t<=120?2:3});
+ }
+ assert.throws(()=>downhillLead(a,b,2,28,'ramp'),/insufficient B-only vehicle-tick span/);
+ assert.equal(downhillLead(a,b,2,120,'ramp').max_dcy_u,8);
+ const sparse=new Map([...b].filter(([t])=>t%3===0));
+ assert.equal(downhillLead(a,sparse,2,120,'sparse ramp').max_dcy_u,8);
+ const noLead=new Map([...b].map(([t,s])=>[t,{...s,cy:t<=120?2.81:100}]));
+ assert.throws(()=>downhillLead(a,noLead,2,120,'ramp'),/did not change the view/);
+ const noDescent=new Map([...b].map(([t,s])=>[t,{...s,descent:0}]));
+ assert.throws(()=>downhillLead(a,noDescent,2,120,'ramp'),/built no downhill lead/);
 });

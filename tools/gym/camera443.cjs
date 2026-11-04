@@ -21,7 +21,7 @@ const DESKTOP={width:1280,height:720},PHONE={width:1080,height:486},TOL_PX=1.5;
 // first drive-ready tick; under the probe's 480-entry page buffer); setting: the live step after the switch.
 const SCENARIOS=[
  {name:'ramps-down-30',station:'ramps-long',query:'station=ramps-long&section=down-30&drive443=ramp',ticks:300,toggleAt:2,
-  setting:{key:'offset',dir:1,taps:3},effect:'cy',b_lead:true},
+  setting:{key:'offset',dir:1,taps:3},effect:'cy',b_lead:true,bOnlyUntil:120},
  {name:'air-mid',station:'air',query:'station=air&section=mid&lean=-1&drive443=air',ticks:420,toggleAt:20,
   setting:{key:'zoom',dir:1,taps:3},effect:'zoom',air:true},
  {name:'straight-reverse',station:'straight',query:'station=straight&drive443=reverse',ticks:420,toggleAt:20,
@@ -91,6 +91,19 @@ function cameraDelta(a,b,{from=1,to=Infinity,filter=()=>true}={}){
  }
  return {paired_ticks:n,first_tick:first,max_dcx_u:cx,max_dcy_u:cy,max_dzoom:zoom};
 }
+// Only default B settings in the fixed pre-step window can prove the downhill lead.
+function downhillLead(a,b,seq,until,label){
+ const samples=[...b].filter(([t,s])=>t<=until&&s.mode==='b'&&s.cam_seq===seq);
+ const lead=Math.max(0,...samples.map(([,s])=>s.descent));
+ const d=cameraDelta(a,b,{to:until,filter:s=>s.mode==='b'&&s.cam_seq===seq});
+ const paired=[...a.keys()].filter(t=>t<=until&&b.get(t)?.mode==='b'&&b.get(t)?.cam_seq===seq);
+ const span=paired.length?Math.max(...paired)-Math.min(...paired):0;
+ assert(span>=60,label+': insufficient B-only vehicle-tick span: '+JSON.stringify(d));
+ assert(lead>5,label+': camera B built no downhill lead before the step: '+lead);
+ assert(d.max_dcy_u>3,label+': camera B did not change the view on the downhill: '+JSON.stringify(d));
+ assert([...a.values()].every(s=>s.descent===0),label+': camera A has a downhill lead');
+ return {frames:samples.length,vehicle_tick_span:span,max_descent_u:lead,...d};
+}
 // A recording of taps: cleanly stopped and without any drive command.
 function verifyNoDrive(recording,label){
  assert(recording&&recording.ended==='stopped'&&recording.error===false,label+': recording not cleanly stopped');
@@ -110,7 +123,7 @@ function verifyReplay(play,label){
 const overlap=(a,b,tol=0.5)=>a.left<b.right-tol&&a.right>b.left+tol&&a.top<b.bottom-tol&&a.bottom>b.top+tol;
 const inside=(r,c,tol=0.5)=>r.left>=c.left-tol&&r.top>=c.top-tol&&r.right<=c.right+tol&&r.bottom<=c.bottom+tol;
 const sameValues=(a,b)=>Object.keys(DEFAULTS).every(k=>a[k]===b[k]);
-module.exports={parseArgs,byTick,identicalPhysics,renderByTick,cameraDelta,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
+module.exports={parseArgs,byTick,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
  SCENARIOS,PHYSICS_KEYS,DEFAULTS};
 
 if(require.main===module){
@@ -283,6 +296,13 @@ if(require.main===module){
     await waitTick(t.p,scn.toggleAt);
     const toggled=await command(t.p,'toggle',null,label+' Cam A -> B',{mode:'b'});
     const toggleSeq=toggled.settings_seq;
+    if(scn.b_lead){
+     // #486: a fast host used to step the height after only ~28 B ticks. Give the
+     // unmodified B camera a fixed vehicle-tick window to develop its downhill lead.
+     // Fail a late toggle instead of silently measuring a shorter interval.
+     assert(await tick(t.p)<scn.bOnlyUntil-60,label+': toggle too late for the B-only window');
+     await waitTick(t.p,scn.bOnlyUntil);
+    }
     await panel(t.p,true,label+' open panel');
     let last;
     for(let i=0;i<scn.setting.taps;i++)last=await command(t.p,null,{key:scn.setting.key,which:scn.setting.dir>0?'plus':'minus'},label+' step '+scn.setting.key);
@@ -311,13 +331,7 @@ if(require.main===module){
     if(scn.effect==='cx')assert(afterStep.max_dcx_u>=20,label+': look-ahead setting did not move the camera: '+JSON.stringify(afterStep));
     if(scn.b_lead){
      // Camera B alone (before the setting step): a real downhill lead on the loaded slope, a lower view than A.
-     const bOnly=[...rt].filter(([k,s])=>s.mode==='b'&&s.cam_seq===toggleSeq&&k<stepFrame[0]);
-     const lead=Math.max(0,...bOnly.map(([,s])=>s.descent));
-     const d=cameraDelta(ra,rt,{to:stepFrame[0]-1,filter:s=>s.mode==='b'&&s.cam_seq===toggleSeq});
-     assert(lead>5,label+': camera B built no downhill lead before the step: '+lead);
-     assert(d.max_dcy_u>3,label+': camera B did not change the view on the downhill: '+JSON.stringify(d));
-     assert([...ra.values()].every(s=>s.descent===0),label+': camera A has a downhill lead');
-     summary.b_only={frames:bOnly.length,max_descent_u:lead,...d};
+     summary.b_only=downhillLead(ra,rt,toggleSeq,scn.bOnlyUntil,label);
      const ra30=A.report?.records?.find(r=>r.id==='down-30'),rt30=T.report?.records?.find(r=>r.id==='down-30');
      assert(ra30&&rt30,label+': no down-30 station record');
      summary.station_result={a:ra30.speed_gain_mps,b:rt30.speed_gain_mps};
