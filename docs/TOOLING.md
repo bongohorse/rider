@@ -107,6 +107,8 @@ git -C ~/rider worktree remove ~/rider-worktrees/<name>   # after merge
 
 ## CI and required check
 
+![CI selection flow: PR base diff, cumulative main baseline and strict required outcomes](images/ci-selection.svg)
+
 - `required` (in `ci.yml`) is the only required status check on `main`. It aggregates bootstrap, CI Node tests, Renovate, physics (native + HTML5), tooling/Android, Bridge and release preview, and fails on any failed, cancelled or unexpectedly skipped dependency. `tools/ci/required_gate.py` accepts a skip only for the selection that skips that job, and fails on a missing, unknown or contradicting selection output. Never bypass it or use whole-workflow `paths-ignore`; keep the force-push/deletion protections on `main`.
 - Branch protection requires zero approving reviews, so the independent review is a workflow rule ([AGENTS.md](../AGENTS.md)), not technically enforced.
 - PR jobs test GitHub's merge commit; preview manifests identify that SHA.
