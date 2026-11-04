@@ -357,3 +357,137 @@ Suggested evaluation sequence: complete the currently scoped object-authoring pa
 - **Fairness and feel:** moving hazards should telegraph timing; keep random patterns seeded or deterministic per attempt. Never trap the vehicle by teleporting a closed gate through it. Ensure throttle/brake/tilt remain central.
 - **Rules ownership:** rewards, medals, coin/fuel behavior and authoritative finish results belong to #262; vehicle assemblies and attachments to #198; visual decoration/material presentation to #121. Reuse the seesaw from #57 and existing saw implementations where applicable.
 - **Delivery discipline:** prefer presets and small parameter sets over general logic graphs; one scoped mechanic per task with an observable example, input tests and a human drive test where needed. No entire-course fluid, destructive terrain, arbitrary fracture or new physics engine is implied by these ideas.
+
+### H. Vehicle modifiers, temporary transformations and tyres
+
+These are future *vehicle modifiers*, not permission to mutate Box2D bodies or shapes during a collision. Reuse the validated vehicle definitions and car-editor architecture in [#198](https://github.com/bongohorse/rider/issues/198); course items/events in #120 should request only approved presets. Every modifier needs a source, clear on-screen feedback, duration, stacking/conflict rule and Retry restoration.
+
+| Modifier | Gameplay effect | First safe design rule / concern |
+|---|---|---|
+| Grow / shrink whole buggy | Huge car pushes barriers; tiny car fits into narrow tunnels | Switch between tested complete vehicle presets at a collision-free pose; handle chassis/wheels, mass/inertia, geometry, momentum, camera, joint and reset coherently |
+| Bigger / smaller wheels | Climb taller blocks or squeeze through smaller gaps | Tested wheel radius, clearance and suspension presets; resizing the visual sprite alone is insufficient |
+| Different wheel sets | Swap between road, off-road, balloon, heavy and other tyres | Separate cosmetic appearance from physical parameters |
+| Spiked wheels | Grip tagged surfaces and possibly engage designated breakables | Start with a traction/interaction preset; physical spikes with many collision shapes need a separate cost test |
+| Slippery wheels | Intentionally low grip; drift and hard braking | Wheel friction preset, explicit length of effect and recovery |
+| Soft wheels | Absorb shocks, bounce or deform visually | First test compliant suspension/response plus cosmetic squash; not full soft-body tyres |
+| Sticky wheels | Very high traction on difficult climbs | Clamp traction/forces; wall and ceiling driving need an additional gravity/contact experiment |
+| Change suspension height | Duck through a low passage or climb over rough ground | Validate physical clearance and contact transitions; do not clip terrain |
+| Light/heavy vehicle | Different jumps, inertia and load-based puzzles | Explicit validated mass preset; an occupancy plate is not a mass sensor |
+| Magnetic wheels | Stick to tagged metal strips | Bounded tagged force; separate feasibility prototype |
+| Temporary hover mode | Glide above short hazards | Distinct validated controller preset and safe re-landing; not mere visual lift |
+| Shield / invulnerable state | Survive one declared hazard | Only after the crash/damage policy is specified; not a substitute for collisions |
+
+**Transitions:** when a new wheel size, body scale or archetype is activated, ensure there is physical space and a valid state. Rebuild/swap the complete validated vehicle at a controlled boundary, or defer/reject the transformation; define whether linear/angular momentum is preserved. Start with friction-only tyre swaps rather than live body rescaling.
+
+### I. Alternative vehicles and movement modes (vehicle epic, not new #120 objects)
+
+| Archetype | Distinct player experience | Main feasibility risk |
+|---|---|---|
+| Unicycle (1 wheel) | Balance with torque, wheelies and precise jumps | One-point support and body stability |
+| Existing buggy (2 wheels) | Baseline | Preserve handling and tests |
+| Tricycle / 3-wheel buggy | Different balance and obstacle response | Additional suspension/wheel setup |
+| Tracked vehicle / tank | Slow powerful climbing over uneven terrain | Expensive individual links; consider affordable contact approximation |
+| Soft-wheel buggy | Cushioned landings and rebound | Controlled compliance without full soft-body physics |
+| Sticky-wheel climber | Steep climbs | Adhesion forces and contact transitions |
+| Hover vehicle | Gliding above surfaces | New hover force and camera model |
+| Pogo-stick vehicle | Repeated spring hops | Balance, grounded timing and impulse bounds |
+| Stilts / walker | Step over short gaps | Many constraints and contact instability |
+| Trials-style crossbike | Weight transfer, balance and flips | New geometry, rider pose and tuned input |
+| Airplane / glider | Launch, glide and land | Lift/drag forces and ground-to-air transitions |
+| UFO | Hover and steer through airborne obstacles | Different flight controls |
+| Flappy-style craft | Repeated tap to stay aloft | Touch control timing and level pacing |
+| Train engine + wagons | Pull connected cargo over rolling hills | Couplers, joints, turning and camera length |
+| Rocket craft | Directional thrust and landing | Thrust/torque, fuel/heat and safe impacts |
+| Witch on a broom | Playful flying special vehicle | Flight physics, controls and animation |
+
+**Ownership:** car construction and archetypes belong to #198 or separately approved movement experiments. #120 may eventually host a level object that activates an *already implemented* mode. Avoid building all vehicles at once: choose a single prototype and retain the stock buggy as comparison.
+
+### J. Active abilities, stunt hoops and reward feedback
+
+| Feature | Gameplay | Required contract |
+|---|---|---|
+| Player-activated nitro | Save boost for a ramp, gap or chase | Charge/duration/cooldown, force limit and justified additional touch control |
+| Car jump ability | Hop on command to clear a small barrier | Ground/contact eligibility, bounded impulse, cooldown and air-control interaction |
+| Rocket propulsion | Short burst of thrust, potentially midair | Chassis/world-relative direction, charge, torque and camera response |
+| Recharge pickup | Restore ability charge | Reuse existing pickup and results ownership; no new economy |
+| Jump-through ring | Cross a visible ring for a coin or other existing bonus | Crossing direction, whole buggy/center condition, once-per-attempt and event deduplication |
+| Ring combo / ordered hoops | Chain difficult jumps for larger bonus | Order, time window, retry and intermediate feedback |
+| Perfect landing / skill bonus | Combine ring, speed and precision landing | Build from existing measurements, not duplicate score logic |
+
+**Presentation:** ring glow/pulse, particles, brief celebratory sound, floating bonus text, streak counter and clear color-independent completed state. Verify whether coin, score, gem or medal bonuses actually exist in the delivered #262 game loop; do not invent a second persistent reward system.
+
+### K. Bridges, conveyors, cranes, balloons and cargo factories
+
+Some basic versions are **already catalogued**: suspension bridge (Group 7), conveyors, elevator/moving platform (Group 3), launcher (Group 4), crate, ball and release dispenser (Groups 1–2). The rows below define *new variants and playable examples*, not duplicate systems.
+
+| Variant | Distinct interaction | Authoring and safe runtime limits |
+|---|---|---|
+| Wooden plank bridge | Individual hinged Box2D planks sag, wobble or fail as buggy crosses | Anchors, segment size/count, joint limits/damping, break rule; short stability/mobile budget experiment first |
+| Physical conveyor belt | Moves buggy, crates and balls that land on it | Signed direction/surface speed, area, accepted actor types; verify real wheel/object contact response in pinned Defold/Box2D |
+| Red/green direction belt | Belts reverse or stop; moving red/green arrows signal direction and speed | Arrow direction and animation plus labels/icons (not color alone); configurable acceleration and maximum speed |
+| Crate-spawner conveyor level | A finite overhead spawner drops differently sized boxes onto belts; drive over the pile | Sized presets, spawn period, live-object cap, blocked exit, deterministic sequence, cleanup and Retry |
+| Elevator / freight lift | Carry buggy and loose cargo between floors | Stops, path, dwell, acceleration, blocked-motion and cargo-contact tests |
+| Grab arm / mechanical claw | Reach, grab a crate/ball, transport and release it onto a target | One held actor, limited joints/reach, typed grab/release and no dangling connections |
+| Flying transport platform | Airborne carrier moves along a path; buggy rides it over a gap | Guided moving platform with cosmetic hover/propellers rather than a second flight engine |
+| Bounce balloon | Rebound from a giant soft balloon, chain several jumps | Bounded spring impulse, cooldown, simple physical shape and cosmetic squash/stretch |
+| Balance atop a rolling ball | Stay on a large ball and move it across a passage or to a destination | Mass/radius/contact stability, explicit goal and safe recovery if ball rolls away |
+| Chained machinery puzzle | Crate → belt → ball → button → claw → gate | Compose typed links and timers; bound cycles and avoid a general scripting graph |
+
+**Conveyor acceptance example:** a crate drops onto a belt and travels in the displayed direction without buggy contact; reversing direction affects both crate and buggy. After Save/Reload and Retry, the exact same sequence plays. Crate accumulation never spawns unlimited bodies; stalled exits and full buffers must have declared behaviour. Test sloped belts and wheel traction separately.
+
+### L. Explosives, breakage, lasers, missiles and bosses
+
+| Object / mode | Gameplay | Safe implementation and fairness rule |
+|---|---|---|
+| Burning red barrel | Hit barrel → reaches damage threshold → ignites → explodes after X seconds | Explicit intact/burning/exploded states, fuse telegraph, bounded radial impulse and physical/cosmetic debris caps |
+| Timed laser | Weave past intermittent laser beams or block with cargo | Clear on/off warning and accepted-actor filter; avoid offscreen instant damage |
+| Homing missile | Dodge a rocket steering toward the buggy | Speed/turn cap, finite lifetime, cooldown, visible warning and limited live projectiles |
+| Breakable wood | Cracks/splinters under specified impact or sustained load | Declared threshold and capped prepared fragments |
+| Breakable glass | Fragile windows/platforms shatter | Impact rule and cosmetic-only shards where possible |
+| Breakable stone | Heavy barrier that resists weak collisions | Stronger rule and bounded rubble |
+| HP-based damage | Several distinct hits weaken an object | Hit deduplication; wheel contact every physics tick must not drain HP instantly |
+| Force/impulse breakage | A sufficiently hard impact breaks the object | Verify measurable signal on pinned backend; overlap alone is not impact force |
+| Weight/time breakage | Hold a heavy object on a weak plank until it fails | Define true load measurement versus occupancy+duration proxy |
+| Boss chase: giant steamroller | Outdrive an oversized crushing machine moving behind the player | Deterministic bounded pursuit, readable gap/camera, safe Retry and no need for generic enemy AI |
+| Boss chase: shredder vehicle | Escape a themed mechanical crusher on a collapsing track | Similar pursuit but more hazard presentation; reuse one chase runtime |
+| Race a visible ghost | Beat a transparent recorded run that demonstrates the fastest line | Ghost is non-colliding replay, synchronized to attempt time; separate from physical boss |
+
+**Damage semantics:** HP, single impact, sustained load and triggered demolition are distinct selectable rules, not a vague combined "damage" number. No arbitrary runtime fracture: use known pieces, limit physical debris, and handle explosion/Retry state atomically. Use existing finish/time/reward ownership for ghost/ring results.
+
+### M. Time manipulation and portals — special feasibility experiments
+
+Rider has a single fixed 60 Hz Box2D simulation owner. It is **not straightforward or physically equivalent** to run one contacted vehicle at a different clock rate from other bodies. This section describes desired player effects and candidate approximations, *not* an approved per-body time engine.
+
+| Mode | Intended player experience | First test and honest limitation |
+|---|---|---|
+| Global slow motion | Dramatic slow-motion jump or crash | Explore presentation/animation and consistent global mechanics policy; preserve simulation contract and timing semantics |
+| Vehicle-only slowed time | Buggy reacts slowly while machines keep moving | First approximate with reduced motor/input/thrust; physical impacts are not actually time-dilated |
+| World-only slowed time | Buggy drives normally while lifts, hazards, spawners and missiles seem frozen | Scale/pause authored mechanism schedules, not free dynamic-body clocks; dynamic crates continue physically interacting |
+| Freeze specific mechanisms | Stop an elevator, moving saw or conveyor temporarily | Explicit pause/resume state, blocked interactions, remaining timer and Retry |
+| Fixed portal pair | Vehicle enters one portal, exits another preserving understandable orientation/speed | Atomic whole-vehicle relocation, destination clearance, momentum mapping, cooldown, camera and stable contacts |
+| Cargo portal | Teleport tagged unjointed balls/crates through the same paired portals | Define supported actor types, velocity/orientation and loop prevention |
+| Portal Gun | Player places entry/exit portals on valid surfaces with aim controls | Only after fixed portals pass physics tests; wall whitelist, angle and clearance rules, two active portals, mobile aiming/UI and persistence |
+| Portal puzzle | Move cargo through portals to operate switches and gates | Combine proven fixed portals and typed object events, without unrestricted arbitrary teleport |
+
+**Portal rollout gate:** fixed, aligned and stationary pair → varied orientations → stable buggy wheels/chassis → one cargo type → repeated Retry and rapid re-entry → only then investigate Portal Gun placement. Never teleport a vehicle into geometry or detach joints implicitly.
+
+**Time rollout gate:** each experiment must specify whether only visuals, authored motors/timers, input/forces or the *entire world simulation* changes; it must not claim actual per-body local time dilation when Box2D contacts remain at a common tick. No second physics world/step or arbitrary per-body delta time is authorized.
+
+### N. Selection and combined level concepts (unapproved backlog)
+
+| Prototype | Source | Risk | First success criterion |
+|---|---|---|---|
+| Crate factory: overhead spawner + red/green belts + boxes of varying size | #120 objects/events | Medium | Buggy and crates move, pileup bounded, retry deterministic |
+| Balloon canyon: balloon rebounds + bonus hoops | #120 objects and game-loop events | Low–medium | Bounce predictable, ring crossings counted once |
+| Rolling-ball balance trial | #120 object + target | Medium | Balance is possible under standard controls |
+| Explosive warehouse: barrels, destructible wood/glass/stone | #120 hazard/materials | Medium | Fuse readable, limited fragments, full reset |
+| Steamroller chase + personal best ghost | #120 moving hazard + existing results | Medium–high | Fair camera gap, non-colliding replay |
+| Jointed plank bridge + grabber claw | #120 experiments | High | Stable loading, grasp/release, mobile cost measured |
+| Reversible spiked/slippery wheel pickup | #198 vehicle + #120 typed modifier request | Medium | Safe wheel effect, no physics desync |
+| Tiny/giant vehicle size switch | #198 vehicle experiment | High | Complete collision-safe chassis/wheel swap |
+| Nitro / jump / rocket ability | #198 vehicle controls and level abilities | Medium | Clear limited activation from mobile UI |
+| Unicycle, bike, tracks, hover and flight modes | #198 separate prototypes | High | One compelling tuned mode; original buggy unaffected |
+| Fixed portals → Portal Gun | #120 feasibility experiment | High → very high | Repeatable safe teleport before user placement |
+| Local vehicle/world time control | #120 feasibility experiment | Very high | Honest approximation versus true physics; no second tick |
+
+**Candidate mini-courses:** *Crate Factory* (spawn boxes over multiple belts and drive across); *Balloon Canyon* (jump rings through springy balloons); *Run from the Roller* (escape a giant machine over failing planks while racing a ghost); *Portal Lab* (send one ball through a portal to open a gate). Each would need a small implementation task, tested API usage and a separate GO. These ideas do not change the active #281 editor work or the existing milestone order.
