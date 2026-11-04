@@ -261,6 +261,7 @@ function init(self)
 end
 function update(self,dt)
     if self.load_probe then require('main.gym.loader_probe506').poll(self.load_probe,self,loader_message) end
+    if self.failed then return end -- timeout is terminal until a page/application reload
     levels.poll(self.levels,self,dt)
     if self.initial_course and not self.loading and not self.levels.progress.checking then
         local id=self.initial_course;self.initial_course=nil
@@ -288,8 +289,10 @@ function update(self,dt)
         self.deadline=self.deadline+dt
         if self.deadline>15 and not self.failed then
             self.failed=true
+            self.world_alive=false
             msg.post("#ui","station_error",{note="Station loading timed out. Reload to retry."})
             msg.post("#world","disable")
+            return -- do not consume queued imports or publish a success after the error
         end
     end
     if self.debug_limits then
@@ -342,6 +345,7 @@ function update(self,dt)
 end
 function on_message(self,id,data,sender)
     if self.load_probe and require('main.gym.loader_probe506').hold(self.load_probe,id,data,sender) then return end
+    if self.failed then return end -- also reject late/duplicate proxy and readiness messages
     if id==hash("fps_cap_next") then
         -- Tap on the FPS counter: next cap live (no reload), then persist it as a player setting.
         self.settings.fps_cap=fps_counter.next_cap(self.settings.fps_cap)
