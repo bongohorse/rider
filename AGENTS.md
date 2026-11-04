@@ -48,3 +48,17 @@ These rules apply to every AI agent working in this repository. `CLAUDE.md` and 
 
 - Follow [TOOLING.md](docs/TOOLING.md). Every change runs `python tools/bootstrap_check.py`, `python tools/ci/lint_lua.py` and `python -m unittest discover -s tests/bootstrap -v`, plus every suite that the [affected-suites table](docs/TOOLING.md#affected-suites) lists for the paths it changes.
 - Dependency changes also run Renovate validation/extraction.
+
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues in `bongohorse/rider`. Before tracker operations, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use Rider's existing labels and workflow. Before triaging, read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout, with domain files created when needed. Before domain exploration, read `docs/agents/domain.md`.
