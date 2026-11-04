@@ -1,5 +1,6 @@
 """A matrix edit must not silently drop or duplicate a previously required case."""
 from collections import Counter
+import importlib.util
 from pathlib import Path
 import re
 import unittest
@@ -57,7 +58,10 @@ class ParallelInventory(unittest.TestCase):
                 self.assertEqual(set(re.findall(r'-\$RUN/(\w+)"', match.group(2))), {outputs[match.group(1)]})
         download = next(s for s in job['steps'] if s.get('uses', '').startswith('actions/download-artifact@'))
         self.assertEqual(download['with']['pattern'], 'g1-gym-*-[12]-${{ github.run_id }}-${{ github.run_attempt }}')
-        self.assertIn("PARTS={'a18':['1/2','2/2'],'le1b':['1/2','2/2'],'a19b':['1/2','2/2'],'le6':['1/2','2/2']}", (ROOT / 'tools/gym/smoke.py').read_text())
+        spec = importlib.util.spec_from_file_location('gym_dispatch_inventory', ROOT / 'tools/gym/dispatch.py')
+        metadata = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(metadata)
+        self.assertEqual(metadata.PARTS, SPLIT)
         groups = {g['group'] for g in workflow['jobs']['gym']['strategy']['matrix']['include']}
         for dirs in merges.values():
             self.assertEqual(len({name for name, _ in dirs}), 1)

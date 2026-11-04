@@ -70,7 +70,9 @@ test('a drag recording must hold no drive command',()=>{
 
 test('fps444 is registered in smoke.py, the CI matrix and the affected rules',()=>{
  const smoke=fs.readFileSync(path.join(root,'tools/gym/smoke.py'),'utf8');
- assert.match(smoke,/'fps444\.cjs' if args\.case=='fps444'/);assert.match(smoke,/if args\.case=='fps444':/);
+ const metadata=fs.readFileSync(path.join(root,'tools/gym/dispatch.py'),'utf8');
+ assert.match(smoke,/from dispatch import PARTS, PRESET_CASES, runner_config/);
+ assert.match(metadata,/'fps444': \('fps444\.cjs', 360\)/);assert.match(smoke,/if args\.case=='fps444':/);
  const g1=fs.readFileSync(path.join(root,'.github/workflows/g1.yml'),'utf8');
  assert.match(g1,/cases: 'fps417 fps444'/);assert.match(g1,/--case fps444\n/);
  const rules=JSON.parse(fs.readFileSync(path.join(root,'tools/local_affected.json'),'utf8')).rules;
