@@ -20,3 +20,4 @@ A place to collect and work out ideas that are **not decided and not scheduled**
 |---|---|---|
 | Future feature roadmap (waves, smaller ideas) | worked out | [roadmap.md](roadmap.md) |
 | Build your own vehicle | worked out | [vehicle-builder.md](vehicle-builder.md) |
+| Interactive objects and gameplay catalogue | worked out | [interactive-objects/README.md](interactive-objects/README.md) |
