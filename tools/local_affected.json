@@ -62,6 +62,13 @@
    ]
   },
   {
+   "name": "browser provisioning and host probes (CI only; check covers the helper's unit tests)",
+   "cases": "ci",
+   "paths": [
+    "tools/ci/setup_playwright.cjs"
+   ]
+  },
+  {
    "name": "unit tests and tooling run by check",
    "cases": [],
    "paths": [
