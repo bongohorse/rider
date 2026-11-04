@@ -2,7 +2,7 @@
 -- resource path (stations.resource: decode, built-in road profile, station_data.validate) and every
 -- file through the import path (custom.parse). Files: main/game/stations/*.json (official courses
 -- included) and every other tracked *.json with "units": Gym samples, terrain_compare courses, the
--- docs/reports and tests fixtures. Decoding uses the Defold json.decode shapes (tests/gameplay/lib/json.lua).
+-- archived terrain level fixtures (under tests/gameplay/level-fixtures/) and other test fixtures. Decoding uses the Defold json.decode shapes (tests/gameplay/lib/json.lua).
 local J=require 'tests.gameplay.lib.json'
 json={decode=J.decode}
 sys={get_save_file=function(app,name) return app..'/'..name end,get_engine_info=function() return {is_debug=true} end,
@@ -34,8 +34,8 @@ for path in listing:gmatch('[^%z]+') do
 end
 -- Fail closed on a short discovery (no git, a moved directory): the groups and sizes at #387.
 for group,least in pairs({['main/game/stations']=18,['main/gym/samples']=5,['main/terrain_compare/courses']=3,
-    ['tests/gameplay/fuel-fixtures']=6,['tests/objects/fixtures']=7,['docs/reports/terrain-p0']=7,['docs/reports/terrain-p5']=2,
-    ['docs/reports/terrain-292']=2,['docs/reports/terrain-278']=1,['tools/gym']=1}) do
+    ['tests/gameplay/fuel-fixtures']=6,['tests/objects/fixtures']=7,['tests/gameplay/level-fixtures/terrain-p0']=7,['tests/gameplay/level-fixtures/terrain-p5']=2,
+    ['tests/gameplay/level-fixtures/terrain-292']=2,['tests/gameplay/level-fixtures/terrain-278']=1,['tools/gym']=1}) do
     assert((groups[group] or 0)>=least,group..': '..tostring(groups[group])..' level files found, expected at least '..least)
 end
 for path in pairs(REJECTED) do local found;for _,f in ipairs(files) do found=found or f.path==path end;assert(found,'missing '..path) end

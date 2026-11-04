@@ -3,7 +3,7 @@
 
 Usage: python tools/ci/editor_inventory.py [FILE] [--section NAME] [--json OUT]
 FILE defaults to main/editor/editor.gui_script; sections: summary (default), functions, locals,
-self, editor, complexity. Output feeds docs/reports/EDITOR_E0_INVENTORY.md.
+self, editor, complexity. Re-run on current sources; retired E0 findings are linked in docs/TECHNICAL_HISTORY.md.
 
 The scanner tokenizes Lua 5.1, tracks block scopes (function/do/then/else/repeat), locals,
 parameters and for variables, and records for every top-level function (file-scope `local

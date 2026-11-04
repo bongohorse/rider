@@ -13,7 +13,7 @@ These rules apply to every AI agent working in this repository. `CLAUDE.md` and 
 ## Project state
 
 - Live state lives only on GitHub: GOs, owners, progress and blockers in issue comments and `status:` labels, open drive tests as issues labelled `status: needs drive test`, order in milestones and sub-issues, evidence in PRs. The [current-state links](docs/README.md#current-state) open these views.
-- Never write current state into repository files (no status file, dated snapshots or "currently open" lists). Docs hold rules, contracts, decisions and immutable reports; a report may state its historical outcome with its date.
+- Never write current state into repository files (no status file, dated snapshots or "currently open" lists). Docs hold rules, contracts, decisions and concise historical pointers. Completed task reports and bulky screenshots/JSON/logs live in PRs and immutable Git history; do not recreate `docs/reports/`.
 
 ## Workflow
 
