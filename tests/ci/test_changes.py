@@ -219,5 +219,103 @@ class RepoToolingSelection(unittest.TestCase):
                                                 "selection_reason=repo-tooling-and-docs-only"])
 
 
+class DocsAssets494(unittest.TestCase):
+    def test_runtime_asset_consumers_fail_closed_including_atlases(self):
+        import subprocess
+        from classify_changes import doc_asset_consumers
+        self.assertEqual(doc_asset_consumers(ROOT), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", tmp], check=True)
+            project = root / "game.project"
+            project.write_text("[project]\ncustom_resources = /main/stations\n")
+            atlas = root / "main.atlas"
+            atlas.write_text('images { image: "/docs/images/a.png" }\n')
+            subprocess.run(["git", "-C", tmp, "add", "-A"], check=True)
+            self.assertEqual(doc_asset_consumers(root), ["main.atlas"])
+            self.assertFalse(is_docs_only(["docs/images/a.png"], project))
+            atlas.write_text('images { image: "/main/a.png" }\n')
+            self.assertTrue(is_docs_only(["docs/images/a.png"], project))
+        self.assertTrue(doc_asset_consumers(Path(tmp)))
+
+    def test_allowlist_rename_and_mixed_controls(self):
+        from classify_changes import selection
+        for suffix in ("png", "svg", "jpg", "jpeg", "webp"):
+            paths = [f"docs/editor-a/old.{suffix}", f"docs/images/new.{suffix}"]
+            self.assertEqual(selection(paths), ("true", "false", "false", "docs-assets-and-text-only"))
+            # --no-renames includes both old and new names; moving into runtime/data is full.
+            self.assertEqual(selection(paths + [f"main/new.{suffix}"]), FULL)
+        for path in ("docs/reports/fixture.json", "tests/gameplay/level-fixtures/one.json",
+                     "docs/editor-a/render_layouts.py", "docs/editor-a/fixture.json",
+                     "docs/editor-a/file.txt.py", "docs/unknown/fixture.png", "main/icon.svg"):
+            self.assertEqual(selection(["docs/images/shot.png", path]), FULL)
+
+    def test_bundled_assets_and_missing_manifest_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "game.project"
+            project.write_text("[project]\ncustom_resources = /docs/images\n")
+            self.assertFalse(is_docs_only(["docs/images/a.png"], project))
+            # No Git inventory in this synthetic directory: image classification fails closed.
+            self.assertFalse(is_docs_only(["docs/editor-a/a.svg"], project))
+            self.assertFalse(is_docs_only(["docs/editor-a/a.svg"], Path(tmp) / "missing"))
+
+
+class MainBaseline494(unittest.TestCase):
+    def test_only_complete_successful_ancestor_push_ci_is_accepted(self):
+        from classify_changes import successful_main_base
+        good = dict(head_sha="a" * 40, event="push", head_branch="main",
+                    path=".github/workflows/ci.yml", status="completed", conclusion="success")
+        for key, values in {
+            "event": ["pull_request", "workflow_dispatch", "schedule"],
+            "head_branch": ["feature"], "path": [".github/workflows/pages.yml"],
+            "status": ["queued", "in_progress", "pending"],
+            "conclusion": [None, "failure", "cancelled"], "head_sha": ["invalid", ""],
+        }.items():
+            for value in values:
+                self.assertIsNone(successful_main_base([{**good, key: value}], lambda sha: True))
+        self.assertIsNone(successful_main_base([good], lambda sha: False))
+        self.assertIsNone(successful_main_base([], lambda sha: True))
+        self.assertEqual(successful_main_base([{**good, "status": "in_progress"}, good],
+                                             lambda sha: True), "a" * 40)
+
+    def test_replaced_code_push_stays_in_cumulative_diff(self):
+        import subprocess
+        from classify_changes import selection, successful_main_base
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            git = ["git", "-C", tmp, "-c", "user.name=test", "-c", "user.email=test@example.invalid",
+                   "-c", "commit.gpgsign=false"]
+            subprocess.run(git + ["init", "-q"], check=True)
+            def commit(path):
+                p = root / path
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text("changed")
+                subprocess.run(git + ["add", "-A"], check=True)
+                subprocess.run(git + ["commit", "-qm", path], check=True)
+                return subprocess.check_output(git + ["rev-parse", "HEAD"], text=True).strip()
+            baseline = commit("README.md")
+            pending_code = commit("main/game/change.lua")
+            commit("docs/images/one.png")
+            commit("docs/images/two.png")
+            runs = [dict(head_sha=sha, event="push", head_branch="main", path=".github/workflows/ci.yml",
+                         status=status, conclusion=conclusion) for sha, status, conclusion in
+                    [(pending_code, "completed", "cancelled"), (baseline, "completed", "success")]]
+            base = successful_main_base(runs, lambda sha: subprocess.run(
+                git + ["merge-base", "--is-ancestor", sha, "HEAD"]).returncode == 0)
+            self.assertEqual(base, baseline)
+            paths = subprocess.check_output(git + ["diff", "--no-renames", "--name-only", "-z", base, "HEAD"])
+            self.assertEqual(selection(paths.decode().strip("\0").split("\0"))[0], "false")
+            # Once that code AND its Pages deployment finish, subsequent docs can skip safely.
+            paths = subprocess.check_output(git + ["diff", "--no-renames", "--name-only", "-z", pending_code, "HEAD"])
+            self.assertEqual(selection(paths.decode().strip("\0").split("\0"))[0], "true")
+
+    def test_api_failure_falls_back_without_logging_request(self):
+        from unittest.mock import patch
+        from classify_changes import main_push_base
+        with patch.dict("os.environ", {"GITHUB_REPOSITORY": "bongohorse/rider", "GH_TOKEN": "test"}), \
+                patch("classify_changes.urlopen", side_effect=OSError("unavailable")):
+            self.assertIsNone(main_push_base())
+
+
 if __name__ == "__main__":
     unittest.main()

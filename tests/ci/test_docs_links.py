@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools" / "ci"))
-from check_docs_links import check_paths, targets
+from check_docs_links import check_paths, targets, check_asset_references
 
 
 class RelativeLinks(unittest.TestCase):
@@ -50,6 +50,16 @@ class RelativeLinks(unittest.TestCase):
             "[real](ok.md)\n"
         ))
         self.assertEqual(lines, [(6, "other.md"), (7, "ok.md")])
+
+    def test_deleted_asset_checks_unchanged_markdown_without_unrelated_link_failures(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "docs/images").mkdir(parents=True)
+            md = root / "docs/readme.md"
+            md.write_text("![old](images/old.png) [unrelated](already-missing.md)\n")
+            self.assertEqual(len(check_asset_references(root, ["docs/images/old.png"], ["docs/readme.md"])), 1)
+            (root / "docs/images/old.png").write_bytes(b"image")
+            self.assertEqual(check_asset_references(root, ["docs/images/old.png"], ["docs/readme.md"]), [])
 
     def test_deleted_path(self):
         with tempfile.TemporaryDirectory() as td:

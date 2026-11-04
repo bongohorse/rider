@@ -11,6 +11,7 @@ MODES = {
     # mode: (docs_only, skip_special, repo_tooling, selection_reason, jobs that must be skipped)
     "full": ("false", "false", "false", "unknown-or-shared-change-full", ()),
     "docs": ("true", "false", "false", "docs-text-only", NAMES),
+    "assets": ("true", "false", "false", "docs-assets-and-text-only", NAMES),
     "gym": ("false", "true", "false", "gym-and-docs-only", ("bridge",)),
     "tooling": ("false", "false", "true", "repo-tooling-and-docs-only", HEAVY),
 }

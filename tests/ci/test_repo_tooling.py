@@ -53,6 +53,8 @@ CI_NODE_COMMAND = "node --test tests/ci/*.cjs"
 # reason it does not make a gameplay, Gym or release job load it. A new reference fails the
 # test: either explain it here or add the file to FULL_RUN_TOOLING in classify_changes.py.
 KNOWN_REFERENCES = {
+    ("tools/ci/classify_changes.py", "tests/ci/test_changes.py"): "asset namespace scanner excludes its own synthetic classifier path fixtures",
+    ("tools/ci/classify_changes.py", "tests/ci/test_docs_links.py"): "asset namespace scanner excludes synthetic image-link fixtures",
     (".luacheckrc", "tools/ci/lint_lua.py"): "comment; lint_lua reads .luacheckrc, not the reverse",
     (".luacheckrc", "tools/ci/luacheck-lock.json"): "comment naming the lock lint_lua verifies",
     ("main/editor/editor.gui_script", "tests/ci/test_editor_help.py"): "comment naming the test that reads this script",
@@ -315,7 +317,7 @@ class ClassifyStepGuard(unittest.TestCase):
     """The workflow refuses a short path for the classifier, gate or workflows, even if the
     classifier under test is broken (the classifier itself is never trusted to exclude itself)."""
 
-    def run_step(self, changed, verdict, event="pull_request", ref="refs/pull/1/merge"):
+    def run_step(self, changed, verdict, event="pull_request", ref="refs/pull/1/merge", main_base=False):
         step = next(s for s in load(".github/workflows/ci.yml")["jobs"]["changes"]["steps"]
                     if s.get("id") == "classify")
         with tempfile.TemporaryDirectory() as tmp:
@@ -327,7 +329,11 @@ class ClassifyStepGuard(unittest.TestCase):
             # A deliberately broken classifier that returns a fixed verdict for any diff.
             stub = repo / "tools/ci/classify_changes.py"
             keys = ("docs_only", "skip_special", "repo_tooling", "selection_reason")
-            stub.write_text("".join(f"print('{k}={v}')\n" for k, v in zip(keys, verdict)))
+            stub.write_text("import os, sys\n"
+                            "if sys.argv[1:] == ['--main-base']:\n"
+                            " print(os.environ.get('TEST_MAIN_BASE', ''))\n"
+                            " sys.exit(0)\n" +
+                            "".join(f"print('{k}={v}')\n" for k, v in zip(keys, verdict)))
             subprocess.run(git + ["add", "-A"], check=True)
             subprocess.run(git + ["commit", "-qm", "base"], check=True)
             base = subprocess.run(git + ["rev-parse", "HEAD"], capture_output=True, text=True,
@@ -344,7 +350,8 @@ class ClassifyStepGuard(unittest.TestCase):
             env = {**os.environ, "GITHUB_EVENT_NAME": event, "GITHUB_REF": ref,
                    "PR_BASE": base if event == "pull_request" else "",
                    "PUSH_BEFORE": base if event == "push" else "",
-                   "GITHUB_OUTPUT": str(output), "RUNNER_TEMP": str(temp)}
+                   "GITHUB_OUTPUT": str(output), "RUNNER_TEMP": str(temp),
+                   "TEST_MAIN_BASE": base if main_base else ""}
             result = subprocess.run([shutil.which("bash"), "-c", step["run"]], cwd=repo, env=env,
                                     capture_output=True, text=True)
             return result, output.read_text() if output.exists() else ""
@@ -401,6 +408,19 @@ class ClassifyStepGuard(unittest.TestCase):
                 result, output = self.run_step(["docs/TOOLING.md"], FAST_VERDICTS["docs"], event, ref)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(self.outputs(output)["selection_reason"], "docs-text-only")
+
+    @unittest.skipUnless(shutil.which("bash") and shutil.which("git"), "needs bash and git")
+    def test_cumulative_main_docs_can_skip_but_code_and_tooling_stay_full(self):
+        # The main step must use its successful baseline, not PUSH_BEFORE. The unit tests
+        # of successful_main_base below prove pending/failed/non-ancestor runs cannot supply it.
+        for path, verdict in (("docs/TOOLING.md", FAST_VERDICTS["docs"]),
+                              ("main/game/controller.script", FAST_VERDICTS["gym"]),
+                              ("tools/ci/lint_lua.py", FAST_VERDICTS["tooling"])):
+            result, output = self.run_step([path], verdict, "push", "refs/heads/main", main_base=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            expected = "docs-text-only" if path.startswith("docs/") else "main-push-full"
+            self.assertEqual(self.outputs(output)["selection_reason"], expected)
+
 
 if __name__ == "__main__":
     unittest.main()
