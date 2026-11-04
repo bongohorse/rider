@@ -204,7 +204,8 @@ if args.case=='le6':
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='le1a':
     report=json.loads((out/'custom-result.json').read_text())
-    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==22
+    assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and len(report['cases'])==23
+    assert 'loader_timeout_is_terminal' in report['cases']
     print(json.dumps(report));raise SystemExit(0)
 if args.case=='a19':
     report=json.loads((out/'gaps-result.json').read_text())

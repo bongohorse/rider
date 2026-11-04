@@ -17,6 +17,7 @@ local levels=require "main.game.levels_runtime"
 local player_settings=require "main.game.player_settings"
 local fps_counter=require "main.game.fps_counter"
 local camera_settings=require "main.game.camera_settings"
+local loader_message -- retain the callback: Defold removes callback globals after loading the script
 -- #417: the loader is the only owner of the update-rate request (sys.set_update_frequency). It changes the
 -- update()/render cadence only; fixed_update physics stays at engine.fixed_update_frequency = 60.
 local function send_fps_cap(self,changed,saved)
@@ -201,6 +202,7 @@ function init(self)
     msg.post(".","acquire_input_focus")
     custom.init()
     self.debug_limits=html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")=="le1a"
+    self.load_probe=self.debug_limits and require('main.gym.loader_probe506').new()
     local case=sys.get_config_string("rider.gym_test","")
     self.settings=player_settings.load()
     -- The #356/#372 debug probes set their own startup/runtime rate; every other start applies the stored cap.
@@ -258,6 +260,7 @@ function init(self)
     msg.post("#world","load")
 end
 function update(self,dt)
+    if self.load_probe then require('main.gym.loader_probe506').poll(self.load_probe,self,loader_message) end
     levels.poll(self.levels,self,dt)
     if self.initial_course and not self.loading and not self.levels.progress.checking then
         local id=self.initial_course;self.initial_course=nil
@@ -338,6 +341,7 @@ function update(self,dt)
     end
 end
 function on_message(self,id,data,sender)
+    if self.load_probe and require('main.gym.loader_probe506').hold(self.load_probe,id,data,sender) then return end
     if id==hash("fps_cap_next") then
         -- Tap on the FPS counter: next cap live (no reload), then persist it as a player setting.
         self.settings.fps_cap=fps_counter.next_cap(self.settings.fps_cap)
@@ -535,3 +539,4 @@ function on_message(self,id,data,sender)
         end
     end
 end
+loader_message=on_message

@@ -1,5 +1,6 @@
 // LE1a: custom level import, switching, persistence and recovery in the debug HTML5 gym.
 const {configure}=require('./launch.cjs');
+const {loaderTimeout}=require('./loader_timeout.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samples');
@@ -170,6 +171,8 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
   await page.waitForFunction(()=>window.riderCustomStatus?.startsWith('Save failed'));measurements.save_failure=await page.evaluate(()=>window.riderCustomStatus);
   await page.evaluate(()=>window.__riderRestoreWrite());
   await page.goto(url);t=await ready('rolling-hills',1,null);assert.deepEqual(counts(t),a1);cases.push('failed_save_keeps_previous');
+
+  measurements.loader_timeouts=await loaderTimeout(page,url,ready,importFile);cases.push('loader_timeout_is_terminal');
 
   // A validated level whose hull Box2D cannot build: safe error state, re-import offered, save unchanged.
   const broken=JSON.parse(text('kicker-platform'));broken.id='weld-hull';broken.name='Welded hull';
