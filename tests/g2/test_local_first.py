@@ -123,6 +123,22 @@ class AffectedTest(unittest.TestCase):
         for path in stations:
             self.assertEqual(self.pick(path), self.inventory, path)
 
+    def test_browser_provisioning_is_ci_only_and_affected_run_is_blocked(self):
+        from classify_changes import selection
+        path = 'tools/ci/setup_playwright.cjs'
+        self.assertEqual(selection([path]), 'full')
+        cases, _, ci_only = local.affected_cases([path], RULES, self.inventory, CLOSURE)
+        self.assertEqual(cases, [])
+        self.assertIn(path, ci_only, 'Unit tests do not provision/probe the browser host')
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(local, 'changed_paths', return_value=[path]), \
+                mock.patch.object(local, 'fast_check', return_value=0) as check, \
+                mock.patch.object(local, 'gym_cases') as gym:
+            args = type('Args', (), {'base': 'origin/main', 'run': True, 'jobs': 1})()
+            self.assertEqual(local.run_affected(args, Path(directory), 'sha', local.LOCAL_SERVER), 2)
+            check.assert_called_once()
+            gym.assert_not_called()
+
     def test_g1_release_entry_paths_run_gym_and_still_block(self):
         for path in ('game.project', 'main/main.collection', 'main/controller.script', 'tools/g1/build.py',
                      'tools/project.py', 'main/g1/wheel.convexshape'):
