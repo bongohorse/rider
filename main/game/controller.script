@@ -791,3 +791,6 @@ function on_message(self,id,data,sender)
     elseif id==hash("run_retry") and self.race and data.id==self.race.id and require("main.game.run").terminal(self.race) then manual_retry(self)
     elseif id==hash("retry_labelled") and data.reason=="bounds" then self.bounds_labelled=true end
 end
+
+-- Opt-in #516 measurements; ordinary callbacks and release execution keep their original function/environment.
+if sys.get_engine_info().is_debug then update=require('main.gym.publication_probe516').wrap(update,'controller.update',{mobile.poll}) end
