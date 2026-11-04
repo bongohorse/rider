@@ -2,7 +2,7 @@
 
 Full body of [#120 [Gameplay] Interactive objects and event wiring (future epic)](https://github.com/bongohorse/rider/issues/120), moved here on 2026-11-02 (unchanged except repo-relative links made absolute) during the issue cleanup ([issue guide](../ISSUES.md#length)). Current scope, binding rules and GOs live in the issue body, its sub-issues and `status:` labels; superseded parts of this text are history.
 
-**Contents:** [Goal and status](#goal-and-status) · [Index](#index) · [Research basis and approved delivery plan](#research-basis-and-approved-delivery-plan) · [Scope and ownership](#scope-and-ownership) · [Delivery order](#delivery-order) · [Group 1 — Basic physics objects and balance](#group-1--basic-physics-objects-and-balance) · [Group 2 — Triggers and simple reactions](#group-2--triggers-and-simple-reactions) · [Group 3 — Guided and rotating movement](#group-3--guided-and-rotating-movement) · [Group 4 — Driving surfaces and force effects](#group-4--driving-surfaces-and-force-effects) · [Group 5 — Yielding and breakable structures](#group-5--yielding-and-breakable-structures) · [Group 6 — Objectives and combined challenges](#group-6--objectives-and-combined-challenges) · [Group 7 — Separate feasibility experiments](#group-7--separate-feasibility-experiments) · [Box2D building blocks](#box2d-building-blocks) · [Event wiring and feedback](#event-wiring-and-feedback) · [Shared acceptance requirements](#shared-acceptance-requirements) · [Suggested first playable slice](#suggested-first-playable-slice)
+**Contents:** [Goal and status](#goal-and-status) · [Index](#index) · [Research basis and approved delivery plan](#research-basis-and-approved-delivery-plan) · [Scope and ownership](#scope-and-ownership) · [Delivery order](#delivery-order) · [Group 1 — Basic physics objects and balance](#group-1--basic-physics-objects-and-balance) · [Group 2 — Triggers and simple reactions](#group-2--triggers-and-simple-reactions) · [Group 3 — Guided and rotating movement](#group-3--guided-and-rotating-movement) · [Group 4 — Driving surfaces and force effects](#group-4--driving-surfaces-and-force-effects) · [Group 5 — Yielding and breakable structures](#group-5--yielding-and-breakable-structures) · [Group 6 — Objectives and combined challenges](#group-6--objectives-and-combined-challenges) · [Group 7 — Separate feasibility experiments](#group-7--separate-feasibility-experiments) · [Box2D building blocks](#box2d-building-blocks) · [Event wiring and feedback](#event-wiring-and-feedback) · [Shared acceptance requirements](#shared-acceptance-requirements) · [Suggested first playable slice](#suggested-first-playable-slice) · [Addendum — Additional gameplay concepts](#addendum--additional-gameplay-concepts-2026-11-04-brainstorm)
 
 ## Goal and status
 
@@ -253,3 +253,107 @@ Each selected object or small slice must meet the applicable requirements:
 This exercises reusable objects, a single event/action connection and reset with a small course. Other high-interest follow-ups are the one-way flap, delayed falling track pieces, roller track, precision landing and hold-position target.
 
 Before implementation: check existing work, choose the slice, verify the pinned APIs, agree acceptance/budget and obtain Claudio's implementation GO. This entire catalogue is not one delivery package.
+
+## Addendum — Additional gameplay concepts (2026-11-04 brainstorm)
+
+This is an **idea pool, not Group 8 of the delivery plan and not an implementation GO**. The historical planning text above remains unchanged. Issue #120 and its sub-issues determine actual scope, ownership, order and acceptance. The extra concepts below favor short, legible 2D driving interactions, toy-like physical feedback and reuse of the existing mechanisms. They must not delay agreed vehicle-feel, camera, editor, CI or performance work.
+
+### A. Additional physical toys and cargo
+
+| Concept | Driving interaction | Authoring / feasibility considerations |
+|---|---|---|
+| Loose tyre / tyre stack | Roll a tyre, push a soft obstacle or topple a small stack before a climb | Circular-body preset, tyre count and contact cap; not the vehicle wheel assembly |
+| Oversized bouncy ball | Push a ball that rebounds strongly; use it as a temporary moving obstacle | Radius, bounded restitution and damping; avoid energy gain and retry drift |
+| Tipping container | Drive into a large container to rotate it into a ramp or block a passage | Pivot, initial angle, stops and mass; fixed shape rather than free breakage |
+| Snap-off bumper / obstacle | Hit a small obstacle hard enough to detach it from its mount | Declared impact rule, one-time state and capped released bodies |
+| Fragile crystal / glass barrier | Break a shortcut barrier by impact, with clearly readable risk | Fixed break condition and pre-cut collision pieces; cosmetic shards separately budgeted |
+| Rolling tyre obstacle course | Thread between a few loose wheels or knock them into a gap | Composition of the tyre preset; no separate runtime system |
+
+Related existing entries: crates, balls, boulders, barrels, seesaws, breakaway mounts and dominoes remain in Groups 1 and 5; do not duplicate them.
+
+### B. New active machinery and precision hazards
+
+| Concept | Gameplay | Authoring / feasibility considerations |
+|---|---|---|
+| Flipper paddle | Contact-triggered paddle propels the buggy or cargo, like a pinball machine | Pivot, rest/active angles, bounded motor force, activation and rearm; no extra player button by default |
+| Rotating gear pair | Two geared-looking wheels form a timed route or moving driving surface | Prefer explicitly synchronized motion rather than assuming a supported gear joint |
+| Cable trolley / hanging ferry | Ride a suspended carrier between two ledges | Guided movement with a visually hanging carrier; verify stable vehicle contacts and joint budget |
+| Sliding circular saw | Avoid a rotating saw that travels on a short rail | Path, speed, phase, collision policy and high-contrast warning; reuse any existing saw obstacle work |
+| Oscillating crusher | Cross between a moving jaw and a wall during its open phase | Travel, dwell, speed, telegraph and safe blocked-motion behavior |
+| Falling icicle / stalactite | Passing below a sensor releases a pointed obstacle | Finite prepared bodies, explicit trigger timing, capped active count and full Retry restore |
+| Pneumatic launcher | A visibly charging piston launches cargo or the vehicle | Reuse piston/spring components; impulse cap and readable launch direction |
+| Counter-rotating roller gate | Navigate between two rollers that affect approach speed | Bounded powered-roller preset; test stall/jam conditions and wheel-contact stability |
+
+These are variants or combinations when possible: the existing rotating arm, piston, roller track, moving platform, pendulum and gate entries remain the foundational mechanics.
+
+### C. Surface and environment interactions
+
+| Concept | Player-facing effect | Ownership / technical caution |
+|---|---|---|
+| Oil patch | A short, conspicuously slippery section changes braking and hill grip | Surface-material variant of the ice/mud system, not a second friction engine |
+| Deep snow bank | Visible resistance slows momentum, potentially hiding a small bump | Prefer bounded drag/contact effect plus cosmetic snow; no deformable snow simulation |
+| Shallow puddle | Splash and optional small contact/rolling effect | Default cosmetic only; if handling changes, define an explicit surface rule |
+| Thin ice sheet | Breaks after contact duration or a declared impact threshold | Pre-authored breakable pieces and per-attempt reset, not terrain fracture |
+| Geyser / steam vent | A periodic vertical burst can alter a jump or launch a light ball | Pulsed bounded force with visible charge phase; particles remain cosmetic |
+| Rockfall chute | A small finite sequence of rocks rolls into the track on trigger | Reuse boulder and release-cradle logic; cap live bodies and clear between attempts |
+| Snow-slide / mini-avalanche | Drive ahead of a short wave of prepared rolling obstacles | Predefined finite release, not general fluid, soft-body or granular simulation |
+| Pliable plant / rubber arch | A stylized plant bends and springs back when the buggy hits it | Prefer one hinged/sprung obstacle; do not require skeletal vegetation physics |
+| Shallow water crossing (experiment) | Float, slow down or partially submerge the vehicle | Separate feasibility test for forces, buoyancy approximation, handling and camera; not approved by this catalogue |
+
+**Materials vs textures:** when #121 provides visual terrain materials, author gameplay grip/drag as separately declared material properties, not implicit texture-name effects. A decorative mud, snow or rain texture must never silently change traction; material transitions need visible inspector values and predictable wheel contacts.
+
+### D. New objective and skill-rule variants
+
+| Objective | Player challenge | Reuse / validation |
+|---|---|---|
+| One-wheel balance stretch | Cross a short section while only one wheel supports the vehicle | Wheel-contact state, minimum duration, tolerance for momentary contact jitter |
+| Reverse-driving segment | Traverse a marked gate or short section while driving backward | Reuse directed crossing / motion sign; define whether body heading or velocity counts |
+| Low-speed precision corridor | Stay below a speed ceiling while clearing an obstacle sequence | Reuse speed-gate measurement, with explicit begin/end and tolerances |
+| Multi-stunt combo | Link a jump, rotation and landing without touching an invalid surface | Reuse future stunt measurements; reset chain on declared interruption |
+| Intact-cargo bonus | Reach the target without losing or striking carried cargo | Requires an explicit cargo loss/damage rule; not inferred from mere proximity |
+| Clean-run medal condition | Complete with no declared crash/hazard event | Add only when crash semantics and result ownership (#262) expose a reliable signal |
+| Target-speed landing | Reach a designated zone with controlled touchdown speed | Compose precision-landing and speed measurement, not a separate physics mechanic |
+| Optional stunt shortcut | Risk a jump or moving obstacle to save time or reach a bonus | Level-layout composition; avoid inventing a second reward pipeline |
+
+Existing objectives already cover precision landings, hold-position, speed gates, ordered checkpoints, cargo delivery, airtime/rotation and timed passages. These rows are new *rules or variants*, not approvals to create parallel checkpoint, coin, medal or result systems.
+
+### E. Example themed course compositions
+
+| Example course | Short sequence | What it tests |
+|---|---|---|
+| Toy factory | Push tyre onto a plate → timed door → moving rollers → flipper launch → finish | Low-speed control, event wiring and airborne attitude |
+| Frozen pass | Oil/ice-like low-grip approach → thin ice sheet → falling icicle → precision landing | Braking and prediction on changing surfaces |
+| Hazard workshop | Timed circular saw → oscillating crusher → breakaway barrier → short escape jump | Telegraphing, rhythm and collision fairness |
+| Stunt park | Booster (existing) → spring launch (existing) → midair combo → target-speed landing | Approach speed, air control and measurement |
+| Mountain chase | Release a finite set of boulders → cross a yielding bridge → reach safe gate | Momentum choice, bounded spawn cost and reset |
+| Cargo puzzle | Guide large bouncy ball through rollers → activate plate → cross drawbridge | Object-to-object contact, stable event states and recovery |
+
+Author these as **small sample courses made of reusable objects**, not bespoke course scripts. Each challenge should be playable with throttle, brake, tilt and standard air rotation. Keep ordinary (non-objective) routes completable without demanding new touchscreen controls.
+
+### F. Candidate order for future selection (not the work order)
+
+The table ranks *potential design value* and approximate *relative implementation risk*, not measured effort or approved priorities. Scope and GO are still decided through #120 after its O1/O2 workflow.
+
+| Candidate | Value | Relative risk | Why consider it |
+|---|---|---|---|
+| Spring / launch pad (existing Group 4) | High | Low–medium | Strong immediate feedback, new jump lines and vehicle-feel testing |
+| Booster pad (existing Group 4) | High | Low–medium | Creates optional speed lines; must cap force and repeat activation |
+| Slippery oil patch as material variant | High | Low–medium | Useful braking/traction challenge; pairs with planned surface authoring |
+| Rolling tyre / bouncy ball | Medium–high | Low–medium | Low setup cost after reusable loose-body presets |
+| Sliding saw | High | Medium | Strong timed obstacle; reuse saw code rather than a duplicate implementation |
+| Flipper paddle | High | Medium | Memorable pinball-style interaction; depends on measured joint/impulse behavior |
+| Thin ice / collapsing piece | High | Medium | Time pressure and new route choices; bounded preset breakage |
+| Oscillating crusher | High | Medium | Readable rhythm challenge; explicit blocked-motion policy required |
+| Cable trolley / suspended ferry | Medium | High | Distinct set piece, but vehicle contact and joint stability are unproven |
+| Shallow-water buoyancy / vehicle size changes | Experimental | High | Separate physics/UX experiments; do not fold into routine object delivery |
+
+Suggested evaluation sequence: complete the currently scoped object-authoring path first, then select **one** mechanic that strengthens driving feel and **one** that demonstrates level-editor event wiring. Prototype, measure and human-drive-test each before widening the catalogue.
+
+### G. Shared authoring and safety notes for the addendum
+
+- **Editor:** reuse existing object palettes, per-object inspector, IDs and typed signal links. Preview hazard sweep, release trajectories, active zones, timing and physical-vs-cosmetic distinction without running physics in Edit mode. Show meaningful invalid-reference and budget warnings.
+- **Runtime:** stick to the pinned Defold/Box2D API, one fixed-tick owner and single object runtime; never derive simulation state from render visibility. Define Retry and mid-course start initial states before implementation.
+- **Object budgets:** default to one or a few dynamic bodies per obstacle; set explicit per-level and per-mechanic live body, joint, spawn and collision-fragment caps. Cosmetic particles and fragments do not receive physics bodies by default.
+- **Fairness and feel:** moving hazards should telegraph timing; keep random patterns seeded or deterministic per attempt. Never trap the vehicle by teleporting a closed gate through it. Ensure throttle/brake/tilt remain central.
+- **Rules ownership:** rewards, medals, coin/fuel behavior and authoritative finish results belong to #262; vehicle assemblies and attachments to #198; visual decoration/material presentation to #121. Reuse the seesaw from #57 and existing saw implementations where applicable.
+- **Delivery discipline:** prefer presets and small parameter sets over general logic graphs; one scoped mechanic per task with an observable example, input tests and a human drive test where needed. No entire-course fluid, destructive terrain, arbitrary fracture or new physics engine is implied by these ideas.
