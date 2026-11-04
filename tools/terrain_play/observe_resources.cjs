@@ -1,4 +1,5 @@
 // Bounded #276 comparison using ordinary import, input, telemetry and WebGL calls.
+const fixtureTexts=require('./fixtures.cjs').loadFixtures(['six-anchor','long-curves','mixed',...(process.argv.includes('--large')?['mixed-over-budget']:[])]);
 // No physics mutation, debug command endpoint, new CI group or device/GPU-time claim.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs');
@@ -34,7 +35,7 @@ function probe(){
   assert.equal(s.telemetry.terrain_shapes,d.chains.reduce((n,c)=>n+c.length-1,0)+(d.hulls||[]).length);assert.equal(s.mesh.budget.stride,perspectiveProfile?48:36);assert.equal(s.projection?.mode||null,perspectiveProfile?'perspective':null);assert.equal(await page.evaluate(()=>typeof window.riderRoadLook),'undefined');r.loads.push({label,...s,timing});return s;
  }
  const names=['six-anchor','long-curves','mixed',...(large?['mixed-over-budget']:[])];
- const sources=Object.fromEntries(names.map(n=>{const d=JSON.parse(fs.readFileSync('docs/reports/'+(n.endsWith('over-budget')?'terrain-p5':'terrain-p0')+'/'+n+'.json'));if(perspectiveProfile)d.editor.road_profile='perspective-v1';if(authored){d.editor.road_profile='authored-v1';d.editor.road_look={version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:Math.atan(.55)*180/Math.PI,side:64,shading:1}};d.editor.objects.filter(o=>['line','curve','prefab'].includes(o.type)).forEach((o,i)=>o.road_look={version:1,width:i%2?2:.25,side:i%2?.25:64,shading:i%2?0:1});}return [n,d];}));
+ const sources=Object.fromEntries(names.map(n=>{const d=JSON.parse(fixtureTexts[n]);if(perspectiveProfile)d.editor.road_profile='perspective-v1';if(authored){d.editor.road_profile='authored-v1';d.editor.road_look={version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:Math.atan(.55)*180/Math.PI,side:64,shading:1}};d.editor.objects.filter(o=>['line','curve','prefab'].includes(o.type)).forEach((o,i)=>o.road_look={version:1,width:i%2?2:.25,side:i%2?.25:64,shading:i%2?0:1});}return [n,d];}));
  for(const [name,d] of Object.entries(sources)){
   for(let i=0;i<5;i++)await load(d,name+'-'+i);
   await page.locator('canvas').focus();await page.keyboard.down('ArrowUp');await page.waitForTimeout(8000);await page.keyboard.up('ArrowUp');r.camera.push({label:name+'-drive',...await snapshot()});

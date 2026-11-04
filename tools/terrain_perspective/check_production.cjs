@@ -1,4 +1,5 @@
 // Normal-build compatibility through existing import, GUI editing/export, save/reload and Retry.
+const fixtureTexts=require('../terrain_play/fixtures.cjs').loadFixtures(['long-curves']);
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs');
 const [bundleArg,outArg]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg),sha=JSON.parse(fs.readFileSync(path.join(bundle,'bundle.json'))).source_sha;fs.mkdirSync(out,{recursive:true});
@@ -17,7 +18,7 @@ execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bund
   await page.goto(base+'/index.html?station=straight');await ready();assert.equal(await page.evaluate(()=>window.riderTerrainMesh.budget.stride),48,'Built-in must use accepted profile');
   // A comparison preference on this origin cannot enable an ordinary-build tuner or override defaults.
   await page.evaluate(()=>localStorage.setItem('rider-road-look-v1',JSON.stringify({version:1,mode:'fixed',width:2,perspective:1,angle:45,side:.25,shading:0})));
-  const d=JSON.parse(fs.readFileSync('docs/reports/terrain-p0/long-curves.json'));if(projected)d.editor.road_profile='perspective-v1';
+  const d=JSON.parse(fixtureTexts['long-curves']);if(projected)d.editor.road_profile='perspective-v1';
   const row={projected};r.courses.push(row);let generation=await page.evaluate(()=>window.riderTelemetry.session_generation);
   await page.evaluate(body=>{window.riderCustom.open();window.riderCustom.importFile(new File([body],'course.json',{type:'application/json'}));},JSON.stringify(d));await page.waitForFunction(n=>window.riderCustomStatus==='Saved'&&window.riderTelemetry?.session_generation>n&&window.riderTelemetry?.sequence>2,generation);await pointer.frames(page);
   row.play=await snap();assert.equal(row.play.mesh.budget.stride,projected?48:36);assert.equal(row.play.projection?.mode||null,projected?'perspective':null);

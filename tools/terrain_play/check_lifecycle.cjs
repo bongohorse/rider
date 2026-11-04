@@ -1,4 +1,5 @@
 // Focused real-engine resource comparison; records WebGL handle sizes, not GPU memory or duration.
+const fixtureTexts=require('./fixtures.cjs').loadFixtures(['six-anchor']);
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright'),{configure}=require('../gym/launch.cjs'),pointer=require('../gym/pointer.cjs');
 const [bundleArg,outArg,mode]=process.argv.slice(2),bundle=path.resolve(bundleArg),out=path.resolve(outArg);fs.mkdirSync(out,{recursive:true});
@@ -20,7 +21,7 @@ function probe(){const p=window.__buffers={live:new Map(),created:0,deleted:0};
  page.on('pageerror',e=>r.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))r.errors.push(m.text());});
  await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.sequence>2);
  assert.equal(await page.evaluate(()=>window.riderReady.source_sha),sha);
- const body=fs.readFileSync('docs/reports/terrain-p0/six-anchor.json','utf8');
+ const body=fixtureTexts['six-anchor'];
  for(let i=0;i<8;i++){
   const before=await page.evaluate(()=>window.riderTelemetry.session_generation);
   await page.evaluate(body=>{window.riderCustom.open();document.querySelector('#rider-custom-text').value=body;[...document.querySelectorAll('#rider-custom-panel button')].find(x=>x.textContent==='Import text').click();},body);
