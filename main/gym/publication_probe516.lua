@@ -15,11 +15,11 @@ local function resolution()
  for _=1,10000 do local now=socket.gettime();local d=now-previous;if d>0 and (not best or d<best)then best=d end;previous=now end
  return best and best*1000 or false
 end
-local function add(state,name,elapsed,bytes)
+local function add(state,name,elapsed,bytes,returned)
  if not state.active then return end
  local b=state.buckets[name]
- if not b then b={count=0,bytes=0,sum_ms=0,max_ms=0,samples_ms={}};state.buckets[name]=b end
- b.count=b.count+1;b.bytes=b.bytes+(bytes or 0);local ms=elapsed*1000
+ if not b then b={count=0,bytes=0,returned_bytes=0,sum_ms=0,max_ms=0,samples_ms={}};state.buckets[name]=b end
+ b.count=b.count+1;b.bytes=b.bytes+(bytes or 0);b.returned_bytes=b.returned_bytes+(returned or 0);local ms=elapsed*1000
  b.sum_ms=b.sum_ms+ms;b.max_ms=math.max(b.max_ms,ms)
  if #b.samples_ms<M.CAP then b.samples_ms[#b.samples_ms+1]=ms else state.overflow=true end
 end
@@ -34,7 +34,8 @@ function M.wrap(fn,label,helpers)
     local value=(kind=='json.encode') and result[1] or (...)
     local name=kind
     if kind=='html5.run' then name=name..':'..(type(value)=='string' and value:match('window%.([%w_]+)') or 'expression')end
-    add(active,name,elapsed,type(value)=='string' and #value or 0)
+    add(active,name,elapsed,type(value)=='string' and #value or 0,
+     kind=='html5.run' and type(result[1])=='string' and #result[1] or 0)
    end
    return unpack(result,1,result.n)
   end

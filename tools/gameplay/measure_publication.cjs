@@ -7,6 +7,7 @@ const PLAN={schema:1,warmup_s:5,sample_s:20,repetitions:3,viewport:{width:1280,h
  command_trace:'idle: throttle=0, brake_reverse=0, lean=0; no driving keys or pointer gestures',
  material_rule:'absolute median p95 effect >= max(0.2ms, 3 * largest within-mode MAD, 5 * observed clock resolution)',
  floor_ms:.2,noise_factor:3,resolution_factor:5,
+ byte_semantics:'json.encode bytes are encoded output; html5.run bytes are UTF-8 script input, returned_bytes are returned string bytes. These are memory/bridge representations, not network traffic; do not sum both layers as distinct payload.',
  limitations:'Lua callback/bridge wall time and browser rAF spacing; no GPU/presented FPS or physical-device acceptance. Timer-only debug control includes common timing overhead.'};
 function percentile(values,p){assert(values.length,'No samples');const a=[...values].sort((x,y)=>x-y);return a[Math.max(0,Math.ceil(a.length*p)-1)];}
 const median=a=>percentile(a,.5);
