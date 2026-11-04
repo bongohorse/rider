@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="610" viewBox="0 0 1000 610" role="img" aria-labelledby="title desc">
+  <title id="title">Rider CI selection</title>
+  <desc id="desc">Pull requests classify their complete base diff. Main pushes classify a cumulative diff from a completed successful ancestor CI run, including Pages. Only safe documentation skips heavy jobs on main. Missing history and non-documentation changes run full CI. Scheduled and manual runs are always full.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#52627a"/></marker>
+  </defs>
+  <rect width="1000" height="610" rx="16" fill="#f5f7fb"/>
+  <g font-family="sans-serif" text-anchor="middle" fill="#18273e">
+    <text x="500" y="40" font-size="24" font-weight="700">CI selection with a strict required gate</text>
+    <g stroke="#b8c5d7" fill="#ffffff" stroke-width="1.5">
+      <rect x="35" y="70" width="440" height="125" rx="10"/>
+      <rect x="525" y="70" width="440" height="125" rx="10"/>
+      <rect x="35" y="240" width="440" height="115" rx="10"/>
+      <rect x="525" y="240" width="440" height="115" rx="10"/>
+      <rect x="35" y="405" width="930" height="125" rx="10" fill="#e8f3ec" stroke="#84aa90"/>
+    </g>
+    <g font-size="19" font-weight="700">
+      <text x="255" y="103">Pull request</text>
+      <text x="745" y="103">Main push</text>
+      <text x="255" y="273">Allowlisted documentation only?</text>
+      <text x="745" y="273">Cumulative documentation only?</text>
+      <text x="500" y="439">required checks exact selected-job outcomes</text>
+    </g>
+    <g font-size="16">
+      <text x="255" y="136">Compare the PR base with the tested merge.</text>
+      <text x="255" y="165">Include old and new paths for renames.</text>
+      <text x="745" y="136">Find completed successful ancestor CI + Pages.</text>
+      <text x="745" y="165">Compare that baseline with this entire head.</text>
+      <text x="255" y="303">Yes: lint, CI Python tests and link checks.</text>
+      <text x="255" y="332">Otherwise: Gym, repo-tooling or full selection.</text>
+      <text x="745" y="303">Yes: fast checks; keep the deployed game.</text>
+      <text x="745" y="332">No / unknown baseline: full CI + Pages.</text>
+      <text x="500" y="471">Only explicitly expected jobs may be skipped. Selected jobs must succeed.</text>
+      <text x="500" y="501">Pending or cancelled code stays in the cumulative diff until validated and deployed.</text>
+      <text x="500" y="571">Scheduled and manual runs always run the full suite.</text>
+    </g>
+    <g stroke="#52627a" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <path d="M255 195V229"/>
+      <path d="M745 195V229"/>
+      <path d="M255 355V394"/>
+      <path d="M745 355V394"/>
+    </g>
+  </g>
+</svg>
