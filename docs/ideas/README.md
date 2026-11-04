@@ -1,22 +1,23 @@
-# Ideas
+# Ideas and planning references
 
-A place to collect and work out ideas that are **not decided and not scheduled**. Nothing here is approved work.
+This directory contains **unscheduled concepts**, historical briefs for issues that may still be open, and closed-epic planning history. The categories are deliberately separated to prevent an old plan from being mistaken for an approved task.
 
-**Rules for agents**
+**Agent and implementation rules**
 
-- Do not implement anything from this folder. An idea becomes work only when Claudio turns it into an issue with a milestone.
-- Do not read this folder for routine tasks; it is not part of the plan or the contracts.
-- You may add notes to an idea (technical approach, risks, cost) when asked, or link it from an issue that touches the same area.
-
-**How to use it**
-
-- One file per larger idea; small ideas go into [roadmap.md](roadmap.md).
-- Status at the top of each file: `raw` (just written down) · `worked out` (approach, risks, cost sketched) · `ready` (could become issues) · `scheduled` (issue/milestone exists, link it) · `dropped` (keep the reason).
-- Keep it short: goal, why it is fun, rough approach, risks, open questions, smallest playable version.
+- Do not start work solely from a document here. Follow the live GitHub issue, status labels, current owner, explicit GO, dependencies and applicable contracts.
+- A historical brief may describe approved *past* decisions; it does not override current issue scope or work order.
+- Keep exploratory ideas, delivered features, unverified experiments and planned changes clearly distinct.
+- Work on these documents when researching or refining a feature. Do not routinely load the entire directory while implementing unrelated tasks.
 
 ## Index
 
-| Idea | Status | File |
-|---|---|---|
-| Future feature roadmap (waves, smaller ideas) | worked out | [roadmap.md](roadmap.md) |
-| Build your own vehicle | worked out | [vehicle-builder.md](vehicle-builder.md) |
+| Collection | Contents |
+| --- | --- |
+| [Future roadmap](roadmap.md) | Unscheduled feature waves and design possibilities |
+| [Vehicle builder](vehicle-builder.md) | Custom car workshop concept; [#198](https://github.com/bongohorse/rider/issues/198) controls implementation |
+| [Procedural generation](procedural-generation/README.md) | Passage library, finite courses, visual helpers, editor validation and feasibility tests |
+| [Feature planning briefs](feature-briefs/README.md) | Long historical references associated with active/blocked issues #121, #356, #358 and #392 |
+| [Closed-issue history](history/README.md) | Delivered game loop and rendering epics, retired studio coordination charter |
+| [Interactive objects migration PR #488](https://github.com/bongohorse/rider/pull/488) | Object catalogue being split into themed idea documents; [issue #120](https://github.com/bongohorse/rider/issues/120) is authoritative |
+
+Vehicle-builder consolidation is separately proposed in [PR #489](https://github.com/bongohorse/rider/pull/489). Integrate its final index entry when that PR merges; don't create a duplicate car-editor catalogue.
