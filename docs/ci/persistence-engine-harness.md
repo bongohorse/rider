@@ -18,6 +18,7 @@
 | `slot_protection` | 6 | production `custom.slot_store`/`custom.save`, injected `sys`/`json`, newer-version slots |
 | `my_levels_index` | 4 | production My levels (`custom.library`) with real Defold `json` and `custom.parse`, injected `sys`/`io.open`/`os.remove`; non-dense `levels` (#382) |
 | `version_index` | 6 | production Version History (`editor_versions` on `custom.slot_store`) with real Defold `json` and `sys.serialize`, injected `sys`/`io.open`/`os.remove`; non-dense `entries`/`garbage` (#386) |
+| `editor_save_session` | 3 | production editor save/switch/restore/Undo admission with real Defold `json`; controlled clock, draft/library storage and version acknowledgements; ten-second override and stale-callback guards (#513) |
 
 The bootstrap prints exactly one `RIDER_PERSISTENCE` JSON completion marker (source commit, run ID, Defold engine version and SHA, case, PASS-line count, status) and exits non-zero on failure.
 
@@ -38,12 +39,14 @@ Use a fresh, empty output path. Optional: `--cases best level_progress …`, `--
 
 ## CI
 
-The Linux `G1 native` job runs the protocol checks and then the harness for all ten suites, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
+The Linux `G1 native` job runs the protocol checks and then the harness for every registered suite, so `required` gates genuine pinned-engine execution. Output is uploaded with the job's `g1-x86_64-linux-<run>` artifact under `persistence/`.
 
 ## Evidence and limits
 
 2026-11-02, local WSL x86-64, Temurin-25.0.4.1+1, Bob `90da8341…`, Defold 1.14.0 engine `a81dbb04`: with the P2 fixes (#390, #380, #381, #393) all six suites PASS; against the unpatched modules `level_progress`, `run_best_pending`, `coin_bank_recovery` and `coin_bank_late_restore` FAIL at their regression assertions while `best`/`coin_bank` PASS (PR #389/#391 comments).
 
 These suites inject file/slot-store failures. They do **not** prove native disk EIO, browser IndexedDB durability or Android persistence. `tools/gameplay/lua_tests.py` (#395) runs the same suites under Bob's LuaJIT; that is cheaper but not the engine. There `my_levels_index` and `version_index` have no Defold `json` and decode each fixture to a modelled table; the engine run first asserts that the real `json.decode` gives exactly those tables.
+
+`editor_save_session` substitutes storage and version-acknowledgement boundaries to test editor admission. It does not test the actual version transaction phases; `version_index` and the browser `ea3` case cover those separately. Plain LuaJIT uses opaque encoded-text fixtures; the native suite keeps Defold's real JSON codec.
 
 Official references: [Defold automated testing](https://defold.com/manuals/automated-testing/), [Bob project builder](https://defold.com/manuals/bob/), [Defold 1.14.0 System API](https://defold.com/ref/sys-lua/).
