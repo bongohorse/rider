@@ -54,7 +54,7 @@ About 20 minutes on the reference phone. Synthetic touch in CI does not replace 
 | # | Item | Steps | Result |
 | --- | --- | --- | --- |
 | 3.1 | M4 stations on the real phone | *Suggested:* drive bumps, air, balance and gaps with touch controls; pause and Retry. | Obsolete — Claudio 2026-11-02 ("session 3 brauchen wir nicht") |
-| 3.2 | LE1b phone procedure ([PR #139](https://github.com/bongohorse/rider/pull/139), [#142](https://github.com/bongohorse/rider/pull/142)) | Follow the [phone procedure](reports/LE1B_REPORT.md#phone-procedure) and drive `seg-800`. | Obsolete — Claudio 2026-11-02 ("session 3 brauchen wir nicht") |
+| 3.2 | LE1b phone procedure ([PR #139](https://github.com/bongohorse/rider/pull/139), [#142](https://github.com/bongohorse/rider/pull/142)) | Follow the [phone procedure](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/LE1B_REPORT.md#phone-procedure) and drive `seg-800`. | Obsolete — Claudio 2026-11-02 ("session 3 brauchen wir nicht") |
 | 3.3 | Phone performance (open limit at the time) | Optional, needed before Phase B: run the [phone trial](MOBILE_TRIAL.md). | Deferred: tracked as phone frame-time experiment [#416](https://github.com/bongohorse/rider/issues/416) |
 
 ## Session 4: vehicle feel (deferred)

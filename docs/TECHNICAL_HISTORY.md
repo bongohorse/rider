@@ -1,0 +1,56 @@
+# Retired report findings and evidence
+
+The current tree keeps the binding documents and small, useful conclusions—not repeated screenshots or historical test dumps. All retired report files remain accessible from the **immutable [2026-11-03 report tree](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports)** at source commit `564f056f57344b56db61d563d37e37efbedc45e9`. This snapshot contains 187 files (24 Markdown, 64 PNG, 79 JSON, 20 TXT; approximately 11.7 MiB). Removing them from `main` does not erase the Git commit.
+
+**Contents:** [Purpose](#purpose) · [Terrain rendering and road look](#terrain-rendering-and-road-look) · [Gameplay and mechanisms](#gameplay-and-mechanisms) · [Editor, camera and driving feel](#editor-camera-and-driving-feel) · [CI and test evidence](#ci-and-test-evidence)
+
+## Purpose
+
+Use [the documentation index](README.md), [current issues and PRs](https://github.com/bongohorse/rider/issues), and the binding [contracts](contracts/level-editor.md) for current behavior. The links below are **historical measurements or implementation records**, not a claim that the same values, versions, evidence status or code paths remain current. Do not interpret synthetic Chromium runs as phone/GPU tests or old branch results as a recent acceptance. New test artifacts belong in PR evidence / CI artifacts, not a recreated `docs/reports/`.
+
+## Terrain rendering and road look
+
+| Topic and source | Retained finding |
+| --- | --- |
+| [P0, #272](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P0_REPORT.md) | Baseline for resource cost, curves and long-course fixtures; desktop/software-GL only, not phone or hardware GPU. |
+| [P1, #273](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P1_REPORT.md) | Isolated original-lines versus flat/depth comparison; the later accepted direction was depth. |
+| [P2, #274](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P2_REPORT.md) | Normal Play uses sectioned depth meshes while collision/physics remained on the original sampled terrain. |
+| [P3, #275](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P3_REPORT.md) | Editor uses retained mesh preview; invalid or oversized drafts can still be edited with bounded fallback. |
+| [P4, #276](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P4_REPORT.md) | Viewport-based mesh residency and bounded cache, with full-world collision retained. |
+| [P5, #277](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_P5_REPORT.md) | Replaced obsolete 800-Sprite render estimate with resource-based admission. Historical 660 m fixture: 1,016 segments, 17 mesh sections, 18,312 vertices; the separate source/physics limits still applied. |
+| [Perspective comparison, #290](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_PERSPECTIVE_REPORT.md) | Gated camera-dependent projection comparison and five control parameters; visual experiment, not an independent device test. |
+| [Perspective integration, #292](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_PERSPECTIVE_INTEGRATION_REPORT.md) | Accepted production mode, shared geometry and compatibility, with historical defaults width 0.9 m, strength 0.35, angle 28.8108°, cap 64 m and shading 1. Current rules: [road-look contract](contracts/road-look.md). |
+| [Terrain Look authoring, #278](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_LOOK_REPORT.md) | Shared Editor/Gym settings, scoped styling and persistence; controls and current consumer boundary belong to [road-look](contracts/road-look.md). |
+| [Material Stage A, #392](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/TERRAIN_MATERIAL_A_REPORT.md) | Kenney CC0 24-slot atlas and textured Play/Edit pilot. Historical URL-only selection was temporary; do not mistake it for Stage B's authored material format. Current feature tracking: [#392](https://github.com/bongohorse/rider/issues/392). |
+
+Raw historical artifact folders: [P0](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p0), [P1](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p1), [P2](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p2), [P3](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p3), [P4](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p4), [P5](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-p5), [Terrain Look](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-278), [Perspective](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-290), [Integration](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-292), [Materials](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/terrain-392).
+
+## Gameplay and mechanisms
+
+| Topic and source | Retained feature/authority decision |
+| --- | --- |
+| [G1, #279](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G1_REPORT.md) | An official First run attempt starts with the first driving command; the fixed simulation tick owns timer, finish, result, best and Retry. |
+| [G2, #296](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G2_REPORT.md) | Progress follows projected 2D arc length of the directed terrain route; reverse moves the marker back and an open gap is bridged by a chord. |
+| [G3, #298](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G3_REPORT.md) | Optional authored Gold/Silver/Bronze targets are compared against unrounded official finish time; practices do not award medals. |
+| [G4, #300](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G4_REPORT.md) | Coins have stable pickup IDs and are banked only on valid official finishes; failure/Retry does not bank the attempt haul. |
+| [G5, #314](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G5_REPORT.md) | Multiple Wonder Gems use one-time claims keyed by shipped course ID plus pickup ID, unlike repeatable gold earnings. |
+| [G6, #318](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G6_REPORT.md) | Fuel is course-wide with shared canister refill; an empty tank disables powered forward/reverse but does not itself fail the attempt. |
+| [G7, #320](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/GAMEPLAY_G7_REPORT.md) | Official completion unlocks the next catalogue level without a medal requirement; durable records are keyed by official course ID. |
+| [Objects O1, #280](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/OBJECTS_O1_REPORT.md) | Runtime crate/plate/gate, hold/toggle/pulse plate modes, linked gates and canonical Retry; editor node-style authoring was a separate follow-up. |
+
+Historical snapshots: [G1](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/gameplay-g1), [G2](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/gameplay-g2). Current task ownership and acceptance come from the relevant [GitHub issues](https://github.com/bongohorse/rider/issues), not these closed-slice reports.
+
+## Editor, camera and driving feel
+
+- [LE1b, #123](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/LE1B_REPORT.md): headless Chromium desktop measured Import→drive-ready median **55–68 ms** over tested cases, with a **21–26 ms** long switch frame near 612–800 render objects. Approximately 50 ms was fixed world-switch cost; phone measurement was **NOT RUN**. See [level-editor contract](contracts/level-editor.md) for the relevant implementation boundaries.
+- [E0 inventory, #331](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/EDITOR_E0_INVENTORY.md): source-pinned lexical inventory of `editor.gui_script` at `f493a2d`, listing state, functions, messages, extraction hazards and proposed boundaries. Its line numbers and counts are **not current**. Re-run `python tools/ci/editor_inventory.py` and consult [test coverage](../tests/ci/test_editor_inventory.py) before a split.
+- [Camera downhill baseline, #337](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/camera-337-baseline.md): **offline formula characterization only** of camera framing and a bounded candidate; not a running Defold or phone measurement. The existing horizontal/vertical look-ahead was already implemented.
+- [Wheel-size trial notes](feel/wheel-size-114-stage1.md) retain the quantitative stage-1 experiment, failure caveats and playback protocol. Its former [A/B JSON, screenshots and tables](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/wheel-size-114) remain available permanently; they are debug candidate observations, not proof of production improvement.
+
+## CI and test evidence
+
+- [CI Speed 3, #264](https://github.com/bongohorse/rider/blob/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports/CI_SPEED_3_REPORT.md): pinned browser dependency checks and EA3 persistence fix, with before/after CI runs and verification limits. Do not compare single wall-clock totals as if runner queue and hardware were controlled.
+- Screenshots, JSON observations and native memory/resource logs in the [complete retired tree](https://github.com/bongohorse/rider/tree/564f056f57344b56db61d563d37e37efbedc45e9/docs/reports) are available for reproducibility but are not regenerated automatically. Re-run current scenarios from [TOOLING.md](TOOLING.md), [CI critical path](ci/gym-critical-path-2026-11-01.md), and the active issue's acceptance criteria. Historical screenshots never substitute for an Android drive test.
+- [HUD audit](ui/hud-audit.md) links to the same pinned historical G1 screenshots and explicitly distinguishes them from current-head captures. [Evidence policy](contracts/evidence.md) defines PASS, FAIL, BLOCKED and NOT RUN.
+
+This index intentionally captures the reusable conclusions rather than duplicating the reports; exact tables, parameters, test caveats, raw evidence and source SHAs remain recoverable at the immutable commit above.
