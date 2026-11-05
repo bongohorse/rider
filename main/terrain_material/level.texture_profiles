@@ -2,6 +2,10 @@ path_settings {
   path: "/main/terrain_material/presets/**"
   profile: "level_material"
 }
+path_settings {
+  path: "**"
+  profile: "unchanged"
+}
 profiles {
   name: "level_material"
   platforms {
@@ -12,6 +16,20 @@ profiles {
       compression_type: COMPRESSION_TYPE_DEFAULT
     }
     mipmaps: true
+    max_texture_size: 0
+    premultiply_alpha: true
+  }
+}
+profiles {
+  name: "unchanged"
+  platforms {
+    os: OS_ID_GENERIC
+    formats {
+      format: TEXTURE_FORMAT_RGBA
+      compression_level: NORMAL
+      compression_type: COMPRESSION_TYPE_DEFAULT
+    }
+    mipmaps: false
     max_texture_size: 0
     premultiply_alpha: true
   }
