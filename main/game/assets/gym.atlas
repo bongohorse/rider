@@ -18,6 +18,7 @@ animations {
   images { image: "/main/game/assets/car_wheel.png" }
 }
 
+images { image: "/main/game/assets/vehicle_shadow.png" }
 images { image: "/main/game/assets/coin.png" }
 images { image: "/main/game/assets/wonder-gem.png" }
 images { image: "/main/game/assets/fuel-canister.png" }
