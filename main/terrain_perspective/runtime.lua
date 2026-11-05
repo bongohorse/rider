@@ -58,8 +58,12 @@ function M.apply(state,set_bounds)
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
         local center=(p.center or 0)*p.width -- #536: metres the visible body moves in front of the driving line
-        if fresh or e.look_phase~=phase or e.look_center~=center then
-            go.set(url,'editor_params',vmath.vector4(phase,center,0,0));e.look_phase,e.look_center=phase,center
+        if g.textured and (fresh or e.look_center~=center) then
+            go.set(url,'look_body',vmath.vector4(center,0,0,0));e.look_center=center
+            state.uniform_writes=(state.uniform_writes or 0)+1
+        end
+        if fresh or e.look_phase~=phase then
+            go.set(url,'editor_params',vmath.vector4(phase,0,0,0));e.look_phase=phase
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
         e.look_object,e.look_revision=e.object,state.param_key

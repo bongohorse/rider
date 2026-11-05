@@ -8,6 +8,7 @@ vertex_constants { name: "editor_params" type: CONSTANT_TYPE_USER value { x: 0 y
 vertex_constants { name: "look_origin" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: -10 w: 0.01 } }
 vertex_constants { name: "look_shape" type: CONSTANT_TYPE_USER value { x: 0.9 y: 0 z: 64 w: 1 } }
 vertex_constants { name: "look_camera" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: 0.18 w: 0.55 } }
+vertex_constants { name: "look_body" type: CONSTANT_TYPE_USER value { x: 0 y: 0 z: 0 w: 0 } }
 samplers {
   name: "tex0"
   wrap_u: WRAP_MODE_CLAMP_TO_EDGE
