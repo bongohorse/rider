@@ -13,7 +13,6 @@ sys={get_config_number=function(_,d) return d end,get_engine_info=function() ret
 html5=nil
 package.loaded.socket={gettime=function() return 1 end}
 local D=require 'main.editor.editor_doc'
-local look=require 'main.terrain_perspective.look'
 local P=require 'main.terrain_perspective.projection'
 local function fresh()
  local d=D.blank('look','Look');d.editor.objects[1]={id='o1',type='line',points={{0,0},{20,0}}};d.editor.objects[2]={id='o2',type='line',points={{30,0},{50,0}}};d.editor.next_id=3;return d
@@ -32,7 +31,8 @@ function E.undo() local b=table.remove(hist);b.editor.revision=E.doc.editor.revi
 package.loaded['main.editor.editor']=E
 local S=require 'main.editor.editor_look'
 local function p() return enc(E.doc.editor.road_look and E.doc.editor.road_look.params) end
-local function T(name,fn) local ok,err=pcall(fn);print((ok and 'ok   ' or 'FAIL ')..name,ok and '' or err) end
+local failures={}
+local function T(name,fn) local ok,err=pcall(fn);if not ok then failures[#failures+1]=name..': '..tostring(err) end end
 T('legacy level apply is set 1',function() S.open();S.scope('level');assert(S.change('width',1.4));assert(S.apply());assert(E.doc.editor.road_look.params.version==1);assert(S.change('vehicle_position',.5)==nil) end)
 T('first material updates session',function() assert(E.commit(function(t) assert(D.set_material(t,{version=1,preset='meadow'})) end));S.sync();assert(S.session.params.version==2 and S.session.params.width==.6) end)
 T('undo first material returns session to set 1',function() E.undo();S.sync();assert(S.session.params.version==1,enc(S.session.params));assert(S.session.params.width==1.4);assert(E.doc.editor.material==nil) ; assert(D.validate(E.doc)) end)
@@ -49,6 +49,5 @@ S.session.field=nil
 T('v1+material level reset goes v2',function() E.doc=fresh();E.opened=2;assert(D.set_material(E.doc.editor,{version=1,preset='meadow'}));E.doc.editor.road_look={version=1,params=P.validate(P.DEFAULT)};assert(D.validate(E.doc));S.sync();assert(S.session.params.version==1);S.reset();assert(S.session.params.version==2);assert(S.apply());assert(E.doc.editor.road_look.params.version==2);print('  ',p()) end)
 T('locked terrain: set_material vs lock_conflict',function() local d=fresh();d.editor.objects[1].locked=true;local a=D.copy(d.editor);D.set_material(d.editor,{version=1,preset='meadow'});print('   first material on locked level conflict=',D.lock_conflict(a,d.editor)) end)
 T('locked terrain: removal clamp',function() local d=fresh();d.editor.objects[1].road_look={version=1,width=1,side=1,shading=.5};D.set_material(d.editor,{version=1,preset='meadow'});d.editor.objects[1].road_look.width=3;d.editor.objects[1].locked=true;local a=D.copy(d.editor);D.set_material(d.editor,nil);print('   removal conflict=',D.lock_conflict(a,d.editor)) end)
-print('bounds w4 p6 a75',enc(P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=75,width=4},4)))
-print('angle0 p6',enc(P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=0,width=4},4)))
+assert(#failures==0,table.concat(failures,'\n'))
 print('PASS #573 Terrain Look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal')
