@@ -18,6 +18,15 @@ local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 -- Original level material presets (main/terrain_material/presets, docs/contracts/level-visuals.md): Surface, Band and
 -- Fill, each with its own texture and its own chunk factory. Band follows the driving line, Fill lies in world space.
 M.PRESETS={'meadow','quarry','volcano','city','inca','glacier','scrapyard'}
+-- Slot layout: face + 4 flip, 8 x width mm, then gain (.5 + n x .0125) and shading (n / 3.5).
+M.SLOT_GAIN=32768;M.SLOT_SHADING=32768*64
+function M.slot_parts(v)
+    local shading=math.floor(v/M.SLOT_SHADING);v=v-shading*M.SLOT_SHADING
+    local gain=math.floor(v/M.SLOT_GAIN);v=v-gain*M.SLOT_GAIN
+    local width=math.floor(v/8)
+    return v-width*8,width,.5+gain*.0125,shading/3.5
+end
+M.LIGHT={-.55,.83};M.LIGHT_SCALE=.9;M.LIGHT_MIN=.62;M.LIGHT_MAX=1.22;M.LIGHT_BACK=.86
 M.FLIPPED=4 -- added to a slot's face: see apply_preset
 M.BAND_START=.18 -- metres below the line where the side face begins (terrain_geometry EDGE)
 local PRESET={};for _,id in ipairs(M.PRESETS) do PRESET[id]=true end
@@ -158,6 +167,34 @@ local function apply_preset(c,prep,first,last,spec,styles,looks)
         end
         n=n+6
     end end
+    -- Static light from the upper left (docs/contracts/level-visuals.md): per joint, so neighbours and sections agree.
+    -- It travels in the slot, apart from the selection tint in the colour stream. Overhangs stay neutral.
+    local function light_at(i)
+        if not prep.monotone then return 1 end
+        local v=prep.normals[i];local x,y=v[1],v[2]
+        local len=math.max(math.sqrt(x*x+y*y),1e-9);x,y=x/len,y/len
+        if y<0 then x,y=-x,-y end
+        return math.max(M.LIGHT_MIN,math.min(M.LIGHT_MAX,1+M.LIGHT_SCALE*(M.LIGHT[1]*x+M.LIGHT[2]*y-M.LIGHT[2])))
+    end
+    local function add_light(vertex,gain,shading)
+        slot[vertex]=slot[vertex]+M.SLOT_GAIN*math.floor((gain-.5)/.0125+.5)+M.SLOT_SHADING*math.floor((shading or 0)*3.5+.5)
+    end
+    for i=first,last-1 do
+        local q=(i-first)*18
+        for f=0,2 do for j,index in ipairs({i,i+1,i+1,i,i+1,i}) do
+            local vertex=q+f*6+j
+            local gain=light_at(index)
+            if f==2 and uv[(vertex-1)*2+2]>.5 then gain=gain*M.LIGHT_BACK end
+            add_light(vertex,gain,looks and looks[index].shading)
+        end end
+    end
+    do
+        local m=(last-first)*18
+        for _,i in ipairs({first==1 and first or false,last==#p and last or false}) do if i then
+            for j=1,6 do add_light(m+j,1,looks and looks[i].shading) end
+            m=m+6
+        end end
+    end
     -- Section overrides: each vertex carries its local width, so the vehicle stays on the middle there too.
     if looks then
         local function width(vertex,index) slot[vertex]=slot[vertex]+8*math.floor(looks[index].width*1000+.5) end
