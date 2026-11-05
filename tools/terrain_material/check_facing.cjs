@@ -31,7 +31,9 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});
  const button=async name=>{for(let i=0;i<8&&!await page.evaluate(n=>window.riderEditor?.visible.includes(n),name);i++){await page.mouse.move(1100,350);await page.mouse.wheel(0,120);await pointer.frames(page);}const p=await page.evaluate(name=>{const e=window.riderEditor,b=e.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!e.visible.includes(name)||!b)throw Error('Invisible '+name);return {x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};},name);await pointer.tap(page,p);await pointer.frames(page,{n:4});};
  const numeric=async(k,v)=>{await button('look_value_'+k);await page.keyboard.type(String(v),{delay:30});await key('Enter');await page.waitForFunction(([k,v])=>window.riderEditor.look.params[k]===v&&!window.riderEditor.look.pending,[k,v]);};
- await button('terrain_look');await page.waitForFunction(()=>window.riderEditor.look?.open===true);
+ // The first tap can land before the bar reacts: retry until the panel is open.
+ for(let i=0;i<5&&!await page.evaluate(()=>window.riderEditor.look?.open===true);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await button('terrain_look');await page.waitForTimeout(400);}
+ assert.equal(await page.evaluate(()=>window.riderEditor.look?.open),true,'Terrain Look did not open');
  await numeric('width',2);await numeric('perspective',1);
  await button('look_apply');await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1');await button('look_close');
  const map=()=>page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x,zoom:e.camera.zoom};});
