@@ -142,7 +142,7 @@ function paintKind(p){
    const r=rng(6),dr=[];for(let i=0;i<22;i++)dr.push([r()*W,5+r()*9,18+r()*52]);
    const base=wave(6,5),cache=new Float32Array(W);for(let i=0;i<W;i++){let v=26+base(i);for(const q of dr){let dx=Math.abs(i-q[0]);dx=Math.min(dx,W-dx);v=Math.max(v,26+q[2]*Math.exp(-(dx*dx)/(q[1]*q[1])));}cache[i]=v;}
    const bh=relief(W,HS,false,(x,y)=>smooth(0,9,s(x,y).gap)*8+sg(x,y)*4);
-   const bd=band(x=>cache[x],(x,y,e)=>{const depth=y/e,t=smooth(.42,1,depth)*smooth(24,44,e)+smooth(e-9,e,y)*.8,a=s(x,y);let col=scale([54,48,48],bh(x,y)*mix(.55,1,smooth(0,2.2,a.gap)));return mixc(col,hot(clamp(t)),clamp(t*1.25));},20);
+   const bd=band(x=>cache[x],(x,y,e)=>{const depth=y/e,t=smooth(.42,1,depth)*smooth(24,44,e)+smooth(e-9,e,y)*.8,a=s(x,y);let col=scale(mixc([74,66,64],[50,44,46],smooth(0,30,y)),bh(x,y)*mix(.55,1,smooth(0,2.2,a.gap)));return mixc(col,hot(clamp(t)),clamp(t*1.25));},20);
    return {fill,surface,band:bd};
   },
   city(){

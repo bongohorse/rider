@@ -3,7 +3,7 @@
  "issue": 538,
  "license": "Original work generated for Rider; no third-party input.",
  "generator": "tools/art/level_materials.cjs",
- "generator_sha256": "2120553800f94ac6e0bc40806d6d653f2ba53e423a4b4411a4cca2f1d0060ad7",
+ "generator_sha256": "825beb5fafe4863ea3a6438a6b7be096608369551ed6e06893880464a8a444ea",
  "browser": "156.0.8078.4",
  "pixels_per_metre": 128,
  "sizes": {
@@ -49,9 +49,9 @@
    "seed": 723,
    "sha256": {
     "surface": "7d13e9e63597b0a2c1c3b7fea7b7462fa43f3bb4b80ed330f6889eaf9f6ffc3f",
-    "band": "014343b2e6bedd4ea43404033c888c412cf111734a3b21777d66fd57df3a5269",
+    "band": "2e852c6a132e2f28db1ece56833afa03d28ec5cce4148c6ba1b772ecee6d480e",
     "fill": "83bfd8aa762a18e9b115355b7403f538a12df9aa93c4f500483ba560998457f1",
-    "thumb": "7fa5fce80a73215912508f0395be0c58d8452f5e933852a1a69736ab628a3777"
+    "thumb": "f7ddbc6a99016eabb7f0829eba2b5c7275be06e76f11631466916374456959d7"
    }
   },
   {
