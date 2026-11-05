@@ -2,7 +2,7 @@
 -- the course's driving lines, never physics state. A linear search per frame is fine for the test course; a real
 -- version needs an indexed lookup for full-size levels.
 local material=require 'main.terrain_perspective.material'
-local M={WIDTH_FACTOR=1.6,RATIO=.2,FADE_HEIGHT=5,MIN_SCALE=.4,ALPHA=.6,MIN_ALPHA=.15}
+local M={WIDTH_FACTOR=1.7,FADE_HEIGHT=4,MIN_SCALE=.4,ALPHA=.85,MIN_ALPHA=.2}
 local function ground(chains,x,y)
     local best,angle
     for _,chain in ipairs(chains) do
