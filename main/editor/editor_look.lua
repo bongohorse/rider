@@ -6,7 +6,7 @@ local projection=require 'main.terrain_perspective.projection'
 local socket=require 'socket'
 local M={}
 local function signature(e)
- local p=look.params({editor=e});local t={e.road_profile or 'legacy',{p.mode,p.width,p.perspective,p.angle,p.side,p.shading},{}}
+ local p=look.params({editor=e});local t={e.road_profile or 'legacy',{p.version,p.mode,p.width,p.perspective,p.angle,p.side,p.shading,p.vehicle_position or 0},{}}
  for _,o in ipairs(e.objects) do if e.road_profile==look.ID and o.road_look then t[3][#t[3]+1]={o.id,o.road_look.version,o.road_look.width,o.road_look.side,o.road_look.shading} end end
  return json.encode(t)
 end
@@ -82,13 +82,13 @@ function M.preview()
  s.error=nil;M.play_level=s.play_generation and compiled or nil;editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch();return e
 end
 function M.change(k,value)
- local s=M.sync();local r=projection.RANGES[k]
- if s.scope=='selected' and (k=='perspective' or k=='angle') then s.error='Perspective and view angle are level-wide.';return end
+ local s=M.sync();local r=projection.ranges(s.params)[k]
+ if s.scope=='selected' and (k=='perspective' or k=='angle' or k=='vehicle_position') then s.error='Perspective and view angle are level-wide.';return end
  if not r or type(value)~='number' or value~=value or value<r[1] or value>r[2] then s.error=k..' must be '..r[1]..'..'..r[2];return nil end
  s.params[k]=value;if s.scope=="level" then s.params.mode="perspective" end;s.dirty=true;s.clear=nil;s.pending=true;s.error=nil;return true
 end
 function M.reset()
- local s=M.sync();s.params=s.scope=='selected' and look.params(editor.doc) or projection.validate(projection.DEFAULT);s.clear=s.scope=='selected';s.dirty=true;s.pending=true;s.field=nil
+ local s=M.sync();s.params=s.scope=='selected' and look.params(editor.doc) or projection.validate(editor.doc.editor.material and projection.DEFAULT_V2 or projection.DEFAULT);s.clear=s.scope=='selected';s.dirty=true;s.pending=true;s.field=nil
 end
 function M.apply()
  local s=M.sync();local e=M.preview();if not e then return nil end

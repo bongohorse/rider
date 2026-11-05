@@ -775,17 +775,27 @@ function M.test_start(doc,p,mode)
     if blocked then return nil,"the vehicle would overlap "..M.label(blocked):lower() end
     return pos
 end
--- First material: raises the document, enables the authored profile and keeps its section overrides. The level-wide
--- values come from the contract's defaults once parameter set v2 exists (#573). nil removes the material.
+-- First material: raises the document, enables the authored profile and takes the accepted default look; section
+-- overrides stay. nil removes the material and returns to parameter set 1, with overrides inside its ranges.
 function M.set_material(e,m)
     local material=require('main.terrain_perspective.material')
+    local projection=require('main.terrain_perspective.projection')
     local ok,err=material.validate(m)
     if not ok then return nil,err end
-    if m==nil then e.material=nil;return true end
-    local look=require('main.terrain_perspective.look')
-    if e.road_profile~=look.ID then
-        e.road_look={version=1,params=require('main.terrain_perspective.projection').validate(require('main.terrain_perspective.projection').DEFAULT)}
-        e.road_profile=look.ID
+    if m==nil then
+        if e.material==nil then return true end
+        e.material=nil
+        e.road_look={version=1,params=projection.validate(projection.DEFAULT)}
+        for _,o in ipairs(e.objects) do if o.road_look then
+            for k,r in pairs({width=projection.RANGES.width,side=projection.RANGES.side,shading=projection.RANGES.shading}) do
+                o.road_look[k]=math.max(r[1],math.min(r[2],o.road_look[k]))
+            end
+        end end
+        return true
+    end
+    if e.material==nil then
+        e.road_look={version=1,params=projection.validate(projection.DEFAULT_V2)}
+        e.road_profile=require('main.terrain_perspective.look').ID
     end
     e.editor_version,e.compiler_version=M.MATERIAL_EDITOR_VERSION,M.MATERIAL_EDITOR_VERSION
     e.material=copy(m)

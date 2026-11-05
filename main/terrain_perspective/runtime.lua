@@ -30,7 +30,7 @@ function M.prepare(state,camera)
     state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        local width=state.baked and 2 or p.width -- also covers wider dirty/cached sections before materialization
+        local width=state.baked and projection.ranges(p).width[2] or p.width -- also covers wider dirty/cached sections before materialization
         e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end
