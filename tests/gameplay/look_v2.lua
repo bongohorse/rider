@@ -83,7 +83,7 @@ local worst=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=4
 assert(worst[1]==worst[1] and worst[3]>worst[1] and worst[4]>worst[2],'no pole at the set 2 limit')
 local mat=require 'main.terrain_perspective.material'
 mat.override={preset='meadow',text='meadow'}
-local baked=fresh();local points={};for x=0,10 do points[#points+1]={x,0} end
+local points={};for x=0,10 do points[#points+1]={x,0} end
 local prep=require('main.game.terrain_geometry').prepare(points,-30,0)
 local looks={};for i=1,#points do looks[i]={width=i<6 and 1.25 or 2,side=8,shading=1} end
 local sec=P.section(prep,1,#points,'s',nil,looks)

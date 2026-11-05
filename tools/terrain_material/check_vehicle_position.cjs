@@ -22,7 +22,7 @@ const brightness=(page,file,q)=>page.evaluate(async({src,q})=>{const i=new Image
  for(const v of [0,.5]){
   const context=await browser.newContext({viewport:{width:1280,height:720}}),page=await context.newPage();
   page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:|EDITOR_MESH_FALLBACK/.test(m.text()))errors.push(m.text());});
-  await configure(page,'pos-'+v,'le6');
+  await configure(page,'pos-'+v*10,'le6');
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
   await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:90000});
   const generation=await page.evaluate(()=>window.riderTelemetry.session_generation);
