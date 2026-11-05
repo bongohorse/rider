@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/art'))
@@ -44,6 +44,8 @@ class BrokenPresets(unittest.TestCase):
         self.out = Path(temp.name)/'presets'
         shutil.copytree(level_materials.OUT, self.out)
         self.manifest = json.loads((self.out/'manifest.json').read_text(encoding='utf-8'))
+        for other in self.manifest['presets'][1:]:
+            shutil.rmtree(self.out/other['id'])
         self.manifest['presets'] = self.manifest['presets'][:1]
         self.preset = self.manifest['presets'][0]
         self.folder = self.out/self.preset['id']
@@ -108,6 +110,39 @@ class BrokenPresets(unittest.TestCase):
     def test_stone_cut_at_the_repeat_edge(self):
         message = self.broken('fill', self.rect((478, 200, 511, 240), (230, 225, 215, 255)))
         self.assertIn('seam in u', message)
+
+    def test_colour_step_across_the_whole_edge(self):
+        def step(image):
+            ramp = Image.linear_gradient('L').rotate(90).resize(image.size).point(lambda v: v*40//255)
+            rgb = ImageChops.add(image.convert('RGB'), Image.merge('RGB', (ramp, ramp, ramp)))
+            rgb.putalpha(image.getchannel('A'))
+            return rgb
+        self.assertIn('seam in u', self.broken('fill', step))
+
+    def test_bright_rows_just_above_the_fold(self):
+        self.assertIn('fold', self.broken('surface', self.rect((0, 122, 511, 126), (255, 255, 255, 255))))
+
+    def test_bright_rows_just_below_the_fold(self):
+        self.assertIn('fold', self.broken('band', self.rect((0, 1, 511, 5), (255, 255, 255, 255))))
+
+    def test_flat_surface_from_the_second_row(self):
+        self.assertIn('fray', self.broken('surface', self.rect((0, 1, 511, 3), (60, 90, 40, 255))))
+
+    def test_small_patch_in_a_thumbnail(self):
+        self.assertIn('thumb', self.broken('thumb', self.rect((0, 0, 9, 9), (255, 0, 255, 255))))
+
+    def test_stray_file_in_a_preset(self):
+        (self.folder/'extra.png').write_bytes(b'x')
+        self.assertIn('unexpected files', ' '.join(level_materials.check(self.out)))
+
+    def test_leftover_generation_file(self):
+        (self.out/'generation.json').write_text('{}', encoding='utf-8')
+        self.assertIn('unexpected files', ' '.join(level_materials.check(self.out)))
+
+    def test_changed_layout_record(self):
+        self.manifest['pixels_per_metre'] = 64
+        self.save_manifest()
+        self.assertIn('layout', ' '.join(level_materials.check(self.out)))
 
     def test_generator_change(self):
         self.manifest['generator_sha256'] = '0'*64
