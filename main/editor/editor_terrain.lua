@@ -59,7 +59,7 @@ function M.plan(e,previews,selected,hover,old)
     for _,entry in ipairs(old or {}) do
         local k=point_key(entry.points[1]);candidates[k]=candidates[k] or {};table.insert(candidates[k],entry)
     end
-    local plans,used,arc,previous={},{},0,nil
+    local plans,used,arc,previous,preps={},{},0,nil,{}
     for _,run in ipairs(doc.runs(effective)) do
         for _,chain in ipairs(doc.run_chains(effective,run,pieces)) do
             local raw=chain.points
@@ -67,7 +67,7 @@ function M.plan(e,previews,selected,hover,old)
                 local reverse=raw[1][1]>raw[#raw][1]
                 local first=raw[reverse and #raw or 1]
                 if previous then arc=arc+math.sqrt((previous[1]-first[1])^2+(previous[2]-first[2])^2) end
-                local prep=geometry.prepare(raw,lower,arc);arc,previous=prep.arc,prep.p[#prep.p]
+                local prep=geometry.prepare(raw,lower,arc);arc,previous=prep.arc,prep.p[#prep.p];preps[#preps+1]=prep
                 local looks=baked and look.samples(chain,values)
                 local styles={}
                 for i=1,#raw-1 do styles[i]=styles_by[chain.owner[reverse and #raw-i+1 or i+1]] end
@@ -105,6 +105,7 @@ function M.plan(e,previews,selected,hover,old)
     if not require("main.game.terrain_budget").preview(#plans,vertices,0,0,e) then
         return nil,"Mesh preview exceeds component or Fit payload budget; shorten terrain. Line preview retained."
     end
+    geometry.assign_layers(preps)
     return plans
 end
 function M.create(e)
@@ -163,6 +164,7 @@ function M.update(state,e,previews,selected,hover,generation,view)
         entry.restyle=entry.restyle or p.restyled
         if not p.changed then result.reused=result.reused+1 end
         entry.plan=p;entry.bounds=geometry.extent(p.prep,p.first,p.last);entry.base_bounds=entry.bounds
+        mesh.layer(entry,p.prep.layer_z)
         entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
         local vertices=(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0)
         result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*(state.perspective and 48 or 36)

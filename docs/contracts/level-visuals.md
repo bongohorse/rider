@@ -2,7 +2,7 @@
 
 Binding vocabulary and data model for level materials, depth, light, backgrounds, decorations and local textures under [#121](https://github.com/bongohorse/rider/issues/121). Decisions are Claudio's of 2026-11-05 unless noted; the [#536 experiment](https://github.com/bongohorse/rider/issues/536) tested them. Issue labels hold task state.
 
-**Contents:** [Boundary](#boundary) · [Vocabulary](#vocabulary) · [Track material](#track-material) · [Depth look](#depth-look) · [Vehicle position](#vehicle-position) · [Facing](#facing) · [Light](#light) · [Vehicle shadow](#vehicle-shadow) · [Backgrounds and foreground](#backgrounds-and-foreground) · [Decorations](#decorations) · [Local textures](#local-textures) · [Format and compatibility](#format-and-compatibility) · [Assets](#assets) · [Measurement](#measurement) · [Task map](#task-map)
+**Contents:** [Boundary](#boundary) · [Vocabulary](#vocabulary) · [Track material](#track-material) · [Depth look](#depth-look) · [Vehicle position](#vehicle-position) · [Facing](#facing) · [Run order](#run-order) · [Light](#light) · [Vehicle shadow](#vehicle-shadow) · [Backgrounds and foreground](#backgrounds-and-foreground) · [Decorations](#decorations) · [Local textures](#local-textures) · [Format and compatibility](#format-and-compatibility) · [Assets](#assets) · [Measurement](#measurement) · [Task map](#task-map)
 
 ## Boundary
 
@@ -65,6 +65,10 @@ The formula in [road-look.md](road-look.md#projection-and-spaces) stays, with th
 ## Facing
 
 On a level with a material, a face that turns away from the camera is hidden, never drawn over a face in front of it. This covers run-end caps on both sides and the Surface. v1 ranges cannot fold the Surface; a run-end cap on a level without a material is checked in [#570](https://github.com/bongohorse/rider/issues/570) and fixed there only if its stream stays unchanged. With the values above the Surface folds at `tan(angle) / (perspective / 40)` above the camera centre, about 6.7 m, so zoomed-out views depend on this rule.
+
+## Run order
+
+Where two runs overlap, the one that is lower in that overlap is in front (Claudio's idea of 2026-11-05). Height is compared only inside the overlap, so a bridge stays behind a long climb that passes under it. All sections of a run share one draw position, so runs that truly cross keep one order: the rule holds where one run is lower throughout. This applies on all routes, in Play and in Edit. Terrain stays behind all other world objects.
 
 ## Light
 
@@ -140,6 +144,7 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 | Depth look | [#573](https://github.com/bongohorse/rider/issues/573) |
 | Vehicle position | [#571](https://github.com/bongohorse/rider/issues/571) |
 | Facing | [#570](https://github.com/bongohorse/rider/issues/570) |
+| Run order | [#577](https://github.com/bongohorse/rider/issues/577) |
 | Light | [#541](https://github.com/bongohorse/rider/issues/541) |
 | Vehicle shadow | [#572](https://github.com/bongohorse/rider/issues/572) |
 | Backgrounds and foreground | Epic [#565](https://github.com/bongohorse/rider/issues/565) |

@@ -46,12 +46,20 @@ function M.upload(entry,c,path)
     end
     if not entry.object then
         -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
-        entry.object=factory.create(c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2))
+        entry.object=factory.create(c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
-    else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,-2),entry.object) end
+    else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z),entry.object) end
     entry.geometry=c
     if c.perspective then entry.look_object=nil end
     publish()
+end
+-- An edit elsewhere can change a run's draw order: retained sections follow without a rebuild.
+function M.layer(entry,z)
+    local c=entry.geometry
+    if not (entry.object and c) or c.layer_z==z then return end
+    local scale=sys.get_config_number("physics.scale",0.01)
+    go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,z),entry.object)
+    c.layer_z=z
 end
 -- Selection/visibility changes write colors in place; positions and resource identity stay retained.
 function M.colors(entry,styles,first)
