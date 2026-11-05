@@ -44,8 +44,10 @@ const row=(page,file,x0,x1,y)=>page.evaluate(async({src,x0,x1,y})=>{const i=new 
  const results={zoom:e.zoom,background,farClear:near(farRow),farSoft:soft,contactClear:near(contactRow)};
  assert.ok(results.farClear>.05,'the far edge must show the view behind it: '+JSON.stringify(results));
  assert.ok(results.farClear<.98,'the far edge must have art: '+JSON.stringify(results));
+ assert.ok(results.farSoft>.05,'the far edge must blend, not cut: '+JSON.stringify(results));
  assert.ok(results.contactClear<.01,'holes in the contact side: '+JSON.stringify(results));
  // Hide: the section goes, without adding light.
+ for(let i=0;i<14&&!await page.evaluate(()=>window.riderEditor.visible.some(v=>v.startsWith('object_eye_')));i++){await page.mouse.move(100,500);await pointer.frames(page);await page.mouse.wheel(0,120);await pointer.frames(page,{n:4});}
  const eye=await page.evaluate(()=>{const n=window.riderEditor.visible.find(v=>v.startsWith('object_eye_'));if(!n)return null;const b=window.riderEditor.buttons[n],c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};});
  assert.ok(eye,'object eye button');await pointer.tap(page,eye);await pointer.frames(page,{n:10});await page.mouse.move(640,70);await pointer.frames(page,{n:6});await page.waitForTimeout(500);
  const hiddenFile=path.join(out,'hidden.png');await page.screenshot({path:hiddenFile});
