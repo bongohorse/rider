@@ -1,16 +1,17 @@
 -- Soft shadow below the vehicle on a level with a material (docs/contracts/level-visuals.md). Visual only: reads wheel
 -- positions and the course's driving lines, never physics state. A level's lines are indexed once by metre of x.
 local material=require 'main.terrain_perspective.material'
-local M={WIDTH_FACTOR=1.7,FADE_HEIGHT=4,MIN_SCALE=.4,ALPHA=.5,MIN_ALPHA=.08,ABOVE=.25,IMAGE_WIDTH=256}
+local M={WIDTH_FACTOR=1.7,FADE_HEIGHT=4,MIN_SCALE=.4,ALPHA=.5,MIN_ALPHA=.08,ABOVE=.5,IMAGE_WIDTH=256}
 function M.index(chains)
     local buckets={}
     for _,chain in ipairs(chains) do
         for i=1,#chain-1 do
             local a,b=chain[i],chain[i+1]
             if a[1]~=b[1] then
+                local segment={a,b}
                 for x=math.floor(math.min(a[1],b[1])),math.floor(math.max(a[1],b[1])) do
                     local list=buckets[x];if not list then list={};buckets[x]=list end
-                    list[#list+1]={a,b}
+                    list[#list+1]=segment
                 end
             end
         end
@@ -35,6 +36,7 @@ function M.look(height)
 end
 function M.update(self)
     local v=self.vehicle;local state=self.terrain_mesh
+    if state and state.shadow and not material.spec() then go.set(msg.url(nil,state.shadow,'sprite'),'tint.w',0) end
     if not material.spec() or not v or not v.ready or not state or not state.source then return end
     if state.shadow_source~=state.source then state.shadow_source=state.source;state.shadow_index=M.index(state.source.chains) end
     local scale=sys.get_config_number('physics.scale',.01)
