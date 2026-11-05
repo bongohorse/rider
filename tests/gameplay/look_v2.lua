@@ -75,6 +75,25 @@ local file1=J.decode(enc(assert(D.compile(set1))));file1.spawn[1]=file1.spawn[1]
 local _,_,clash1=D.open_level(file1);assert(clash1.lines.editor.road_look.params.version==1 and clash1.lines.editor.road_look.params.width==1.1,'set 1 stays')
 -- Removing a material from a set 1 level keeps its values.
 assert(D.set_material(set1.editor,nil));assert(set1.editor.road_look.params.width==1.1)
+-- #571: bounds include the body shift, section overrides carry their width, and a set 1 level has no shift.
+local b0=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,width=.6,vehicle_position=0},.6)
+local b5=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,width=.6,vehicle_position=.5},.6)
+assert(b5[2]<b0[2],'the body moves below the line')
+local worst=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,width=4,vehicle_position=1},4)
+for _,v in ipairs(worst) do assert(math.abs(v)<1e4,'finite bounds at the set 2 limit: '..v) end
+assert(1+(P.RANGES_V2.perspective[2]/P.FOCAL)*-P.RANGES_V2.width[2]*P.RANGES_V2.vehicle_position[2]>=.4-1e-9,'denominator stays positive')
+assert(worst[3]>worst[1] and worst[4]>worst[2])
+local mat=require 'main.terrain_perspective.material'
+mat.override={preset='meadow',text='meadow'}
+local points={};for x=0,10 do points[#points+1]={x,0} end
+local prep=require('main.game.terrain_geometry').prepare(points,-30,0)
+local looks={};for i=1,#points do looks[i]={width=i<6 and 1.25 or 2,side=8,shading=1} end
+local sec=P.section(prep,1,#points,'s',nil,looks)
+assert(sec.texture[1]==2+8*1250,'local width in the slot: '..sec.texture[1])
+local n=(#points-1)*18
+assert(sec.texture[n+7]==3+4+8*2000,'last run end keeps its flip and width')
+local plain_sec=P.section(prep,1,#points,'p');assert(plain_sec.texture[1]==2,'no width without a section look')
+mat.override=nil
 -- The panel gets a control for every value of the set.
 assert(#P.controls(P.DEFAULT_V2)==#P.CONTROLS+1 and #P.controls(P.DEFAULT)==#P.CONTROLS)
 for _,c in ipairs(P.controls(P.DEFAULT_V2)) do assert(P.RANGES_V2[c.key],c.key) end

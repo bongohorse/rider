@@ -35,7 +35,7 @@ end
 function M.bounds(base,c,p,width)
     local b={math.huge,math.huge,-math.huge,-math.huge}
     for _,x in ipairs({base[1],base[3]}) do for _,y in ipairs({base[2],base[4]}) do
-        for _,z in ipairs({0,width or p.width}) do
+        for _,z in ipairs({-(p.vehicle_position or 0)*(width or p.width),0,width or p.width}) do
             local u,v=M.project(x,y,z,c,p)
             b[1],b[2],b[3],b[4]=math.min(b[1],u),math.min(b[2],v),math.max(b[3],u),math.max(b[4],v)
         end
@@ -94,7 +94,7 @@ function M.section(prep,first,last,key,styles,looks)
     c.bytes,c.perspective,c.lower=c.vertices*M.STRIDE,true,prep.lower
     -- #392 Stage A: textured route only when the temporary pilot selection is active.
     local spec=material.spec()
-    if spec then material.apply(c,prep,first,last,spec,styles) end
+    if spec then material.apply(c,prep,first,last,spec,styles,looks) end
     return c
 end
 return M

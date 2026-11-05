@@ -30,7 +30,7 @@ function M.prepare(state,camera)
     state.look_camera=camera
     local p=M.comparison() and M.params or state.params or projection.DEFAULT
     state.current_params=p
-    state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
+    state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading,p.vehicle_position or 0},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
         local width=state.baked and projection.ranges(p).width[2] or p.width -- also covers wider dirty/cached sections before materialization
@@ -58,6 +58,10 @@ function M.apply(state,set_bounds)
         if fresh or e.look_revision~=state.param_key or e.look_cx~=c[1] or e.look_cy~=c[2] then
             go.set(url,'look_camera',vmath.vector4(c[1],c[2],.18,math.tan(p.angle*math.pi/180)))
             e.look_cx,e.look_cy=c[1],c[2]
+            state.uniform_writes=(state.uniform_writes or 0)+1
+        end
+        if g.preset and (fresh or e.look_revision~=state.param_key) then
+            go.set(url,'look_body',vmath.vector4(p.vehicle_position or 0,0,0,0))
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
         if fresh or e.look_phase~=phase then

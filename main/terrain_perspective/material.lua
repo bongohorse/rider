@@ -108,7 +108,7 @@ end
 -- reversed against the first one for every run shape. Top vertices carry their drop below the line in
 -- look_data.x (unused above z<0); bottom vertices derive it in the shader. texcoord0.y carries the slope factor,
 -- which keeps the Band's thickness measured across the slope. Run ends close up to the driving line.
-local function apply_preset(c,prep,first,last,spec,styles)
+local function apply_preset(c,prep,first,last,spec,styles,looks)
     local p=prep.p
     local slot,uv,base,color={},c.uv,c.base_colors,c.color
     c.texture=slot
@@ -158,6 +158,19 @@ local function apply_preset(c,prep,first,last,spec,styles)
         end
         n=n+6
     end end
+    -- Section overrides: each vertex carries its local width, so the vehicle stays on the middle there too.
+    if looks then
+        local function width(vertex,index) slot[vertex]=slot[vertex]+8*math.floor(looks[index].width*1000+.5) end
+        for i=first,last-1 do
+            local q=(i-first)*18
+            for f=0,2 do for j,index in ipairs({i,i+1,i+1,i,i+1,i}) do width(q+f*6+j,index) end end
+        end
+        local m=(last-first)*18
+        for _,i in ipairs({first==1 and first or false,last==#p and last or false}) do if i then
+            for j=1,6 do width(m+j,i) end
+            m=m+6
+        end end
+    end
     c.textured,c.preset=true,spec.preset
     c.overrides={spec.surface or false,spec.band or false,spec.fill or false}
     c.material_key=spec.text
@@ -167,8 +180,8 @@ end
 -- Adds one float per vertex (family*4+face) to a perspective section built by projection.section,
 -- gives end caps a 0..1 depth U and neutral face shading. Positions, look_data and partition stay exactly
 -- as built; the arc-length U of the other faces differs by whole tiles per quad (see bound below).
-function M.apply(c,prep,first,last,spec,styles)
-    if spec.preset then return apply_preset(c,prep,first,last,spec,styles) end
+function M.apply(c,prep,first,last,spec,styles,looks)
+    if spec.preset then return apply_preset(c,prep,first,last,spec,styles,looks) end
     local p=prep.p
     local slot,uv,base,color={},c.uv,c.base_colors,c.color
     c.texture=slot
