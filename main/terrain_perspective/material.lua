@@ -17,10 +17,11 @@ M.PERIOD={[0]=.9,[1]=.9,[2]=1}
 local SELECT_GAIN={1.6,.95,.5}
 local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 -- #536 experiment only: Band/Fill measured from the driving line, on its own REPEAT textures (tex1..tex3).
--- proto: U follows the arc length. protox: U follows world x. Slots 24..31; the Kenney slots stay unchanged.
+-- proto: Fill follows the driving line (arc U, drop V). protow: Fill stays in world coordinates (x, y); Band still
+-- follows the line. Slots 24..31; the Kenney slots stay unchanged.
 local PROTO=6
-INDEX.proto,INDEX.protox=PROTO,PROTO+1
-local NAMES={};for i,f in ipairs(M.FAMILIES) do NAMES[i]=f end;NAMES[PROTO+1],NAMES[PROTO+2]='proto','protox'
+INDEX.proto,INDEX.protow=PROTO,PROTO+1
+local NAMES={};for i,f in ipairs(M.FAMILIES) do NAMES[i]=f end;NAMES[PROTO+1],NAMES[PROTO+2]='proto','protow'
 M.PROTO_EDGE=.18
 local PROTO_SHADE={[0]=1,[1]=1,[2]=1,[3]=.72}
 
@@ -62,6 +63,7 @@ function M.apply_pose()
     local scale=sys.get_config_number('physics.scale',.01)
     go.set_position(vmath.vector3(pose.x/scale,pose.y/scale,500),'/camera')
     go.set('/camera#camera','orthographic_zoom',pose.zoom)
+    if pose.clean and not M.clean then M.clean=true;msg.post('main:/loader#ui','disable') end
 end
 function M.stride() return M.spec() and M.STRIDE or M.UNTEXTURED_STRIDE end
 function M.describe()
@@ -129,7 +131,12 @@ function M.apply(c,prep,first,last,spec,styles)
             paint(n+j,f,M.END,interval);uv[(n+j-1)*2+1]=depth_u[j]
             if f>=PROTO then
                 uv[(n+j-1)*2+2]=1
-                if j==1 or j==2 or j==4 then c.look_data[(n+j-1)*3+1]=M.PROTO_EDGE end
+                -- The cap top meets the surface at the driving line: no open wedge at run ends.
+                if j==1 or j==2 or j==4 then
+                    c.look_data[(n+j-1)*3+1]=0
+                    local k=(n+j-1)*3
+                    c.position[k+1],c.position[k+2]=p[i][1]-c.origin[1],p[i][2]-c.origin[2]
+                end
             end
         end
         n=n+6

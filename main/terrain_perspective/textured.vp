@@ -6,7 +6,7 @@ in highp vec3 look_data;
 in highp float texture_slot; // #392: family*4+face, constant per triangle
 out lowp vec4 var_color;
 out highp vec3 var_tile; // tile U, tile V (top-left image origin), slot
-out highp vec2 var_line; // #536: metres below the driving line, slope factor
+out highp vec4 var_line; // #536: metres below the driving line, slope factor, Fill U, Fill V (image top = 0)
 uniform vs_uniforms {
     highp mat4 world_view_proj;
     highp vec4 editor_params;
@@ -30,6 +30,7 @@ void main() {
     // #536: drop below the driving line. Bottoms use their source point in look_data; tops carry a constant.
     float line_drop=position.z<0.0?distance(look_data.xy,p.xy*s):look_data.x;
     float world_x=p.x*s+look_origin.x;
+    float world_y=p.y*s+look_origin.y;
     float perspective_w=1.0;
     if(depth>0.0 && look_shape.y==0.0) {
         p.xy+=(depth/s)*look_camera.zw;
@@ -58,11 +59,10 @@ void main() {
     float u=face<2.5?arc:texcoord0.x;
     float v=face<0.5?1.0-texcoord0.y:face<1.5?texcoord0.y:-tile_y;
     if(proto) {
-        // protox (slots 28..31): Band and Fill U follow world x; Surface keeps the arc.
-        if(id>27.5 && face>0.5 && face<2.5) u=world_x/4.0;
-        else if(face>2.5) u=texcoord0.x*0.225;
-        var_line=vec2(line_drop,texcoord0.y);
+        if(face>2.5) u=texcoord0.x*0.225;
+        bool world_fill=id>27.5;
+        var_line=vec4(line_drop,texcoord0.y,world_fill&&face<2.5?world_x/4.0:u,(world_fill?-world_y:line_drop)/4.0);
         v=face<0.5?1.0-texcoord0.y:0.0;
-    } else var_line=vec2(0.0);
+    } else var_line=vec4(0.0);
     var_tile=vec3(u,v,id);
 }

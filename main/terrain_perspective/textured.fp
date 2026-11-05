@@ -2,7 +2,7 @@
 // #392 Stage A: Kenney 1.1 terrain atlas, six family rows x four face columns (main/terrain_material/manifest.json).
 in lowp vec4 var_color;
 in highp vec3 var_tile;
-in highp vec2 var_line;
+in highp vec4 var_line;
 out vec4 frag_color;
 uniform lowp sampler2D tex0;
 uniform lowp sampler2D tex1; // #536 surface
@@ -20,7 +20,7 @@ void main() {
         vec3 rgb;
         if(face<0.5) rgb=texture(tex1,vec2(var_tile.x,-clamp(var_tile.y,0.0,1.0)*0.25)).rgb;
         else {
-            vec3 fill=texture(tex3,vec2(var_tile.x,-var_line.x*0.25)).rgb;
+            vec3 fill=texture(tex3,vec2(var_line.z,-var_line.w)).rgb;
             float band_v=var_line.x*var_line.y*0.25;
             vec4 band=texture(tex2,vec2(var_tile.x,-band_v));
             band*=step(band_v,0.98);
