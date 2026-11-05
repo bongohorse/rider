@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "issue": 538,
+ "license": "Original work generated for Rider; no third-party input.",
+ "generator": "tools/art/level_materials.cjs",
+ "generator_sha256": "825beb5fafe4863ea3a6438a6b7be096608369551ed6e06893880464a8a444ea",
+ "browser": "156.0.8078.4",
+ "pixels_per_metre": 128,
+ "sizes": {
+  "surface": [
+   512,
+   128
+  ],
+  "band": [
+   512,
+   128
+  ],
+  "fill": [
+   512,
+   512
+  ]
+ },
+ "presets": [
+  {
+   "id": "meadow",
+   "name": "Meadow",
+   "seed": 536,
+   "sha256": {
+    "surface": "c1b55b5e3997371f863fd697789ceb6831ff14f6f98516ff92a23ab55df971be",
+    "band": "bb0e65f3b419824ca36bd2b9cd799d12d0cc33957e047f5c12d6793954e71059",
+    "fill": "335775047e55cf5b58fb11bd01003c7834669c1736ab82f489b78b774581e9a7",
+    "thumb": "34a5e78da648758d0998ce7d689171fc54af951e7d93d2bca9d9b41497db5862"
+   }
+  },
+  {
+   "id": "quarry",
+   "name": "Quarry",
+   "seed": 611,
+   "sha256": {
+    "surface": "3018b7ead59a43e9f197184fda7ebcea7c732595fdd12c495c6ee5085be51cdd",
+    "band": "599d4a405457a41fc7577704fee9035131888bb0c9fd1c9e6661dd9789a832ce",
+    "fill": "08960245e9ecfc099b2c9ea8e40bb95c14850f5c4cef0e5ff3eb2d5135a694ce",
+    "thumb": "e418716bd5b7afd5e18667b00060072508ec988ced21a8b659eb6278db389961"
+   }
+  },
+  {
+   "id": "volcano",
+   "name": "Volcano",
+   "seed": 723,
+   "sha256": {
+    "surface": "7d13e9e63597b0a2c1c3b7fea7b7462fa43f3bb4b80ed330f6889eaf9f6ffc3f",
+    "band": "2e852c6a132e2f28db1ece56833afa03d28ec5cce4148c6ba1b772ecee6d480e",
+    "fill": "83bfd8aa762a18e9b115355b7403f538a12df9aa93c4f500483ba560998457f1",
+    "thumb": "f7ddbc6a99016eabb7f0829eba2b5c7275be06e76f11631466916374456959d7"
+   }
+  },
+  {
+   "id": "city",
+   "name": "City street",
+   "seed": 847,
+   "sha256": {
+    "surface": "fc52a6afcad70536cd722330751d9d88e300d4b10e481003736469e53d6ac293",
+    "band": "054d302487216d200b25f34038ba7385379bad11bb5cb067fa1f26f6549a1a19",
+    "fill": "0cad5226ff17e48e769c3eecfc3dcb883f58bcd9a5e24ef1f3b87449441b0976",
+    "thumb": "17d866caa36bc4e6630f495e33463dd29cb2d8b5ace16cc686cc60eabc509c54"
+   }
+  },
+  {
+   "id": "inca",
+   "name": "Inca stone",
+   "seed": 961,
+   "sha256": {
+    "surface": "d79325d8bf2965a150969e7eb593712478ab13da4a05718b82c60c8fa9eb4828",
+    "band": "bb322a8a53140ea63c64a0173298713578db7037aae5b924ecea6ab1e2cac00e",
+    "fill": "c5ebf8f8b355cbe8c63520b4f01c77ae94b6c17097efa5f910866e282710381e",
+    "thumb": "efe09ff433fbf6f77660e8226f6af0d9523d27f7e8e8e3eba11d3c5a84040ac8"
+   }
+  },
+  {
+   "id": "glacier",
+   "name": "Glacier",
+   "seed": 1033,
+   "sha256": {
+    "surface": "4d0362e45def84a872910f551d89cb5aed6af2648f78146cfd81e4b21e05a611",
+    "band": "35430460937c4c2796c933ae76760e5f10875fc45e54d87dc521f331769d050a",
+    "fill": "182fec69bffa4a42df5fc1d3095a4858f4171c8f3dd35c4f234a6301c7a9e3ea",
+    "thumb": "41dc9f6b17f69e025015a4b5e6692896a858ea38d94d70e48d3fdf01fdbded46"
+   }
+  },
+  {
+   "id": "scrapyard",
+   "name": "Scrapyard",
+   "seed": 1151,
+   "sha256": {
+    "surface": "ce8957f77ae38e64b7686817b722ec066736761ba1b3e6cd28bdfa3240c08567",
+    "band": "c66a2969fbe7a4bff9bdfdcb500decb7ee33ee2a65c757bc80d16b99ddf086e3",
+    "fill": "554227644982aee01fd11cc4ed4e3475032fdf52a378a799634328630afb9a3f",
+    "thumb": "63d37dbab0d0d696497383115b50dd44080503c0dbf6318e45d76de9b027e9fe"
+   }
+  }
+ ]
+}
