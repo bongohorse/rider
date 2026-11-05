@@ -159,7 +159,7 @@ function M.apply(c,prep,first,last,spec,styles)
         for j=1,6 do
             local v=first_vertex+j-1;local k=(v-1)*4
             local gain=slope_gain(order[j])
-            if surface then gain=gain*(uv[(v-1)*2+2]>.5 and .82 or 1.06) end
+            if surface then gain=gain*(uv[(v-1)*2+2]>.5 and .86 or 1) end
             for q=1,3 do base[k+q]=base[k+q]*gain;color[k+q]=color[k+q]*gain end
         end
     end
@@ -179,7 +179,8 @@ function M.apply(c,prep,first,last,spec,styles)
         for j=1,6 do
             paint(n+j,f,M.END,interval);uv[(n+j-1)*2+1]=depth_u[j]
             if f>=PROTO then
-                uv[(n+j-1)*2+2]=1
+                -- Sign: which way this run end points. The fragment shader hides the cap when it faces away from the camera.
+                uv[(n+j-1)*2+2]=(i==1 and p[1][1]-p[2][1] or p[i][1]-p[i-1][1])>=0 and 1 or -1
                 -- The cap top meets the surface at the driving line: no open wedge at run ends.
                 if j==1 or j==2 or j==4 then
                     c.look_data[(n+j-1)*3+1]=0

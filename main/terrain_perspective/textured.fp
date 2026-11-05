@@ -17,11 +17,13 @@ void main() {
     if(id>23.5) {
         // #536: one image is 4 m x 4 m (128 px/m). Texture V grows upward: the image top is V=1. Surface and Band clamp V.
         float face=id-4.0*floor(id*0.25+0.01);
+        // A run end whose back edge crossed its front edge faces away: drawing it would cover the front face.
+        if(face>2.5&&gl_FrontFacing==(var_line.y>0.0)) discard;
         vec3 rgb;
         if(face<0.5) rgb=texture(tex1,vec2(var_tile.x,1.0-clamp(var_tile.y,0.0,1.0)*0.25)).rgb;
         else {
             vec3 fill=texture(tex3,vec2(var_line.z,-var_line.w)).rgb;
-            float band_v=var_line.x*var_line.y*0.25;
+            float band_v=var_line.x*abs(var_line.y)*0.25;
             vec4 band=texture(tex2,vec2(var_tile.x,1.0-band_v));
             rgb=band.rgb+fill*(1.0-band.a);
         }
