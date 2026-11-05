@@ -77,4 +77,6 @@ function M.apply(state,set_bounds)
         html5.run('window.riderRoadProjection='..json.encode({revision=M.revision,params=p,baked=state.baked==true,mode=p.mode,camera=c,stride=projection.stride(),material=require('main.terrain_perspective.material').describe(),sections=#state.entries,counts=state.last,view=state.view,entries=entries,uploads=state.uploads or 0,uniform_writes=state.uniform_writes or 0,aabb_writes=state.aabb_writes or 0}))
     end
 end
+-- Opt-in #516 measurement owns samples on the existing renderer state.
+if sys and sys.get_engine_info and sys.get_engine_info().is_debug then M.apply=require('main.gym.publication_probe516').wrap(M.apply,'projection.apply') end
 return M
