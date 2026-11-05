@@ -163,6 +163,7 @@ function M.update(state,e,previews,selected,hover,generation,view)
         entry.restyle=entry.restyle or p.restyled
         if not p.changed then result.reused=result.reused+1 end
         entry.plan=p;entry.bounds=geometry.extent(p.prep,p.first,p.last);entry.base_bounds=entry.bounds
+        mesh.layer(entry,p.prep.layer_z)
         entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
         local vertices=(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0)
         result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*(state.perspective and 48 or 36)

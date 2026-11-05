@@ -1,5 +1,5 @@
 -- Normal-Play depth geometry, version 1. Metres; never mutates collision/source data.
-local M={VERSION=1,INTERVALS=64,PROJECTION={0.18,0.55},DEPTH=0.9,EDGE=0.18}
+local M={VERSION=1,INTERVALS=64,PROJECTION={0.18,0.55},DEPTH=0.9,EDGE=0.18,LAYER_NEAR=-2,LAYER_RANGE=.8,LAYER_SCALE=64}
 local BODY_TOP,BODY_BOTTOM={0.25,0.34,0.29,1},{0.10,0.16,0.17,1}
 local TOP,BACK,EDGE,CAP={0.63,0.76,0.62,1},{0.43,0.60,0.47,1},{0.29,0.43,0.36,1},{0.17,0.25,0.22,1}
 local SELECT_GAIN={1.6,.95,.5}
@@ -38,7 +38,18 @@ function M.prepare(raw,lower,arc)
         end
         local u={arc/4}
         for i=2,#p do arc=arc+distance(p[i-1],p[i]);u[i]=arc/4 end
-        return {p=p,normals=normals,monotone=monotone,u=u,arc=arc,lower=lower,offset=offset,bottom=bottom}
+        return {p=p,normals=normals,monotone=monotone,u=u,arc=arc,lower=lower,offset=offset,bottom=bottom,layer_z=M.layer_z(p)}
+end
+-- Draw order of a whole run (Claudio 2026-11-05, #577): the lower run is in front, the higher run behind. Height is
+-- the mean along the run, so every section of a run shares one z. Stays below all other world objects.
+function M.layer_z(p)
+    local height,length=0,0
+    for i=2,#p do
+        local d=distance(p[i-1],p[i])
+        height=height+(p[i-1][2]+p[i][2])/2*d;length=length+d
+    end
+    height=length>0 and height/length or p[1][2]
+    return M.LAYER_NEAR-M.LAYER_RANGE*(math.atan(height/M.LAYER_SCALE)/math.pi+.5)
 end
 function M.section(prep,first,last,key,editing,styles)
     local p,u,monotone=prep.p,prep.u,prep.monotone
@@ -90,6 +101,7 @@ function M.section(prep,first,last,key,editing,styles)
                 end
             end
             c.vertices=#c.position/3;c.bytes=c.vertices*9*4
+            c.layer_z=prep.layer_z
     return c
 end
 function M.build(d)
