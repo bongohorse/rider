@@ -59,7 +59,7 @@ function M.plan(e,previews,selected,hover,old)
     for _,entry in ipairs(old or {}) do
         local k=point_key(entry.points[1]);candidates[k]=candidates[k] or {};table.insert(candidates[k],entry)
     end
-    local plans,used,arc,previous={},{},0,nil
+    local plans,used,arc,previous,preps={},{},0,nil,{}
     for _,run in ipairs(doc.runs(effective)) do
         for _,chain in ipairs(doc.run_chains(effective,run,pieces)) do
             local raw=chain.points
@@ -67,7 +67,7 @@ function M.plan(e,previews,selected,hover,old)
                 local reverse=raw[1][1]>raw[#raw][1]
                 local first=raw[reverse and #raw or 1]
                 if previous then arc=arc+math.sqrt((previous[1]-first[1])^2+(previous[2]-first[2])^2) end
-                local prep=geometry.prepare(raw,lower,arc);arc,previous=prep.arc,prep.p[#prep.p]
+                local prep=geometry.prepare(raw,lower,arc);arc,previous=prep.arc,prep.p[#prep.p];preps[#preps+1]=prep
                 local looks=baked and look.samples(chain,values)
                 local styles={}
                 for i=1,#raw-1 do styles[i]=styles_by[chain.owner[reverse and #raw-i+1 or i+1]] end
@@ -99,6 +99,7 @@ function M.plan(e,previews,selected,hover,old)
             end
         end
     end
+    geometry.assign_layers(preps)
     -- Safe fallback for still-invalid drafts; configured engine capacity is not raised.
     local vertices=0
     for _,p in ipairs(plans) do vertices=vertices+(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0) end
