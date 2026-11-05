@@ -6,6 +6,7 @@ in highp vec3 look_data;
 in highp float texture_slot; // face, constant per triangle
 out lowp vec4 var_color;
 out highp vec3 var_uv; // along the track, Surface across (back edge 0), face
+out lowp float var_flipped; // 1 when this face's winding is reversed
 out highp vec4 var_side; // metres below the line, slope factor, Fill UV in world space
 uniform vs_uniforms {
     highp mat4 world_view_proj;
@@ -40,10 +41,13 @@ void main() {
     p.z=0.0; // preserve accepted terrain/sprite layering; no gameplay camera or 3D physics
     gl_Position=(world_view_proj*vec4(p,1.0))*perspective_w;
     var_color=color;
-    float face=floor(texture_slot+0.5);
+    float slot=floor(texture_slot+0.5);
+    float flipped=slot>3.5?1.0:0.0;
+    float face=slot-4.0*flipped;
     // One image spans 4 m along the track; per-quad U plus the fractional section phase, continuous across sections.
     float u=face<2.5?texcoord0.x+fract(editor_params.x):texcoord0.x*0.225;
     var_uv=vec3(u,1.0-texcoord0.y,face);
+    var_flipped=flipped;
     // Run ends share one x: U continues over their depth, so the Fill does not streak.
     if(face>2.5) fill_uv.x+=u;
     var_side=vec4(line_drop,texcoord0.y,fill_uv);

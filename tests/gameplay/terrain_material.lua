@@ -153,7 +153,7 @@ do
     local a=projection.section(prep,1,65,'a')
     local b=projection.section(prep,65,129,'b')
     assert(a.preset=='meadow' and a.textured and a.bytes==a.vertices*52)
-    for i,v in ipairs(a.texture) do assert(v>=0 and v<=3,'slot is a face') end
+    for i,v in ipairs(a.texture) do assert(v>=0 and v<=7,'slot is a face, maybe flipped') end
     assert(a.texture[1]==material.SIDE and a.texture[7]==material.RIM and a.texture[13]==material.SURFACE)
     -- Side tops start below the rim; rim runs from the line down to that start.
     assert(a.look_data[1]==material.BAND_START and a.look_data[4]==material.BAND_START)
@@ -169,7 +169,11 @@ do
     assert(near<1e-6 or math.abs(near-1)<1e-6,'U continuous across sections: '..near)
     -- A run end closes up to the driving line.
     local n=64*18
-    assert(a.texture[n+1]==material.END and a.look_data[n*3+1]==0)
+    assert(a.texture[n+1]==material.END+material.FLIPPED and a.look_data[n*3+1]==0,'the left run end is flipped')
+    local c=projection.section(prep,129,#prep.p,'c');local m=(#prep.p-129)*18
+    assert(c.texture[m+1]==material.END,'the right run end is not flipped')
+    local back=geometry.prepare({{0,0},{10,5},{5,10},{15,12}},-30,0);local r=projection.section(back,1,4,'r')
+    assert(r.texture[12+1]==material.SURFACE and r.texture[18+12+1]==material.SURFACE+material.FLIPPED,'an overhang running back is flipped')
     assert(math.abs(a.position[n*3+1]-(prep.p[1][1]-a.origin[1]))<1e-9 and math.abs(a.position[n*3+2]-(prep.p[1][2]-a.origin[2]))<1e-9)
     assert(material.describe().preset=='meadow')
     -- Rim and Surface U also agree across sections.
