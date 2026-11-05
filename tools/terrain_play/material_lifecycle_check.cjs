@@ -6,7 +6,12 @@ function checkRoute(report){
  for(const [i,x] of report.loads.entries()){
   assert.equal(x.course,i%2===0?'a':'b');// Release emits no Gym events; its reload evidence is generation plus handles and payloads.
   assert.equal(x.world_ready_events,report.variant==='debug'?report.loads[0].world_ready_events+i:0);
-  if(i)assert.equal(x.generation,report.loads[i-1].generation+1);
+  if(i){
+   const prev=report.loads[i-1],terrain=l=>l.webgl.buffers.filter(b=>b.bytes===PAYLOAD[report.route]).map(b=>b.id);
+   assert.equal(x.generation,prev.generation+1);
+   assert(x.webgl.created>prev.webgl.created&&x.webgl.deleted>prev.webgl.deleted,'world switch replaced no buffers');
+   assert(!terrain(x).some(id=>terrain(prev).includes(id)),'terrain payload handle survived a world switch');
+  }
   assert.equal(x.webgl.failed_creates,0);assert.equal(x.webgl.created-x.webgl.deleted,x.webgl.live);
   assert.equal(x.webgl.buffers.length,x.webgl.live);assert.equal(new Set(x.webgl.buffers.map(b=>b.id)).size,x.webgl.live);
   assert(x.webgl.buffers.every(b=>Number.isSafeInteger(b.bytes)&&b.bytes>=0),'invalid buffer payload evidence');
@@ -34,6 +39,8 @@ function checkRoute(report){
  const payload=b=>b.bytes===PAYLOAD[report.route];
  assert.deepEqual(after.webgl.buffers.filter(payload),before.webgl.buffers.filter(payload),'Retry replaced a terrain payload');
  return {switches:CYCLES*2,cycles:CYCLES,per_switch:report.loads.slice(1).map((x,i)=>({from:report.loads[i].course,to:x.course,
+  created:x.webgl.created-report.loads[i].webgl.created,deleted:x.webgl.deleted-report.loads[i].webgl.deleted,live:x.webgl.live,
+  terrain_vbs:x.webgl.histogram[PAYLOAD[report.route]],terrain_owner:x.lifecycle,
   uniform_delta:Object.fromEntries([...new Set([...Object.keys(x.webgl.uniform_histogram),...Object.keys(report.loads[i].webgl.uniform_histogram)])]
    .map(size=>[size,(x.webgl.uniform_histogram[size]||0)-(report.loads[i].webgl.uniform_histogram[size]||0)]))}))};
 }

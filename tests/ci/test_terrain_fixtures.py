@@ -65,6 +65,7 @@ class TerrainFixtures(unittest.TestCase):
         entries = {
             'terrain_compare/measure.cjs': 'six-anchor',
             'terrain_play/check_lifecycle.cjs': 'six-anchor',
+            'terrain_play/material_lifecycle.cjs': 'six-anchor',
             'terrain_play/check_far_course.cjs': 'mixed-over-budget',
             'terrain_play/observe_resources.cjs': 'six-anchor',
             'terrain_perspective/check_gym_menu.cjs': 'mixed-over-budget',

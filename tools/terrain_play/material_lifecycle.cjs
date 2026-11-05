@@ -13,6 +13,8 @@ const indexes=Object.keys(manifest.files).filter(f=>f.endsWith('/index.html')||f
 const web=path.dirname(path.join(bundle,indexes[0])),prefix=path.posix.dirname(indexes[0]);
 const source=id=>{const d=JSON.parse(fixture);d.id='lifecycle-'+id;d.name='Material lifecycle '+id.toUpperCase();
  if(route!=='legacy')d.editor.road_profile='perspective-v1';return JSON.stringify(d);};
+// Longer than one observed world load (about 1 s), so a late Retry reload would be seen.
+const RETRY_SETTLE_MS=5000;
 const bodies={a:source('a'),b:source('b')},runId='mat515-'+crypto.randomUUID();
 (async()=>{let browser,server,page;const ready=[],logs=[],loadPromises=[],loadErrors=[];
  const r={schema_version:1,status:'FAIL',source_sha:manifest.source_sha,source_fingerprint:manifest.source_fingerprint,variant,route,
@@ -57,7 +59,7 @@ const bodies={a:source('a'),b:source('b')},runId='mat515-'+crypto.randomUUID();
   await load('a');for(let i=0;i<CYCLES;i++){await load('b');await load('a');}
   r.retry={before:await snapshot('a')};await page.locator('canvas').focus();await page.keyboard.down('r');
   try{await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,r.retry.before.reset_count,{timeout:10000});}finally{await page.keyboard.up('r');}
-  r.retry.after=await snapshot('a');r.summary=checkRoute(r);assert.deepEqual(r.errors,[]);r.status='PASS';console.log(JSON.stringify({status:r.status,variant,route,cycles:CYCLES,summary:r.summary}));
+  await page.waitForTimeout(RETRY_SETTLE_MS);r.retry.settle_ms=RETRY_SETTLE_MS;r.retry.after=await snapshot('a');r.summary=checkRoute(r);assert.deepEqual(r.errors,[]);r.status='PASS';console.log(JSON.stringify({status:r.status,variant,route,cycles:CYCLES,summary:r.summary}));
  }catch(e){r.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'failed.png'),timeout:5000}).catch(()=>{});throw e;}
  finally{r.console=logs;fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(r,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

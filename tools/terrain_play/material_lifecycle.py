@@ -54,7 +54,7 @@ def main():
                 raw = out / case / 'results.json'
                 if raw.exists():
                     r = json.loads(raw.read_text())
-                    if (r['source_sha'], r['variant'], r['route'], r['status'], r['engine']) != (sha, variant, route, 'PASS', ENGINE):
+                    if (r['source_sha'], r['variant'], r['route'], r['status'], r['engine'], r['cycles']) != (sha, variant, route, 'PASS', ENGINE, 8):
                         test.update(status='FAIL', detail='Foreign or incomplete lifecycle result')
                     else:
                         reports[case] = r
@@ -76,7 +76,11 @@ def main():
                 sizes = set().union(*(set(x['webgl']['uniform_histogram']) for r in rows.values() for x in r['loads']))
                 growth = {route: {size: r['loads'][-1]['webgl']['uniform_histogram'].get(size, 0) - r['loads'][0]['webgl']['uniform_histogram'].get(size, 0) for size in sorted(sizes, key=int)} for route, r in rows.items()}
                 extra = {size: growth['textured'][size] - max(growth['legacy'][size], growth['perspective'][size]) for size in sizes}
-                summary[variant] = {'uniform_growth_over_16_switches': growth, 'incremental_textured_growth': {s: n for s, n in extra.items() if n > 0}, 'renderer': renderers[0]}
+                summary[variant] = {'uniform_growth_over_16_switches': growth, 'incremental_textured_growth': {s: n for s, n in extra.items() if n > 0}, 'renderer': renderers[0],
+                    'browser': {route: r['browser'] for route, r in rows.items()},
+                    'per_route': {route: {'live_first_last': [r['loads'][0]['webgl']['live'], r['loads'][-1]['webgl']['live']],
+                                          'terrain_owner_last': r['loads'][-1]['lifecycle'],
+                                          'per_switch': r['summary']['per_switch']} for route, r in rows.items()}}
             (out / 'comparison.json').write_text(json.dumps(summary, indent=2) + '\n')
             tests.append({'id': 'evidence-integrity', 'status': 'PASS', 'duration_ms': 0, 'assertions': 1,
                           'detail': 'Exact source/engine/route inventory and renderer comparison verified', 'artifacts': ['plan.json', 'comparison.json']})
