@@ -83,8 +83,9 @@ function M.preview()
 end
 function M.change(k,value)
  local s=M.sync();local r=projection.ranges(s.params)[k]
- if s.scope=='selected' and (k=='perspective' or k=='angle' or k=='vehicle_position') then s.error='Perspective and view angle are level-wide.';return end
- if not r or type(value)~='number' or value~=value or value<r[1] or value>r[2] then s.error=k..' must be '..r[1]..'..'..r[2];return nil end
+ if s.scope=='selected' and (k=='perspective' or k=='angle' or k=='vehicle_position') then s.error='Perspective, view angle and vehicle position are level-wide.';return end
+ if not r then s.error='Unknown look value '..tostring(k);return nil end
+ if type(value)~='number' or value~=value or value<r[1] or value>r[2] then s.error=k..' must be '..r[1]..'..'..r[2];return nil end
  s.params[k]=value;if s.scope=="level" then s.params.mode="perspective" end;s.dirty=true;s.clear=nil;s.pending=true;s.error=nil;return true
 end
 function M.reset()

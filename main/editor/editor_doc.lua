@@ -200,7 +200,11 @@ local function from_station(d,id,name)
     -- The station's validated mechanisms become source objects after the other objects took their IDs.
     mechanisms.migrate(e)
     -- Compiled geometry opened as lines keeps the level's material, for example after a source conflict.
-    if d.material then M.set_material(e,d.material) end
+    if d.material then
+        local authored=e.road_look
+        M.set_material(e,d.material)
+        e.road_look=authored or e.road_look -- the file's own look stays
+    end
     return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
@@ -785,7 +789,7 @@ function M.set_material(e,m)
     if m==nil then
         if e.material==nil then return true end
         e.material=nil
-        e.road_look={version=1,params=projection.validate(projection.DEFAULT)}
+        if e.road_look.params.version==2 then e.road_look={version=1,params=projection.validate(projection.DEFAULT)} end
         for _,o in ipairs(e.objects) do if o.road_look then
             for k,r in pairs({width=projection.RANGES.width,side=projection.RANGES.side,shading=projection.RANGES.shading}) do
                 o.road_look[k]=math.max(r[1],math.min(r[2],o.road_look[k]))

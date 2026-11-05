@@ -1,5 +1,5 @@
-// #573: real input on a level file with a material and parameter set 2: the panel accepts the new ranges by typing and by
-// slider, refuses a value above them, Apply survives a reload and export, and far views stay clean.
+// #573: real input on a level file with a material and parameter set 2: the panel accepts the new ranges by typing,
+// refuses a value above them, Apply survives a reload and export. Screenshots of Play and Fit are for the eye.
 //   node tools/terrain_material/check_look_v2.cjs <verified debug bundle> <out dir>
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');

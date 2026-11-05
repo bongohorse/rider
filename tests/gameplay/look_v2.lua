@@ -65,6 +65,16 @@ narrow.editor.objects[1].road_look={version=1,width=3.5,side=8,shading=.5};asser
 -- Removing the material returns to set 1 inside its ranges.
 assert(D.set_material(wide.editor,nil));assert(wide.editor.road_look.params.version==1 and wide.editor.objects[1].road_look.width==2 and wide.editor.objects[1].road_look.shading==1)
 assert(D.validate(wide) and wide.editor.editor_version==13)
+-- Opening compiled lines after a conflict keeps the file's own look, of either set.
+local own=fresh();assert(D.set_material(own.editor,{version=1,preset='meadow'}));own.editor.road_look.params.width=1.5
+local file=J.decode(enc(assert(D.compile(own))));file.spawn[1]=file.spawn[1]+1
+local _,_,clash=D.open_level(file);assert(clash.lines.editor.road_look.params.width==1.5,'set 2 stays')
+local set1=fresh();assert(D.set_material(set1.editor,{version=1,preset='meadow'}));set1.editor.road_look={version=1,params=P.validate(P.DEFAULT)}
+set1.editor.road_look.params.width=1.1
+local file1=J.decode(enc(assert(D.compile(set1))));file1.spawn[1]=file1.spawn[1]+1
+local _,_,clash1=D.open_level(file1);assert(clash1.lines.editor.road_look.params.version==1 and clash1.lines.editor.road_look.params.width==1.1,'set 1 stays')
+-- Removing a material from a set 1 level keeps its values.
+assert(D.set_material(set1.editor,nil));assert(set1.editor.road_look.params.width==1.1)
 -- The panel gets a control for every value of the set.
 assert(#P.controls(P.DEFAULT_V2)==#P.CONTROLS+1 and #P.controls(P.DEFAULT)==#P.CONTROLS)
 for _,c in ipairs(P.controls(P.DEFAULT_V2)) do assert(P.RANGES_V2[c.key],c.key) end
