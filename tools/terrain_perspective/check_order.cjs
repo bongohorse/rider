@@ -1,5 +1,5 @@
 // #577: real browser check on the debug Gym bundle. Overlapping runs in both source orders: the lower run's bright front
-// edge must stay visible at several zooms in Edit and after panning. No camera or source injection.
+// edge must stay visible at several zooms in Edit. No camera or source injection.
 //   node tools/terrain_perspective/check_order.cjs <verified debug bundle> <out dir>
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
@@ -28,15 +28,18 @@ const CASES=[['low-first',[LOW,HIGH]],['high-first',[HIGH,LOW]]];
   await page.keyboard.down('e');await pointer.frames(page,{n:3});await page.keyboard.up('e');
   await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});
   await page.keyboard.down('Home');await pointer.frames(page,{n:3});await page.keyboard.up('Home');await pointer.frames(page,{n:20});
-  for(const step of [0,1,2]){
-   if(step){await page.mouse.move(640,400);await pointer.frames(page);await page.mouse.wheel(0,step===1?-240:240);await pointer.frames(page,{n:10});await page.waitForTimeout(400);}
+  const map=()=>page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x,zoom:e.camera.zoom};});
+  const toPageWith=(e,mx,my)=>({x:e.x+(e.s.ox+mx*e.s.ppm_x)*e.k,y:e.y+e.h-(e.s.oy+my*e.s.ppm_y)*e.k});
+  // Zoom towards the overlap until a metre covers enough pixels to sample; the wheel keeps the point under the cursor.
+  const wheelTo=async target=>{for(let i=0;i<24;i++){const e=await map();if(e.zoom>=target)return;const q=toPageWith(e,20,0);await page.mouse.move(q.x,q.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:6});}};
+  for(const step of [.15,.3,.6]){
+   await wheelTo(step);await page.waitForTimeout(400);
    const shot=path.join(out,id+'-'+step+'.png');await page.screenshot({path:shot});
-   const e=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x,cw:c.width,ch:c.height};});
+   const e=await map();
    // Screen map from the editor: canvas units, y up. The overlap column x = 20 m.
-   const toPage=(mx,my)=>({x:e.x+(e.s.ox+mx*e.s.ppm_x)*e.k,y:e.y+e.h-(e.s.oy+my*e.s.ppm_y)*e.k});
-   const edge=toPage(20,-.06),body=toPage(20,-1.2);
+   const edge=toPageWith(e,20,-.06),body=toPageWith(e,20,-1.2);
    const px=await page.evaluate(async({src,a,b})=>{const i=new Image();i.src=src;await i.decode();const k=document.createElement('canvas');k.width=i.width;k.height=i.height;const x=k.getContext('2d');x.drawImage(i,0,0);const g=q=>{const d=x.getImageData(Math.round(q.x),Math.round(q.y),1,1).data;return .3*d[0]+.59*d[1]+.11*d[2];};return [g(a),g(b)];},{src:'data:image/png;base64,'+fs.readFileSync(shot).toString('base64'),a:edge,b:body});
-   const visible=px[0]>px[1]+20;results.push({id,step,zoom:await page.evaluate(()=>window.riderEditor.camera.zoom),edge:px[0],body:px[1],visible});
+   const visible=px[0]>px[1]+20;results.push({id,step,zoom:e.zoom,edge:px[0],body:px[1],visible});
    if(!visible)failed=true;
   }
   await context.close();
