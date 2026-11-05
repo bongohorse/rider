@@ -30,7 +30,7 @@ test('any uniform size growing across a switch fails, and release must not gain 
  const release=fixture('legacy','release');release.loads[4].world_ready_events=1;assert.throws(()=>checkRoute(release));
 });
 test('missing worlds, stale census, VB accumulation, bad owner balance and Retry reloads fail independently',()=>{
- const mutations=[r=>r.loads.pop(),r=>{r.loads[4].webgl.buffers[0].id=r.loads[3].webgl.buffers[0].id;},r=>{r.loads[4].webgl.deleted=r.loads[3].webgl.deleted;r.loads[4].webgl.created=r.loads[4].webgl.live+r.loads[4].webgl.deleted;},r=>r.loads[4].world_ready_events++,r=>r.loads[3].generation++,
+ const mutations=[r=>r.loads.pop(),r=>{for(const x of r.loads)x.webgl.uniform_histogram={};},r=>{r.loads[4].webgl.buffers[0].id=r.loads[3].webgl.buffers[0].id;},r=>{r.loads[4].webgl.deleted=r.loads[3].webgl.deleted;r.loads[4].webgl.created=r.loads[4].webgl.live+r.loads[4].webgl.deleted;},r=>r.loads[4].world_ready_events++,r=>r.loads[3].generation++,
   r=>r.loads[3].mesh.generation++,r=>r.loads[3].lifecycle.released++,r=>r.loads[4].webgl.histogram[PAYLOAD.legacy]++,
   r=>r.loads[4].webgl.failed_creates++,r=>r.loads[4].webgl.buffers[0].bytes=NaN,
   r=>r.loads[4].webgl.contexts[0].context_lost=true,r=>r.retry.after.world_ready_events++,r=>r.retry.after.generation++,

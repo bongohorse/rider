@@ -32,6 +32,7 @@ function checkRoute(report){
    }
   }else assert.equal(x.mesh,null,'release must remain uninstrumented');
  }
+ assert(Object.keys(report.loads[0].webgl.uniform_histogram||{}).length>0,'no uniform buffers observed');
  const {before,after}=report.retry;
  assert.equal(after.reset_count,before.reset_count+1);assert.equal(after.generation,before.generation);
  assert.equal(after.world_ready_events,before.world_ready_events,'Retry admitted another proxy world');
