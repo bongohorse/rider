@@ -472,6 +472,7 @@ function update(self, dt)
     end
     require("main.terrain_perspective.material").apply_pose() -- #536 experiment: fixed debug camera pose
     require("main.game.terrain_mesh").update(self)
+    require("main.terrain_perspective.vehicle_shadow").update(self) -- #536 experiment
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
         sfx.update(self)

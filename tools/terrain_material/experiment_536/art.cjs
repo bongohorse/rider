@@ -36,7 +36,7 @@ function paint(){
  for(let i=0;i<900;i++){const x=R(0,S),e=edge(x),y0=e-R(0,8),len=R(7,26),sw=R(-5,5),w=R(1.2,3),l=R(20,36),h=R(94,114);wrap(dx=>{b.strokeStyle=hsl(h,54,l);b.lineWidth=w;b.beginPath();b.moveTo(x+dx,y0);b.quadraticCurveTo(x+dx+sw*.4,y0+len*.6,x+dx+sw,y0+len);b.stroke();},false);}
  for(let i=0;i<2600;i++){const x=R(0,S),t=r(),y=t*edge(x),h=R(80,104),l=R(30,60),a=R(.25,.6),w=R(1,2.2),c=R(3,7);wrap(dx=>{b.fillStyle=hsl(h,58,l,a);b.fillRect(x+dx,y,w,c);},false);}
  // Top rows meet the Surface in one shared colour: no bright line at the fold.
- b.globalCompositeOperation='source-atop';const bt=b.createLinearGradient(0,0,0,16);bt.addColorStop(0,'rgba(84,134,44,.95)');bt.addColorStop(1,'rgba(84,134,44,0)');b.fillStyle=bt;b.fillRect(0,0,S,16);b.globalCompositeOperation='source-over';
+ b.globalCompositeOperation='source-atop';const bt=b.createLinearGradient(0,0,0,16);bt.addColorStop(0,'rgba(84,134,44,.72)');bt.addColorStop(1,'rgba(84,134,44,0)');b.fillStyle=bt;b.fillRect(0,0,S,16);b.globalCompositeOperation='source-over';
  // SURFACE: seen from above. Row 128 is the driving line, row 0 the far edge; darker to the back.
  const surface=make(),s=surface.getContext('2d');
  const sg=s.createLinearGradient(0,0,0,128);sg.addColorStop(0,hsl(108,44,27));sg.addColorStop(.6,hsl(98,52,36));sg.addColorStop(1,hsl(88,62,47));
@@ -62,9 +62,11 @@ function paint(){
  for(let i=0;i<2200;i++){const x=R(0,S);blade(x,front(x)+R(-5,8),R(4,12));}
  for(let i=0;i<14;i++){const x=R(0,S),y=R(44,92);for(let j=0;j<18;j++)blade(x+R(-5,5),y+R(-2,2),R(3,7));}
  // Front rows fade into the same colour as the Band's top rows.
- const ft=s.createLinearGradient(0,110,0,128);ft.addColorStop(0,'rgba(84,134,44,0)');ft.addColorStop(1,'rgba(84,134,44,.95)');s.fillStyle=ft;s.fillRect(0,110,S,18);
+ const ft=s.createLinearGradient(0,110,0,128);ft.addColorStop(0,'rgba(84,134,44,0)');ft.addColorStop(1,'rgba(84,134,44,.72)');s.fillStyle=ft;s.fillRect(0,110,S,18);
  const dump=c=>c.toDataURL('image/png');
- return {surface:dump(surface),band:dump(band),fill:dump(fill)};
+ // SHADOW: soft dark ellipse for the vehicle.
+ const shadow=document.createElement('canvas');shadow.width=256;shadow.height=52;const h=shadow.getContext('2d');h.translate(128,26);h.scale(1,26/128);const sh=h.createRadialGradient(0,0,0,0,0,128);sh.addColorStop(0,'rgba(0,0,0,1)');sh.addColorStop(.55,'rgba(0,0,0,.8)');sh.addColorStop(1,'rgba(0,0,0,0)');h.fillStyle=sh;h.fillRect(-128,-128,256,256);
+ return {surface:dump(surface),band:dump(band),fill:dump(fill),shadow:dump(shadow)};
 }
 (async()=>{
  const browser=await chromium.launch();const page=await browser.newPage();

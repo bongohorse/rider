@@ -23,6 +23,7 @@ components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory"
 components { id: "perspective_mesh" component: "/main/terrain_perspective/chunk.factory" }
 components { id: "textured_mesh" component: "/main/terrain_perspective/textured_chunk.factory" }
 components { id: "coin" component: "/main/game/coin.factory" }
+components { id: "vehicle_shadow" component: "/main/terrain_perspective/vehicle_shadow.factory" }
 components { id: "mechanism_crate" component: "/main/game/mechanism_crate.factory" }
 components { id: "mechanism_plate" component: "/main/game/mechanism_plate.factory" }
 components { id: "mechanism_gate" component: "/main/game/mechanism_gate.factory" }
