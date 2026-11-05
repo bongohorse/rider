@@ -64,7 +64,7 @@ The formula in [road-look.md](road-look.md#projection-and-spaces) stays, with th
 
 ## Facing
 
-On a level with a material, a face that turns away from the camera is hidden, never drawn over a face in front of it. This covers run-end caps on both sides and the Surface. v1 ranges cannot fold the Surface; a run-end cap on a level without a material is checked in [#570](https://github.com/bongohorse/rider/issues/570) and fixed there only if its stream stays unchanged. With the values above the Surface folds at `tan(angle) / (perspective / 40)` above the camera centre, about 6.7 m, so zoomed-out views depend on this rule.
+On a level with a material, a face that turns away from the camera is hidden, never drawn over a face in front of it. This covers run-end caps on both sides and the Surface. A level without a material keeps its present streams, so these faces stay drawn there, as they always were. The Surface folds at `tan(angle) / (perspective / 40)` above the camera centre: about 6.7 m with the values above, so zoomed-out views depend on this rule.
 
 ## Run order
 

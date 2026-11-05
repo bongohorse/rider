@@ -19,6 +19,7 @@ local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 -- Original level material presets (main/terrain_material/presets, docs/contracts/level-visuals.md): Surface, Band and
 -- Fill, each with its own texture and its own chunk factory. Band follows the driving line, Fill lies in world space.
 M.PRESETS={'meadow','quarry','volcano','city','inca','glacier','scrapyard'}
+M.FLIPPED=4 -- added to a slot's face: see apply_preset
 M.BAND_START=.18 -- metres below the line where the side face begins (terrain_geometry EDGE)
 local PRESET={};for _,id in ipairs(M.PRESETS) do PRESET[id]=true end
 local PRESET_SHADE={[0]=1,[1]=1,[2]=1,[3]=.72}
@@ -59,7 +60,8 @@ function M.describe()
         boundary=s and s.boundary and s.boundary~=math.huge and s.boundary or false,preset=s and s.preset or false}
 end
 
--- One preset for the whole level: the slot holds only the face. Top vertices carry their drop below the line in
+-- One preset for the whole level: the slot holds the face, plus M.FLIPPED on the last run end, whose winding is
+-- reversed against the first one for every run shape. Top vertices carry their drop below the line in
 -- look_data.x (unused above z<0); bottom vertices derive it in the shader. texcoord0.y carries the slope factor,
 -- which keeps the Band's thickness measured across the slope. Run ends close up to the driving line.
 local function apply_preset(c,prep,first,last,spec,styles)
@@ -103,6 +105,7 @@ local function apply_preset(c,prep,first,last,spec,styles)
         local interval=i==1 and 1 or i-1
         for j=1,6 do
             paint(n+j,M.END,interval);uv[(n+j-1)*2+1]=depth_u[j];uv[(n+j-1)*2+2]=1
+            if i==#p then slot[n+j]=M.END+M.FLIPPED end
             if j==1 or j==2 or j==4 then
                 local k=(n+j-1)*3
                 c.look_data[k+1]=0

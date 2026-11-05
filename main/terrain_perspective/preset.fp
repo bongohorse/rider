@@ -4,11 +4,14 @@
 in lowp vec4 var_color;
 in highp vec3 var_uv;
 in highp vec4 var_side;
+in lowp float var_flipped;
 out vec4 frag_color;
 uniform lowp sampler2D tex0; // Surface, 1 m across
 uniform lowp sampler2D tex1; // Band, starts at the driving line, 1 m tall
 uniform lowp sampler2D tex2; // Fill, 4 m x 4 m
 void main() {
+    // A run end or Surface that turned away from the camera is hidden, never drawn over a face in front of it.
+    if((var_uv.z<0.5||var_uv.z>2.5)&&gl_FrontFacing==(var_flipped>0.5)) discard;
     vec3 rgb;
     if(var_uv.z<0.5) {
         vec4 surface=texture(tex0,vec2(var_uv.x,1.0-clamp(var_uv.y,0.0,1.0)));
