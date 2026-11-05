@@ -13,7 +13,7 @@ do -- #536 experiment only: stronger 3D settings from the URL; perspective may l
         M.RANGES.width,M.RANGES.perspective,M.RANGES.angle,M.RANGES.shading={.05,4},{0,6},{0,75},{0,2}
         M.RANGES.center={0,1};M.DEFAULT.center=o.center or 0
         M.CONTROLS[#M.CONTROLS+1]={key='center',label='Car position on Surface (0 edge, .5 middle)',step=.01}
-        if o.width then M.DEFAULT.width,M.DEFAULT.perspective,M.DEFAULT.angle=o.width,o.perspective,o.angle end
+        if o.width then M.DEFAULT.width,M.DEFAULT.perspective,M.DEFAULT.angle,M.DEFAULT.shading=o.width,o.perspective,o.angle,o.shading end
     end
 end
 function M.validate(p)
