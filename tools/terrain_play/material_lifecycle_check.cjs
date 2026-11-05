@@ -11,6 +11,7 @@ function checkRoute(report){
    assert.equal(x.generation,prev.generation+1);
    assert(x.webgl.created>prev.webgl.created&&x.webgl.deleted>prev.webgl.deleted,'world switch replaced no buffers');
    assert(!terrain(x).some(id=>terrain(prev).includes(id)),'terrain payload handle survived a world switch');
+   assert.deepEqual(x.webgl.uniform_histogram,prev.webgl.uniform_histogram,'world switch changed retained uniform buffers');
   }
   assert.equal(x.webgl.failed_creates,0);assert.equal(x.webgl.created-x.webgl.deleted,x.webgl.live);
   assert.equal(x.webgl.buffers.length,x.webgl.live);assert.equal(new Set(x.webgl.buffers.map(b=>b.id)).size,x.webgl.live);
