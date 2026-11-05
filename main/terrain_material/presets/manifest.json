@@ -3,7 +3,7 @@
  "issue": 538,
  "license": "Original work generated for Rider; no third-party input.",
  "generator": "tools/art/level_materials.cjs",
- "generator_sha256": "4db5c767b11da17c08eb098015116ec94aeb0789fba278b7b410e52dca6dd531",
+ "generator_sha256": "44fd07d51d7419757504d83a091963d862fbac2f154fd15e8ae688339aae4944",
  "browser": "156.0.8078.4",
  "pixels_per_metre": 128,
  "sizes": {
@@ -33,47 +33,69 @@
    }
   },
   {
-   "id": "canyon",
-   "name": "Canyon",
+   "id": "quarry",
+   "name": "Quarry",
    "seed": 611,
    "sha256": {
-    "surface": "b6a36a530b097137ca1d7ca080a74649bf8e6b19dcf91d58ea557718d81cf74e",
-    "band": "359d3d7caca12cca44ba1aedfb92c80dccadf4d4972d1c6004de9e93d028fc26",
-    "fill": "9eca6c18302a970f851bb567143911f4b09616eef78ecebc13332dcb0dc69ad0",
-    "thumb": "ada1536442ddeedebe534670ff1cefa153ced2483ef03a4bc5522ef72e2e08d3"
+    "surface": "c37778dfd9fb702162a0fc1a1a1cd5d68e3397d0db0a796d604813b0e26374f7",
+    "band": "04d30bc4d62f3bf3f7a3d1c89b6af598d81f71dd0451ee59b81dfe994f6126f3",
+    "fill": "4e6a1b1c7d9887b98eb69b3693f1bb4fe61b5cd2adba60594d5df15814855ef3",
+    "thumb": "113c60eb717dda461dcaac62b4028fc8cdf0044c0a213270c47d57686e46fad5"
    }
   },
   {
-   "id": "snowfield",
-   "name": "Snowfield",
+   "id": "volcano",
+   "name": "Volcano",
    "seed": 723,
    "sha256": {
-    "surface": "27232b08d64699afb3e2b76152a179d81aee15aa0cab034c7b01ea7c1763f6b3",
-    "band": "9b66989f3a40ba56284d0ff7c3ae6744c0179b467256bbf41d151f2a3a15702c",
-    "fill": "bb95471403abe5e2e871406caf7b3c4af0b1bc6e26879023780bd70e68bd1c69",
-    "thumb": "6297d60d58fa3b36235c8579952425847dc6f01a5b9642d3063ed0343f356780"
+    "surface": "767f80390141d15c9720b49c58b30bf56860692bfb83438d34caba03482b38c9",
+    "band": "9aaa6f7459151e4166c7d5620dc73c467fca5af6138514111a622a842fa877a7",
+    "fill": "7cbeea086fc473d4ad768355aaed5f9fb773c86631643513348ecb1d77143fe2",
+    "thumb": "2c97cd85f687c71c9db84cd7cf29f3537b1b22d8a2e63447ad2263e30272a7b8"
    }
   },
   {
-   "id": "forest",
-   "name": "Forest",
+   "id": "city",
+   "name": "City street",
    "seed": 847,
    "sha256": {
-    "surface": "6df29aeaa551c27b2b0c709b06c5d4529b1c8c69e81cfab8741b68b18a8e035c",
-    "band": "fa3e83344b4fdc15cdacf4f2389f5ba44a7c37c1ae48138c79933ababb5f09cd",
-    "fill": "12d05665133f4798200f773b19db257b5e12e73c4438ec4efc75cdb5b4fbc70f",
-    "thumb": "b1d221133b571244675ca66282d716d7af887e2ddbe9396a88e0bcd74065dcfd"
+    "surface": "fc52a6afcad70536cd722330751d9d88e300d4b10e481003736469e53d6ac293",
+    "band": "054d302487216d200b25f34038ba7385379bad11bb5cb067fa1f26f6549a1a19",
+    "fill": "0cad5226ff17e48e769c3eecfc3dcb883f58bcd9a5e24ef1f3b87449441b0976",
+    "thumb": "17d866caa36bc4e6630f495e33463dd29cb2d8b5ace16cc686cc60eabc509c54"
    }
   },
   {
-   "id": "volcanic",
-   "name": "Volcanic",
+   "id": "inca",
+   "name": "Inca stone",
    "seed": 961,
    "sha256": {
-    "surface": "de10538c76e410c35221d35449d6ee55711ed47e78bcc19478032b1a2b43bc44",
-    "band": "e83ad4055f801d5c118d0dbe75d9eb003a5bdc824eb7092aff54adb6b826a233",
-    "fill": "5428abf258ae5597d8504f3104711a8427a77ad7c703f8c531349361bf6eb072",
-    "thumb": "2f042327e6fdc34570a3034e6e7ddae7ef45569a750538772f93ac7681926179"
+    "surface": "d79325d8bf2965a150969e7eb593712478ab13da4a05718b82c60c8fa9eb4828",
+    "band": "bb322a8a53140ea63c64a0173298713578db7037aae5b924ecea6ab1e2cac00e",
+    "fill": "c5ebf8f8b355cbe8c63520b4f01c77ae94b6c17097efa5f910866e282710381e",
+    "thumb": "efe09ff433fbf6f77660e8226f6af0d9523d27f7e8e8e3eba11d3c5a84040ac8"
+   }
+  },
+  {
+   "id": "glacier",
+   "name": "Glacier",
+   "seed": 1033,
+   "sha256": {
+    "surface": "4d0362e45def84a872910f551d89cb5aed6af2648f78146cfd81e4b21e05a611",
+    "band": "35430460937c4c2796c933ae76760e5f10875fc45e54d87dc521f331769d050a",
+    "fill": "182fec69bffa4a42df5fc1d3095a4858f4171c8f3dd35c4f234a6301c7a9e3ea",
+    "thumb": "41dc9f6b17f69e025015a4b5e6692896a858ea38d94d70e48d3fdf01fdbded46"
+   }
+  },
+  {
+   "id": "scrapyard",
+   "name": "Scrapyard",
+   "seed": 1151,
+   "sha256": {
+    "surface": "cb88ece2e2bc66f25a837eeb1aa33103e644ed8a444a4f996b9c444ac434ff39",
+    "band": "c66a2969fbe7a4bff9bdfdcb500decb7ee33ee2a65c757bc80d16b99ddf086e3",
+    "fill": "554227644982aee01fd11cc4ed4e3475032fdf52a378a799634328630afb9a3f",
+    "thumb": "72720afdb856596d0442f6e044fe955c67a4fb7639acf1bee468c55863779209"
    }
   }
  ]

@@ -10,22 +10,12 @@ const PRESETS=[
   fill:{base:[26,36,29],dark:'30,16,8',light:'190,140,90',grainDark:'20,10,5',grainLight:'215,170,120',stoneH:[24,40],stoneS:[6,18],stoneL:[38,56],stoneShadow:'15,8,4',stones:34},
   band:{top:[92,58,42],mid:[100,55,31],low:[112,52,22],shadow:'18,10,4',root:'40,26,12',roots:150,bladeH:[94,114],bladeS:54,bladeL:[20,36],blades:900,bladeLen:[7,26],fleckH:[80,104],fleckS:58,fleckL:[30,60],flecks:2600},
   surface:{back:[108,44,27],mid:[98,52,36],front:[88,62,47],blotchDark:'12,44,12',blotchLight:'190,225,110',bladeH:[82,114],bladeS:56,bladeL:[24,40],bladeGain:18,edgeL:[26,50],track:[[32,32,35],[36,36,44],[38,40,52],[34,36,42]],trackDark:'70,44,22',trackLight:'232,204,150',rut:'58,36,18',streakLight:'240,214,164',grainDark:'50,30,14',grainLight:'245,225,180',pebble:[34,10,[45,70]],pebbleShadow:'30,18,8',tufts:14}},
- {id:'canyon',name:'Canyon',seed:611,fold:'176,132,64',
-  fill:{base:[16,48,33],dark:'62,20,8',light:'232,150,92',grainDark:'50,18,8',grainLight:'240,180,130',stoneH:[20,34],stoneS:[20,36],stoneL:[46,64],stoneShadow:'40,14,6',stones:26},
-  band:{top:[42,52,50],mid:[34,50,38],low:[24,50,28],shadow:'46,16,6',root:'66,34,14',roots:50,bladeH:[34,52],bladeS:48,bladeL:[34,52],blades:520,bladeLen:[6,20],fleckH:[38,54],fleckS:56,fleckL:[46,72],flecks:1700},
-  surface:{back:[34,36,36],mid:[40,44,46],front:[44,52,54],blotchDark:'84,48,18',blotchLight:'240,212,132',bladeH:[36,54],bladeS:48,bladeL:[38,52],bladeGain:14,edgeL:[38,62],track:[[20,42,38],[24,50,48],[26,54,58],[20,48,44]],trackDark:'96,44,20',trackLight:'248,190,130',rut:'86,36,16',streakLight:'252,204,150',grainDark:'82,36,16',grainLight:'252,214,170',pebble:[20,22,[46,72]],pebbleShadow:'52,20,8',tufts:7}},
- {id:'snowfield',name:'Snowfield',seed:723,fold:'214,228,240',
-  fill:{base:[214,20,30],dark:'10,18,34',light:'150,178,214',grainDark:'8,14,28',grainLight:'186,206,232',stoneH:[208,224],stoneS:[8,20],stoneL:[44,66],stoneShadow:'6,12,24',stones:30},
-  band:{top:[208,44,94],mid:[208,36,86],low:[212,32,72],shadow:'12,20,36',root:null,roots:0,bladeH:[204,216],bladeS:42,bladeL:[80,96],blades:640,bladeLen:[6,18],fleckH:[200,214],fleckS:60,fleckL:[88,100],flecks:2200},
-  surface:{back:[210,30,78],mid:[208,38,88],front:[206,46,95],blotchDark:'120,150,190',blotchLight:'255,255,255',bladeH:[202,216],bladeS:40,bladeL:[84,92],bladeGain:6,edgeL:[86,98],track:[[214,20,58],[212,22,68],[210,24,75],[214,20,62]],trackDark:'92,112,146',trackLight:'238,246,255',rut:'70,90,126',streakLight:'248,252,255',grainDark:'82,102,136',grainLight:'255,255,255',pebble:[214,16,[40,62]],pebbleShadow:'40,56,84',tufts:6}},
- {id:'forest',name:'Forest',seed:847,fold:'52,92,42',
-  fill:{base:[22,34,18],dark:'12,6,3',light:'132,92,54',grainDark:'8,4,2',grainLight:'160,120,80',stoneH:[60,100],stoneS:[8,20],stoneL:[28,44],stoneShadow:'6,4,2',stones:30},
-  band:{top:[112,44,31],mid:[122,44,22],low:[132,42,14],shadow:'6,6,2',root:'28,18,8',roots:190,bladeH:[108,136],bladeS:44,bladeL:[12,28],blades:1100,bladeLen:[8,30],fleckH:[90,120],fleckS:50,fleckL:[22,44],flecks:2400},
-  surface:{back:[132,38,15],mid:[122,42,23],front:[110,48,33],blotchDark:'4,24,10',blotchLight:'120,170,70',bladeH:[100,134],bladeS:46,bladeL:[14,30],bladeGain:14,edgeL:[16,38],track:[[24,30,16],[26,32,22],[28,34,28],[24,32,20]],trackDark:'28,16,8',trackLight:'150,112,72',rut:'20,11,5',streakLight:'160,122,84',grainDark:'18,10,5',grainLight:'170,130,90',pebble:[34,12,[28,50]],pebbleShadow:'12,8,4',tufts:20}},
- {id:'volcanic',name:'Volcanic',seed:961,fold:'92,84,84',
-  fill:{base:[260,8,15],dark:'5,4,8',light:'112,94,112',grainDark:'2,2,4',grainLight:'230,108,40',stoneH:[10,30],stoneS:[58,92],stoneL:[34,52],stoneShadow:'4,2,4',stones:22},
-  band:{top:[0,4,36],mid:[0,4,24],low:[260,6,14],shadow:'3,2,4',root:'230,90,28',roots:70,bladeH:[0,20],bladeS:8,bladeL:[12,30],blades:560,bladeLen:[5,18],fleckH:[14,30],fleckS:82,fleckL:[30,58],flecks:700},
-  surface:{back:[260,6,18],mid:[0,4,27],front:[0,4,36],blotchDark:'5,4,8',blotchLight:'130,118,118',bladeH:[0,20],bladeS:6,bladeL:[14,26],bladeGain:12,edgeL:[16,36],track:[[260,8,12],[255,8,16],[250,8,19],[260,8,13]],trackDark:'3,2,4',trackLight:'118,102,108',rut:'2,2,3',streakLight:'240,110,40',grainDark:'2,2,3',grainLight:'224,112,52',pebble:[16,70,[36,56]],pebbleShadow:'3,2,3',tufts:4}},
+ {id:'quarry',name:'Quarry',seed:611,kind:'quarry',fold:'122,118,112'},
+ {id:'volcano',name:'Volcano',seed:723,kind:'volcano',fold:'66,58,58'},
+ {id:'city',name:'City street',seed:847,kind:'city',fold:'168,166,160'},
+ {id:'inca',name:'Inca stone',seed:961,kind:'inca',fold:'205,166,76'},
+ {id:'glacier',name:'Glacier',seed:1033,kind:'glacier',fold:'232,240,248'},
+ {id:'scrapyard',name:'Scrapyard',seed:1151,kind:'scrap',fold:'120,118,104'},
 ];
 function paint(p){
  const W=512,HS=128;
@@ -102,11 +92,101 @@ function paint(p){
  const dump=c=>c.toDataURL('image/png');
  return {surface:dump(surfaceImage()),band:dump(bandImage()),fill:dump(fillImage())};
 }
+function paintKind(p){
+ const W=512,HS=128;
+ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a));return t*t*(3-2*t);};
+ const mixc=(a,b,t)=>[mix(a[0],b[0],t),mix(a[1],b[1],t),mix(a[2],b[2],t)],scale=(c,k)=>[c[0]*k,c[1]*k,c[2]*k];
+ const rng=k=>{let seed=(p.seed*(k+1)+k*7919)>>>0;return ()=>(seed=(seed*1664525+1013904223)>>>0)/2**32;};
+ // Value noise that repeats after cx x cy cells over a w x h image.
+ const noise=(cx,cy,w,h,k)=>{const r=rng(100+k),g=new Float32Array(cx*cy);for(let i=0;i<g.length;i++)g[i]=r();
+  return (x,y)=>{const u=x/w*cx,v=y/h*cy,i=Math.floor(u),j=Math.floor(v),fu=u-i,fv=v-j,su=fu*fu*(3-2*fu),sv=fv*fv*(3-2*fv),m=(a,b)=>g[((b%cy+cy)%cy)*cx+((a%cx+cx)%cx)];
+   return mix(mix(m(i,j),m(i+1,j),su),mix(m(i,j+1),m(i+1,j+1),su),sv);};};
+ const fbm=(cx,cy,w,h,k)=>{const a=noise(cx,cy,w,h,k),b=noise(cx*2,cy*2,w,h,k+1),c=noise(cx*4,cy*4,w,h,k+2);return (x,y)=>(a(x,y)*.55+b(x,y)*.3+c(x,y)*.15);};
+ // Voronoi cells on a torus: distance to nearest, gap to second nearest, cell id.
+ const cells=(cx,cy,w,h,jit,k)=>{const r=rng(200+k),pts=[];for(let j=0;j<cy;j++)for(let i=0;i<cx;i++)pts.push([((i+1+(r()-.5)*jit)*w/cx)%w,(j+.5+(r()-.5)*jit)*h/cy,r(),r()]);
+  return (x,y)=>{const u=Math.floor(x/w*cx-.5),v=Math.floor(y/h*cy);let d1=1e9,d2=1e9,id=0;
+   for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){const ii=((u+a)%cx+cx)%cx,jj=((v+b)%cy+cy)%cy,q=pts[jj*cx+ii];let dx=Math.abs(q[0]-x),dy=Math.abs(q[1]-y);dx=Math.min(dx,w-dx);dy=Math.min(dy,h-dy);const d=Math.hypot(dx,dy);if(d<d1){d2=d1;d1=d;id=jj*cx+ii;}else if(d<d2)d2=d;}
+   return {d1,gap:d2-d1,id,a:pts[id][2],b:pts[id][3]};};};
+ const image=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),d=x.createImageData(w,h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const o=fn(i,j),k=(j*w+i)*4;d.data[k]=clamp(o[0],0,255);d.data[k+1]=clamp(o[1],0,255);d.data[k+2]=clamp(o[2],0,255);d.data[k+3]=o[3]===undefined?255:o[3];}x.putImageData(d,0,0);return c;};
+ const wave=(k,amp)=>{const r=rng(300+k),w=[[1,r()*6.28,amp],[2,r()*6.28,amp*.7],[3,r()*6.28,amp*.5],[5,r()*6.28,amp*.35],[9,r()*6.28,amp*.2]];return x=>w.reduce((v,[n,ph,a])=>v+a*Math.sin(x/W*6.2831853*n+ph),0);};
+ const FAR=4;
+ const finishSurface=c=>{const s=c.getContext('2d');const g=s.createLinearGradient(0,112,0,HS);g.addColorStop(0,`rgba(${p.fold},0)`);g.addColorStop(.62,`rgba(${p.fold},.92)`);g.addColorStop(1,`rgba(${p.fold},.92)`);s.fillStyle=g;s.fillRect(0,112,W,16);return c;};
+ const finishBand=c=>{const b=c.getContext('2d');b.globalCompositeOperation='source-atop';const g=b.createLinearGradient(0,0,0,14);g.addColorStop(0,`rgba(${p.fold},.92)`);g.addColorStop(.43,`rgba(${p.fold},.92)`);g.addColorStop(1,`rgba(${p.fold},0)`);b.fillStyle=g;b.fillRect(0,0,W,14);b.globalCompositeOperation='source-over';return c;};
+ // Band helper: art above edge(x), then a soft contact shadow, then transparent.
+ const band=(edge,colour,shadow=18)=>image(W,HS,(x,y)=>{const e=edge(x);if(y<e)return colour(x,y,e);const t=(y-e)/shadow;if(t>=1)return [0,0,0,0];return [8,6,6,Math.round(120*(1-t)*(1-t))];});
+ const K={
+  quarry(){
+   const crack=cells(10,8,W,W,.9,1),n=fbm(8,8,W,W,1),warp=fbm(4,4,W,W,4),tone=[[132,128,120],[108,106,102],[150,142,128],[92,92,92],[122,118,112],[140,136,130],[100,98,94],[116,110,100]];
+   const fill=image(W,W,(x,y)=>{const yy=y+(warp(x,y)-.5)*42,l=Math.floor(((yy%W)+W)%W/64),fr=(((yy%64)+64)%64)/64,c=crack(x,y);let col=tone[l%8];
+    col=scale(col,.72+n(x,y)*.5);col=scale(col,mix(.62,1,smooth(0,.06,fr))*mix(1,.72,smooth(.9,1,fr)));col=scale(col,mix(.45,1,smooth(0,3,c.gap)));return col;});
+   const r=rng(1),stones=[];for(let i=0;i<220;i++)stones.push([r()*W,r()*W,1+r()*2,r()]);
+   const cob=cells(18,4,W,HS,.75,2),sn=fbm(16,4,W,HS,7),ef=wave(1,4),ef2=wave(2,4);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2))return [0,0,0,0];const c=cob(x,y),wear=1-smooth(30,52,Math.abs(y-66));const stone=mixc([96,94,92],[140,136,128],c.a);let col=mixc(stone,[168,162,150],wear*.45);col=scale(col,.8+sn(x,y)*.45);col=scale(col,mix(.32,1,smooth(0,3.2,c.gap)));col=scale(col,mix(1,1.1,smooth(10,0,c.gap)*0));return col;});
+   const e0=wave(3,10),en=fbm(16,3,W,HS,9);
+   const bd=band(x=>{const v=46+e0(x)+Math.round(en(x,0)*4)*7;return Math.max(16,v);},(x,y,e)=>{const c=cob(x,y*.9+9);let col=mixc([104,100,96],[138,132,124],c.a);col=scale(col,mix(.42,1,smooth(0,3,c.gap))*mix(1.05,.62,smooth(0,e,y)));return col;});
+   return {fill,surface,band:bd};
+  },
+  volcano(){
+   const c=cells(9,9,W,W,.95,3),fine=cells(26,26,W,W,.9,4),n=fbm(6,6,W,W,11),glow=fbm(5,5,W,W,14);
+   const hot=t=>mixc(mixc([120,24,6],[244,92,14],smooth(0,.55,t)),[255,214,104],smooth(.55,1,t));
+   const fill=image(W,W,(x,y)=>{const a=c(x,y),b=fine(x,y),base=scale([34,30,34],.75+n(x,y)*.7+a.a*.2);const vein=(1-smooth(0,6,a.gap))*smooth(.34,.62,glow(x,y));let col=scale(base,mix(.55,1,smooth(0,2.2,b.gap)));return mixc(col,hot(vein),clamp(vein*1.25));});
+   const s=cells(14,4,W,HS,.9,5),sf=fbm(12,4,W,HS,17),ash=wave(4,6),fr=wave(5,3);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,fr(x)+1.5))return [0,0,0,0];const a=s(x,y),mid=1-smooth(26,44,Math.abs(y-66+ash(x)*.4));const crust=scale(mixc([92,86,84],[28,24,28],mid),.75+sf(x,y)*.55);let col=scale(crust,mix(.55,1,smooth(0,2.4,a.gap)));const v=(1-smooth(0,2.8,a.gap))*mid*smooth(.32,.58,sf(x,y));return mixc(col,hot(v),clamp(v*1.2));});
+   const r=rng(6),dr=[];for(let i=0;i<26;i++)dr.push([r()*W,3+r()*9,14+r()*50]);
+   const e=x=>{let v=26+wave(6,5)(x);for(const q of dr){let dx=Math.abs(x-q[0]);dx=Math.min(dx,W-dx);v=Math.max(v,26+q[2]*Math.exp(-(dx*dx)/(q[1]*q[1])));}return v;};
+   const cache=new Float32Array(W);for(let i=0;i<W;i++)cache[i]=e(i);
+   const bd=band(x=>cache[x],(x,y,ee)=>{const t=smooth(ee-20,ee,y),a=s(x,y);const top=scale([58,52,52],.75+sf(x,y)*.6);let col=scale(top,mix(.6,1,smooth(0,2.2,a.gap)));return mixc(col,hot(t),clamp(t*1.1));},14);
+   return {fill,surface,band:bd};
+  },
+  city(){
+   const n=fbm(32,32,W,W,21),rn=rng(7),tint=[];for(let i=0;i<8*16;i++)tint.push(rn());
+   const fill=image(W,W,(x,y)=>{const row=Math.floor(y/32),off=row%2?32:0,ix=Math.floor(((x+off)%W)/64),bx=((x+off)%W)%64,by=y%32,j=Math.min(Math.min(bx,64-bx),Math.min(by,32-by));const t=tint[(row%16)*8+ix%8];if(j<2.5)return scale([92,88,84],.8+n(x,y)*.4);const brick=mixc([140,62,46],[176,88,62],t);return scale(brick,(.78+n(x,y)*.42)*mix(.86,1,smooth(2.5,6,j)));});
+   const an=fbm(64,16,W,HS,24),spot=fbm(8,3,W,HS,27);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR)return [0,0,0,0];const curb=y<16||y>=112;let col=curb?scale([168,166,160],.85+an(x,y)*.3):scale([62,64,68],.72+an(x,y)*.55+spot(x,y)*.2);
+    if(curb&&(x%128>=62&&x%128<65))col=scale(col,.62);
+    if(!curb){if((y>=20&&y<23)||(y>=105&&y<108))col=mixc(col,[226,226,220],.86);if(y>=60&&y<68&&x%128>=28&&x%128<100)col=mixc(col,[232,186,52],.9);}
+    return col;});
+   const bd=image(W,HS,(x,y)=>{if(y<38){let col=scale([168,166,160],(.82+an(x,y*3)*.3)*mix(1.02,.74,y/38));if(x%128>=62&&x%128<65)col=scale(col,.62);return col;}if(y<60){const t=(y-38)/22;return [10,10,12,Math.round(190*(1-t)*(1-t))];}return [0,0,0,0];});
+   return {fill,surface,band:bd};
+  },
+  inca(){
+   const c=cells(6,6,W,W,.62,18),n=fbm(24,24,W,W,31),big=fbm(5,5,W,W,34);
+   const fill=image(W,W,(x,y)=>{const a=c(x,y);const stone=mixc([150,136,108],[186,170,136],a.a);let col=scale(stone,(.82+n(x,y)*.34)*(.9+big(x,y)*.2)*mix(.95,1.08,a.b));const light=smooth(0,9,a.gap)*mix(.9,1,1-smooth(0,60,a.d1));col=scale(col,mix(.34,1,smooth(0,2.4,a.gap))*mix(.86,1.06,light));return col;});
+   const sn=fbm(40,10,W,HS,37),moss=fbm(12,3,W,HS,38),ef=wave(8,3);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+1))return [0,0,0,0];const row=Math.floor((y-4)/31),off=row%2?32:0,bx=(x+off)%W%64,by=((y-4)%31+31)%31,j=Math.min(Math.min(bx,64-bx),Math.min(by,31-by));const id=(Math.floor(((x+off)%W)/64)*7+row*13)%10/10;let col=scale(mixc([168,150,114],[202,184,144],id),.82+sn(x,y)*.36);if(j<2)return scale([72,62,46],.9+sn(x,y)*.3);col=scale(col,mix(.84,1,smooth(2,6,j)));const edge=smooth(30,52,Math.abs(y-64))*smooth(.42,.62,moss(x,y));col=mixc(col,[74,104,48],edge*.8);if(y>=62&&y<67)col=mixc(col,[214,170,62],.7);return col;});
+   const step=(x,y)=>{const u=(x+32)%64,v=y-22;const d=Math.max(Math.abs(u-32),0);const lev=Math.floor(d/8);return v>=lev*6&&v<36-lev*0&&d<32&&v<lev*6+14;};
+   const bd=image(W,HS,(x,y)=>{if(y<78){let col=scale([176,158,122],.82+n(x,y)*.38);if(y<7||(y>=70))col=mixc(col,[214,170,62],.82);else if(y<10||y>=67)col=scale(col,.5);else if(step(x,y))col=scale(col,.56);else if(step(x,y-3))col=scale(col,1.2);return col;}if(y<98){const t=(y-78)/20;return [8,6,4,Math.round(170*(1-t)*(1-t))];}return [0,0,0,0];});
+   return {fill,surface,band:bd};
+  },
+  glacier(){
+   const n=fbm(6,6,W,W,41),cr=cells(7,7,W,W,.85,9),streak=fbm(4,32,W,W,44);
+   const fill=image(W,W,(x,y)=>{const a=cr(x,y),t=n(x,y);let col=mixc([34,84,132],[120,190,226],t);col=mixc(col,[196,234,248],smooth(.58,.72,streak(x,y))*.3);col=mixc(col,[220,246,252],(1-smooth(0,2,a.gap))*.55);return col;});
+   const f=fill.getContext('2d'),r=rng(11);const crystals=[];for(let i=0;i<14;i++)crystals.push([r()*W,r()*W,20+r()*36,r()*6.28,r()]);
+   for(const [x0,y0,q,ang,t] of crystals)for(const dx of [-W,0,W])for(const dy of [-W,0,W]){f.save();f.translate(x0+dx,y0+dy);f.rotate(ang);f.beginPath();f.moveTo(0,-q);f.lineTo(q*.28,-q*.55);f.lineTo(q*.28,q*.6);f.lineTo(0,q);f.lineTo(-q*.28,q*.6);f.lineTo(-q*.28,-q*.55);f.closePath();f.fillStyle=`rgba(${t>.5?'198,244,255':'150,214,255'},.82)`;f.fill();f.beginPath();f.moveTo(0,-q);f.lineTo(q*.28,-q*.55);f.lineTo(q*.28,q*.6);f.lineTo(0,q);f.closePath();f.fillStyle='rgba(40,110,170,.35)';f.fill();f.restore();}
+   const sn=fbm(30,8,W,HS,47),sc=fbm(3,48,W,HS,48),ef=wave(10,4),mw=wave(11,5),mw2=wave(12,5);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2.5))return [0,0,0,0];const ice=smooth(28+mw(x),36+mw(x),y)*(1-smooth(96+mw2(x),104+mw2(x),y));const snow=scale([232,240,248],.9+sn(x,y)*.14);let i=mixc([120,186,224],[176,224,244],sn(x,y));i=mixc(i,[236,250,255],smooth(.56,.64,sc(x,y))*.5);return mixc(snow,i,ice);});
+   const rr=rng(12),sp=[];let xx=0;while(xx<W-6){const w=8+rr()*22;sp.push([xx,w,18+rr()*64]);xx+=w;}sp[sp.length-1][1]=W-sp[sp.length-1][0];
+   const cache=new Float32Array(W);for(const [a,w,l] of sp)for(let i=Math.floor(a);i<Math.min(W,a+w);i++){cache[i]=16+l*(1-Math.abs((i-a)/w*2-1));}
+   const bd=image(W,HS,(x,y)=>{const e=cache[x];if(y<16)return scale([232,240,248],.94+sn(x,y)*.1);if(y<e)return mixc([226,244,252],[118,196,236],(y-16)/(e-16+.01));const t=(y-e)/12;if(t<1)return [10,30,60,Math.round(70*(1-t))];return [0,0,0,0];});
+   return {fill,surface,band:bd};
+  },
+  scrap(){
+   const n=fbm(10,10,W,W,51),rust=fbm(6,6,W,W,54),rn=rng(13),tint=[];for(let i=0;i<16;i++)tint.push(rn());
+   const fill=image(W,W,(x,y)=>{const u=(x+64)%128,v=(y+64)%128,j=Math.min(u,128-u,v,128-v),id=Math.floor((x+64)/128)%4+4*(Math.floor((y+64)/128)%4),t=tint[id];let col=mixc([86,92,98],[58,66,78],t);const rt=smooth(.44,.66,rust(x,y));col=mixc(col,[132,70,34],rt);col=scale(col,.82+n(x,y)*.34);if(j<3)return scale(col,.34);col=scale(col,mix(1.14,1,smooth(3,8,j)));const rv=Math.min(Math.hypot(u-12,v-12),Math.hypot(116-u,v-12),Math.hypot(u-12,116-v),Math.hypot(116-u,116-v));if(rv<5)return scale([150,152,152],1.05-rv*.09);return col;});
+   const sn=fbm(40,10,W,HS,57),rs=fbm(10,3,W,HS,58);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR)return [0,0,0,0];const u=(x+y)%24,v=(x-y+2400)%24;const dia=Math.min(Math.abs(u-12)*Math.abs(((x%24)-12)),99);const bump=(((Math.floor(x/12)+Math.floor(y/12))%2)===0?Math.abs((x%12)-(y%12)):Math.abs((x%12)+(y%12)-12))<1.8&&(x%12>2&&x%12<10);let col=scale([116,122,128],.84+sn(x,y)*.3);if(bump)col=scale(col,1.34);col=mixc(col,[138,76,36],smooth(.5,.72,rs(x,y))*.75);if(y<14||y>=114){const st=((x+y)%64)<32;col=st?[226,178,40]:[36,36,38];col=scale(col,.84+sn(x,y)*.3);}return col;});
+   const bd=image(W,HS,(x,y)=>{if(y<56){let col=scale([98,104,110],.84+n(x,y*2)*.3);col=mixc(col,[132,70,34],smooth(.5,.66,rust(x,y*2+40))*.8*smooth(10,50,y));const u=x%64,rv=Math.min(Math.hypot(u-16,y-16),Math.hypot(u-16,y-42));if(rv<5)return scale([156,158,160],1.05-rv*.08);if(y>=26&&y<30)col=scale(col,.56);if(x%128>=62&&x%128<65)col=scale(col,.5);return col;}if(y<74){const t=(y-56)/18;const drip=smooth(.55,.75,rust(x,y))*(1-t);return drip>.05?[110,58,28,Math.round(190*drip)]:[8,8,8,Math.round(120*(1-t)*(1-t))];}return [0,0,0,0];});
+   return {fill,surface,band:bd};
+  },
+ };
+ const a=K[p.kind]();
+ return {surface:finishSurface(a.surface).toDataURL('image/png'),band:finishBand(a.band).toDataURL('image/png'),fill:a.fill.toDataURL('image/png')};
+}
 (async()=>{
  const browser=await chromium.launch();const page=await browser.newPage();
  const meta={generator:'tools/art/level_materials.cjs',generator_sha256:crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),browser:browser.version(),presets:[]};
  for(const p of PRESETS){
-  const images=await page.evaluate(paint,p);
+  const images=await page.evaluate(p.kind?paintKind:paint,p);
   fs.mkdirSync(path.join(OUT,p.id),{recursive:true});
   for(const [n,d] of Object.entries(images))fs.writeFileSync(path.join(OUT,p.id,n+'.png'),Buffer.from(d.split(',')[1],'base64'));
   meta.presets.push({id:p.id,name:p.name,seed:p.seed});
