@@ -16,6 +16,8 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 import local  # noqa: E402
+sys.path.insert(0, str(ROOT / 'tools/gym'))
+from dispatch import runner_config  # noqa: E402
 
 RULES = json.loads((ROOT / 'tools/local_affected.json').read_text(encoding='utf-8'))
 CLOSURE = local.bootstrap_closure()
@@ -90,11 +92,8 @@ class AffectedTest(unittest.TestCase):
                 self.assertEqual(hits, [], f'narrow rule {rule["name"]!r} matches files every case loads')
 
     def test_every_runner_dependency_selects_the_cases_that_load_it(self):
-        smoke = (ROOT / 'tools/gym/smoke.py').read_text(encoding='utf-8')
-        runners = dict((case, runner) for runner, case in re.findall(r"'([\w.]+\.cjs)' if args\.case=='(\w+)'", smoke))
-        self.assertGreater(len(runners), 20)
         for case in self.inventory:
-            for path in js_closure('tools/gym/' + runners.get(case, 'browser.cjs')):
+            for path in js_closure('tools/gym/' + runner_config(case)[0]):
                 self.assertIn(case, self.pick(path), f'{path} is loaded by {case}')
 
     def test_specific_paths_select_their_cases(self):

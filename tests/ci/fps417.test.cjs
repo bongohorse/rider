@@ -94,7 +94,9 @@ test('a tap-only recording must hold no drive command',()=>{
 
 test('fps417 is registered in smoke.py, the CI matrix and the affected rules',()=>{
  const smoke=fs.readFileSync(path.join(root,'tools/gym/smoke.py'),'utf8');
- assert.match(smoke,/'fps417\.cjs' if args\.case=='fps417'/);
+ const metadata=fs.readFileSync(path.join(root,'tools/gym/dispatch.py'),'utf8');
+ assert.match(smoke,/from dispatch import PARTS, PRESET_CASES, runner_config/);
+ assert.match(metadata,/'fps417': \('fps417\.cjs', 360\)/);
  const g1=fs.readFileSync(path.join(root,'.github/workflows/g1.yml'),'utf8');
  assert.match(g1,/cases: '(?:[^'\n]* )?fps417(?: [^'\n]*)?'/);assert.match(g1,/--case fps417\n/);
  const rules=JSON.parse(fs.readFileSync(path.join(root,'tools/local_affected.json'),'utf8')).rules;
