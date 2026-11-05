@@ -27,10 +27,10 @@ function M.prepare(state,camera)
     state.look_camera=camera
     local p=M.comparison() and M.params or state.params or projection.DEFAULT
     state.current_params=p
-    state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
+    state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading,p.center or 0},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        local width=state.baked and 2 or p.width -- also covers wider dirty/cached sections before materialization
+        local width=state.baked and math.max(2,projection.RANGES.width[2]) or p.width -- also covers wider dirty/cached sections before materialization
         e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end
@@ -57,8 +57,9 @@ function M.apply(state,set_bounds)
             e.look_cx,e.look_cy=c[1],c[2]
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
-        if fresh or e.look_phase~=phase then
-            go.set(url,'editor_params',vmath.vector4(phase,0,0,0));e.look_phase=phase
+        local center=(p.center or 0)*p.width -- #536: metres the visible body moves in front of the driving line
+        if fresh or e.look_phase~=phase or e.look_center~=center then
+            go.set(url,'editor_params',vmath.vector4(phase,center,0,0));e.look_phase,e.look_center=phase,center
             state.uniform_writes=(state.uniform_writes or 0)+1
         end
         e.look_object,e.look_revision=e.object,state.param_key

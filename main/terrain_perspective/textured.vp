@@ -31,10 +31,12 @@ void main() {
     float line_drop=position.z<0.0?distance(look_data.xy,p.xy*s):look_data.x;
     float world_x=p.x*s+look_origin.x;
     float world_y=p.y*s+look_origin.y;
+    // #536: move the whole visible body in front of the line, so the car drives on the Surface instead of its edge.
+    if(texture_slot>23.5) depth-=editor_params.y;
     float perspective_w=1.0;
-    if(depth>0.0 && look_shape.y==0.0) {
+    if(depth!=0.0 && look_shape.y==0.0) {
         p.xy+=(depth/s)*look_camera.zw;
-    } else if(depth>0.0) {
+    } else if(depth!=0.0) {
     vec2 world=p.xy*s+look_origin.xy;
     // One central projection for the entire rigid shallow body. z=0 is exactly invariant.
     perspective_w=1.0+look_shape.y*depth;
@@ -44,8 +46,8 @@ void main() {
     p.z=0.0; // preserve accepted terrain/sprite layering; no gameplay camera or 3D physics
     gl_Position=(world_view_proj*vec4(p,1.0))*perspective_w;
     // Neutral per-face shading and selection gains come from the vertex colour; no green look tint.
-    var_color=color;
     float id=floor(texture_slot+0.5);
+    var_color=id>31.5?vec4(mix(vec3(1.0),color.rgb,look_shape.w),color.a):color; // protolit: Shading sets the light strength
     float face=id-4.0*floor(id*0.25+0.01);
     // Arc length in tile periods: per-quad U (material.lua drops whole tiles) plus the fractional section phase.
     // It differs from the course-wide value by whole tiles only (continuous) and stays below about

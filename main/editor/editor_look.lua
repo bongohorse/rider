@@ -6,7 +6,7 @@ local projection=require 'main.terrain_perspective.projection'
 local socket=require 'socket'
 local M={}
 local function signature(e)
- local p=look.params({editor=e});local t={e.road_profile or 'legacy',{p.mode,p.width,p.perspective,p.angle,p.side,p.shading},{}}
+ local p=look.params({editor=e});local t={e.road_profile or 'legacy',{p.mode,p.width,p.perspective,p.angle,p.side,p.shading,p.center or 0},{}}
  for _,o in ipairs(e.objects) do if e.road_profile==look.ID and o.road_look then t[3][#t[3]+1]={o.id,o.road_look.version,o.road_look.width,o.road_look.side,o.road_look.shading} end end
  return json.encode(t)
 end
@@ -83,7 +83,7 @@ function M.preview()
 end
 function M.change(k,value)
  local s=M.sync();local r=projection.RANGES[k]
- if s.scope=='selected' and (k=='perspective' or k=='angle') then s.error='Perspective and view angle are level-wide.';return end
+ if s.scope=='selected' and (k=='perspective' or k=='angle' or k=='center') then s.error='Perspective and view angle are level-wide.';return end
  if not r or type(value)~='number' or value~=value or value<r[1] or value>r[2] then s.error=k..' must be '..r[1]..'..'..r[2];return nil end
  s.params[k]=value;if s.scope=="level" then s.params.mode="perspective" end;s.dirty=true;s.clear=nil;s.pending=true;s.error=nil;return true
 end

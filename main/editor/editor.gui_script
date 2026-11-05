@@ -2076,7 +2076,7 @@ function on_input(self,action_id,action)
         local controls=require('main.terrain_perspective.projection').CONTROLS
         local ranges=require('main.terrain_perspective.projection').RANGES
         local function slider(key)
-            if ls.scope=='selected' and (key=='perspective' or key=='angle') then return end
+            if ls.scope=='selected' and (key=='perspective' or key=='angle' or key=='center') then return end
             local r=self.ui.rects['look_slider_'..key];local p=self.ui.pointer
             if r and p then local range=ranges[key];local step
                 for _,v in ipairs(controls) do if v.key==key then step=v.step end end

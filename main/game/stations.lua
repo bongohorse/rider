@@ -27,7 +27,7 @@ end
 function M.resource(id)
     local found=false
     for _,key in ipairs(M.ids) do if id==key then found=true end end
-    if not found and id~="objects-demo" and not require("main.game.course_catalog").index(id) then return nil,"Unknown station" end
+    if not found and id~="objects-demo" and id~="texture-test" and not require("main.game.course_catalog").index(id) then return nil,"Unknown station" end
     local ok,d=pcall(function() return json.decode(assert(sys.load_resource("/main/game/stations/"..id..".json"))) end)
     if ok and type(d)=='table' then d._road_profile=require('main.terrain_perspective.profile').ID end
     if not ok or not data.validate(d) then return nil,"Unreadable station file" end

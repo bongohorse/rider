@@ -54,10 +54,33 @@ function M.spec()
 end
 -- #536 experiment: window.riderExperimentPose={x,y,zoom} (metres, orthographic zoom) overrides the camera each frame.
 -- Debug builds only; never touches physics, source or the follow state.
+local FREE_CAM=[==[(()=>{if(window.riderFreeCam)return;const k={},moves=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyQ','KeyE','ShiftLeft','ShiftRight'];
+let on=false,x=0,y=0,z=.8,last=0,drag=null;
+const b=document.createElement('button');b.type='button';b.textContent='Free cam [O]';b.style.cssText='position:fixed;left:16px;bottom:64px;z-index:9;padding:6px 10px;font:600 13px sans-serif;background:#1d3a44;color:#fff;border:1px solid #6fb;border-radius:4px;opacity:.9';
+const set=v=>{on=v;b.textContent=on?'Free cam ON [O]':'Free cam [O]';b.style.background=on?'#2c8a5e':'#1d3a44';if(on){const c=window.riderRoadProjection&&window.riderRoadProjection.camera;if(c){x=c[0];y=c[1];}last=performance.now();}else{delete window.riderExperimentPose;for(const m of moves)k[m]=0;drag=null;}};
+b.onclick=()=>{set(!on);b.blur();};document.body.append(b);
+const cancel=e=>{e.stopImmediatePropagation();e.preventDefault();};
+addEventListener('keydown',e=>{if(e.code==='KeyO'){if(!e.repeat)set(!on);cancel(e);return;}if(on&&moves.includes(e.code)){k[e.code]=1;cancel(e);}},true);
+addEventListener('keyup',e=>{if(e.code==='KeyO'){cancel(e);return;}if(on&&moves.includes(e.code)){k[e.code]=0;cancel(e);}},true);
+const scale=()=>{const c=document.querySelector('canvas');return (c.width/c.clientWidth)/(100*z);};
+addEventListener('mousedown',e=>{if(on&&e.button===2){drag={cx:e.clientX,cy:e.clientY,x,y};cancel(e);}},true);
+addEventListener('mousemove',e=>{if(drag){x=drag.x-(e.clientX-drag.cx)*scale();y=drag.y+(e.clientY-drag.cy)*scale();cancel(e);}},true);
+addEventListener('mouseup',e=>{if(drag&&e.button===2){drag=null;cancel(e);}},true);
+addEventListener('contextmenu',e=>{if(on)cancel(e);},true);
+addEventListener('wheel',e=>{if(!on)return;const c=document.querySelector('canvas').getBoundingClientRect();if(e.clientX>c.left+c.width*.65)return;z=Math.max(.02,Math.min(6,z*Math.exp(-e.deltaY*.001)));cancel(e);},{capture:true,passive:false});
+const step=t=>{requestAnimationFrame(step);if(!on)return;const d=Math.min(.1,(t-last)/1000);last=t;const v=12/z*(k.ShiftLeft||k.ShiftRight?3:1)*d;
+x+=((k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0))*v;y+=((k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0))*v;
+if(k.KeyE)z=Math.min(6,z*Math.exp(d*1.5));if(k.KeyQ)z=Math.max(.02,z*Math.exp(-d*1.5));window.riderExperimentPose={x,y,zoom:z};};
+requestAnimationFrame(step);window.riderFreeCam={set,get on(){return on;},get zoom(){return z;}};})()]==]
 function M.apply_pose()
     if not (html5 and sys.get_engine_info().is_debug) then return end
+    if not M.free_cam then M.free_cam=true;html5.run(FREE_CAM) end
     local text=html5.run("window.riderExperimentPose?JSON.stringify(window.riderExperimentPose):''")
-    if text=='' then return end
+    if text=='' then
+        if M.saved_zoom then go.set('/camera#camera','orthographic_zoom',M.saved_zoom);M.saved_zoom=nil end
+        return
+    end
+    if not M.saved_zoom then M.saved_zoom=go.get('/camera#camera','orthographic_zoom') end
     local ok,pose=pcall(json.decode,text)
     if not ok or type(pose)~='table' then return end
     local scale=sys.get_config_number('physics.scale',.01)
@@ -65,15 +88,15 @@ function M.apply_pose()
     go.set('/camera#camera','orthographic_zoom',pose.zoom)
     if pose.clean and not M.clean then M.clean=true;msg.post('main:/loader#ui','disable') end
 end
--- #536 experiment: URL terrain_look=<width>,<perspective>,<angle> replaces the level default look for one page load.
+-- #536 experiment: URL terrain_look=<width>,<perspective>,<angle>[,<center>] replaces the level default look for one page load.
 -- Debug builds only, so stronger 3D settings can be driven on the test course.
 function M.look_override()
     if not (html5 and sys.get_engine_info().is_debug) then return nil end
     local text=html5.run("new URLSearchParams(location.search).get('terrain_look')||''")
-    local w,p,a=text:match('^([%d.]+),([%d.]+),([%d.]+)$')
+    local w,p,a,c=text:match('^([%d.]+),([%d.]+),([%d.]+),?([%d.]*)$')
     w,p,a=tonumber(w),tonumber(p),tonumber(a)
-    if not (w and p and a) then return nil end
-    return {width=w,perspective=p,angle=a}
+    if not (w and p and a) then return {} end
+    return {width=w,perspective=p,angle=a,center=tonumber(c) or 0}
 end
 function M.stride() return M.spec() and M.STRIDE or M.UNTEXTURED_STRIDE end
 function M.describe()

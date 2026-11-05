@@ -41,6 +41,24 @@ function paint(){
  s.fillStyle=sg;s.fillRect(0,0,S,S);
  for(let i=0;i<280;i++){const x=R(0,S),y=R(0,128),q=R(10,40),a=R(.05,.13),dark=r()<.5;wrap(dx=>{const c=s.createRadialGradient(x+dx,y,0,x+dx,y,q);c.addColorStop(0,dark?`rgba(12,44,12,${a})`:`rgba(190,225,110,${a})`);c.addColorStop(1,'rgba(0,0,0,0)');s.fillStyle=c;s.fillRect(x+dx-q,y-q,2*q,2*q);},false);}
  for(let i=0;i<5200;i++){const x=R(0,S),y=R(0,134),len=R(4,12),sw=R(-3,3),w=R(.8,1.8),t=y/128,h=R(82,114),l=R(24,40)+t*18,a=R(.45,.9);wrap(dx=>{s.strokeStyle=hsl(h,56,l,a);s.lineWidth=w;s.beginPath();s.moveTo(x+dx,y);s.lineTo(x+dx+sw,y-len);s.stroke();},false);}
+ // Worn track: sandy earth along the middle where many cars drove; grass stays on both sides and creeps over the edges.
+ const wave=()=>[[1,R(0,6.28),5],[2,R(0,6.28),4],[3,R(0,6.28),3],[7,R(0,6.28),2],[11,R(0,6.28),1]];
+ const w1=wave(),w2=wave(),at=(w,x)=>w.reduce((v,[n,p,a])=>v+a*Math.sin(x/S*6.283*n+p),0);
+ const back=x=>25+at(w1,x),front=x=>106+at(w2,x);
+ s.save();s.beginPath();s.moveTo(0,back(0));for(let x=2;x<=S;x+=2)s.lineTo(x,back(x));for(let x=S;x>=0;x-=2)s.lineTo(x,front(x));s.closePath();s.clip();
+ const dg=s.createLinearGradient(0,20,0,110);dg.addColorStop(0,hsl(32,32,35));dg.addColorStop(.25,hsl(36,36,44));dg.addColorStop(.6,hsl(38,40,52));dg.addColorStop(1,hsl(34,36,42));s.fillStyle=dg;s.fillRect(0,0,S,128);
+ for(let i=0;i<150;i++){const x=R(0,S),y=R(20,110),q=R(8,34),a=R(.05,.14),dark=r()<.5;wrap(dx=>{const c=s.createRadialGradient(x+dx,y,0,x+dx,y,q);c.addColorStop(0,dark?`rgba(70,44,22,${a})`:`rgba(232,204,150,${a})`);c.addColorStop(1,'rgba(0,0,0,0)');s.fillStyle=c;s.fillRect(x+dx-q,y-q,2*q,2*q);},false);}
+ // Tyre wear: two soft ruts and fine streaks running along the track.
+ for(const [row,n,p] of [[50,3,R(0,6.28)],[82,2,R(0,6.28)]])for(const [w,a] of [[11,.09],[6,.13]]){s.strokeStyle=`rgba(58,36,18,${a})`;s.lineWidth=w;s.beginPath();for(let x=-2;x<=S+2;x+=4){const y=row+2.5*Math.sin(x/S*6.283*n+p);if(x<0)s.moveTo(x,y);else s.lineTo(x,y);}s.stroke();}
+ for(let i=0;i<190;i++){const x=R(0,S),y=R(26,104),l=R(30,190),a=R(.04,.13),w=R(.6,1.6),dark=r()<.6;wrap(dx=>{s.strokeStyle=dark?`rgba(58,36,18,${a})`:`rgba(240,214,164,${a})`;s.lineWidth=w;s.beginPath();s.moveTo(x+dx,y);s.lineTo(x+dx+l,y+R(-.6,.6));s.stroke();},false);}
+ for(let i=0;i<9000;i++){const x=R(0,S),y=R(18,112);s.fillStyle=r()<.5?`rgba(50,30,14,${R(.08,.25)})`:`rgba(245,225,180,${R(.06,.2)})`;s.fillRect(x,y,R(.8,1.8),R(.6,1.3));}
+ for(let i=0;i<90;i++){const x=R(0,S),y=R(30,102),q=R(.8,2.2),l=R(45,70);wrap(dx=>{s.fillStyle='rgba(30,18,8,.35)';s.beginPath();s.ellipse(x+dx+.5,y+.7,q,q*.7,0,0,6.3);s.fill();s.fillStyle=hsl(34,10,l);s.beginPath();s.ellipse(x+dx,y,q,q*.7,0,0,6.3);s.fill();},false);}
+ s.restore();
+ // Grass blades over both edges; only a few tufts survive in the middle.
+ const blade=(x,y,len)=>{const sw=R(-3,3),w=R(.8,1.8),h=R(82,114),l=R(26,50),a=R(.6,.95);wrap(dx=>{s.strokeStyle=hsl(h,56,l,a);s.lineWidth=w;s.beginPath();s.moveTo(x+dx,y);s.lineTo(x+dx+sw,y-len);s.stroke();},false);};
+ for(let i=0;i<2200;i++){const x=R(0,S);blade(x,back(x)+R(-2,11),R(4,11));}
+ for(let i=0;i<2200;i++){const x=R(0,S);blade(x,front(x)+R(-5,8),R(4,12));}
+ for(let i=0;i<14;i++){const x=R(0,S),y=R(44,92);for(let j=0;j<18;j++)blade(x+R(-5,5),y+R(-2,2),R(3,7));}
  const dump=c=>c.toDataURL('image/png');
  return {surface:dump(surface),band:dump(band),fill:dump(fill)};
 }

@@ -7,10 +7,13 @@ M.DEFAULT={version=1,mode='perspective',width=.9,perspective=.35,angle=math.atan
 M.RANGES={width={.25,2},perspective={0,1},angle={10,45},side={.25,64},shading={0,1}}
 M.CONTROLS={{key='width',label='Road width (m)',step=.01},{key='perspective',label='Perspective (level-wide)',step=.01},{key='angle',label='View angle (degrees; level-wide)',step=.1},{key='side',label='Side depth (m)',step=.25},{key='shading',label='Shading',step=.01}}
 do -- #536 experiment only: stronger 3D settings from the URL; perspective may leave the editor slider range.
+    -- Debug HTML5 only: wider sliders and a control for where the car sits on the Surface. Other builds and tests keep the contract ranges.
     local o=material.look_override()
     if o then
-        M.RANGES.perspective={0,math.max(1,o.perspective)}
-        M.DEFAULT.width,M.DEFAULT.perspective,M.DEFAULT.angle=o.width,o.perspective,o.angle
+        M.RANGES.width,M.RANGES.perspective,M.RANGES.angle,M.RANGES.shading={.05,4},{0,6},{0,75},{0,2}
+        M.RANGES.center={0,1};M.DEFAULT.center=o.center or 0
+        M.CONTROLS[#M.CONTROLS+1]={key='center',label='Car position on Surface (0 edge, .5 middle)',step=.01}
+        if o.width then M.DEFAULT.width,M.DEFAULT.perspective,M.DEFAULT.angle=o.width,o.perspective,o.angle end
     end
 end
 function M.validate(p)
@@ -18,6 +21,7 @@ function M.validate(p)
     local out={version=1,mode=p.mode}
     for k,r in pairs(M.RANGES) do
         local v=p[k]
+        if v==nil and k=='center' then v=M.DEFAULT.center end
         if type(v)~='number' or v~=v or v<r[1] or v>r[2] then return nil,k..' must be '..r[1]..'..'..r[2] end
         out[k]=v
     end
@@ -35,7 +39,7 @@ end
 function M.bounds(base,c,p,width)
     local b={math.huge,math.huge,-math.huge,-math.huge}
     for _,x in ipairs({base[1],base[3]}) do for _,y in ipairs({base[2],base[4]}) do
-        for _,z in ipairs({0,width or p.width}) do
+        for _,z in ipairs({-(p.center or 0)*(width or p.width),0,width or p.width}) do
             local u,v=M.project(x,y,z,c,p)
             b[1],b[2],b[3],b[4]=math.min(b[1],u),math.min(b[2],v),math.max(b[3],u),math.max(b[4],v)
         end
