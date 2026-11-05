@@ -3,7 +3,7 @@
  "issue": 538,
  "license": "Original work generated for Rider; no third-party input.",
  "generator": "tools/art/level_materials.cjs",
- "generator_sha256": "44fd07d51d7419757504d83a091963d862fbac2f154fd15e8ae688339aae4944",
+ "generator_sha256": "85cf2f6ab53a3ff202595f29b465133c48bd2e2421738bd36d4161b909d14939",
  "browser": "156.0.8078.4",
  "pixels_per_metre": 128,
  "sizes": {
@@ -92,10 +92,10 @@
    "name": "Scrapyard",
    "seed": 1151,
    "sha256": {
-    "surface": "cb88ece2e2bc66f25a837eeb1aa33103e644ed8a444a4f996b9c444ac434ff39",
+    "surface": "ce8957f77ae38e64b7686817b722ec066736761ba1b3e6cd28bdfa3240c08567",
     "band": "c66a2969fbe7a4bff9bdfdcb500decb7ee33ee2a65c757bc80d16b99ddf086e3",
     "fill": "554227644982aee01fd11cc4ed4e3475032fdf52a378a799634328630afb9a3f",
-    "thumb": "72720afdb856596d0442f6e044fe955c67a4fb7639acf1bee468c55863779209"
+    "thumb": "63d37dbab0d0d696497383115b50dd44080503c0dbf6318e45d76de9b027e9fe"
    }
   }
  ]

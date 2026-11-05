@@ -119,9 +119,8 @@ function paintKind(p){
    const crack=cells(10,8,W,W,.9,1),n=fbm(8,8,W,W,1),warp=fbm(4,4,W,W,4),tone=[[132,128,120],[108,106,102],[150,142,128],[92,92,92],[122,118,112],[140,136,130],[100,98,94],[116,110,100]];
    const fill=image(W,W,(x,y)=>{const yy=y+(warp(x,y)-.5)*42,l=Math.floor(((yy%W)+W)%W/64),fr=(((yy%64)+64)%64)/64,c=crack(x,y);let col=tone[l%8];
     col=scale(col,.72+n(x,y)*.5);col=scale(col,mix(.62,1,smooth(0,.06,fr))*mix(1,.72,smooth(.9,1,fr)));col=scale(col,mix(.45,1,smooth(0,3,c.gap)));return col;});
-   const r=rng(1),stones=[];for(let i=0;i<220;i++)stones.push([r()*W,r()*W,1+r()*2,r()]);
-   const cob=cells(18,4,W,HS,.75,2),sn=fbm(16,4,W,HS,7),ef=wave(1,4),ef2=wave(2,4);
-   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2))return [0,0,0,0];const c=cob(x,y),wear=1-smooth(30,52,Math.abs(y-66));const stone=mixc([96,94,92],[140,136,128],c.a);let col=mixc(stone,[168,162,150],wear*.45);col=scale(col,.8+sn(x,y)*.45);col=scale(col,mix(.32,1,smooth(0,3.2,c.gap)));col=scale(col,mix(1,1.1,smooth(10,0,c.gap)*0));return col;});
+      const cob=cells(18,4,W,HS,.75,2),sn=fbm(16,4,W,HS,7),ef=wave(1,4);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2))return [0,0,0,0];const c=cob(x,y),wear=1-smooth(30,52,Math.abs(y-66));const stone=mixc([96,94,92],[140,136,128],c.a);let col=mixc(stone,[168,162,150],wear*.45);col=scale(col,.8+sn(x,y)*.45);col=scale(col,mix(.32,1,smooth(0,3.2,c.gap)));return col;});
    const e0=wave(3,10),en=fbm(16,3,W,HS,9);
    const bd=band(x=>{const v=46+e0(x)+Math.round(en(x,0)*4)*7;return Math.max(16,v);},(x,y,e)=>{const c=cob(x,y*.9+9);let col=mixc([104,100,96],[138,132,124],c.a);col=scale(col,mix(.42,1,smooth(0,3,c.gap))*mix(1.05,.62,smooth(0,e,y)));return col;});
    return {fill,surface,band:bd};
@@ -154,7 +153,7 @@ function paintKind(p){
    const fill=image(W,W,(x,y)=>{const a=c(x,y);const stone=mixc([150,136,108],[186,170,136],a.a);let col=scale(stone,(.82+n(x,y)*.34)*(.9+big(x,y)*.2)*mix(.95,1.08,a.b));const light=smooth(0,9,a.gap)*mix(.9,1,1-smooth(0,60,a.d1));col=scale(col,mix(.34,1,smooth(0,2.4,a.gap))*mix(.86,1.06,light));return col;});
    const sn=fbm(40,10,W,HS,37),moss=fbm(12,3,W,HS,38),ef=wave(8,3);
    const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+1))return [0,0,0,0];const row=Math.floor((y-4)/31),off=row%2?32:0,bx=(x+off)%W%64,by=((y-4)%31+31)%31,j=Math.min(Math.min(bx,64-bx),Math.min(by,31-by));const id=(Math.floor(((x+off)%W)/64)*7+row*13)%10/10;let col=scale(mixc([168,150,114],[202,184,144],id),.82+sn(x,y)*.36);if(j<2)return scale([72,62,46],.9+sn(x,y)*.3);col=scale(col,mix(.84,1,smooth(2,6,j)));const edge=smooth(30,52,Math.abs(y-64))*smooth(.42,.62,moss(x,y));col=mixc(col,[74,104,48],edge*.8);if(y>=62&&y<67)col=mixc(col,[214,170,62],.7);return col;});
-   const step=(x,y)=>{const u=(x+32)%64,v=y-22;const d=Math.max(Math.abs(u-32),0);const lev=Math.floor(d/8);return v>=lev*6&&v<36-lev*0&&d<32&&v<lev*6+14;};
+   const step=(x,y)=>{const u=(x+32)%64,v=y-22;const d=Math.max(Math.abs(u-32),0);const lev=Math.floor(d/8);return v>=lev*6&&v<36&&d<32&&v<lev*6+14;};
    const bd=image(W,HS,(x,y)=>{if(y<78){let col=scale([176,158,122],.82+n(x,y)*.38);if(y<7||(y>=70))col=mixc(col,[214,170,62],.82);else if(y<10||y>=67)col=scale(col,.5);else if(step(x,y))col=scale(col,.56);else if(step(x,y-3))col=scale(col,1.2);return col;}if(y<98){const t=(y-78)/20;return [8,6,4,Math.round(170*(1-t)*(1-t))];}return [0,0,0,0];});
    return {fill,surface,band:bd};
   },
@@ -174,7 +173,7 @@ function paintKind(p){
    const n=fbm(10,10,W,W,51),rust=fbm(6,6,W,W,54),rn=rng(13),tint=[];for(let i=0;i<16;i++)tint.push(rn());
    const fill=image(W,W,(x,y)=>{const u=(x+64)%128,v=(y+64)%128,j=Math.min(u,128-u,v,128-v),id=Math.floor((x+64)/128)%4+4*(Math.floor((y+64)/128)%4),t=tint[id];let col=mixc([86,92,98],[58,66,78],t);const rt=smooth(.44,.66,rust(x,y));col=mixc(col,[132,70,34],rt);col=scale(col,.82+n(x,y)*.34);if(j<3)return scale(col,.34);col=scale(col,mix(1.14,1,smooth(3,8,j)));const rv=Math.min(Math.hypot(u-12,v-12),Math.hypot(116-u,v-12),Math.hypot(u-12,116-v),Math.hypot(116-u,116-v));if(rv<5)return scale([150,152,152],1.05-rv*.09);return col;});
    const sn=fbm(40,10,W,HS,57),rs=fbm(10,3,W,HS,58);
-   const surface=image(W,HS,(x,y)=>{if(y<FAR)return [0,0,0,0];const u=(x+y)%24,v=(x-y+2400)%24;const dia=Math.min(Math.abs(u-12)*Math.abs(((x%24)-12)),99);const bump=(((Math.floor(x/12)+Math.floor(y/12))%2)===0?Math.abs((x%12)-(y%12)):Math.abs((x%12)+(y%12)-12))<1.8&&(x%12>2&&x%12<10);let col=scale([116,122,128],.84+sn(x,y)*.3);if(bump)col=scale(col,1.34);col=mixc(col,[138,76,36],smooth(.5,.72,rs(x,y))*.75);if(y<14||y>=114){const st=((x+y)%64)<32;col=st?[226,178,40]:[36,36,38];col=scale(col,.84+sn(x,y)*.3);}return col;});
+   const surface=image(W,HS,(x,y)=>{if(y<FAR)return [0,0,0,0];const bump=(((Math.floor(x/16)+Math.floor(y/16))%2)===0?Math.abs((x%16)-(y%16)):Math.abs((x%16)+(y%16)-16))<2.2&&(x%16>3&&x%16<13);let col=scale([116,122,128],.84+sn(x,y)*.3);if(bump)col=scale(col,1.34);col=mixc(col,[138,76,36],smooth(.5,.72,rs(x,y))*.75);if(y<14||y>=114){const st=((x+y)%64)<32;col=st?[226,178,40]:[36,36,38];col=scale(col,.84+sn(x,y)*.3);}return col;});
    const bd=image(W,HS,(x,y)=>{if(y<56){let col=scale([98,104,110],.84+n(x,y*2)*.3);col=mixc(col,[132,70,34],smooth(.5,.66,rust(x,y*2+40))*.8*smooth(10,50,y));const u=x%64,rv=Math.min(Math.hypot(u-16,y-16),Math.hypot(u-16,y-42));if(rv<5)return scale([156,158,160],1.05-rv*.08);if(y>=26&&y<30)col=scale(col,.56);if(x%128>=62&&x%128<65)col=scale(col,.5);return col;}if(y<74){const t=(y-56)/18;const drip=smooth(.55,.75,rust(x,y))*(1-t);return drip>.05?[110,58,28,Math.round(190*drip)]:[8,8,8,Math.round(120*(1-t)*(1-t))];}return [0,0,0,0];});
    return {fill,surface,band:bd};
   },

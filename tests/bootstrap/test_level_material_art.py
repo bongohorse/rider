@@ -93,7 +93,7 @@ class BrokenPresets(unittest.TestCase):
         self.assertIn('holes', self.broken('surface', self.rect((100, 60, 110, 70), (0, 0, 0, 0))))
 
     def test_flat_far_edge(self):
-        self.assertIn('fray', self.broken('surface', self.rect((0, 0, 511, 0), (60, 90, 40, 254))))
+        self.assertIn('far edge', self.broken('surface', self.rect((0, 0, 511, 0), (60, 90, 40, 254))))
 
     def test_band_reaching_the_last_row(self):
         self.assertIn('last row', self.broken('band', self.rect((0, 127, 511, 127), (60, 90, 40, 255))))
@@ -126,7 +126,7 @@ class BrokenPresets(unittest.TestCase):
         self.assertIn('fold', self.broken('band', self.rect((0, 1, 511, 5), (255, 255, 255, 255))))
 
     def test_flat_surface_from_the_second_row(self):
-        self.assertIn('fray', self.broken('surface', self.rect((0, 1, 511, 3), (60, 90, 40, 255))))
+        self.assertIn('far edge', self.broken('surface', self.rect((0, 1, 511, 3), (60, 90, 40, 255))))
 
     def test_small_patch_in_a_thumbnail(self):
         self.assertIn('thumb', self.broken('thumb', self.rect((0, 0, 9, 9), (255, 0, 255, 255))))

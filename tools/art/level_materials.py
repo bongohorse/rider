@@ -27,10 +27,10 @@ SURFACE_OPAQUE_FROM = 24  # far edge may fray above this row; the contact side s
 SEGMENT = 16  # pixels compared at once across a repeat edge
 SEAM_FACTOR = 1.5  # the worst edge segment may differ at most this much more than the worst inner one
 SEAM_MEAN_FACTOR = 2.5  # the same for the whole edge, which catches a uniform colour step
-FRAYED_SHARE = .25  # share of each such row that must be fully transparent
+FRAYED_SHARE = .5  # share of each such row that must be fully transparent
 FOLD_LIMIT = 8  # mean brightness levels Surface and Band may differ near the fold
 FOLD_ROWS = 6  # rows compared on each side of the fold, averaged into one row
-FRAY_ROWS = 4  # rows of the Surface's far edge that must each be mostly transparent
+FRAY_ROWS = 4  # rows of the Surface's far edge that must each be mostly transparent; it may fray or be straight
 THUMB_LIMIT = .25  # mean brightness levels a thumbnail may differ from its preset
 
 
@@ -130,7 +130,7 @@ def check_preset(preset, out):
         errors.append(f'{name_}/surface: holes in the opaque zone')
     rows = [surface_alpha.crop((0, i, 512, i+1)).tobytes() for i in range(FRAY_ROWS)]
     if min(row.count(0)/len(row) for row in rows) < FRAYED_SHARE:
-        errors.append(f'{name_}/surface: far edge does not fray')
+        errors.append(f'{name_}/surface: far edge is not open')
     band_alpha = images['band'].getchannel('A')
     if band_alpha.crop((0, 127, 512, 128)).getextrema()[1] != 0:
         errors.append(f'{name_}/band: art reaches the last row')
