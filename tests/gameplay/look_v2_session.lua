@@ -51,3 +51,4 @@ T('locked terrain: set_material vs lock_conflict',function() local d=fresh();d.e
 T('locked terrain: removal clamp',function() local d=fresh();d.editor.objects[1].road_look={version=1,width=1,side=1,shading=.5};D.set_material(d.editor,{version=1,preset='meadow'});d.editor.objects[1].road_look.width=3;d.editor.objects[1].locked=true;local a=D.copy(d.editor);D.set_material(d.editor,nil);print('   removal conflict=',D.lock_conflict(a,d.editor)) end)
 print('bounds w4 p6 a75',enc(P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=75,width=4},4)))
 print('angle0 p6',enc(P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=0,width=4},4)))
+print('PASS #573 Terrain Look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal')
