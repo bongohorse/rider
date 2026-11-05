@@ -2,14 +2,33 @@
 // #392 Stage A: Kenney 1.1 terrain atlas, six family rows x four face columns (main/terrain_material/manifest.json).
 in lowp vec4 var_color;
 in highp vec3 var_tile;
+in highp vec2 var_line;
 out vec4 frag_color;
 uniform lowp sampler2D tex0;
+uniform lowp sampler2D tex1; // #536 surface
+uniform lowp sampler2D tex2; // #536 band (premultiplied alpha)
+uniform lowp sampler2D tex3; // #536 fill
 const float ATLAS=512.0;
 const float CELL=80.0;
 const float PAD=8.0;
 const float TILE=64.0;
 void main() {
     float id=floor(var_tile.z+0.5);
+    if(id>23.5) {
+        // #536: one image is 4 m x 4 m (128 px/m). Texture V grows upward, so the image top sits at V=0 going down.
+        float face=id-4.0*floor(id*0.25+0.01);
+        vec3 rgb;
+        if(face<0.5) rgb=texture(tex1,vec2(var_tile.x,-clamp(var_tile.y,0.0,1.0)*0.25)).rgb;
+        else {
+            vec3 fill=texture(tex3,vec2(var_tile.x,-var_line.x*0.25)).rgb;
+            float band_v=var_line.x*var_line.y*0.25;
+            vec4 band=texture(tex2,vec2(var_tile.x,-band_v));
+            band*=step(band_v,0.98);
+            rgb=band.rgb+fill*(1.0-band.a);
+        }
+        frag_color=vec4(rgb*var_color.rgb,var_color.a);
+        return;
+    }
     float row=floor(id*0.25+0.01);
     float col=id-4.0*row;
     // Surface/rim keep one cross-section (clamped V); side/end repeat. End U spans the cap once.

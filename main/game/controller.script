@@ -470,6 +470,7 @@ function update(self, dt)
     else
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
+    require("main.terrain_perspective.material").apply_pose() -- #536 experiment: fixed debug camera pose
     require("main.game.terrain_mesh").update(self)
     if self.vehicle and self.vehicle.ready then
         audio.update(self)

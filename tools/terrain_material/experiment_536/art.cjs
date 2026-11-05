@@ -1,0 +1,52 @@
+// #536 experiment: original, procedural placeholder art (no third-party input). 512 px = 4 m. Deterministic.
+// Usage: node tools/terrain_material/experiment_536/art.cjs
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('playwright');
+const OUT=path.resolve(__dirname,'../../../main/terrain_material/experiment_536');
+function paint(){
+ const S=512;
+ let seed=536;const r=()=>(seed=(seed*1664525+1013904223)>>>0)/2**32;const R=(a,b)=>a+(b-a)*r();
+ const make=()=>{const c=document.createElement('canvas');c.width=c.height=S;return c;};
+ const wrap=(fn,both=true)=>{for(const dx of [-S,0,S])for(const dy of both?[-S,0,S]:[0])fn(dx,dy);};
+ const hsl=(h,s,l,a=1)=>`hsla(${h},${s}%,${l}%,${a})`;
+ // FILL: earth with soft blotches, faint strata, stones and pebbles; tiles both ways.
+ const fill=make(),f=fill.getContext('2d');
+ f.fillStyle=hsl(26,36,29);f.fillRect(0,0,S,S);
+ for(let i=0;i<420;i++){const x=R(0,S),y=R(0,S),q=R(14,70),dark=r()<.5,a=R(.03,.09);
+  wrap((dx,dy)=>{const g=f.createRadialGradient(x+dx,y+dy,0,x+dx,y+dy,q);g.addColorStop(0,dark?`rgba(30,16,8,${a})`:`rgba(190,140,90,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');f.fillStyle=g;f.fillRect(x+dx-q,y+dy-q,2*q,2*q);});}
+ for(let i=0;i<18000;i++){const x=R(0,S),y=R(0,S);f.fillStyle=r()<.5?`rgba(20,10,5,${R(.04,.16)})`:`rgba(215,170,120,${R(.03,.12)})`;f.fillRect(x,y,R(1,2.4),R(1,2));}
+ const stone=(ctx,x,y,q,h,s,l)=>{const n=9,a=[];const k=R(.65,.95),rot=R(0,3.14);for(let i=0;i<n;i++){const t=i/n*6.283,d=q*R(.82,1.12);const px=Math.cos(t)*d,py=Math.sin(t)*d*k;a.push([x+px*Math.cos(rot)-py*Math.sin(rot),y+px*Math.sin(rot)+py*Math.cos(rot)]);}
+  const path=(ox,oy)=>{ctx.beginPath();for(let i=0;i<n;i++){const p=a[i],m=a[(i+1)%n];const mx=(p[0]+m[0])/2+ox,my=(p[1]+m[1])/2+oy;if(i===0)ctx.moveTo(mx,my);else ctx.quadraticCurveTo(p[0]+ox,p[1]+oy,mx,my);}const p=a[0],m=a[1];ctx.quadraticCurveTo(p[0]+ox,p[1]+oy,(p[0]+m[0])/2+ox,(p[1]+m[1])/2+oy);ctx.closePath();};
+  path(q*.08,q*.14);ctx.fillStyle='rgba(15,8,4,.45)';ctx.fill();
+  path(0,0);const g=ctx.createLinearGradient(x,y-q,x,y+q);g.addColorStop(0,hsl(h,s,l+16));g.addColorStop(.55,hsl(h,s,l));g.addColorStop(1,hsl(h,s,l-12));ctx.fillStyle=g;ctx.fill();};
+ for(let i=0;i<34;i++){const x=R(0,S),y=R(0,S),q=i<8?R(16,30):R(5,13),h=R(24,40),s=R(6,18),l=R(38,56);const before=seed;wrap((dx,dy)=>{seed=before;stone(f,x+dx,y+dy,q,h,s,l);});}
+ // BAND: grass fringe from the driving line down, transparent below; tiles in U only, fades out by ~0.9 m.
+ const band=make(),b=band.getContext('2d');
+ const k=[[1,R(0,6.28),11],[2,R(0,6.28),8],[3,R(0,6.28),6],[5,R(0,6.28),5],[8,R(0,6.28),4],[13,R(0,6.28),3]];
+ const edge=x=>38+k.reduce((s,[n,p,a])=>s+a*Math.sin(x/S*6.283*n+p),0);
+ const fringe=(ctx,off,style)=>{ctx.beginPath();ctx.moveTo(-2,0);for(let x=-2;x<=S+2;x+=2)ctx.lineTo(x,edge(x)+off);ctx.lineTo(S+2,0);ctx.closePath();ctx.fillStyle=style;ctx.fill();};
+ // Soft contact shadow on the earth below the turf.
+ for(let i=0;i<14;i++)fringe(b,i*3+6,'rgba(18,10,4,.055)');
+ // Roots: thin dark tendrils.
+ b.lineCap='round';for(let i=0;i<150;i++){const x=R(0,S),y0=edge(x)-4,len=R(10,46),sw=R(-10,10);const w=R(.7,1.8),a=R(.25,.6);wrap(dx=>{b.strokeStyle=`rgba(40,26,12,${a})`;b.lineWidth=w;b.beginPath();b.moveTo(x+dx,y0);b.quadraticCurveTo(x+dx+sw,y0+len*.5,x+dx+sw*.4,y0+len);b.stroke();},false);}
+ const g=b.createLinearGradient(0,0,0,64);g.addColorStop(0,hsl(92,58,42));g.addColorStop(.55,hsl(100,55,31));g.addColorStop(1,hsl(112,52,22));
+ fringe(b,0,g);
+ // Hanging blades over the edge, then light flecks on the turf.
+ for(let i=0;i<900;i++){const x=R(0,S),e=edge(x),y0=e-R(0,8),len=R(7,26),sw=R(-5,5),w=R(1.2,3),l=R(20,36),h=R(94,114);wrap(dx=>{b.strokeStyle=hsl(h,54,l);b.lineWidth=w;b.beginPath();b.moveTo(x+dx,y0);b.quadraticCurveTo(x+dx+sw*.4,y0+len*.6,x+dx+sw,y0+len);b.stroke();},false);}
+ for(let i=0;i<2600;i++){const x=R(0,S),t=r(),y=t*t*edge(x),h=R(80,104),l=R(30,60),a=R(.25,.6),w=R(1,2.2),c=R(3,7);wrap(dx=>{b.fillStyle=hsl(h,58,l,a);b.fillRect(x+dx,y,w,c);},false);}
+ // SURFACE: seen from above. Row 128 is the driving line, row 0 the far edge; darker to the back.
+ const surface=make(),s=surface.getContext('2d');
+ const sg=s.createLinearGradient(0,0,0,128);sg.addColorStop(0,hsl(108,44,27));sg.addColorStop(.6,hsl(98,52,36));sg.addColorStop(1,hsl(88,62,47));
+ s.fillStyle=sg;s.fillRect(0,0,S,S);
+ for(let i=0;i<280;i++){const x=R(0,S),y=R(0,128),q=R(10,40),a=R(.05,.13),dark=r()<.5;wrap(dx=>{const c=s.createRadialGradient(x+dx,y,0,x+dx,y,q);c.addColorStop(0,dark?`rgba(12,44,12,${a})`:`rgba(190,225,110,${a})`);c.addColorStop(1,'rgba(0,0,0,0)');s.fillStyle=c;s.fillRect(x+dx-q,y-q,2*q,2*q);},false);}
+ for(let i=0;i<5200;i++){const x=R(0,S),y=R(0,134),len=R(4,12),sw=R(-3,3),w=R(.8,1.8),t=y/128,h=R(82,114),l=R(24,40)+t*18,a=R(.45,.9);wrap(dx=>{s.strokeStyle=hsl(h,56,l,a);s.lineWidth=w;s.beginPath();s.moveTo(x+dx,y);s.lineTo(x+dx+sw,y-len);s.stroke();},false);}
+ const dump=c=>c.toDataURL('image/png');
+ return {surface:dump(surface),band:dump(band),fill:dump(fill)};
+}
+(async()=>{
+ const browser=await chromium.launch();const page=await browser.newPage();
+ const images=await page.evaluate(paint);await browser.close();
+ fs.mkdirSync(OUT,{recursive:true});
+ for(const [n,d] of Object.entries(images)){const file=path.join(OUT,n+'.png');fs.writeFileSync(file,Buffer.from(d.split(',')[1],'base64'));console.log(file,fs.statSync(file).size);}
+})();

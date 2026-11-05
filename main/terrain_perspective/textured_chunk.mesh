@@ -1,5 +1,8 @@
 material: "/main/terrain_perspective/textured.material"
 vertices: "/main/terrain_perspective/textured_empty.buffer"
 textures: "/main/terrain_material/kenney_terrain_64.png"
+textures: "/main/terrain_material/experiment_536/surface.png"
+textures: "/main/terrain_material/experiment_536/band.png"
+textures: "/main/terrain_material/experiment_536/fill.png"
 primitive_type: PRIMITIVE_TRIANGLES
 position_stream: "position"
