@@ -59,12 +59,9 @@ function M.describe()
         boundary=s and s.boundary and s.boundary~=math.huge and s.boundary or false,preset=s and s.preset or false}
 end
 
--- Adds one float per vertex (family*4+face) to a perspective section built by projection.section,
--- gives end caps a 0..1 depth U and neutral face shading. Positions, look_data and partition stay exactly
--- as built; the arc-length U of the other faces differs by whole tiles per quad (see bound below).
 -- One preset for the whole level: the slot holds only the face. Top vertices carry their drop below the line in
 -- look_data.x (unused above z<0); bottom vertices derive it in the shader. texcoord0.y carries the slope factor,
--- which keeps the Band's vertical thickness on slopes. Run ends close up to the driving line.
+-- which keeps the Band's thickness measured across the slope. Run ends close up to the driving line.
 local function apply_preset(c,prep,first,last,spec,styles)
     local p=prep.p
     local slot,uv,base,color={},c.uv,c.base_colors,c.color
@@ -118,6 +115,9 @@ local function apply_preset(c,prep,first,last,spec,styles)
     c.bytes=c.vertices*M.STRIDE
     return c
 end
+-- Adds one float per vertex (family*4+face) to a perspective section built by projection.section,
+-- gives end caps a 0..1 depth U and neutral face shading. Positions, look_data and partition stay exactly
+-- as built; the arc-length U of the other faces differs by whole tiles per quad (see bound below).
 function M.apply(c,prep,first,last,spec,styles)
     if spec.preset then return apply_preset(c,prep,first,last,spec,styles) end
     local p=prep.p

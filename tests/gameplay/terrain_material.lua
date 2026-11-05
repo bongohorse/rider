@@ -172,6 +172,24 @@ do
     assert(a.texture[n+1]==material.END and a.look_data[n*3+1]==0)
     assert(math.abs(a.position[n*3+1]-(prep.p[1][1]-a.origin[1]))<1e-9 and math.abs(a.position[n*3+2]-(prep.p[1][2]-a.origin[2]))<1e-9)
     assert(material.describe().preset=='meadow')
+    -- Rim and Surface U also agree across sections.
+    for _,offset in ipairs({6,12}) do
+        local near2=math.abs(u_at(a,63*18+offset+2,prep.u[1]%1)-u_at(b,offset+1,prep.u[65]%1))
+        assert(near2<1e-6 or math.abs(near2-1)<1e-6,'U continuous across sections on face at '..offset)
+    end
+    -- Budgets with a preset: the 660 m course and the near-limit refusal.
+    local preset_long={chains={},hulls={},labels={},bounds={-10,700,-40,50},_road_profile='perspective-v1'}
+    for k,n in ipairs({520,496}) do local chain={};for i=0,n do chain[i+1]={i+(k-1)*600,0} end;preset_long.chains[k]=chain end
+    local measured=assert(budget.check(preset_long))
+    assert(measured.stride==52 and measured.payload==952224 and measured.cpu_estimate==18312*576+measured.physics_vertices*512+2*952224)
+    assert(measured.cpu_estimate<budget.CPU,'CPU working estimate under the limit: '..measured.cpu_estimate)
+    local function course(segments)
+        local chain={};for i=0,segments do chain[i+1]={i,0} end
+        return {chains={chain},hulls={},labels={},bounds={-10,segments+10,-40,50},_road_profile='perspective-v1'}
+    end
+    local fits=assert(budget.check(course(1119)));assert(fits.vertices==20154 and fits.payload==20154*52)
+    local refused,why=budget.check(course(1120));assert(not refused and why:find('payload',1,true),'near-limit refusal: '..tostring(why))
+    print('PASS #539 preset budgets: 660 m '..measured.payload..' B, CPU '..measured.cpu_estimate..' B; 1119 segments admitted, 1120 refused')
     material.override=nil
 end
 print('PASS terrain material')

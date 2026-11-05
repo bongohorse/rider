@@ -17,7 +17,9 @@ void main() {
         rgb=surface.rgb/surface.a;
     } else {
         vec3 fill=texture(tex2,var_side.zw).rgb;
-        vec4 band=texture(tex1,vec2(var_uv.x,1.0-var_side.x*var_side.y));
+        float band_v=1.0-var_side.x*var_side.y;
+        // Below its art the Band is empty at every mip: clamped V would repeat a row that averages in the art.
+        vec4 band=texture(tex1,vec2(var_uv.x,band_v))*step(0.0,band_v);
         rgb=band.rgb+fill*(1.0-band.a);
     }
     frag_color=vec4(rgb*var_color.rgb,var_color.a);

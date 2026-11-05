@@ -44,5 +44,7 @@ void main() {
     // One image spans 4 m along the track; per-quad U plus the fractional section phase, continuous across sections.
     float u=face<2.5?texcoord0.x+fract(editor_params.x):texcoord0.x*0.225;
     var_uv=vec3(u,1.0-texcoord0.y,face);
+    // Run ends share one x: U continues over their depth, so the Fill does not streak.
+    if(face>2.5) fill_uv.x+=u;
     var_side=vec4(line_drop,texcoord0.y,fill_uv);
 }
