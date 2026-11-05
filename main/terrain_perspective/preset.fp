@@ -20,7 +20,7 @@ void main() {
         vec4 surface=texture(tex0,vec2(var_uv.x,1.0-clamp(var_uv.y,0.0,1.0)));
         if(var_uv.y<SURFACE_FAR_EDGE) {
             // The far edge frays: what lies behind shows through.
-            rgb=surface.rgb;
+            rgb=surface.rgb/max(surface.a,0.004);
             alpha=surface.a;
         } else {
             // The contact side stays solid, also for art with holes.
@@ -32,7 +32,6 @@ void main() {
         vec4 band=texture(tex1,vec2(var_uv.x,band_v))*step(0.0,band_v);
         rgb=band.rgb+fill*(1.0-band.a);
     }
-    // Premultiplied output, as the terrain blends; vertex alpha hides a section.
-    alpha*=var_color.a;
-    frag_color=vec4(rgb*var_color.rgb*var_color.a,alpha);
+    // Straight output: the default render script blends with source alpha. Vertex alpha hides a section.
+    frag_color=vec4(rgb*var_color.rgb,alpha*var_color.a);
 }

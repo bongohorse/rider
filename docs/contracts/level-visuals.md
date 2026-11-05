@@ -29,7 +29,7 @@ Everything here is visual. It never reads or writes collision, physics, replay o
 - **Fill** lies in world coordinates and repeats, so it never stretches. Claudio chose this on 2026-11-05: "texture verzerrung will ich nicht".
 - Surface and Band meet in one colour at the fold, without a hard light edge.
 - The textured route keeps its 52-byte vertex and no new vertex stream. Levels without a material stay byte-identical at 36 or 48 bytes, according to their profile.
-- The Surface art may have a frayed transparent far edge above an opaque lower zone. The contact side stays opaque, so the wheels never appear to touch a hole. [#540](https://github.com/bongohorse/rider/issues/540) sets the blending and records what shows through.
+- The Surface art may have a frayed transparent far edge above an opaque lower zone. The contact side stays opaque, so the wheels never appear to touch a hole. Above image row 24 of 128 the art blends over whatever lies behind the run: the background or an earlier run. Below it the art lies over Fill.
 
 ## Depth look
 
