@@ -11,10 +11,11 @@ const VARIANTS=[['today',''],['stage-a','grass'],['band-fill-line','proto'],['ba
 const DRIVE=.8;
 const POSES=[['fit',137,10,.0316],['wide-ramp-drop',170,12,.25],['flat',8,1.2,DRIVE],['valley',38,-3.2,DRIVE],['crest',78,5.2,DRIVE],['ramp',142,10.5,DRIVE],['steep-drop',184,11,DRIVE],['gap',208.5,.5,DRIVE],['overhang',266,5.5,DRIVE],['overhang-top',273,11,DRIVE],['run-end-closeup',203,.2,2.5]];
 function probe(){
- const p=window.__x={textures:[],mipmaps:0,frames:[]};
+ const p=window.__x={textures:[],sub:{},mipmaps:0,frames:[]};
  for(const proto of [window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype].filter(Boolean)){
-  const tex=proto.texImage2D,mip=proto.generateMipmap;
-  proto.texImage2D=function(...a){if(a.length>=9&&a[3]>=128&&a[4]>=128)p.textures.push({level:a[1],width:a[3],height:a[4],format:a[6],type:a[7]});return tex.apply(this,a);};
+  const tex=proto.texImage2D,mip=proto.generateMipmap,sub=proto.texSubImage2D;
+  proto.texSubImage2D=function(...a){if(a.length>=9){const k=a[1]+':'+a[4]+'x'+a[5];p.sub[k]=(p.sub[k]||0)+1;}return sub.apply(this,a);};
+  proto.texImage2D=function(...a){if(a.length>=9&&a[3]>=16&&a[4]>=16)p.textures.push({level:a[1],width:a[3],height:a[4],format:a[6],type:a[7]});return tex.apply(this,a);};
   proto.generateMipmap=function(...a){p.mipmaps++;return mip.apply(this,a);};
  }
  const raf=window.requestAnimationFrame.bind(window);
@@ -52,22 +53,29 @@ const r={schema:1,issue:536,source_sha:sha,status:'INCOMPLETE',vertices,sections
    await page.waitForTimeout(1500);
    await page.addStyleTag({content:'button{display:none!important}'}).catch(()=>{});
    const run={id,spec,poses:{}};
-   await page.screenshot({path:path.join(out,id+'--start.png')});
+   await page.screenshot({path:path.join(out,id+'--start.jpg'),quality:88});
    for(const [pose,x,y,zoom] of POSES){
     await page.evaluate(v=>{window.riderExperimentPose=v;},{x,y,zoom,clean:true});
     await page.waitForFunction(([zx])=>Math.abs((window.riderRoadProjection?.camera?.[0]??1e9)-zx)<.01,[x],{timeout:20000,polling:50});
     await page.waitForTimeout(900);
     const from=await page.evaluate(()=>window.__x.frames.length);await page.waitForTimeout(1200);
     const f=await page.evaluate(n=>window.__x.frames.slice(n),from);
-    await page.screenshot({path:path.join(out,id+'--'+pose+'.png')});
+    await page.screenshot({path:path.join(out,id+'--'+pose+'.jpg'),quality:88});
     const p=await page.evaluate(()=>({stride:window.riderRoadProjection.stride,visible:window.riderRoadProjection.counts?.visible,allocated:window.riderRoadProjection.counts?.allocated,bytes:window.riderRoadProjection.counts?.bytes,camera:window.riderRoadProjection.camera}));
     run.poses[pose]={...p,frame_ms:stats(f.slice(1).map((t,i)=>t-f[i]))};
    }
    await page.evaluate(()=>{window.riderExperimentPose=null;});
+   // Real key input: the follow camera and streaming take over from the fixed poses.
+   await page.locator('canvas').focus();
+   let from=await page.evaluate(()=>window.__x.frames.length);
+   await page.keyboard.down('w');await page.waitForFunction(()=>window.riderTelemetry?.station_distance>=30,null,{timeout:40000,polling:50});
+   await page.screenshot({path:path.join(out,id+'--driving.jpg'),quality:88});
+   await page.keyboard.up('w');
+   const drive=await page.evaluate(n=>window.__x.frames.slice(n),from);run.drive_frame_ms=stats(drive.slice(1).map((t,i)=>t-drive[i]));
    run.material=await page.evaluate(()=>window.riderRoadProjection.material);
    run.mesh=await page.evaluate(()=>window.riderTerrainMesh);
    run.stride=run.poses.fit.stride;run.fit_payload_bytes=vertices*run.stride;
-   run.textures=await page.evaluate(()=>window.__x.textures);run.generate_mipmap_calls=await page.evaluate(()=>window.__x.mipmaps);
+   run.textures=await page.evaluate(()=>window.__x.textures);run.sub_images=await page.evaluate(()=>window.__x.sub);run.generate_mipmap_calls=await page.evaluate(()=>window.__x.mipmaps);
    r.variants.push(run);
    await context.close();
   }

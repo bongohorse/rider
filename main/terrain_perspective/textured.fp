@@ -15,15 +15,14 @@ const float TILE=64.0;
 void main() {
     float id=floor(var_tile.z+0.5);
     if(id>23.5) {
-        // #536: one image is 4 m x 4 m (128 px/m). Texture V grows upward, so the image top sits at V=0 going down.
+        // #536: one image is 4 m x 4 m (128 px/m). Texture V grows upward: the image top is V=1. Surface and Band clamp V.
         float face=id-4.0*floor(id*0.25+0.01);
         vec3 rgb;
-        if(face<0.5) rgb=texture(tex1,vec2(var_tile.x,-clamp(var_tile.y,0.0,1.0)*0.25)).rgb;
+        if(face<0.5) rgb=texture(tex1,vec2(var_tile.x,1.0-clamp(var_tile.y,0.0,1.0)*0.25)).rgb;
         else {
             vec3 fill=texture(tex3,vec2(var_line.z,-var_line.w)).rgb;
             float band_v=var_line.x*var_line.y*0.25;
-            vec4 band=texture(tex2,vec2(var_tile.x,-band_v));
-            band*=step(band_v,0.98);
+            vec4 band=texture(tex2,vec2(var_tile.x,1.0-band_v));
             rgb=band.rgb+fill*(1.0-band.a);
         }
         frag_color=vec4(rgb*var_color.rgb,var_color.a);
