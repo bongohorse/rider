@@ -3,7 +3,7 @@
  "issue": 538,
  "license": "Original work generated for Rider; no third-party input.",
  "generator": "tools/art/level_materials.cjs",
- "generator_sha256": "85cf2f6ab53a3ff202595f29b465133c48bd2e2421738bd36d4161b909d14939",
+ "generator_sha256": "2120553800f94ac6e0bc40806d6d653f2ba53e423a4b4411a4cca2f1d0060ad7",
  "browser": "156.0.8078.4",
  "pixels_per_metre": 128,
  "sizes": {
@@ -37,10 +37,10 @@
    "name": "Quarry",
    "seed": 611,
    "sha256": {
-    "surface": "c37778dfd9fb702162a0fc1a1a1cd5d68e3397d0db0a796d604813b0e26374f7",
-    "band": "04d30bc4d62f3bf3f7a3d1c89b6af598d81f71dd0451ee59b81dfe994f6126f3",
-    "fill": "4e6a1b1c7d9887b98eb69b3693f1bb4fe61b5cd2adba60594d5df15814855ef3",
-    "thumb": "113c60eb717dda461dcaac62b4028fc8cdf0044c0a213270c47d57686e46fad5"
+    "surface": "3018b7ead59a43e9f197184fda7ebcea7c732595fdd12c495c6ee5085be51cdd",
+    "band": "599d4a405457a41fc7577704fee9035131888bb0c9fd1c9e6661dd9789a832ce",
+    "fill": "08960245e9ecfc099b2c9ea8e40bb95c14850f5c4cef0e5ff3eb2d5135a694ce",
+    "thumb": "e418716bd5b7afd5e18667b00060072508ec988ced21a8b659eb6278db389961"
    }
   },
   {
@@ -48,10 +48,10 @@
    "name": "Volcano",
    "seed": 723,
    "sha256": {
-    "surface": "767f80390141d15c9720b49c58b30bf56860692bfb83438d34caba03482b38c9",
-    "band": "9aaa6f7459151e4166c7d5620dc73c467fca5af6138514111a622a842fa877a7",
-    "fill": "7cbeea086fc473d4ad768355aaed5f9fb773c86631643513348ecb1d77143fe2",
-    "thumb": "2c97cd85f687c71c9db84cd7cf29f3537b1b22d8a2e63447ad2263e30272a7b8"
+    "surface": "7d13e9e63597b0a2c1c3b7fea7b7462fa43f3bb4b80ed330f6889eaf9f6ffc3f",
+    "band": "014343b2e6bedd4ea43404033c888c412cf111734a3b21777d66fd57df3a5269",
+    "fill": "83bfd8aa762a18e9b115355b7403f538a12df9aa93c4f500483ba560998457f1",
+    "thumb": "7fa5fce80a73215912508f0395be0c58d8452f5e933852a1a69736ab628a3777"
    }
   },
   {

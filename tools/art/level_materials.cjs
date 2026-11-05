@@ -10,8 +10,8 @@ const PRESETS=[
   fill:{base:[26,36,29],dark:'30,16,8',light:'190,140,90',grainDark:'20,10,5',grainLight:'215,170,120',stoneH:[24,40],stoneS:[6,18],stoneL:[38,56],stoneShadow:'15,8,4',stones:34},
   band:{top:[92,58,42],mid:[100,55,31],low:[112,52,22],shadow:'18,10,4',root:'40,26,12',roots:150,bladeH:[94,114],bladeS:54,bladeL:[20,36],blades:900,bladeLen:[7,26],fleckH:[80,104],fleckS:58,fleckL:[30,60],flecks:2600},
   surface:{back:[108,44,27],mid:[98,52,36],front:[88,62,47],blotchDark:'12,44,12',blotchLight:'190,225,110',bladeH:[82,114],bladeS:56,bladeL:[24,40],bladeGain:18,edgeL:[26,50],track:[[32,32,35],[36,36,44],[38,40,52],[34,36,42]],trackDark:'70,44,22',trackLight:'232,204,150',rut:'58,36,18',streakLight:'240,214,164',grainDark:'50,30,14',grainLight:'245,225,180',pebble:[34,10,[45,70]],pebbleShadow:'30,18,8',tufts:14}},
- {id:'quarry',name:'Quarry',seed:611,kind:'quarry',fold:'122,118,112'},
- {id:'volcano',name:'Volcano',seed:723,kind:'volcano',fold:'66,58,58'},
+ {id:'quarry',name:'Quarry',seed:611,kind:'quarry',fold:'122,118,112',foldAlpha:.72},
+ {id:'volcano',name:'Volcano',seed:723,kind:'volcano',fold:'66,58,58',foldAlpha:.66},
  {id:'city',name:'City street',seed:847,kind:'city',fold:'168,166,160'},
  {id:'inca',name:'Inca stone',seed:961,kind:'inca',fold:'205,166,76'},
  {id:'glacier',name:'Glacier',seed:1033,kind:'glacier',fold:'232,240,248'},
@@ -105,36 +105,44 @@ function paintKind(p){
  // Voronoi cells on a torus: distance to nearest, gap to second nearest, cell id.
  const cells=(cx,cy,w,h,jit,k)=>{const r=rng(200+k),pts=[];for(let j=0;j<cy;j++)for(let i=0;i<cx;i++)pts.push([((i+1+(r()-.5)*jit)*w/cx)%w,(j+.5+(r()-.5)*jit)*h/cy,r(),r()]);
   return (x,y)=>{const u=Math.floor(x/w*cx-.5),v=Math.floor(y/h*cy);let d1=1e9,d2=1e9,id=0;
-   for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){const ii=((u+a)%cx+cx)%cx,jj=((v+b)%cy+cy)%cy,q=pts[jj*cx+ii];let dx=Math.abs(q[0]-x),dy=Math.abs(q[1]-y);dx=Math.min(dx,w-dx);dy=Math.min(dy,h-dy);const d=Math.hypot(dx,dy);if(d<d1){d2=d1;d1=d;id=jj*cx+ii;}else if(d<d2)d2=d;}
+   for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){const ii=((u+a)%cx+cx)%cx,jj=((v+b)%cy+cy)%cy,q=pts[jj*cx+ii];let dx=Math.abs(q[0]-x),dy=Math.abs(q[1]-y);dx=Math.min(dx,w-dx);dy=Math.min(dy,h-dy);const d=Math.hypot(dx,dy),at=jj*cx+ii;if(at===id&&d1<1e9)continue;if(d<d1){d2=d1;d1=d;id=at;}else if(d<d2)d2=d;}
    return {d1,gap:d2-d1,id,a:pts[id][2],b:pts[id][3]};};};
  const image=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),d=x.createImageData(w,h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const o=fn(i,j),k=(j*w+i)*4;d.data[k]=clamp(o[0],0,255);d.data[k+1]=clamp(o[1],0,255);d.data[k+2]=clamp(o[2],0,255);d.data[k+3]=o[3]===undefined?255:o[3];}x.putImageData(d,0,0);return c;};
  const wave=(k,amp)=>{const r=rng(300+k),w=[[1,r()*6.28,amp],[2,r()*6.28,amp*.7],[3,r()*6.28,amp*.5],[5,r()*6.28,amp*.35],[9,r()*6.28,amp*.2]];return x=>w.reduce((v,[n,ph,a])=>v+a*Math.sin(x/W*6.2831853*n+ph),0);};
+ // Baked relief: shade from a height field, light from the upper left. wrapY for textures that repeat vertically.
+ const relief=(w,h,wrapY,fn,k=.075)=>{const H=new Float32Array(w*h);for(let j=0;j<h;j++)for(let i=0;i<w;i++)H[j*w+i]=fn(i,j);
+  return (x,y)=>{const l=H[y*w+(x+w-1)%w],r=H[y*w+(x+1)%w],up=wrapY?(y+h-1)%h:Math.max(0,y-1),dn=wrapY?(y+1)%h:Math.min(h-1,y+1),t=H[up*w+x],b=H[dn*w+x];return clamp(1+k*2*((r-l)*.6+(b-t)*.8)/2,.42,1.5);};};
  const FAR=4;
- const finishSurface=c=>{const s=c.getContext('2d');const g=s.createLinearGradient(0,112,0,HS);g.addColorStop(0,`rgba(${p.fold},0)`);g.addColorStop(.62,`rgba(${p.fold},.92)`);g.addColorStop(1,`rgba(${p.fold},.92)`);s.fillStyle=g;s.fillRect(0,112,W,16);return c;};
- const finishBand=c=>{const b=c.getContext('2d');b.globalCompositeOperation='source-atop';const g=b.createLinearGradient(0,0,0,14);g.addColorStop(0,`rgba(${p.fold},.92)`);g.addColorStop(.43,`rgba(${p.fold},.92)`);g.addColorStop(1,`rgba(${p.fold},0)`);b.fillStyle=g;b.fillRect(0,0,W,14);b.globalCompositeOperation='source-over';return c;};
+ const finishSurface=c=>{const s=c.getContext('2d');const g=s.createLinearGradient(0,112,0,HS);g.addColorStop(0,`rgba(${p.fold},0)`);g.addColorStop(.62,`rgba(${p.fold},${p.foldAlpha||.92})`);g.addColorStop(1,`rgba(${p.fold},${p.foldAlpha||.92})`);s.fillStyle=g;s.fillRect(0,112,W,16);return c;};
+ const finishBand=c=>{const b=c.getContext('2d');b.globalCompositeOperation='source-atop';const g=b.createLinearGradient(0,0,0,14);g.addColorStop(0,`rgba(${p.fold},${p.foldAlpha||.92})`);g.addColorStop(.43,`rgba(${p.fold},${p.foldAlpha||.92})`);g.addColorStop(1,`rgba(${p.fold},0)`);b.fillStyle=g;b.fillRect(0,0,W,14);b.globalCompositeOperation='source-over';return c;};
  // Band helper: art above edge(x), then a soft contact shadow, then transparent.
  const band=(edge,colour,shadow=18)=>image(W,HS,(x,y)=>{const e=edge(x);if(y<e)return colour(x,y,e);const t=(y-e)/shadow;if(t>=1)return [0,0,0,0];return [8,6,6,Math.round(120*(1-t)*(1-t))];});
  const K={
   quarry(){
-   const crack=cells(10,8,W,W,.9,1),n=fbm(8,8,W,W,1),warp=fbm(4,4,W,W,4),tone=[[132,128,120],[108,106,102],[150,142,128],[92,92,92],[122,118,112],[140,136,130],[100,98,94],[116,110,100]];
-   const fill=image(W,W,(x,y)=>{const yy=y+(warp(x,y)-.5)*42,l=Math.floor(((yy%W)+W)%W/64),fr=(((yy%64)+64)%64)/64,c=crack(x,y);let col=tone[l%8];
-    col=scale(col,.72+n(x,y)*.5);col=scale(col,mix(.62,1,smooth(0,.06,fr))*mix(1,.72,smooth(.9,1,fr)));col=scale(col,mix(.45,1,smooth(0,3,c.gap)));return col;});
-      const cob=cells(18,4,W,HS,.75,2),sn=fbm(16,4,W,HS,7),ef=wave(1,4);
-   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2))return [0,0,0,0];const c=cob(x,y),wear=1-smooth(30,52,Math.abs(y-66));const stone=mixc([96,94,92],[140,136,128],c.a);let col=mixc(stone,[168,162,150],wear*.45);col=scale(col,.8+sn(x,y)*.45);col=scale(col,mix(.32,1,smooth(0,3.2,c.gap)));return col;});
-   const e0=wave(3,10),en=fbm(16,3,W,HS,9);
-   const bd=band(x=>{const v=46+e0(x)+Math.round(en(x,0)*4)*7;return Math.max(16,v);},(x,y,e)=>{const c=cob(x,y*.9+9);let col=mixc([104,100,96],[138,132,124],c.a);col=scale(col,mix(.42,1,smooth(0,3,c.gap))*mix(1.05,.62,smooth(0,e,y)));return col;});
+   const stone=relief(W,W,true,(()=>{const c=cells(8,7,W,W,.72,1),n=fbm(24,24,W,W,1),big=fbm(5,5,W,W,4),fine=fbm(96,96,W,W,9);return (x,y)=>{const a=c(x,y);return smooth(0,16,a.gap)*(18+a.a*16)+big(x,y)*10+n(x,y)*7+fine(x,y)*3;};})());
+   const c=cells(8,7,W,W,.72,1),tint=fbm(6,6,W,W,6),n2=fbm(48,48,W,W,8);
+   const fill=image(W,W,(x,y)=>{const a=c(x,y),base=mixc(mixc([92,88,82],[136,126,110],a.a),[118,108,92],a.b*.45),moss=smooth(.6,.72,tint(x,y))*(1-smooth(0,10,a.gap));let col=mixc(base,[74,86,52],moss*.6);col=scale(col,.84+n2(x,y)*.3);col=scale(col,stone(x,y)*mix(.3,1,smooth(0,4,a.gap)));return col;});
+   const cob=cells(26,5,W,HS,.62,2),rn=fbm(8,3,W,HS,11),gr=fbm(120,30,W,HS,13);
+   const sh=relief(W,HS,false,(x,y)=>{const a=cob(x,y),wear=1-smooth(28,50,Math.abs(y-66));return smooth(0,7,a.gap)*(7-wear*3.5)+gr(x,y)*1.6;});
+   const ef=wave(1,4);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,ef(x)+2))return [0,0,0,0];const a=cob(x,y),wear=1-smooth(28,50,Math.abs(y-66));let col=mixc(mixc([98,96,92],[142,136,124],a.a),[164,156,140],wear*.5);col=mixc(col,[84,100,60],smooth(.52,.7,rn(x,y))*(1-wear)*(1-smooth(0,6,a.gap))*.7);col=scale(col,sh(x,y)*mix(.28,1,smooth(0,2.6,a.gap)));return col;});
+   const e0=wave(3,9),blocks=fbm(14,2,W,HS,15);const edge=x=>Math.max(20,50+e0(x)+(blocks(x,8)-.5)*26);
+   const bh=relief(W,HS,false,(()=>{const q=cells(14,3,W,HS,.8,3),nn=fbm(48,12,W,HS,16);return (x,y)=>smooth(0,10,q(x,y).gap)*12+nn(x,y)*7;})()),q=cells(14,3,W,HS,.8,3);
+   const bd=band(edge,(x,y,e)=>{const a=q(x,y);let col=mixc([98,94,88],[140,132,118],a.a);col=mixc(col,[78,96,50],(1-smooth(0,16,y))*.7);col=scale(col,bh(x,y)*mix(.34,1,smooth(0,3,a.gap))*mix(1.05,.72,smooth(0,e,y)));return col;},22);
    return {fill,surface,band:bd};
   },
   volcano(){
-   const c=cells(9,9,W,W,.95,3),fine=cells(26,26,W,W,.9,4),n=fbm(6,6,W,W,11),glow=fbm(5,5,W,W,14);
-   const hot=t=>mixc(mixc([120,24,6],[244,92,14],smooth(0,.55,t)),[255,214,104],smooth(.55,1,t));
-   const fill=image(W,W,(x,y)=>{const a=c(x,y),b=fine(x,y),base=scale([34,30,34],.75+n(x,y)*.7+a.a*.2);const vein=(1-smooth(0,6,a.gap))*smooth(.34,.62,glow(x,y));let col=scale(base,mix(.55,1,smooth(0,2.2,b.gap)));return mixc(col,hot(vein),clamp(vein*1.25));});
-   const s=cells(14,4,W,HS,.9,5),sf=fbm(12,4,W,HS,17),ash=wave(4,6),fr=wave(5,3);
-   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,fr(x)+1.5))return [0,0,0,0];const a=s(x,y),mid=1-smooth(26,44,Math.abs(y-66+ash(x)*.4));const crust=scale(mixc([92,86,84],[28,24,28],mid),.75+sf(x,y)*.55);let col=scale(crust,mix(.55,1,smooth(0,2.4,a.gap)));const v=(1-smooth(0,2.8,a.gap))*mid*smooth(.32,.58,sf(x,y));return mixc(col,hot(v),clamp(v*1.2));});
-   const r=rng(6),dr=[];for(let i=0;i<26;i++)dr.push([r()*W,3+r()*9,14+r()*50]);
-   const e=x=>{let v=26+wave(6,5)(x);for(const q of dr){let dx=Math.abs(x-q[0]);dx=Math.min(dx,W-dx);v=Math.max(v,26+q[2]*Math.exp(-(dx*dx)/(q[1]*q[1])));}return v;};
-   const cache=new Float32Array(W);for(let i=0;i<W;i++)cache[i]=e(i);
-   const bd=band(x=>cache[x],(x,y,ee)=>{const t=smooth(ee-20,ee,y),a=s(x,y);const top=scale([58,52,52],.75+sf(x,y)*.6);let col=scale(top,mix(.6,1,smooth(0,2.2,a.gap)));return mixc(col,hot(t),clamp(t*1.1));},14);
+   const hot=t=>mixc(mixc([96,14,4],[232,70,8],smooth(0,.45,t)),mixc([255,150,30],[255,238,150],smooth(.72,1,t)),smooth(.42,.74,t));
+   const c=cells(7,7,W,W,.95,3),glow=fbm(4,4,W,W,14),fine=fbm(64,64,W,W,12),mid=fbm(14,14,W,W,11),ff=cells(30,30,W,W,.95,4);
+   const rh=relief(W,W,true,(x,y)=>{const a=c(x,y);return smooth(0,26,a.gap)*22+mid(x,y)*12+fine(x,y)*5+smooth(0,3,ff(x,y).gap)*1.6;});
+   const fill=image(W,W,(x,y)=>{const a=c(x,y),g=smooth(.3,.62,glow(x,y)),core=(1-smooth(1,7.5,a.gap))*g,halo=Math.exp(-a.gap/11)*g;let col=mixc([26,23,27],[60,50,52],a.a*.6+mid(x,y)*.4);col=scale(col,rh(x,y));col=mixc(col,[150,34,6],clamp(halo*.55));return mixc(col,hot(core),clamp(core*1.5));});
+   const s=cells(13,3,W,HS,.92,5),sf=fbm(12,3,W,HS,17),sg=fbm(80,20,W,HS,19),fr=wave(5,3);
+   const sh=relief(W,HS,false,(x,y)=>smooth(0,9,s(x,y).gap)*10+sg(x,y)*5);
+   const surface=image(W,HS,(x,y)=>{if(y<FAR+Math.max(0,fr(x)+1.5))return [0,0,0,0];const a=s(x,y),mid2=1-smooth(24,42,Math.abs(y-66)),g=smooth(.28,.54,sf(x,y))*mix(.3,1,mid2),core=(1-smooth(.6,4.2,a.gap))*g,halo=Math.exp(-a.gap/6)*g;let col=mixc([74,66,64],[30,26,30],mid2);col=scale(col,sh(x,y)*(.86+sg(x,y)*.28));col=mixc(col,[150,34,6],clamp(halo*.55));return mixc(col,hot(core),clamp(core*1.6));});
+   const r=rng(6),dr=[];for(let i=0;i<22;i++)dr.push([r()*W,5+r()*9,18+r()*52]);
+   const base=wave(6,5),cache=new Float32Array(W);for(let i=0;i<W;i++){let v=26+base(i);for(const q of dr){let dx=Math.abs(i-q[0]);dx=Math.min(dx,W-dx);v=Math.max(v,26+q[2]*Math.exp(-(dx*dx)/(q[1]*q[1])));}cache[i]=v;}
+   const bh=relief(W,HS,false,(x,y)=>smooth(0,9,s(x,y).gap)*8+sg(x,y)*4);
+   const bd=band(x=>cache[x],(x,y,e)=>{const depth=y/e,t=smooth(.42,1,depth)*smooth(24,44,e)+smooth(e-9,e,y)*.8,a=s(x,y);let col=scale([54,48,48],bh(x,y)*mix(.55,1,smooth(0,2.2,a.gap)));return mixc(col,hot(clamp(t)),clamp(t*1.25));},20);
    return {fill,surface,band:bd};
   },
   city(){
