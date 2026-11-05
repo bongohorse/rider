@@ -25,7 +25,10 @@ void main() {
             vec4 band=texture(tex2,vec2(var_tile.x,1.0-band_v));
             rgb=band.rgb+fill*(1.0-band.a);
         }
-        frag_color=vec4(rgb*var_color.rgb,var_color.a);
+        vec3 shade=var_color.rgb;
+        // protolit: the slope light fades within a few metres below the line, the body darkens further down.
+        if(id>31.5&&face>0.5&&face<2.5) shade=mix(vec3(1.0),shade,exp(-var_line.x/2.5))*mix(0.7,1.0,exp(-var_line.x/5.0));
+        frag_color=vec4(rgb*shade,var_color.a);
         return;
     }
     float row=floor(id*0.25+0.01);

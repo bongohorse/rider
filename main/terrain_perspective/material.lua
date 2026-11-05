@@ -20,8 +20,8 @@ local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 -- proto: Fill follows the driving line (arc U, drop V). protow: Fill stays in world coordinates (x, y); Band still
 -- follows the line. Slots 24..31; the Kenney slots stay unchanged.
 local PROTO=6
-INDEX.proto,INDEX.protow=PROTO,PROTO+1
-local NAMES={};for i,f in ipairs(M.FAMILIES) do NAMES[i]=f end;NAMES[PROTO+1],NAMES[PROTO+2]='proto','protow'
+INDEX.proto,INDEX.protow,INDEX.protolit=PROTO,PROTO+1,PROTO+2 -- protolit: protow plus slope light
+local NAMES={};for i,f in ipairs(M.FAMILIES) do NAMES[i]=f end;NAMES[PROTO+1],NAMES[PROTO+2],NAMES[PROTO+3]='proto','protow','protolit'
 M.PROTO_EDGE=.18
 local PROTO_SHADE={[0]=1,[1]=1,[2]=1,[3]=.72}
 
@@ -125,12 +125,28 @@ function M.apply(c,prep,first,last,spec,styles)
             if upper then c.look_data[(v-1)*3+1]=top elseif bottom_drop then c.look_data[(v-1)*3+1]=bottom_drop end
         end
     end
+    -- #536 experiment: soft light from the upper left. Rising faces brighten, falling faces darken; flat stays neutral.
+    local function slope_gain(i)
+        local v=prep.normals[i];local x,y=v[1],v[2]
+        if y<0 then x,y=-x,-y end
+        return math.max(.62,math.min(1.22,1+.9*(-.55*x+.83*y-.83)))
+    end
+    local function light(first_vertex,index,surface)
+        local order={index,index+1,index+1,index,index+1,index}
+        for j=1,6 do
+            local v=first_vertex+j-1;local k=(v-1)*4
+            local gain=slope_gain(order[j])
+            if surface then gain=gain*(uv[(v-1)*2+2]>.5 and .82 or 1.06) end
+            for q=1,3 do base[k+q]=base[k+q]*gain;color[k+q]=color[k+q]*gain end
+        end
+    end
     for i=first,last-1 do
         local n,f=(i-first)*18,family(i)
         local proto=f>=PROTO
         for j=1,6 do paint(n+j,f,M.SIDE,i);paint(n+6+j,f,M.RIM,i);paint(n+12+j,f,M.SURFACE,i) end
         bound(n+1,proto and 4 or M.PERIOD[M.SIDE]);bound(n+7,proto and 4 or M.PERIOD[M.RIM]);bound(n+13,proto and 4 or M.PERIOD[M.SURFACE])
         if proto then measured(n+1,i,M.PROTO_EDGE);measured(n+7,i,0,M.PROTO_EDGE) end
+        if f==PROTO+2 then light(n+1,i);light(n+7,i);light(n+13,i,true) end
     end
     -- Caps: quad(e,{e,depth},{bottom,depth},bottom) emits a,b,c,a,c,d; U runs front (0) to back (1).
     local n,depth_u=(last-first)*18,{0,1,1,0,1,0}
