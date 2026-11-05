@@ -21,7 +21,8 @@ local dense=require "main.game.dense"
 -- in mechanism_links (editor_mechanisms); a version-12 e.mechanisms block opens migrated, same IDs and
 -- settings. The compiled O1 mechanisms (station schema 5) are unchanged.
 local mechanisms=require "main.editor.editor_mechanisms"
-local M={EDITOR_VERSION=13,COMPILER_VERSION=13}
+-- New documents stay at 13, so older readers keep opening them. A level material raises its document to 14.
+local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14}
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -198,6 +199,8 @@ local function from_station(d,id,name)
     end
     -- The station's validated mechanisms become source objects after the other objects took their IDs.
     mechanisms.migrate(e)
+    -- Compiled geometry opened as lines keeps the level's material, for example after a source conflict.
+    if d.material then M.set_material(e,d.material) end
     return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
@@ -241,7 +244,7 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms","material"}
 -- An O1 block without any crate, plate, gate or link compiles to no block (editor 13): compare them as equal.
 local function mechanism_block(m)
     if type(m)=='table' and type(m.crates)=='table' and next(m.crates)==nil and type(m.plates)=='table' and next(m.plates)==nil
@@ -249,7 +252,7 @@ local function mechanism_block(m)
     return m
 end
 local function compiled(d)
-    local t={mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={material=d.material,mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -298,7 +301,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -327,6 +330,10 @@ function M.validate(doc)
     if e.medal_times~=nil and e.editor_version<8 then return nil,'Medal targets require editor/compiler version 8',true end
     local medal_ok,medal_err,medal_unknown=require('main.game.medals').validate(e.medal_times)
     if not medal_ok then return nil,medal_err,medal_unknown end
+    if e.material~=nil and e.editor_version<M.MATERIAL_EDITOR_VERSION then return nil,'A level material needs editor/compiler 14',true end
+    local material_ok,material_err,material_unknown=require('main.terrain_perspective.material').validate(e.material)
+    if not material_ok then return nil,material_err,material_unknown end
+    if e.material~=nil and e.road_profile~=require('main.terrain_perspective.look').ID then return nil,'A level material needs the authored Terrain Look' end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
     local ids,total,pickups,coin_count={},0,{},0
@@ -420,7 +427,8 @@ function M.validate(doc)
         e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
     end
     mechanisms.migrate(e)
-    e.editor_version,e.compiler_version=M.EDITOR_VERSION,M.COMPILER_VERSION
+    local current=e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
+    e.editor_version,e.compiler_version=current,current
     return doc
 end
 
@@ -736,6 +744,7 @@ function M.compile(doc,test,errors)
     if d.coins then d.schema=d.coins.version==2 and 3 or 2 end
     d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version==3 then d.schema=4 end
     d.mechanisms=mechanisms.runtime(e);if d.mechanisms then d.schema=5 end
+    d.material=copy(e.material);if d.material then d.schema=6 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)
@@ -765,6 +774,22 @@ function M.test_start(doc,p,mode)
     local blocked=M.blocked(e,pos)
     if blocked then return nil,"the vehicle would overlap "..M.label(blocked):lower() end
     return pos
+end
+-- First material: raises the document, enables the authored profile and keeps its section overrides. The level-wide
+-- values come from the contract's defaults once parameter set v2 exists (#573). nil removes the material.
+function M.set_material(e,m)
+    local material=require('main.terrain_perspective.material')
+    local ok,err=material.validate(m)
+    if not ok then return nil,err end
+    if m==nil then e.material=nil;return true end
+    local look=require('main.terrain_perspective.look')
+    if e.road_profile~=look.ID then
+        e.road_look={version=1,params=require('main.terrain_perspective.projection').validate(require('main.terrain_perspective.projection').DEFAULT)}
+        e.road_profile=look.ID
+    end
+    e.editor_version,e.compiler_version=M.MATERIAL_EDITOR_VERSION,M.MATERIAL_EDITOR_VERSION
+    e.material=copy(m)
+    return true
 end
 -- Snapshot undo (R17): bounded copies of authoring data only; one entry per completed action.
 -- Each entry carries the instance token of the document it belongs to (not its level id: two template

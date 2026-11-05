@@ -6,7 +6,7 @@ function M.measure(d)
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled(d)
     -- #392: the textured route adds one float32 per uploaded vertex (52 B) and one retained Lua number
     -- (16 B: a Lua 5.1 array slot on HTML5; 8 B under LuaJIT).
-    local textured=projected and require('main.terrain_perspective.material').spec()~=nil
+    local textured=projected and require('main.terrain_perspective.material').spec_for(d)~=nil
     local stride,working=textured and 52 or projected and 48 or 36,textured and 576 or projected and 560 or 512
     local r={stride=stride,sections=0,vertices=0,segments=0,physics_vertices=0,physics_chains=0,hull_vertices=0,
         sprites=0,labels=#(d.labels or {}),largest_chain=0,largest_segments=0}
@@ -38,6 +38,7 @@ function M.measure(d)
     -- Fit can activate everything; caching is a subset, never an extra two beyond all sections.
     r.visible_max=r.sections;r.allocated_max=r.sections;r.cached_max=math.min(2,r.sections)
     r.mesh_peak=2*r.sections -- retiring old + incoming, before end-of-frame deletion
+    r.mesh_peak=r.mesh_peak+require('main.terrain_perspective.material').held_presets(d) -- hidden override chunks
     r.instances=r.sections+r.sprites+r.labels+M.RESERVE
     -- Conservative CPU working envelope: retained editor arrays (including base colors),
     -- staging/replacement arrays, descriptors and two engine-owned buffer copies.
@@ -67,7 +68,7 @@ end
 function M.preview(sections,vertices,sprites,labels,document)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled({editor=document})
-    return sections*2<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride() or 36)<=M.PAYLOAD and
+    return sections*2<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride_for({editor=document}) or 36)<=M.PAYLOAD and
         2*sprites+12<=M.SPRITES and 2*labels+4<=M.LABELS and
         2*(sections+sprites+labels)+16<=M.INSTANCES
 end

@@ -35,7 +35,7 @@ Everything here is visual. It never reads or writes collision, physics, replay o
 
 Claudio chose these values on 2026-11-05. No level has a material before this work, so the rule is:
 
-- The first material Apply replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. The panel previews this before Apply, and Apply is one Undo step. Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores this and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
+- The first material Apply replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. The panel previews this before Apply, and Apply is one Undo step. Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores the material and enables the profile, [#573](https://github.com/bongohorse/rider/issues/573) sets these values, and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
 - A level without a material keeps its values and parameter set v1.
 - Parameter set v2 is valid only on a level with a material; without one it is refused.
 
@@ -118,9 +118,10 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 
 - A saved reference is a stable preset ID or a local content hash, never a path. An unknown preset ID is refused. A local hash whose data is missing falls back to the level's preset, with a warning.
 - A layer or surface that references a local hash also names the preset it falls back to.
-- The format is editor and compiler version 13 before these tasks. A task that adds a stored block or value raises the version in that task; `road_look.version` 2 carries parameter set v2.
+- A task that adds a stored block or value raises the version in that task; `road_look.params.version` 2 carries parameter set v2.
+- The level material is `editor.material`: `{"version":1,"preset":"meadow","surface":"quarry"}`, where `surface`, `band` and `fill` are optional overrides. It needs editor and compiler version 14 and the authored profile, and compiles to `material` in station schema 6. New documents stay at version 13 until they get a material, so older readers keep opening them.
 - Unknown versions and values are refused and the original file stays unchanged, as in [road-look.md](road-look.md#production-compatibility). Older levels stay byte-identical until an explicit Apply.
-- `terrain_material` in the URL is a temporary pilot, and [#542](https://github.com/bongohorse/rider/issues/542) replaces it.
+- `terrain_material` in the URL works only in debug builds, as a test override.
 
 ## Assets
 
