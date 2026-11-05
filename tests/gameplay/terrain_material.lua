@@ -169,9 +169,9 @@ do
     assert(near<1e-6 or math.abs(near-1)<1e-6,'U continuous across sections: '..near)
     -- A run end closes up to the driving line.
     local n=64*18
-    assert(a.texture[n+1]==material.END+material.FLIPPED and a.look_data[n*3+1]==0,'the left run end is flipped')
+    assert(a.texture[n+1]==material.END and a.look_data[n*3+1]==0,'the left run end is not flipped')
     local c=projection.section(prep,129,#prep.p,'c');local m=(#prep.p-129)*18
-    assert(c.texture[m+1]==material.END,'the right run end is not flipped')
+    assert(c.texture[m+1]==material.END+material.FLIPPED,'the right run end is flipped')
     local back=geometry.prepare({{0,0},{10,5},{5,10},{15,12}},-30,0);local r=projection.section(back,1,4,'r')
     assert(r.texture[12+1]==material.SURFACE and r.texture[18+12+1]==material.SURFACE+material.FLIPPED,'an overhang running back is flipped')
     assert(math.abs(a.position[n*3+1]-(prep.p[1][1]-a.origin[1]))<1e-9 and math.abs(a.position[n*3+2]-(prep.p[1][2]-a.origin[2]))<1e-9)

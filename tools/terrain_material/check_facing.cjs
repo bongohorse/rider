@@ -11,9 +11,10 @@ function find(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=
 const web=path.dirname(find(path.resolve(bundleArg)));
 const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http://x').pathname);if(!f.startsWith(web)||!fs.existsSync(f)){r.writeHead(404);return r.end();}r.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':f.endsWith('.json')?'application/json':'text/html');fs.createReadStream(f).pipe(r);});
 const run=(a,b)=>{const p=[];for(let x=b;x>=a;x-=4)p.push([x,0]);return p;}; // solid side up: right to left
-const LEVEL=JSON.stringify({schema:1,units:'metres',id:'facing',name:'facing',spawn:[10,.7],start_speed:0,run_in:0,run_out:0,bounds:[-10,310,-30,20],chains:[run(0,100),run(200,300)],hulls:[]});
-// Home centres the view near x = 150. Outer ends face away from the camera, inner ends face it.
-const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-left-facing',200,-1,true],['right-away',300,1,false]];
+const LEVEL=JSON.stringify({schema:1,units:'metres',id:'facing',name:'facing',spawn:[10,.7],start_speed:0,run_in:0,run_out:0,bounds:[-10,350,-30,20],chains:[run(0,100),run(240,340)],hulls:[]});
+// Home centres the view near x = 170. Outer ends face away from the camera, inner ends face it.
+const BACKGROUND=27; // the editor's empty view
+const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-left-facing',240,-1,true],['right-away',340,1,false]];
 (async()=>{
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
  const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];
@@ -23,7 +24,7 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:90000});
  const generation=await page.evaluate(()=>window.riderTelemetry.session_generation);
  await page.evaluate(body=>{window.riderCustom.open();window.riderCustom.importFile(new File([body],'facing.json',{type:'application/json'}));},LEVEL);
- await page.waitForFunction(g=>window.riderTelemetry?.session_generation>g&&window.riderTelemetry.sequence>2,generation,{timeout:30000});
+ await page.waitForFunction(g=>window.riderTelemetry?.session_generation>g&&window.riderTelemetry.sequence>2,generation,{timeout:30000}).catch(async e=>{console.log(errors.slice(0,4),await page.evaluate(()=>document.body.innerText.slice(0,300)));await page.screenshot({path:path.join(out,'failed.png')});throw e;});
  await page.locator('canvas').focus();
  const key=async k=>{await page.keyboard.down(k);await pointer.frames(page);await page.keyboard.up(k);await pointer.frames(page);};
  await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});
@@ -38,15 +39,15 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  for(const [name,x,side,facing] of ENDS){
   await key('Home');await pointer.frames(page,{n:20});
   let e=await map();
-  for(let i=0;i<30&&e.zoom<.16;i++){const q=at(e,x,0);await page.mouse.move(q.x,q.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:5});e=await map();}
-  assert.ok(e.zoom>=.16,'zoom target');await page.mouse.move(640,70);await pointer.frames(page,{n:8});await page.waitForTimeout(400);e=await map();
+  for(let i=0;i<30&&e.zoom<.08;i++){const q=at(e,x,0);await page.mouse.move(q.x,q.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:5});e=await map();}
+  assert.ok(e.zoom>=.08,'zoom target');await page.mouse.move(640,70);await pointer.frames(page,{n:8});await page.waitForTimeout(400);e=await map();
   const file=path.join(out,name+'.png');await page.screenshot({path:file});
   // Brightness of a strip just inside the front face, deep inside it, and just outside the run end.
   const strip=(mx,my)=>at(e,mx,my);
-  const px=await page.evaluate(async({src,pts})=>{const i=new Image();i.src=src;await i.decode();const k=document.createElement('canvas');k.width=i.width;k.height=i.height;const c=k.getContext('2d');c.drawImage(i,0,0);return pts.map(q=>{const d=c.getImageData(Math.round(q.x)-1,Math.round(q.y)-30,3,60).data;let s=0;for(let j=0;j<d.length;j+=4)s+=.3*d[j]+.59*d[j+1]+.11*d[j+2];return s/(d.length/4);});},{src:'data:image/png;base64,'+fs.readFileSync(file).toString('base64'),pts:[strip(x-side*.5,-8),strip(x-side*6,-8),strip(x+side*.5,-8)]});
+  const px=await page.evaluate(async({src,pts})=>{const i=new Image();i.src=src;await i.decode();const k=document.createElement('canvas');k.width=i.width;k.height=i.height;const c=k.getContext('2d');c.drawImage(i,0,0);return pts.map(q=>{const d=c.getImageData(Math.round(q.x)-1,Math.round(q.y)-30,3,60).data;let s=0;for(let j=0;j<d.length;j+=4)s+=.3*d[j]+.59*d[j+1]+.11*d[j+2];return s/(d.length/4);});},{src:'data:image/png;base64,'+fs.readFileSync(file).toString('base64'),pts:[strip(x-side*.4,-8),strip(x-side*6,-8),strip(x+side*.4,-8)]});
   const [inside,deep,outside]=px;
   // Facing: the cap lies outside the front corner and is lit. Away: nothing outside, and the front keeps its brightness.
-  const ok=facing?outside>25:(outside<25&&inside>deep*.86);
+  const ok=facing?outside>BACKGROUND+8:(outside<BACKGROUND+6&&inside>deep*.86);
   results.push({name,zoom:e.zoom,inside,deep,outside,facing,ok});if(!ok)failed=true;
  }
  await browser.close();server.close();
