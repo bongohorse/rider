@@ -53,7 +53,7 @@ function M.upload(entry,c,path)
     if c.perspective then entry.look_object=nil end
     publish()
 end
--- An edit elsewhere on a run moves its mean height: retained sections follow without a rebuild.
+-- An edit elsewhere can change a run's draw order: retained sections follow without a rebuild.
 function M.layer(entry,z)
     local c=entry.geometry
     if not (entry.object and c) or c.layer_z==z then return end

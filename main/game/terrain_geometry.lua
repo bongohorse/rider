@@ -81,14 +81,18 @@ function M.assign_layers(preps)
     for i=1,n-1 do for j=i+1,n do
         local from,to=math.max(lows[i],lows[j]),math.min(highs[i],highs[j])
         if to>from then
-            local difference=0
+            local above,below=false,false
             for s=0,M.LAYER_SAMPLES do
                 local x=from+(to-from)*s/M.LAYER_SAMPLES
-                difference=difference+height_at(preps[i],x)-height_at(preps[j],x)
+                local difference=height_at(preps[i],x)-height_at(preps[j],x)
+                above=above or difference>1e-6;below=below or difference<-1e-6
             end
-            local i_higher=difference>1e-6 or (math.abs(difference)<=1e-6 and identity_before(preps[i],preps[j],i,j))
-            local back,front=i_higher and i or j,i_higher and j or i
-            behind[back][#behind[back]+1]=front;blockers[front]=blockers[front]+1
+            -- Runs that truly cross add no constraint: the mean decides them below, and strict pairs cannot be overruled.
+            if not (above and below) then
+                local i_higher=above or (not below and identity_before(preps[i],preps[j],i,j))
+                local back,front=i_higher and i or j,i_higher and j or i
+                behind[back][#behind[back]+1]=front;blockers[front]=blockers[front]+1
+            end
         end
     end end
     -- Back to front. Among free runs, or to break a cycle of crossing runs, the highest mean goes first.

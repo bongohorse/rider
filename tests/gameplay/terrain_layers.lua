@@ -27,7 +27,17 @@ local e1=order({line(0,5,50,5),line(30,5,90,5)})
 local e2=order({line(30,5,90,5),line(0,5,50,5)})
 assert(e1[1].layer_z~=e1[2].layer_z,'no equal z for overlapping runs')
 assert(e1[1].layer_z==e2[2].layer_z and e1[2].layer_z==e2[1].layer_z,'tie independent of source order')
--- Crossing cycle: finishes with distinct values.
+-- A crossing pair must not overrule a strict pair: B is lower than the short run C throughout their overlap.
+local A={{0,-10},{40,10},{60,10},{100,-10}}
+local B={{0,10},{40,0},{60,0},{100,10}}
+local C={{40,5},{60,5}}
+for _,chains in ipairs({{A,B,C},{C,A,B},{B,C,A}}) do
+    local out,index={},{}
+    for i,run in ipairs(order(chains)) do out[i]=run;index[chains[i]]=i end
+    assert(out[index[B]].layer_z>out[index[C]].layer_z,'a strict pair holds next to a crossing pair')
+    assert(out[index[C]].layer_z>out[index[A]].layer_z,'C is lower than A throughout')
+end
+-- Crossing runs: finishes with distinct values.
 local f=order({line(0,0,100,10),line(0,10,100,0),line(0,5,100,5)})
 assert(f[1].layer_z~=f[2].layer_z and f[2].layer_z~=f[3].layer_z and f[1].layer_z~=f[3].layer_z,'crossing runs stay distinct')
 -- One z for all sections of a run; reversed input; bounded.

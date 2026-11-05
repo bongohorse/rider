@@ -10,18 +10,19 @@ const out=path.resolve(outArg);fs.mkdirSync(out,{recursive:true});
 function find(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory()){const v=find(p);if(v)return v;}else if(e.name==='index.html')return p;}}
 const web=path.dirname(find(path.resolve(bundleArg)));
 const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http://x').pathname);if(!f.startsWith(web)||!fs.existsSync(f)){r.writeHead(404);return r.end();}r.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':f.endsWith('.json')?'application/json':'text/html');fs.createReadStream(f).pipe(r);});
-const dense=(x0,y0,x1,y1,step=.5)=>{const p=[];for(let x=x0;x<=x1;x+=step)p.push([x,y0+(y1-y0)*(x-x0)/(x1-x0)]);return p;};
+const dense=(x0,y0,x1,y1,step=.5)=>{const p=[];for(let x=x0;x<=x1;x+=step)p.push([x,y0+(y1-y0)*(x-x0)/(x1-x0)]);return p.reverse();}; // solid side up: runs go right to left
 const LOW=dense(0,0,60,0),HIGH=dense(10,2.5,50,2.5),CLIMB=dense(0,0,120,24),BRIDGE=dense(10,6.5,30,6.5);
-const level=(id,chains,y)=>JSON.stringify({schema:1,units:'metres',id,name:id,spawn:[20,y+1.2],start_speed:0,run_in:0,run_out:0,bounds:[-10,130,-30,40],chains,hulls:[]});
+const level=(id,chains,y)=>JSON.stringify({schema:1,units:'metres',id,name:id,spawn:[20,y+.7],start_speed:0,run_in:0,run_out:0,bounds:[-10,130,-30,40],chains,hulls:[]});
 // target: the lower run's height at x = 20 m (more than one 64-interval section per run).
-const CASES=[['low-first',[LOW,HIGH],0,2.5],['high-first',[HIGH,LOW],0,2.5],['bridge',[CLIMB,BRIDGE],4,2.5]];
+// The Play check needs flat ground: on the climb the vehicle rolls away.
+const CASES=[['low-first',[LOW,HIGH],0,true],['high-first',[HIGH,LOW],0,true],['bridge',[CLIMB,BRIDGE],4,false]];
 const rows=(page,src,x)=>page.evaluate(async({src,x})=>{const i=new Image();i.src=src;await i.decode();const k=document.createElement('canvas');k.width=i.width;k.height=i.height;const c=k.getContext('2d');c.drawImage(i,0,0);const d=c.getImageData(x,0,1,i.height).data,out=[];for(let y=0;y<i.height;y++)out.push(.3*d[y*4]+.59*d[y*4+1]+.11*d[y*4+2]);return out;},{src,x});
 // Bright clusters in one screen column: each visible Surface and edge is one.
-const clusters=v=>{let n=0,last=-99;v.forEach((b,y)=>{if(b>135){if(y-last>10)n++;last=y;}});return n;};
+const clusters=v=>{let n=0,last=-99;v.forEach((b,y)=>{if(y>270&&y<620&&b>135){if(y-last>10)n++;last=y;}});return n;}; // below the debug HUD, above the bottom bar
 (async()=>{
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
  const browser=await chromium.launch(),results=[];let failed=false;
- for(const [id,chains,lowY] of CASES){
+ for(const [id,chains,lowY,checkPlay] of CASES){
   const context=await browser.newContext({viewport:{width:1280,height:720}}),page=await context.newPage();
   await configure(page,'order-'+id,'le6');
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
@@ -29,11 +30,14 @@ const clusters=v=>{let n=0,last=-99;v.forEach((b,y)=>{if(b>135){if(y-last>10)n++
   const generation=await page.evaluate(()=>window.riderTelemetry.session_generation);
   await page.evaluate(([body,name])=>{window.riderCustom.open();window.riderCustom.importFile(new File([body],name+'.json',{type:'application/json'}));},[level('order-'+id,chains,lowY),id]);
   await page.waitForFunction(g=>window.riderTelemetry?.session_generation>g&&window.riderTelemetry.sequence>2,generation,{timeout:30000}).catch(async e=>{console.log('import',await page.evaluate(()=>JSON.stringify({hud:document.body.innerText.slice(0,400)})));await page.screenshot({path:path.join(out,'import-failed.png')});throw e;});
-  await pointer.frames(page,{n:30});await page.waitForTimeout(800);
+  if(checkPlay){
+  await page.waitForFunction(()=>Math.abs(window.riderTelemetry?.speed_mps)<.5&&window.riderTelemetry.sequence>60,null,{timeout:20000});await page.waitForTimeout(500);
   const playShot=path.join(out,id+'-play.png');await page.screenshot({path:playShot});
   const png='data:image/png;base64,'+fs.readFileSync(playShot).toString('base64');
   const play=[clusters(await rows(page,png,240)),clusters(await rows(page,png,1040))];
-  results.push({id,step:'play',clusters:play,visible:play.every(n=>n>=2)});if(!play.every(n=>n>=2))failed=true;
+  const speed=await page.evaluate(()=>window.riderTelemetry.speed_mps);
+  results.push({id,step:'play',clusters:play,speed,visible:play.every(n=>n>=2)});if(!play.every(n=>n>=2))failed=true;
+  }
   await page.locator('canvas').focus();
   await page.keyboard.down('e');await pointer.frames(page,{n:3});await page.keyboard.up('e');
   await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});
