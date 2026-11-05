@@ -11,6 +11,7 @@ function checkRoute(report){
    assert.equal(x.generation,prev.generation+1);
    assert(x.webgl.created>prev.webgl.created&&x.webgl.deleted>prev.webgl.deleted,'world switch replaced no buffers');
    assert(!terrain(x).some(id=>terrain(prev).includes(id)),'terrain payload handle survived a world switch');
+   assert.deepEqual(x.webgl.uniform_histogram,prev.webgl.uniform_histogram,'world switch changed retained uniform buffers');
   }
   assert.equal(x.webgl.failed_creates,0);assert.equal(x.webgl.created-x.webgl.deleted,x.webgl.live);
   assert.equal(x.webgl.buffers.length,x.webgl.live);assert.equal(new Set(x.webgl.buffers.map(b=>b.id)).size,x.webgl.live);
@@ -31,6 +32,7 @@ function checkRoute(report){
    }
   }else assert.equal(x.mesh,null,'release must remain uninstrumented');
  }
+ assert(Object.keys(report.loads[0].webgl.uniform_histogram||{}).length>0,'no uniform buffers observed');
  const {before,after}=report.retry;
  assert.equal(after.reset_count,before.reset_count+1);assert.equal(after.generation,before.generation);
  assert.equal(after.world_ready_events,before.world_ready_events,'Retry admitted another proxy world');
