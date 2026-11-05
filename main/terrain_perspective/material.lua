@@ -1,11 +1,10 @@
 -- #392 Stage A: opt-in textured terrain route (Kenney 1.1 atlas, main/terrain_material/).
 -- Visual only: never reads or writes collision, physics or level source data.
 --
--- TEMPORARY pilot selection (Stage A only): the page URL parameter
+-- A level selects its material in its source (see M.validate). Debug builds also take the page URL parameter
 --   terrain_material=<family>                 one family for the whole course
 --   terrain_material=<left>,<right>@<x>       <left> for intervals whose midpoint is left of x metres, <right> otherwise
--- Stage B replaces this with a versioned per-section field in the level source. Without the
--- parameter every course keeps the untextured 48-byte vertex route, byte for byte.
+-- for the test tools. A level without a material keeps the untextured 48-byte vertex route, byte for byte.
 local M={STRIDE=52,UNTEXTURED_STRIDE=48,FAMILIES={'grass','dirt','sand','snow','stone','purple'},
     -- Face index = atlas column (manifest slot order): surface, rim, side, end.
     SURFACE=0,RIM=1,SIDE=2,END=3}
@@ -40,17 +39,51 @@ function M.parse(text)
     if not INDEX[right] then return nil,'Unknown terrain material '..right end
     return {left=INDEX[left],right=INDEX[right],boundary=x,text=text}
 end
--- Read once per page load; the selection never changes while the engine runs.
-function M.spec()
+-- The level material in a document or compiled station (docs/contracts/level-visuals.md, version 1).
+M.MATERIAL_VERSION=1
+M.OVERRIDES={'surface','band','fill'}
+function M.validate(m)
+    if m==nil then return true end
+    if type(m)~='table' or m.version~=M.MATERIAL_VERSION then return nil,'Unsupported level material version; keep the original file.',true end
+    for k in pairs(m) do
+        if k~='version' and k~='preset' and k~='surface' and k~='band' and k~='fill' then return nil,'Unknown level material field '..tostring(k),true end
+    end
+    if not PRESET[m.preset] then return nil,'Unknown material preset '..tostring(m.preset),true end
+    for _,k in ipairs(M.OVERRIDES) do
+        if m[k]~=nil and not PRESET[m[k]] then return nil,'Unknown material preset '..tostring(m[k])..' for '..k,true end
+    end
+    return true
+end
+local function document_spec(d)
+    if type(d)~='table' then return nil end
+    local e=type(d.editor)=='table' and d.editor or d
+    local m=d.material or e.material
+    if type(m)~='table' or not PRESET[m.preset] then return nil end
+    local text=m.preset
+    for _,k in ipairs(M.OVERRIDES) do text=text..'/'..(m[k] or '') end
+    return {preset=m.preset,surface=m.surface,band=m.band,fill=m.fill,text=text}
+end
+-- Debug builds keep the URL as a test override: the Kenney fixtures and test tools have no other selection.
+local function debug_spec()
     if M.override~=nil then return M.override or nil end
     if M.cached==nil then
-        local text=html5 and html5.run("new URLSearchParams(location.search).get('terrain_material')||''") or ''
+        local debug=html5 and sys.get_engine_info().is_debug
+        local text=debug and html5.run("new URLSearchParams(location.search).get('terrain_material')||''") or ''
         local spec,err=M.parse(text)
         if err then print('RIDER_TERRAIN_MATERIAL ignored: '..err) end
         M.cached=spec or false
         M.error=err
     end
     return M.cached or nil
+end
+-- The renderer's selection follows the document being built or edited; admission asks per document.
+function M.select(d) M.selected=document_spec(d) end
+function M.spec() return debug_spec() or M.selected end
+function M.spec_for(d) return debug_spec() or document_spec(d) end
+function M.stride_for(d) return M.spec_for(d) and M.STRIDE or M.UNTEXTURED_STRIDE end
+function M.key()
+    local s=M.spec()
+    return s and s.text or ''
 end
 function M.stride() return M.spec() and M.STRIDE or M.UNTEXTURED_STRIDE end
 function M.describe()
@@ -115,6 +148,8 @@ local function apply_preset(c,prep,first,last,spec,styles)
         n=n+6
     end end
     c.textured,c.preset=true,spec.preset
+    c.overrides={spec.surface or false,spec.band or false,spec.fill or false}
+    c.material_key=spec.text
     c.bytes=c.vertices*M.STRIDE
     return c
 end

@@ -36,9 +36,27 @@ function M.buffer(c)
     M.bounds(b,c)
     return b
 end
+-- Per-surface overrides: a hidden chunk object keeps the other preset's textures loaded for this world.
+local PRESET_IMAGE={'surface','band','fill'}
+function M.overrides(object,c)
+    if not c.overrides then return end
+    local url=msg.url(nil,object,"mesh")
+    for i,id in ipairs(c.overrides) do
+        if id and id~=c.preset then
+            M.holders=M.holders or {}
+            if not M.holders[id] then
+                M.holders[id]=factory.create("#preset_"..id,vmath.vector3(0,0,-3))
+                msg.post(M.holders[id],"disable")
+            end
+            go.set(url,"texture"..(i-1),hash("/main/terrain_material/presets/"..id.."/"..PRESET_IMAGE[i]..".texturec"))
+        end
+    end
+end
 function M.upload(entry,c,path)
     local scale=sys.get_config_number("physics.scale",0.01)
     local b=M.buffer(c)
+    -- A material change needs another chunk object; the resource keeps its identity only for the same layout.
+    if entry.object and entry.material_key~=c.material_key then go.delete(entry.object);entry.object=nil end
     if entry.resource then resource.set_buffer(entry.resource,b,{transfer_ownership=true})
     else
         entry.resource=resource.create_buffer(path,{buffer=b,transfer_ownership=true})
@@ -48,6 +66,8 @@ function M.upload(entry,c,path)
         -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
         entry.object=factory.create(c.preset and "#preset_"..c.preset or c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
+        M.overrides(entry.object,c)
+        entry.material_key=c.material_key
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z),entry.object) end
     entry.geometry=c
     if c.perspective then entry.look_object=nil end
@@ -88,7 +108,9 @@ end
 function M.build(self,d)
     local started=socket.gettime()
     local look=require "main.terrain_perspective.look"
-    local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d)};self.terrain_mesh=state
+    M.holders=nil
+    local material=require("main.terrain_perspective.material");material.select(d)
+    local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d),material_key=material.key()};self.terrain_mesh=state
     local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*require("main.terrain_perspective.projection").stride() end;stats.budget=require("main.game.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
     local mapping=look.mapping(d);if mapping then for _,e in ipairs(entries) do e.looks=mapping[e.chain] end end
     if not state.perspective and html5 and sys.get_engine_info().is_debug then html5.run('window.riderRoadProjection=null') end
@@ -149,17 +171,20 @@ local function live_look(self,state)
         state.look_source=d;return
     end
     local look=require("main.terrain_perspective.look")
+    local material=require("main.terrain_perspective.material");material.select(d)
+    local material_key=material.key()
     local projected=require("main.terrain_perspective.runtime").enabled(d)
     local mapping=look.mapping(d)
     for _,e in ipairs(state.entries) do
         local values=mapping and mapping[e.chain]
-        if state.perspective~=projected then
+        if state.perspective~=projected or state.material_key~=material_key then
             -- Factory/material layout changes only on explicit legacy opt-in, never camera motion.
             M.drop(e,true);e.dirty=true
         elseif not same_looks(e.looks,values,e.first,e.last) then e.dirty=true end
         e.looks=values
     end
     state.perspective,state.params,state.baked=projected,look.params(d),look.has_sections(d)
+    state.material_key=material_key
     state.stats.buffer_bytes=state.stats.vertices*(projected and require("main.terrain_perspective.projection").stride() or 36)
     state.stats.budget=budget
     state.look_source=d;state.revision=(state.revision or 0)+1

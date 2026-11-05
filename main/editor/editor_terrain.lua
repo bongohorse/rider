@@ -147,6 +147,12 @@ function M.resident(state,generation,view,result)
 end
 function M.update(state,e,previews,selected,hover,generation,view)
     local mesh=require "main.game.terrain_mesh"
+    -- A changed level material rebuilds every section, for example on Undo.
+    local material=require "main.terrain_perspective.material";material.select({editor=e})
+    if state.material_key~=material.key() then
+        for _,entry in ipairs(state.entries) do mesh.drop(entry,true);entry.dirty=true end
+        state.material_key=material.key()
+    end
     state.params=require("main.terrain_perspective.look").params({editor=e});state.baked=require("main.terrain_perspective.look").has_sections({editor=e})
     local plans,err=M.plan(e,previews,selected,hover,state.entries)
     if not plans then return nil,err end
