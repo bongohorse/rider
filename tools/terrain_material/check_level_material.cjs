@@ -12,7 +12,7 @@ const web=path.dirname(find(path.resolve(bundleArg)));
 const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http://x').pathname);if(!f.startsWith(web)||!fs.existsSync(f)){r.writeHead(404);return r.end();}r.setHeader('Content-Type',f.endsWith('.wasm')?'application/wasm':f.endsWith('.js')?'text/javascript':f.endsWith('.json')?'application/json':'text/html');fs.createReadStream(f).pipe(r);});
 const chain=[];for(let x=40;x>=-10;x-=1)chain.push([x,0]);
 const level=material=>JSON.stringify({schema:6,units:'metres',id:'material',name:'material',spawn:[2,.7],start_speed:0,run_in:0,run_out:0,bounds:[-20,50,-30,20],chains:[chain],two_sided:[false],hulls:[],labels:[],material,
- editor:{editor_version:14,compiler_version:14,revision:1,next_id:2,objects:[{id:'o1',type:'line',points:[...chain].reverse()}],connections:[],sampling:{tolerance:.02,max_segment:4},start:{position:[2,.7],speed:0},road_profile:'authored-v1',road_look:{version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:28.810793742973,side:64,shading:1}},material}});
+ editor:{editor_version:14,compiler_version:14,revision:1,next_id:2,objects:[{id:'o1',type:'line',points:[...chain].reverse()}],connections:[],sampling:{tolerance:.005,max_segment:.5},start:{position:[2,.7],speed:0},road_profile:'authored-v1',road_look:{version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:28.810793742973,side:64,shading:1}},material}});
 const CASES=[['city',{version:1,preset:'city'}],['city-band-meadow',{version:1,preset:'city',band:'meadow'}]];
 (async()=>{
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
@@ -36,7 +36,9 @@ const CASES=[['city',{version:1,preset:'city'}],['city-band-meadow',{version:1,p
   const edit=await seen();assert.equal(edit.material.preset,'city');assert.equal(edit.stride,52);
   await page.screenshot({path:path.join(out,id+'-edit.png')});
   const source=await page.evaluate(()=>window.riderEditorDoc);assert.deepEqual(source.material,material);assert.equal(source.editor_version,14);
-  await page.reload();await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:60000});await page.waitForTimeout(800);
+  await page.reload();await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(800);
+  if(await page.evaluate(()=>window.riderEditor?.mode!=='edit')){await page.locator('canvas').focus();await key('e');}
+  await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:30000});await page.waitForTimeout(800);
   const reloaded=await page.evaluate(()=>window.riderEditorDoc);assert.deepEqual(reloaded.material,material,'reload keeps the material');
   const again=await seen();assert.equal(again.material.preset,'city');assert.equal(again.stride,52);
   const q=await page.evaluate(()=>{const e=window.riderEditor,b=e.buttons.export,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};});
