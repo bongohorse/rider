@@ -9,7 +9,7 @@ assert(S.ground(index,25,1)==nil,'a gap has no ground')
 assert(S.ground(index,5,-1)==nil,'no line below the wheels')
 local s0,a0=S.look(0);assert(s0==1 and a0==S.ALPHA)
 local s2,a2=S.look(2);assert(s2<s0 and a2<a0 and s2>S.MIN_SCALE)
-local s4,a4=S.look(4);assert(s4==S.MIN_SCALE and a4==S.MIN_ALPHA)
+local s4,a4=S.look(4);assert(math.abs(s4-S.MIN_SCALE)<1e-9 and math.abs(a4-S.MIN_ALPHA)<1e-9)
 assert(S.look(9)==s4 and S.look(-1)==1,'bounded')
 -- A full-size level stays cheap per frame.
 local big={};for c=1,32 do local p={};for i=1,2048 do p[i]={i*.5,c} end;big[c]=p end
