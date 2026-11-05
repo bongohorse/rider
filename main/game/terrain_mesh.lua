@@ -46,7 +46,7 @@ function M.upload(entry,c,path)
     end
     if not entry.object then
         -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
-        entry.object=factory.create(c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z))
+        entry.object=factory.create(c.preset and "#preset_"..c.preset or c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z),entry.object) end
     entry.geometry=c

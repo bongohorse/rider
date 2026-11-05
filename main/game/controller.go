@@ -22,6 +22,13 @@ components { id: "ghost_wheel" component: "/main/game/ghost_wheel.factory" }
 components { id: "terrain_mesh" component: "/main/terrain_compare/chunk.factory" }
 components { id: "perspective_mesh" component: "/main/terrain_perspective/chunk.factory" }
 components { id: "textured_mesh" component: "/main/terrain_perspective/textured_chunk.factory" }
+components { id: "preset_meadow" component: "/main/terrain_material/presets/meadow/chunk.factory" }
+components { id: "preset_quarry" component: "/main/terrain_material/presets/quarry/chunk.factory" }
+components { id: "preset_volcano" component: "/main/terrain_material/presets/volcano/chunk.factory" }
+components { id: "preset_city" component: "/main/terrain_material/presets/city/chunk.factory" }
+components { id: "preset_inca" component: "/main/terrain_material/presets/inca/chunk.factory" }
+components { id: "preset_glacier" component: "/main/terrain_material/presets/glacier/chunk.factory" }
+components { id: "preset_scrapyard" component: "/main/terrain_material/presets/scrapyard/chunk.factory" }
 components { id: "coin" component: "/main/game/coin.factory" }
 components { id: "mechanism_crate" component: "/main/game/mechanism_crate.factory" }
 components { id: "mechanism_plate" component: "/main/game/mechanism_plate.factory" }

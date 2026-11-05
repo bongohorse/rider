@@ -1,0 +1,2 @@
+prototype: "/main/terrain_material/presets/quarry/chunk.go"
+load_dynamically: true

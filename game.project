@@ -44,3 +44,6 @@ max_count = 1024
 
 [label]
 max_count = 1024
+
+[graphics]
+texture_profiles = /main/terrain_material/level.texture_profiles
