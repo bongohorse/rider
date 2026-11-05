@@ -28,11 +28,16 @@ Everything here is visual. It never reads or writes collision, physics, replay o
 - **Band** follows the driving line and shows once. It repeats along the track and is transparent below its art. On very steep slopes it compresses along the line; the Smooth Tool ([#564](https://github.com/bongohorse/rider/issues/564)) is the remedy, not a slope limit.
 - **Fill** lies in world coordinates and repeats, so it never stretches. Claudio chose this on 2026-11-05: "texture verzerrung will ich nicht".
 - Surface and Band meet in one colour at the fold, without a hard light edge.
-- The textured route keeps its 52-byte vertex and no new vertex stream; untextured levels stay byte-identical on 48 bytes.
+- The textured route keeps its 52-byte vertex and no new vertex stream. Levels without a material stay byte-identical at 36 or 48 bytes, according to their profile.
+- The Surface art may have a frayed transparent far edge above an opaque lower zone. The contact side stays opaque, so the wheels never appear to touch a hole. [#540](https://github.com/bongohorse/rider/issues/540) sets the blending and records what shows through.
 
 ## Depth look
 
-Claudio chose these values on 2026-11-05. They are the default for a level that first gets a material. Existing levels keep their values until an explicit Apply.
+Claudio chose these values on 2026-11-05. No level has a material before this work, so the rule is:
+
+- The first material Apply replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. The panel previews this before Apply, and Apply is one Undo step. Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores this and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
+- A level without a material keeps its values and parameter set v1.
+- Parameter set v2 is valid only on a level with a material; without one it is refused.
 
 | Value | Default | Range |
 | --- | --- | --- |
@@ -43,26 +48,34 @@ Claudio chose these values on 2026-11-05. They are the default for a level that 
 | `shading` | 1.15 | 0–2 |
 | `vehicle_position` | 0.5 | 0–1 |
 
-These ranges come from the #536 prototype. They form parameter set v2, which adds `vehicle_position` and otherwise uses the fields of v1. The formula in [road-look.md](road-look.md#projection-and-spaces) stays, with the body shift below. Set v1 keeps its ranges and meaning.
+These ranges come from the #536 prototype, where Claudio used them. He confirms them with the GO of [#573](https://github.com/bongohorse/rider/issues/573). They form parameter set v2:
+
+- v2 is stored as `road_look.params.version` 2. It has the fields of v1 plus `vehicle_position`, and a wider range for the listed values.
+- The `road_look.version` container, the section override version and the `authored-v1` profile ID stay at their present values. An older reader refuses `params.version` 2.
+- Section overrides of `width`, `side` and `shading` use the v2 ranges on a level with v2.
+- `vehicle_position`, `perspective` and `angle` are level-wide.
+- Set v1 keeps its ranges and meaning.
+
+The formula in [road-look.md](road-look.md#projection-and-spaces) stays, with the body shift below. These [road-look.md](road-look.md) limits hold only for v1: the denominator of at most 1.05 with no folds, and the 2 m bound for local styles. In v2 the denominator lies between 0.4 and 1.6, [Facing](#facing) handles folds, and bounds use a width of up to 4 m.
 
 ## Vehicle position
 
-`vehicle_position` sets where the driving line lies on the Surface: `0` at the front edge, `1` at the back edge. The renderer moves the complete visible body by `vehicle_position × width` in front of the line, so the shift is rigid and needs no new geometry. Projected bounds include the shift. It applies to textured levels; untextured levels stay at `0`.
+`vehicle_position` sets where the driving line lies on the Surface: `0` at the front edge, `1` at the back edge. The renderer moves the complete visible body by `vehicle_position × width` in front of the line, using the local width where a section override sets one, so the vehicle stays on the middle there too. The shift needs no new geometry, and projected bounds include it. The value exists only in v2, so levels without a material have no shift.
 
 ## Facing
 
-A face that turns away from the camera is hidden, never drawn over a face in front of it. This covers run-end caps on both sides and the Surface. With the values above the Surface folds at `tan(angle) / (perspective / 40)` above the camera centre, about 6.7 m, so zoomed-out views depend on this rule.
+On a level with a material, a face that turns away from the camera is hidden, never drawn over a face in front of it. This covers run-end caps on both sides and the Surface. v1 ranges cannot fold the Surface; a run-end cap on a level without a material is checked in [#570](https://github.com/bongohorse/rider/issues/570) and fixed there only if its stream stays unchanged. With the values above the Surface folds at `tan(angle) / (perspective / 40)` above the camera centre, about 6.7 m, so zoomed-out views depend on this rule.
 
 ## Light
 
-Static light bakes into existing colour data and never follows the camera. It comes softly from the upper left: rising faces brighten and falling faces darken, while flat ground stays neutral. It fades within a few metres below the driving line, and the Surface darkens slightly towards its back edge. `shading` sets the strength. Starting values from the prototype, which [#541](https://github.com/bongohorse/rider/issues/541) may tune:
+Static light bakes into existing colour data and never follows the camera. It comes softly from the upper left: rising faces brighten and falling faces darken, while flat ground stays neutral. It fades within a few metres below the driving line, and the Surface darkens slightly towards its back edge. `shading` sets the strength, and a section override sets it locally. Starting values from the prototype, which [#541](https://github.com/bongohorse/rider/issues/541) may tune:
 
 | Value | Start |
 | --- | --- |
 | Light direction | (-0.55, 0.83) |
 | Gain limits | 0.62–1.22 |
-| Fade below the line | 2.5 m |
-| Body darkening | to 0.7, over 5 m |
+| Fade below the line | `exp(-drop / 2.5 m)` |
+| Body darkening | `mix(0.7, 1, exp(-drop / 5 m))` |
 | Surface back edge | 0.86 |
 
 ## Vehicle shadow
@@ -79,7 +92,7 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 ## Backgrounds and foreground
 
 - A level has up to five background layers and one foreground, stored as one level-wide block: preset ID and, per layer, visibility, image, Depth and Auto.
-- One Depth value per layer drives X and Y. Auto is the default. [#545](https://github.com/bongohorse/rider/issues/545) measures the cost and [#546](https://github.com/bongohorse/rider/issues/546) sets the value mapping.
+- One Depth value per layer drives X and Y. Auto is the default. [#545](https://github.com/bongohorse/rider/issues/545) measures the cost. [#546](https://github.com/bongohorse/rider/issues/546) defines the Depth range, its mapping to X and Y, and what Auto selects; [#548](https://github.com/bongohorse/rider/issues/548) validates that range.
 - Vertical motion never shows a gap, and empty layers cost nothing.
 - The foreground stays in a safe zone at the lower edge and draws below the HUD and touch controls.
 - A missing image falls back to the preset.
@@ -99,7 +112,8 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 
 ## Format and compatibility
 
-- A saved reference is a stable preset ID or a local content hash, never a path.
+- A saved reference is a stable preset ID or a local content hash, never a path. An unknown preset ID is refused. A local hash whose data is missing falls back to the level's preset, with a warning.
+- A layer or surface that references a local hash also names the preset it falls back to.
 - The format is editor and compiler version 13 before these tasks. A task that adds a stored block or value raises the version in that task; `road_look.version` 2 carries parameter set v2.
 - Unknown versions and values are refused and the original file stays unchanged, as in [road-look.md](road-look.md#production-compatibility). Older levels stay byte-identical until an explicit Apply.
 - `terrain_material` in the URL is a temporary pilot, and [#542](https://github.com/bongohorse/rider/issues/542) replaces it.
@@ -115,7 +129,7 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 ## Measurement
 
 - The 1 MiB Fit payload and 16 MiB CPU working limits in `main/game/terrain_budget.lua` stay.
-- Three 512 px textures with mipmaps cost about 4.2 MB by calculation. [#544](https://github.com/bongohorse/rider/issues/544) measures real cost and the effect of the #536 mipmap texture profile on the sprite atlas.
+- Three 512 px textures with mipmaps cost about 4.2 MB by calculation. [#539](https://github.com/bongohorse/rider/issues/539) ships the texture profile that gives terrain textures mipmaps. [#544](https://github.com/bongohorse/rider/issues/544) measures real cost and the profile's effect on the sprite atlas.
 - Software-rendered frame times prove nothing about a device. Real GPU and phone cost stays NOT RUN until Claudio's device session.
 
 ## Task map
