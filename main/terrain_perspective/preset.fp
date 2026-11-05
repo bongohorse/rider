@@ -6,6 +6,7 @@ in highp vec3 var_uv;
 in highp vec4 var_side;
 in lowp float var_flipped;
 in lowp float var_shading;
+in mediump float var_light;
 out vec4 frag_color;
 uniform lowp sampler2D tex0; // Surface, 1 m across
 uniform lowp sampler2D tex1; // Band, starts at the driving line, 1 m tall
@@ -34,12 +35,12 @@ void main() {
         rgb=band.rgb+fill*(1.0-band.a);
     }
     // Straight output: the default render script blends with source alpha. Vertex alpha hides a section.
-    vec3 shade=var_color.rgb;
+    float light=var_light;
     if(var_uv.z>0.5&&var_uv.z<2.5) {
-        // The light fades below the line and the body darkens further down. A selection tint (not grey) stays.
+        // The light fades below the line and the body darkens further down.
         float drop=var_side.x;
-        if(abs(shade.r-shade.b)<0.001) shade=mix(vec3(1.0),shade,exp(-drop/2.5));
-        shade*=mix(1.0,mix(0.7,1.0,exp(-drop/5.0)),clamp(var_shading,0.0,1.0));
+        light=mix(1.0,light,exp(-drop/2.5))*mix(1.0,mix(0.7,1.0,exp(-drop/5.0)),var_shading);
     }
+    vec3 shade=var_color.rgb*light;
     frag_color=vec4(rgb*shade,alpha*var_color.a);
 }

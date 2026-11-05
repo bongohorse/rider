@@ -153,14 +153,15 @@ do
     local a=projection.section(prep,1,65,'a')
     local b=projection.section(prep,65,129,'b')
     assert(a.preset=='meadow' and a.textured and a.bytes==a.vertices*52)
-    for i,v in ipairs(a.texture) do assert(v>=0 and v<=3,'slot is a face; the first section has no flipped end') end
-    assert(a.texture[1]==material.SIDE and a.texture[7]==material.RIM and a.texture[13]==material.SURFACE)
+    for i,v in ipairs(a.texture) do local code=material.slot_parts(v);assert(code>=0 and code<=3,'slot is a face; the first section has no flipped end') end
+    local function code_of(c,v) local x=material.slot_parts(c.texture[v]);return x end
+    assert(code_of(a,1)==material.SIDE and code_of(a,7)==material.RIM and code_of(a,13)==material.SURFACE)
     -- Side tops start below the rim; rim runs from the line down to that start.
     assert(a.look_data[1]==material.BAND_START and a.look_data[4]==material.BAND_START)
     assert(a.look_data[(7-1)*3+1]==0 and a.look_data[(9-1)*3+1]==material.BAND_START)
     -- Slope factor: 1 on flat ground, smaller on a slope, positive everywhere.
     local slopes=false
-    for i=1,a.vertices do local f=a.uv[(i-1)*2+2];if a.texture[i]==material.SIDE then assert(f>0 and f<=1);slopes=slopes or f<.999 end end
+    for i=1,a.vertices do local f=a.uv[(i-1)*2+2];if code_of(a,i)==material.SIDE then assert(f>0 and f<=1);slopes=slopes or f<.999 end end
     assert(slopes,'the course has slopes')
     -- Quads drop whole images only: at the section boundary U agrees modulo 1, with the phase.
     local function u_at(c,vertex,phase) local v=c.uv[(vertex-1)*2+1]+phase;return v-math.floor(v) end
@@ -169,17 +170,17 @@ do
     assert(near<1e-6 or math.abs(near-1)<1e-6,'U continuous across sections: '..near)
     -- A run end closes up to the driving line.
     local n=64*18
-    assert(a.texture[n+1]==material.END and a.look_data[n*3+1]==0,'the left run end is not flipped')
+    assert(code_of(a,n+1)==material.END and a.look_data[n*3+1]==0,'the left run end is not flipped')
     local c=projection.section(prep,129,#prep.p,'c');local m=(#prep.p-129)*18
-    assert(c.texture[m+1]==material.END+material.FLIPPED,'the right run end is flipped')
+    assert(code_of(c,m+1)==material.END+material.FLIPPED,'the right run end is flipped')
     -- First end never flipped, last end always, for every run shape: a wall, a step, overhangs running either way.
     for name,run in pairs({wall={{40,0},{40,8}},step={{0,0},{20,0},{20,4}},back_start={{88,8},{84,4},{90,2},{95,3}},back_end={{60,0},{70,4},{70,8},{66,8}}}) do
         local shape=geometry.prepare(run,-30,0)
         local r=projection.section(shape,1,#shape.p,'r')
         local cap=(#shape.p-1)*18
-        assert(r.texture[cap+1]==material.END,name..': first end')
-        assert(r.texture[cap+7]==material.END+material.FLIPPED,name..': last end')
-        for q=1,cap do assert(r.texture[q]<=2,name..': no flip on other faces') end
+        assert(code_of(r,cap+1)==material.END,name..': first end')
+        assert(code_of(r,cap+7)==material.END+material.FLIPPED,name..': last end')
+        for q=1,cap do assert(code_of(r,q)<=2,name..': no flip on other faces') end
     end
     assert(math.abs(a.position[n*3+1]-(prep.p[1][1]-a.origin[1]))<1e-9 and math.abs(a.position[n*3+2]-(prep.p[1][2]-a.origin[2]))<1e-9)
     assert(material.describe().preset=='meadow')
@@ -193,13 +194,14 @@ do
         local hill={};for x=0,200 do hill[#hill+1]={x,x<80 and x*.5 or (x<120 and 40 or 40-(x-120)*.5)} end
         local shape=geometry.prepare(hill,-30,0)
         local s1=projection.section(shape,1,65,'l1');local s2=projection.section(shape,65,129,'l2');local s3=projection.section(shape,129,193,'l3')
-        local function grey(c,vertex) return c.color[(vertex-1)*4+1] end
+        local function grey(c,vertex) local _,_,g=material.slot_parts(c.texture[vertex]);return g end
         assert(grey(s1,1)>1.05,'rising is brighter: '..grey(s1,1))
         assert(grey(s3,18*20+1)<.95,'falling is darker')
-        assert(math.abs(grey(s2,18*30+1)-1)<1e-9,'flat is neutral')
-        assert(math.abs(grey(s1,63*18+2)-grey(s2,1))<1e-9,'sections agree at their joint')
+        assert(math.abs(grey(s2,18*30+1)-1)<.007,'flat is neutral')
+        assert(s2.color[18*30*4+1]==1,'the colour stream holds only tints')
+        assert(grey(s1,63*18+2)==grey(s2,1),'sections agree at their joint')
         assert(grey(s2,18*30+13+2)<grey(s2,18*30+13),'the Surface darkens to its back edge')
-        assert(math.abs(s1.base_colors[1]-s1.color[1])<1e-9 and s1.bytes==s1.vertices*52)
+        assert(s1.bytes==s1.vertices*52)
     end
     -- Budgets with a preset: the 660 m course and the near-limit refusal.
     local preset_long={chains={},hulls={},labels={},bounds={-10,700,-40,50},_road_profile='perspective-v1'}

@@ -89,10 +89,10 @@ local points={};for x=0,10 do points[#points+1]={x,0} end
 local prep=require('main.game.terrain_geometry').prepare(points,-30,0)
 local looks={};for i=1,#points do looks[i]={width=i<6 and 1.25 or 2,side=8,shading=1} end
 local sec=P.section(prep,1,#points,'s',nil,looks)
-assert(sec.texture[1]==2+8*1250,'local width in the slot: '..sec.texture[1])
+local c1,w1,_,s1=mat.slot_parts(sec.texture[1]);assert(c1==2 and w1==1250 and math.abs(s1-1)<.15,'local width and shading in the slot')
 local n=(#points-1)*18
-assert(sec.texture[n+7]==3+4+8*2000,'last run end keeps its flip and width')
-local plain_sec=P.section(prep,1,#points,'p');assert(plain_sec.texture[1]==2,'no width without a section look')
+local c2,w2=mat.slot_parts(sec.texture[n+7]);assert(c2==7 and w2==2000,'last run end keeps its flip and width')
+local plain_sec=P.section(prep,1,#points,'p');local c3,w3=mat.slot_parts(plain_sec.texture[1]);assert(c3==2 and w3==0,'no width without a section look')
 mat.override=nil
 -- The panel gets a control for every value of the set.
 assert(#P.controls(P.DEFAULT_V2)==#P.CONTROLS+1 and #P.controls(P.DEFAULT)==#P.CONTROLS)

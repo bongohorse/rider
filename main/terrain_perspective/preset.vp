@@ -6,6 +6,7 @@ in highp vec3 look_data;
 in highp float texture_slot; // face + 4 when flipped + 8 x local width in mm
 out lowp vec4 var_color;
 out highp vec3 var_uv; // along the track, Surface across (back edge 0), face
+out mediump float var_light;
 out lowp float var_shading;
 out lowp float var_flipped; // 1 when this face's winding is reversed
 out highp vec4 var_side; // metres below the line, slope factor, Fill UV in world space
@@ -32,7 +33,11 @@ void main() {
     vec2 fill_uv=(p.xy*s+look_origin.xy)/4.0;
     // The slot's upper part holds a section override's local width in millimetres; 0 means the level width.
     float raw_slot=floor(texture_slot+0.5);
-    float local_width=floor(raw_slot/8.0)/1000.0;
+    float slot_shading=floor(raw_slot/2097152.0);
+    float slot_rest=raw_slot-slot_shading*2097152.0;
+    float slot_gain=floor(slot_rest/32768.0);
+    slot_rest-=slot_gain*32768.0;
+    float local_width=floor(slot_rest/8.0)/1000.0;
     // The whole visible body moves in front of the line, so the vehicle drives on the Surface and not at its edge.
     depth-=look_body.x*(local_width>0.0?local_width:look_shape.x);
     float perspective_w=1.0;
@@ -47,10 +52,12 @@ void main() {
     }
     p.z=0.0; // preserve accepted terrain/sprite layering; no gameplay camera or 3D physics
     gl_Position=(world_view_proj*vec4(p,1.0))*perspective_w;
-    // Shading sets the light strength; 1 on baked sections, which hold their own.
-    var_color=vec4(mix(vec3(1.0),color.rgb,look_shape.w),color.a);
-    var_shading=look_shape.w;
-    float slot=raw_slot-8.0*floor(raw_slot/8.0);
+    var_color=color;
+    // A section override's shading is in the slot; otherwise the level's value.
+    float shading=local_width>0.0?slot_shading/3.5:look_shape.w;
+    var_light=1.0+(0.5+slot_gain*0.0125-1.0)*shading;
+    var_shading=min(shading,1.0);
+    float slot=slot_rest-8.0*floor(slot_rest/8.0);
     float flipped=slot>3.5?1.0:0.0;
     float face=slot-4.0*flipped;
     // One image spans 4 m along the track; per-quad U plus the fractional section phase, continuous across sections.
