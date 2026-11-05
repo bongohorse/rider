@@ -52,7 +52,8 @@ void main() {
     // 1 + segment/period + 1, set by the longest single interval (worst built-in case ~137 periods, a 122.88 m
     // segment in straight.json), so var_tile needs highp (declared in both shaders; WebGL2/ES 3.0 guarantee it).
     bool proto=id>23.5;
-    float period=proto?4.0:face<1.5?0.9:1.0;
+    float period=face<1.5?0.9:1.0;
+    if(proto) period=4.0;
     float arc=texcoord0.x*4.0/period+fract(editor_params.x*4.0/period);
     // Surface: one cross-section over the depth, image top at the back edge. Rim: image top at the road line.
     // Side: 1 m world tiles. End: U front->back over the cap, V by world height.

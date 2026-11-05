@@ -1,0 +1,18 @@
+path_settings {
+  path: "/main/terrain_material/experiment_536/**"
+  profile: "experiment_536"
+}
+profiles {
+  name: "experiment_536"
+  platforms {
+    os: OS_ID_GENERIC
+    formats {
+      format: TEXTURE_FORMAT_RGBA
+      compression_level: NORMAL
+      compression_type: COMPRESSION_TYPE_DEFAULT
+    }
+    mipmaps: true
+    max_texture_size: 0
+    premultiply_alpha: true
+  }
+}
