@@ -60,8 +60,8 @@ function M.describe()
         boundary=s and s.boundary and s.boundary~=math.huge and s.boundary or false,preset=s and s.preset or false}
 end
 
--- One preset for the whole level: the slot holds the face, plus M.FLIPPED when this triangle's winding is reversed:
--- a run end pointing right, or a Surface quad on an overhang running backwards. Top vertices carry their drop below the line in
+-- One preset for the whole level: the slot holds the face, plus M.FLIPPED on the last run end, whose winding is
+-- reversed against the first one for every run shape. Top vertices carry their drop below the line in
 -- look_data.x (unused above z<0); bottom vertices derive it in the shader. texcoord0.y carries the slope factor,
 -- which keeps the Band's thickness measured across the slope. Run ends close up to the driving line.
 local function apply_preset(c,prep,first,last,spec,styles)
@@ -97,7 +97,6 @@ local function apply_preset(c,prep,first,last,spec,styles)
     for i=first,last-1 do
         local n=(i-first)*18
         for j=1,6 do paint(n+j,M.SIDE,i);paint(n+6+j,M.RIM,i);paint(n+12+j,M.SURFACE,i) end
-        if p[i+1][1]<p[i][1] then for j=1,6 do slot[n+12+j]=M.SURFACE+M.FLIPPED end end
         bound(n+1);bound(n+7);bound(n+13)
         measured(n+1,i,M.BAND_START);measured(n+7,i,0,M.BAND_START)
     end
@@ -106,7 +105,7 @@ local function apply_preset(c,prep,first,last,spec,styles)
         local interval=i==1 and 1 or i-1
         for j=1,6 do
             paint(n+j,M.END,interval);uv[(n+j-1)*2+1]=depth_u[j];uv[(n+j-1)*2+2]=1
-            if (i==1 and p[1][1]-p[2][1] or p[i][1]-p[i-1][1])>0 then slot[n+j]=M.END+M.FLIPPED end
+            if i==#p then slot[n+j]=M.END+M.FLIPPED end
             if j==1 or j==2 or j==4 then
                 local k=(n+j-1)*3
                 c.look_data[k+1]=0
