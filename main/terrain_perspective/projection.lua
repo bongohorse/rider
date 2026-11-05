@@ -6,6 +6,13 @@ local M={VERSION=1,FOCAL=40,STRIDE=48,WORKING=560}
 M.DEFAULT={version=1,mode='perspective',width=.9,perspective=.35,angle=math.atan(.55)*180/math.pi,side=64,shading=1}
 M.RANGES={width={.25,2},perspective={0,1},angle={10,45},side={.25,64},shading={0,1}}
 M.CONTROLS={{key='width',label='Road width (m)',step=.01},{key='perspective',label='Perspective (level-wide)',step=.01},{key='angle',label='View angle (degrees; level-wide)',step=.1},{key='side',label='Side depth (m)',step=.25},{key='shading',label='Shading',step=.01}}
+do -- #536 experiment only: stronger 3D settings from the URL; perspective may leave the editor slider range.
+    local o=material.look_override()
+    if o then
+        M.RANGES.perspective={0,math.max(1,o.perspective)}
+        M.DEFAULT.width,M.DEFAULT.perspective,M.DEFAULT.angle=o.width,o.perspective,o.angle
+    end
+end
 function M.validate(p)
     if type(p)~='table' or p.version~=1 or (p.mode~='fixed' and p.mode~='perspective') then return nil,'Unsupported look version/mode' end
     local out={version=1,mode=p.mode}

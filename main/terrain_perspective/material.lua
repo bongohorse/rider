@@ -65,6 +65,16 @@ function M.apply_pose()
     go.set('/camera#camera','orthographic_zoom',pose.zoom)
     if pose.clean and not M.clean then M.clean=true;msg.post('main:/loader#ui','disable') end
 end
+-- #536 experiment: URL terrain_look=<width>,<perspective>,<angle> replaces the level default look for one page load.
+-- Debug builds only, so stronger 3D settings can be driven on the test course.
+function M.look_override()
+    if not (html5 and sys.get_engine_info().is_debug) then return nil end
+    local text=html5.run("new URLSearchParams(location.search).get('terrain_look')||''")
+    local w,p,a=text:match('^([%d.]+),([%d.]+),([%d.]+)$')
+    w,p,a=tonumber(w),tonumber(p),tonumber(a)
+    if not (w and p and a) then return nil end
+    return {width=w,perspective=p,angle=a}
+end
 function M.stride() return M.spec() and M.STRIDE or M.UNTEXTURED_STRIDE end
 function M.describe()
     local s=M.spec()
