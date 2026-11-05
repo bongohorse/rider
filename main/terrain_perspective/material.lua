@@ -57,7 +57,8 @@ end
 local function document_spec(d)
     if type(d)~='table' then return nil end
     local e=type(d.editor)=='table' and d.editor or d
-    local m=d.material or e.material
+    -- The source decides, so Play and Edit agree even for a hand-edited file.
+    local m=e.material or d.material
     if type(m)~='table' or not PRESET[m.preset] then return nil end
     local text=m.preset
     for _,k in ipairs(M.OVERRIDES) do text=text..'/'..(m[k] or '') end
@@ -80,6 +81,16 @@ end
 function M.select(d) M.selected=document_spec(d) end
 function M.spec() return debug_spec() or M.selected end
 function M.spec_for(d) return debug_spec() or document_spec(d) end
+function M.held_presets(d)
+    local s=M.spec_for(d)
+    if not (s and s.preset) then return 0 end
+    local seen,count={},0
+    for _,k in ipairs(M.OVERRIDES) do
+        local id=s[k]
+        if id and id~=s.preset and not seen[id] then seen[id]=true;count=count+1 end
+    end
+    return count
+end
 function M.stride_for(d) return M.spec_for(d) and M.STRIDE or M.UNTEXTURED_STRIDE end
 function M.key()
     local s=M.spec()

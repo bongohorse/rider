@@ -38,21 +38,22 @@ function M.buffer(c)
 end
 -- Per-surface overrides: a hidden chunk object keeps the other preset's textures loaded for this world.
 local PRESET_IMAGE={'surface','band','fill'}
-function M.overrides(object,c)
+function M.overrides(object,c,state)
     if not c.overrides then return end
     local url=msg.url(nil,object,"mesh")
     for i,id in ipairs(c.overrides) do
         if id and id~=c.preset then
-            M.holders=M.holders or {}
-            if not M.holders[id] then
-                M.holders[id]=factory.create("#preset_"..id,vmath.vector3(0,0,-3))
-                msg.post(M.holders[id],"disable")
+            -- Held on the world's terrain state: a handle does not survive the world.
+            state.holders=state.holders or {}
+            if not state.holders[id] then
+                state.holders[id]=factory.create("#preset_"..id,vmath.vector3(0,0,-3))
+                msg.post(state.holders[id],"disable")
             end
             go.set(url,"texture"..(i-1),hash("/main/terrain_material/presets/"..id.."/"..PRESET_IMAGE[i]..".texturec"))
         end
     end
 end
-function M.upload(entry,c,path)
+function M.upload(entry,c,path,state)
     local scale=sys.get_config_number("physics.scale",0.01)
     local b=M.buffer(c)
     -- A material change needs another chunk object; the resource keeps its identity only for the same layout.
@@ -66,7 +67,7 @@ function M.upload(entry,c,path)
         -- #392: the textured route has its own material/vertex layout; the pilot selection is fixed per page load.
         entry.object=factory.create(c.preset and "#preset_"..c.preset or c.textured and "#textured_mesh" or c.perspective and "#perspective_mesh" or "#terrain_mesh",vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z))
         go.set(msg.url(nil,entry.object,"mesh"),"vertices",entry.resource)
-        M.overrides(entry.object,c)
+        M.overrides(entry.object,c,state)
         entry.material_key=c.material_key
     else go.set_position(vmath.vector3(c.origin[1]/scale,c.origin[2]/scale,c.layer_z),entry.object) end
     entry.geometry=c
@@ -108,7 +109,6 @@ end
 function M.build(self,d)
     local started=socket.gettime()
     local look=require "main.terrain_perspective.look"
-    M.holders=nil
     local material=require("main.terrain_perspective.material");material.select(d)
     local state={perspective=require("main.terrain_perspective.runtime").enabled(d),params=look.params(d),baked=look.has_sections(d),material_key=material.key()};self.terrain_mesh=state
     local entries,stats=geometry.describe(d);if state.perspective then stats.buffer_bytes=stats.vertices*require("main.terrain_perspective.projection").stride() end;stats.budget=require("main.game.terrain_budget").measure(d);state.entries,state.stats,state.source=entries,stats,d
@@ -200,7 +200,7 @@ function M.update(self)
         local c=state.perspective and require("main.terrain_perspective.projection").section(e.prep,e.first,e.last,e.key,nil,e.looks) or geometry.section(e.prep,e.first,e.last,e.key)
         state.uploads=(state.uploads or 0)+1
         if not e.resource then state.serial=(state.serial or 0)+1 end
-        M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc")
+        M.upload(e,c,"/terrain_mesh/g"..self.session_generation.."-slot"..state.serial..".bufferc",state)
     end,function(e) M.drop(e,true) end)
     if state.perspective then perspective.apply(state,M.bounds) end
     state.stats.mesh_gameobjects,state.stats.allocated_bytes=r.allocated,r.bytes

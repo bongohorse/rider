@@ -13,13 +13,14 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
 const chain=[];for(let x=40;x>=-10;x-=1)chain.push([x,0]);
 const level=material=>JSON.stringify({schema:6,units:'metres',id:'material',name:'material',spawn:[2,.7],start_speed:0,run_in:0,run_out:0,bounds:[-20,50,-30,20],chains:[chain],two_sided:[false],hulls:[],labels:[],material,
  editor:{editor_version:14,compiler_version:14,revision:1,next_id:2,objects:[{id:'o1',type:'line',points:[...chain].reverse()}],connections:[],sampling:{tolerance:.005,max_segment:.5},start:{position:[2,.7],speed:0},road_profile:'authored-v1',road_look:{version:1,params:{version:1,mode:'perspective',width:.9,perspective:.35,angle:28.810793742973,side:64,shading:1}},material}});
+async function colour(file,x,y){const {execFileSync}=require('node:child_process');return JSON.parse(execFileSync(process.env.PYTHON||'python3',['-I','-c','import sys,json;from PIL import Image;i=Image.open(sys.argv[1]).convert("RGB");x,y=int(float(sys.argv[2])),int(float(sys.argv[3]));b=i.crop((x-6,y-2,x+6,y+3)).resize((1,1),Image.BOX).getpixel((0,0));print(json.dumps(b))',file,String(x),String(y)],{encoding:'utf8'}));}
 const CASES=[['city',{version:1,preset:'city'}],['city-band-meadow',{version:1,preset:'city',band:'meadow'}]];
 (async()=>{
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
  const browser=await chromium.launch(),results={},errors=[];
  for(const [id,material] of CASES){
   const context=await browser.newContext({viewport:{width:1280,height:720}}),page=await context.newPage();
-  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:/.test(m.text()))errors.push(m.text());});
+  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:|EDITOR_MESH_FALLBACK/.test(m.text()))errors.push(m.text());});
   await configure(page,'material-'+id,'le6');
   await page.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=straight');
   await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:90000});
@@ -33,8 +34,17 @@ const CASES=[['city',{version:1,preset:'city'}],['city-band-meadow',{version:1,p
   await page.locator('canvas').focus();
   const key=async k=>{await page.keyboard.down(k);await pointer.frames(page);await page.keyboard.up(k);await pointer.frames(page);};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});await page.waitForTimeout(800);
+  await page.waitForFunction(()=>window.riderTerrainResources?.mode==='edit',null,{timeout:15000});
   const edit=await seen();assert.equal(edit.material.preset,'city');assert.equal(edit.stride,52);
   await page.screenshot({path:path.join(out,id+'-edit.png')});
+  // The Band itself: Meadow is green, City's kerb is grey. Row just below the line in Edit, band area in Play.
+  const e=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x};});
+  const band={x:e.x+(e.s.ox+15*e.s.ppm_x)*e.k,y:e.y+e.h-(e.s.oy-.2*e.s.ppm_y)*e.k};
+  const editPixel=await colour(path.join(out,id+'-edit.png'),band.x,band.y);
+  const playPixel=await colour(path.join(out,id+'-play.png'),900,610);
+  const green=([r,g])=>g-r>12;
+  assert.equal(green(editPixel),!!material.band,'Band in Edit: '+editPixel);assert.equal(green(playPixel),!!material.band,'Band in Play: '+playPixel);
+  const pixels={edit:editPixel,play:playPixel};
   const source=await page.evaluate(()=>window.riderEditorDoc);assert.deepEqual(source.material,material);assert.equal(source.editor_version,14);
   await page.reload();await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(800);
   if(await page.evaluate(()=>window.riderEditor?.mode!=='edit')){await page.locator('canvas').focus();await key('e');}
@@ -45,7 +55,7 @@ const CASES=[['city',{version:1,preset:'city'}],['city-band-meadow',{version:1,p
   await pointer.tap(page,q);await page.waitForSelector('#rider-export-text');
   const file=JSON.parse(await page.locator('#rider-export-text').inputValue());
   assert.deepEqual(file.editor.material,material);assert.deepEqual(file.material,material);assert.equal(file.schema,6);
-  results[id]={play,edit,schema:file.schema};
+  results[id]={play,edit,schema:file.schema,pixels};
   await context.close();
  }
  await browser.close();server.close();

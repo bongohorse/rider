@@ -199,6 +199,8 @@ local function from_station(d,id,name)
     end
     -- The station's validated mechanisms become source objects after the other objects took their IDs.
     mechanisms.migrate(e)
+    -- Compiled geometry opened as lines keeps the level's material, for example after a source conflict.
+    if d.material then M.set_material(e,d.material) end
     return {schema=1,units="metres",id=id,name=name,editor=e}
 end
 -- R3: a template copy is a generic custom level. It keeps only geometry, labels and the start;
@@ -773,9 +775,6 @@ function M.test_start(doc,p,mode)
     if blocked then return nil,"the vehicle would overlap "..M.label(blocked):lower() end
     return pos
 end
--- Snapshot undo (R17): bounded copies of authoring data only; one entry per completed action.
--- Each entry carries the instance token of the document it belongs to (not its level id: two template
--- copies of one station share the id), so Undo/Redo across a document replacement is recognisable.
 -- First material: raises the document, enables the authored profile and keeps its section overrides. The level-wide
 -- values come from the contract's defaults once parameter set v2 exists (#573). nil removes the material.
 function M.set_material(e,m)
@@ -792,6 +791,9 @@ function M.set_material(e,m)
     e.material=copy(m)
     return true
 end
+-- Snapshot undo (R17): bounded copies of authoring data only; one entry per completed action.
+-- Each entry carries the instance token of the document it belongs to (not its level id: two template
+-- copies of one station share the id), so Undo/Redo across a document replacement is recognisable.
 function M.history(limit) return {limit=limit or 100,undo={},redo={}} end
 function M.record(h,doc,instance)
     h.undo[#h.undo+1]={doc=copy(doc),instance=instance};h.redo={}

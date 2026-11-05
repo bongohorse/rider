@@ -120,7 +120,7 @@ local function materialize(state,entry,generation,result)
     if rebuilt then
         local c=state.perspective and require("main.terrain_perspective.projection").section(p.prep,p.first,p.last,tostring(entry.key),p.styles,p.looks) or geometry.section(p.prep,p.first,p.last,tostring(entry.key),true,p.styles)
         if not entry.resource then state.resource_serial=(state.resource_serial or 0)+1 end
-        mesh.upload(entry,c,"/editor_terrain/g"..generation.."-slot"..state.resource_serial..".bufferc")
+        mesh.upload(entry,c,"/editor_terrain/g"..generation.."-slot"..state.resource_serial..".bufferc",state)
         result.rebuilt=result.rebuilt+1;state.uploads=state.uploads+1
     elseif entry.restyle then
         mesh.colors(entry,p.styles,p.first);result.recolored=result.recolored+1
@@ -173,7 +173,7 @@ function M.update(state,e,previews,selected,hover,generation,view)
         mesh.layer(entry,p.prep.layer_z)
         entry.signature,entry.color,entry.points,entry.phase,entry.lower=p.signature,p.color,p.points,p.phase,p.lower
         local vertices=(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0)
-        result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*(state.perspective and 48 or 36)
+        result.vertices=result.vertices+vertices;result.buffer_bytes=result.buffer_bytes+vertices*(state.perspective and require('main.terrain_perspective.material').stride() or 36)
     end
     for _,entry in ipairs(retired) do mesh.drop(entry,true);entry.geometry=nil end
     -- Register new entries before any potentially failing upload; pending retains partial failure cleanup.
@@ -190,6 +190,7 @@ function M.final(state,remove)
             if not seen[entry] then mesh.drop(entry,remove);seen[entry]=true end
         end end
         state.entries,state.pending={},nil
+        if remove then for _,holder in pairs(state.holders or {}) do go.delete(holder) end;state.holders=nil end
     end
 end
 return M

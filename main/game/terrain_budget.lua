@@ -38,6 +38,7 @@ function M.measure(d)
     -- Fit can activate everything; caching is a subset, never an extra two beyond all sections.
     r.visible_max=r.sections;r.allocated_max=r.sections;r.cached_max=math.min(2,r.sections)
     r.mesh_peak=2*r.sections -- retiring old + incoming, before end-of-frame deletion
+    r.mesh_peak=r.mesh_peak+require('main.terrain_perspective.material').held_presets(d) -- hidden override chunks
     r.instances=r.sections+r.sprites+r.labels+M.RESERVE
     -- Conservative CPU working envelope: retained editor arrays (including base colors),
     -- staging/replacement arrays, descriptors and two engine-owned buffer copies.

@@ -42,6 +42,9 @@ function M.validate(d)
     end
     if d.mechanisms~=nil and d.schema~=5 and d.schema~=6 then return nil,'Mechanisms require station schema 5',true end
     if d.material~=nil and d.schema~=6 then return nil,'A level material requires station schema 6',true end
+    if d.material~=nil and not (type(d.editor)=='table' and d.editor.road_profile==require('main.terrain_perspective.look').ID) then
+        return nil,'A level material needs the authored Terrain Look'
+    end
     local material_ok,material_err,material_unknown=require('main.terrain_perspective.material').validate(d.material)
     if not material_ok then return nil,material_err,material_unknown end
     local fuel_ok,fuel_err,fuel_unknown=require('main.game.fuel').validate(d.fuel)

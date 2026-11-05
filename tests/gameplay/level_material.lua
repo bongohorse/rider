@@ -46,10 +46,31 @@ local play,edit=material.spec_for(out),material.spec_for({editor=d.editor})
 assert(play.preset=='quarry' and play.band=='meadow' and play.text==edit.text and material.stride_for(out)==52)
 material.select(out);assert(material.key()==play.text);material.select({editor=d.editor});assert(material.key()==play.text)
 material.select(legacy);assert(material.key()=='' and material.stride()==48)
--- Undo: the history restores the earlier document.
+-- Undo and Redo through the real history.
 local h=D.history();local plain=fresh();D.record(h,plain,1)
-local changed=D.copy(plain);assert(D.set_material(changed.editor,{version=1,preset='city'}));D.record(h,changed,1)
-assert(changed.editor.material.preset=='city' and plain.editor.material==nil and plain.editor.editor_version==13,'the earlier document is unchanged')
+local changed=D.copy(plain);assert(D.set_material(changed.editor,{version=1,preset='city'}))
+local undone=assert(D.step(h,changed,true,1))
+assert(undone.editor.material==nil and undone.editor.editor_version==13,'Undo removes the material')
+local redone=assert(D.step(h,undone,false,1));assert(redone.editor.material.preset=='city','Redo restores it')
+-- Opening a saved level (R1): the material stays, also when the file conflicts or comes from a newer editor.
+local saved=assert(D.compile(d))
+local opened,note,conflict=D.open_level(saved)
+assert(opened.editor.material.preset=='quarry' and opened.editor.material.band=='meadow' and note==nil and conflict==nil)
+assert(D.compare(opened,saved)==nil,'a level compares equal to its own file')
+local other=J.decode(enc(saved));other.material.preset='city'
+assert(D.compare(opened,other),'a changed material is a difference')
+local moved=J.decode(enc(saved));moved.spawn[1]=moved.spawn[1]+1
+local _,_,clash=D.open_level(moved);assert(clash and clash.lines.editor.material.preset=='quarry','keeping compiled geometry keeps the material')
+assert(clash.lines.editor.editor_version==14 and D.validate(clash.lines))
+local newer=J.decode(enc(saved));newer.editor.editor_version,newer.editor.compiler_version=15,15
+local lines=D.open_level(newer);assert(lines.editor.material.band=='meadow','an unsupported editor block keeps the material')
+-- A stored level without one stays as it was, also an older file.
+local f=assert(io.open('tests/gameplay/level-fixtures/terrain-p0/mixed.json','r'));local fixture=J.decode(f:read('*a'));f:close()
+local before_text=enc(fixture);assert(require('main.game.station_data').validate(fixture) and enc(fixture)==before_text and fixture.material==nil)
+local fixture_doc=D.open_level(fixture);assert(fixture_doc.editor.material==nil and material.spec_for(fixture)==nil)
+-- The source wins over a hand-edited top-level value, in Play and Edit alike.
+local edited=J.decode(enc(saved));edited.material.preset='city';assert(material.spec_for(edited).preset=='quarry')
+local bare=J.decode(enc(saved));bare.editor=nil;local no,why=require('main.game.station_data').validate(bare);assert(not no and why:find('authored',1,true))
 -- Refusals: unknown IDs and versions are marked unsupported, so the file stays unchanged.
 local function bad(change,text)
     local c=D.copy(d);change(c.editor);local unknown=rejected(c,text);assert(unknown==true,text..' keeps the file')
@@ -76,6 +97,8 @@ assert(budget.measure(course(10)).stride==48 and budget.measure(course(10,true))
 assert(budget.check(course(1119,true)))
 local refused,why=budget.check(course(1120,true));assert(not refused and why:find('payload',1,true))
 assert(budget.check(course(1120)),'the same course fits without a material')
+local held=course(10,true);held.material={version=1,preset='meadow',band='city',fill='quarry'}
+assert(budget.measure(held).mesh_peak==budget.measure(course(10,true)).mesh_peak+2,'held override presets count as meshes')
 assert(budget.preview(1,20164,0,0,{road_profile='authored-v1',material={version=1,preset='meadow'}}))
 assert(not budget.preview(1,20165,0,0,{road_profile='authored-v1',material={version=1,preset='meadow'}}))
 assert(budget.preview(1,20165,0,0,{road_profile='authored-v1'}))
