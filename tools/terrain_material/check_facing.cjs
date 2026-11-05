@@ -13,6 +13,7 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
 const run=(a,b)=>{const p=[];for(let x=b;x>=a;x-=4)p.push([x,0]);return p;}; // solid side up: right to left
 const LEVEL=JSON.stringify({schema:1,units:'metres',id:'facing',name:'facing',spawn:[10,.7],start_speed:0,run_in:0,run_out:0,bounds:[-10,350,-30,20],chains:[run(0,100),run(240,340)],hulls:[]});
 // Home centres the view near x = 170. Outer ends face away from the camera, inner ends face it.
+// The inner left end needs the camera well to its left, so that zoom anchors at a fixed point left of the end.
 const BACKGROUND=27; // the editor's empty view
 const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-left-facing',240,-1,true],['right-away',340,1,false]];
 (async()=>{
@@ -39,7 +40,7 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  for(const [name,x,side,facing] of ENDS){
   await key('Home');await pointer.frames(page,{n:20});
   let e=await map();
-  for(let i=0;i<30&&e.zoom<.08;i++){const q=at(e,x,0);await page.mouse.move(q.x,q.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:5});e=await map();}
+  for(let i=0;i<30&&e.zoom<.08;i++){const q=name==='inner-left-facing'?{x:620,y:372}:at(e,x,0);await page.mouse.move(q.x,q.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:5});e=await map();}
   assert.ok(e.zoom>=.08,'zoom target');await page.mouse.move(640,70);await pointer.frames(page,{n:8});await page.waitForTimeout(400);e=await map();
   const file=path.join(out,name+'.png');await page.screenshot({path:file});
   // Brightness of a strip just inside the front face, deep inside it, and just outside the run end.
