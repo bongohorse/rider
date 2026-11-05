@@ -4,6 +4,8 @@
 
 ## Scope and activation
 
+Level materials, parameter set v2 and later visual work are defined in the [level visuals contract](level-visuals.md).
+
 Claudio accepted the camera-dependent direction in #290 and authorized the separate #292 integration. The explicit comparison remains available through `rider.terrain_perspective = 1`, supplied only by `tools/terrain_perspective/build.py`. Ordinary builds select the profile using the compatibility rule below; the native Terrain Look editor authors versioned source values. It does not read comparison localStorage or expose the comparison style-request API. Source/collision/physics/camera/Retry remain unchanged.
 
 The prototype keeps the existing 64-interval partition, source sampling and front contour. It adds a visual depth projection; it does not introduce 3D physics or move the actual follow camera. All state affecting the projection is the parameter set plus the current camera XY. There is no speed/direction input, oscillator, lag or shape-history filter.

@@ -2,6 +2,8 @@
 
 **Source:** [Issue #392](https://github.com/bongohorse/rider/issues/392) · **Issue status on 2026-11-04:** needs go · **Type:** historical planning reference.
 
+> **Superseded on 2026-11-05.** Claudio replaced Surface/Rim/Side/End per section with one level-wide Surface, Band and Fill. The [level visuals contract](../../contracts/level-visuals.md) is binding.
+>
 > **Reference, not implementation approval.** The issue currently has `status: needs go`. Kenney art-direction approval does not prove a shipping renderer, asset subset or editor UI. Current GitHub issues, child tasks and active contracts are authoritative.
 
 **At a glance:** Verified Kenney material subset, Surface/Rim/Side/End regions, material IDs, migration, editor UX and real device tests.
