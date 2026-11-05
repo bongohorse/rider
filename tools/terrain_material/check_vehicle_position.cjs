@@ -55,6 +55,6 @@ const brightness=(page,file,q)=>page.evaluate(async({src,q})=>{const i=new Image
  assert.deepEqual(errors,[]);
  for(const k of ['travel1','travel2','pitch'])assert.ok(Math.abs(results[0].rest[k]-results[.5].rest[k])<1e-3,'physics differs in '+k);
  assert.ok(results[.5].road<results[0].road-10,'the line must lie on the darker road at 0.5');
- for(const v of [0,.5]){assert.ok(results[v].below>40,'terrain visible on hover at '+v);assert.ok(results[v].selected>40,'terrain visible on selection at '+v);}
+ for(const v of [0,.5]){assert.ok(results[v].hover,'hover found the line at '+v);assert.ok(results[v].below>40,'terrain visible on hover at '+v);assert.ok(results[v].selected>40,'terrain visible on selection at '+v);}
  console.log('PASS');
 })().catch(e=>{console.error(String(e.message||e).slice(0,400));process.exit(1);});

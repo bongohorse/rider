@@ -80,7 +80,9 @@ local b0=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,w
 local b5=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,width=.6,vehicle_position=.5},.6)
 assert(b5[2]<b0[2],'the body moves below the line')
 local worst=P.bounds({0,0,10,10},{5,5},{mode='perspective',perspective=6,angle=45,width=4,vehicle_position=1},4)
-assert(worst[1]==worst[1] and worst[3]>worst[1] and worst[4]>worst[2],'no pole at the set 2 limit')
+for _,v in ipairs(worst) do assert(math.abs(v)<1e4,'finite bounds at the set 2 limit: '..v) end
+assert(1+(P.RANGES_V2.perspective[2]/P.FOCAL)*-P.RANGES_V2.width[2]*P.RANGES_V2.vehicle_position[2]>=.4-1e-9,'denominator stays positive')
+assert(worst[3]>worst[1] and worst[4]>worst[2])
 local mat=require 'main.terrain_perspective.material'
 mat.override={preset='meadow',text='meadow'}
 local points={};for x=0,10 do points[#points+1]={x,0} end
