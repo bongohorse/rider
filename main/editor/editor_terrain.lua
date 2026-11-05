@@ -99,13 +99,13 @@ function M.plan(e,previews,selected,hover,old)
             end
         end
     end
-    geometry.assign_layers(preps)
     -- Safe fallback for still-invalid drafts; configured engine capacity is not raised.
     local vertices=0
     for _,p in ipairs(plans) do vertices=vertices+(p.last-p.first)*18+(p.first==1 and 6 or 0)+(p.last==#p.prep.p and 6 or 0) end
     if not require("main.game.terrain_budget").preview(#plans,vertices,0,0,e) then
         return nil,"Mesh preview exceeds component or Fit payload budget; shorten terrain. Line preview retained."
     end
+    geometry.assign_layers(preps)
     return plans
 end
 function M.create(e)
