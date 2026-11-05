@@ -68,7 +68,7 @@ On a level with a material, a face that turns away from the camera is hidden, ne
 
 ## Run order
 
-Claudio's rule of 2026-11-05: where runs overlap, the lower run is in front and the higher run behind. Height is the mean along the whole run, so every section of a run shares one draw position, and this holds on all routes, in Play and in Edit. Terrain stays behind all other world objects.
+Where two runs overlap, the one that is lower in that overlap is in front (Claudio's idea of 2026-11-05). Height is compared only inside the overlap, so a bridge stays behind a long climb that passes under it. All sections of a run share one draw position, so runs that truly cross keep one order: the rule holds where one run is lower throughout. This applies on all routes, in Play and in Edit. Terrain stays behind all other world objects.
 
 ## Light
 

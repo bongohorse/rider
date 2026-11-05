@@ -1,5 +1,5 @@
 -- Normal-Play depth geometry, version 1. Metres; never mutates collision/source data.
-local M={VERSION=1,INTERVALS=64,PROJECTION={0.18,0.55},DEPTH=0.9,EDGE=0.18,LAYER_NEAR=-2,LAYER_RANGE=.8,LAYER_SCALE=64}
+local M={VERSION=1,INTERVALS=64,PROJECTION={0.18,0.55},DEPTH=0.9,EDGE=0.18,LAYER_NEAR=-2,LAYER_RANGE=.8,LAYER_SAMPLES=16}
 local BODY_TOP,BODY_BOTTOM={0.25,0.34,0.29,1},{0.10,0.16,0.17,1}
 local TOP,BACK,EDGE,CAP={0.63,0.76,0.62,1},{0.43,0.60,0.47,1},{0.29,0.43,0.36,1},{0.17,0.25,0.22,1}
 local SELECT_GAIN={1.6,.95,.5}
@@ -38,18 +38,73 @@ function M.prepare(raw,lower,arc)
         end
         local u={arc/4}
         for i=2,#p do arc=arc+distance(p[i-1],p[i]);u[i]=arc/4 end
-        return {p=p,normals=normals,monotone=monotone,u=u,arc=arc,lower=lower,offset=offset,bottom=bottom,layer_z=M.layer_z(p)}
+        return {p=p,normals=normals,monotone=monotone,u=u,arc=arc,lower=lower,offset=offset,bottom=bottom,layer_z=M.LAYER_NEAR}
 end
--- Draw order of a whole run (Claudio 2026-11-05, #577): the lower run is in front, the higher run behind. Height is
--- the mean along the run, so every section of a run shares one z. Stays below all other world objects.
-function M.layer_z(p)
-    local height,length=0,0
-    for i=2,#p do
-        local d=distance(p[i-1],p[i])
-        height=height+(p[i-1][2]+p[i][2])/2*d;length=length+d
+-- Draw order of runs (#577): where two runs overlap, the one that is lower there is in front. Height along x, averaged
+-- over the overlap only: a whole-run mean would put a bridge in front of the long climb passing under it.
+local function height_at(prep,x)
+    local p,total,count=prep.p,0,0
+    if prep.monotone then
+        local a,b=1,#p
+        while b-a>1 do local m=math.floor((a+b)/2);if p[m][1]<=x then a=m else b=m end end
+        local dx=p[b][1]-p[a][1]
+        return dx>0 and p[a][2]+(p[b][2]-p[a][2])*(x-p[a][1])/dx or p[a][2]
     end
-    height=length>0 and height/length or p[1][2]
-    return M.LAYER_NEAR-M.LAYER_RANGE*(math.atan(height/M.LAYER_SCALE)/math.pi+.5)
+    for i=1,#p-1 do
+        local a,b=p[i],p[i+1]
+        if x>=math.min(a[1],b[1]) and x<=math.max(a[1],b[1]) then
+            local dx=b[1]-a[1];total=total+(dx~=0 and a[2]+(b[2]-a[2])*(x-a[1])/dx or (a[2]+b[2])/2);count=count+1
+        end
+    end
+    return count>0 and total/count or p[1][2]
+end
+local function x_range(prep)
+    local low,high=math.huge,-math.huge
+    for _,q in ipairs(prep.p) do low=math.min(low,q[1]);high=math.max(high,q[1]) end
+    return low,high
+end
+local function identity_before(a,b,i,j)
+    local p,q=a.p[1],b.p[1]
+    if p[1]~=q[1] then return p[1]<q[1] end
+    if p[2]~=q[2] then return p[2]<q[2] end
+    return i<j
+end
+-- Assigns layer_z to every prepared run of a level. Deterministic for the same points, in Play and in Edit.
+function M.assign_layers(preps)
+    local n=#preps
+    local lows,highs,means,behind,blockers={},{},{},{},{}
+    for i,prep in ipairs(preps) do
+        lows[i],highs[i]=x_range(prep);means[i]=0;behind[i]={};blockers[i]=0
+        for s=0,M.LAYER_SAMPLES do means[i]=means[i]+height_at(prep,lows[i]+(highs[i]-lows[i])*s/M.LAYER_SAMPLES) end
+        means[i]=means[i]/(M.LAYER_SAMPLES+1)
+    end
+    for i=1,n-1 do for j=i+1,n do
+        local from,to=math.max(lows[i],lows[j]),math.min(highs[i],highs[j])
+        if to>from then
+            local difference=0
+            for s=0,M.LAYER_SAMPLES do
+                local x=from+(to-from)*s/M.LAYER_SAMPLES
+                difference=difference+height_at(preps[i],x)-height_at(preps[j],x)
+            end
+            local i_higher=difference>1e-6 or (math.abs(difference)<=1e-6 and identity_before(preps[i],preps[j],i,j))
+            local back,front=i_higher and i or j,i_higher and j or i
+            behind[back][#behind[back]+1]=front;blockers[front]=blockers[front]+1
+        end
+    end end
+    -- Back to front. Among free runs, or to break a cycle of crossing runs, the highest mean goes first.
+    local done,rank={},0
+    while rank<n do
+        local best
+        for i=1,n do if not done[i] then
+            local free=blockers[i]==0;local other=best and blockers[best]==0
+            if not best or (free and not other) or (free==other and (means[i]>means[best]
+                or (means[i]==means[best] and identity_before(preps[i],preps[best],i,best)))) then best=i end
+        end end
+        done[best]=true
+        for _,front in ipairs(behind[best]) do blockers[front]=blockers[front]-1 end
+        preps[best].layer_z=n>1 and M.LAYER_NEAR-M.LAYER_RANGE*(1-rank/(n-1)) or M.LAYER_NEAR
+        rank=rank+1
+    end
 end
 function M.section(prep,first,last,key,editing,styles)
     local p,u,monotone=prep.p,prep.u,prep.monotone
@@ -105,12 +160,15 @@ function M.section(prep,first,last,key,editing,styles)
     return c
 end
 function M.build(d)
-    local chunks,total,arc,previous={},0,0,nil
+    local chunks,total,arc,previous,preps={},0,0,nil,{}
     for chain_index,raw in ipairs(d.chains) do
         local start=raw[raw[1][1]>raw[#raw][1] and #raw or 1]
         if previous then arc=arc+distance(previous,start) end
-        local prep=M.prepare(raw,d.bounds[3],arc)
-        arc,previous=prep.arc,prep.p[#prep.p]
+        preps[chain_index]=M.prepare(raw,d.bounds[3],arc)
+        arc,previous=preps[chain_index].arc,preps[chain_index].p[#preps[chain_index].p]
+    end
+    M.assign_layers(preps)
+    for chain_index,prep in ipairs(preps) do
         for first=1,#prep.p-1,M.INTERVALS do
             local last=math.min(first+M.INTERVALS,#prep.p)
             local c=M.section(prep,first,last,"run"..chain_index.."-"..first.."-"..last)
@@ -137,11 +195,11 @@ function M.extent(prep,first,last)
     return b
 end
 function M.describe(d)
-    local entries,total,arc,previous={},0,0,nil
+    local entries,total,arc,previous,preps={},0,0,nil,{}
     for chain_index,raw in ipairs(d.chains) do
         local start=raw[raw[1][1]>raw[#raw][1] and #raw or 1]
         if previous then arc=arc+distance(previous,start) end
-        local prep=M.prepare(raw,d.bounds[3],arc);arc,previous=prep.arc,prep.p[#prep.p]
+        local prep=M.prepare(raw,d.bounds[3],arc);arc,previous=prep.arc,prep.p[#prep.p];preps[#preps+1]=prep
         for first=1,#prep.p-1,M.INTERVALS do
             local last=math.min(first+M.INTERVALS,#prep.p)
             local vertices=(last-first)*18+(first==1 and 6 or 0)+(last==#prep.p and 6 or 0)
@@ -149,6 +207,7 @@ function M.describe(d)
             total=total+vertices
         end
     end
+    M.assign_layers(preps)
     return entries,{chunks=#entries,vertices=total,triangles=total/3,buffer_bytes=total*36,version=M.VERSION,intervals=M.INTERVALS,lower_extent=d.bounds[3],depth=M.DEPTH,projection=M.PROJECTION}
 end
 return M
