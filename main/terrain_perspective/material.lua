@@ -18,6 +18,7 @@ local INDEX={};for i,f in ipairs(M.FAMILIES) do INDEX[f]=i-1 end
 -- Original level material presets (main/terrain_material/presets, docs/contracts/level-visuals.md): Surface, Band and
 -- Fill, each with its own texture and its own chunk factory. Band follows the driving line, Fill lies in world space.
 M.PRESETS={'meadow','quarry','volcano','city','inca','glacier','scrapyard'}
+M.LIGHT={-.55,.83};M.LIGHT_SCALE=.9;M.LIGHT_MIN=.62;M.LIGHT_MAX=1.22;M.LIGHT_BACK=.86
 M.FLIPPED=4 -- added to a slot's face: see apply_preset
 M.BAND_START=.18 -- metres below the line where the side face begins (terrain_geometry EDGE)
 local PRESET={};for _,id in ipairs(M.PRESETS) do PRESET[id]=true end
@@ -158,6 +159,23 @@ local function apply_preset(c,prep,first,last,spec,styles,looks)
         end
         n=n+6
     end end
+    -- Static light from the upper left (docs/contracts/level-visuals.md): per joint, so neighbours and sections agree.
+    -- A section override's shading is baked here; otherwise the shader applies the level's value.
+    local function light_at(i)
+        local v=prep.normals[i];local x,y=v[1],v[2]
+        if y<0 then x,y=-x,-y end
+        local gain=math.max(M.LIGHT_MIN,math.min(M.LIGHT_MAX,1+M.LIGHT_SCALE*(M.LIGHT[1]*x+M.LIGHT[2]*y-M.LIGHT[2])))
+        return looks and 1+(gain-1)*looks[i].shading or gain
+    end
+    for i=first,last-1 do
+        local q=(i-first)*18
+        for f=0,2 do for j,index in ipairs({i,i+1,i+1,i,i+1,i}) do
+            local vertex=q+f*6+j;local k=(vertex-1)*4
+            local gain=light_at(index)
+            if f==2 and uv[(vertex-1)*2+2]>.5 then gain=gain*(looks and 1+(M.LIGHT_BACK-1)*looks[index].shading or M.LIGHT_BACK) end
+            for channel=1,3 do base[k+channel]=base[k+channel]*gain;color[k+channel]=color[k+channel]*gain end
+        end end
+    end
     -- Section overrides: each vertex carries its local width, so the vehicle stays on the middle there too.
     if looks then
         local function width(vertex,index) slot[vertex]=slot[vertex]+8*math.floor(looks[index].width*1000+.5) end

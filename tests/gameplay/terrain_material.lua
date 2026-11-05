@@ -188,6 +188,19 @@ do
         local near2=math.abs(u_at(a,63*18+offset+2,prep.u[1]%1)-u_at(b,offset+1,prep.u[65]%1))
         assert(near2<1e-6 or math.abs(near2-1)<1e-6,'U continuous across sections on face at '..offset)
     end
+    -- #541 light: rising brighter, falling darker, flat neutral, equal across sections, Surface back darker.
+    do
+        local hill={};for x=0,200 do hill[#hill+1]={x,x<80 and x*.5 or (x<120 and 40 or 40-(x-120)*.5)} end
+        local shape=geometry.prepare(hill,-30,0)
+        local s1=projection.section(shape,1,65,'l1');local s2=projection.section(shape,65,129,'l2');local s3=projection.section(shape,129,193,'l3')
+        local function grey(c,vertex) return c.color[(vertex-1)*4+1] end
+        assert(grey(s1,1)>1.05,'rising is brighter: '..grey(s1,1))
+        assert(grey(s3,18*20+1)<.95,'falling is darker')
+        assert(math.abs(grey(s2,18*30+1)-1)<1e-9,'flat is neutral')
+        assert(math.abs(grey(s1,63*18+2)-grey(s2,1))<1e-9,'sections agree at their joint')
+        assert(grey(s2,18*30+13+2)<grey(s2,18*30+13),'the Surface darkens to its back edge')
+        assert(math.abs(s1.base_colors[1]-s1.color[1])<1e-9 and s1.bytes==s1.vertices*52)
+    end
     -- Budgets with a preset: the 660 m course and the near-limit refusal.
     local preset_long={chains={},hulls={},labels={},bounds={-10,700,-40,50},_road_profile='perspective-v1'}
     for k,n in ipairs({520,496}) do local chain={};for i=0,n do chain[i+1]={i+(k-1)*600,0} end;preset_long.chains[k]=chain end
