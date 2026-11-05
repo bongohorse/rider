@@ -3,7 +3,7 @@
  "issue": 538,
  "license": "Original work generated for Rider; no third-party input.",
  "generator": "tools/art/level_materials.cjs",
- "generator_sha256": "2638e6801e9f6f9d4de881ef76f8d286e4c404e2dd101ef5fbd1f6ec2cefb484",
+ "generator_sha256": "4db5c767b11da17c08eb098015116ec94aeb0789fba278b7b410e52dca6dd531",
  "browser": "156.0.8078.4",
  "pixels_per_metre": 128,
  "sizes": {
@@ -26,10 +26,10 @@
    "name": "Meadow",
    "seed": 536,
    "sha256": {
-    "surface": "913a47d1e42aae68e54a199294f6f7f9bf823ac30a0d4c174937f845621b0cad",
+    "surface": "c1b55b5e3997371f863fd697789ceb6831ff14f6f98516ff92a23ab55df971be",
     "band": "bb0e65f3b419824ca36bd2b9cd799d12d0cc33957e047f5c12d6793954e71059",
     "fill": "335775047e55cf5b58fb11bd01003c7834669c1736ab82f489b78b774581e9a7",
-    "thumb": "ae68eac64310fb81bdf8ed1355d00328b76ff13251a6f1de4c564d1cd5807d08"
+    "thumb": "34a5e78da648758d0998ce7d689171fc54af951e7d93d2bca9d9b41497db5862"
    }
   },
   {
@@ -37,10 +37,10 @@
    "name": "Canyon",
    "seed": 611,
    "sha256": {
-    "surface": "467d3480ab585a1e34988dbb1267864150e428495410e6d334b2d42a2c00a343",
+    "surface": "b6a36a530b097137ca1d7ca080a74649bf8e6b19dcf91d58ea557718d81cf74e",
     "band": "359d3d7caca12cca44ba1aedfb92c80dccadf4d4972d1c6004de9e93d028fc26",
     "fill": "9eca6c18302a970f851bb567143911f4b09616eef78ecebc13332dcb0dc69ad0",
-    "thumb": "8294fe632dc3a77236e4eb70e96c9ccfc7adcce6a211fac5c4bd0233683e6e92"
+    "thumb": "ada1536442ddeedebe534670ff1cefa153ced2483ef03a4bc5522ef72e2e08d3"
    }
   },
   {
@@ -48,10 +48,10 @@
    "name": "Snowfield",
    "seed": 723,
    "sha256": {
-    "surface": "0852b0db7ee68df989e07a733c2ba6a0cc49fee114034e26df4cdefc95d9a877",
+    "surface": "27232b08d64699afb3e2b76152a179d81aee15aa0cab034c7b01ea7c1763f6b3",
     "band": "9b66989f3a40ba56284d0ff7c3ae6744c0179b467256bbf41d151f2a3a15702c",
     "fill": "bb95471403abe5e2e871406caf7b3c4af0b1bc6e26879023780bd70e68bd1c69",
-    "thumb": "a4abc05613d868e2c93bb80579a88b39e09efba53d1fab5a1efe58cd1a62897a"
+    "thumb": "6297d60d58fa3b36235c8579952425847dc6f01a5b9642d3063ed0343f356780"
    }
   },
   {
@@ -59,10 +59,10 @@
    "name": "Forest",
    "seed": 847,
    "sha256": {
-    "surface": "4577f4bcdbfbb3c756bf3b08216fee35b2343489c4c39fc42398ff75a3f106d4",
+    "surface": "6df29aeaa551c27b2b0c709b06c5d4529b1c8c69e81cfab8741b68b18a8e035c",
     "band": "fa3e83344b4fdc15cdacf4f2389f5ba44a7c37c1ae48138c79933ababb5f09cd",
     "fill": "12d05665133f4798200f773b19db257b5e12e73c4438ec4efc75cdb5b4fbc70f",
-    "thumb": "0fadf37d464929b78c5b9b06840a43c7261eb212265773dceef57c3719cdffd3"
+    "thumb": "b1d221133b571244675ca66282d716d7af887e2ddbe9396a88e0bcd74065dcfd"
    }
   },
   {
@@ -70,10 +70,10 @@
    "name": "Volcanic",
    "seed": 961,
    "sha256": {
-    "surface": "268748dac9847313a4f7af53977f7571041762f3cddb6052fc3f9c69865ae4d7",
+    "surface": "de10538c76e410c35221d35449d6ee55711ed47e78bcc19478032b1a2b43bc44",
     "band": "e83ad4055f801d5c118d0dbe75d9eb003a5bdc824eb7092aff54adb6b826a233",
     "fill": "5428abf258ae5597d8504f3104711a8427a77ad7c703f8c531349361bf6eb072",
-    "thumb": "9b6f573ee00e8aaeefcb35c161411887f9be6f5c97099dec9a5983741e1a9a88"
+    "thumb": "2f042327e6fdc34570a3034e6e7ddae7ef45569a750538772f93ac7681926179"
    }
   }
  ]

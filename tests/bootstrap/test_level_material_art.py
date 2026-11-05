@@ -1,8 +1,12 @@
 """#538: committed level material presets match their manifest and the rules of the level visuals contract."""
 import json
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 import unittest
+
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/art'))
@@ -30,13 +34,90 @@ class LevelMaterialArt(unittest.TestCase):
         self.assertTrue(KENNEY.is_file())
         self.assertFalse(list(level_materials.OUT.glob('*/kenney*')))
 
-    def test_seam_check_finds_a_real_seam(self):
-        from PIL import Image
-        image = Image.new('RGBA', (64, 64), (10, 10, 10, 255))
-        image.paste((240, 240, 240, 255), (32, 0, 64, 64))
-        across, inner = level_materials.edge_difference(image, 'u')
-        self.assertGreater(across, 100)
-        self.assertLess(inner, 50)
+
+class BrokenPresets(unittest.TestCase):
+    """Each rule must fail on a preset broken on purpose, with its hash rewritten so only that rule can catch it."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.out = Path(temp.name)/'presets'
+        shutil.copytree(level_materials.OUT, self.out)
+        self.manifest = json.loads((self.out/'manifest.json').read_text(encoding='utf-8'))
+        self.manifest['presets'] = self.manifest['presets'][:1]
+        self.preset = self.manifest['presets'][0]
+        self.folder = self.out/self.preset['id']
+        self.save_manifest()
+        self.assertEqual(level_materials.check(self.out), [])
+
+    def save_manifest(self):
+        (self.out/'manifest.json').write_text(json.dumps(self.manifest), encoding='utf-8')
+
+    def broken(self, name, change):
+        path = self.folder/f'{name}.png'
+        image = change(Image.open(path).convert('RGBA'))
+        image.save(path)
+        self.preset['sha256'][name] = level_materials.sha256(path)
+        self.save_manifest()
+        return ' '.join(level_materials.check(self.out))
+
+    @staticmethod
+    def rect(box, colour):
+        def change(image):
+            ImageDraw.Draw(image).rectangle(box, fill=colour)
+            return image
+        return change
+
+    def test_changed_pixels_without_a_new_hash(self):
+        path = self.folder/'fill.png'
+        self.rect((0, 0, 9, 9), (255, 0, 255, 255))(Image.open(path).convert('RGBA')).save(path)
+        self.assertIn('pixels differ', ' '.join(level_materials.check(self.out)))
+
+    def test_missing_manifest_key(self):
+        del self.preset['sha256']['fill']
+        self.save_manifest()
+        self.assertIn('manifest lists', ' '.join(level_materials.check(self.out)))
+
+    def test_thumbnail_of_something_else(self):
+        self.assertIn('thumb', self.broken('thumb', self.rect((0, 0, 127, 127), (255, 0, 255, 255))))
+
+    def test_small_thumbnail(self):
+        self.assertIn('thumb', self.broken('thumb', lambda image: image.resize((16, 16))))
+
+    def test_wrong_size(self):
+        self.assertIn('size', self.broken('fill', lambda image: image.resize((256, 256))))
+
+    def test_hole_in_the_contact_zone(self):
+        self.assertIn('holes', self.broken('surface', self.rect((100, 60, 110, 70), (0, 0, 0, 0))))
+
+    def test_flat_far_edge(self):
+        self.assertIn('fray', self.broken('surface', self.rect((0, 0, 511, 0), (60, 90, 40, 254))))
+
+    def test_band_reaching_the_last_row(self):
+        self.assertIn('last row', self.broken('band', self.rect((0, 127, 511, 127), (60, 90, 40, 255))))
+
+    def test_band_gap_at_the_fold(self):
+        self.assertIn('gap', self.broken('band', self.rect((0, 0, 40, 0), (0, 0, 0, 0))))
+
+    def test_transparent_fill(self):
+        self.assertIn('not opaque', self.broken('fill', self.rect((0, 0, 4, 4), (0, 0, 0, 0))))
+
+    def test_bright_line_at_the_fold(self):
+        self.assertIn('fold', self.broken('surface', self.rect((0, 118, 511, 127), (255, 255, 255, 255))))
+
+    def test_stone_cut_at_the_repeat_edge(self):
+        message = self.broken('fill', self.rect((478, 200, 511, 240), (230, 225, 215, 255)))
+        self.assertIn('seam in u', message)
+
+    def test_generator_change(self):
+        self.manifest['generator_sha256'] = '0'*64
+        self.save_manifest()
+        self.assertIn('generator', ' '.join(level_materials.check(self.out)))
+
+    def test_license_change(self):
+        self.manifest['license'] = 'other'
+        self.save_manifest()
+        self.assertIn('license', ' '.join(level_materials.check(self.out)))
 
 
 if __name__ == '__main__':

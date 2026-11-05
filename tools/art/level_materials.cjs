@@ -2,9 +2,9 @@
 // 128 px = 1 m. Surface and Band are 512 x 128 and repeat along the track; Fill is 512 x 512 and repeats both ways.
 //   node tools/art/level_materials.cjs            then   python tools/art/level_materials.py --write
 'use strict';
-const fs=require('node:fs'),path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {chromium}=require('playwright');
-const OUT=path.resolve(__dirname,'../../main/terrain_material/presets');
+const OUT=process.env.LEVEL_MATERIALS_OUT||path.resolve(__dirname,'../../main/terrain_material/presets');
 const PRESETS=[
  {id:'meadow',name:'Meadow',seed:536,fold:'84,134,44',
   fill:{base:[26,36,29],dark:'30,16,8',light:'190,140,90',grainDark:'20,10,5',grainLight:'215,170,120',stoneH:[24,40],stoneS:[6,18],stoneL:[38,56],stoneShadow:'15,8,4',stones:34},
@@ -93,7 +93,7 @@ function paint(p){
   for(let i=0;i<2200;i++){const x=R(0,W);blade(x,front(x)+R(-5,8),R(4,12),q.edgeL);}
   for(let i=0;i<q.tufts;i++){const x=R(0,W),y=R(48,92);for(let j=0;j<18;j++)blade(x+R(-5,5),y+R(-2,2),R(3,7),q.edgeL);}
   // Fray the far edge, then let blades cross it.
-  const fray=x=>7+at(w3,x)*.7;
+  const fray=x=>Math.max(4,7+at(w3,x)*.7);
   s.globalCompositeOperation='destination-out';s.beginPath();s.moveTo(-2,-2);for(let x=-2;x<=W+2;x+=2)s.lineTo(x,fray(x));s.lineTo(W+2,-2);s.closePath();s.fillStyle='#000';s.fill();s.globalCompositeOperation='source-over';
   for(let i=0;i<620;i++){const x=R(0,W);blade(x,fray(x)+R(1,6),R(3,8),q.edgeL);}
   const ft=s.createLinearGradient(0,110,0,HS);ft.addColorStop(0,rgba(p.fold,0));ft.addColorStop(1,rgba(p.fold,.72));s.fillStyle=ft;s.fillRect(0,110,W,18);
@@ -104,7 +104,7 @@ function paint(p){
 }
 (async()=>{
  const browser=await chromium.launch();const page=await browser.newPage();
- const meta={generator:'tools/art/level_materials.cjs',browser:browser.version(),presets:[]};
+ const meta={generator:'tools/art/level_materials.cjs',generator_sha256:crypto.createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),browser:browser.version(),presets:[]};
  for(const p of PRESETS){
   const images=await page.evaluate(paint,p);
   fs.mkdirSync(path.join(OUT,p.id),{recursive:true});

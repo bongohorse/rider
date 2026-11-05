@@ -14,16 +14,20 @@ import json
 from pathlib import Path
 import sys
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT/'main/terrain_material/presets'
 GENERATOR = ROOT/'tools/art/level_materials.cjs'
 LICENSE = 'Original work generated for Rider; no third-party input.'
 SIZES = {'surface': (512, 128), 'band': (512, 128), 'fill': (512, 512)}
+FILES = (*SIZES, 'thumb')
 THUMB = 128
 SURFACE_OPAQUE_FROM = 24  # far edge may fray above this row; the contact side stays opaque
-SEAM_FACTOR = 2.5  # a repeat edge may differ at most this much more than neighbouring columns or rows
+SEGMENT = 16  # pixels compared at once across a repeat edge
+SEAM_FACTOR = 1.5  # the worst edge segment may differ at most this much more than the worst inner one
+FRAYED_SHARE = .5  # share of the Surface's top row that must be fully transparent
+FOLD_LIMIT = 8  # mean brightness levels Surface and Band may differ at the fold
 
 
 def sha256(path):
@@ -44,41 +48,108 @@ def thumbnail(folder):
 
 def write():
     meta = json.loads((OUT/'generation.json').read_text(encoding='utf-8'))
+    if meta['generator_sha256'] != sha256(GENERATOR):
+        raise SystemExit('generator changed after it ran; run it again')
     presets = []
     for p in meta['presets']:
         folder = OUT/p['id']
         thumbnail(folder).save(folder/'thumb.png', optimize=True)
-        files = {name: sha256(folder/f'{name}.png') for name in (*SIZES, 'thumb')}
+        files = {name: sha256(folder/f'{name}.png') for name in FILES}
         presets.append({'id': p['id'], 'name': p['name'], 'seed': p['seed'], 'sha256': files})
     manifest = {'schema': 1, 'issue': 538, 'license': LICENSE, 'generator': meta['generator'],
-                'generator_sha256': sha256(GENERATOR), 'browser': meta['browser'], 'pixels_per_metre': 128,
+                'generator_sha256': meta['generator_sha256'], 'browser': meta['browser'], 'pixels_per_metre': 128,
                 'sizes': {k: list(v) for k, v in SIZES.items()}, 'presets': presets}
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=1)+'\n', encoding='utf-8')
     (OUT/'generation.json').unlink()
 
 
+def line_difference(image, axis, a, b):
+    """Mean RGBA difference between two lines, per SEGMENT pixels, so a local break does not average away."""
+    pixels = image.load()
+    w, h = image.size
+    length = h if axis == 'u' else w
+    out = []
+    for start in range(0, length, SEGMENT):
+        total = count = 0
+        for i in range(start, min(start+SEGMENT, length)):
+            p, q = (pixels[a, i], pixels[b, i]) if axis == 'u' else (pixels[i, a], pixels[i, b])
+            total += sum(abs(x-y) for x, y in zip(p, q))
+            count += 1
+        out.append(total/count)
+    return out
+
+
 def edge_difference(image, axis):
-    """(difference across the repeat edge, typical difference between neighbouring lines), RGBA means."""
+    """(worst segment across the repeat edge, worst segment between neighbouring inner lines)."""
     data = image.convert('RGBA')
-    w, h = data.size
-    pixels = data.load()
-    length, lines = (h, w) if axis == 'u' else (w, h)
-
-    def at(line, i):
-        return pixels[line, i] if axis == 'u' else pixels[i, line]
-
-    def diff(a, b):
-        return sum(sum(abs(p-q) for p, q in zip(at(a, i), at(b, i))) for i in range(length))/length
-    inner = sum(diff(i, i+1) for i in range(0, lines-1, max(1, lines//32)))/len(range(0, lines-1, max(1, lines//32)))
-    return diff(lines-1, 0), inner
+    lines = data.size[0] if axis == 'u' else data.size[1]
+    step = max(1, lines//64)
+    inner = max(max(line_difference(data, axis, i, i+1)) for i in range(step//2, lines-1, step))
+    return max(line_difference(data, axis, lines-1, 0)), inner
 
 
-def check():
+def has_seam(across, inner):
+    return across > max(inner*SEAM_FACTOR, 1)
+
+
+def mean_difference(a, b):
+    a, b = a.convert('RGB'), b.convert('RGB')
+    diff = ImageChops.difference(a, b).convert('L').tobytes()
+    return sum(diff)/len(diff)
+
+
+def check_preset(preset, out):
+    """Every rule for one preset; returns its errors."""
     errors = []
+    name_ = preset['id']
+    folder = out/name_
+    if set(preset['sha256']) != set(FILES):
+        return [f'{name_}: manifest lists {sorted(preset["sha256"])}']
+    for name, digest in preset['sha256'].items():
+        path = folder/f'{name}.png'
+        if not path.is_file() or sha256(path) != digest:
+            errors.append(f'{name_}/{name}: pixels differ from the manifest')
+    if errors:
+        return errors
+    images = {name: Image.open(folder/f'{name}.png').convert('RGBA') for name in SIZES}
+    for name, size in SIZES.items():
+        if images[name].size != size:
+            errors.append(f'{name_}/{name}: size {images[name].size}')
+    if errors:
+        return errors
+    thumb = Image.open(folder/'thumb.png').convert('RGBA')
+    if thumb.size != (THUMB, THUMB) or mean_difference(thumb, thumbnail(folder)) > 1:
+        errors.append(f'{name_}/thumb: does not show this preset')
+    surface_alpha = images['surface'].getchannel('A')
+    if surface_alpha.crop((0, SURFACE_OPAQUE_FROM, 512, 128)).getextrema()[0] != 255:
+        errors.append(f'{name_}/surface: holes in the opaque zone')
+    top = surface_alpha.crop((0, 0, 512, 1)).tobytes()
+    if sum(1 for v in top if v == 0)/len(top) < FRAYED_SHARE:
+        errors.append(f'{name_}/surface: far edge does not fray')
+    band_alpha = images['band'].getchannel('A')
+    if band_alpha.crop((0, 127, 512, 128)).getextrema()[1] != 0:
+        errors.append(f'{name_}/band: art reaches the last row')
+    if band_alpha.crop((0, 0, 512, 1)).getextrema()[0] != 255:
+        errors.append(f'{name_}/band: gap at the fold')
+    if images['fill'].getchannel('A').getextrema()[0] != 255:
+        errors.append(f'{name_}/fill: not opaque')
+    fold = mean_difference(images['surface'].crop((0, 127, 512, 128)), images['band'].crop((0, 0, 512, 1)))
+    if fold > FOLD_LIMIT:
+        errors.append(f'{name_}: Surface and Band differ at the fold ({fold:.1f})')
+    for name, axes in (('surface', 'u'), ('band', 'u'), ('fill', 'uv')):
+        for axis in axes:
+            across, inner = edge_difference(images[name], axis)
+            if has_seam(across, inner):
+                errors.append(f'{name_}/{name}: seam in {axis} ({across:.1f} against {inner:.1f})')
+    return errors
+
+
+def check(out=OUT):
     try:
-        manifest = json.loads((OUT/'manifest.json').read_text(encoding='utf-8'))
+        manifest = json.loads((out/'manifest.json').read_text(encoding='utf-8'))
     except (OSError, ValueError) as exc:
         return [f'manifest: {exc}']
+    errors = []
     if manifest.get('generator_sha256') != sha256(GENERATOR):
         errors.append('generator changed after the last generation')
     if manifest.get('license') != LICENSE:
@@ -86,33 +157,7 @@ def check():
     if not manifest.get('presets'):
         errors.append('no presets')
     for preset in manifest.get('presets', []):
-        folder = OUT/preset['id']
-        for name, digest in preset['sha256'].items():
-            path = folder/f'{name}.png'
-            if not path.is_file() or sha256(path) != digest:
-                errors.append(f'{preset["id"]}/{name}: pixels differ from the manifest')
-        if errors:
-            continue
-        images = {name: Image.open(folder/f'{name}.png').convert('RGBA') for name in SIZES}
-        for name, size in SIZES.items():
-            if images[name].size != size:
-                errors.append(f'{preset["id"]}/{name}: size {images[name].size}')
-        alpha = images['surface'].getchannel('A').crop((0, SURFACE_OPAQUE_FROM, 512, 128))
-        if alpha.getextrema()[0] != 255:
-            errors.append(f'{preset["id"]}/surface: holes in the opaque zone')
-        if images['surface'].getchannel('A').crop((0, 0, 512, 2)).getextrema()[0] == 255:
-            errors.append(f'{preset["id"]}/surface: far edge does not fray')
-        if images['band'].getchannel('A').crop((0, 127, 512, 128)).getextrema()[1] != 0:
-            errors.append(f'{preset["id"]}/band: art reaches the last row')
-        if images['band'].getchannel('A').crop((0, 0, 512, 1)).getextrema()[0] != 255:
-            errors.append(f'{preset["id"]}/band: gap at the fold')
-        if images['fill'].getchannel('A').getextrema()[0] != 255:
-            errors.append(f'{preset["id"]}/fill: not opaque')
-        for name, axes in (('surface', 'u'), ('band', 'u'), ('fill', 'uv')):
-            for axis in axes:
-                across, inner = edge_difference(images[name], axis)
-                if across > max(inner*SEAM_FACTOR, 1):
-                    errors.append(f'{preset["id"]}/{name}: seam in {axis} ({across:.1f} against {inner:.1f})')
+        errors += check_preset(preset, out)
     return errors
 
 
@@ -121,16 +166,21 @@ def contact(path):
     rows = []
     for preset in manifest['presets']:
         folder = OUT/preset['id']
-        row = Image.new('RGBA', (1024, 384), (24, 30, 38, 255))
+        row = Image.new('RGBA', (1024, 896), (24, 30, 38, 255))
         fill = Image.open(folder/'fill.png').convert('RGBA')
         for x in (0, 512):
             row.paste(fill.crop((0, 0, 512, 256)), (x, 128))
             row.alpha_composite(Image.open(folder/'surface.png').convert('RGBA'), (x, 0))
             row.alpha_composite(Image.open(folder/'band.png').convert('RGBA'), (x, 128))
+        # The Fill repeats both ways: 2 x 2 at half size.
+        half = fill.resize((256, 256), Image.LANCZOS)
+        for x in (0, 256):
+            for y in (0, 256):
+                row.paste(half, (x, 384+y))
         rows.append(row)
-    sheet = Image.new('RGBA', (1024, 392*len(rows)), (0, 0, 0, 255))
+    sheet = Image.new('RGBA', (1024, 904*len(rows)), (0, 0, 0, 255))
     for i, row in enumerate(rows):
-        sheet.paste(row, (0, 392*i))
+        sheet.paste(row, (0, 904*i))
     sheet.save(path)
 
 
