@@ -35,7 +35,7 @@ const FIXTURE='mixed-over-budget';
  await key('Home');let e=await map();
  const mid=chain[Math.floor(chain.length/2)],fit=await patch('fit',[at(e,mid[0],mid[1]-6),at(e,mid[0],mid[1]-12)],4);
  results.fit={zoom:e.zoom,pixels:fit};
- for(const [r,g] of fit)assert.ok(r>g,'Band colour over the Fill at Fit: '+JSON.stringify(fit));
+ for(const [r,g] of fit)assert.ok(r-g>=15,'Band colour over the Fill at Fit: '+JSON.stringify(fit));
  // Find a crest and a valley with a real curve.
  const pick=sign=>{let best=null;for(let i=4;i<chain.length-4;i++){const c=sign*(chain[i][1]-(chain[i-4][1]+chain[i+4][1])/2);if(!best||c>best.c)best={c,p:chain[i]};}return best.p;};
  for(const [name,p] of [['crest',pick(1)],['valley',pick(-1)]]){
