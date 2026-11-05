@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "description": "G0 developer tooling only; not a game runtime",
   "engines": {
-    "node": ">=24.11.0 <25"
+    "node": ">=24.11.0 <27"
   },
   "scripts": {
     "renovate:validate": "renovate-config-validator --strict renovate.json",
