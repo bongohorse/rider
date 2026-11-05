@@ -47,6 +47,22 @@ class TerrainMaterialArt(unittest.TestCase):
         self.assertIn('load_dynamically: true', factory)  # untextured courses never load the atlas
         self.assertIn('/main/terrain_perspective/textured_chunk.factory', (ROOT/'main/game/controller.go').read_text())
 
+    def test_preset_route_wiring(self):
+        controller = (ROOT/'main/game/controller.go').read_text()
+        material = (PERSPECTIVE/'preset.material').read_text()
+        for name in ('tex0', 'tex1', 'tex2'):
+            self.assertRegex(material, r'samplers \{\s*name: "%s"' % name)
+            self.assertIn(f'uniform lowp sampler2D {name};', (PERSPECTIVE/'preset.fp').read_text())
+        self.assertIn('"/main/terrain_perspective/preset.material"', (ROOT/'main/game/boot.script').read_text())
+        lua = (PERSPECTIVE/'material.lua').read_text()
+        manifest = json.loads((ROOT/'main/terrain_material/presets/manifest.json').read_text())
+        for preset in manifest['presets']:
+            self.assertIn(f'/main/terrain_material/presets/{preset["id"]}/chunk.factory', controller)
+            self.assertIn(f"'{preset['id']}'", lua)
+            factory = (ROOT/'main/terrain_material/presets'/preset['id']/'chunk.factory').read_text()
+            self.assertIn('load_dynamically: true', factory)  # a level loads only its own preset
+        self.assertIn('level.texture_profiles', (ROOT/'game.project').read_text())
+
     def test_vertex_layout_is_52_bytes(self):
         streams = json.loads((PERSPECTIVE/'textured_empty.buffer').read_text())
         self.assertEqual([s['name'] for s in streams], ['position', 'color', 'texcoord0', 'look_data', 'texture_slot'])

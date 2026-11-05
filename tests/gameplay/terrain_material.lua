@@ -142,4 +142,36 @@ print('PASS 660 m Fit payload: 18,312 vertices x 52 B = 952,224 B (96,352 B unde
 -- Largest admitted vertex count: 21,845 untextured, 20,164 textured.
 assert(math.floor(budget.PAYLOAD/48)==21845 and math.floor(budget.PAYLOAD/52)==20164)
 material.override=nil
+-- #539 level material presets: slot is the face, Band data on rim and side, 52 bytes, continuous U.
+do
+    local spec=assert(material.parse('meadow'));assert(spec.preset=='meadow')
+    for _,id in ipairs(material.PRESETS) do assert(material.parse(id).preset==id) end
+    assert(material.PRESETS[1]=='meadow')
+    material.override=spec
+    local points={};for x=0,140 do points[#points+1]={x,math.sin(x*.1)*3} end
+    local prep=geometry.prepare(points,-30,0)
+    local a=projection.section(prep,1,65,'a')
+    local b=projection.section(prep,65,129,'b')
+    assert(a.preset=='meadow' and a.textured and a.bytes==a.vertices*52)
+    for i,v in ipairs(a.texture) do assert(v>=0 and v<=3,'slot is a face') end
+    assert(a.texture[1]==material.SIDE and a.texture[7]==material.RIM and a.texture[13]==material.SURFACE)
+    -- Side tops start below the rim; rim runs from the line down to that start.
+    assert(a.look_data[1]==material.BAND_START and a.look_data[4]==material.BAND_START)
+    assert(a.look_data[(7-1)*3+1]==0 and a.look_data[(9-1)*3+1]==material.BAND_START)
+    -- Slope factor: 1 on flat ground, smaller on a slope, positive everywhere.
+    local slopes=false
+    for i=1,a.vertices do local f=a.uv[(i-1)*2+2];if a.texture[i]==material.SIDE then assert(f>0 and f<=1);slopes=slopes or f<.999 end end
+    assert(slopes,'the course has slopes')
+    -- Quads drop whole images only: at the section boundary U agrees modulo 1, with the phase.
+    local function u_at(c,vertex,phase) local v=c.uv[(vertex-1)*2+1]+phase;return v-math.floor(v) end
+    local last=(64-1)*18+2 -- side quad's upper right vertex in section a
+    local near=math.abs(u_at(a,last,prep.u[1]%1)-u_at(b,1,prep.u[65]%1))
+    assert(near<1e-6 or math.abs(near-1)<1e-6,'U continuous across sections: '..near)
+    -- A run end closes up to the driving line.
+    local n=64*18
+    assert(a.texture[n+1]==material.END and a.look_data[n*3+1]==0)
+    assert(math.abs(a.position[n*3+1]-(prep.p[1][1]-a.origin[1]))<1e-9 and math.abs(a.position[n*3+2]-(prep.p[1][2]-a.origin[2]))<1e-9)
+    assert(material.describe().preset=='meadow')
+    material.override=nil
+end
 print('PASS terrain material')

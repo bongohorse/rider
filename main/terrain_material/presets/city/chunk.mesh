@@ -1,0 +1,7 @@
+material: "/main/terrain_perspective/preset.material"
+vertices: "/main/terrain_perspective/textured_empty.buffer"
+textures: "/main/terrain_material/presets/city/surface.png"
+textures: "/main/terrain_material/presets/city/band.png"
+textures: "/main/terrain_material/presets/city/fill.png"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"

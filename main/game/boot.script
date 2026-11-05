@@ -3,6 +3,7 @@
 -- Pinned OpenGL program teardown retains scratch UBOs; avoid shader churn on switches.
 go.property("terrain_material",resource.material("/main/terrain_compare/terrain.material"))
 go.property("perspective_material",resource.material("/main/terrain_perspective/terrain.material"))
+go.property("preset_material",resource.material("/main/terrain_perspective/preset.material"))
 go.property("textured_material",resource.material("/main/terrain_perspective/textured.material"))
 go.property("sprite_material",resource.material("/builtins/materials/sprite.material"))
 local stations=require "main.game.stations"

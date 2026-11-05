@@ -1,0 +1,2 @@
+prototype: "/main/terrain_material/presets/city/chunk.go"
+load_dynamically: true

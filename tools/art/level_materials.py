@@ -22,6 +22,7 @@ GENERATOR = ROOT/'tools/art/level_materials.cjs'
 LICENSE = 'Original work generated for Rider; no third-party input.'
 SIZES = {'surface': (512, 128), 'band': (512, 128), 'fill': (512, 512)}
 FILES = (*SIZES, 'thumb')
+RENDER_FILES = ('chunk.mesh', 'chunk.go', 'chunk.factory')
 THUMB = 128
 SURFACE_OPAQUE_FROM = 24  # far edge may fray above this row; the contact side stays opaque
 SEGMENT = 16  # pixels compared at once across a repeat edge
@@ -50,6 +51,26 @@ def thumbnail(folder):
     return out
 
 
+def render_files(preset_id):
+    """The preset's mesh, game object and factory; loaded only when a level uses this preset."""
+    root = f'/main/terrain_material/presets/{preset_id}'
+    return {
+        'chunk.mesh': ('material: "/main/terrain_perspective/preset.material"\n'
+                       'vertices: "/main/terrain_perspective/textured_empty.buffer"\n'
+                       + ''.join(f'textures: "{root}/{name}.png"\n' for name in SIZES)
+                       + 'primitive_type: PRIMITIVE_TRIANGLES\nposition_stream: "position"\n'),
+        'chunk.go': f'components {{ id: "mesh" component: "{root}/chunk.mesh" }}\n',
+        'chunk.factory': f'prototype: "{root}/chunk.go"\nload_dynamically: true\n',
+    }
+
+
+def write_render_files():
+    manifest = json.loads((OUT/'manifest.json').read_text(encoding='utf-8'))
+    for preset in manifest['presets']:
+        for name, text in render_files(preset['id']).items():
+            (OUT/preset['id']/name).write_text(text, encoding='utf-8')
+
+
 def write():
     meta = json.loads((OUT/'generation.json').read_text(encoding='utf-8'))
     if meta['generator_sha256'] != sha256(GENERATOR):
@@ -65,6 +86,7 @@ def write():
                 'sizes': {k: list(v) for k, v in SIZES.items()}, 'presets': presets}
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=1)+'\n', encoding='utf-8')
     (OUT/'generation.json').unlink()
+    write_render_files()
 
 
 def line_difference(image, axis, a, b):
@@ -166,8 +188,12 @@ def check(out=OUT):
     for preset in manifest.get('presets', []):
         folder = out/preset['id']
         files = {p.name for p in folder.iterdir()} if folder.is_dir() else set()
-        if files != {f'{name}.png' for name in FILES}:
+        if files != {f'{name}.png' for name in FILES} | set(RENDER_FILES):
             errors.append(f'{preset["id"]}: unexpected files {sorted(files)}')
+        else:
+            for name, text in render_files(preset['id']).items():
+                if (folder/name).read_text(encoding='utf-8') != text:
+                    errors.append(f'{preset["id"]}/{name}: differs from the generator')
     if manifest.get('generator_sha256') != sha256(GENERATOR):
         errors.append('generator changed after the last generation')
     if manifest.get('license') != LICENSE:
@@ -205,11 +231,14 @@ def contact(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true')
+    parser.add_argument('--write-render-files', action='store_true')
     parser.add_argument('--check', action='store_true')
     parser.add_argument('--contact')
     args = parser.parse_args()
     if args.write:
         write()
+    if args.write_render_files:
+        write_render_files()
     if args.contact:
         contact(args.contact)
     if args.check:
