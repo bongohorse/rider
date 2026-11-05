@@ -34,7 +34,7 @@ assert(material.spec_for(legacy)==nil and material.stride_for(legacy)==48)
 -- First material raises the version, enables the authored profile and validates.
 local d=fresh()
 assert(D.set_material(d.editor,{version=1,preset='quarry',band='meadow'}))
-assert(d.editor.editor_version==14 and d.editor.compiler_version==14 and d.editor.road_profile=='authored-v1' and d.editor.road_look.version==1)
+assert(d.editor.editor_version==14 and d.editor.compiler_version==14 and d.editor.road_profile=='authored-v1' and d.editor.road_look.params.version==2)
 assert(D.validate(d))
 -- Round trip through compile and export text.
 local out=assert(D.compile(d));assert(out.schema==6 and out.material.preset=='quarry' and out.material.band=='meadow')

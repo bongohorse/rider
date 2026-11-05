@@ -16,7 +16,10 @@ function M.poll()
         local ok,r=false,nil
         if #text<=2048 then ok,r=pcall(json.decode,text) end
         local p,err
-        if ok and type(r)=='table' then p,err=projection.validate(r.params) end
+        if ok and type(r)=='table' then
+            p,err=projection.validate(r.params)
+            if p and p.version~=1 then p,err=nil,'Comparison builds take look set 1 only' end
+        end
         if p then M.params=p;M.revision=M.revision+1 end
         html5.run("Object.assign(window.riderRoadLook,"..json.encode({status=p and 'Applied' or err or 'Invalid look request',ack=ok and r and r.token or 0,current=M.params})..")")
     elseif not M.published then
@@ -30,7 +33,7 @@ function M.prepare(state,camera)
     state.param_key=table.concat({p.mode,p.width,p.perspective,p.angle,p.side,p.shading},"|")
     for _,e in ipairs(state.entries) do
         e.base_bounds=e.base_bounds or e.bounds
-        local width=state.baked and 2 or p.width -- also covers wider dirty/cached sections before materialization
+        local width=state.baked and projection.ranges(p).width[2] or p.width -- also covers wider dirty/cached sections before materialization
         e.bounds=projection.bounds(e.base_bounds,camera,p,width)
     end
 end

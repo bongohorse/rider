@@ -6,10 +6,17 @@ local M={VERSION=1,FOCAL=40,STRIDE=48,WORKING=560}
 M.DEFAULT={version=1,mode='perspective',width=.9,perspective=.35,angle=math.atan(.55)*180/math.pi,side=64,shading=1}
 M.RANGES={width={.25,2},perspective={0,1},angle={10,45},side={.25,64},shading={0,1}}
 M.CONTROLS={{key='width',label='Road width (m)',step=.01},{key='perspective',label='Perspective (level-wide)',step=.01},{key='angle',label='View angle (degrees; level-wide)',step=.1},{key='side',label='Side depth (m)',step=.25},{key='shading',label='Shading',step=.01}}
+-- Parameter set v2 (docs/contracts/level-visuals.md): the accepted look, valid only on a level with a material.
+M.DEFAULT_V2={version=2,mode='perspective',width=.6,perspective=6,angle=45,side=64,shading=1.15,vehicle_position=.5}
+M.RANGES_V2={width={.05,4},perspective={0,6},angle={0,75},side={.25,64},shading={0,2},vehicle_position={0,1}}
+M.CONTROLS_V2={};for i,c in ipairs(M.CONTROLS) do M.CONTROLS_V2[i]=c end
+M.CONTROLS_V2[#M.CONTROLS_V2+1]={key='vehicle_position',label='Vehicle position on Surface (level-wide)',step=.01}
+function M.ranges(p) return p and p.version==2 and M.RANGES_V2 or M.RANGES end
+function M.controls(p) return p and p.version==2 and M.CONTROLS_V2 or M.CONTROLS end
 function M.validate(p)
-    if type(p)~='table' or p.version~=1 or (p.mode~='fixed' and p.mode~='perspective') then return nil,'Unsupported look version/mode' end
-    local out={version=1,mode=p.mode}
-    for k,r in pairs(M.RANGES) do
+    if type(p)~='table' or (p.version~=1 and p.version~=2) or (p.mode~='fixed' and p.mode~='perspective') then return nil,'Unsupported look version/mode' end
+    local out={version=p.version,mode=p.mode}
+    for k,r in pairs(M.ranges(p)) do
         local v=p[k]
         if type(v)~='number' or v~=v or v<r[1] or v>r[2] then return nil,k..' must be '..r[1]..'..'..r[2] end
         out[k]=v
