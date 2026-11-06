@@ -87,6 +87,11 @@ function M.update(s,frame)
                 go.set_scale(vmath.vector3(rect.half_w/s.scale,rect.half_h/s.scale,1),l.object)
                 go.set(l.url,"uv_transform",vmath.vector4(uv[1],uv[2],uv[3],uv[4]))
             end
+            if i==6 then
+                local cutout=model.cutout(frame)
+                go.set(l.url,"vehicle_cutout",vmath.vector4(cutout[1],cutout[2],cutout[3],cutout[4]))
+                l.cutout=cutout
+            end
             l.rect,l.uv=rect,uv
         end
     end
@@ -106,6 +111,7 @@ function M.report(s)
         if l then
             r.objects=r.objects+1;r.textures=r.textures+1;r.texture_bytes=r.texture_bytes+l.texture.bytes
             r.layers[i].rect,r.layers[i].uv,r.layers[i].rendered=l.rect,l.uv,l.visible
+            r.layers[i].cutout=l.cutout
         end
     end
     return r

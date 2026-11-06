@@ -54,11 +54,18 @@ async function main(){
   for(const p of low.pixels)assert(p[1]>=245&&Math.abs(p[2]-180)<=2&&p[3]===255,'Bottom image row was not extended: '+p);
   report.cases.vertical_edges={high:high.pixels,low:low.pixels};await page.screenshot({path:path.join(out,'low-edge.png')});
   await command('set',{config:config(6)});const foreground=await command('pose',{pose:'origin'}),l=foreground.state.layers[5],f=foreground.state.frame;
-  assert(l.active&&l.rendered);assert(l.rect.y+l.rect.half_h<=f.vehicle_low-.08+1e-6,'Foreground covers vehicle');assert(l.rect.half_h<=f.half_h*.16+1e-6,'Foreground outside lower safe zone');
+  assert(l.active&&l.rendered);assert.equal(l.rect.half_h,f.half_h);
+  assert.equal(l.rect.y-l.rect.half_h,f.y-f.half_h);
+  assert.equal(l.uv[1],.5);assert.equal(l.uv[3],.5);
   await page.screenshot({path:path.join(out,'foreground-safe.png')});
-  // Below the finite terrain, the known opaque blue gradient is the framebuffer reference.
-  const foregroundPixels=await command('pose',{pose:'low'});assert(foregroundPixels.pixels[1][2]>=164&&foregroundPixels.pixels[1][2]<=168,'Foreground pixels missing from lower safe zone');assert(Math.abs(foregroundPixels.pixels[3][2]-180)<=2,'Foreground escaped lower zone');
-  const hidden=await command('pose',{pose:'high'});assert.equal(hidden.state.layers[5].rendered,false,'Foreground covers vehicle below safe zone');report.cases.foreground_safe={visible:foreground.state.layers[5],pixels:foregroundPixels.pixels,clipped:hidden.state.layers[5]};await page.screenshot({path:path.join(out,'high-edge.png')});
+  // The translucent fixture now covers the full viewport; camera Y never clips it.
+  const foregroundPixels=await command('pose',{pose:'low'});
+  for(const p of foregroundPixels.pixels)assert(p[2]>=164&&p[2]<=168,'Foreground disappeared at low camera Y: '+p);
+  const highForeground=await command('pose',{pose:'high'});
+  assert.equal(highForeground.state.layers[5].rendered,true);
+  assert.deepEqual(highForeground.state.layers[5].uv,foregroundPixels.state.layers[5].uv);
+  report.cases.foreground_safe={visible:l,pixels:foregroundPixels.pixels,high:highForeground.state.layers[5]};
+  await page.screenshot({path:path.join(out,'high-edge.png')});
   const slots=[];
   for(let index=1;index<=6;index++){
    const layerOff=await command('visible',{index,visible:false});assert.equal(layerOff.state.objects,5);assert.equal(layerOff.layer_images,5);assert.equal(layerOff.state.layers[index-1].visible,false);

@@ -2,7 +2,7 @@
 // #548: authored background import/save/reopen and actual resources in both proxied worlds.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{configure}=require('./launch.cjs');
-const EXPECTED=['legacy_empty','imported_play','edit_agreement','saved_reload','master_off_restore'];
+const EXPECTED=['legacy_empty','imported_play','edit_agreement','saved_reload','master_off_restore','foreground_603'];
 async function main(){
  const [output,sha,runId,kind,bundleArg]=process.argv.slice(2);assert.equal(kind,'bg548');
  const out=path.resolve(output),bundle=path.resolve(bundleArg);fs.mkdirSync(out,{recursive:true});
@@ -13,7 +13,7 @@ async function main(){
  try{
   server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/octet-stream');fs.createReadStream(file).pipe(res);});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));browser=await chromium.launch();report.browser=browser.version();
-  page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});await configure(page,runId,kind);
+  page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});await configure(page,runId,kind);await page.addInitScript(require('./foreground603.cjs').observe);
   page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))report.errors.push(m.text());});
   const base=`http://127.0.0.1:${server.address().port}/index.html`;
   await page.goto(base+'?station=straight');
@@ -45,8 +45,10 @@ async function main(){
   r=await state();selected(r);assert.equal(r.edit,false);report.cases.saved_reload=r;
   source.enabled=false;fixture.editor.backgrounds=structuredClone(source);r=await load();selected(r,0);assert.equal(r.buffers,0);
   const off=r;source.enabled=true;fixture.editor.backgrounds=structuredClone(source);r=await load();selected(r);
-  report.cases.master_off_restore={off,on:r};assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
- }catch(e){report.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});}
+  report.cases.master_off_restore={off,on:r};
+  report.cases.foreground_603=await require('./foreground603.cjs').run(page,out,state);
+  assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
+ }catch(e){report.failure=e.stack;if(page)report.pixel_diagnostic=await page.evaluate(()=>window.riderForegroundPixels||null).catch(()=>null);if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});}
  finally{fs.writeFileSync(path.join(out,'background548-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
  console.log(JSON.stringify({status:report.status,cases:Object.keys(report.cases),failure:report.failure}));return report.status==='PASS'?0:1;
 }

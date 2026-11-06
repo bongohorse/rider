@@ -389,7 +389,9 @@ local function update_backgrounds(self)
         local c=go.get_position("/camera");local p=camera.get_projection("/camera#camera");local scale=self.backgrounds.scale
         local frame={x=c.x*scale,y=c.y*scale,half_w=scale/p.m00,half_h=scale/p.m11}
         if self.vehicle then
-            frame.vehicle_low=require("main.backgrounds.vehicle_bounds").low(self.vehicle.ids,scale)
+            -- Root GO in this untransformed collection; read-only, metres once here.
+            local v=go.get_position(self.vehicle.ids.chassis)
+            frame.vehicle={x=v.x*scale,y=v.y*scale}
         end
         backgrounds.update(self.backgrounds,frame)
         self.background_frame=frame

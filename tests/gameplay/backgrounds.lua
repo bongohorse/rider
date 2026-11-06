@@ -10,8 +10,15 @@ for _,depth in ipairs({-0.26,1.01,math.huge,0/0}) do assert(model.normalize({lay
 local frame={x=6,y=12,half_w=5,half_h=3,vehicle_low=10}
 local rect=model.layout(frame,1);local uv=model.uv(frame,rect,normalized.layers[1],1,64,32)
 near(uv[3],0.625);near(uv[4],1)
-local fg=model.layout(frame,6);assert(fg.y+fg.half_h<=9.92+1e-8 and fg.half_h<=0.48+1e-8)
-frame.vehicle_low=8;assert(model.layout(frame,6).half_h==0)
+-- #603: camera Y and vehicle overlap must never crop or vertically shift the image.
+for _,y in ipairs({-10000,-120,-4,-3,0,120,10000}) do
+ frame.y=y;frame.vehicle_low=y-100
+ local fg=model.layout(frame,6)
+ near(fg.y-fg.half_h,y-frame.half_h);near(fg.half_h,frame.half_h)
+ local tex=model.uv(frame,fg,normalized.layers[6],6,1024,512)
+ near(tex[2],.5);near(tex[4],.5)
+end
+frame.y=12
 -- Resource-owner model: components retain refs until the engine deletes their GOs.
 local refs,objects,deleted,loads={}, {}, {}, {}
 local function retain(id) if id then refs[id]=(refs[id] or 0)+1 end end
