@@ -3029,7 +3029,7 @@ function on_message(self,id,data)
         if data.mode~=self.mode then
             self.mode=data.mode
             cancel(self);self.open_dialog,self.warnings_open,self.drawing,self.field,self.help_open=false,false,nil,nil,false
-            if data.mode~="edit" then terrain_look.close();editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1 end
+            if data.mode~="edit" then track_panel.close();terrain_look.close();editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1 end
         end
         -- Back on top of the input stack for this mode.
         msg.post(".","acquire_input_focus")

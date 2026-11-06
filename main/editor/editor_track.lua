@@ -36,6 +36,9 @@ function M.candidate(m)
     local e=doc.copy(editor.doc.editor)
     local set,why=doc.set_material(e,clean)
     if not set then return nil,why end
+    -- A material raises the stride: the level must still fit, as Terrain Look checks.
+    local compiled,blocked=doc.compile({schema=1,units='metres',id=editor.doc.id,name=editor.doc.name,editor=e})
+    if not compiled and blocked and blocked:find('Resource budget:',1,true) then return nil,(blocked:match('^[^%.]+%.') or blocked)..' Shorten or simplify terrain to use a material.' end
     return e,nil,clean
 end
 function M.draft(m)
@@ -46,7 +49,9 @@ function M.draft(m)
     return e
 end
 function M.discard()
+    local owned=M.current~=nil
     M.current=nil;M.message=''
+    if not owned then return end -- a retained Terrain Look preview stays
     editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch()
 end
 function M.apply()
@@ -55,7 +60,11 @@ function M.apply()
     if err then M.message=err;return nil,err end
     local blocked=locked(editor.doc.editor)
     if blocked then M.message=blocked;return nil,blocked end
-    local ok,why=editor.commit(function(target) return doc.set_material(target,clean) and nil or nil end,false)
+    if json.encode(editor.doc.editor.material or false)==json.encode(clean) then M.discard();return true end
+    local ok,why=editor.commit(function(target)
+        local set,err2=doc.set_material(target,clean)
+        if not set then return nil,err2 end
+    end,false)
     if not ok then M.message=why or 'Apply refused';return nil,M.message end
     M.discard()
     return true
@@ -81,6 +90,9 @@ local function presets()
 end
 function M.open()
     if not html5 then return end
+    local look=require('main.editor.editor_look').session
+    if look and look.dirty then editor.message='Apply or reset Terrain Look first.';return end
+    M.current=nil
     html5.run(assert(sys.load_resource('/main/game/track_panel.js'),'Missing track panel'))
     html5.run('window.riderTrackPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.material or false)..')')
 end

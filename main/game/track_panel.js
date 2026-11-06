@@ -12,7 +12,7 @@
       b.setAttribute('aria-pressed', String(!!on));
       b.style.outline = on ? '3px solid #8fe0c0' : 'none';
     });
-    for (const [key] of OVERRIDES) panel.querySelector('#rider-track-' + key).value = (draft && draft[key]) || '';
+    for (const [key] of OVERRIDES) { const s = panel.querySelector('#rider-track-' + key);s.value = (draft && draft[key]) || '';s.disabled = !draft; }
     panel.querySelector('#rider-track-note').textContent = api.message;
   }
   function changed() { send({type: 'draft', material: draft}); render(); }

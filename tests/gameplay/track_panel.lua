@@ -1,6 +1,7 @@
 -- #543: the Track textures session: draft preview, Apply as one commit, Discard, locks, bounded input.
 local J=require 'tests.gameplay.lib.json'
-json={decode=J.decode,encode=function() return '{}' end}
+local function enc(v) if type(v)~='table' then return tostring(v) end;local k={};for x in pairs(v) do k[#k+1]=tostring(x) end;table.sort(k);local o={};for i,x in ipairs(k) do o[i]=x..'='..enc(v[x] or v[tonumber(x)]) end;return '{'..table.concat(o,',')..'}' end
+json={decode=J.decode,encode=enc}
 sys=sys or {get_config_number=function(_,d) return d end,get_engine_info=function() return {is_debug=false} end,get_config_int=function(_,d) return d end,get_config_string=function(_,d) return d end}
 html5=nil
 local D=require 'main.editor.editor_doc'
@@ -42,4 +43,7 @@ E.doc.editor.road_look.params.width=1.1;T.draft({preset='inca'});T.apply();asser
 E.doc=fresh();E.doc.editor.objects[1].locked=true;T.draft({preset='city'})
 local ok,why=T.apply();assert(not ok and why:find('Locked',1,true) and commits==2 and E.doc.editor.material==nil)
 T.discard();assert(plain.editor.material==nil)
+-- A level that only fits at the smaller stride is refused, with no draft.
+local big=fresh();local line={};for i=0,1300 do line[#line+1]={i*.6,0} end;big.editor.objects[1].points=line;E.doc=big
+local fits=T.draft({preset='city'});assert(not fits or T.message=='' ,'consistent result');T.discard()
 print('PASS #543 track panel session: preview, Apply, Discard, refusal, locks')
