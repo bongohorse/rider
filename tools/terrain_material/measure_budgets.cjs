@@ -1,10 +1,9 @@
-// #544: same 660 m course with and without a level material, real debug build in headless Chromium: vertex payload,
+// #544: the first-run course with and without a level material, real debug build in headless Chromium: vertex payload,
 // texture bytes uploaded, start time and frame intervals. Software rendering: frame times say nothing about a device.
 //   node tools/terrain_material/measure_budgets.cjs <verified debug bundle> <out dir>
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const {chromium}=require('playwright'),{configure}=require('../gym/launch.cjs');
-const {loadFixtures}=require('../terrain_play/fixtures.cjs');
 const {stats}=require('./observe.cjs');
 const [bundleArg,outArg]=process.argv.slice(2);
 const out=path.resolve(outArg);fs.mkdirSync(out,{recursive:true});
@@ -15,8 +14,7 @@ function probe(){const p=window.__m={tex:0,levels:{},frames:[],start:performance
 (async()=>{
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
  const b=await chromium.launch(),results={};
- const base=JSON.parse(loadFixtures(['mixed-over-budget'])['mixed-over-budget']);base.editor.road_profile='perspective-v1';
- for(const [id,url] of [['untextured',''],['meadow','&terrain_material=meadow'],['city+held','&terrain_material=city']]){
+ for(const [id,url] of [['untextured',''],['meadow','&terrain_material=meadow'],['city','&terrain_material=city']]){
   const c=await b.newContext({viewport:{width:1280,height:720}}),p=await c.newPage();await configure(p,'budget-'+id.replace(/\W/g,''),'le6');await p.addInitScript(probe);
   const t0=Date.now();await p.goto('http://127.0.0.1:'+server.address().port+'/index.html?station=first-run'+url);
   await p.waitForFunction(()=>window.riderRoadProjection?.sections>0&&window.riderTelemetry?.sequence>2,null,{timeout:90000});const ready=Date.now()-t0;
