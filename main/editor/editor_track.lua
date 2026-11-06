@@ -36,7 +36,7 @@ function M.candidate(m)
     local e=doc.copy(editor.doc.editor)
     local set,why=doc.set_material(e,clean)
     if not set then return nil,why end
-    -- A material raises the stride: the level must still fit, as Terrain Look checks.
+    -- A material raises the stride: the level must still fit, as 3D look checks.
     local compiled,blocked=doc.compile({schema=1,units='metres',id=editor.doc.id,name=editor.doc.name,editor=e})
     if not compiled and blocked and blocked:find('Resource budget:',1,true) then return nil,(blocked:match('^[^%.]+%.') or blocked)..' Shorten or simplify terrain to use a material.' end
     return e,nil,clean
@@ -56,7 +56,7 @@ end
 function M.discard()
     local owned=M.current~=nil
     M.current=nil;M.message=''
-    if not owned then return end -- a retained Terrain Look preview stays
+    if not owned then return end -- a retained 3D look preview stays
     editor.look_preview=nil;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch()
 end
 function M.apply()
@@ -83,7 +83,7 @@ function M.handle(message)
     elseif message.type=='discard' then M.discard()
     elseif message.type=='close' then close()
     elseif message.type=='background' then
-        if M.current then M.message='Apply or discard Track textures first.'
+        if M.current then M.message='Apply or discard Texture first.'
         elseif M.background then M.close();M.background.open() end
     end
 end
@@ -103,7 +103,7 @@ function M.open()
     if bg and bg.current then editor.message='Apply or discard Background first.';return end
     if bg then bg.close() end
     local look=require('main.editor.editor_look').session
-    if look and look.dirty then editor.message='Apply or reset Terrain Look first.';return end
+    if look and look.dirty then editor.message='Apply or reset 3D first.';return end
     M.current=nil
     html5.run(assert(sys.load_resource('/main/game/track_panel.js'),'Missing track panel'))
     html5.run('window.riderTrackPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.material or false)..')')

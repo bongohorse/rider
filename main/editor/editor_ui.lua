@@ -101,7 +101,7 @@ function M.init()
             assert(gui.new_texture('editor_tile_'..(active and 'active_' or '')..name,36,32,'rgba',table.concat(tile),false))
         end end
     end
-    local u={boxes={},texts={},buttons={},visible={},rects={},scroll=0,tool_scroll=0,tools=false,properties=false,prefabs=false}
+    local u={boxes={},texts={},buttons={},visible={},rects={},labels={},scroll=0,tool_scroll=0,tools=false,properties=false,prefabs=false}
     for i=1,M.BOXES do u.boxes[i]=gui.new_box_node(vmath.vector3(),vmath.vector3(1,1,0));gui.set_size_mode(u.boxes[i],gui.SIZE_MODE_MANUAL);gui.set_enabled(u.boxes[i],false) end
     for i=1,M.TEXTS do
         local n=gui.new_text_node(vmath.vector3(),"");gui.set_font(n,'default');gui.set_pivot(n,gui.PIVOT_W)
@@ -112,7 +112,7 @@ function M.init()
 end
 function M.hide(u)
     for _,pool in ipairs({u.boxes,u.texts}) do for _,n in ipairs(pool) do gui.set_enabled(n,false) end end
-    u.buttons,u.visible,u.rects={},{},{};u.scroll_drag=nil
+    u.buttons,u.visible,u.rects,u.labels={},{},{},{};u.scroll_drag=nil
 end
 function M.size(u)
     local w,h=window.get_size()
@@ -227,6 +227,7 @@ function M.render(u,d)
         local icon=ICONS[icon_name]
         local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_') or name:match('^fuel_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
+        u.labels[name]=label
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
         local blocked=name=='warnings' and d.blocking
@@ -261,7 +262,7 @@ function M.render(u,d)
         gui.set_texture(n,'editor_icon_thumb_'..kind)
     end
     u.hover,u.tip=nil,nil
-    -- In Edit, Terrain Look lies over the working editor: the chrome draws first, the panel on top.
+    -- In Edit, 3D look lies over the working editor: the chrome draws first, the panel on top.
     local overlay=d.modal=='terrain_look' and not d.play
     u.modal_rect=nil
     -- Properties folds to its tab meanwhile: text would show through the panel.
@@ -274,25 +275,26 @@ function M.render(u,d)
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
         text(16,h-40,'Edit level [E]',C.secondary,12)
-        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Change Terrain Look live in this run; Apply saves to the level.')
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'Change the 3D look live in this run; Apply saves to the level.')
         if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
     elseif not modal then
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
-        local title_width=math.min(280,math.max(96,#d.title*10.5+4))
+        local title_width=math.min(160,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
+        u.title_rect={x=96,y=8,w=title_width,h=32}
         local sx=112+title_width
-        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-384-sx)
-        u.status_rect={x=sx,y=8,w=math.max(0,w-384-sx),h=32}
+        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-504-sx)
+        u.status_rect={x=sx,y=8,w=math.max(0,w-504-sx),h=32}
         for i,v in ipairs({{'new','New level'},{'open','Open levels / templates'},{'import','Import JSON'},{'export','Export JSON'}}) do
             button(v[1],w-264+(i-1)*40,8,32,v[2],false,v[2])
         end
         button('warnings',w-104,8,48,d.blocking and ('! '..d.error_count) or d.warning_count>0 and ('! '..d.warning_count) or 'OK',false,d.diagnostics..': show problems and their sources')
         button('view_help',w-48,8,32,'?',false,'Help [H]')
         button('versions',w-352,8,80,'Versions',false,'Restore saved versions / named snapshots')
-        local commands=(w-120)/2
-        button('undo',commands,56,32,'Undo',false,'Undo [Ctrl+Z]')
-        button('redo',commands+40,56,32,'Redo',false,'Redo [Ctrl+Y]')
-        button('play',commands+80,56,40,'Play',true,'Play from START [E]')
+        local commands=w-480
+        button('undo',commands,8,32,'Undo',false,'Undo [Ctrl+Z]')
+        button('redo',commands+40,8,32,'Redo',false,'Redo [Ctrl+Y]')
+        button('play',commands+80,8,40,'Play',true,'Play from START [E]')
         local lw=u.tools and 40 or 184
         local gameplay_top=152+(u.tool_category and 0 or 80)
         -- Gameplay: eight 36 x 32 tiles in two rows of four (Start, Finish, Coin, Fuel / Gem, Crate, Plate,
@@ -525,8 +527,8 @@ function M.render(u,d)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
-        button('track_textures',700,h-56,132,'Track textures',false,'Track textures: choose the level material. Apply is one Undo step')
-        button('terrain_look',560,h-56,132,d.look and d.look.dirty and 'Terrain Look *' or 'Terrain Look',false,'Terrain Look: level or selected terrain sections. * means preview values need Apply.')
+        button('track_textures',616,h-56,132,'Texture',false,'Texture: choose the level material. Apply is one Undo step')
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'3D: level or selected terrain sections. * means preview values need Apply.')
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12)
         button('zoom_out',404,h-56,32,'-',false,'Zoom out to the previous step (minimum 1%).')
         if d.zoom_edit then box(442,h-58,76,36,d.zoom_error and C.error or C.active) end
@@ -541,7 +543,7 @@ function M.render(u,d)
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
             local s=d.look
-            text(mx+16,my+24,'Terrain Look',C.active,18)
+            text(mx+16,my+24,'3D',C.active,18)
             button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
             button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
             text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
@@ -631,6 +633,7 @@ function M.render(u,d)
     if overlay then u.properties=properties_open end
     local modal=d.modal
     if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
+    if not modal and not d.play and u.pointer and inside(u.title_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='title',d.title end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
     end

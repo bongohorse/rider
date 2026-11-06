@@ -1,4 +1,4 @@
--- #573: the Terrain Look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal.
+-- #573: the 3D look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal.
 local J=require 'tests.gameplay.lib.json'
 local function enc(v)
     if type(v)=='string' then return string.format('%q',v) end
@@ -50,4 +50,4 @@ T('v1+material level reset goes v2',function() E.doc=fresh();E.opened=2;assert(D
 T('locked terrain: set_material vs lock_conflict',function() local d=fresh();d.editor.objects[1].locked=true;local a=D.copy(d.editor);D.set_material(d.editor,{version=1,preset='meadow'});print('   first material on locked level conflict=',D.lock_conflict(a,d.editor)) end)
 T('locked terrain: removal clamp',function() local d=fresh();d.editor.objects[1].road_look={version=1,width=1,side=1,shading=.5};D.set_material(d.editor,{version=1,preset='meadow'});d.editor.objects[1].road_look.width=3;d.editor.objects[1].locked=true;local a=D.copy(d.editor);D.set_material(d.editor,nil);print('   removal conflict=',D.lock_conflict(a,d.editor)) end)
 assert(#failures==0,table.concat(failures,'\n'))
-print('PASS #573 Terrain Look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal')
+print('PASS #573 3D look session with parameter set 2: scopes, preview, Apply, Reset, Undo, removal')

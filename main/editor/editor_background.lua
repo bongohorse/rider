@@ -67,9 +67,9 @@ end
 function M.open()
     if not html5 or not editor.doc then return end
     local look=require 'main.editor.editor_look'
-    if look.session and look.session.dirty then editor.message='Apply or reset Terrain Look first.';return end
+    if look.session and look.session.dirty then editor.message='Apply or reset 3D first.';return end
     local track=require 'main.editor.editor_track'
-    if track.current then editor.message='Apply or discard Track textures first.';return end
+    if track.current then editor.message='Apply or discard Texture first.';return end
     track.close();look.close();M.discard();M.suspended=false;M.instance=editor.opened;M.revision=editor.doc.editor.revision
     html5.run(assert(sys.load_resource('/main/game/background_panel.js'),'Missing Background panel'))
     html5.run('window.riderBackgroundPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.backgrounds or false)..')')

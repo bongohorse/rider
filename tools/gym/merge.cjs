@@ -13,7 +13,7 @@ const LE6_EXPECTED=[
   "help_modal_lists_controls",
   "ghost_matches_test_start",
   "readouts_start_drag_units",
-  "coin_editor_categories_independent_and_centered_commands",
+  "coin_editor_categories_independent_and_top_bar_commands",
   "a1b_feedback_errors_and_scroll",
   "a1b_layout_viewports_and_collapse",
   "a1b_numeric_focus_steps_and_connected_run",

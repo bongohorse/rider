@@ -93,7 +93,7 @@ local function dom_layout(self)
     return out
 end
 -- The visible GUI buttons: Pause, Speed, Record, Replay, Next, Section, T, H, Levels, result buttons, the open
--- tuning panel and the editor's Terrain Look.
+-- tuning panel and the editor's 3D look.
 local function gui_controls(self)
     local rects={}
     local r=self.run_ui
@@ -103,8 +103,8 @@ local function gui_controls(self)
     for _,n in ipairs(nodes) do
         if gui.get_visible(n) then rects[#rects+1]=gui_rect(n) end
     end
-    -- Play-mode buttons of the editor GUI (Terrain Look), from its last render in this shared GUI state; kept from
-    -- before while the Terrain Look panel is open (a transient modal).
+    -- Play-mode buttons of the editor GUI (3D look), from its last render in this shared GUI state; kept from
+    -- before while the 3D look panel is open (a transient modal).
     local editor=require "main.editor.editor"
     if not editor.play_ui then self.editor_rects=nil
     elseif not editor.play_ui_modal then self.editor_rects=require("main.editor.editor_ui").screen_rects(editor.play_ui) end
