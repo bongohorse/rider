@@ -95,7 +95,7 @@ local styles={};for i=e.first,e.last do styles[i]=1 end
 local c=projection.section(e.prep,e.first,e.last,e.key,styles)
 assert(math.abs(c.color[1]-material.SHADE[material.SIDE]*1.6)<1e-12 and math.abs(c.color[3]-material.SHADE[material.SIDE]*.5)<1e-12)
 
--- Saved Terrain Look sections (baked width/side/shading) and an overhang (non-monotone ribbon):
+-- Saved 3D look sections (baked width/side/shading) and an overhang (non-monotone ribbon):
 -- the textured build keeps the baked geometry and look_data and only replaces colours with neutral shading.
 local function compare(prep,first,last,looks,label)
     material.override=false
@@ -122,11 +122,11 @@ local function compare(prep,first,last,looks,label)
     end
 end
 local looks={};for i=1,#entries[1].prep.p do looks[i]={width=1.4,side=3,shading=.4} end
-compare(entries[1].prep,entries[1].first,entries[1].last,looks,'Terrain Look sections')
+compare(entries[1].prep,entries[1].first,entries[1].last,looks,'3D look sections')
 local curl={{0,0},{2,0},{3,1},{2.5,2.2},{1.2,2},{1,3},{4,4},{6,4}}
 local prep=geometry.prepare(curl,-8,0);assert(not prep.monotone)
 compare(prep,1,#curl,nil,'overhang ribbon')
-print('PASS textured route keeps baked Terrain Look geometry and overhang ribbons; only shading and slots change')
+print('PASS textured route keeps baked 3D look geometry and overhang ribbons; only shading and slots change')
 
 -- 1 MiB Fit: the P5 660 m course (1016 segments in two chains, 17 sections, 18,312 vertices).
 local long={chains={},hulls={},labels={},bounds={-10,700,-40,50}}

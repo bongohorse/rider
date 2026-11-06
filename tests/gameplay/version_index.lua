@@ -222,9 +222,9 @@ end
 print('PASS 1280 entries or retired ids load and 1281 are refused')
 
 -- 6. Each index error fits the status bar "Save failed (versions: <error>)" whole. editor_ui.lua shortens
--- the status to width/(12*.57) characters in w-384-sx px, sx=112+title width (at most 280 px), and the
+-- the status to width/(12*.57) characters in w-504-sx px, sx=112+title width (at most 160 px), and the
 -- logical width w is never below 1280 (editor_ui.size), so the narrowest status shows 73 characters.
-local STATUS_CHARS=math.floor((1280-384-(112+280))/(12*.57))
+local STATUS_CHARS=math.floor((1280-504-(112+160))/(12*.57))
 assert(STATUS_CHARS==73)
 for _,e in ipairs({versions.INDEX_UNREADABLE,versions.INDEX_NEWER}) do
     local status='Save failed (versions: '..e..')'
@@ -235,8 +235,8 @@ end
 local function source(path) local f=real_open(path,'rb');if not f then return nil end;local t=f:read('*a');f:close();return t end
 local ui,editor=source('main/editor/editor_ui.lua'),source('main/editor/editor.lua')
 if ui and editor then
-    for _,needle in ipairs({'local title_width=math.min(280,math.max(96,#d.title*10.5+4))','local sx=112+title_width',
-        'text(sx,24,d.status,','C.active,12,w-384-sx)','math.floor(width/((size or 14)*.57))','math.min(1,math.max(1,w)/density/1280)'}) do
+    for _,needle in ipairs({'local title_width=math.min(160,math.max(96,#d.title*10.5+4))','local sx=112+title_width',
+        'text(sx,24,d.status,','C.active,12,w-504-sx)','math.floor(width/((size or 14)*.57))','math.min(1,math.max(1,w)/density/1280)'}) do
         assert(ui:find(needle,1,true),'editor_ui.lua changed the status width math: '..needle)
     end
     assert(editor:find('M.version_error="Save failed (versions: "..tostring(err)..")"',1,true),'editor.lua changed the versions status prefix')

@@ -25,7 +25,8 @@ local input=S.defaults('city');input.enabled=false;input.layers[2].visible=false
 assert(B.draft(input));input.layers[3].depth=.88
 assert(E.background_preview.backgrounds.layers[3].depth==.31 and E.doc.editor.backgrounds==nil)
 assert(B.current.enabled==false and B.current.layers[2].visible==false and commits==0)
-local preview=E.background_preview;B.suspend(true);assert(B.current and E.background_preview==preview);B.suspend(false);assert(E.background_preview==preview)
+-- #604: a dialog ends a Depth drag; the stored source stays and nothing keeps previewing.
+B.suspend(true);assert(B.current==nil and E.background_preview==nil and commits==0);B.suspend(false);assert(B.draft(input))
 E.look_preview={unrelated=true};B.discard();assert(E.background_preview==nil and E.look_preview.unrelated)
 assert(not B.apply());assert(not B.draft('bad') and E.doc.editor.backgrounds==nil)
 input.layers[3].depth=.31;assert(B.draft(input));E.refuse=true

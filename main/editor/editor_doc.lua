@@ -341,7 +341,7 @@ function M.validate(doc)
     if e.material~=nil and e.editor_version<M.MATERIAL_EDITOR_VERSION then return nil,'A level material needs editor/compiler 14',true end
     local material_ok,material_err,material_unknown=require('main.terrain_perspective.material').validate(e.material)
     if not material_ok then return nil,material_err,material_unknown end
-    if e.material~=nil and e.road_profile~=require('main.terrain_perspective.look').ID then return nil,'A level material needs the authored Terrain Look' end
+    if e.material~=nil and e.road_profile~=require('main.terrain_perspective.look').ID then return nil,'A level material needs the authored 3D look' end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
     local ids,total,pickups,coin_count={},0,{},0

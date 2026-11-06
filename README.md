@@ -7,7 +7,7 @@ Rider is a 2D mobile buggy-driving game built with **Defold 1.14.0** and integra
 ## Play and test
 
 - **Levels:** select a course, drive from START to FINISH, collect coins and Wonder Gems, manage fuel, then see your time, medals, rewards and saved progress. Retry and Next Level use the same run lifecycle.
-- **Editor:** create and modify courses, position START/FINISH and pickups, edit terrain and Terrain Look, save/reopen designs and switch between Edit and Play. The [level-editor contract](docs/contracts/level-editor.md) documents supported operations and limits.
+- **Editor:** create and modify courses, position START/FINISH and pickups, edit terrain and 3D look, save/reopen designs and switch between Edit and Play. The [level-editor contract](docs/contracts/level-editor.md) documents supported operations and limits.
 - **Driving Gym:** use the practice stations for ramps, gaps, jumps, seams, suspension, air control, balance and repeatable tests. This is a developer/test area, not the regular level-selection flow.
 
 **Desktop Gym controls:** W / Up = throttle; S / Down = brake/reverse; A/D = pitch; R = Retry. H opens in-game help for context-sensitive controls; touch controls are available on mobile, with tilt opt-in. Station/preset examples: `?station=air` and `?preset=a`. See [Gym notes](main/gym/README.md) for the current command set.
