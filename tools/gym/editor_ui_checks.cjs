@@ -30,13 +30,13 @@ module.exports=async function uiChecks(h){
   await button('collapse_tool_category');await button('tool_select');assert.equal((await ed()).tool,'select');
   await button('collapse_gameplay');await button('tool_coin');assert.equal((await ed()).tool,'coin');
   state=await ed();r=state.ui.rects;assert.ok(r.tool_coin.y>r.collapse_gameplay.y&&r.tool_coin.y+r.tool_coin.h<r.collapse_prefabs.y);
-  assert.equal(r.undo.y,r.redo.y);assert.equal(r.redo.y,r.play.y);assert.equal(r.undo.x+r.play.x+r.play.w,size.width/state.ui.scale);
+  assert.equal(r.undo.y,r.redo.y);assert.equal(r.redo.y,r.play.y);assert.equal(r.undo.x,size.width/state.ui.scale-480);assert.equal(r.undo.y,8);
   assert.ok(r.tool_coin.y!==r.play.y);assert.equal(state.overlay.nodes,628);await unchanged(categoryBefore,'category collapse/tool choice/viewport');
   await page.screenshot({path:path.join(out,`editor-categories-${size.width}x${size.height}.png`)});
   await button('collapse_prefabs');
  }
  await page.setViewportSize({width:1280,height:720});await key('s');await key('Home');
- cases.push('coin_editor_categories_independent_and_centered_commands');checkpoint('coin_editor_categories_independent_and_centered_commands');
+ cases.push('coin_editor_categories_independent_and_top_bar_commands');checkpoint('coin_editor_categories_independent_and_top_bar_commands');
 
  const bad=structuredClone(base);bad.id='ea1-error';bad.name='Invalid line';
  bad.editor.connections=[];bad.editor.next_id=3;
@@ -97,8 +97,8 @@ module.exports=async function uiChecks(h){
   // #602: Undo, Redo and Play sit in the top bar, left of Versions, without overlap.
   for(const name of ['undo','redo','play'])assert.equal(e.ui.rects[name].y,8,name+' top bar');
   assert.ok(e.ui.rects.undo.x+e.ui.rects.undo.w<=e.ui.rects.redo.x&&e.ui.rects.redo.x+e.ui.rects.redo.w<=e.ui.rects.play.x&&e.ui.rects.play.x+e.ui.rects.play.w<=e.ui.rects.versions.x,'top-bar commands overlap');
-  assert.equal(e.ui.rects.play.y,56);assert.equal(e.ui.rects.play.x,size.width/2+20);
-  assert.equal(e.ui.rects.undo.x,size.width/2-60);assert.equal(e.ui.rects.redo.x,size.width/2-20);
+  assert.equal(e.ui.rects.play.x,size.width-400);
+  assert.equal(e.ui.rects.undo.x,size.width-480);assert.equal(e.ui.rects.redo.x,size.width-440);
   assert.equal(e.ui.scale,1);assert.equal(e.usable.x1-e.usable.x0,size.width-528);
   const nodes=e.overlay.nodes;assert.ok(nodes<=640);assert.equal(nodes,628);
   const pageTools=await page.locator('#page-tools').boundingBox();
@@ -136,7 +136,7 @@ module.exports=async function uiChecks(h){
  await hi.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.ui.rects.play);
  const high=await hi.evaluate(()=>({state:window.riderEditor,canvas:document.querySelector('canvas').width,css:document.querySelector('canvas').clientWidth}));
  assert.equal(high.canvas/high.css,2);assert.equal(high.state.ui.scale,2);
- assert.equal(high.state.ui.rects.play.x,high.css/2+20);assert.equal(high.state.ui.rects.play.h,32);
+ assert.equal(high.state.ui.rects.play.x,high.css-400);assert.equal(high.state.ui.rects.play.h,32);
  assert.equal(high.state.usable.x0,432);assert.equal(high.state.usable.x1,1936);assert.equal(high.state.overlay.nodes,628);
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};
