@@ -19,9 +19,22 @@ function observe(){
     const before=new Uint8Array(16*16*4),after=new Uint8Array(before.length);
     this.readPixels(x,y,16,16,this.RGBA,this.UNSIGNED_BYTE,before);
     const result=draw.apply(this,args);this.readPixels(x,y,16,16,this.RGBA,this.UNSIGNED_BYTE,after);
-    let changed=0;const pattern=[];
-    for(let i=0;i<256;i++){const different=[0,1,2].some(k=>before[i*4+k]!==after[i*4+k]);changed+=different?1:0;pattern.push(different?1:0);}
-    window.riderForegroundPixels={x,y,changed,total:256,pattern};return result;
+    // Exact oracle: the same per-pixel threshold and coverage as main/backgrounds/foreground.fp.
+    const smooth=(l,h,v)=>{const t=Math.max(0,Math.min(1,(v-l)/(h-l)));return t*t*(3-2*t);};
+    const bayer=(a,b)=>2*a+3*b-4*a*b;
+    const old=window.riderForegroundPixels||{frames:0,kept:0,dropped:0,violations:0};
+    let changed=0,kept=0,dropped=0,violations=0;
+    for(let j=0;j<16;j++)for(let i=0;i<16;i++){
+     const n=(j*16+i)*4,different=[0,1,2].some(k=>before[n+k]!==after[n+k]);changed+=different?1:0;
+     const fx=x+i,fy=y+j,cx=fx%4,cy=fy%4;
+     const threshold=(4*bayer(cx%2,cy%2)+bayer(cx>>1,cy>>1)+.5)/16;
+     const r=Math.hypot(((fx+.5)/this.drawingBufferWidth-c[0])/c[2],((fy+.5)/this.drawingBufferHeight-c[1])/c[3]);
+     const coverage=.25+.75*smooth(.35,1,r);
+     // Skip pixels within rounding of the feather edge.
+     if(Math.abs(threshold-coverage)<.01)continue;
+     if(threshold>coverage){dropped++;if(different)violations++;}else if(different)kept++;
+    }
+    window.riderForegroundPixels={x,y,changed,frames:old.frames+1,kept:old.kept+kept,dropped:old.dropped+dropped,violations:old.violations+violations};return result;
    };
   }
  }
@@ -47,7 +60,7 @@ async function run(page,out,state){
  try{
   await page.waitForFunction(()=>{const s=window.riderBackgroundState,l=s?.layers[5];return l?.cutout&&l.cutout[1]<.27&&l.cutout[1]>0;},null,{timeout:15000});
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1,null,{timeout:5000});
-  before=await state();await page.waitForFunction(()=>{const p=window.riderForegroundPixels;return p&&p.changed>=40&&p.changed<=110;},null,{timeout:10000});await pointer.frames(page,{n:20});after=await state();
+  before=await state();await page.waitForFunction(()=>{const p=window.riderForegroundPixels;return p&&(p.violations>0||p.frames>=20&&p.kept>=1000&&p.dropped>=1000);},null,{timeout:10000});await pointer.frames(page,{n:20});after=await state();
   assert(after.layers[5].cutout[1]<.3,'Vehicle left foreground overlap');
   await page.screenshot({path:path.join(out,'foreground603-driving.png')});
  }finally{await page.keyboard.up('ArrowUp');}
@@ -58,9 +71,10 @@ async function run(page,out,state){
   assert(l.cutout[2]>0&&l.cutout[3]>0);assert.equal(s.source.preset,'meadow');
  }
  const pixels=await page.evaluate(()=>window.riderForegroundPixels);
- assert.equal(pixels.changed,64,'Expected quarter coverage inside the feather');
- // Bayer's quarter-coverage cells stay on the same framebuffer parity while driving.
- for(let y=0;y<16;y++)for(let x=0;x<16;x++)assert.equal(pixels.pattern[y*16+x],x%2===0&&y%2===0?1:0,'Moving/shimmering Bayer phase');
+ // Art has gaps between blades, so judge many frames: pixels the shader must discard never change,
+ // and both drawn and discarded pixels occur. A moving phase or missing dither produces violations.
+ assert.equal(pixels.violations,0,'A pixel the dither must discard was drawn');
+ assert(pixels.kept>=1000&&pixels.dropped>=1000,'Dither not exercised: '+JSON.stringify(pixels));
  return {before,after,pixels,command,input:'mouse Height +150, Zoom 1.4; ArrowUp',screenshot:'foreground603-driving.png'};
 }
 module.exports={run,observe};
