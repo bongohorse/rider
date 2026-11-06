@@ -15,16 +15,16 @@ function M.has_sections(d)
 end
 function M.validate(e)
  if e.road_profile~=M.ID then return true end
- if (e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=14 and e.editor_version~=15) or e.compiler_version~=e.editor_version then return nil,'Authored Terrain Look requires supported editor/compiler version 7 through 15 source; keep the original file.',true end
+ if (e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=14 and e.editor_version~=15) or e.compiler_version~=e.editor_version then return nil,'Authored 3D look requires supported editor/compiler version 7 through 15 source; keep the original file.',true end
  local l=e.road_look
- if type(l)~='table' or l.version~=1 then return nil,'Unsupported Terrain Look version; keep the original file.',true end
- for k in pairs(l) do if k~='version' and k~='params' then return nil,'Unsupported Terrain Look field '..tostring(k),true end end
- local p,err=projection.validate(l.params);if not p then return nil,'Terrain Look: '..err,(err:find('Unsupported',1,true) or err:find('Unknown',1,true))~=nil end
- if p.version==2 and e.material==nil then return nil,'Terrain Look: parameter set 2 needs a level material' end
+ if type(l)~='table' or l.version~=1 then return nil,'Unsupported 3D look version; keep the original file.',true end
+ for k in pairs(l) do if k~='version' and k~='params' then return nil,'Unsupported 3D look field '..tostring(k),true end end
+ local p,err=projection.validate(l.params);if not p then return nil,'3D look: '..err,(err:find('Unsupported',1,true) or err:find('Unknown',1,true))~=nil end
+ if p.version==2 and e.material==nil then return nil,'3D look: parameter set 2 needs a level material' end
  for _,o in ipairs(e.objects or {}) do if type(o)~='table' then return nil,'Invalid terrain source object' end;if o.road_look~=nil then
   local v=o.road_look
-  if (o.type~='line' and o.type~='curve' and o.type~='prefab') or (o.type=='prefab' and o.kind=='platform') then return nil,'Terrain Look applies only to terrain sections' end
-  if type(v)~='table' or v.version~=1 then return nil,'Unsupported section Terrain Look version',true end
+  if (o.type~='line' and o.type~='curve' and o.type~='prefab') or (o.type=='prefab' and o.kind=='platform') then return nil,'3D look applies only to terrain sections' end
+  if type(v)~='table' or v.version~=1 then return nil,'Unsupported section 3D look version',true end
   for k in pairs(v) do if k~='version' and k~='width' and k~='side' and k~='shading' then return nil,'Section look: projection strength/angle are level-wide; unsupported field '..tostring(k),true end end
   for _,k in ipairs(M.LOCAL) do local n,r=v[k],projection.ranges(p)[k];if type(n)~='number' or n~=n or n<r[1] or n>r[2] then return nil,'Section '..k..' must be '..r[1]..'..'..r[2] end end
  end end
@@ -52,7 +52,7 @@ end
 function M.validate_station(d)
  if not M.authored(d) then return true end
  local doc=M.document
- if not doc then return nil,'Terrain Look requires supported editor source validation; open the source in the editor.' end
+ if not doc then return nil,'3D look requires supported editor source validation; open the source in the editor.' end
  -- Source wrappers remain schema 1; coin-bearing compiled stations use schema 2.
  local ok,err,unsupported=doc.validate({schema=1,units=d.units,id=d.id,name=d.name,editor=d.editor})
  if not ok then return nil,err,unsupported end

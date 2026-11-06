@@ -8,7 +8,7 @@ json={decode=J.decode}
 sys={get_save_file=function(app,name) return app..'/'..name end,get_engine_info=function() return {is_debug=true} end,
     load=function() return {} end,save=function() error('this suite never saves') end}
 html5=nil
--- Loaded by the game before any import: it provides the editor-source check for Terrain Look levels.
+-- Loaded by the game before any import: it provides the editor-source check for 3D look levels.
 require 'main.editor.editor_doc'
 local data=require 'main.game.station_data'
 local custom=require 'main.game.custom'

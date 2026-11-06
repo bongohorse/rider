@@ -35,4 +35,4 @@ styled.editor.objects[1].road_look={version=1,width=.9,side=8,shading=1}
 local styled_level=assert(E.compile(styled));assert(styled.schema==1 and styled_level.schema==2)
 assert(require('main.game.station_data').validate(styled_level));assert(require('main.terrain_perspective.look').mapping(styled_level))
 assert(not E.compare(styled,styled_level));assert(styled_level.coins.items[1].id=='pickup-original')
-print('PASS authored Terrain Look and local styles on coin-bearing schema-2 stations retain schema-1 source validation')
+print('PASS authored 3D look and local styles on coin-bearing schema-2 stations retain schema-1 source validation')

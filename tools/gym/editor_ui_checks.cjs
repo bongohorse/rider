@@ -35,6 +35,16 @@ module.exports=async function uiChecks(h){
   await page.screenshot({path:path.join(out,`editor-categories-${size.width}x${size.height}.png`)});
   await button('collapse_prefabs');
  }
+ for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
+  await page.setViewportSize(size);await pointer.frames(page);const state=await ed();
+  // #602: real clicks at the top-bar positions on every layout, plus the rendered names.
+  assert.equal(state.ui.labels.terrain_look,'3D');assert.equal(state.ui.labels.track_textures,'Texture');
+  const undoBefore=(await ed()).undo;await button('undo');await pointer.frames(page);
+  const undone=await ed();assert.ok(undone.undo!==undoBefore||/Nothing to undo/.test(undone.message),'Undo click had no effect at '+size.width);
+  await button('redo');await pointer.frames(page);const redone=await ed();assert.ok(redone.undo===undoBefore||/Nothing to redo/.test(redone.message),'Redo click had no effect at '+size.width);
+  await button('play');await page.waitForFunction(()=>window.riderEditor?.mode==='play'||window.riderEditor?.ui?.error_banner,null,{timeout:20000});
+  if((await ed()).mode==='play'){await key('e');await edit();}
+ }
  await page.setViewportSize({width:1280,height:720});await key('s');await key('Home');
  cases.push('coin_editor_categories_independent_and_top_bar_commands');checkpoint('coin_editor_categories_independent_and_top_bar_commands');
 

@@ -441,7 +441,7 @@ function on_message(self,id,data,sender)
         local ok,err=open_current(self)
         if ok and not editor.conflict then
             require("main.editor.editor_look").play_open(self.generation)
-        else editor.message=err or "Resolve the source conflict in the Editor before changing Terrain Look." end
+        else editor.message=err or "Resolve the source conflict in the Editor before changing 3D look." end
     elseif id==hash("editor_enter") and not self.loading and editor.mode=="play" then
         local ok,err=open_current(self)
         if ok then enter_edit(self) else editor.message=err end

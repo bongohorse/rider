@@ -6,7 +6,7 @@ Binding vocabulary and data model for level materials, depth, light, backgrounds
 
 ## Boundary
 
-Everything here is visual. It never reads or writes collision, physics, replay or the follow camera. The collision plane and driving line stay where the compiled level puts them. The [road-look contract](road-look.md) still owns parameter set v1, the projection, resources and Terrain Look controls; this contract owns what later tasks add to them.
+Everything here is visual. It never reads or writes collision, physics, replay or the follow camera. The collision plane and driving line stay where the compiled level puts them. The [road-look contract](road-look.md) still owns parameter set v1, the projection, resources and 3D look controls; this contract owns what later tasks add to them.
 
 ## Vocabulary
 

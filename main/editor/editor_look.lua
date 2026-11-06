@@ -1,4 +1,4 @@
--- Terrain Look session: drafts are separate from source, Apply is one existing editor commit.
+-- 3D look session: drafts are separate from source, Apply is one existing editor commit.
 local editor=require 'main.editor.editor'
 local doc=require 'main.editor.editor_doc'
 local look=require 'main.terrain_perspective.look'
@@ -64,7 +64,7 @@ local function candidate(s)
   if s.scope=='selected' then
    if s.clear then o.road_look=nil else o.road_look={version=1,width=s.params.width,side=s.params.side,shading=s.params.shading} end
   end
- elseif ids[o.id] then return nil,'Terrain Look applies only to terrain sections, not props or labels.' end end
+ elseif ids[o.id] then return nil,'3D look applies only to terrain sections, not props or labels.' end end
  if s.scope=='selected' and count==0 then return nil,'Select terrain sections first.' end
  copy.road_profile=look.ID
  copy.road_look={version=1,params=s.scope=='level' and projection.validate(s.params) or look.params({editor=e})}

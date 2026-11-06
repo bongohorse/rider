@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Characterize Terrain Look initialization in 20 fresh pinned-Bob LuaJIT processes (#511).
+"""Characterize 3D look initialization in 20 fresh pinned-Bob LuaJIT processes (#511).
 
 Writes evidence outside source by default. This tests source interfaces, not the engine's loader.
 """
@@ -48,7 +48,7 @@ local function snapshot(label)
  assert(not not valid==not not expected,label..': unexpected station validation: '..tostring(err))
  assert(mapped==(registered and variant=='authored'),label..': unexpected local-style mapping')
  if not registered and variant~='legacy' then
-  assert(err=='Terrain Look requires supported editor source validation; open the source in the editor.')
+  assert(err=='3D look requires supported editor source validation; open the source in the editor.')
  elseif variant=='invalid' then
   assert(err and err:find('width',1,true) and not unknown,label..': invalid source classification')
  elseif variant=='newer' then
