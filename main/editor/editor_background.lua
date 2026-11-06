@@ -1,4 +1,4 @@
--- Background panel session: a choice commits at once as one Undo step; a Depth drag previews until release.
+-- Background panel session: a choice commits at once as one Undo step; a slider drag previews until release.
 local editor=require 'main.editor.editor'
 local doc=require 'main.editor.editor_doc'
 local source=require 'main.backgrounds.source'
@@ -55,12 +55,12 @@ function M.close()
     if html5 then html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.close()') end
 end
 local show
--- Yield to canvas dialogs. A Depth drag ends without storing; the panel returns to the stored value.
+-- Yield to canvas dialogs. A slider drag ends without storing; the panel returns to the stored value.
 function M.suspend(value)
     local blocked=value and true or false
     if M.suspended==blocked then return end
     M.suspended=blocked
-    -- A dialog ends a Depth drag: the stored value stays and the panel shows it again.
+    -- A dialog ends a slider drag: the stored value stays and the panel shows it again.
     if blocked then M.discard() end
     if html5 then
         html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.suspend('..tostring(blocked)..')')

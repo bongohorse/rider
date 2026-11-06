@@ -53,7 +53,7 @@ local function bad(change,part,unsupported)
     if unsupported then assert(unknown==true) end
     assert(enc(c)==before,'refusal leaves original source untouched')
 end
-bad(function(e) e.backgrounds.version=2 end,'Unsupported backgrounds',true)
+bad(function(e) e.backgrounds.version=3 end,'Unsupported backgrounds',true)
 bad(function(e) e.backgrounds.preset='unknown' end,'Unknown background preset',true)
 bad(function(e) e.backgrounds.extra=true end,'Unknown background field',true)
 bad(function(e) e.backgrounds.layers[1].image={preset='unknown'} end,'Unknown background image preset',true)
@@ -72,3 +72,23 @@ local f=assert(io.open('tests/gameplay/level-fixtures/terrain-p0/mixed.json'));l
 local fixture=J.decode(text);local before=enc(fixture);assert(D.validate(D.open_level(fixture)))
 assert(enc(fixture)==before and fixture.backgrounds==nil)
 print('PASS #548 backgrounds source: round trip, Undo/Redo, export/import, schema/version refusal, missing fallback, legacy unchanged, Play/Edit resolution')
+
+-- #614: only authoring vertical settings opts into v2; v1 stays byte-identical.
+local v1=S.defaults();local original=enc(v1);assert(S.resolve(v1));assert(enc(v1)==original)
+assert(v1.version==1 and v1.layers[1].vertical_position==nil)
+local v2=D.copy(v1);v2.version=2;v2.layers[1].vertical_position=-4;v2.layers[1].vertical_parallax=1
+v2.layers[5].vertical_position=4;v2.layers[5].vertical_parallax=0
+local vertical=fresh();assert(D.set_backgrounds(vertical.editor,v2));assert(D.validate(vertical))
+local result=assert(D.compile(vertical));assert(result.schema==7)
+local reopened=assert(D.open_level(J.decode(enc(result))))
+assert(enc(reopened.editor.backgrounds)==enc(v2))
+local resolved=assert(S.resolve(result.backgrounds));assert(resolved.layers[1].vertical_position==-4 and resolved.layers[5].vertical_parallax==0)
+local hist=D.history();D.record(hist,d,1)
+local undo=assert(D.step(hist,vertical,true,1));assert(enc(undo.editor.backgrounds)==enc(d.editor.backgrounds))
+local redo=assert(D.step(hist,undo,false,1));assert(enc(redo.editor.backgrounds)==enc(v2))
+for field,values in pairs({vertical_position={-4.01,4.01,math.huge,0/0,'0',false},vertical_parallax={-.01,1.01,math.huge,0/0,'0',false}}) do
+ for _,value in ipairs(values) do local b2=D.copy(v2);b2.layers[1][field]=value;assert(not S.validate(b2)) end
+ local b1=D.copy(v1);b1.layers[1][field]=0;local ok1,_,unknown1=S.validate(b1);assert(not ok1 and unknown1)
+ local fg=D.copy(v2);fg.layers[6][field]=0;local ok6,_,unknown6=S.validate(fg);assert(not ok6 and unknown6)
+end
+print('PASS #614 vertical source: optional v2 round trip, bounds, Undo/Redo, v1 unchanged and foreground refused')

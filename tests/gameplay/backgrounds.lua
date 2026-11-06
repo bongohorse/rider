@@ -32,6 +32,33 @@ for _,range in ipairs({{-120,120},{1000,1400},{7,7}}) do
  end
  near(f.level_min_y,range[1]);near(f.level_max_y,range[2])
 end
+-- #614: optional defaults are exactly the old expression; authored extremes keep
+-- the image interior at viewport centre for every camera/level/zoom combination.
+for _,range in ipairs({{-120,120},{1000,1400},{7,7},{0,0}}) do
+ for i=1,5 do
+  for _,y in ipairs({range[1]-1000,range[1],(range[1]+range[2])/2,range[2],range[2]+1000}) do
+   local f={x=6,y=y,half_w=5,half_h=3,level_min_y=range[1],level_max_y=range[2]}
+   local t=math.max(-1,math.min(1,(y-(range[1]+(range[2]-range[1])/2))/math.max(6,(range[2]-range[1])/2)))
+   assert(model.vertical(f,i,{})==t*12/16*(1-model.AUTO[i]),'Legacy vertical result changed')
+   for _,position in ipairs({-4,0,4}) do for _,amount in ipairs({0,.5,1}) do
+    local l={auto=true,depth=.5,vertical_position=position,vertical_parallax=amount}
+    assert(model.normalize({layers={[i]=l}}))
+    for _,h in ipairs({.01,3,100}) do
+     f.half_h=h
+     local uv=model.uv(f,model.layout(f,i),l,i,64,32)
+     assert(uv[4]>0 and uv[4]<1,'Image interior left viewport centre')
+     assert(uv[4]-uv[2]<1 and uv[4]+uv[2]>0,'Image left viewport')
+     near(uv[4],.5+(t*.75*amount-position)/12)
+    end
+   end end
+   near(model.vertical(f,i,{vertical_position=2,vertical_parallax=0}),-2)
+  end
+ end
+end
+for field,values in pairs({vertical_position={-4.01,4.01,math.huge,0/0,'0',false},vertical_parallax={-.01,1.01,math.huge,0/0,'0',false}}) do
+ for _,value in ipairs(values) do assert(not model.normalize({layers={{[field]=value}}})) end
+ assert(not model.normalize({layers={[6]={[field]=0}}}),'Foreground refuses vertical authoring')
+end
 -- #603: camera Y and vehicle overlap must never crop or vertically shift the image.
 for _,y in ipairs({-10000,-120,-4,-3,0,120,10000}) do
  frame.y=y;frame.vehicle_low=y-100

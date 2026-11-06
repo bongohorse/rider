@@ -1,7 +1,7 @@
 -- Versioned authored backgrounds. Persist IDs/hash references, resolve resource paths only at render boundary.
 local dense=require 'main.game.dense'
 local model=require 'main.backgrounds.model'
-local M={VERSION=1,PRESETS={'meadow','quarry','city','volcano'}}
+local M={VERSION=1,VERTICAL_VERSION=2,PRESETS={'meadow','quarry','city','volcano'}}
 local known={};for _,id in ipairs(M.PRESETS) do known[id]=true end
 local function fields(value,allowed)
     for k in pairs(value) do if not allowed[k] then return nil,'Unknown background field '..tostring(k):sub(1,40),true end end
@@ -10,17 +10,19 @@ end
 local function finite(n) return type(n)=='number' and n==n and n>=model.MIN_DEPTH and n<=model.MAX_DEPTH end
 function M.validate(b)
     if b==nil then return true end
-    if type(b)~='table' or b.version~=M.VERSION then return nil,'Unsupported backgrounds version; keep the original file.',true end
+    if type(b)~='table' or (b.version~=M.VERSION and b.version~=M.VERTICAL_VERSION) then return nil,'Unsupported backgrounds version; keep the original file.',true end
     local ok,err,unknown=fields(b,{version=true,preset=true,enabled=true,layers=true})
     if not ok then return nil,err,unknown end
     if not known[b.preset] then return nil,'Unknown background preset '..tostring(b.preset),true end
     if type(b.enabled)~='boolean' then return nil,'Background enabled must be boolean' end
     if dense.length(b.layers,6)~=6 then return nil,'Backgrounds need six dense layer slots' end
-    for _,layer in ipairs(b.layers) do
+    for i,layer in ipairs(b.layers) do
         if type(layer)~='table' then return nil,'Invalid background layer' end
-        ok,err,unknown=fields(layer,{visible=true,auto=true,depth=true,image=true})
+        ok,err,unknown=fields(layer,{visible=true,auto=true,depth=true,image=true,
+            vertical_position=b.version==M.VERTICAL_VERSION and i<=5,vertical_parallax=b.version==M.VERTICAL_VERSION and i<=5})
         if not ok then return nil,err,unknown end
         if type(layer.visible)~='boolean' or type(layer.auto)~='boolean' or not finite(layer.depth) then return nil,'Invalid layer visibility, Auto or Depth (-0.25..1)' end
+        if not model.valid_vertical(layer,i) then return nil,'Invalid vertical position (-4..4 m) or parallax (0..1)' end
         local image=layer.image
         if image~=nil then
             if type(image)~='table' then return nil,'Invalid background image reference' end
@@ -50,7 +52,7 @@ function M.resolve(b)
     local missing=false
     for i,l in ipairs(b.layers) do
         local id=l.image and l.image.preset or b.preset
-        out.layers[i]={visible=l.visible,auto=l.auto,depth=l.depth,image=path(id,i),preset_image=path(id,i)}
+        out.layers[i]={visible=l.visible,auto=l.auto,depth=l.depth,image=path(id,i),preset_image=path(id,i),vertical_position=l.vertical_position,vertical_parallax=l.vertical_parallax}
         if l.image and l.image.hash then missing=true end
     end
     return out,missing and 'Local background image missing; using its preset. Import it again on this browser.' or nil
