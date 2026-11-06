@@ -83,9 +83,9 @@ The existing renderer is retained to preserve old courses, not selected from a d
 
 Claudio explicitly authorized #278 after merging #293; he did not report an additional drive test. The persistent **3D** button opens a native menu built from the existing GUI pool, `projection.CONTROLS` and `projection.RANGES`. There is one projector and one parameter validator. Scope is **Level** defaults or **Selected sections** (existing terrain line/curve/prefab source objects, not render chunks, hulls or labels). Perspective strength and view angle remain level-wide and are read-only in Selected scope, preserving one central projection space. Width, side depth and shading can be local.
 
-A menu session belongs to the current document instance. Slider/numeric edits preview without mutating source, revision, save slots or Undo. Close/Esc retain valid draft values; opening again restores them. `3D *` indicates retained preview values awaiting Apply. Preview is not saved by closing or ordinary Save; Apply writes the selected source scope once through the existing commit/Undo/autosave/version pipeline. Switching to Play uses committed source. Reset previews accepted level defaults, or inheritance for selected sections; Apply makes that reset persistent. Level Reset/Apply retain manual object overrides. Unknown/future look versions stay protected by existing save-slot handling.
+A menu session belongs to the current document instance. Slider drags and open number fields preview without mutating source. Each finished change (#604: release, confirmed number, Reset) writes the selected source scope once through the existing commit/Undo/autosave/version pipeline; there is no Apply. `3D *` marks a drag in progress. Switching to Play uses committed source. Reset previews accepted level defaults, or inheritance for selected sections; it is stored at once. Level Reset and changes retain manual object overrides. Unknown/future look versions stay protected by existing save-slot handling.
 
-Explicit Apply uses `editor.road_profile = "authored-v1"` with:
+A finished change uses `editor.road_profile = "authored-v1"` with:
 
 ```json
 {"road_look":{"version":1,"params":{"version":1,"mode":"perspective","width":0.9,"perspective":0.35,"angle":28.810793742973,"side":64,"shading":1}}}

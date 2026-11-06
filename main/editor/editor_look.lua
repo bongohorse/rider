@@ -1,4 +1,4 @@
--- 3D look session: drafts are separate from source, Apply is one existing editor commit.
+-- 3D look session: a finished change commits as one Undo step; a slider drag or open number field only previews.
 local editor=require 'main.editor.editor'
 local doc=require 'main.editor.editor_doc'
 local look=require 'main.terrain_perspective.look'
@@ -49,7 +49,7 @@ function M.close() local s=M.sync();if s then s.open=false;s.field=nil;s.drag=ni
 local function candidate(s)
  local e=editor.doc.editor;local copy=doc.copy(e);local ids={}
  if s.scope=='selected' then
-  if not require('main.terrain_perspective.profile').enabled({editor=e}) then return nil,'Legacy level: Apply a level-wide look first. Loading or opening this menu never converts it.' end
+  if not require('main.terrain_perspective.profile').enabled({editor=e}) then return nil,'Legacy level: change the level-wide look first. Loading or opening this menu never converts it.' end
   for _,id in ipairs(s.ids or {}) do ids[id]=true end
   if not next(ids) then return nil,'Select terrain sections first, then choose Selected sections.' end
   local objects={};for _,o in ipairs(e.objects) do objects[o.id]=o end
@@ -103,8 +103,15 @@ function M.apply()
  else s.error=editor.message end
  return ok
 end
+-- A refused change returns the controls to the stored look and keeps the reason visible.
+function M.commit()
+ local s=M.sync();local ok=M.apply()
+ if not ok then local err=s.error;M.scope(s.scope);M.session.error=err;if not s.open then editor.message=err or '3D change refused.' end end
+ return ok
+end
 function M.tick()
  local s=M.sync();if not s then return end
+ if s.dirty and not s.drag and not s.field then M.commit();s=M.session end
  -- The editor stays usable beside the menu: Selected scope follows the selection.
  if s.open and s.scope=='selected' and table.concat(s.ids or {},'|')~=table.concat(editor.selected_ids(),'|') then M.scope('selected');s=M.session end
  if s.pending and (not s.last or socket.gettime()-s.last>=.1) then s.last=socket.gettime();M.preview() end
@@ -118,11 +125,13 @@ function M.live(generation)
  if s and s.instance==editor.opened and s.play_generation==generation then return M.play_level end
 end
 function M.clear_play()
- local s=M.session;if s then s.open=false;s.play_generation=nil end
+ local s=M.session;if s then s.open=false;s.drag=nil;s.field=nil;s.play_generation=nil end
  M.play_level=nil
 end
 function M.confirm()
  local s=M.sync();local f=s.field;if not f then return true end
+ -- Dismissing an unedited field changes nothing: no commit, no legacy conversion, no mixed-value overwrite.
+ if f.text==tostring(s.params[f.key]) then s.field=nil;return true end
  if not M.change(f.key,tonumber(f.text)) then return nil end;s.field=nil;return true
 end
 return M
