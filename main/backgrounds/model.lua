@@ -30,12 +30,18 @@ function M.layout(frame,_index)
     assert(finite(cx) and finite(cy) and finite(w) and finite(h) and w>0 and h>0,"Invalid render frame")
     return {x=cx,y=cy,half_w=w,half_h=h}
 end
-function M.uv(frame,rect,layer,index,width,height)
+-- `scroll` is the foreground's per-layer state: the phase accumulates at the current image size, so it moves at
+-- 1-Depth of world speed and a camera zoom scales the image without sliding it.
+function M.uv(frame,rect,layer,index,width,height,scroll)
     local tile_h=index==6 and 2*frame.half_h or M.HEIGHT;local tile_w=tile_h*width/height
     local factor=M.factor(layer,index)
     if index==6 then
-        -- The scroll phase uses the fixed reference size: camera zoom scales the image without sliding it.
-        return {rect.half_w/tile_w,0.5,frame.x*factor/(M.HEIGHT*width/height)+0.5,0.5}
+        local phase=frame.x*factor/tile_w
+        if scroll then
+            phase=scroll.x and scroll.phase+(frame.x-scroll.x)*factor/tile_w or phase
+            scroll.x,scroll.phase=frame.x,phase
+        end
+        return {rect.half_w/tile_w,0.5,phase+0.5,0.5}
     end
     return {rect.half_w/tile_w,rect.half_h/tile_h,
         frame.x*factor/tile_w+0.5,(rect.y-frame.y+frame.y*factor)/tile_h+0.5}

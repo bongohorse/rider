@@ -20,8 +20,11 @@ for _,y in ipairs({-10000,-120,-4,-3,0,120,10000}) do
 end
 frame.y=12
 -- Speed-dependent camera zoom must not slide the foreground sideways far from the origin.
-do local far={x=300,y=0,half_w=8,half_h=4.5};local a=model.uv(far,model.layout(far,6),normalized.layers[6],6,1024,512)
- far.half_w,far.half_h=8.08,4.545;local b=model.uv(far,model.layout(far,6),normalized.layers[6],6,1024,512);near(a[3],b[3]) end
+do local far={x=300,y=0,half_w=8,half_h=4.5};local scroll={};local fg=normalized.layers[6]
+ local a=model.uv(far,model.layout(far,6),fg,6,1024,512,scroll)
+ far.half_w,far.half_h=8.08,4.545;local b=model.uv(far,model.layout(far,6),fg,6,1024,512,scroll);near(a[3],b[3])
+ -- Screen-relative speed is the contract's 1-Depth of world speed at the current size.
+ far.x=301;local c=model.uv(far,model.layout(far,6),fg,6,1024,512,scroll);near((c[3]-b[3])*(2*far.half_h*2),model.factor(fg,6)) end
 -- Resource-owner model: components retain refs until the engine deletes their GOs.
 local refs,objects,deleted,loads={}, {}, {}, {}
 local function retain(id) if id then refs[id]=(refs[id] or 0)+1 end end

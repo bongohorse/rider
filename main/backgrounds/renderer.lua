@@ -79,7 +79,8 @@ function M.update(s,frame)
         if l then
             count=count+1
             local rect=model.layout(frame,i)
-            local uv=model.uv(frame,rect,config,i,l.texture.width,l.texture.height)
+            if i==6 then l.scroll=l.scroll or {} end
+            local uv=model.uv(frame,rect,config,i,l.texture.width,l.texture.height,l.scroll)
             local visible=rect.half_h>0
             if l.visible~=visible then msg.post(l.url,visible and "enable" or "disable");l.visible=visible end
             if visible then
