@@ -30,6 +30,7 @@ components { id: "preset_inca" component: "/main/terrain_material/presets/inca/c
 components { id: "preset_glacier" component: "/main/terrain_material/presets/glacier/chunk.factory" }
 components { id: "preset_scrapyard" component: "/main/terrain_material/presets/scrapyard/chunk.factory" }
 components { id: "coin" component: "/main/game/coin.factory" }
+components { id: "vehicle_shadow" component: "/main/terrain_perspective/vehicle_shadow.factory" }
 components { id: "mechanism_crate" component: "/main/game/mechanism_crate.factory" }
 components { id: "mechanism_plate" component: "/main/game/mechanism_plate.factory" }
 components { id: "mechanism_gate" component: "/main/game/mechanism_gate.factory" }

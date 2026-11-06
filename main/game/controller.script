@@ -471,6 +471,7 @@ function update(self, dt)
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
     require("main.game.terrain_mesh").update(self)
+    require("main.terrain_perspective.vehicle_shadow").update(self)
     if self.vehicle and self.vehicle.ready then
         audio.update(self)
         sfx.update(self)

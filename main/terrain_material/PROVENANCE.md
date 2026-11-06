@@ -22,3 +22,5 @@ Committed outputs: `kenney_terrain_64.png` (512×512 RGBA, six family rows × fo
 | Art direction | The Meadow preset follows the look Claudio accepted in #536; he judges the set in #543 |
 
 The Kenney atlas above is a test fixture, separate from these presets.
+
+`main/game/assets/vehicle_shadow.png` is original: a soft dark ellipse computed with Pillow, no input (#572).
