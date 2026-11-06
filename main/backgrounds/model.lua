@@ -34,7 +34,8 @@ function M.uv(frame,rect,layer,index,width,height)
     local tile_h=index==6 and 2*frame.half_h or M.HEIGHT;local tile_w=tile_h*width/height
     local factor=M.factor(layer,index)
     if index==6 then
-        return {rect.half_w/tile_w,0.5,frame.x*factor/tile_w+0.5,0.5}
+        -- The scroll phase uses the fixed reference size: camera zoom scales the image without sliding it.
+        return {rect.half_w/tile_w,0.5,frame.x*factor/(M.HEIGHT*width/height)+0.5,0.5}
     end
     return {rect.half_w/tile_w,rect.half_h/tile_h,
         frame.x*factor/tile_w+0.5,(rect.y-frame.y+frame.y*factor)/tile_h+0.5}

@@ -19,6 +19,9 @@ for _,y in ipairs({-10000,-120,-4,-3,0,120,10000}) do
  near(tex[2],.5);near(tex[4],.5)
 end
 frame.y=12
+-- Speed-dependent camera zoom must not slide the foreground sideways far from the origin.
+do local far={x=300,y=0,half_w=8,half_h=4.5};local a=model.uv(far,model.layout(far,6),normalized.layers[6],6,1024,512)
+ far.half_w,far.half_h=8.08,4.545;local b=model.uv(far,model.layout(far,6),normalized.layers[6],6,1024,512);near(a[3],b[3]) end
 -- Resource-owner model: components retain refs until the engine deletes their GOs.
 local refs,objects,deleted,loads={}, {}, {}, {}
 local function retain(id) if id then refs[id]=(refs[id] or 0)+1 end end
