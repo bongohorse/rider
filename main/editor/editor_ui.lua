@@ -278,7 +278,7 @@ function M.render(u,d)
         if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
     elseif not modal then
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
-        local title_width=math.min(280,math.max(96,#d.title*10.5+4))
+        local title_width=math.min(160,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
         local sx=112+title_width
         text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-504-sx)
