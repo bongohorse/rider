@@ -283,15 +283,23 @@ function M.render(u,d)
         text(96,24,d.title,C.text,18,title_width)
         u.title_rect={x=96,y=8,w=title_width,h=32}
         local sx=112+title_width
-        text(sx,24,d.status,d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active,12,w-504-sx)
-        u.status_rect={x=sx,y=8,w=math.max(0,w-504-sx),h=32}
+        -- Undo, Redo and Play stay centred; a long status uses two lines beside them.
+        local commands=(w-120)/2
+        local status_width=math.max(0,commands-8-sx)
+        local status_colour=d.status:lower():find('failed') and C.error or d.status:lower():find('only') and C.selected or C.active
+        local status_lines=wrap(d.status,status_width,12)
+        if #status_lines<=1 then text(sx,24,d.status,status_colour,12,status_width)
+        else
+            text(sx,16,status_lines[1],status_colour,12,status_width)
+            text(sx,32,table.concat(status_lines,'',2),status_colour,12,status_width)
+        end
+        u.status_rect={x=sx,y=8,w=status_width,h=32}
         for i,v in ipairs({{'new','New level'},{'open','Open levels / templates'},{'import','Import JSON'},{'export','Export JSON'}}) do
             button(v[1],w-264+(i-1)*40,8,32,v[2],false,v[2])
         end
         button('warnings',w-104,8,48,d.blocking and ('! '..d.error_count) or d.warning_count>0 and ('! '..d.warning_count) or 'OK',false,d.diagnostics..': show problems and their sources')
         button('view_help',w-48,8,32,'?',false,'Help [H]')
         button('versions',w-352,8,80,'Versions',false,'Restore saved versions / named snapshots')
-        local commands=w-480
         button('undo',commands,8,32,'Undo',false,'Undo [Ctrl+Z]')
         button('redo',commands+40,8,32,'Redo',false,'Redo [Ctrl+Y]')
         button('play',commands+80,8,40,'Play',true,'Play from START [E]')

@@ -222,10 +222,10 @@ end
 print('PASS 1280 entries or retired ids load and 1281 are refused')
 
 -- 6. Each index error fits the status bar "Save failed (versions: <error>)" whole. editor_ui.lua shortens
--- the status to width/(12*.57) characters in w-504-sx px, sx=112+title width (at most 160 px), and the
--- logical width w is never below 1280 (editor_ui.size), so the narrowest status shows 73 characters.
-local STATUS_CHARS=math.floor((1280-504-(112+160))/(12*.57))
-assert(STATUS_CHARS==73)
+-- the status to two lines of width/(12*.57) characters in (w-120)/2-8-sx px, sx=112+title width (at most 160 px),
+-- and the logical width w is never below 1280 (editor_ui.size). Word wrapping can leave a line short, so allow 12.
+local STATUS_CHARS=2*math.floor(((1280-120)/2-8-(112+160))/(12*.57))-12
+assert(STATUS_CHARS==74)
 for _,e in ipairs({versions.INDEX_UNREADABLE,versions.INDEX_NEWER}) do
     local status='Save failed (versions: '..e..')'
     assert(#status<=STATUS_CHARS,'"'..status..'" ('..#status..' characters) is cut in the status bar')
@@ -236,7 +236,7 @@ local function source(path) local f=real_open(path,'rb');if not f then return ni
 local ui,editor=source('main/editor/editor_ui.lua'),source('main/editor/editor.lua')
 if ui and editor then
     for _,needle in ipairs({'local title_width=math.min(160,math.max(96,#d.title*10.5+4))','local sx=112+title_width',
-        'text(sx,24,d.status,','C.active,12,w-504-sx)','math.floor(width/((size or 14)*.57))','math.min(1,math.max(1,w)/density/1280)'}) do
+        'local commands=(w-120)/2','local status_width=math.max(0,commands-8-sx)','wrap(d.status,status_width,12)','math.floor(width/((size or 14)*.57))','math.min(1,math.max(1,w)/density/1280)'}) do
         assert(ui:find(needle,1,true),'editor_ui.lua changed the status width math: '..needle)
     end
     assert(editor:find('M.version_error="Save failed (versions: "..tostring(err)..")"',1,true),'editor.lua changed the versions status prefix')
