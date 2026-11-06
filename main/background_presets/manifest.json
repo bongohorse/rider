@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "license": "Original work generated for Rider; no third-party input.",
+  "generator": "tools/art/background_presets.py",
+  "generator_sha256": "15446abe8be6f891664040330af787331b6081acb479fa513628741d9de57b93",
+  "size": [
+    1024,
+    512
+  ],
+  "thumbnail_size": [
+    256,
+    128
+  ],
+  "presets": [
+    {
+      "id": "meadow",
+      "name": "Meadow",
+      "seed": 5471,
+      "files": {
+        "layer1": {
+          "sha256": "72da20035484f847658fa7a505cb9a79a6939ef439220ab7e202b0a599abe61b",
+          "rgba_sha256": "8799cc0790efaee4343c2a4b3182edf4d90be822defb532027b56ffeabac681c"
+        },
+        "layer2": {
+          "sha256": "80aa9e9847ccf5e83355270547cd1897a1ce0992e582c9c34744bab485a5a49f",
+          "rgba_sha256": "21b9379c5ec5e546511080b80172be590a084fe1afc8b3d05f1eb44f3329ef4a"
+        },
+        "layer3": {
+          "sha256": "e1ca7eaf3c729b121d10c6500461291ea9c626aeebecec46fd0943c35b1d2190",
+          "rgba_sha256": "3b8180f2b3911e9a74249c9c82fb0e18e9b0debfa7fe65480107e14ab2e2ca6c"
+        },
+        "layer4": {
+          "sha256": "0bc59be5bd5b14c3b2515602d0b21cf79db3df30213fe64c4c415d3573747e94",
+          "rgba_sha256": "3dbbd4d0a78a3381fc78cf85d40bcf540c3b484d37583c95a48570fa45475674"
+        },
+        "layer5": {
+          "sha256": "06425a1b57549e8c67c25c56e0d960cf3459a3ca80b4da2875c8ddf111dccaa9",
+          "rgba_sha256": "b7976eab3bd9f27f9d8e4f4fba03bc147e2675696f4233a4133bc2b62f030df7"
+        },
+        "foreground": {
+          "sha256": "cc8653232b0f779a9a7d246da42f5493d4baf51c6a321a5943618c21b6a19547",
+          "rgba_sha256": "79756051a14e992008e764df2f4cf173d122495b4f32d00e43f5eb97a3ce2633"
+        },
+        "thumb": {
+          "sha256": "9232d7dc281e87cd551ab1bb0303bb8215459d9fa93e6f3bbffd832d27d07033",
+          "rgba_sha256": "1248e926d295d4e01a92d91af14b451a7fd0ec4f2ef82c7b6d9ebf749dc6647a"
+        }
+      }
+    },
+    {
+      "id": "quarry",
+      "name": "Quarry",
+      "seed": 5472,
+      "files": {
+        "layer1": {
+          "sha256": "249d2ccb4d39f30afdfef8d2b8a84079266a29bc8e60faeaace1ef0ea42004aa",
+          "rgba_sha256": "5326a9720919deb81a1f53ef8d5ee5cb47546607ff7c2a2677e74ba82890e378"
+        },
+        "layer2": {
+          "sha256": "966bd3b8fabdad032cc436b32cefef4cfd3b5f9492141ac0be51dbba155f87b7",
+          "rgba_sha256": "b8ca258e1ab275c2d807c3648740ce932a0c2066c0ec7d5bc8a9f9c01120470b"
+        },
+        "layer3": {
+          "sha256": "23eea13417b801fedc00077f4e967ca20364422dd0b318599174d482c563072d",
+          "rgba_sha256": "b6f30f1326d50e75724accb91005602da110caf29012cbe54163f18e031acfea"
+        },
+        "layer4": {
+          "sha256": "f8e0581b9dbcb4e34ff614aad136ac0cc61866f0283340776f9b0f4a37c10bab",
+          "rgba_sha256": "017a6054347be54379dfe5889098904340fd34dae26f19ca6d3d1b833dbd6195"
+        },
+        "layer5": {
+          "sha256": "d41b7b17a5f6fb48b204dbbf2293f88ea205018fbc3293c522049de2ae5425b0",
+          "rgba_sha256": "98b8a1a002409889d1592a10542b24d7ac67f9a0e57346d729bd0f7a64a5ed1b"
+        },
+        "foreground": {
+          "sha256": "0c97f6634ce9e1b652775228db0027ed87610bc1297347bedc22f60c5392413c",
+          "rgba_sha256": "e5e55097690ad9effb533ae00b14425635ca4048a9721aaeee69d04a04e5d446"
+        },
+        "thumb": {
+          "sha256": "81d5bdad797a583a43791e5c039cebd98548b4dd390496d4da2e556fda407859",
+          "rgba_sha256": "ae4bf206cd44b6bb79032b441716ef0c876dd82369626909a7f3e231eb422509"
+        }
+      }
+    },
+    {
+      "id": "city",
+      "name": "City",
+      "seed": 5473,
+      "files": {
+        "layer1": {
+          "sha256": "7745edc451a8d8710f55e3a549010d3cff2443a933c6aa2d7592a56c7a2f6d42",
+          "rgba_sha256": "2f999d361f399639b600ba211418334da4c58d0a83dda673aaab4c16dc655dc6"
+        },
+        "layer2": {
+          "sha256": "13a98f9d48c681296418abded8244918f6ecef31859423a815ffaf43447f7ffb",
+          "rgba_sha256": "95e7df88e41344597c171e17a3f0f193cc3784c92ae1c2d00a7304988e845318"
+        },
+        "layer3": {
+          "sha256": "61c4d9ad81b29753f0fa512204efc485295588a5d5cb3a34532854a43aba01c6",
+          "rgba_sha256": "9b14c5ecd9d10337bb83f0d5f8aa4c2e4ab3d3fab6d198eb055a59a7fab5fdd3"
+        },
+        "layer4": {
+          "sha256": "04e31d550ad6251d6413e468d9c2952fee7536cdc37a5a9c5ac68660f16ac16c",
+          "rgba_sha256": "0eec20f2d9eb4392da3af26e49ec932511e4f8afaf71fc845853b8ff3b98341e"
+        },
+        "layer5": {
+          "sha256": "585481ed44294ce57d2d1afdb06ce88a598977e2b5630e86b13cabd4e3498022",
+          "rgba_sha256": "a07285e3782f47c39465996deaf463f3d928f52cac9626919f3a57cfd6c80934"
+        },
+        "foreground": {
+          "sha256": "1382a08fd72e1b9503d31f1ab32d7e261d194b34a14c9d65f7dc6792205d55d2",
+          "rgba_sha256": "11364ed27b7199757b3cbb6625d63b778d0fb46b1689393ff8a537d60222cd65"
+        },
+        "thumb": {
+          "sha256": "e27ebe9d83e66a891dc4930583c9dfb98890930939aebfbf70166ba1c113c841",
+          "rgba_sha256": "9b0069404ff37010d7e7bdf1e1ca67b4a0a5da1526a369e9bcb29048fad6a51f"
+        }
+      }
+    },
+    {
+      "id": "volcano",
+      "name": "Volcano",
+      "seed": 5474,
+      "files": {
+        "layer1": {
+          "sha256": "199932fe2c2f8ace2249e44aca26e2991da34d6371a6649971d2ca6f9617392e",
+          "rgba_sha256": "9fc60aa659a4fba6e0b74f9163c3c038f6f24688e00ce7fc2087ffd22f8e7310"
+        },
+        "layer2": {
+          "sha256": "57e12bfddf90ef67b79825e2c7c375a1cfe066c29d9d98b2b1832726a1324d6e",
+          "rgba_sha256": "9298f22b1f5d773283dac17dccd722a2daab3cbe799afb64112674d4023b60c2"
+        },
+        "layer3": {
+          "sha256": "d75a88e1e032edf9effbbabc578ea8783a55e7b095cf310b2bb1939878de603f",
+          "rgba_sha256": "ad947004a63c54c7c824ebad3f3ee721ace61b897562499e53036f7ddad976af"
+        },
+        "layer4": {
+          "sha256": "1ec28ef95b6ff21a0d3c6091c6a2009215f1fd317935908670bdda4e7b4887ea",
+          "rgba_sha256": "a7739dedbfe1d249d8efc746c3b3af8596aff6e6da11c23c1abc384b9f31dc7e"
+        },
+        "layer5": {
+          "sha256": "ae6c171466d66e41640679733fc8b2c674858617883fd0fcd74d6ded82bb8640",
+          "rgba_sha256": "2bbe2aed89a493afeb2db574b5d5505c557c5d9136710456f0f6aedce1650159"
+        },
+        "foreground": {
+          "sha256": "d9f96abbfae8f98b58dcbe550781e43caddce33ed3904b783c700ec1a9f258a3",
+          "rgba_sha256": "b81c0261cb5c1537f60f63511dd052170f8b62ab86320136b732a187d526066f"
+        },
+        "thumb": {
+          "sha256": "63f1dca7104ac6100a80f66bb6436dfc767cfc0bf432a1981e436c4326a9502c",
+          "rgba_sha256": "d65945d18ba0b2fc9fa09a6ae825b5af1cf2cf35027cbd58e11f64dbfa7307d7"
+        }
+      }
+    }
+  ]
+}
