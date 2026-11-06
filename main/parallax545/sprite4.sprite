@@ -1,0 +1,3 @@
+default_animation: "layer4"
+material: "/builtins/materials/sprite.material"
+textures { sampler: "texture_sampler" texture: "/main/parallax545/sprite-layer4.atlas" }

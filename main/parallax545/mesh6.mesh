@@ -1,0 +1,5 @@
+material: "/main/parallax545/layer.material"
+vertices: "/main/terrain_perspective/empty.buffer"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"
+textures: "/main/parallax545/layer6.png"

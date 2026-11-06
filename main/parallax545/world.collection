@@ -1,0 +1,6 @@
+name: "gym"
+instances { id: "owner" prototype: "/main/game/controller.go" }
+instances { id: "terrain" prototype: "/main/game/terrain.go" position { y: 80.0 } }
+instances { id: "camera" prototype: "/main/game/camera.go" position { y: 250.0 z: 500.0 } }
+embedded_instances { id: "focus" data: "" position { y: 180.0 } }
+instances { id: "parallax545" prototype: "/main/parallax545/probe.go" }
