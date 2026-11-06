@@ -134,7 +134,7 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 ## Measurement
 
 - The 1 MiB Fit payload and 16 MiB CPU working limits in `main/game/terrain_budget.lua` stay.
-- Three 512 px textures with mipmaps cost about 4.2 MB by calculation. [#539](https://github.com/bongohorse/rider/issues/539) ships the texture profile that gives terrain textures mipmaps. [#544](https://github.com/bongohorse/rider/issues/544) measures real cost and the profile's effect on the sprite atlas.
+- A preset's two 512×128 textures and one 512×512 texture with mipmaps cost about 2.1 MB, measured as uploads in a debug build. [#539](https://github.com/bongohorse/rider/issues/539) ships the texture profile that gives terrain textures mipmaps. [#544](https://github.com/bongohorse/rider/issues/544) measures real cost and the profile's effect on the sprite atlas.
 - Software-rendered frame times prove nothing about a device. Real GPU and phone cost stays NOT RUN until Claudio's device session.
 
 ## Task map
