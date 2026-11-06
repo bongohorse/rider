@@ -1,4 +1,4 @@
--- Background panel session: source stays unchanged until Apply; one editor commit, ordinary history/storage.
+-- Background panel session: a choice commits at once as one Undo step; a Depth drag previews until release.
 local editor=require 'main.editor.editor'
 local doc=require 'main.editor.editor_doc'
 local source=require 'main.backgrounds.source'
@@ -43,12 +43,18 @@ function M.apply()
     if not ok then M.message=why or 'Apply refused';return nil,M.message end
     M.discard();return true
 end
+function M.commit(b)
+    if not M.draft(b) then return nil end
+    local ok,why=M.apply()
+    if not ok then local message=M.message;M.discard();M.message=message;return nil,why end
+    return true
+end
 function M.visible() return html5 and html5.run('!!window.riderBackgroundPanel?.visible')=='true' end
 function M.close()
     M.discard();M.instance=nil;M.revision=nil;M.suspended=false
     if html5 then html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.close()') end
 end
--- Yield to canvas dialogs without discarding an unapplied draft.
+-- Yield to canvas dialogs without discarding a Depth drag.
 function M.suspend(value)
     local blocked=value and true or false
     if M.suspended==blocked then return end
@@ -67,9 +73,7 @@ end
 function M.open()
     if not html5 or not editor.doc then return end
     local look=require 'main.editor.editor_look'
-    if look.session and look.session.dirty then editor.message='Apply or reset 3D first.';return end
     local track=require 'main.editor.editor_track'
-    if track.current then editor.message='Apply or discard Texture first.';return end
     track.close();look.close();M.discard();M.suspended=false;M.instance=editor.opened;M.revision=editor.doc.editor.revision
     html5.run(assert(sys.load_resource('/main/game/background_panel.js'),'Missing Background panel'))
     html5.run('window.riderBackgroundPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.backgrounds or false)..')')
@@ -77,12 +81,10 @@ end
 function M.handle(message)
     if type(message)~='table' then return end
     if message.type=='draft' then M.draft(message.backgrounds)
-    elseif message.type=='apply' then M.apply()
-    elseif message.type=='discard' then M.discard()
+    elseif message.type=='commit' then M.commit(message.backgrounds)
     elseif message.type=='close' then M.close()
     elseif message.type=='track' then
-        if M.current then M.message='Apply or discard Background first.'
-        else M.close();require('main.editor.editor_track').open() end
+        M.close();require('main.editor.editor_track').open()
     end
 end
 local function show()

@@ -35,7 +35,7 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  for(let i=0;i<5&&!await page.evaluate(()=>window.riderEditor.look?.open===true);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await button('terrain_look');await page.waitForTimeout(400);}
  assert.equal(await page.evaluate(()=>window.riderEditor.look?.open),true,'3D look did not open');
  await numeric('width',2);await numeric('perspective',1);
- await button('look_apply');await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1');await button('look_close');
+ await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1'&&window.riderEditorDoc.road_look.params.perspective===1);await button('look_close');
  const map=()=>page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x,zoom:e.camera.zoom};});
  const at=(e,mx,my)=>({x:e.x+(e.s.ox+mx*e.s.ppm_x)*e.k,y:e.y+e.h-(e.s.oy+my*e.s.ppm_y)*e.k});
  const results=[];let failed=false;

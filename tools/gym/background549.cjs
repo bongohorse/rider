@@ -39,9 +39,9 @@ async function main(){
   for(const id of ['meadow','quarry','city','volcano']){
    await page.locator(`[data-background-preset=${id}]`).click();
    await page.waitForFunction(id=>window.riderBackgroundState?.source?.preset===id&&window.riderBackgroundState?.objects===6,id,{timeout:10000});
-   assert.equal((await document()).backgrounds,undefined);await page.screenshot({path:path.join(out,'preset-'+id+'.png')});
+   await page.waitForFunction(id=>window.riderEditorDoc.backgrounds?.preset===id,id);await page.screenshot({path:path.join(out,'preset-'+id+'.png')});
   }
-  assert.equal(await page.evaluate(()=>window.riderEditor.revision),initial.revision);report.cases.preview_presets={presets:['meadow','quarry','city','volcano'],unchanged_revision:initial.revision};
+  assert.equal(await page.evaluate(()=>window.riderEditor.undo),initial.undo+4,'one Undo step per preset');assert.equal(await page.locator('#rider-background-apply').count(),0);assert.equal(await page.locator('#rider-background-discard').count(),0);report.cases.preview_presets={presets:['meadow','quarry','city','volcano'],undo_steps:4};
   const checkbox=(i,name)=>page.getByRole('checkbox',{name:`${i===6?'Foreground':'Layer '+i} ${name}`,exact:true});
   const slots=[];
   for(let i=1;i<=6;i++){
@@ -55,8 +55,12 @@ async function main(){
   await checkbox(3,'Auto').check();await page.waitForFunction(()=>window.riderBackgroundState.layers[2].effective_depth===.55&&window.riderBackgroundState.source.layers[2].depth===.5);
   await checkbox(3,'Auto').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.layers[2].effective_depth===.5);
   await page.getByRole('combobox',{name:'Layer 4 image',exact:true}).selectOption('quarry');await page.waitForFunction(()=>window.riderBackgroundState.source.layers[3].image?.preset==='quarry');
-  await depth.focus();await page.keyboard.press('e');await page.keyboard.press('Delete');await pointer.frames(page,{n:8});
-  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),initial.undo);
+  // #604: one mouse drag previews live and stores one Undo step on release.
+  const track=await depth.boundingBox(),beforeDrag=await page.evaluate(()=>window.riderEditor.undo);
+  await page.mouse.move(track.x+track.width*.3,track.y+track.height/2);await page.mouse.down();await page.mouse.move(track.x+track.width*.5,track.y+track.height/2,{steps:6});await page.mouse.move(track.x+track.width*.7,track.y+track.height/2,{steps:6});await pointer.frames(page,{n:8});
+  assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeDrag,'a drag only previews');await page.mouse.up();await page.waitForFunction(n=>window.riderEditor.undo===n+1,beforeDrag);await pointer.frames(page,{n:8});assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeDrag+1);
+  const beforeKeys=await page.evaluate(()=>window.riderEditor.undo);await depth.focus();await page.keyboard.press('e');await page.keyboard.press('Delete');await pointer.frames(page,{n:8});
+  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeKeys);
   report.cases.layer_controls={slots,state:await state()};
   const master=page.getByRole('checkbox',{name:'Background ON/OFF',exact:true});const choices=(await state()).source.layers;
   await master.uncheck();await page.waitForFunction(()=>!window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===0&&window.riderBackgroundState.buffers===0);
@@ -66,17 +70,16 @@ async function main(){
   // Persist master OFF too; Undo/Redo must restore the complete source, not just visible images.
   await master.uncheck();await page.waitForFunction(()=>!window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===0);
   const expected=structuredClone((await state()).source);
-  await page.locator('#rider-background-apply').click();await page.waitForFunction(n=>window.riderEditor.revision===n+1&&window.riderEditorDoc.backgrounds?.enabled===false,initial.revision);
-  assert.equal(await page.evaluate(()=>window.riderEditor.undo),initial.undo+1);assert.deepEqual((await document()).backgrounds,expected);
+  await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===false);assert.deepEqual((await document()).backgrounds,expected);
   await page.locator('#rider-background-close').click();await page.waitForFunction(()=>!window.riderBackgroundPanel.visible);await tap('undo');
-  await page.waitForFunction(()=>!window.riderEditorDoc.backgrounds&&window.riderBackgroundState.objects===0);await tap('redo');
+  await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===true&&window.riderBackgroundState.objects===5);await tap('redo');
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===false);assert.deepEqual((await document()).backgrounds,expected);
   report.cases.apply_undo_redo={saved:expected,undo_steps:1};await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty,null,{timeout:30000});
   await page.reload();await page.waitForFunction(()=>window.riderEditor?.mode==='edit'||window.riderTelemetry?.sequence>2,null,{timeout:60000});
   if(await page.evaluate(()=>window.riderEditor?.mode!=='edit'))await key('e');
   await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditorDoc?.backgrounds?.enabled===false&&window.riderBackgroundState?.objects===0,null,{timeout:30000});
   assert.deepEqual((await document()).backgrounds,expected);await open();assert.equal(await master.isChecked(),false);assert.equal(await checkbox(2,'ON/OFF').isChecked(),false);
-  await master.check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);await page.locator('#rider-background-apply').click();
+  await master.check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds.enabled===true);expected.enabled=true;
   await page.locator('#rider-background-close').click();await tap('play');
   await page.waitForFunction(()=>window.riderEditor?.mode==='play'&&!window.riderBackgroundState?.edit&&window.riderBackgroundState?.objects===5,null,{timeout:30000});
@@ -84,9 +87,8 @@ async function main(){
   await page.screenshot({path:path.join(out,'drive.png')});report.cases.reload_play={source:expected,play:await state()};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderBackgroundState?.edit,null,{timeout:30000});await open();
   const undo=await page.evaluate(()=>window.riderEditor.undo);await page.locator('[data-background-preset=meadow]').click();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='meadow');
-  await page.locator('#rider-background-panel').getByRole('tab',{name:'Texture',exact:true}).click();
-  await page.waitForFunction(()=>window.riderBackgroundPanel.message.includes('Apply or discard'));assert.equal(await page.evaluate(()=>window.riderBackgroundPanel.visible),true);
-  // Canvas dialogs take precedence without discarding the pending Meadow preview.
+  await page.waitForFunction(()=>window.riderEditorDoc.backgrounds.preset==='meadow');assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo+1,'preset is one Undo step');expected.preset='meadow';
+  // Canvas dialogs take precedence and keep the panel state.
   for(const modal of [{open:'view_help',field:'help_open',close:'help_close'},{open:'versions',field:'versions_open',close:'dialog_close'}]){
    await tap(modal.open);await page.waitForFunction(field=>window.riderEditor[field]&&window.riderBackgroundPanel.suspended,modal.field);
    assert.equal(await page.locator('#rider-background-panel').isVisible(),false);assert.equal((await state()).source.preset,'meadow');
@@ -94,7 +96,7 @@ async function main(){
    await page.waitForFunction(field=>!window.riderEditor[field]&&!window.riderBackgroundPanel.suspended,modal.field);
    assert.equal(await page.locator('#rider-background-panel').isVisible(),true);assert.equal((await state()).source.preset,'meadow');
   }
-  await page.locator('#rider-background-discard').click();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='volcano');assert.deepEqual((await document()).backgrounds,expected);
+  // Tabs switch freely: nothing is pending.
   await page.locator('#rider-background-panel').getByRole('tab',{name:'Texture',exact:true}).click();await page.waitForFunction(()=>window.riderTrackPanel.visible&&!window.riderBackgroundPanel.visible);
   await page.locator('#rider-track-panel').getByRole('tab',{name:'Background',exact:true}).click();await page.waitForFunction(()=>window.riderBackgroundPanel.visible);
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
@@ -103,8 +105,8 @@ async function main(){
    await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
    await page.screenshot({path:path.join(out,`layout-${viewport.width}x${viewport.height}.png`)});
   }
-  await page.locator('#rider-background-close').click();assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo);assert.deepEqual((await document()).backgrounds,expected);
-  report.cases.discard_tabs_layout={unchanged_undo:undo,viewports:['844x390','1920x1080'],modal_draft_preserved:['help','versions']};assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
+  await page.locator('#rider-background-close').click();assert.deepEqual((await document()).backgrounds.preset,'meadow');
+  report.cases.discard_tabs_layout={viewports:['844x390','1920x1080'],modal_draft_preserved:['help','versions']};assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;if(page)report.observed=await page.evaluate(()=>({editor:window.riderEditor,document:window.riderEditorDoc,background:window.riderBackgroundState})).catch(()=>null);if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});}
  finally{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
  console.log(JSON.stringify({status:report.status,cases:Object.keys(report.cases),failure:report.failure}));return report.status==='PASS'?0:1;

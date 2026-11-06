@@ -1,6 +1,6 @@
 (() => {
   if (window.riderTrackPanel) return;
-  // Texture panel (#543). HTML only: Lua owns the document, validation, preview and Apply.
+  // Texture panel (#543). HTML only: Lua owns the document, validation and commit.
   const OVERRIDES = [['surface', 'Surface'], ['band', 'Band'], ['fill', 'Fill']];
   const api = window.riderTrackPanel = {visible: false, queue: [], message: ''};
   let panel, presets = [], draft = null;
@@ -15,7 +15,7 @@
     for (const [key] of OVERRIDES) { const s = panel.querySelector('#rider-track-' + key);s.value = (draft && draft[key]) || '';s.disabled = !draft; }
     panel.querySelector('#rider-track-note').textContent = api.message;
   }
-  function changed() { send({type: 'draft', material: draft}); render(); }
+  function changed() { send({type: 'commit', material: draft}); render(); }
   function build() {
     panel = document.createElement('section');panel.id = 'rider-track-panel';
     panel.setAttribute('aria-label', 'Texture');
@@ -44,7 +44,7 @@
     }
     const note = document.createElement('p');note.id = 'rider-track-note';note.setAttribute('aria-live', 'polite');note.style.cssText = 'min-height:1.3em;margin:8px 0;color:#ffd08a';panel.append(note);
     const row = document.createElement('div');row.style.cssText = 'display:flex;gap:6px';
-    for (const [id, label] of [['apply', 'Apply'], ['discard', 'Discard'], ['close', 'Close']]) {
+    for (const [id, label] of [['close', 'Close']]) {
       const b = document.createElement('button');b.type = 'button';b.id = 'rider-track-' + id;b.textContent = label;b.style.padding = '6px 12px';
       b.onclick = () => send({type: id});row.append(b);
     }

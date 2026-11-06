@@ -275,7 +275,7 @@ function M.render(u,d)
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
         text(16,h-40,'Edit level [E]',C.secondary,12)
-        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'Change the 3D look live in this run; Apply saves to the level.')
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'Change the 3D look live in this run; changes save to the level.')
         if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
     elseif not modal then
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
@@ -527,8 +527,8 @@ function M.render(u,d)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
-        button('track_textures',616,h-56,132,'Texture',false,'Texture: choose the level material. Apply is one Undo step')
-        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'3D: level or selected terrain sections. * means preview values need Apply.')
+        button('track_textures',616,h-56,132,'Texture',false,'Texture: choose the level material. Each choice is one Undo step')
+        button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'3D: level or selected terrain sections. Each finished change is one Undo step.')
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12)
         button('zoom_out',404,h-56,32,'-',false,'Zoom out to the previous step (minimum 1%).')
         if d.zoom_edit then box(442,h-58,76,36,d.zoom_error and C.error or C.active) end
@@ -546,7 +546,7 @@ function M.render(u,d)
             text(mx+16,my+24,'3D',C.active,18)
             button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
             button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
-            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. Level Apply enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
+            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. A level change enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; Apply unifies them.' or ' source sections')),C.secondary,12,mw-32)
             local top,bottom=my+104,my+mh-104
             local height=#require('main.terrain_perspective.projection').controls(s.params)*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
             for i,spec in ipairs(require('main.terrain_perspective.projection').controls(s.params)) do
@@ -565,10 +565,9 @@ function M.render(u,d)
             if s.error then paragraph(mx+16,my+mh-96,s.error,mw-32,C.error,12,{my+mh-104,my+mh-40})
             else
                 text(mx+16,my+mh-86,'Strength / angle: level-wide. Scroll for all controls.',C.secondary,12,mw-32)
-                paragraph(mx+16,my+mh-68,s.dirty and 'Preview only; Apply saves one Undo action.' or ('Applied settings: '..d.status),mw-32,C.secondary,12,{my+mh-84,my+mh-36})
+                paragraph(mx+16,my+mh-68,'Each finished change is one Undo step: '..d.status,mw-32,C.secondary,12,{my+mh-84,my+mh-36})
             end
-            button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset preview; Apply to store. Selected reset restores inheritance.',28)
-            button('look_apply',mx+120,my+mh-36,92,'Apply',true,'Store this scope as one Undo action',28)
+            button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset this scope. Selected reset restores inheritance.',28)
             button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
         elseif modal=='help' then
             u.help_panel=panel

@@ -6,7 +6,7 @@
   let panel, presets = [], draft = null;
   const copy = value => value ? structuredClone(value) : null;
   function send(message) {
-    // Slider input coalesces; Apply always follows the newest complete draft.
+    // Slider input coalesces; its release commits the newest value.
     if (message.type === 'draft') {
       const last = api.queue.at(-1);
       if (last?.type === 'draft') { api.queue[api.queue.length - 1] = message; return; }
@@ -35,10 +35,10 @@
       row.querySelectorAll('input,select').forEach(input => input.disabled = !draft);
       row.querySelector('.depth').disabled = !draft || layer.auto;
     });
-    panel.querySelector('#rider-background-apply').disabled = !draft;
-    panel.querySelector('#rider-background-note').textContent = api.message || (!draft ? 'Choose a preset to preview backgrounds.' : '');
+    panel.querySelector('#rider-background-note').textContent = api.message || (!draft ? 'Choose a preset.' : '');
   }
-  function changed() { send({type: 'draft', backgrounds: copy(draft)}); render(); }
+  function changed() { send({type: 'commit', backgrounds: copy(draft)}); render(); }
+  function preview() { send({type: 'draft', backgrounds: copy(draft)}); render(); }
   function button(label, action) {
     const node = document.createElement('button');node.type = 'button';node.textContent = label;
     node.style.cssText = 'padding:6px 10px;cursor:pointer';node.onclick = action;return node;
@@ -70,14 +70,14 @@
       for (const [id, name] of [['', 'Preset image'], ...presets.map(p => [p.id, p.name])]) { const option = document.createElement('option');option.value = id;option.textContent = name;image.append(option); }
       image.onchange = () => { if (image.value) draft.layers[i].image = {preset: image.value};else delete draft.layers[i].image;changed(); };row.append(image);
       const depth = document.createElement('input');depth.type = 'range';depth.className = 'depth';depth.min = '-0.25';depth.max = '1';depth.step = '.01';depth.style.width = '120px';depth.setAttribute('aria-label', `${title} Depth`);depth.title = 'Higher Depth moves more slowly. Turn Auto off to use your manual value.';
-      depth.oninput = () => { draft.layers[i].depth = Number(depth.value);changed(); };label('Depth', depth);
+      depth.oninput = () => { draft.layers[i].depth = Number(depth.value);preview(); };depth.onchange = () => { draft.layers[i].depth = Number(depth.value);changed(); };label('Depth', depth);
       row.append(document.createElement('output'));
       const auto = document.createElement('input');auto.type = 'checkbox';auto.className = 'auto';auto.setAttribute('aria-label', `${title} Auto`);auto.title = 'Use automatic Depth; your manual value is kept.';
       auto.onchange = () => { draft.layers[i].auto = auto.checked;changed(); };label('Auto', auto);panel.append(row);
     });
     const footer = document.createElement('div');footer.style.cssText = 'position:sticky;bottom:-12px;background:#17272f;padding:8px 0 4px';
     const note = document.createElement('p');note.id = 'rider-background-note';note.setAttribute('aria-live', 'polite');note.style.cssText = 'min-height:1.3em;margin:0 0 8px;color:#ffd08a';footer.append(note);
-    for (const [id, text] of [['apply', 'Apply'], ['discard', 'Discard'], ['close', 'Close']]) {
+    for (const [id, text] of [['close', 'Close']]) {
       const action = button(text, () => send({type: id}));action.id = `rider-background-${id}`;action.style.marginRight = '6px';footer.append(action);
     }
     panel.append(footer);

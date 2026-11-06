@@ -53,7 +53,7 @@ const LEVEL=JSON.stringify({schema:6,units:'metres',id:'look',name:'look',spawn:
  assert.equal(await page.evaluate(()=>window.riderEditor.look.params.width),.6,'above the range');
  assert.match(await page.evaluate(()=>String(window.riderEditor.look.error||window.riderEditor.ui?.field_error||'')),/4/);
  await key('Escape');await page.waitForTimeout(300);
- await tapButton('look_apply');await page.waitForFunction(()=>window.riderEditorDoc.road_look.params.vehicle_position===.25,null,{timeout:10000});
+ await page.waitForFunction(()=>window.riderEditorDoc.road_look.params.vehicle_position===.25,null,{timeout:10000});
  await tapButton('look_close');await page.waitForFunction(()=>!window.riderEditor.look.open);
  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty,null,{timeout:20000});
  await page.reload();await page.waitForFunction(()=>window.riderEditor?.mode==='edit'||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(800);

@@ -1,4 +1,4 @@
--- #543: the Track textures session: draft preview, Apply as one commit, Discard, locks, bounded input.
+-- #543: the Track textures session: immediate commit, drag-style draft, locks, bounded input.
 local J=require 'tests.gameplay.lib.json'
 local function enc(v) if type(v)~='table' then return tostring(v) end;local k={};for x in pairs(v) do k[#k+1]=tostring(x) end;table.sort(k);local o={};for i,x in ipairs(k) do o[i]=x..'='..enc(v[x] or v[tonumber(x)]) end;return '{'..table.concat(o,',')..'}' end
 json={decode=J.decode,encode=enc}
@@ -34,7 +34,7 @@ assert(not T.draft({preset='nope'}) and T.message:find('Unknown',1,true) and E.l
 assert(not T.draft('x'));T.handle('x');T.handle({type='other'})
 assert(not T.apply(),'nothing to apply')
 -- Apply is one commit and clears the preview.
-T.handle({type='draft',material={preset='quarry',fill='volcano'}});T.handle({type='apply'})
+T.handle({type='commit',material={preset='quarry',fill='volcano'}})
 assert(commits==1 and E.doc.editor.material.preset=='quarry' and E.doc.editor.material.fill=='volcano' and E.look_preview==nil)
 assert(E.doc.editor.editor_version==14 and E.undo_doc.editor.material==nil)
 -- A second material keeps the author's look.
@@ -42,7 +42,10 @@ E.doc.editor.road_look.params.width=1.1;T.draft({preset='inca'});T.apply();asser
 -- Locked terrain refuses.
 E.doc=fresh();E.doc.editor.objects[1].locked=true;T.draft({preset='city'})
 local ok,why=T.apply();assert(not ok and why:find('Locked',1,true) and commits==2 and E.doc.editor.material==nil)
-T.discard();assert(plain.editor.material==nil)
+T.discard();
+-- A refused immediate choice keeps the reason and leaves no preview of the refused material.
+ok=T.commit({preset='city'});assert(not ok and T.message:find('Locked',1,true) and T.current==nil and E.look_preview==nil and commits==2);T.discard();
+assert(plain.editor.material==nil)
 -- A level that only fits at the smaller stride is refused, with no draft.
 local big=fresh();local line={};for i=0,1300 do line[#line+1]={i*.6,0} end;big.editor.objects[1].points=line;E.doc=big
 local fits=T.draft({preset='city'});assert(not fits or T.message=='' ,'consistent result');T.discard()
