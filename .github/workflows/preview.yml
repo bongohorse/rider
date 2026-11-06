@@ -87,7 +87,7 @@ jobs:
           path: _site/
       - name: Validate release verification plan and timing observer
         if: matrix.group == 'desktop-layout'
-        run: node --test tests/preview/verification-plan.test.cjs tests/preview/timings.test.cjs
+        run: node --test tests/preview/verification-plan.test.cjs tests/preview/timings.test.cjs tests/preview/deployment-wait.test.cjs
       - name: Verify release loader and gym on desktop and phone viewport
         env:
           BUILD_ID: ${{ github.run_id }}-${{ github.run_attempt }}

@@ -6,6 +6,7 @@ const http=require('node:http');
 const {verificationPlan,DESKTOP_GAMEPLAY_SHARDS}=require('./verification-plan.cjs');
 const {createTimings}=require('./timings.cjs');
 const pointer=require('../gym/pointer.cjs');
+const {waitForDeployedBuild}=require('./deployment-wait.cjs');
 // Preset registry (feel.order): the P cycle and the chips follow it, so a new preset needs no change here.
 const PRESETS=/^M\.order=\{([^}]*)\}/m.exec(fs.readFileSync(path.join(__dirname,'../../main/game/feel.lua'),'utf8'))[1].match(/\w+/g);
 async function main(){
@@ -30,6 +31,7 @@ async function main(){
       await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
       url='http://127.0.0.1:'+server.address().port+'/';
     }
+    if(!server)await timings.run('deployment/build-identity',()=>waitForDeployedBuild(url,sha,buildId));
     browser=await timings.run('browser/launch',()=>chromium.launch(process.env.RIDER_CHROME?{executablePath:process.env.RIDER_CHROME}:{}));
     const results=[];
     for(const spec of [{name:'desktop',viewport:{width:1280,height:720},deviceScaleFactor:2},
