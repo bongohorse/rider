@@ -7,7 +7,7 @@
 // - at device pixel ratio 2.75 a 9 CSS px press is a tap and a 12 px press a drag;
 // - Menu: ON/OFF survives a reload (OFF also disables the tap), the nine presets, Reset returns to top left;
 // - every placement stays inside the canvas and clear of pause, drive and the other controls (also the editor's
-//   Terrain Look button), also after a resolution change and a rotation, and the stored position is unchanged.
+//   3D button), also after a resolution change and a rotation, and the stored position is unchanged.
 'use strict';
 const assert=require('node:assert/strict');
 const STATION='straight', THRESHOLD_CSS_PX=10, TOL_PX=1.5;
@@ -119,10 +119,10 @@ if(require.main===module){
       if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim()),left:b.left,top:b.top,right:b.right,bottom:b.bottom});
      }
     }
-    // The editor GUI's play-mode Terrain Look button (editor_ui.lua: x 560, 56 units above the bottom, 112x32,
+    // The editor GUI's play-mode 3D button (editor_ui.lua: x 560, 56 units above the bottom, 32x32,
     // scaled by min(1, CSS width / 1280)), drawn while driving on desktop and phone.
     if(!window.riderEditing){const k=Math.min(1,r.width/1280);
-     dom.push({name:'editor:Terrain Look',left:r.x+560*k,right:r.x+672*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
+     dom.push({name:'editor:3D',left:r.x+560*k,right:r.x+592*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
     const touch=!!window.riderMobile?.enabled;
     let hud=null;
     if(H.fps_rect){const a=pt(H.fps_rect.top_left),b=pt(H.fps_rect.bottom_right);hud={left:Math.min(a.x,b.x),right:Math.max(a.x,b.x),top:Math.min(a.y,b.y),bottom:Math.max(a.y,b.y)};}
