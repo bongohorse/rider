@@ -59,6 +59,8 @@ function M.suspend(value)
     local blocked=value and true or false
     if M.suspended==blocked then return end
     M.suspended=blocked
+    -- A dialog ends a Depth drag: the stored value stays and the panel shows it again.
+    if blocked then M.discard() end
     if html5 then html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.suspend('..tostring(blocked)..')') end
 end
 local function presets()

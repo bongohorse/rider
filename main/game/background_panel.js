@@ -1,6 +1,6 @@
 (() => {
   if (window.riderBackgroundPanel) return;
-  // DOM presents a draft; Lua validates and owns source, preview, Apply, Undo and storage.
+  // DOM presents a draft; Lua validates and owns source, preview, commit, Undo and storage.
   const AUTO = [.9, .75, .55, .35, .15, -.1];
   const api = window.riderBackgroundPanel = {visible: false, queue: [], message: ''};
   let panel, presets = [], draft = null;
@@ -70,7 +70,7 @@
       for (const [id, name] of [['', 'Preset image'], ...presets.map(p => [p.id, p.name])]) { const option = document.createElement('option');option.value = id;option.textContent = name;image.append(option); }
       image.onchange = () => { if (image.value) draft.layers[i].image = {preset: image.value};else delete draft.layers[i].image;changed(); };row.append(image);
       const depth = document.createElement('input');depth.type = 'range';depth.className = 'depth';depth.min = '-0.25';depth.max = '1';depth.step = '.01';depth.style.width = '120px';depth.setAttribute('aria-label', `${title} Depth`);depth.title = 'Higher Depth moves more slowly. Turn Auto off to use your manual value.';
-      depth.oninput = () => { draft.layers[i].depth = Number(depth.value);preview(); };depth.onchange = () => { draft.layers[i].depth = Number(depth.value);changed(); };label('Depth', depth);
+      depth.oninput = () => { draft.layers[i].depth = Number(depth.value);preview(); };depth.onpointercancel = () => { if (draft) changed(); };depth.onchange = () => { draft.layers[i].depth = Number(depth.value);changed(); };label('Depth', depth);
       row.append(document.createElement('output'));
       const auto = document.createElement('input');auto.type = 'checkbox';auto.className = 'auto';auto.setAttribute('aria-label', `${title} Auto`);auto.title = 'Use automatic Depth; your manual value is kept.';
       auto.onchange = () => { draft.layers[i].auto = auto.checked;changed(); };label('Auto', auto);panel.append(row);

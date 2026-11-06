@@ -106,7 +106,7 @@ end
 -- A refused change returns the controls to the stored look and keeps the reason visible.
 function M.commit()
  local s=M.sync();local ok=M.apply()
- if not ok then local err=s.error;M.scope(s.scope);M.session.error=err end
+ if not ok then local err=s.error;M.scope(s.scope);M.session.error=err;if not s.open then editor.message=err or '3D change refused.' end end
  return ok
 end
 function M.tick()
@@ -125,11 +125,13 @@ function M.live(generation)
  if s and s.instance==editor.opened and s.play_generation==generation then return M.play_level end
 end
 function M.clear_play()
- local s=M.session;if s then s.open=false;s.play_generation=nil end
+ local s=M.session;if s then s.open=false;s.drag=nil;s.play_generation=nil end
  M.play_level=nil
 end
 function M.confirm()
  local s=M.sync();local f=s.field;if not f then return true end
+ -- Dismissing an unedited field changes nothing: no commit, no legacy conversion, no mixed-value overwrite.
+ if f.text==tostring(s.params[f.key]) then s.field=nil;return true end
  if not M.change(f.key,tonumber(f.text)) then return nil end;s.field=nil;return true
 end
 return M
