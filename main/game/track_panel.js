@@ -55,7 +55,7 @@
     draft = material ? Object.assign({surface: null, band: null, fill: null}, material) : null;
     api.message = '';panel.hidden = false;api.visible = true;render();
   };
-  api.close = () => { if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0; };
+  api.close = () => { if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = (material, message) => {
     draft = material ? Object.assign({surface: null, band: null, fill: null}, material) : null;
     api.message = message || '';render();
