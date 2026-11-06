@@ -21,7 +21,8 @@ function observe(){
     const result=draw.apply(this,args);this.readPixels(x,y,16,16,this.RGBA,this.UNSIGNED_BYTE,after);
     let changed=0;const pattern=[];
     for(let i=0;i<256;i++){const different=[0,1,2].some(k=>before[i*4+k]!==after[i*4+k]);changed+=different?1:0;pattern.push(different?1:0);}
-    window.riderForegroundPixels={x,y,changed,total:256,pattern};return result;
+    const old=window.riderForegroundPixels;const seen=old?old.seen.map((v,i)=>v||pattern[i]):pattern.slice();
+    window.riderForegroundPixels={x,y,changed,total:256,pattern,seen,frames:(old?.frames||0)+1,off_lattice:(old?.off_lattice||0)+pattern.filter((v,i)=>v&&!(i%2===0&&Math.floor(i/16)%2===0)).length};return result;
    };
   }
  }
@@ -47,7 +48,7 @@ async function run(page,out,state){
  try{
   await page.waitForFunction(()=>{const s=window.riderBackgroundState,l=s?.layers[5];return l?.cutout&&l.cutout[1]<.27&&l.cutout[1]>0;},null,{timeout:15000});
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1,null,{timeout:5000});
-  before=await state();await page.waitForFunction(()=>{const p=window.riderForegroundPixels;return p&&p.changed>=40&&p.changed<=110;},null,{timeout:10000});await pointer.frames(page,{n:20});after=await state();
+  before=await state();await page.waitForFunction(()=>{const p=window.riderForegroundPixels;return p&&(p.off_lattice>0||p.seen.reduce((a,b)=>a+b,0)>=60);},null,{timeout:10000});await pointer.frames(page,{n:20});after=await state();
   assert(after.layers[5].cutout[1]<.3,'Vehicle left foreground overlap');
   await page.screenshot({path:path.join(out,'foreground603-driving.png')});
  }finally{await page.keyboard.up('ArrowUp');}
@@ -58,10 +59,10 @@ async function run(page,out,state){
   assert(l.cutout[2]>0&&l.cutout[3]>0);assert.equal(s.source.preset,'meadow');
  }
  const pixels=await page.evaluate(()=>window.riderForegroundPixels);
- // Art may leave gaps between blades, so coverage has a floor and the exact quarter is its ceiling.
- assert(pixels.changed>=40&&pixels.changed<=64,'Expected quarter coverage inside the feather: '+pixels.changed);
- // Only Bayer's quarter-coverage cells may ever change, on the same framebuffer parity while driving.
- for(let y=0;y<16;y++)for(let x=0;x<16;x++)if(pixels.pattern[y*16+x])assert(x%2===0&&y%2===0,'Moving/shimmering Bayer phase');
+ // Art has gaps between blades, so judge the union over the sampled frames: the whole quarter
+ // lattice fills up, and on every frame only that lattice changes, at a fixed framebuffer parity.
+ assert.equal(pixels.off_lattice,0,'Moving/shimmering Bayer phase or coverage above a quarter');
+ assert(pixels.seen.reduce((a,b)=>a+b,0)>=60,'Expected the full quarter lattice to fill');
  return {before,after,pixels,command,input:'mouse Height +150, Zoom 1.4; ArrowUp',screenshot:'foreground603-driving.png'};
 }
 module.exports={run,observe};
