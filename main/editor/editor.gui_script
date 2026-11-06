@@ -417,6 +417,7 @@ local function zoom(self,factor) set_zoom(self,editor.camera.zoom*factor,self.cu
 -- After another document became current: dialogs close, and an unfinished piece (which belongs to the
 -- previous document) is discarded with its gesture state.
 local function opened(self)
+    track_panel.close()
     self.track_height=track_align.DEFAULT;self.track_session,self.track_cache,self.track_opened=nil,nil,nil
     self.open_dialog,self.field,self.confirm_delete,self.place=false,nil,nil,nil
     if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
@@ -1435,9 +1436,9 @@ local function on_button(self,name)
                 if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
             end
         end
-    elseif name=="track_textures" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;track_panel.open()
+    elseif name=="track_textures" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;if not (terrain_look.session and terrain_look.session.dirty) then terrain_look.close() end;track_panel.open()
     elseif name=="terrain_look" and track_panel.current then editor.message="Apply or discard Track textures first."
-    elseif name=="terrain_look" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
+    elseif name=="terrain_look" then track_panel.close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
@@ -2704,6 +2705,8 @@ end
 -- Editor A1b adapter: business state and existing actions remain here; the renderer only draws
 -- bounded pools. Templates have logical identities, never one permanent GUI allocation per station.
 local function render_ui(self)
+    -- Dialogs take over from the panels, which would hide them.
+    if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
     terrain_look.tick();track_panel.tick()
     local vh=select(2,window.get_size())/(self.ui.scale or 1)
     self.version_per=math.max(1,math.min(6,math.floor((math.min(620,vh-64)-244)/48)))
@@ -2977,6 +2980,8 @@ function update(self,dt)
     end
     if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
     editor.sync()
+    -- Dialogs take over from the panels, which would hide them.
+    if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
     terrain_look.tick();track_panel.tick()
     local look_open=editor.mode=='play' and terrain_look.session and terrain_look.session.open or false
     if self.look_capture~=look_open then

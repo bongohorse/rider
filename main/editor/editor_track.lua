@@ -43,7 +43,12 @@ function M.candidate(m)
 end
 function M.draft(m)
     local e,err=M.candidate(m)
-    if not e then M.message=err;return nil,err end
+    if not e then
+        -- Never keep drawing an older copy of the level.
+        M.message=err;M.revision=editor.doc.editor.revision
+        if M.current then M.discard();M.message=err end
+        return nil,err
+    end
     M.message='';M.current=m;M.revision=editor.doc.editor.revision
     editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch()
     return e
@@ -104,7 +109,10 @@ close=M.close
 function M.tick()
     if not (html5 and M.visible()) then return end
     -- The editor stays usable: a draft follows edits made while it is open.
-    if M.current and editor.doc and M.revision~=editor.doc.editor.revision then M.draft(M.current) end
+    if M.current and editor.doc and M.revision~=editor.doc.editor.revision then
+        local kept=M.draft(M.current)
+        if not kept then html5.run('window.riderTrackPanel.show('..json.encode(editor.doc.editor.material or false)..','..json.encode(M.message or '')..')') end
+    end
     local text=html5.run('window.riderTrackPanel.take()')
     if text=='[]' then return end
     local ok,list=pcall(json.decode,text)

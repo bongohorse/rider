@@ -105,6 +105,8 @@ function M.apply()
 end
 function M.tick()
  local s=M.sync();if not s then return end
+ -- The editor stays usable beside the menu: Selected scope follows the selection.
+ if s.open and s.scope=='selected' and table.concat(s.ids or {},'|')~=table.concat(editor.selected_ids(),'|') then M.scope('selected');s=M.session end
  if s.pending and (not s.last or socket.gettime()-s.last>=.1) then s.last=socket.gettime();M.preview() end
 end
 -- The loader binds this same session to one running world without entering Edit.
