@@ -2,7 +2,7 @@
   "version": 1,
   "license": "Original work generated for Rider; no third-party input.",
   "generator": "tools/art/background_presets.py",
-  "generator_sha256": "d6fdb3e689c802d2d0de7e4f4618ea5381c9b93b70df8ad6517cedab488d05b5",
+  "generator_sha256": "155c6ba3cbd6039ae99e732a50d2665452dcad1d8e174b74d15bdf0e9ef5b927",
   "size": [
     1024,
     512
@@ -34,16 +34,16 @@
           "rgba_sha256": "0c7814f3ec891c7dfea29f9d68872e8d8db276d0ffd7b5f2c3bf50ac936a1ee5"
         },
         "layer5": {
-          "sha256": "ea5030c9b27559b219cc68f39dbbd471313f670523baba0b569c66877cf64811",
-          "rgba_sha256": "98a8ddb43b58f283c6ee88e858549153702eb2b56d9f660c68aacf254b7edbc3"
+          "sha256": "58521eb3a600aee9e4941a64d7cf02f4798babfb517e654b50e25300a3438cf1",
+          "rgba_sha256": "ffe18be53db4318419485b0ab203bad572a4a4a7f868aede5a028a0f55416c4f"
         },
         "foreground": {
           "sha256": "1934eb2a1ae13fe1a0cfed91f866df285bfa6b1b719576eb2c2782b45a87811b",
           "rgba_sha256": "08694850ae29381056127e5f7b73dfd860755e478d0ba6e8647fd3ad5ab7ec34"
         },
         "thumb": {
-          "sha256": "816c1e693f8cdbe892ece603697407427bfd9a752a50f18e6fe5c4e1f8cec478",
-          "rgba_sha256": "9a621972e9eaddeb8ffe902f37a2b9d6fcfc6555e776fe0f1b0a7007d537ae1a"
+          "sha256": "64adae0f51d7eb47f056562a5d4bdc4827363fd02931ce44b698aadf5cc5ef59",
+          "rgba_sha256": "578a58a71bdf54aca57bfce1e7f207cdb02054fa9c0765218d2bbe34b1f186c7"
         }
       }
     },

@@ -119,7 +119,7 @@ def meadow_layer(slot, rng, polygon, ellipse, draw, w, h, scale, period):
             ellipse((x-r*1.3, y-r, x+r*1.3, y+r*.5), (*shade, 255))
             ellipse((x-r*.8, y-r*.92, x+r*.5, y-r*.1), (*grass, 255))
         land(line, grass)
-        for start in range(0, period, 340):
+        for start in range(0, 1020, 340):
             for i in range(6):
                 x = start+40+i*30
                 y = height_at(line, x)
@@ -133,7 +133,7 @@ def meadow_layer(slot, rng, polygon, ellipse, draw, w, h, scale, period):
             colour = rng.choice([(244, 232, 150), (246, 246, 236), (226, 134, 150), (112, 170, 84)])
             ellipse((x-1.6, y-1.6, x+1.6, y+1.6), (*colour, 255))
     else:
-        # Foreground: a low dark grass and fern fringe, about a seventh of the image high.
+        # Foreground: a low dark grass and fern fringe, under a fifth of the image high.
         dark, tone = (26, 58, 44), (38, 76, 54)
         line = ridge(474, [(5, 3, .7), (3, 9, 1.9)])
         land(line, dark)
