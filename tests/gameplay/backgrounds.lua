@@ -63,3 +63,17 @@ render.enabled(state,false);render.update(state,frame);flush()
 for _,n in pairs(refs) do assert(n==0,"Live toggle resource leak") end
 render.final(state)
 print("PASS backgrounds: Depth, bounded foreground, atomic configuration, preserved choices and resource owners")
+
+-- Cached world transforms may be a frame old. Rapid down/up poses must both be bounded.
+local positions={chassis={x=0,y=50,z=0},rider={x=0,y=20,z=0},rear={x=-76,y=40,z=0},front={x=76,y=40,z=0}}
+local cached={chassis={y=200},rider={y=220},rear={y=180},front={y=180}}
+go.get_position=function(id)return positions[id]end
+go.get_world_position=function(id)return cached[id]end
+vmath.length=function(v)return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)end
+local bounds=require "main.backgrounds.vehicle_bounds"
+local ids={chassis="chassis",rider="rider","rear","front"}
+near(bounds.low(ids,0.01),-0.4)
+positions.chassis.y,positions.rear.y,positions.front.y=200,180,180
+cached.chassis.y,cached.rider.y,cached.rear.y,cached.front.y=50,70,30,30
+assert(bounds.low(ids,0.01)<=-0.3+1e-8,"Rising interpolated vehicle escaped bound")
+print("PASS background visual bound uses both immediate and prior poses")

@@ -376,11 +376,7 @@ local function update_backgrounds(self)
         local c=go.get_position("/camera");local p=camera.get_projection("/camera#camera");local scale=self.backgrounds.scale
         local frame={x=c.x*scale,y=c.y*scale,half_w=scale/p.m00,half_h=scale/p.m11}
         if self.vehicle then
-            -- Conservative visual sprite radii incl. component offsets: chassis 80, rider 70, wheels 40.
-            -- Read GO poses only; the renderer never reads collision/physics state.
-            local ids=self.vehicle.ids
-            frame.vehicle_low=math.min(go.get_world_position(ids.chassis).y-80,go.get_world_position(ids.rider).y-70,
-                go.get_world_position(ids[1]).y-40,go.get_world_position(ids[2]).y-40)*scale
+            frame.vehicle_low=require("main.backgrounds.vehicle_bounds").low(self.vehicle.ids,scale)
         end
         backgrounds.update(self.backgrounds,frame)
         self.background_frame=frame
