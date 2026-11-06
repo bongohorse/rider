@@ -9,7 +9,29 @@ assert(model.normalize({layers={[7]={}}})==nil)
 for _,depth in ipairs({-0.26,1.01,math.huge,0/0}) do assert(model.normalize({layers={{depth=depth}}})==nil) end
 local frame={x=6,y=12,half_w=5,half_h=3,vehicle_low=10}
 local rect=model.layout(frame,1);local uv=model.uv(frame,rect,normalized.layers[1],1,64,32)
-near(uv[3],0.625);near(uv[4],1)
+near(uv[3],0.625);near(uv[4],.50625)
+-- #605: steep, translated, flat and missing ranges; every active image intersects
+-- both extremes and stays continuous, including outside the authored bounds.
+for _,range in ipairs({{-120,120},{1000,1400},{7,7}}) do
+ local f={x=6,y=range[1],half_w=5,half_h=3,level_min_y=range[1],level_max_y=range[2]}
+ local previous=0
+ for i=1,5 do
+  local travel=0
+  for _,y in ipairs({range[1]-1000,range[1],(range[1]+range[2])/2,range[2],range[2]+1000}) do
+   f.y=y
+   local a=model.uv(f,model.layout(f,i),auto.layers[i],i,64,32)
+   assert(a[4]-a[2]<1 and a[4]+a[2]>0,"Steep layer image left viewport")
+   assert(a[4]>.25 and a[4]<.75,"Viewport centre left image interior")
+   f.y=y+1e-6;local b=model.uv(f,model.layout(f,i),auto.layers[i],i,64,32)
+   assert(math.abs(a[4]-b[4])<1e-6,"Vertical jump")
+   local manual={auto=false,depth=-.25};local c=model.uv(f,model.layout(f,i),manual,i,64,32)
+   near(c[4],b[4]);near(c[3],f.x*1.25/24+.5)
+   travel=math.max(travel,math.abs(a[4]-.5))
+  end
+  assert(travel>previous,"Near slots need more vertical travel");previous=travel
+ end
+ near(f.level_min_y,range[1]);near(f.level_max_y,range[2])
+end
 -- #603: camera Y and vehicle overlap must never crop or vertically shift the image.
 for _,y in ipairs({-10000,-120,-4,-3,0,120,10000}) do
  frame.y=y;frame.vehicle_low=y-100

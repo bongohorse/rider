@@ -56,16 +56,17 @@ async function run(page,out,state){
  await tap('close');
  // Follow the real moving vehicle: the overlap must be present in the screenshot.
  await page.keyboard.down('ArrowUp');
- let before,after;
+ let before,after,command;
  try{
   await page.waitForFunction(()=>{const s=window.riderBackgroundState,l=s?.layers[5];return l?.cutout&&l.cutout[1]<.27&&l.cutout[1]>0;},null,{timeout:15000});
   await page.waitForFunction(()=>window.riderTelemetry?.command?.throttle===1,null,{timeout:5000});
   before=await state();await page.waitForFunction(()=>{const p=window.riderForegroundPixels;return p&&(p.violations>0||p.frames>=20&&p.kept>=1000&&p.dropped>=1000);},null,{timeout:10000});await pointer.frames(page,{n:20});after=await state();
   assert(after.layers[5].cutout[1]<.3,'Vehicle left foreground overlap');
   await page.screenshot({path:path.join(out,'foreground603-driving.png')});
+  command=await page.evaluate(()=>window.riderTelemetry.command);
  }finally{await page.keyboard.up('ArrowUp');}
  assert.notDeepEqual(before.layers[5].uv,after.layers[5].uv,'Real drive input did not scroll foreground');
- const command=await page.evaluate(()=>window.riderTelemetry.command);assert.equal(command.throttle,1);
+ assert.equal(command.throttle,1,'Throttle must be read while the key is still held');
  for(const s of [before,after]){
   const l=s.layers[5];assert(l.rendered);assert.equal(l.uv[1],.5);assert.equal(l.uv[3],.5);
   assert(l.cutout[2]>0&&l.cutout[3]>0);assert.equal(s.source.preset,'meadow');
