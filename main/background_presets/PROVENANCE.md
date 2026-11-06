@@ -6,4 +6,6 @@ Run `python tools/art/background_presets.py --write` to reproduce all outputs; `
 
 Each of Meadow, Quarry, City and Volcano has five 1024×512 RGBA background layers, one 1024×512 RGBA foreground and a 256×128 composited thumbnail. Layer 1 is opaque sky; layers 2–5 and foreground have transparent upper regions. Horizontal endpoints match after antialiasing. Vertical edge pixels, including alpha, extend under the runtime's clamp rule. Foreground composition remains subject to the runtime vehicle-safe strip.
 
-The set uses muted distant shapes and stronger near silhouettes: trees and hills, cut stone, an original city skyline, and volcanic rock with small amber fissures. These are static environment art, with no weather or animation. Claudio judges art direction in #549; pixel checks establish technical integrity only. Kenney test fixtures are separate and remain unchanged.
+Meadow (#606) uses a separate motif per depth: cumulus sky, snow-capped far peaks, farmland with hedges and barns, mixed forest, a near meadow with bushes, fence and flowers, and a low grass and fern foreground. The other presets stay unchanged until Claudio accepts this direction.
+
+The other sets use muted distant shapes and stronger near silhouettes: cut stone, an original city skyline, and volcanic rock with small amber fissures. These are static environment art, with no weather or animation. Claudio judges art direction in #549; pixel checks establish technical integrity only. Kenney test fixtures are separate and remain unchanged.
