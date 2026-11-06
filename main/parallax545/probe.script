@@ -1,0 +1,75 @@
+-- Isolated #545 build only. Reads the live camera; never writes camera or physics.
+local TILE_W,TILE_H=1200,600
+local function publish(self)
+    if html5 then html5.run("window.parallax545="..json.encode({route=self.route,layers=self.count,hidden=self.hidden,objects=#self.objects,updates=self.updates,ready=self.ready,half_w=self.half_w,half_h=self.half_h})) end
+end
+local function setup(self)
+    local q=json.decode(html5.run("JSON.stringify(Object.fromEntries(new URLSearchParams(location.search)))"))
+    self.route=q.route=="sprites" and "sprites" or "mesh"
+    self.count=tonumber(q.layers) or 0
+    assert(self.count==0 or self.count==3 or self.count==6)
+    self.hidden=q.hidden=="1";self.objects={};self.resources={}
+    local projection=camera.get_projection("/camera#camera")
+    -- Freeze a coverage envelope for the normal camera A's declared zoom range.
+    local feel=require "main.game.feel"
+    local zoom=go.get("/camera#camera","orthographic_zoom")
+    local minimum=math.min(feel.values.camera_zoom,feel.values.camera_zoom_min)
+    self.half_w,self.half_h=zoom/projection.m00/minimum,zoom/projection.m11/minimum
+    assert(self.half_w>0 and self.half_h>0)
+    for i=1,(self.hidden and 0 or self.count) do
+        local z=i==6 and 5 or -20+i
+        if self.route=="mesh" then
+            local w,h=self.half_w*2,self.half_h*2
+            local b=buffer.create(6,{{name=hash("position"),type=buffer.VALUE_TYPE_FLOAT32,count=3},{name=hash("texcoord0"),type=buffer.VALUE_TYPE_FLOAT32,count=2}})
+            local pos,uv=buffer.get_stream(b,"position"),buffer.get_stream(b,"texcoord0")
+            local corners={{-w,-h},{w,-h},{w,h},{-w,-h},{w,h},{-w,h}}
+            for n,c in ipairs(corners) do
+                pos[(n-1)*3+1],pos[(n-1)*3+2],pos[(n-1)*3+3]=c[1],c[2],0
+                uv[(n-1)*2+1],uv[(n-1)*2+2]=c[1]/TILE_W+0.5,c[2]/TILE_H+0.5
+            end
+            local resource_id=resource.create_buffer("/parallax545/"..i..".bufferc",{buffer=b,transfer_ownership=true})
+            self.resources[#self.resources+1]=resource_id
+            local id=factory.create("#mesh"..i,vmath.vector3(0,0,z))
+            go.set(msg.url(nil,id,"visual"),"vertices",resource_id)
+            self.objects[#self.objects+1]={id=id,layer=i,z=z}
+        else
+            local nx,ny=math.ceil(self.half_w/TILE_W+0.5),math.ceil(self.half_h/TILE_H+0.5)
+            for x=-nx,nx do for y=-ny,ny do
+                local id=factory.create("#sprite"..i,vmath.vector3(0,0,z),nil,nil,vmath.vector3(TILE_W/1024,TILE_H/512,1))
+                self.objects[#self.objects+1]={id=id,layer=i,z=z,x=x,y=y}
+            end end
+        end
+    end
+    if self.hidden then for _,o in ipairs(self.objects) do msg.post(msg.url(nil,o.id,"visual"),"disable") end end
+    self.ready=true
+    publish(self)
+end
+function init(self)
+    self.updates=0;self.objects={};self.resources={}
+end
+function update(self,dt)
+    self.updates=self.updates+1
+    if not self.ready then
+        if self.updates==60 then setup(self) end
+        return
+    end
+    local projection=camera.get_projection("/camera#camera")
+    assert(1/projection.m00<=self.half_w+0.01 and 1/projection.m11<=self.half_h+0.01,"Camera exceeded frozen coverage envelope")
+    if not self.hidden then
+        local c=go.get_position("/camera")
+        for _,o in ipairs(self.objects) do
+            local depth=o.layer==6 and 1.15 or o.layer/6
+            local sx,sy=c.x*depth,c.y*depth
+            if self.route=="mesh" then
+                go.set_position(vmath.vector3(c.x,c.y,o.z),o.id)
+                go.set(msg.url(nil,o.id,"visual"),"scroll",vmath.vector4(sx/TILE_W,sy/TILE_H,0,0))
+            else
+                go.set_position(vmath.vector3(c.x+o.x*TILE_W-sx%TILE_W,c.y+o.y*TILE_H-sy%TILE_H,o.z),o.id)
+            end
+        end
+    end
+    if self.updates%30==0 then publish(self) end
+end
+function final(self)
+    for _,id in ipairs(self.resources) do resource.release(id) end
+end

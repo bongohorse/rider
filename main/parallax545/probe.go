@@ -1,0 +1,13 @@
+components { id: "script" component: "/main/parallax545/probe.script" }
+components { id: "mesh1" component: "/main/parallax545/mesh1.factory" }
+components { id: "sprite1" component: "/main/parallax545/sprite1.factory" }
+components { id: "mesh2" component: "/main/parallax545/mesh2.factory" }
+components { id: "sprite2" component: "/main/parallax545/sprite2.factory" }
+components { id: "mesh3" component: "/main/parallax545/mesh3.factory" }
+components { id: "sprite3" component: "/main/parallax545/sprite3.factory" }
+components { id: "mesh4" component: "/main/parallax545/mesh4.factory" }
+components { id: "sprite4" component: "/main/parallax545/sprite4.factory" }
+components { id: "mesh5" component: "/main/parallax545/mesh5.factory" }
+components { id: "sprite5" component: "/main/parallax545/sprite5.factory" }
+components { id: "mesh6" component: "/main/parallax545/mesh6.factory" }
+components { id: "sprite6" component: "/main/parallax545/sprite6.factory" }
