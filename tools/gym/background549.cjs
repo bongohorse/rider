@@ -62,6 +62,33 @@ async function main(){
   const beforeKeys=await page.evaluate(()=>window.riderEditor.undo);await depth.focus();await page.keyboard.press('e');await page.keyboard.press('Delete');await pointer.frames(page,{n:8});
   assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeKeys);
   report.cases.layer_controls={slots,state:await state()};
+  // #614: both sliders in every background slot use real pointer drags.
+  // Keep the panel open during Undo/Redo to verify its values follow the source.
+  const vertical=[];
+  for(let slot=1;slot<=5;slot++){
+   for(const [field,name] of [['vertical_position','Vertical position'],['vertical_parallax','Vertical parallax']]){
+    const slider=page.getByRole('slider',{name:`Layer ${slot} ${name}`,exact:true});
+    await slider.scrollIntoViewIfNeeded();const box=await slider.boundingBox();
+    const before=structuredClone((await state()).source),undo=await page.evaluate(()=>window.riderEditor.undo);
+    await page.mouse.move(box.x+box.width*.2,box.y+box.height/2);await page.mouse.down();
+    await page.mouse.move(box.x+box.width*.4,box.y+box.height/2,{steps:5});await pointer.frames(page,{n:8});
+    await page.waitForFunction(({slot,field})=>window.riderBackgroundState.source.layers[slot-1][field]!==undefined,{slot,field});
+    assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo,'vertical drag previews without Undo');
+    assert.deepEqual((await document()).backgrounds,before,'preview leaves stored source untouched');
+    const preview=(await state()).source.layers[slot-1][field];
+    await page.mouse.move(box.x+box.width*.7,box.y+box.height/2,{steps:8});await pointer.frames(page,{n:8});
+    assert.notEqual((await state()).source.layers[slot-1][field],preview,'drag previews newest value');
+    await page.mouse.up();await page.waitForFunction(n=>window.riderEditor.undo===n+1,undo);
+    await pointer.frames(page,{n:8});assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo+1,'release is exactly one Undo step');
+    const saved=structuredClone((await state()).source);assert.equal(saved.version,2);assert.deepEqual((await document()).backgrounds,saved);
+    await tap('undo');await page.waitForFunction(b=>JSON.stringify(window.riderEditorDoc.backgrounds)===JSON.stringify(b),before);
+    assert(Math.abs(Number(await slider.inputValue())-(before.layers[slot-1][field]??(field==='vertical_position'?0:1-[.9,.75,.55,.35,.15][slot-1])))<1e-8);
+    await tap('redo');await page.waitForFunction(b=>JSON.stringify(window.riderEditorDoc.backgrounds)===JSON.stringify(b),saved);
+    assert.equal(Number(await slider.inputValue()),saved.layers[slot-1][field]);vertical.push({slot,field,value:saved.layers[slot-1][field]});
+   }
+  }
+  assert.equal(await page.getByRole('slider',{name:/Foreground Vertical/}).count(),0);
+  report.cases.layer_controls.vertical=vertical;
   const master=page.getByRole('checkbox',{name:'Background ON/OFF',exact:true});const choices=(await state()).source.layers;
   await master.uncheck();await page.waitForFunction(()=>!window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===0&&window.riderBackgroundState.buffers===0);
   let off=await state();assert.equal(off.texture_bytes,0);assert.deepEqual(off.source.layers,choices);

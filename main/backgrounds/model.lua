@@ -1,6 +1,12 @@
 -- Render-only resolved layer settings. Authored source/versioning belongs to #548.
 local M={MIN_DEPTH=-0.25,MAX_DEPTH=1,AUTO={0.9,0.75,0.55,0.35,0.15,-0.1},HEIGHT=12}
 local function finite(n) return type(n)=="number" and n==n and n~=math.huge and n~=-math.huge end
+function M.valid_vertical(layer,index)
+    if index==6 and (layer.vertical_position~=nil or layer.vertical_parallax~=nil) then return false end
+    local position,amount=layer.vertical_position,layer.vertical_parallax
+    return (position==nil or finite(position) and position>=-4 and position<=4)
+        and (amount==nil or finite(amount) and amount>=0 and amount<=1)
+end
 local function image_id(v) return v==nil or type(v)=="string" and #v<=512 end
 function M.normalize(config)
     if config==nil then config={} end
@@ -13,8 +19,9 @@ function M.normalize(config)
         if type(l)~="table" or l.visible~=nil and type(l.visible)~="boolean" or l.auto~=nil and type(l.auto)~="boolean" then return nil,"Invalid layer state" end
         local depth=l.depth==nil and M.AUTO[i] or l.depth
         if not finite(depth) or depth<M.MIN_DEPTH or depth>M.MAX_DEPTH then return nil,"Depth outside -0.25..1" end
+        if not M.valid_vertical(l,i) then return nil,"Invalid vertical position (-4..4 m) or parallax (0..1); backgrounds only" end
         if not image_id(l.image) or not image_id(l.preset_image) then return nil,"Invalid layer image" end
-        out.layers[i]={visible=l.visible~=false,auto=l.auto~=false,depth=depth,image=l.image,preset_image=l.preset_image}
+        out.layers[i]={visible=l.visible~=false,auto=l.auto~=false,depth=depth,image=l.image,preset_image=l.preset_image,vertical_position=l.vertical_position,vertical_parallax=l.vertical_parallax}
     end
     return out
 end
@@ -31,14 +38,16 @@ function M.layout(frame,_index)
     return {x=cx,y=cy,half_w=w,half_h=h}
 end
 -- Background Y is independent of authored Depth. Map the level's vertical bounds
--- continuously into the middle eighth of the image, retaining more travel in near slots.
--- Clamp only outside those bounds; even there the viewport centre stays inside the image.
-function M.vertical(frame,index)
+-- continuously into the image, retaining the original slot travel when unauthored.
+-- Position plus bounded travel keeps the viewport centre inside the image at all settings.
+function M.vertical(frame,index,layer)
     local low,high=frame.level_min_y or 0,frame.level_max_y or 0
     assert(finite(low) and finite(high) and low<=high,"Invalid level height range")
     local centre=low+(high-low)/2
     local t=math.max(-1,math.min(1,(frame.y-centre)/math.max(M.HEIGHT/2,(high-low)/2)))
-    return t*M.HEIGHT/16*(1-M.AUTO[index])
+    local amount=layer and layer.vertical_parallax
+    if amount==nil then amount=1-M.AUTO[index] end
+    return t*M.HEIGHT/16*amount-(layer and layer.vertical_position or 0)
 end
 -- `scroll` is the foreground's phase state: accumulate at the current image size,
 -- retaining 1-Depth of world speed without sliding under camera zoom.
@@ -54,7 +63,7 @@ function M.uv(frame,rect,layer,index,width,height,scroll)
         return {rect.half_w/tile_w,0.5,phase+0.5,0.5}
     end
     return {rect.half_w/tile_w,rect.half_h/tile_h,
-        frame.x*factor/tile_w+0.5,(rect.y-frame.y+M.vertical(frame,index))/tile_h+0.5}
+        frame.x*factor/tile_w+0.5,(rect.y-frame.y+M.vertical(frame,index,layer))/tile_h+0.5}
 end
 -- Normalized viewport coordinates; a visual GO read is supplied by the controller.
 function M.cutout(frame)

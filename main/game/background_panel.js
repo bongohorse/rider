@@ -31,9 +31,15 @@
       row.querySelector('.auto').checked = !!layer?.auto;
       row.querySelector('.image').value = layer?.image?.preset || '';
       row.querySelector('.depth').value = layer?.auto ? value : layer?.depth ?? value;
-      row.querySelector('output').textContent = Number(layer?.auto ? value : layer?.depth ?? value).toFixed(2);
+      row.querySelector('.depth-output').textContent = Number(layer?.auto ? value : layer?.depth ?? value).toFixed(2);
       row.querySelectorAll('input,select').forEach(input => input.disabled = !draft);
       row.querySelector('.depth').disabled = !draft || layer.auto;
+      if (i < 5) {
+        for (const [field, value] of [['vertical_position', layer?.vertical_position ?? 0], ['vertical_parallax', layer?.vertical_parallax ?? 1 - AUTO[i]]]) {
+          row.querySelector(`.${field}`).value = value;
+          row.querySelector(`.${field}-output`).textContent = Number(value).toFixed(2);
+        }
+      }
     });
     panel.querySelector('#rider-background-note').textContent = api.message || (!draft ? 'Choose a preset.' : '');
   }
@@ -71,9 +77,22 @@
       image.onchange = () => { if (image.value) draft.layers[i].image = {preset: image.value};else delete draft.layers[i].image;changed(); };row.append(image);
       const depth = document.createElement('input');depth.type = 'range';depth.className = 'depth';depth.min = '-0.25';depth.max = '1';depth.step = '.01';depth.style.width = '120px';depth.setAttribute('aria-label', `${title} Depth`);depth.title = 'Higher Depth moves more slowly. Turn Auto off to use your manual value.';
       depth.oninput = () => { draft.layers[i].depth = Number(depth.value);preview(); };depth.onpointercancel = () => { if (draft) changed(); };depth.onchange = () => { draft.layers[i].depth = Number(depth.value);changed(); };label('Depth', depth);
-      row.append(document.createElement('output'));
+      const depthOutput = document.createElement('output');depthOutput.className = 'depth-output';row.append(depthOutput);
       const auto = document.createElement('input');auto.type = 'checkbox';auto.className = 'auto';auto.setAttribute('aria-label', `${title} Auto`);auto.title = 'Use automatic Depth; your manual value is kept.';
-      auto.onchange = () => { draft.layers[i].auto = auto.checked;changed(); };label('Auto', auto);panel.append(row);
+      auto.onchange = () => { draft.layers[i].auto = auto.checked;changed(); };label('Auto', auto);
+      if (i < 5) {
+        for (const [field, name, min, max, step, help] of [
+          ['vertical_position', 'Vertical position', -4, 4, '.05', 'Metres: positive moves the image up.'],
+          ['vertical_parallax', 'Vertical parallax', 0, 1, '.01', 'Camera-height motion: 0 is fixed, 1 travels 0.75 metres each way. Independent of Depth and Auto.']
+        ]) {
+          const input = document.createElement('input');input.type = 'range';input.className = field;
+          input.min = min;input.max = max;input.step = step;input.style.width = '120px';input.setAttribute('aria-label', `${title} ${name}`);input.title = help;
+          const update = commit => { draft.version = 2;draft.layers[i][field] = Number(input.value);if (commit) changed();else preview(); };
+          input.oninput = () => update(false);input.onchange = () => update(true);input.onpointercancel = () => { if (draft) changed(); };
+          label(name, input);const output = document.createElement('output');output.className = `${field}-output`;row.append(output);
+        }
+      }
+      panel.append(row);
     });
     const footer = document.createElement('div');footer.style.cssText = 'position:sticky;bottom:-12px;background:#17272f;padding:8px 0 4px';
     const note = document.createElement('p');note.id = 'rider-background-note';note.setAttribute('aria-live', 'polite');note.style.cssText = 'min-height:1.3em;margin:0 0 8px;color:#ffd08a';footer.append(note);
