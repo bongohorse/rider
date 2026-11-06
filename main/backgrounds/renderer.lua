@@ -91,7 +91,7 @@ function M.update(s,frame)
         end
     end
     s.dirty=false
-    if count==0 then
+    if count==0 and s.buffer then
         release(s.buffer);s.buffer=nil
         for _,f in ipairs({"#background_mesh","#foreground_mesh"}) do
             if factory.get_status(f)==factory.STATUS_LOADED then factory.unload(f) end

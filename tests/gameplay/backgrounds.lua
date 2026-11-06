@@ -1,6 +1,9 @@
 local model=require "main.backgrounds.model"
 local function near(a,b) assert(math.abs(a-b)<1e-8,tostring(a).." vs "..tostring(b)) end
 local config={enabled=true,layers={{image="grid",auto=false,depth=0.5},{visible=false,image="grid"}}}
+local auto=assert(model.normalize({layers={{image="grid",depth=0.5,auto=true}}}))
+for i,depth in ipairs({0.9,0.75,0.55,0.35,0.15,-0.1}) do near(model.depth(auto.layers[i],i),depth) end
+assert(auto.layers[1].depth==0.5);auto.layers[1].auto=false;near(model.depth(auto.layers[1],1),0.5)
 local normalized=assert(model.normalize(config));assert(model.active(normalized,1) and not model.active(normalized,2))
 assert(model.normalize({layers={[7]={}}})==nil)
 for _,depth in ipairs({-0.26,1.01,math.huge,0/0}) do assert(model.normalize({layers={{depth=depth}}})==nil) end
@@ -37,6 +40,8 @@ end
 local render=require "main.backgrounds.renderer"
 local state=render.new(0.01)
 render.update(state,frame);assert(next(refs)==nil,"Empty layer allocated")
+assert(render.set(state,nil));local status=factory.get_status;factory.get_status=function()error("Empty renderer touched factory")end
+render.update(state,frame);factory.get_status=status
 assert(render.set(state,config));render.update(state,frame)
 local report=render.report(state);assert(report.objects==1 and report.buffers==1 and report.texture_bytes==8192)
 assert(not render.set(state,{enabled="yes"}));assert(state.config.enabled)
