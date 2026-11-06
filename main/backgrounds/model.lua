@@ -30,8 +30,18 @@ function M.layout(frame,_index)
     assert(finite(cx) and finite(cy) and finite(w) and finite(h) and w>0 and h>0,"Invalid render frame")
     return {x=cx,y=cy,half_w=w,half_h=h}
 end
--- `scroll` is the foreground's per-layer state: the phase accumulates at the current image size, so it moves at
--- 1-Depth of world speed and a camera zoom scales the image without sliding it.
+-- Background Y is independent of authored Depth. Map the level's vertical bounds
+-- continuously into the middle eighth of the image, retaining more travel in near slots.
+-- Clamp only outside those bounds; even there the viewport centre stays inside the image.
+function M.vertical(frame,index)
+    local low,high=frame.level_min_y or 0,frame.level_max_y or 0
+    assert(finite(low) and finite(high) and low<=high,"Invalid level height range")
+    local centre=low+(high-low)/2
+    local t=math.max(-1,math.min(1,(frame.y-centre)/math.max(M.HEIGHT/2,(high-low)/2)))
+    return t*M.HEIGHT/16*(1-M.AUTO[index])
+end
+-- `scroll` is the foreground's phase state: accumulate at the current image size,
+-- retaining 1-Depth of world speed without sliding under camera zoom.
 function M.uv(frame,rect,layer,index,width,height,scroll)
     local tile_h=index==6 and 2*frame.half_h or M.HEIGHT;local tile_w=tile_h*width/height
     local factor=M.factor(layer,index)
@@ -44,7 +54,7 @@ function M.uv(frame,rect,layer,index,width,height,scroll)
         return {rect.half_w/tile_w,0.5,phase+0.5,0.5}
     end
     return {rect.half_w/tile_w,rect.half_h/tile_h,
-        frame.x*factor/tile_w+0.5,(rect.y-frame.y+frame.y*factor)/tile_h+0.5}
+        frame.x*factor/tile_w+0.5,(rect.y-frame.y+M.vertical(frame,index))/tile_h+0.5}
 end
 -- Normalized viewport coordinates; a visual GO read is supplied by the controller.
 function M.cutout(frame)

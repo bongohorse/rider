@@ -147,7 +147,7 @@ if args.case=='bg548':
 if args.case=='bg546':
     report=json.loads((out/'background546-result.json').read_text())
     identity(report)
-    assert set(report['cases'])=={'empty','depth_xy','vertical_edges','foreground_safe','layer_toggle','master_restore','missing_fallback','world_teardown','resource_cycles'}
+    assert set(report['cases'])=={'empty','depth_xy','vertical_edges','foreground_safe','layer_toggle','master_restore','missing_fallback','world_teardown','resource_cycles','steep_605'}
     print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='cf3':
     report=json.loads((out/'struts-result.json').read_text())

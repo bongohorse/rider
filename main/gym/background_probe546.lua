@@ -1,7 +1,7 @@
 -- Debug-only named camera poses and renderer requests for the bg546 Gym fixture.
 local backgrounds=require "main.backgrounds.renderer"
 local M={}
-local poses={origin={x=0,y=0},sky={x=0,y=3},sky_east={x=6,y=3},sky_rise={x=0,y=9},high={x=0,y=120},low={x=0,y=-120}}
+local poses={origin={x=0,y=0},sky={x=0,y=3},sky_east={x=6,y=3},sky_rise={x=0,y=9},high={x=0,y=120},low={x=0,y=-120},steep_top={x=350,y=140},steep_bottom={x=-80,y=-140}}
 function M.init(self)
     self.bg546={ack=0,sequence=0,pose=poses.origin}
     html5.run("window.riderBackgroundRequest=null") -- never replay an old world's request

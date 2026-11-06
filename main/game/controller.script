@@ -388,6 +388,17 @@ local function update_backgrounds(self)
     if self.backgrounds.dirty or next(self.backgrounds.layers) then
         local c=go.get_position("/camera");local p=camera.get_projection("/camera#camera");local scale=self.backgrounds.scale
         local frame={x=c.x*scale,y=c.y*scale,half_w=scale/p.m00,half_h=scale/p.m11}
+        local bounds=self.station and self.station.bounds
+        if self.edit then
+            local editor=require('main.editor.editor')
+            local doc=editor.doc
+            if self.background_height_doc~=doc or self.background_height_revision~=doc.editor.revision then
+                self.background_height_doc,self.background_height_revision=doc,doc.editor.revision
+                self.background_height_bounds=require('main.editor.editor_doc').bounds(doc.editor)
+            end
+            bounds=self.background_height_bounds
+        end
+        if bounds then frame.level_min_y,frame.level_max_y=bounds[3],bounds[4] end
         if self.vehicle then
             -- Root GO in this untransformed collection; read-only, metres once here.
             local v=go.get_position(self.vehicle.ids.chassis)

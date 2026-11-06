@@ -2,7 +2,7 @@
 // bg546: real engine rendering, named debug camera poses and resource lifecycle; no device claims.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{configure}=require('./launch.cjs'),pointer=require('./pointer.cjs');
-const EXPECTED=['empty','depth_xy','vertical_edges','foreground_safe','layer_toggle','master_restore','missing_fallback','world_teardown','resource_cycles'];
+const EXPECTED=['empty','depth_xy','vertical_edges','foreground_safe','layer_toggle','master_restore','missing_fallback','world_teardown','resource_cycles','steep_605'];
 function observe(){
  const state=window.__bg546={textures:new Map(),gl:null,pixels:[],draws:0};
  const get=HTMLCanvasElement.prototype.getContext;
@@ -43,15 +43,16 @@ async function main(){
   assert(Math.abs(b.state.layers[0].uv[2]-a.state.layers[0].uv[2]-.125)<1e-6,'X Depth motion');
   const rise=await command('pose',{pose:'sky_rise'});
   const sky=6;for(const s of [a,b,rise])assert(Math.abs(s.pixels[sky][2]-180)<=2,'Motion sample is occluded by world/UI');report.evidence.motion_pixels={origin:a.pixels[sky],east:b.pixels[sky],rise:rise.pixels[sky]};assert(Math.abs((b.pixels[sky][0]-a.pixels[sky][0]+256)%256-32)<=2,'Framebuffer X motion ignored Depth: '+JSON.stringify(report.evidence.motion_pixels));
-  assert(Math.abs(rise.pixels[sky][1]-a.pixels[sky][1]+64)<=2,'Framebuffer Y motion ignored Depth');
+  assert(Math.abs(rise.pixels[sky][1]-a.pixels[sky][1])>=1,'Bounded Y motion missing from framebuffer');
   const far=config();far.layers[0].depth=1;await command('set',{config:far});
   const farOrigin=await command('pose',{pose:'sky'}),farEast=await command('pose',{pose:'sky_east'}),farRise=await command('pose',{pose:'sky_rise'});
-  for(const s of [farEast,farRise])for(let c=0;c<4;c++)assert(Math.abs(s.pixels[sky][c]-farOrigin.pixels[sky][c])<=1,'Depth 1 framebuffer moved');
+  for(let c=0;c<4;c++)assert(Math.abs(farEast.pixels[sky][c]-farOrigin.pixels[sky][c])<=1,'Depth 1 framebuffer moved horizontally');
+  assert.notEqual(farRise.state.layers[0].uv[3],farOrigin.state.layers[0].uv[3],'Depth must not suppress bounded vertical motion');
   await command('set',{config:config()});
   const high=await command('pose',{pose:'high'}),low=await command('pose',{pose:'low'});
-  assert(Math.abs(high.state.layers[0].uv[3]-low.state.layers[0].uv[3]-10)<1e-6,'Y Depth motion');report.cases.depth_xy={origin:a.state.layers[0],east:b.state.layers[0],high:high.state.layers[0],low:low.state.layers[0],pixels:{origin:a.pixels[sky],east:b.pixels[sky],rise:rise.pixels[sky],far_origin:farOrigin.pixels[sky],far_east:farEast.pixels[sky],far_rise:farRise.pixels[sky]}};
-  for(const p of high.pixels)assert(p[1]<=3&&Math.abs(p[2]-180)<=2&&p[3]===255,'Top image row was not extended: '+p);
-  for(const p of low.pixels)assert(p[1]>=245&&Math.abs(p[2]-180)<=2&&p[3]===255,'Bottom image row was not extended: '+p);
+  assert(Math.abs(high.state.layers[0].uv[3]-low.state.layers[0].uv[3]-.0125)<1e-6,'Bounded Y motion');report.cases.depth_xy={origin:a.state.layers[0],east:b.state.layers[0],high:high.state.layers[0],low:low.state.layers[0],pixels:{origin:a.pixels[sky],east:b.pixels[sky],rise:rise.pixels[sky],far_origin:farOrigin.pixels[sky],far_east:farEast.pixels[sky],far_rise:farRise.pixels[sky]}};
+  for(const p of high.pixels)assert(p[1]>3&&p[1]<245&&Math.abs(p[2]-180)<=2&&p[3]===255,'High pose lost image interior: '+p);
+  for(const p of low.pixels)assert(p[1]>3&&p[1]<245&&Math.abs(p[2]-180)<=2&&p[3]===255,'Low pose lost image interior: '+p);
   report.cases.vertical_edges={high:high.pixels,low:low.pixels};await page.screenshot({path:path.join(out,'low-edge.png')});
   await command('set',{config:config(6)});const foreground=await command('pose',{pose:'origin'}),l=foreground.state.layers[5],f=foreground.state.frame;
   assert(l.active&&l.rendered);assert.equal(l.rect.half_h,f.half_h);
@@ -83,6 +84,34 @@ async function main(){
   await command('set',{config:config()});
   for(let i=0;i<8;i++){const s=await command('enabled',{enabled:false});assert.equal(s.state.objects,0);assert.equal(s.layer_images,0);const s2=await command('enabled',{enabled:true});assert.equal(s2.state.objects,1);assert.equal(s2.layer_images,1);}
   const final=await command('enabled',{enabled:false});assert.equal(final.state.created,final.state.released);assert.equal(final.state.texture_bytes,0);report.cases.resource_cycles={cycles:8,final:final.state};
+  // #605: load a real steep level through the ordinary custom import path.
+  const steep=JSON.parse(fs.readFileSync('main/game/stations/straight.json','utf8'));
+  steep.id='steep-605';steep.name='Steep background visibility';steep.bounds=[-100,450,-140,140];
+  steep.spawn=[0,-118.3];steep.chains=[[[400,120],[300,120],[100,-120],[-40,-120]]];
+  const oldGeneration=await page.evaluate(()=>window.riderTelemetry.session_generation);
+  await page.evaluate(()=>window.riderCustom.open());await page.locator('#rider-custom-text').fill(JSON.stringify(steep));
+  await page.getByRole('button',{name:'Import text',exact:true}).click();
+  await page.waitForFunction(g=>window.riderCustomStatus==='Saved'&&window.riderTelemetry?.session_generation>g&&window.riderBackgroundReport?.sequence>5,oldGeneration,{timeout:30000});
+  const meadow={layers:Array.from({length:5},(_,i)=>({image:`/main/background_presets/meadow/layer${i+1}.png`,auto:true}))};
+  const captures={};
+  for(const pose of ['steep_top','steep_bottom']){
+   await command('set',{config:meadow});const all=await command('pose',{pose});
+   assert.equal(all.state.objects,5);assert.equal(all.state.frame.level_min_y,-140);assert.equal(all.state.frame.level_max_y,140);
+   const layers=all.state.layers.slice(0,5);
+   let previous=0;
+   for(const l of layers){
+    assert(l.active&&l.rendered);assert(l.uv[3]-l.uv[1]<1&&l.uv[3]+l.uv[1]>0,'Image outside viewport');
+    const travel=Math.abs(l.uv[3]-.5);assert(travel>previous,'Near layer must move more');previous=travel;
+   }
+   await page.screenshot({path:path.join(out,pose+'.png')});
+   // Isolated captures make all five existing silhouettes inspectable, without foreground occlusion.
+   for(let i=0;i<5;i++){
+    const single={layers:meadow.layers.map((l,j)=>({...l,visible:i===j}))};
+    await command('set',{config:single});await page.screenshot({path:path.join(out,`${pose}-layer${i+1}.png`)});
+   }
+   captures[pose]={frame:all.state.frame,layers,screenshot:pose+'.png'};
+  }
+  report.cases.steep_605=captures;
   assert(Math.abs(final.state.fixed_min-1/60)<1e-7&&Math.abs(final.state.fixed_max-1/60)<1e-7);assert.deepEqual(report.errors,[]);
   assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});}
