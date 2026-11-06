@@ -27,7 +27,9 @@ async function main(){
   fixture.editor.editor_version=fixture.editor.compiler_version=15;
   async function load(){
    const old=(await state()).generation;
-   await page.evaluate(text=>window.riderImportJSON(text),JSON.stringify(fixture));
+   await page.evaluate(()=>window.riderCustom.open());
+   await page.locator('#rider-custom-text').fill(JSON.stringify(fixture));
+   await page.getByRole('button',{name:'Import text',exact:true}).click();
    await page.waitForFunction(g=>window.riderCustomStatus==='Saved'&&window.riderBackgroundState?.generation>g&&window.riderTelemetry?.session_generation===window.riderBackgroundState.generation&&window.riderTelemetry?.sequence>2,old,{timeout:30000});
    return state();
   }
@@ -39,7 +41,7 @@ async function main(){
   async function key(name){await page.keyboard.down(name);await page.waitForTimeout(100);await page.keyboard.up(name);await page.waitForTimeout(100);}
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderBackgroundState?.edit&&window.riderBackgroundState?.objects===5,null,{timeout:30000});
   r=await state();selected(r);assert.match(await page.evaluate(()=>window.riderEditor.message),/Local background image missing/);report.cases.edit_agreement=r;await page.screenshot({path:path.join(out,'edit.png')});
-  await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderTelemetry?.station==='custom'&&window.riderTelemetry?.sequence>2&&window.riderBackgroundState?.objects===5,null,{timeout:60000});
+  await page.goto(base+'?station=custom');await page.waitForFunction(id=>window.riderTelemetry?.station===id&&window.riderTelemetry?.sequence>2&&window.riderBackgroundState?.objects===5,fixture.id,{timeout:60000});
   r=await state();selected(r);assert.equal(r.edit,false);report.cases.saved_reload=r;
   source.enabled=false;fixture.editor.backgrounds=structuredClone(source);r=await load();selected(r,0);assert.equal(r.buffers,0);
   const off=r;source.enabled=true;fixture.editor.backgrounds=structuredClone(source);r=await load();selected(r);
