@@ -35,7 +35,7 @@ Everything here is visual. It never writes collision, physics, replay or the fol
 
 Claudio chose these values on 2026-11-05. No level has a material before this work, so the rule is:
 
-- The first material Apply replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. The panel previews this before Apply, and Apply is one Undo step. Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores the material and enables the profile, [#573](https://github.com/bongohorse/rider/issues/573) sets these values, and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
+- The first material choice replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. Each choice is stored at once as one Undo step (#604). Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores the material and enables the profile, [#573](https://github.com/bongohorse/rider/issues/573) sets these values, and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
 - A level without a material keeps its values and parameter set v1.
 - Parameter set v2 is valid only on a level with a material; without one it is refused.
 
