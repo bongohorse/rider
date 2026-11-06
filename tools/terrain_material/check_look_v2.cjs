@@ -40,6 +40,9 @@ const LEVEL=JSON.stringify({schema:6,units:'metres',id:'look',name:'look',spawn:
  assert.equal(await page.evaluate(()=>window.riderEditor.look?.open),true,'panel');
  const visible=await page.evaluate(()=>window.riderEditor.visible.filter(n=>n.startsWith('look_value_')));results.controls=visible;
  assert.ok(visible.includes('look_value_vehicle_position'),'vehicle control: '+visible);
+ // #590: the editor works beside the open panel.
+ await page.screenshot({path:path.join(out,'panel.png')});
+ { const e=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+(e.screen.ox+40*e.screen.ppm_x)*r.width/c.width,y:r.y+r.height-(e.screen.oy+.05*e.screen.ppm_y)*r.width/c.width};});await pointer.tap(page,e);await pointer.frames(page,{n:8});assert.ok(await page.evaluate(()=>!!window.riderEditor.selection),'a click selects beside the panel');assert.equal(await page.evaluate(()=>window.riderEditor.look.open),true); }
  const type=async(k,v)=>{await tapButton('look_value_'+k);await page.keyboard.type(String(v),{delay:30});await key('Enter');await pointer.frames(page,{n:6});};
  await type('width',3.5);assert.equal(await page.evaluate(()=>window.riderEditor.look.params.width),3.5);
  await type('angle',70);assert.equal(await page.evaluate(()=>window.riderEditor.look.params.angle),70);

@@ -417,6 +417,7 @@ local function zoom(self,factor) set_zoom(self,editor.camera.zoom*factor,self.cu
 -- After another document became current: dialogs close, and an unfinished piece (which belongs to the
 -- previous document) is discarded with its gesture state.
 local function opened(self)
+    track_panel.close()
     self.track_height=track_align.DEFAULT;self.track_session,self.track_cache,self.track_opened=nil,nil,nil
     self.open_dialog,self.field,self.confirm_delete,self.place=false,nil,nil,nil
     if self.drawing then self.drawing=nil;editor.message="Unfinished piece discarded: another level was opened." end
@@ -1435,8 +1436,9 @@ local function on_button(self,name)
                 if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
             end
         end
-    elseif name=="track_textures" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;track_panel.open()
-    elseif name=="terrain_look" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
+    elseif name=="track_textures" then cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;if not (terrain_look.session and terrain_look.session.dirty) then terrain_look.close() end;track_panel.open()
+    elseif name=="terrain_look" and track_panel.current then editor.message="Apply or discard Track textures first."
+    elseif name=="terrain_look" then track_panel.close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
@@ -1579,7 +1581,15 @@ local function offered_buttons(self)
 end
 local function visible_buttons(self) return self.ui.visible end
 local function hit(self,action)
-    for _,name in ipairs(visible_buttons(self)) do
+    local shown=visible_buttons(self)
+    -- An open Terrain Look lies on top: its buttons, drawn last, win.
+    if terrain_look.session and terrain_look.session.open then
+        for i=#shown,1,-1 do
+            local b=self.buttons[shown[i]]
+            if b and gui.pick_node(b.box,action.x,action.y) then return shown[i] end
+        end
+    end
+    for _,name in ipairs(shown) do
         local b=self.buttons[name]
         if b and gui.pick_node(b.box,action.x,action.y) then return name end
     end
@@ -2038,8 +2048,6 @@ local function canvas_release(self)
     end
 end
 function on_input(self,action_id,action)
-    -- The Track textures panel is modal: it takes all input until Apply, Discard or leaving Edit.
-    if editor.mode=='edit' and track_panel.visible() then return true end
     if editor.mode~="edit" and not (terrain_look.session and terrain_look.session.open) then
         -- An open report or import panel keeps its input; E does not leave it behind.
         local panel=html5 and html5.run("!!(window.riderFeedback?.visible||window.riderCustom?.visible)")=="true"
@@ -2068,7 +2076,15 @@ function on_input(self,action_id,action)
         end
     end
     editor_ui.pointer(self.ui,action)
-    if not (terrain_look.session and terrain_look.session.open) and not self.help_open and not self.open_dialog and not self.warnings_open and not editor.conflict then
+    -- In Edit, Terrain Look takes only what is meant for it: a press or wheel on the panel, its field, a slider drag, Esc.
+    local look_session=terrain_look.session
+    local look_input=look_session and look_session.open
+    if look_input and editor.mode=='edit' and not look_session.drag and not look_session.field and action_id~=hash('editor_cancel') then
+        local press=action_id==hash('ui_pointer') and action.pressed
+        local wheel=action_id==hash('editor_zoom_in') or action_id==hash('editor_zoom_out')
+        look_input=(press or wheel) and editor_ui.in_panel(self.ui)
+    end
+    if not look_input and not self.help_open and not self.open_dialog and not self.warnings_open and not editor.conflict then
         if self.field and action_id==hash("ui_pointer") and action.pressed and editor_ui.scrollbar_hit(self.ui) then
             confirm_name(self)
             if self.field then return true end -- invalid pending input retains focus
@@ -2076,7 +2092,7 @@ function on_input(self,action_id,action)
         if not self.field and editor_ui.scrollbar_input(self.ui,action_id,action) then return true end
     end
     local ls=terrain_look.session
-    if ls and ls.open then
+    if look_input then
         local controls=require('main.terrain_perspective.projection').controls(ls.params)
         local ranges=require('main.terrain_perspective.projection').ranges(ls.params)
         local function slider(key)
@@ -2185,7 +2201,8 @@ function on_input(self,action_id,action)
             -- The click that returns focus to the canvas never edits the level.
             if self.refocus then
                 self.refocus=false
-                if not self.refocus_until or socket.gettime()<self.refocus_until then return true end
+                -- Returning from the open Track textures panel is ordinary work, not a window switch.
+                if not track_panel.visible() and (not self.refocus_until or socket.gettime()<self.refocus_until) then return true end
             end
             local name=hit(self,action)
             if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" or name=="chrome_panel" then return true
@@ -2688,6 +2705,8 @@ end
 -- Editor A1b adapter: business state and existing actions remain here; the renderer only draws
 -- bounded pools. Templates have logical identities, never one permanent GUI allocation per station.
 local function render_ui(self)
+    -- Dialogs take over from the panels, which would hide them.
+    if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
     terrain_look.tick();track_panel.tick()
     local vh=select(2,window.get_size())/(self.ui.scale or 1)
     self.version_per=math.max(1,math.min(6,math.floor((math.min(620,vh-64)-244)/48)))
@@ -2961,6 +2980,8 @@ function update(self,dt)
     end
     if self.focus_lost and edit_mode then self.focus_lost=false;cancel(self) end
     editor.sync()
+    -- Dialogs take over from the panels, which would hide them.
+    if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
     terrain_look.tick();track_panel.tick()
     local look_open=editor.mode=='play' and terrain_look.session and terrain_look.session.open or false
     if self.look_capture~=look_open then

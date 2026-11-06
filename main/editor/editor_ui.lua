@@ -134,6 +134,9 @@ end
 function M.object_area(u)
     return u.object_rect and u.pointer and inside(u.object_rect,u.pointer[1],u.pointer[2])
 end
+function M.in_panel(u)
+    return u.modal_rect and u.pointer and inside(u.modal_rect,u.pointer[1],u.pointer[2])
+end
 function M.area(u,action)
     local p=action.screen_x and {action.screen_x/u.scale,u.h-action.screen_y/u.scale} or u.pointer
     if not p then return nil end
@@ -258,8 +261,16 @@ function M.render(u,d)
         gui.set_texture(n,'editor_icon_thumb_'..kind)
     end
     u.hover,u.tip=nil,nil
+    -- In Edit, Terrain Look lies over the working editor: the chrome draws first, the panel on top.
+    local overlay=d.modal=='terrain_look' and not d.play
+    u.modal_rect=nil
+    -- Properties folds to its tab meanwhile: text would show through the panel.
+    local properties_open=u.properties
+    if overlay then u.properties=true end
+    for pass=1,overlay and 2 or 1 do
     local modal=d.modal
-    if modal then u.scroll_drag=nil end
+    if overlay and pass==1 then modal=nil end
+    if modal and not overlay then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
         text(16,h-40,'Edit level [E]',C.secondary,12)
@@ -526,7 +537,7 @@ function M.render(u,d)
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
-        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16 end
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16;if overlay then mx=w-mw-72;my=56;mh=math.min(580,h-136) end end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
             local s=d.look
@@ -616,6 +627,9 @@ function M.render(u,d)
             button('warnings',mx+mw-148,my+mh-48,128,'Close [Esc]')
         end
     end
+    end
+    if overlay then u.properties=properties_open end
+    local modal=d.modal
     if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
