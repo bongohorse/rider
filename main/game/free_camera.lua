@@ -5,17 +5,20 @@ local FREE_CAM=[==[(()=>{if(window.riderFreeCam)return;const k={},moves=['KeyW',
 let on=false,x=0,y=0,z=.8,last=0,drag=null;
 const b=document.createElement('button');b.type='button';b.textContent='Free cam [O]';b.style.cssText='position:fixed;left:16px;bottom:64px;z-index:9;padding:6px 10px;font:600 13px sans-serif;background:#1d3a44;color:#fff;border:1px solid #6fb;border-radius:4px;opacity:.9';
 const set=v=>{on=v;b.textContent=on?'Free cam ON [O]':'Free cam [O]';b.style.background=on?'#2c8a5e':'#1d3a44';if(on){addEventListener('wheel',onWheel,{capture:true,passive:false});const c=window.riderRoadProjection&&window.riderRoadProjection.camera;if(c){x=c[0];y=c[1];}last=performance.now();}else{removeEventListener('wheel',onWheel,{capture:true});delete window.riderFreeCamPose;for(const m of moves)k[m]=0;drag=null;}};
-b.onclick=()=>{set(!on);b.blur();};document.body.append(b);
+b.onclick=()=>{set(!on);document.querySelector('canvas')?.focus();};document.body.append(b);
 const cancel=e=>{e.stopImmediatePropagation();e.preventDefault();};
-addEventListener('keydown',e=>{if(e.code==='KeyO'){if(!e.repeat)set(!on);cancel(e);return;}if(on&&moves.includes(e.code)){k[e.code]=1;cancel(e);}},true);
-addEventListener('keyup',e=>{if(e.code==='KeyO'){cancel(e);return;}if(on&&moves.includes(e.code)){k[e.code]=0;cancel(e);}},true);
+const typing=e=>{const t=e.target;return !!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable));};
+const skip=e=>window.riderEditing||typing(e)||e.ctrlKey||e.metaKey||e.altKey;
+addEventListener('keydown',e=>{if(skip(e))return;if(e.code==='KeyO'){if(!e.repeat)set(!on);cancel(e);return;}if(on&&moves.includes(e.code)){k[e.code]=1;cancel(e);}},true);
+addEventListener('blur',()=>{for(const m of moves)k[m]=0;});
+addEventListener('keyup',e=>{if(on&&k[e.code]){k[e.code]=0;cancel(e);}},true);
 const scale=()=>{const c=document.querySelector('canvas');return (c.width/c.clientWidth)/(100*z);};
 addEventListener('mousedown',e=>{if(on&&e.button===2){drag={cx:e.clientX,cy:e.clientY,x,y};cancel(e);}},true);
 addEventListener('mousemove',e=>{if(drag){x=drag.x-(e.clientX-drag.cx)*scale();y=drag.y+(e.clientY-drag.cy)*scale();cancel(e);}},true);
 addEventListener('mouseup',e=>{if(drag&&e.button===2){drag=null;cancel(e);}},true);
 addEventListener('contextmenu',e=>{if(on)cancel(e);},true);
 const onWheel=e=>{if(!on)return;const c=document.querySelector('canvas').getBoundingClientRect();if(e.clientX>c.left+c.width*.65)return;z=Math.max(.02,Math.min(6,z*Math.exp(-e.deltaY*.001)));cancel(e);};
-const step=t=>{requestAnimationFrame(step);if(!on)return;const d=Math.min(.1,(t-last)/1000);last=t;const v=12/z*(k.ShiftLeft||k.ShiftRight?3:1)*d;
+const step=t=>{requestAnimationFrame(step);b.style.display=window.riderEditing?'none':'';if(window.riderEditing&&on)set(false);if(!on)return;const d=Math.min(.1,(t-last)/1000);last=t;const v=12/z*(k.ShiftLeft||k.ShiftRight?3:1)*d;
 x+=((k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0))*v;y+=((k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0))*v;
 if(k.KeyE)z=Math.min(6,z*Math.exp(d*1.5));if(k.KeyQ)z=Math.max(.02,z*Math.exp(-d*1.5));window.riderFreeCamPose={x,y,zoom:z};};
 requestAnimationFrame(step);window.riderFreeCam={set,get on(){return on;},get zoom(){return z;}};})()]==]

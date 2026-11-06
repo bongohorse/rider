@@ -18,7 +18,11 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  const z=await p.evaluate(()=>window.riderFreeCam.zoom);await p.mouse.move(300,300);await p.mouse.wheel(0,400);await p.waitForTimeout(200);assert.ok(await p.evaluate(()=>window.riderFreeCam.zoom)<z,'zoomed');
  assert.ok(Math.abs(await p.evaluate(()=>window.riderTelemetry.station_distance)-car)<.05,'the vehicle stays');
  await p.keyboard.press('KeyO');await p.waitForTimeout(800);assert.ok(Math.abs(await cam()-at)<.5,'back to the vehicle');
+ // A driving key held across the toggle is released in the game.
+ await p.keyboard.down('w');await p.waitForTimeout(600);await p.keyboard.press('KeyO');await p.keyboard.up('w');await p.waitForTimeout(1500);const v1=await p.evaluate(()=>window.riderTelemetry.speed_mps);await p.waitForTimeout(1000);assert.ok(await p.evaluate(()=>window.riderTelemetry.speed_mps)<=v1+.01,'throttle released');await p.keyboard.press('KeyO');
+ // On when entering Edit: it switches off.
+ await p.keyboard.press('KeyO');await p.waitForTimeout(100);
  await p.keyboard.down('e');await pointer.frames(p,{n:3});await p.keyboard.up('e');await p.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen,null,{timeout:20000});await p.waitForTimeout(500);
- const ez=await p.evaluate(()=>window.riderEditor.camera.zoom);await p.mouse.move(640,300);await pointer.frames(p,{n:3});await p.mouse.wheel(0,-240);await pointer.frames(p,{n:6});assert.ok(await p.evaluate(()=>window.riderEditor.camera.zoom)>ez,'editor wheel');
+ const ez=await p.evaluate(()=>window.riderEditor.camera.zoom);await p.mouse.move(640,300);await pointer.frames(p,{n:3});await p.mouse.wheel(0,-240);await pointer.frames(p,{n:6});assert.ok(await p.evaluate(()=>window.riderEditor.camera.zoom)>ez,'editor wheel');assert.equal(await p.evaluate(()=>window.riderFreeCam.on),false,'off in Edit');
  await b.close();server.close();console.log('PASS');
 })().catch(e=>{console.error(String(e.message||e).slice(0,300));process.exit(1);});
