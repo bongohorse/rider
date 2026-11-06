@@ -7,7 +7,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/gym'))
 from dispatch import RUNNERS, PARTS, PRESET_CASES, runner_config
 
-EXPECTED = {'w114': ('wheel114.cjs', 600),
+EXPECTED = {
+    'bg546': ('background546.cjs', 180),
+ 'w114': ('wheel114.cjs', 600),
  'fps417': ('fps417.cjs', 360),
  'fps444': ('fps444.cjs', 360),
  'cam443': ('camera443.cjs', 360),

@@ -1,6 +1,8 @@
 -- Proxy is the only world-switch owner; messages serialize confirmed unload/load.
 -- Shared immutable materials live with the loader, not each proxied world (#530).
 -- Pinned OpenGL program teardown retains scratch UBOs; avoid shader churn on switches.
+go.property("background_material",resource.material("/main/backgrounds/background.material"))
+go.property("foreground_material",resource.material("/main/backgrounds/foreground.material"))
 go.property("terrain_material",resource.material("/main/terrain_compare/terrain.material"))
 go.property("perspective_material",resource.material("/main/terrain_perspective/terrain.material"))
 go.property("preset_material",resource.material("/main/terrain_perspective/preset.material"))

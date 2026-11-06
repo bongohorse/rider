@@ -1,0 +1,5 @@
+material: "/main/backgrounds/foreground.material"
+vertices: "/main/terrain_perspective/empty.buffer"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"
+textures: "/main/backgrounds/seed.png"

@@ -1,0 +1,49 @@
+-- Rider's existing camera components own view/projection. The renderer only selects them.
+-- Preserve the default world/GUI passes; own background/foreground blending explicitly.
+function init(self)
+    self.predicates={}
+    for _,tag in ipairs({"background","tile","particle","model","foreground","gui","debug_text"}) do self.predicates[tag]=render.predicate({tag}) end
+    self.color=vmath.vector4(sys.get_config_number("render.clear_color_red",0),sys.get_config_number("render.clear_color_green",0),sys.get_config_number("render.clear_color_blue",0),sys.get_config_number("render.clear_color_alpha",0))
+    self.view=vmath.matrix4()
+end
+function update(self)
+    local w,h=render.get_window_width(),render.get_window_height()
+    if w<=0 or h<=0 then return end
+    render.set_depth_mask(true);render.set_stencil_mask(0xff)
+    render.clear({[graphics.BUFFER_TYPE_COLOR0_BIT]=self.color,[graphics.BUFFER_TYPE_DEPTH_BIT]=1,[graphics.BUFFER_TYPE_STENCIL_BIT]=0})
+    render.set_viewport(0,0,w,h)
+    local active
+    local cameras=camera.get_cameras()
+    for i=#cameras,1,-1 do if camera.get_enabled(cameras[i]) then active=cameras[i];break end end
+    if active then render.set_camera(active,{use_frustum=true})
+    else
+        render.set_camera();render.set_view(self.view)
+        render.set_projection(self.projection or vmath.matrix4_orthographic(0,render.get_width(),0,render.get_height(),-1,1))
+    end
+    local p=self.predicates
+    render.set_depth_mask(false);render.disable_state(graphics.STATE_DEPTH_TEST)
+    render.enable_state(graphics.STATE_BLEND)
+    render.set_blend_func(graphics.BLEND_FACTOR_ONE,graphics.BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+    render.draw(p.background)
+    -- Exactly the default world pass state, including straight-alpha mesh blending.
+    render.set_blend_func(graphics.BLEND_FACTOR_SRC_ALPHA,graphics.BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+    render.disable_state(graphics.STATE_BLEND)
+    render.set_depth_mask(true);render.enable_state(graphics.STATE_DEPTH_TEST);render.enable_state(graphics.STATE_CULL_FACE)
+    render.draw(p.model)
+    render.set_depth_mask(false);render.disable_state(graphics.STATE_CULL_FACE)
+    render.enable_state(graphics.STATE_BLEND)
+    render.draw(p.tile);render.draw(p.particle)
+    render.disable_state(graphics.STATE_DEPTH_TEST)
+    render.draw_debug3d()
+    render.set_blend_func(graphics.BLEND_FACTOR_ONE,graphics.BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
+    render.draw(p.foreground)
+    render.set_camera();render.set_view(vmath.matrix4())
+    render.set_projection(vmath.matrix4_orthographic(0,w,0,h,-1,1))
+    render.enable_state(graphics.STATE_STENCIL_TEST)
+    render.draw(p.gui);render.draw(p.debug_text)
+    render.disable_state(graphics.STATE_STENCIL_TEST);render.disable_state(graphics.STATE_BLEND)
+end
+function on_message(self,id,data)
+    if id==hash("clear_color") then self.color=data.color
+    elseif id==hash("set_view_projection") then self.view,self.projection=data.view,data.projection end
+end

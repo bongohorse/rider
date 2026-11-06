@@ -95,10 +95,11 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 
 ## Backgrounds and foreground
 
-- A level has up to five background layers and one foreground, stored as one level-wide block: preset ID and, per layer, visibility, image, Depth and Auto.
-- One Depth value per layer drives X and Y. Auto is the default. [#545](https://github.com/bongohorse/rider/issues/545) measures the cost. [#546](https://github.com/bongohorse/rider/issues/546) defines the Depth range, its mapping to X and Y, and what Auto selects; [#548](https://github.com/bongohorse/rider/issues/548) validates that range.
-- Vertical motion never shows a gap, and empty layers cost nothing.
-- The foreground stays in a safe zone at the lower edge and draws below the HUD and touch controls.
+- A level has up to five background layers and one foreground, stored as one level-wide block: master enabled state, preset ID and, per layer, visibility, image, Depth and Auto. The master Background ON/OFF suppresses all six slots without changing their individual choices (Claudio, 2026-11-06).
+- One unitless Depth in **−0.25..1** drives both axes with the same scroll factor `1 − Depth`: 1 fixes an image to the screen, 0 moves at world speed, and a negative value moves faster in front. Auto is the default: from farthest background to nearest, **0.9, 0.75, 0.55, 0.35, 0.15**; foreground **−0.1**. Auto does not erase the stored manual Depth. [#546](https://github.com/bongohorse/rider/issues/546) owns this mapping; [#548](https://github.com/bongohorse/rider/issues/548) validates it.
+- Images preserve aspect ratio at a 12 m reference height, repeat horizontally in world metres, and clamp vertically to their actual edge pixels including alpha. Camera centre and orthographic extents are read-only inputs; units convert once at the GO boundary. Changing Depth never moves the camera, bodies or driving line.
+- Vertical motion never shows a gap. Empty/disabled layers create no quad objects or image resources and run no UV updates. Live OFF releases owned image/buffer references; the engine may retain its bounded mesh VB pool until world teardown (engine pitfall 11). Shared immutable materials stay with the loader to avoid shader churn (pitfall 10).
+- The foreground stays in the lower **16%** of the viewport and is clipped further to at least **0.08 m below the complete vehicle visual bound**. That bound includes immediate root poses, the rider offset radius and previous-frame world poses, since Defold world transforms are cached; no physics or transform writes are used. If no safe height remains, it draws nothing. It renders after the world and before HUD/touch controls. Background and foreground have explicit premultiplied-alpha passes; world mesh/sprite and GUI rendering retain their existing passes.
 - A missing image falls back to the preset.
 
 ## Decorations
