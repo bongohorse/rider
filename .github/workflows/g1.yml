@@ -261,7 +261,7 @@ jobs:
           - group: camera
             cases: 'cam443'
           - group: backgrounds
-            cases: 'bg546'
+            cases: 'bg546 bg548'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -458,6 +458,9 @@ jobs:
       - name: Background layer motion, switches and resource lifecycle (#546)
         if: contains(format(' {0} ', matrix.cases), ' bg546 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/backgrounds --case bg546
+      - name: Background source round trip and Play/Edit agreement (#548)
+        if: contains(format(' {0} ', matrix.cases), ' bg548 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/background-source --case bg548
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

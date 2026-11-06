@@ -244,6 +244,7 @@ function init(self)
         self.background_probe=require "main.gym.background_probe546"
         self.background_probe.init(self)
     end
+    self.background_report=html5 and sys.get_engine_info().is_debug and (self.testcase=="bg548" or self.testcase=="bg549")
     -- #356/#372: debug-only observer; the runtime experiment uses the same read-only fixed-step probe.
     -- #417 (fps417): the same read-only observer measures fixed ticks while the player cap is switched by taps.
     if self.testcase=="fps356" or self.testcase=="fps356runtime" or self.testcase=="fps417" then
@@ -372,6 +373,17 @@ local function update_backgrounds(self)
             go.set("/camera#camera","orthographic_zoom",1)
         end
     end
+    if self.edit and not self.background_probe then
+        local editor=require('main.editor.editor')
+        local spec=(editor.background_preview or editor.doc and editor.doc.editor or {}).backgrounds
+        if self.background_source~=spec then
+            self.background_source=spec
+            local resolved,warning=require('main.backgrounds.source').resolve(spec)
+            backgrounds.set(self.backgrounds,resolved);self.background_warning=warning
+            editor.background_warning=warning
+            if warning then editor.message=warning end
+        end
+    end
     if self.backgrounds.dirty or next(self.backgrounds.layers) then
         local c=go.get_position("/camera");local p=camera.get_projection("/camera#camera");local scale=self.backgrounds.scale
         local frame={x=c.x*scale,y=c.y*scale,half_w=scale/p.m00,half_h=scale/p.m11}
@@ -382,6 +394,14 @@ local function update_backgrounds(self)
         self.background_frame=frame
     end
     if self.background_probe then self.background_probe.after(self) end
+    if self.background_report then
+        local r=backgrounds.report(self.backgrounds)
+        local editor=require('main.editor.editor')
+        r.source=self.edit and (editor.background_preview or editor.doc and editor.doc.editor or {}).backgrounds or self.station and self.station.backgrounds
+        r.generation,r.edit,r.warning=self.session_generation,self.edit or false,self.background_warning or false
+        r.source_sha,r.run_id=sys.get_config_string("rider.source_sha",""),self.run_id
+        html5.run("window.riderBackgroundState="..json.encode(r))
+    end
 end
 function update(self, dt)
     if self.fps356 then self.fps356.update(self.fps356_state,self,dt) end
@@ -770,7 +790,11 @@ function on_message(self,id,data,sender)
         self.session_generation=data.generation or 1
     elseif id==hash("configure_station") and not self.ready then
         self.station,self.station_note=stations.load(data.id,data.speed,nil,data.snapshot)
-        if not self.background_probe then backgrounds.set(self.backgrounds,self.station and self.station.backgrounds) end
+        if not self.background_probe then
+            local resolved,warning=require('main.backgrounds.source').resolve(self.station and self.station.backgrounds)
+            backgrounds.set(self.backgrounds,resolved);self.background_warning=warning
+            if warning then self.station_note=(self.station_note and self.station_note~='' and self.station_note..'; ' or '')..warning end
+        end
         if not self.station and data.note then self.station_note=data.note end
         self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset
         if data.preset then self.preset_refused=data.preset_refused end -- a refused file stays visible across reloads (#199)

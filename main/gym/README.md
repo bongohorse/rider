@@ -201,6 +201,8 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 
 `bg546` proves background Depth motion in X/Y at named camera poses, clamped vertical edges from framebuffer pixels, a bounded foreground below the vehicle, individual ON/OFF, master OFF/ON restoring individual choices, missing-image fallback, a live world teardown and eight live resource-release cycles. Its camera override and request bridge exist only in this debug HTML5 case; production rendering only reads camera state. The runner checks actual fixed dt and texture deletion; it does not establish phone input, art approval or GPU performance.
 
+`bg548` imports versioned backgrounds through the ordinary custom-file path, checks real image resources in Play and Edit, reopens the durable custom save, and verifies master OFF/ON preserves individual visibility, Auto, manual Depth and missing-image references. Its debug observer only reports state; it does not configure the renderer or camera. It does not prove the later Background panel's real controls or human/device acceptance.
+
 `python tools/gym/smoke.py --case <id>` (HTML5 debug gym):
 
 | Case | Checks |

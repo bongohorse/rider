@@ -134,6 +134,11 @@ if args.case=='cam443':
         c=report['cases'][name]
         assert c['physics']['max_difference']==0 and c['physics']['ticks']>=300 and c['replay']['verdict']=='MATCH'
     print(json.dumps({k:{'physics':report['cases'][k]['physics']['modes'],'replay':report['cases'][k]['replay']['verdict']} for k in ('ramps-down-30','air-mid','straight-reverse')}));raise SystemExit(0)
+if args.case=='bg548':
+    report=json.loads((out/'background548-result.json').read_text())
+    identity(report)
+    assert set(report['cases'])=={'legacy_empty','imported_play','edit_agreement','saved_reload','master_off_restore'}
+    print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='bg546':
     report=json.loads((out/'background546-result.json').read_text())
     identity(report)

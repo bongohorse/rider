@@ -9,6 +9,7 @@ from dispatch import RUNNERS, PARTS, PRESET_CASES, runner_config
 
 EXPECTED = {
     'bg546': ('background546.cjs', 180),
+    'bg548': ('background548.cjs', 180),
  'w114': ('wheel114.cjs', 600),
  'fps417': ('fps417.cjs', 360),
  'fps444': ('fps444.cjs', 360),

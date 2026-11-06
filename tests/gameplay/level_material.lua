@@ -62,7 +62,7 @@ assert(D.compare(opened,other),'a changed material is a difference')
 local moved=J.decode(enc(saved));moved.spawn[1]=moved.spawn[1]+1
 local _,_,clash=D.open_level(moved);assert(clash and clash.lines.editor.material.preset=='quarry','keeping compiled geometry keeps the material')
 assert(clash.lines.editor.editor_version==14 and D.validate(clash.lines))
-local newer=J.decode(enc(saved));newer.editor.editor_version,newer.editor.compiler_version=15,15
+local newer=J.decode(enc(saved));newer.editor.editor_version,newer.editor.compiler_version=16,16
 local lines=D.open_level(newer);assert(lines.editor.material.band=='meadow','an unsupported editor block keeps the material')
 -- A stored level without one stays as it was, also an older file.
 local f=assert(io.open('tests/gameplay/level-fixtures/terrain-p0/mixed.json','r'));local fixture=J.decode(f:read('*a'));f:close()
@@ -80,7 +80,7 @@ bad(function(e) e.material.fill='nope' end,'Unknown material preset nope for fil
 bad(function(e) e.material.version=2 end,'Unsupported level material version')
 bad(function(e) e.material.extra=1 end,'Unknown level material field')
 bad(function(e) e.editor_version,e.compiler_version=13,13 end,'needs editor/compiler 14')
-bad(function(e) e.editor_version,e.compiler_version=15,15 end,'Unsupported editor version')
+bad(function(e) e.editor_version,e.compiler_version=16,16 end,'Unsupported editor version')
 local no_profile=D.copy(d);no_profile.editor.road_profile=nil;no_profile.editor.road_look=nil;rejected(no_profile,'needs the authored Terrain Look')
 assert(not D.set_material(fresh().editor,{version=1,preset='nope'}),'set_material refuses too')
 -- Station schema gates.
