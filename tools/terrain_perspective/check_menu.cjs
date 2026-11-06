@@ -23,8 +23,8 @@ execFileSync('python',['-c','import sys;sys.path.insert(0,"tools/gym");from bund
  await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.screen);await key('Home');await page.waitForTimeout(1100);const initial=await snapshot(),baseline=await exported();await openMenu();await page.screenshot({path:path.join(out,'menu.png')});
  for(const [k,v] of [['width',1.3],['perspective',.5],['angle',32],['side',8],['shading',.7]])await numeric(k,v);
  const preview=await snapshot();assert.deepEqual(preview.source,initial.source,'Preview mutated source');assert.equal(preview.editor.undo,initial.editor.undo);const chosen=preview.editor.look.params;
- // Menu input, including drive/edit shortcuts and clicks on the visible world, is fully captured.
- for(const k of ['ArrowUp','ArrowLeft','e','r','Delete'])await key(k);await pointer.tap(page,{x:500,y:400});assert.deepEqual((await snapshot()).source,initial.source);assert.equal((await snapshot()).editor.mode,'edit');
+ // #590: the editor stays usable beside the menu; a press on the menu stays with the menu.
+ await pointer.tap(page,{x:1000,y:300});assert.deepEqual((await snapshot()).source,initial.source);assert.equal((await snapshot()).editor.mode,'edit');assert.equal((await snapshot()).editor.look.open,true);
  await closeMenu();await openMenu();assert.deepEqual((await snapshot()).editor.look.params,chosen);r.checks.push({name:'five_controls_preview_close_reopen_and_input_isolation',state:await snapshot()});
  await button('look_apply');await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1');assert.equal((await snapshot()).editor.undo,initial.editor.undo+1);await saved();await closeMenu();
  await button('undo');await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='perspective-v1');

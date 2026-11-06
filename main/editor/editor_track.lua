@@ -44,7 +44,7 @@ end
 function M.draft(m)
     local e,err=M.candidate(m)
     if not e then M.message=err;return nil,err end
-    M.message='';M.current=m
+    M.message='';M.current=m;M.revision=editor.doc.editor.revision
     editor.look_preview=e;editor.look_epoch=(editor.look_epoch or 0)+1;editor.touch()
     return e
 end
@@ -103,6 +103,8 @@ end
 close=M.close
 function M.tick()
     if not (html5 and M.visible()) then return end
+    -- The editor stays usable: a draft follows edits made while it is open.
+    if M.current and editor.doc and M.revision~=editor.doc.editor.revision then M.draft(M.current) end
     local text=html5.run('window.riderTrackPanel.take()')
     if text=='[]' then return end
     local ok,list=pcall(json.decode,text)

@@ -34,6 +34,10 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  // Keys in the panel do not reach the editor.
  await page.locator('#rider-track-band').focus();const undo=await page.evaluate(()=>window.riderEditor.undo);await page.keyboard.press('Delete');await page.keyboard.press('e');await pointer.frames(page,{n:6});
  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo);
+ // #590: the editor keeps working beside the panel, and the draft follows the edit.
+ await page.locator('canvas').focus();await page.mouse.move(640,70);await pointer.frames(page,{n:6});const q=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+(e.screen.ox+15*e.screen.ppm_x)*r.width/c.width,y:r.y+r.height-(e.screen.oy+.1*e.screen.ppm_y)*r.width/c.width};});
+ for(let i=0;i<3&&!await page.evaluate(()=>!!window.riderEditor.selection);i++){await pointer.tap(page,q);await pointer.frames(page,{n:8});await page.waitForTimeout(300);}
+ assert.ok(await page.evaluate(()=>!!window.riderEditor.selection),'a click selects beside the panel');assert.equal(await page.evaluate(()=>window.riderRoadProjection.material.preset),'volcano');
  // Discard restores.
  await page.locator('#rider-track-discard').click();await page.waitForFunction(()=>!window.riderRoadProjection?.material?.preset,null,{timeout:10000});
  // Apply is one Undo step.

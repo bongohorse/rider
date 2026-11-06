@@ -134,6 +134,9 @@ end
 function M.object_area(u)
     return u.object_rect and u.pointer and inside(u.object_rect,u.pointer[1],u.pointer[2])
 end
+function M.in_panel(u)
+    return u.modal_rect and u.pointer and inside(u.modal_rect,u.pointer[1],u.pointer[2])
+end
 function M.area(u,action)
     local p=action.screen_x and {action.screen_x/u.scale,u.h-action.screen_y/u.scale} or u.pointer
     if not p then return nil end
@@ -258,8 +261,12 @@ function M.render(u,d)
         gui.set_texture(n,'editor_icon_thumb_'..kind)
     end
     u.hover,u.tip=nil,nil
-    local modal=d.modal
-    if modal then u.scroll_drag=nil end
+    -- In Edit, Terrain Look lies over the working editor: the chrome draws first, the panel on top.
+    local overlay=d.modal=='terrain_look' and not d.play
+    u.modal_rect=nil
+    for pass=1,overlay and 2 or 1 do
+    local modal=(overlay and pass==1) and nil or d.modal
+    if modal and not overlay then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
         text(16,h-40,'Edit level [E]',C.secondary,12)
@@ -616,6 +623,8 @@ function M.render(u,d)
             button('warnings',mx+mw-148,my+mh-48,128,'Close [Esc]')
         end
     end
+    end
+    local modal=d.modal
     if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
