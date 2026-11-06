@@ -125,7 +125,7 @@ function M.live(generation)
  if s and s.instance==editor.opened and s.play_generation==generation then return M.play_level end
 end
 function M.clear_play()
- local s=M.session;if s then s.open=false;s.drag=nil;s.play_generation=nil end
+ local s=M.session;if s then s.open=false;s.drag=nil;s.field=nil;s.play_generation=nil end
  M.play_level=nil
 end
 function M.confirm()

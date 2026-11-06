@@ -54,14 +54,18 @@ function M.close()
     M.discard();M.instance=nil;M.revision=nil;M.suspended=false
     if html5 then html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.close()') end
 end
--- Yield to canvas dialogs without discarding a Depth drag.
+local show
+-- Yield to canvas dialogs. A Depth drag ends without storing; the panel returns to the stored value.
 function M.suspend(value)
     local blocked=value and true or false
     if M.suspended==blocked then return end
     M.suspended=blocked
     -- A dialog ends a Depth drag: the stored value stays and the panel shows it again.
     if blocked then M.discard() end
-    if html5 then html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.suspend('..tostring(blocked)..')') end
+    if html5 then
+        html5.run('window.riderBackgroundPanel&&window.riderBackgroundPanel.suspend('..tostring(blocked)..')')
+        if blocked and M.visible() then show() end
+    end
 end
 local function presets()
     local list={};local track=require 'main.editor.editor_track'
@@ -89,7 +93,7 @@ function M.handle(message)
         M.close();require('main.editor.editor_track').open()
     end
 end
-local function show()
+function show()
     local b=M.current or editor.doc.editor.backgrounds
     local _,warning=source.resolve(b)
     html5.run('window.riderBackgroundPanel.show('..json.encode(b or false)..','..json.encode(M.message~='' and M.message or warning or '')..')')
@@ -97,6 +101,7 @@ end
 function M.tick()
     if not (html5 and M.visible()) then return end
     if editor.mode~='edit' or M.instance~=editor.opened then M.close();return end
+    if M.suspended then return end
     local changed=M.revision~=editor.doc.editor.revision
     if changed then
         M.revision=editor.doc.editor.revision

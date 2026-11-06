@@ -87,6 +87,6 @@
   api.open = (list, backgrounds) => { presets = list;if (!panel) build();draft = copy(backgrounds);api.message = '';api.queue.length = 0;api.suspended = false;panel.hidden = false;api.visible = true;render(); };
   api.close = () => { if (panel) panel.hidden = true;api.visible = false;api.suspended = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = (backgrounds, message) => { draft = copy(backgrounds);api.message = message || '';render(); };
-  api.suspend = blocked => { api.suspended = !!blocked;if (panel) panel.hidden = !api.visible || api.suspended; };
+  api.suspend = blocked => { api.suspended = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || api.suspended; };
   api.take = () => JSON.stringify(api.queue.splice(0, api.queue.length));
 })();
