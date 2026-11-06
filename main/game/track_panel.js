@@ -20,6 +20,9 @@
     panel = document.createElement('section');panel.id = 'rider-track-panel';
     panel.setAttribute('aria-label', 'Track textures');
     panel.style.cssText = 'position:fixed;right:16px;top:64px;z-index:99998;box-sizing:border-box;width:min(340px,calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;padding:12px;background:#17272f;color:#eef;border:1px solid #4a6a78;border-radius:6px;font:14px sans-serif';
+    const tabs = document.createElement('div');tabs.setAttribute('role','tablist');tabs.style.cssText='display:flex;gap:6px;margin-bottom:8px';
+    for (const [name,selected] of [['Track textures',true],['Background',false]]) { const tab=document.createElement('button');tab.type='button';tab.textContent=name;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(selected));tab.onclick=()=>{if(!selected)send({type:'background'});};tabs.append(tab); }
+    panel.append(tabs);
     const h = document.createElement('h2');h.textContent = 'Track textures';h.style.cssText = 'margin:0 0 8px;font-size:17px';panel.append(h);
     const grid = document.createElement('div');grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px';
     for (const p of presets) {

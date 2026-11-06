@@ -81,7 +81,11 @@ function M.handle(message)
     if message.type=='draft' then M.draft(message.material)
     elseif message.type=='apply' then M.apply()
     elseif message.type=='discard' then M.discard()
-    elseif message.type=='close' then close() end
+    elseif message.type=='close' then close()
+    elseif message.type=='background' then
+        if M.current then M.message='Apply or discard Track textures first.'
+        elseif M.background then M.close();M.background.open() end
+    end
 end
 function M.visible() return html5 and html5.run('!!window.riderTrackPanel?.visible')=='true' end
 local function presets()
@@ -95,6 +99,9 @@ local function presets()
 end
 function M.open()
     if not html5 then return end
+    local bg=M.background -- supplied by the GUI owner; avoid a circular Defold resource dependency
+    if bg and bg.current then editor.message='Apply or discard Background first.';return end
+    if bg then bg.close() end
     local look=require('main.editor.editor_look').session
     if look and look.dirty then editor.message='Apply or reset Terrain Look first.';return end
     M.current=nil
@@ -117,7 +124,7 @@ function M.tick()
     if text=='[]' then return end
     local ok,list=pcall(json.decode,text)
     if not ok or type(list)~='table' then return end
-    for _,message in ipairs(list) do M.handle(message) end
+    for _,message in ipairs(list) do M.handle(message);if not M.visible() then break end end
     if not M.visible() then return end
     html5.run('window.riderTrackPanel.show('..json.encode(M.current or editor.doc.editor.material or false)..','..json.encode(M.message or '')..')')
 end

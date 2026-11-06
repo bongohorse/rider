@@ -380,8 +380,9 @@ local function update_backgrounds(self)
             self.background_source=spec
             local resolved,warning=require('main.backgrounds.source').resolve(spec)
             backgrounds.set(self.backgrounds,resolved);self.background_warning=warning
+            local old_warning=editor.background_warning
             editor.background_warning=warning
-            if warning then editor.message=warning end
+            if warning then editor.message=warning elseif editor.message==old_warning then editor.message='' end
         end
     end
     if self.backgrounds.dirty or next(self.backgrounds.layers) then
