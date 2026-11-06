@@ -380,6 +380,8 @@ local function update_backgrounds(self)
             self.background_source=spec
             local resolved,warning=require('main.backgrounds.source').resolve(spec)
             backgrounds.set(self.backgrounds,resolved);self.background_warning=warning
+            editor.background_warning=warning
+            if warning then editor.message=warning end
         end
     end
     if self.backgrounds.dirty or next(self.backgrounds.layers) then
@@ -791,6 +793,7 @@ function on_message(self,id,data,sender)
         if not self.background_probe then
             local resolved,warning=require('main.backgrounds.source').resolve(self.station and self.station.backgrounds)
             backgrounds.set(self.backgrounds,resolved);self.background_warning=warning
+            if warning then self.station_note=(self.station_note and self.station_note~='' and self.station_note..'; ' or '')..warning end
         end
         if not self.station and data.note then self.station_note=data.note end
         self.preset=feel.preset(data.preset or self.preset or "a") -- no loader preset yet: keep the URL preset

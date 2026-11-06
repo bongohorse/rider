@@ -35,10 +35,10 @@ async function main(){
    assert.equal(s.source_sha,sha);assert.equal(s.run_id,runId);assert.equal(s.objects,objects);assert.equal(s.textures,objects);assert.equal(s.texture_bytes,objects*1024*512*4);
    assert.deepEqual(s.source,source);assert.equal(s.layers[1].visible,false);assert.equal(s.layers[2].auto,false);assert.equal(s.layers[2].depth,.27);assert.match(s.warning,/missing/);
   }
-  r=await load();selected(r);assert.equal(r.edit,false);report.cases.imported_play=r;await page.screenshot({path:path.join(out,'play.png')});
+  r=await load();selected(r);assert.equal(r.edit,false);assert.match(await page.evaluate(()=>window.riderTelemetry.station_note),/Local background image missing/);report.cases.imported_play=r;await page.screenshot({path:path.join(out,'play.png')});
   async function key(name){await page.keyboard.down(name);await page.waitForTimeout(100);await page.keyboard.up(name);await page.waitForTimeout(100);}
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderBackgroundState?.edit&&window.riderBackgroundState?.objects===5,null,{timeout:30000});
-  r=await state();selected(r);report.cases.edit_agreement=r;await page.screenshot({path:path.join(out,'edit.png')});
+  r=await state();selected(r);assert.match(await page.evaluate(()=>window.riderEditor.message),/Local background image missing/);report.cases.edit_agreement=r;await page.screenshot({path:path.join(out,'edit.png')});
   await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderTelemetry?.station==='custom'&&window.riderTelemetry?.sequence>2&&window.riderBackgroundState?.objects===5,null,{timeout:60000});
   r=await state();selected(r);assert.equal(r.edit,false);report.cases.saved_reload=r;
   source.enabled=false;fixture.editor.backgrounds=structuredClone(source);r=await load();selected(r,0);assert.equal(r.buffers,0);
