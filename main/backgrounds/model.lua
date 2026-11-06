@@ -1,5 +1,5 @@
 -- Render-only resolved layer settings. Authored source/versioning belongs to #548.
-local M={MIN_DEPTH=-0.25,MAX_DEPTH=1,AUTO={0.9,0.75,0.55,0.35,0.15,-0.1},HEIGHT=12,SAFE_FRACTION=0.16}
+local M={MIN_DEPTH=-0.25,MAX_DEPTH=1,AUTO={0.9,0.75,0.55,0.35,0.15,-0.1},HEIGHT=12}
 local function finite(n) return type(n)=="number" and n==n and n~=math.huge and n~=-math.huge end
 local function image_id(v) return v==nil or type(v)=="string" and #v<=512 end
 function M.normalize(config)
@@ -25,24 +25,32 @@ function M.active(config,index)
     return config.enabled and l.visible and ((l.image and l.image~="") or (l.preset_image and l.preset_image~="")) and true or false
 end
 -- Metres at the boundary. No body, collision or camera access in this module.
-function M.layout(frame,index)
+function M.layout(frame,_index)
     local cx,cy,w,h=frame.x,frame.y,frame.half_w,frame.half_h
     assert(finite(cx) and finite(cy) and finite(w) and finite(h) and w>0 and h>0,"Invalid render frame")
-    if index==6 then
-        local bottom=cy-h
-        local top=bottom+2*h*M.SAFE_FRACTION
-        if frame.vehicle_low~=nil then
-            assert(finite(frame.vehicle_low),"Invalid visual vehicle bound")
-            top=math.min(top,frame.vehicle_low-0.08)
-        end
-        h=math.max(0,(top-bottom)/2);cy=bottom+h
-    end
     return {x=cx,y=cy,half_w=w,half_h=h}
 end
-function M.uv(frame,rect,layer,index,width,height)
-    local tile_h=M.HEIGHT;local tile_w=tile_h*width/height
+-- `scroll` is the foreground's per-layer state: the phase accumulates at the current image size, so it moves at
+-- 1-Depth of world speed and a camera zoom scales the image without sliding it.
+function M.uv(frame,rect,layer,index,width,height,scroll)
+    local tile_h=index==6 and 2*frame.half_h or M.HEIGHT;local tile_w=tile_h*width/height
     local factor=M.factor(layer,index)
+    if index==6 then
+        local phase=frame.x*factor/tile_w
+        if scroll then
+            phase=scroll.x and scroll.phase+(frame.x-scroll.x)*factor/tile_w or phase
+            scroll.x,scroll.phase=frame.x,phase
+        end
+        return {rect.half_w/tile_w,0.5,phase+0.5,0.5}
+    end
     return {rect.half_w/tile_w,rect.half_h/tile_h,
         frame.x*factor/tile_w+0.5,(rect.y-frame.y+frame.y*factor)/tile_h+0.5}
+end
+-- Normalized viewport coordinates; a visual GO read is supplied by the controller.
+function M.cutout(frame)
+    local v=frame.vehicle
+    if not v then return {-10,-10,1,1} end
+    return {0.5+(v.x-frame.x)/(2*frame.half_w),0.5+(v.y-frame.y)/(2*frame.half_h),
+        1.9/(2*frame.half_w),1.6/(2*frame.half_h)}
 end
 return M

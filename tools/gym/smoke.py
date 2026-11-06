@@ -142,7 +142,7 @@ if args.case=='bg549':
 if args.case=='bg548':
     report=json.loads((out/'background548-result.json').read_text())
     identity(report)
-    assert set(report['cases'])=={'legacy_empty','imported_play','edit_agreement','saved_reload','master_off_restore'}
+    assert set(report['cases'])=={'legacy_empty','imported_play','edit_agreement','saved_reload','master_off_restore','foreground_603'}
     print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='bg546':
     report=json.loads((out/'background546-result.json').read_text())
