@@ -41,7 +41,7 @@
     }
     const note = document.createElement('p');note.id = 'rider-track-note';note.setAttribute('aria-live', 'polite');note.style.cssText = 'min-height:1.3em;margin:8px 0;color:#ffd08a';panel.append(note);
     const row = document.createElement('div');row.style.cssText = 'display:flex;gap:6px';
-    for (const [id, label] of [['apply', 'Apply'], ['discard', 'Discard']]) {
+    for (const [id, label] of [['apply', 'Apply'], ['discard', 'Discard'], ['close', 'Close']]) {
       const b = document.createElement('button');b.type = 'button';b.id = 'rider-track-' + id;b.textContent = label;b.style.padding = '6px 12px';
       b.onclick = () => send({type: id});row.append(b);
     }

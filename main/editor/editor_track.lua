@@ -60,12 +60,14 @@ function M.apply()
     M.discard()
     return true
 end
+local close
 -- Messages from the page, bounded by the page's queue. Returns true when the panel asks to refresh.
 function M.handle(message)
     if type(message)~='table' then return end
     if message.type=='draft' then M.draft(message.material)
     elseif message.type=='apply' then M.apply()
-    elseif message.type=='discard' then M.discard() end
+    elseif message.type=='discard' then M.discard()
+    elseif message.type=='close' then close() end
 end
 function M.visible() return html5 and html5.run('!!window.riderTrackPanel?.visible')=='true' end
 local function presets()
@@ -86,6 +88,7 @@ function M.close()
     M.discard()
     if html5 then html5.run('window.riderTrackPanel&&window.riderTrackPanel.close()') end
 end
+close=M.close
 function M.tick()
     if not (html5 and M.visible()) then return end
     local text=html5.run('window.riderTrackPanel.take()')
@@ -93,6 +96,7 @@ function M.tick()
     local ok,list=pcall(json.decode,text)
     if not ok or type(list)~='table' then return end
     for _,message in ipairs(list) do M.handle(message) end
+    if not M.visible() then return end
     html5.run('window.riderTrackPanel.show('..json.encode(M.current or editor.doc.editor.material or false)..','..json.encode(M.message or '')..')')
 end
 return M

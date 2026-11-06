@@ -40,8 +40,8 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  await page.locator('[data-preset=inca]').click();await pointer.frames(page,{n:6});await page.locator('#rider-track-band').selectOption('glacier');await pointer.frames(page,{n:6});
  await page.locator('#rider-track-apply').click();await page.waitForFunction(()=>window.riderEditorDoc.material?.preset==='inca',null,{timeout:10000});
  assert.equal((await material()).band,'glacier');assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo+1);
- await page.evaluate(()=>window.riderTrackPanel.close());await pointer.frames(page,{n:6});
- await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('undo');await page.waitForFunction(()=>!window.riderEditorDoc.material,null,{timeout:10000});
+ await page.locator('#rider-track-close').click();await page.waitForFunction(()=>!window.riderTrackPanel.visible);await pointer.frames(page,{n:6});
+ await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('undo');await pointer.frames(page,{n:10});await page.waitForFunction(()=>!window.riderEditorDoc.material,null,{timeout:10000}).catch(async e=>{console.log(JSON.stringify(await page.evaluate(()=>({m:window.riderEditor.message,status:window.riderEditor.status,u:window.riderEditor.undo,mat:window.riderEditorDoc.material}))));await page.screenshot({path:path.join(out,'undo.png')});throw e;});
  await page.waitForFunction(()=>!window.riderRoadProjection?.material?.preset,null,{timeout:10000});
  await tap('redo');await page.waitForFunction(()=>window.riderEditorDoc.material?.preset==='inca',null,{timeout:10000});
  await page.waitForFunction(()=>window.riderRoadProjection?.material?.preset==='inca',null,{timeout:10000});
