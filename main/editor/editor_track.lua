@@ -83,7 +83,7 @@ function M.handle(message)
     elseif message.type=='discard' then M.discard()
     elseif message.type=='close' then close()
     elseif message.type=='background' then
-        if M.current then M.message='Apply or discard Track textures first.'
+        if M.current then M.message='Apply or discard Texture first.'
         elseif M.background then M.close();M.background.open() end
     end
 end
@@ -103,7 +103,7 @@ function M.open()
     if bg and bg.current then editor.message='Apply or discard Background first.';return end
     if bg then bg.close() end
     local look=require('main.editor.editor_look').session
-    if look and look.dirty then editor.message='Apply or reset Terrain Look first.';return end
+    if look and look.dirty then editor.message='Apply or reset 3D first.';return end
     M.current=nil
     html5.run(assert(sys.load_resource('/main/game/track_panel.js'),'Missing track panel'))
     html5.run('window.riderTrackPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.material or false)..')')

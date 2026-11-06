@@ -94,6 +94,9 @@ module.exports=async function uiChecks(h){
   await page.setViewportSize(size);await pointer.frames(page);await key('Home');await key('Escape');await key('p');await key('2');await hover([6,3]);e=await settle();
   assert.equal(e.prefab_kind,'ramp');assert.equal(e.tool,'prefab');
   assert.equal(e.ui.rects.new.y,8);assert.equal(e.ui.rects.new.x,size.width-264);
+  // #602: Undo, Redo and Play sit in the top bar, left of Versions, without overlap.
+  for(const name of ['undo','redo','play'])assert.equal(e.ui.rects[name].y,8,name+' top bar');
+  assert.ok(e.ui.rects.undo.x+e.ui.rects.undo.w<=e.ui.rects.redo.x&&e.ui.rects.redo.x+e.ui.rects.redo.w<=e.ui.rects.play.x&&e.ui.rects.play.x+e.ui.rects.play.w<=e.ui.rects.versions.x,'top-bar commands overlap');
   assert.equal(e.ui.rects.play.y,56);assert.equal(e.ui.rects.play.x,size.width/2+20);
   assert.equal(e.ui.rects.undo.x,size.width/2-60);assert.equal(e.ui.rects.redo.x,size.width/2-20);
   assert.equal(e.ui.scale,1);assert.equal(e.usable.x1-e.usable.x0,size.width-528);

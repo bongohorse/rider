@@ -47,7 +47,7 @@
     panel = document.createElement('section');panel.id = 'rider-background-panel';panel.setAttribute('aria-label', 'Background');
     panel.style.cssText = 'position:fixed;right:16px;top:64px;z-index:99998;box-sizing:border-box;width:min(700px,calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;padding:12px;background:#17272f;color:#eef;border:1px solid #4a6a78;border-radius:6px;font:14px sans-serif';
     const tabs = document.createElement('div');tabs.setAttribute('role', 'tablist');tabs.style.cssText = 'display:flex;gap:6px;margin-bottom:10px';
-    const track = button('Track textures', () => send({type: 'track'}));track.setAttribute('role', 'tab');track.setAttribute('aria-selected', 'false');
+    const track = button('Texture', () => send({type: 'track'}));track.setAttribute('role', 'tab');track.setAttribute('aria-selected', 'false');
     const background = button('Background', () => {});background.setAttribute('role', 'tab');background.setAttribute('aria-selected', 'true');tabs.append(track, background);panel.append(tabs);
     const masterLabel = document.createElement('label');masterLabel.style.cssText = 'display:flex;gap:8px;align-items:center;font-size:17px;margin-bottom:10px';
     const master = document.createElement('input');master.type = 'checkbox';master.id = 'rider-background-enabled';master.onchange = () => { if (draft) { draft.enabled = master.checked;changed(); } };

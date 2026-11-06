@@ -84,7 +84,7 @@ async function main(){
   await page.screenshot({path:path.join(out,'drive.png')});report.cases.reload_play={source:expected,play:await state()};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderBackgroundState?.edit,null,{timeout:30000});await open();
   const undo=await page.evaluate(()=>window.riderEditor.undo);await page.locator('[data-background-preset=meadow]').click();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='meadow');
-  await page.locator('#rider-background-panel').getByRole('tab',{name:'Track textures',exact:true}).click();
+  await page.locator('#rider-background-panel').getByRole('tab',{name:'Texture',exact:true}).click();
   await page.waitForFunction(()=>window.riderBackgroundPanel.message.includes('Apply or discard'));assert.equal(await page.evaluate(()=>window.riderBackgroundPanel.visible),true);
   // Canvas dialogs take precedence without discarding the pending Meadow preview.
   for(const modal of [{open:'view_help',field:'help_open',close:'help_close'},{open:'versions',field:'versions_open',close:'dialog_close'}]){
@@ -95,7 +95,7 @@ async function main(){
    assert.equal(await page.locator('#rider-background-panel').isVisible(),true);assert.equal((await state()).source.preset,'meadow');
   }
   await page.locator('#rider-background-discard').click();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='volcano');assert.deepEqual((await document()).backgrounds,expected);
-  await page.locator('#rider-background-panel').getByRole('tab',{name:'Track textures',exact:true}).click();await page.waitForFunction(()=>window.riderTrackPanel.visible&&!window.riderBackgroundPanel.visible);
+  await page.locator('#rider-background-panel').getByRole('tab',{name:'Texture',exact:true}).click();await page.waitForFunction(()=>window.riderTrackPanel.visible&&!window.riderBackgroundPanel.visible);
   await page.locator('#rider-track-panel').getByRole('tab',{name:'Background',exact:true}).click();await page.waitForFunction(()=>window.riderBackgroundPanel.visible);
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    await page.setViewportSize(viewport);await pointer.frames(page,{n:15});
