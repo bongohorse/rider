@@ -2,7 +2,7 @@
   "version": 1,
   "license": "Original work generated for Rider; no third-party input.",
   "generator": "tools/art/background_presets.py",
-  "generator_sha256": "15446abe8be6f891664040330af787331b6081acb479fa513628741d9de57b93",
+  "generator_sha256": "155c6ba3cbd6039ae99e732a50d2665452dcad1d8e174b74d15bdf0e9ef5b927",
   "size": [
     1024,
     512
@@ -18,32 +18,32 @@
       "seed": 5471,
       "files": {
         "layer1": {
-          "sha256": "72da20035484f847658fa7a505cb9a79a6939ef439220ab7e202b0a599abe61b",
-          "rgba_sha256": "8799cc0790efaee4343c2a4b3182edf4d90be822defb532027b56ffeabac681c"
+          "sha256": "d9d5dd3ccb41f34a5b00442dfc3cdd1dd9868470dc9a714d83c01224e482c5f2",
+          "rgba_sha256": "6466301cce600141868c6607c29b8d1e556dc69610d8faa48b18573f915bbba5"
         },
         "layer2": {
-          "sha256": "80aa9e9847ccf5e83355270547cd1897a1ce0992e582c9c34744bab485a5a49f",
-          "rgba_sha256": "21b9379c5ec5e546511080b80172be590a084fe1afc8b3d05f1eb44f3329ef4a"
+          "sha256": "fdb3f59a21c4fcbfd6f8f2d26bf207f342561dbaf4be6f507f743591ecc88ba4",
+          "rgba_sha256": "52c5e4edbe6fc5c8425ceafb56e72edef4949c1119d8b0258713b52e082eb24b"
         },
         "layer3": {
-          "sha256": "e1ca7eaf3c729b121d10c6500461291ea9c626aeebecec46fd0943c35b1d2190",
-          "rgba_sha256": "3b8180f2b3911e9a74249c9c82fb0e18e9b0debfa7fe65480107e14ab2e2ca6c"
+          "sha256": "2766edc084147c5d4c672e1b75c7ad6fd1c1bce876e07ee2b44d3244a41d9d43",
+          "rgba_sha256": "2e09ca6008acc6980ed88a2c3857e6469b076eade36d314d09443ad1a67ae404"
         },
         "layer4": {
-          "sha256": "0bc59be5bd5b14c3b2515602d0b21cf79db3df30213fe64c4c415d3573747e94",
-          "rgba_sha256": "3dbbd4d0a78a3381fc78cf85d40bcf540c3b484d37583c95a48570fa45475674"
+          "sha256": "7f5c4070d7c696ea766e0cd5dbf3406cae1e80e3756a5497d39a90b55b233dc1",
+          "rgba_sha256": "0c7814f3ec891c7dfea29f9d68872e8d8db276d0ffd7b5f2c3bf50ac936a1ee5"
         },
         "layer5": {
-          "sha256": "06425a1b57549e8c67c25c56e0d960cf3459a3ca80b4da2875c8ddf111dccaa9",
-          "rgba_sha256": "b7976eab3bd9f27f9d8e4f4fba03bc147e2675696f4233a4133bc2b62f030df7"
+          "sha256": "58521eb3a600aee9e4941a64d7cf02f4798babfb517e654b50e25300a3438cf1",
+          "rgba_sha256": "ffe18be53db4318419485b0ab203bad572a4a4a7f868aede5a028a0f55416c4f"
         },
         "foreground": {
-          "sha256": "cc8653232b0f779a9a7d246da42f5493d4baf51c6a321a5943618c21b6a19547",
-          "rgba_sha256": "79756051a14e992008e764df2f4cf173d122495b4f32d00e43f5eb97a3ce2633"
+          "sha256": "1934eb2a1ae13fe1a0cfed91f866df285bfa6b1b719576eb2c2782b45a87811b",
+          "rgba_sha256": "08694850ae29381056127e5f7b73dfd860755e478d0ba6e8647fd3ad5ab7ec34"
         },
         "thumb": {
-          "sha256": "9232d7dc281e87cd551ab1bb0303bb8215459d9fa93e6f3bbffd832d27d07033",
-          "rgba_sha256": "1248e926d295d4e01a92d91af14b451a7fd0ec4f2ef82c7b6d9ebf749dc6647a"
+          "sha256": "64adae0f51d7eb47f056562a5d4bdc4827363fd02931ce44b698aadf5cc5ef59",
+          "rgba_sha256": "578a58a71bdf54aca57bfce1e7f207cdb02054fa9c0765218d2bbe34b1f186c7"
         }
       }
     },
