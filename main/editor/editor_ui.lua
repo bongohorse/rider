@@ -264,6 +264,9 @@ function M.render(u,d)
     -- In Edit, Terrain Look lies over the working editor: the chrome draws first, the panel on top.
     local overlay=d.modal=='terrain_look' and not d.play
     u.modal_rect=nil
+    -- Properties folds to its tab meanwhile: text would show through the panel.
+    local properties_open=u.properties
+    if overlay then u.properties=true end
     for pass=1,overlay and 2 or 1 do
     local modal=d.modal
     if overlay and pass==1 then modal=nil end
@@ -534,7 +537,7 @@ function M.render(u,d)
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
-        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16 end
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16;if overlay then mx=w-mw-72;my=56;mh=math.min(580,h-136) end end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
             local s=d.look
@@ -625,6 +628,7 @@ function M.render(u,d)
         end
     end
     end
+    if overlay then u.properties=properties_open end
     local modal=d.modal
     if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if d.field and not u.hover and u.tips[d.field.key] then
