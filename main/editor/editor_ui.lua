@@ -265,7 +265,8 @@ function M.render(u,d)
     local overlay=d.modal=='terrain_look' and not d.play
     u.modal_rect=nil
     for pass=1,overlay and 2 or 1 do
-    local modal=(overlay and pass==1) and nil or d.modal
+    local modal=d.modal
+    if overlay and pass==1 then modal=nil end
     if modal and not overlay then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
