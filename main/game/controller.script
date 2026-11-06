@@ -470,6 +470,7 @@ function update(self, dt)
     else
         go.set_position(vmath.vector3(target.x,feel.values.camera_height,500),"/camera")
     end
+    require("main.game.free_camera").update()
     require("main.game.terrain_mesh").update(self)
     require("main.terrain_perspective.vehicle_shadow").update(self)
     if self.vehicle and self.vehicle.ready then
