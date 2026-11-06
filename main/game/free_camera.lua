@@ -4,7 +4,7 @@ local M={}
 local FREE_CAM=[==[(()=>{if(window.riderFreeCam)return;const k={},moves=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyQ','KeyE','ShiftLeft','ShiftRight'];
 let on=false,x=0,y=0,z=.8,last=0,drag=null;
 const b=document.createElement('button');b.type='button';b.textContent='Free cam [O]';b.style.cssText='position:fixed;left:16px;bottom:64px;z-index:9;padding:6px 10px;font:600 13px sans-serif;background:#1d3a44;color:#fff;border:1px solid #6fb;border-radius:4px;opacity:.9';
-const set=v=>{on=v;b.textContent=on?'Free cam ON [O]':'Free cam [O]';b.style.background=on?'#2c8a5e':'#1d3a44';if(on){addEventListener('wheel',onWheel,{capture:true,passive:false});const c=window.riderRoadProjection&&window.riderRoadProjection.camera;if(c){x=c[0];y=c[1];}last=performance.now();}else{removeEventListener('wheel',onWheel,{capture:true});delete window.riderFreeCamPose;for(const m of moves)k[m]=0;drag=null;}};
+let step;const set=v=>{on=v;b.textContent=on?'Free cam ON [O]':'Free cam [O]';b.style.background=on?'#2c8a5e':'#1d3a44';if(on){addEventListener('wheel',onWheel,{capture:true,passive:false});const c=window.riderRoadProjection&&window.riderRoadProjection.camera;if(c){x=c[0];y=c[1];}last=performance.now();requestAnimationFrame(step);}else{removeEventListener('wheel',onWheel,{capture:true});delete window.riderFreeCamPose;for(const m of moves)k[m]=0;drag=null;}};
 b.onclick=()=>{set(!on);document.querySelector('canvas')?.focus();};document.body.append(b);
 const cancel=e=>{e.stopImmediatePropagation();e.preventDefault();};
 const typing=e=>{const t=e.target;return !!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable));};
@@ -18,10 +18,12 @@ addEventListener('mousemove',e=>{if(drag){x=drag.x-(e.clientX-drag.cx)*scale();y
 addEventListener('mouseup',e=>{if(drag&&e.button===2){drag=null;cancel(e);}},true);
 addEventListener('contextmenu',e=>{if(on)cancel(e);},true);
 const onWheel=e=>{if(!on)return;const c=document.querySelector('canvas').getBoundingClientRect();if(e.clientX>c.left+c.width*.65)return;z=Math.max(.02,Math.min(6,z*Math.exp(-e.deltaY*.001)));cancel(e);};
-const step=t=>{requestAnimationFrame(step);b.style.display=window.riderEditing?'none':'';if(window.riderEditing&&on)set(false);if(!on)return;const d=Math.min(.1,(t-last)/1000);last=t;const v=12/z*(k.ShiftLeft||k.ShiftRight?3:1)*d;
+// Frames run only while on: Gym frame-rate checks count requestAnimationFrame callbacks.
+setInterval(()=>{b.style.display=window.riderEditing?'none':'';if(window.riderEditing&&on)set(false);},200);
+step=t=>{if(!on)return;requestAnimationFrame(step);const d=Math.min(.1,(t-last)/1000);last=t;const v=12/z*(k.ShiftLeft||k.ShiftRight?3:1)*d;
 x+=((k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0))*v;y+=((k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0))*v;
 if(k.KeyE)z=Math.min(6,z*Math.exp(d*1.5));if(k.KeyQ)z=Math.max(.02,z*Math.exp(-d*1.5));window.riderFreeCamPose={x,y,zoom:z};};
-requestAnimationFrame(step);window.riderFreeCam={set,get on(){return on;},get zoom(){return z;}};})()]==]
+window.riderFreeCam={set,get on(){return on;},get zoom(){return z;}};})()]==]
 function M.update()
     if not (html5 and sys.get_engine_info().is_debug) then return end
     if not M.installed then M.installed=true;html5.run(FREE_CAM) end
