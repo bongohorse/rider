@@ -34,3 +34,5 @@ components { id: "vehicle_shadow" component: "/main/terrain_perspective/vehicle_
 components { id: "mechanism_crate" component: "/main/game/mechanism_crate.factory" }
 components { id: "mechanism_plate" component: "/main/game/mechanism_plate.factory" }
 components { id: "mechanism_gate" component: "/main/game/mechanism_gate.factory" }
+components { id: "background_mesh" component: "/main/backgrounds/background.factory" }
+components { id: "foreground_mesh" component: "/main/backgrounds/foreground.factory" }

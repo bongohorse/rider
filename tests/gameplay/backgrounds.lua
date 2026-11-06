@@ -1,0 +1,60 @@
+local model=require "main.backgrounds.model"
+local function near(a,b) assert(math.abs(a-b)<1e-8,tostring(a).." vs "..tostring(b)) end
+local config={enabled=true,layers={{image="grid",auto=false,depth=0.5},{visible=false,image="grid"}}}
+local normalized=assert(model.normalize(config));assert(model.active(normalized,1) and not model.active(normalized,2))
+assert(model.normalize({layers={[7]={}}})==nil)
+for _,depth in ipairs({-0.26,1.01,math.huge,0/0}) do assert(model.normalize({layers={{depth=depth}}})==nil) end
+local frame={x=6,y=12,half_w=5,half_h=3,vehicle_low=10}
+local rect=model.layout(frame,1);local uv=model.uv(frame,rect,normalized.layers[1],1,64,32)
+near(uv[3],0.625);near(uv[4],1)
+local fg=model.layout(frame,6);assert(fg.y+fg.half_h<=9.92+1e-8 and fg.half_h<=0.48+1e-8)
+frame.vehicle_low=8;assert(model.layout(frame,6).half_h==0)
+-- Resource-owner model: components retain refs until the engine deletes their GOs.
+local refs,objects,deleted,loads={}, {}, {}, {}
+local function retain(id) if id then refs[id]=(refs[id] or 0)+1 end end
+local function release(id) assert(refs[id] and refs[id]>0,"Double/foreign release");refs[id]=refs[id]-1 end
+hash=function(x)return x end
+buffer={VALUE_TYPE_FLOAT32=1,set_metadata=function()end,create=function()return {} end,get_stream=function(b,k)b[k]={};return b[k] end}
+resource={create_buffer=function(path)assert(not refs[path]);refs[path]=1;return path end,
+ create_texture=function(path)assert(not refs[path]);refs[path]=1;return path end,release=release}
+image={TYPE_RGBA="rgba",load_buffer=function()return {type="rgba",width=64,height=32,buffer={}} end}
+graphics={TEXTURE_TYPE_2D=1,TEXTURE_FORMAT_RGBA=1}
+sys={load_resource=function(path)loads[path]=(loads[path] or 0)+1;if path=="missing" then return nil end;return path end}
+vmath={vector3=function(...)return {...} end,vector4=function(...)return {...} end}
+msg={url=function(_,id)return id end,post=function(id)assert(objects[id]) end}
+local next_object=0
+factory={STATUS_LOADED=1,create=function()next_object=next_object+1;objects[next_object]={};return next_object end,get_status=function()return 0 end,unload=function()end}
+go={
+ delete=function(id)assert(objects[id]);deleted[#deleted+1]=id end,
+ set_position=function(_,id)assert(objects[id],"Foreign GO write") end,set_scale=function(_,id)assert(objects[id],"Foreign GO write") end}
+-- Components retain the resource when the property is set.
+local owner_release=resource.release
+go.set=function(id,k,v)assert(objects[id]);if k=="vertices" or k=="texture0" then if objects[id][k] then owner_release(objects[id][k]) end;objects[id][k]=v;retain(v) end end
+local function flush()
+ for _,id in ipairs(deleted) do local o=objects[id];for _,k in ipairs({"vertices","texture0"}) do if o[k] then release(o[k]) end end;objects[id]=nil end
+ deleted={}
+end
+local render=require "main.backgrounds.renderer"
+local state=render.new(0.01)
+render.update(state,frame);assert(next(refs)==nil,"Empty layer allocated")
+assert(render.set(state,config));render.update(state,frame)
+local report=render.report(state);assert(report.objects==1 and report.buffers==1 and report.texture_bytes==8192)
+assert(not render.set(state,{enabled="yes"}));assert(state.config.enabled)
+assert(render.enabled(state,false));render.update(state,frame);flush()
+assert(render.report(state).objects==0 and render.report(state).buffers==0)
+assert(state.config.layers[1].visible and not state.config.layers[2].visible)
+for _,n in pairs(refs) do assert(n==0,"Disabled owner leak") end
+assert(render.enabled(state,true));render.update(state,frame);assert(render.report(state).objects==1)
+assert(config.layers[2].visible==false and config.enabled,"Input was mutated")
+assert(render.visible(state,1,false));render.update(state,frame);flush();assert(render.report(state).objects==0)
+assert(render.visible(state,1,true));render.update(state,frame);assert(render.report(state).objects==1)
+-- Missing chosen image falls back; a missing fallback is safely omitted and not retried per frame.
+assert(render.set(state,{layers={{image="missing",preset_image="grid"},{image="missing"}}}));render.update(state,frame);flush()
+assert(render.report(state).objects==1 and state.errors[2]);local before=loads.missing
+render.update(state,frame);assert(loads.missing==before)
+-- Live OFF/ON never loses choices and releases each image exactly once.
+for _=1,8 do render.enabled(state,false);render.update(state,frame);flush();render.enabled(state,true);render.update(state,frame) end
+render.enabled(state,false);render.update(state,frame);flush()
+for _,n in pairs(refs) do assert(n==0,"Live toggle resource leak") end
+render.final(state)
+print("PASS backgrounds: Depth, bounded foreground, atomic configuration, preserved choices and resource owners")

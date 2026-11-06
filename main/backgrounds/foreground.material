@@ -1,0 +1,9 @@
+name: "foreground"
+tags: "foreground"
+vertex_program: "/main/backgrounds/layer.vp"
+fragment_program: "/main/backgrounds/layer.fp"
+vertex_space: VERTEX_SPACE_LOCAL
+vertex_constants { name: "world_view_proj" type: CONSTANT_TYPE_WORLDVIEWPROJ }
+vertex_constants { name: "uv_transform" type: CONSTANT_TYPE_USER value { x: 1 y: 1 z: 0 w: 0 } }
+fragment_constants { name: "image_size" type: CONSTANT_TYPE_USER value { x: 1 y: 1 z: 0 w: 0 } }
+samplers { name: "tex0" wrap_u: WRAP_MODE_REPEAT wrap_v: WRAP_MODE_CLAMP_TO_EDGE filter_min: FILTER_MODE_MIN_LINEAR filter_mag: FILTER_MODE_MAG_LINEAR }

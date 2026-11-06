@@ -260,6 +260,8 @@ jobs:
             cases: 'fps417 fps444'
           - group: camera
             cases: 'cam443'
+          - group: backgrounds
+            cases: 'bg546'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -453,6 +455,9 @@ jobs:
           name: gym-visual-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/g1/gym/gym.png
           retention-days: 14
+      - name: Background layer motion, switches and resource lifecycle (#546)
+        if: contains(format(' {0} ', matrix.cases), ' bg546 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/backgrounds --case bg546
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

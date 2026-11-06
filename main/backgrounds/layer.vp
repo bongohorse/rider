@@ -1,0 +1,9 @@
+#version 140
+in highp vec3 position;
+in highp vec2 texcoord0;
+out highp vec2 uv;
+uniform vs_uniforms { highp mat4 world_view_proj; highp vec4 uv_transform; };
+void main() {
+    gl_Position=world_view_proj*vec4(position,1.0);
+    uv=texcoord0*uv_transform.xy+uv_transform.zw;
+}

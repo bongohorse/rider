@@ -134,6 +134,11 @@ if args.case=='cam443':
         c=report['cases'][name]
         assert c['physics']['max_difference']==0 and c['physics']['ticks']>=300 and c['replay']['verdict']=='MATCH'
     print(json.dumps({k:{'physics':report['cases'][k]['physics']['modes'],'replay':report['cases'][k]['replay']['verdict']} for k in ('ramps-down-30','air-mid','straight-reverse')}));raise SystemExit(0)
+if args.case=='bg546':
+    report=json.loads((out/'background546-result.json').read_text())
+    identity(report)
+    assert set(report['cases'])=={'empty','depth_xy','vertical_edges','foreground_safe','layer_toggle','master_restore','missing_fallback','world_teardown','resource_cycles'}
+    print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='cf3':
     report=json.loads((out/'struts-result.json').read_text())
     assert report['status']=='PASS' and report['source_sha']==sha and report['run_id']==run_id and set(report['cases'])=={'rest','landing','off','toggle'}
