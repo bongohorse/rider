@@ -43,7 +43,7 @@ function M.validate(d)
     if d.mechanisms~=nil and d.schema~=5 and d.schema~=6 and d.schema~=7 then return nil,'Mechanisms require station schema 5',true end
     if d.material~=nil and d.schema~=6 and d.schema~=7 then return nil,'A level material requires station schema 6',true end
     if d.material~=nil and not (type(d.editor)=='table' and d.editor.road_profile==require('main.terrain_perspective.look').ID) then
-        return nil,'A level material needs the authored Terrain Look'
+        return nil,'A level material needs the authored 3D look'
     end
     if d.backgrounds~=nil and d.schema~=7 then return nil,'Backgrounds require station schema 7',true end
     local bg_ok,bg_err,bg_unknown=require('main.backgrounds.source').validate(d.backgrounds)

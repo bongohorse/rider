@@ -6,7 +6,7 @@ Binding vocabulary and data model for level materials, depth, light, backgrounds
 
 ## Boundary
 
-Everything here is visual. It never writes collision, physics, replay or the follow camera. Visual consumers may read camera and vehicle GO transforms. The collision plane and driving line stay where the compiled level puts them. The [road-look contract](road-look.md) still owns parameter set v1, the projection, resources and Terrain Look controls; this contract owns what later tasks add to them.
+Everything here is visual. It never writes collision, physics, replay or the follow camera. Visual consumers may read camera and vehicle GO transforms. The collision plane and driving line stay where the compiled level puts them. The [road-look contract](road-look.md) still owns parameter set v1, the projection, resources and 3D look controls; this contract owns what later tasks add to them.
 
 ## Vocabulary
 
@@ -35,7 +35,7 @@ Everything here is visual. It never writes collision, physics, replay or the fol
 
 Claudio chose these values on 2026-11-05. No level has a material before this work, so the rule is:
 
-- The first material Apply replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. The panel previews this before Apply, and Apply is one Undo step. Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores the material and enables the profile, [#573](https://github.com/bongohorse/rider/issues/573) sets these values, and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
+- The first material choice replaces the level-wide look with these defaults and enables the authored profile, also on a legacy level. Each choice is stored at once as one Undo step (#604). Section overrides stay. [#542](https://github.com/bongohorse/rider/issues/542) stores the material and enables the profile, [#573](https://github.com/bongohorse/rider/issues/573) sets these values, and [#543](https://github.com/bongohorse/rider/issues/543) offers it.
 - A level without a material keeps its values and parameter set v1.
 - Parameter set v2 is valid only on a level with a material; without one it is refused.
 
@@ -102,7 +102,7 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 - The foreground is anchored to the screen bottom vertically and scrolls only horizontally with Depth. Its complete image height maps to the viewport, preserving aspect ratio and including its transparent silhouette; camera Y and vehicle overlap never crop it or select an extended edge row. It draws below the HUD and touch controls.
 - Around the vehicle, the foreground uses a screen-space ordered Bayer cutout with a broad smooth falloff and 25% coverage at the centre. The pixel pattern is fixed to the framebuffer, with no time or random phase. Only the visual vehicle GO position is read; no physics, camera or simulation writes. Claudio judges the see-through quality in the #603 drive test.
 - A missing image falls back to the preset.
-- The HTML5 editor offers a Background tab beside Track textures: four original presets, a master switch and per-slot visibility, image preset, Depth and Auto. Drafts preview without changing source; Apply is one Undo step, Discard/Close restore source, and Auto retains the manual Depth. Switching tabs requires applying or discarding a pending draft. Canvas modal dialogs temporarily hide the Background panel while retaining its draft; changing the document or leaving Edit closes it. Art and Auto values require Claudio's drive test.
+- The HTML5 editor offers a Background tab beside Texture: four original presets, a master switch and per-slot visibility, image preset, Depth and Auto. Each choice is stored at once as one Undo step (#604), a Depth drag previews and stores on release, Undo replaces Discard, and Auto retains the manual Depth. Canvas modal dialogs temporarily hide the Background panel; changing the document or leaving Edit closes it. Art and Auto values require Claudio's drive test.
 - The authored block is `editor.backgrounds`: `{version: 1, preset, enabled, layers}` with exactly six layer slots, each containing `visible`, `auto` and manual `depth`. An optional `image: {preset, hash?}` chooses another built-in preset's corresponding slot or names a local SHA-256 image with that preset fallback. Resource paths are resolved internally and never saved. Missing local bytes warn and preserve the reference. Applying the block raises editor/compiler to 15 and compiled station schema to 7; material-only files remain 14/schema 6, and untouched legacy files retain their versions. Unknown versions, fields, IDs and invalid sparse slots are refused without rewriting the source.
 
 ## Decorations

@@ -36,8 +36,8 @@ module.exports=async function check(browser,base,sha,out){
   const cosmetic=await page.evaluate(()=>({id:window.riderRun.id,generation:window.riderTelemetry.session_generation,shapes:window.riderTelemetry.terrain_shapes}));
   async function tapCanvas(x,y){const p=await page.locator('canvas').evaluate((c,p)=>{const r=c.getBoundingClientRect();return {x:r.x+p.x/c.width*r.width,y:r.y+p.y/c.height*r.height};},{x,y});await pointer.tap(page,p);await pointer.frames(page,{n:6});}
   const size=await page.locator('canvas').evaluate(c=>({w:c.width,h:c.height}));
-  await tapCanvas(616,size.h-40);await tapCanvas(size.w-436+316,16+104+12);await page.keyboard.type('1.2');await key('Enter');
-  const footer=16+Math.min(580,size.h-96)-22;await tapCanvas(size.w-436+148,footer);await tapCanvas(size.w-436+344,footer);
+  await tapCanvas(576,size.h-40);await tapCanvas(size.w-436+316,16+104+12);await page.keyboard.type('1.2');await key('Enter');
+  const footer=16+Math.min(580,size.h-96)-22;await pointer.frames(page,{n:12});await tapCanvas(size.w-436+344,footer);
   assert.equal((await state()).official,true);assert.equal((await state()).id,cosmetic.id);assert.equal(await page.evaluate(()=>window.riderTelemetry.session_generation),cosmetic.generation);assert.equal(await page.evaluate(()=>window.riderTelemetry.terrain_shapes),cosmetic.shapes);
   checks.push({name:'native-terrain-look-apply-preserves-official-identity-and-world',state:await state()});
   // Custom preset/assists are practice for the entire attempt, even if changed back.

@@ -256,7 +256,7 @@ if(require.main===module){
       if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim().slice(0,24)),left:b.left,top:b.top,right:b.right,bottom:b.bottom});}
     }
     if(!window.riderEditing){const k=Math.min(1,r.width/1280);
-     dom.push({name:'editor:Terrain Look',left:r.x+560*k,right:r.x+672*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
+     dom.push({name:'editor:3D',left:r.x+560*k,right:r.x+592*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
     const touch=!!window.riderMobile?.enabled;
     let fps=null,unit=0;
     if(H.fps_rect){const a=pt(H.fps_rect.top_left),b=pt(H.fps_rect.bottom_right);

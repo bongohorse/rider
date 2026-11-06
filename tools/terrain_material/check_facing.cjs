@@ -1,4 +1,4 @@
-// #570: real browser check with a preset and a strong Terrain Look. Four run ends, camera on each side: a run end that
+// #570: real browser check with a preset and a strong 3D look. Four run ends, camera on each side: a run end that
 // turned away must not draw over the front face; one that faces the camera must draw. Real input only.
 //   node tools/terrain_material/check_facing.cjs <verified debug bundle> <out dir>
 'use strict';
@@ -33,9 +33,9 @@ const ENDS=[['left-away',0,-1,false],['inner-right-facing',100,1,true],['inner-l
  const numeric=async(k,v)=>{await button('look_value_'+k);await page.keyboard.type(String(v),{delay:30});await key('Enter');await page.waitForFunction(([k,v])=>window.riderEditor.look.params[k]===v&&!window.riderEditor.look.pending,[k,v]);};
  // The first tap can land before the bar reacts: retry until the panel is open.
  for(let i=0;i<5&&!await page.evaluate(()=>window.riderEditor.look?.open===true);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await button('terrain_look');await page.waitForTimeout(400);}
- assert.equal(await page.evaluate(()=>window.riderEditor.look?.open),true,'Terrain Look did not open');
+ assert.equal(await page.evaluate(()=>window.riderEditor.look?.open),true,'3D look did not open');
  await numeric('width',2);await numeric('perspective',1);
- await button('look_apply');await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1');await button('look_close');
+ await page.waitForFunction(()=>window.riderEditorDoc.road_profile==='authored-v1'&&window.riderEditorDoc.road_look.params.perspective===1);await button('look_close');
  const map=()=>page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {s:e.screen,k:r.width/c.width,h:r.height,y:r.y,x:r.x,zoom:e.camera.zoom};});
  const at=(e,mx,my)=>({x:e.x+(e.s.ox+mx*e.s.ppm_x)*e.k,y:e.y+e.h-(e.s.oy+my*e.s.ppm_y)*e.k});
  const results=[];let failed=false;

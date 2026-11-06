@@ -160,7 +160,7 @@ local function live_look(self,state)
     local d=session.live(self.session_generation) or state.source
     if d==state.look_source then return end
     if not same_chains(state.source,d) then
-        if session.session then session.session.error='The editor geometry differs from this run. Play from the Editor first, then change Terrain Look.' end
+        if session.session then session.session.error='The editor geometry differs from this run. Play from the Editor first, then change 3D look.' end
         state.look_source=d;return
     end
     -- Retain the actual running station's markers/props/physics costs, even for a template copy.
