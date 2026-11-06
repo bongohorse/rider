@@ -14,8 +14,13 @@ const guard=JSON.parse(fs.readFileSync(path.join(bundle,'engines.json')));assert
 const index=Object.keys(manifest.files).filter(f=>f.endsWith('index.html'));assert.equal(index.length,1);
 const web=path.dirname(path.join(bundle,index[0]));
 function probe(){
- const s=window.__p545={frames:[],draws:0,textures:new Map(),bindings:new Map(),units:new Map(),drawOrder:[],next:0,identity:null};
+ const s=window.__p545={frames:[],draws:0,textures:new Map(),bindings:new Map(),units:new Map(),drawOrder:[],next:0,identity:null,blend:new Map(),programs:new Map(),samplers:new Map()};
  for(const proto of [window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype].filter(Boolean)){
+  const use=proto.useProgram,link=proto.linkProgram,bf=proto.blendFunc,bfs=proto.blendFuncSeparate;
+  proto.useProgram=function(program){s.programs.set(this,program);return use.call(this,program);};
+  proto.linkProgram=function(program){const result=link.call(this,program);let samples=false;for(let i=0;i<this.getProgramParameter(program,this.ACTIVE_UNIFORMS);i++){if([35678,35680].includes(this.getActiveUniform(program,i).type))samples=true;}s.samplers.set(program,samples);return result;};
+  proto.blendFunc=function(src,dst){s.blend.set(this,[src,dst]);return bf.call(this,src,dst);};
+  proto.blendFuncSeparate=function(src,dst,...a){s.blend.set(this,[src,dst]);return bfs.call(this,src,dst,...a);};
   const active=proto.activeTexture;proto.activeTexture=function(unit){s.units.set(this,unit);return active.call(this,unit);};
   const bound=(gl,unit=s.units.get(gl)||gl.TEXTURE0)=>s.bindings.get(gl)?.get(unit);
   const create=proto.createTexture,del=proto.deleteTexture,bind=proto.bindTexture,tex=proto.texImage2D,mip=proto.generateMipmap;
@@ -27,7 +32,7 @@ function probe(){
    return result;};
   proto.generateMipmap=function(...a){const t=s.textures.get(bound(this));if(t)t.generated_mipmap=true;return mip.apply(this,a);};
   for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced'])if(proto[name]){
-   const draw=proto[name];proto[name]=function(...a){s.draws++;if(s.drawOrder.length<100)s.drawOrder.push(s.textures.get(bound(this,this.TEXTURE0))?.id??null);return draw.apply(this,a);};
+   const draw=proto[name];proto[name]=function(...a){s.draws++;if(s.drawOrder.length<100)s.drawOrder.push({texture:s.samplers.get(s.programs.get(this))?(s.textures.get(bound(this,this.TEXTURE0))?.id??null):null,blend:s.blend.get(this)||[1,0]});return draw.apply(this,a);};
   }
   const get=proto.getParameter;
   proto.getParameter=function(...a){if(!s.identity){const e=this.getExtension('WEBGL_debug_renderer_info');s.identity={renderer:e?get.call(this,e.UNMASKED_RENDERER_WEBGL):get.call(this,this.RENDERER),version:get.call(this,this.VERSION)};}return get.apply(this,a);};
@@ -37,7 +42,7 @@ function probe(){
 }
 (async()=>{let browser,server,page;
  const r={schema:1,issue:545,status:'INCOMPLETE',source_sha:sha,source_fingerprint:manifest.source_fingerprint,engine,viewport:[1280,720],dpr:1,
-  host:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0].model,logical_cpus:os.cpus().length},
+  host:{platform:os.platform(),release:os.release(),arch:os.arch(),cpu:os.cpus()[0].model,logical_cpus:os.cpus().length,runner:process.env.RUNNER_NAME||'local',image:process.env.ImageVersion||null},
   protocol:{course:'first-run',warmup_ms:3000,sample_ms:5000,sequence:['idle 5 seconds','W held 5 seconds'],budget_ms:16.67,
    matrix:['mesh/0','sprites/0','mesh/3','sprites/3','mesh/6','sprites/6','mesh/6/hidden','sprites/6/hidden']},runs:[],errors:[],loaded_engines:[],
   limitations:['Software renderer is not physical GPU or phone evidence.','Callback time is CPU wall time, not GPU time.','Frame intervals include browser scheduling.','Texture bytes are explicit RGBA8 upload payload, not physical memory.','Hidden means hidden from startup; live hide/unload transitions are not measured.','Diagnostic art, not approved preset art.']};
@@ -57,9 +62,9 @@ function probe(){
    for(const phase of ['idle','drive']){
     if(phase==='drive'){await page.locator('canvas').focus();await page.keyboard.down('w');}
     const from=await page.evaluate(()=>window.__p545.frames.length);await page.waitForTimeout(r.protocol.sample_ms);
-    const raw=await page.evaluate(n=>window.__p545.frames.slice(n),from);
-    if(phase==='drive')await page.keyboard.up('w');assert(raw.length>60,'Insufficient frames');
-    run.samples[phase]={callback_ms:stats(raw.map(x=>x.callback_ms)),interval_ms:stats(raw.slice(1).map((x,i)=>x.at-raw[i].at)),draw_calls:stats(raw.map(x=>x.draws)),raw};
+    const raw=await page.evaluate(n=>window.__p545.frames.slice(n),from),rendered=raw.filter(x=>x.draws>0);
+    if(phase==='drive')await page.keyboard.up('w');assert(rendered.length>60,'Insufficient rendered frames');
+    run.samples[phase]={callback_ms:stats(rendered.map(x=>x.callback_ms)),interval_ms:stats(rendered.slice(1).map((x,i)=>x.at-rendered[i].at)),draw_calls:stats(rendered.map(x=>x.draws)),raw};
    }
    run.end=await page.evaluate(()=>({probe:window.parallax545,camera:window.riderTelemetry,webgl:window.__p545.identity,textures:[...window.__p545.textures.values()]}));
    run.texture_payload_bytes=run.end.textures.reduce((sum,t)=>sum+Object.values(t.levels).reduce((s,l)=>s+l.width*l.height*({6406:1,6409:1,6410:2,6407:3,6408:4}[l.format]||NaN),0),0);

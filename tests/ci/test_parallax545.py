@@ -69,3 +69,15 @@ class Evidence545(unittest.TestCase):
     def test_false_texture_summary(self):
         raw = complete(); raw['runs'][2]['end']['textures'].pop()
         with self.assertRaises(ValueError): MODULE.analyze(raw)
+
+    def test_nonrender_callbacks_do_not_mask_dropped_render_frames(self):
+        raw = complete()
+        sample = raw['runs'][4]['samples']['drive']
+        sample['raw'] = [dict(at=i*16.6,callback_ms=2,draws=26 if i%2 else 0) for i in range(200)]
+        tests, _ = MODULE.analyze(raw)
+        self.assertEqual(tests[4]['status'], 'FAIL')
+
+    def test_no_rendered_frames(self):
+        raw = complete()
+        for f in raw['runs'][0]['samples']['idle']['raw']: f['draws'] = 0
+        with self.assertRaises(ValueError): MODULE.analyze(raw)

@@ -1,4 +1,4 @@
-material: "/main/parallax545/layer.material"
+material: "/main/parallax545/foreground.material"
 vertices: "/main/terrain_perspective/empty.buffer"
 primitive_type: PRIMITIVE_TRIANGLES
 position_stream: "position"

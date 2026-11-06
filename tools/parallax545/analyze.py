@@ -49,8 +49,12 @@ def analyze(raw):
     for r in runs:
         for sample in r['samples'].values():
             frames = sample['raw']
-            if len(frames) < 60 or not all(math.isfinite(f['at']) and math.isfinite(f['callback_ms']) and f['callback_ms'] >= 0 and isinstance(f['draws'], int) and f['draws'] > 0 for f in frames):
+            if len(frames) < 60 or not all(math.isfinite(f['at']) and math.isfinite(f['callback_ms']) and f['callback_ms'] >= 0 and isinstance(f['draws'], int) and f['draws'] >= 0 for f in frames):
                 raise ValueError('Invalid or missing raw frames')
+            if any(b['at']<=a['at'] for a,b in zip(frames,frames[1:])):
+                raise ValueError('Nonmonotonic timestamps')
+            frames = [f for f in frames if f['draws']>0]
+            if len(frames)<60: raise ValueError('Insufficient rendered frames')
             intervals = [b['at']-a['at'] for a, b in zip(frames, frames[1:])]
             if any(t <= 0 for t in intervals):
                 raise ValueError('Nonmonotonic timestamps')
@@ -66,7 +70,7 @@ def analyze(raw):
         case = f"{r['route']}-{r['layers']}" + ('-hidden' if r['hidden'] else '')
         for phase in ['idle', 'drive']:
             sample = r['samples'][phase]
-            if len(sample['raw']) < 60 or not all(x['callback_ms'] >= 0 and x['draws'] > 0 for x in sample['raw']):
+            if len(sample['raw']) < 60 or not all(x['callback_ms'] >= 0 and x['draws'] >= 0 for x in sample['raw']):
                 raise ValueError('Missing raw frames or invalid measured values')
         probe = r['end']['probe']
         if (probe['route'], probe['layers'], probe['hidden']) != (r['route'], r['layers'], r['hidden']):
@@ -87,7 +91,7 @@ def analyze(raw):
         tests.append(dict(id=case, status='FAIL' if gated and not budget else 'PASS', duration_ms=None,
                           assertions=6, detail='Total frame-interval p95 <= 16.67 ms' if gated else 'Inventory, resources, draw cost and raw frames', artifacts=['measurement.json']))
         rows.append(dict(case=case, texture_delta_bytes=delta, objects=probe['objects'], draws=r['samples']['drive']['draw_calls']['p50'],
-                         callback_p95_ms=r['samples']['drive']['callback_ms']['p95'], frame_p95_ms=r['samples']['drive']['interval_ms']['p95'],
+                         frame_p50_ms=r['samples']['drive']['interval_ms']['p50'], callback_p95_ms=r['samples']['drive']['callback_ms']['p95'], frame_p95_ms=r['samples']['drive']['interval_ms']['p95'],
                          callback_delta_p95_ms=r['samples']['drive']['callback_ms']['p95']-base['samples']['drive']['callback_ms']['p95'], budget_pass=budget))
     return tests, rows
 
@@ -102,9 +106,9 @@ def main():
     report = args.measurement
     report.mkdir(exist_ok=True)
     (report / 'comparison.json').write_text(json.dumps(rows, indent=2) + '\n')
-    text = '| Case | Objects | Texture delta B | Draws | Drive callback p95 ms | Increment ms | Drive interval p95 ms |\n|---|---:|---:|---:|---:|---:|---:|\n'
+    text = '| Case | Objects | Texture delta B | Draws | Drive callback p95 ms | Increment ms | Drive interval median ms | Drive interval p95 ms |\n|---|---:|---:|---:|---:|---:|---:|---:|\n'
     for r in rows:
-        text += f"| {r['case']} | {r['objects']} | {r['texture_delta_bytes']} | {r['draws']} | {r['callback_p95_ms']:.2f} | {r['callback_delta_p95_ms']:+.2f} | {r['frame_p95_ms']:.2f} |\n"
+        text += f"| {r['case']} | {r['objects']} | {r['texture_delta_bytes']} | {r['draws']} | {r['callback_p95_ms']:.2f} | {r['callback_delta_p95_ms']:+.2f} | {r['frame_p50_ms']:.2f} | {r['frame_p95_ms']:.2f} |\n"
     (report / 'comparison.md').write_text(text)
     return write_report(report, 'parallax545', tests, expected, raw['source_sha'])
 
