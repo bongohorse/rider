@@ -1,2 +1,2 @@
 prototype: "/main/parallax545/mesh4.go"
-dynamic_loading: true
+load_dynamically: true
