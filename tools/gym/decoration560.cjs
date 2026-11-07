@@ -22,7 +22,7 @@ async function main(){
   await page.evaluate(()=>window.riderCustom.open());await page.locator('#rider-custom-text').fill(JSON.stringify(fixture));
   await page.getByRole('button',{name:'Import text',exact:true}).click();await page.waitForFunction(()=>window.riderCustomStatus==='Saved',null,{timeout:60000});
   await page.waitForTimeout(1500);
-  async function key(name,mods=[]){await page.locator('canvas').focus();for(const m of mods)await page.keyboard.down(m);await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);for(const m of mods)await page.keyboard.up(m);await pointer.frames(page,{n:6});}
+  async function key(name,mods=[]){await page.locator('canvas').focus();for(const m of mods)await page.keyboard.down(m);await pointer.frames(page,{n:4});await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);for(const m of mods)await page.keyboard.up(m);await pointer.frames(page,{n:6});}
   const doc=()=>page.evaluate(()=>window.riderEditorDoc);const items=async()=>(await doc()).decorations?.items||[];
   const canvas=(x,y)=>page.evaluate(([x,y])=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+x/c.width*r.width,y:r.y+(1-y/c.height)*r.height};},[x,y]);
   const world=async p=>{const s=(await page.evaluate(()=>window.riderEditor.screen));return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);};
