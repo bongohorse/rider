@@ -86,7 +86,9 @@
     const at = (part, x, y) => { const n = gizmo.querySelector(`[data-part="${part}"]`);n.style.left = x + 'px';n.style.top = y + 'px';n.hidden = b.locked && part !== 'frame'; };
     const frame = gizmo.querySelector('[data-part="frame"]');frame.style.left = -w / 2 + 'px';frame.style.top = -top + 'px';frame.style.width = w + 'px';frame.style.height = h + 'px';
     at('tl', -w / 2, -top);at('tr', w / 2, -top);at('bl', -w / 2, h - top);at('br', w / 2, h - top);
-    at('top', 0, -top);at('bottom', 0, h - top);at('rot-l', -w / 2 - 16, -top - 16);at('rot-r', w / 2 + 16, -top - 16);
+    at('top', 0, -top);at('bottom', 0, h - top);
+    // A small object keeps its corners reachable: the offset handles step aside.
+    for (const part of ['top', 'bottom']) if (w < 44 || h < 44) gizmo.querySelector(`[data-part="${part}"]`).hidden = true;at('rot-l', -w / 2 - 16, -top - 16);at('rot-r', w / 2 + 16, -top - 16);
   }
   function renderRange() {
     const g = state && state.range, canvas = document.querySelector('canvas');

@@ -30,7 +30,7 @@ function M.resolved()
             if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
             local x,y,angle=source.resolve(parts_of(src),distance,M.live(o,'offset'),o.tilt)
             if x then out[o.id]={x=x,y=y,angle=source.angle(angle,M.live(o,'rotation')),base=angle}
-            elseif o.at then out[o.id]={x=o.at[1],y=o.at[2],angle=o.at[3],stale=true} end
+            elseif o.at then out[o.id]={x=o.at[1],y=o.at[2],angle=source.angle(o.at[3],o.rotation),stale=true} end
         end
     end
     return out
@@ -308,14 +308,14 @@ local function box(o)
     if not (o and m) or o.to then return false end
     local d=M.drag and M.drag.id==o.id and M.drag
     local parts=parts_of(d and d.source or o.source)
-    local x,y,base=source.resolve(parts,d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
+    local x,y,base,track=source.resolve(parts,d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
     local a=catalog.ASSETS[o.asset]
     if not (x and a) then return false end
     local w,h=window.get_size()
     if w<=0 or h<=0 then return false end
     local size=M.live(o,'scale')
     local r=function(v) return math.floor(v*10000+.5)/10000 end
-    return {x=r((m.ox+x*m.ppm_x)/w),y=r((m.oy+y*m.ppm_y)/h),kx=r(m.ppm_x/w),ky=r(m.ppm_y/h),angle=r(source.angle(base,M.live(o,'rotation'))),normal=r(base),
+    return {x=r((m.ox+x*m.ppm_x)/w),y=r((m.oy+y*m.ppm_y)/h),kx=r(m.ppm_x/w),ky=r(m.ppm_y/h),angle=r(source.angle(base,M.live(o,'rotation'))),normal=r(track),
         w=r(a.width*size),h=r(a.height*size),sink=r(a.sink*size),scale=size,offset=M.live(o,'offset'),rotation=M.live(o,'rotation'),locked=o.locked or false}
 end
 local function state()

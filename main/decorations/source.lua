@@ -114,7 +114,8 @@ function M.resolve(parts,distance,offset,tilt)
     local t=last.done and 1 or left/l
     if dx<0 or (dx==0 and dy<0) then dx,dy=-dx,-dy end
     local nx,ny=-dy/l,dx/l
-    return a[1]+last[3]*t+nx*offset,a[2]+last[4]*t+ny*offset,tilt and math.atan2(dy,dx) or 0
+    -- Fourth value: the track's own angle, along whose normal the offset runs, also for an upright object.
+    return a[1]+last[3]*t+nx*offset,a[2]+last[4]*t+ny*offset,tilt and math.atan2(dy,dx) or 0,math.atan2(dy,dx)
 end
 -- The drawn angle: the anchor's angle turned by the item's rotation, kept within -pi..pi.
 function M.angle(base,rotation)
