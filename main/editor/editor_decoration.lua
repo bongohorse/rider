@@ -24,15 +24,18 @@ end
 -- One Undo step; a change the level cannot hold is refused whole, with the budget's limit and correction.
 local function commit(fn)
     local ok,err=editor.commit(function(e)
+        local count=#edit.block(e).items
         local b=doc.copy(edit.block(e))
         local why=fn(b)
         if why then return nil,why end
         local set,reason=doc.set_decorations(e,b)
         if not set then return nil,reason end
         local _,blocked=doc.compile({schema=1,units='metres',id=editor.doc.id,name=editor.doc.name,editor=e})
-        if blocked and blocked:find('Resource budget:',1,true) then return nil,blocked end
+        -- Only growth is refused: an over-budget level must stay correctable by moving or removing objects.
+        if #b.items>count and blocked and blocked:find('Resource budget:',1,true) then return nil,blocked end
     end,false)
     M.message=ok and '' or err or 'Edit refused'
+    if not ok then M.shown=nil end -- the panel returns to the stored values
     return ok
 end
 local function selected_item(e) return edit.find((e or editor.doc.editor).decorations,M.selected) end
@@ -89,7 +92,7 @@ function M.copy()
     if not o then return end
     local new
     if commit(function(b)
-        new=edit.add(b,{source=o.source,distance=o.distance+1,offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset})
+        new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset})
     end) then M.selected=new.id end
 end
 function M.visible() return html5 and html5.run('!!window.riderDecorationPanel?.visible')=='true' end
@@ -132,6 +135,7 @@ function M.handle(m)
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;if selected_item() then change({offset=m.value}) end
     elseif m.type=='hidden' then change({hidden=m.value==true or nil})
     elseif m.type=='locked' then change({locked=m.value==true or nil})
+    elseif m.type=='release' then M.release()
     elseif m.type=='delete' then M.delete()
     elseif m.type=='copy' then M.copy()
     elseif m.type=='close' then M.on_close()

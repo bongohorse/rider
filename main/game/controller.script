@@ -368,16 +368,17 @@ local function sync_edit_decorations(self)
     local editor=require('main.editor.editor')
     if not editor.doc then return end
     local tool=require('main.editor.editor_decoration')
-    local poses,b=tool.resolved(),editor.doc.editor.decorations
+    local b=editor.doc.editor.decorations
     local d=tool.drag
     local key=table.concat({tostring(editor.opened),editor.doc.editor.revision,tostring(editor.shape_version),tostring(tool.selected),d and d.source or '',d and d.distance or ''},':')
     self.decorations=self.decorations or {items={},visible=0}
     if self.decoration_key==key then return end
     self.decoration_key=key
+    local poses=tool.resolved()
     local items={}
     for _,o in ipairs(b and b.items or {}) do
         local r=poses[o.id]
-        if r and not o.hidden then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset} end
+        if r then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden} end
     end
     require("main.decorations.renderer").sync(self.decorations,items,tool.selected)
 end

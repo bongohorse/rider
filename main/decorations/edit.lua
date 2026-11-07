@@ -40,7 +40,7 @@ function M.pick(b,resolved,p,assets)
     local hit,best
     for i=#b.items,1,-1 do
         local o=b.items[i];local r=resolved[o.id];local a=assets[o.asset]
-        if r and not o.hidden then
+        if r then
             local c,s=math.cos(-r.angle),math.sin(-r.angle)
             local dx,dy=p[1]-r.x,p[2]-r.y
             local u,v=dx*c-dy*s,dx*s+dy*c

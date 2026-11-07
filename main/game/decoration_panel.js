@@ -68,6 +68,8 @@
     const flags = document.createElement('div');flags.style.marginTop = '6px';
     flags.append(check('rider-decoration-hidden', 'Hide', v => send({type: 'hidden', value: v})), check('rider-decoration-locked', 'Lock', v => send({type: 'locked', value: v})));panel.append(flags);
     const note = document.createElement('div');note.id = 'rider-decoration-note';note.setAttribute('role', 'status');note.style.cssText = 'margin-top:6px;color:#ffd27f';panel.append(note);
+    // A drag released over the panel never reaches the canvas.
+    panel.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(panel);
   }
   api.open = list => { if (!panel) build(list);api.queue.length = 0;panel.hidden = false;api.visible = true;render(); };
