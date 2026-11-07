@@ -1,8 +1,8 @@
 -- Decorations anchored to the track (level visuals contract). Pure: source model, validation and anchor
 -- resolution on compiled samples. Decorations never reach collision, physics or replay.
 local dense=require 'main.game.dense'
-local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_OFFSET=8,MAX_DISTANCE=100000,PLACEMENTS={behind=true,front=true,body=true}}
-local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true}
+local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,PLACEMENTS={behind=true,front=true,body=true}}
+local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
 local ASSETS=require('main.decorations.assets').ASSETS
 local function unknown(t,allowed,what)
@@ -31,6 +31,8 @@ function M.validate(b)
         if not M.PLACEMENTS[o.placement] then return nil,'Decoration placement must be behind, front or body: '..o.id,true end
         if type(o.tilt)~='boolean' then return nil,'Invalid decoration tilt: '..o.id end
         if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
+        if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Decoration size must be '..M.MIN_SCALE..' to '..M.MAX_SCALE..': '..o.id end
+        if o.generated~=nil and type(o.generated)~='boolean' then return nil,'Invalid decoration generated flag: '..o.id end
         if (o.hidden~=nil and type(o.hidden)~='boolean') or (o.locked~=nil and type(o.locked)~='boolean') then return nil,'Invalid decoration visibility/lock: '..o.id end
     end
     return true
@@ -45,10 +47,11 @@ function M.validate_compiled(c)
     if not n then return nil,'Decorations are limited to '..M.MAX_ITEMS..' in a dense list: '..tostring(err) end
     for _,o in ipairs(c.items) do
         if type(o)~='table' then return nil,'Invalid compiled decoration' end
-        why=unknown(o,{position=true,angle=true,placement=true,asset=true},'compiled decoration')
+        why=unknown(o,{position=true,angle=true,placement=true,asset=true,scale=true},'compiled decoration')
         if why then return nil,why,true end
         if type(o.position)~='table' or #o.position~=2 or not number(o.position[1],200000) or not number(o.position[2],200000) then return nil,'Invalid compiled decoration position' end
         if not number(o.angle,math.pi) or not M.PLACEMENTS[o.placement] then return nil,'Invalid compiled decoration' end
+        if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Invalid compiled decoration size' end
         if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
     end
     return true
@@ -94,7 +97,7 @@ function M.compile(b,parts_of)
     local items={}
     for _,o in ipairs(b.items) do
         local x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt)
-        if x then items[#items+1]={position={x,y},angle=angle,placement=o.placement,asset=o.asset} end
+        if x then items[#items+1]={position={x,y},angle=angle,placement=o.placement,asset=o.asset,scale=o.scale} end
     end
     return {version=M.COMPILED_VERSION,items=items}
 end
