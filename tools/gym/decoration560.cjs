@@ -107,7 +107,17 @@ async function main(){
   await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderEditor||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(1000);
   if(await page.evaluate(()=>window.riderEditor?.mode!=='edit'))await key('e');
   await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen&&window.riderEditorDoc?.decorations,null,{timeout:30000});assert.deepEqual(await items(),kept);
+  // Play with an object selected: no Decor overlay stays on the drive.
+  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
+  {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
+  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  // Picking another asset ends the selection: bar and box go.
+  await dom('[data-decoration-asset="cone"]');await page.waitForFunction(()=>document.querySelector('#rider-decoration-bar').hidden&&document.querySelector('#rider-decoration-gizmo').hidden);
+  {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
+  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
   await tapButton('play');await page.waitForFunction(()=>window.riderEditor?.mode!=='edit'&&window.riderDecorationState?.objects===1&&window.riderDecorationState?.items?.[0]?.id==null,null,{timeout:30000});
+  await pointer.frames(page,{n:20});
+  assert.deepEqual(await page.evaluate(()=>['#rider-decoration-bar','#rider-decoration-gizmo','#rider-decoration-panel'].filter(s=>{const n=document.querySelector(s);return n&&!n.hidden;})),[],'no Decor overlay in Play');
   report.cases.reload_play=await page.evaluate(()=>window.riderDecorationState);await page.screenshot({path:path.join(out,'decoration-play.png')});
   assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'decoration-failure.png')}).catch(()=>{});}
