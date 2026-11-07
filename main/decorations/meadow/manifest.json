@@ -1,0 +1,64 @@
+{
+ "assets": {
+  "bush-berry": {
+   "rgba_sha256": "c204589f9a358bc22095a98f3e8d1a72d176d5ac1f0f2b59492f795ca393ab78",
+   "sha256": "ff5bf083eeddfd0a0286ee4951d06abb308f0744a64d3041d3badcfa64827fc1",
+   "thumb_sha256": "71116792ccdce8f4bf32205b5f3ee91613cc77f840cee105f01875823ad99e8a"
+  },
+  "bush-round": {
+   "rgba_sha256": "2b79ddefb9caf1bac1cbfbddefd693a21f38f9e70449e04c8df42ff94fa64ad4",
+   "sha256": "24ba962f3dc6e7cb53b926bd488c1550d596a55e1f93f031cc3af3689263e650",
+   "thumb_sha256": "39a355eb1046972e7dce109633a9bae8b5c166ba4ca4dd54d1a48f5ccca45710"
+  },
+  "cone": {
+   "rgba_sha256": "eba572e7359878065a787b41dfddcd7bd680c7481c2254f80682c1bd9d013a1f",
+   "sha256": "e7fd88ffeee06d9e1ddcab18a8ce775322ad8d8a8a0daa6706c2b6381f9574fb",
+   "thumb_sha256": "0df6cce9faef3615353046dd6ea616247ca4a3173a5cc17c587f87db490be39c"
+  },
+  "flowers": {
+   "rgba_sha256": "b684a97b36ec055db391199e8b4a6a287c194389f092a55923c06cab3bb63c49",
+   "sha256": "34bfb2b60f5db230d51dfd7d1c20b09ae0b3c5ade30ec1f96e4d2c2af0e98077",
+   "thumb_sha256": "fb004b4dc93df2d854d518ea7e4d7651aa85de40e5ca603828e7321aeff02bfb"
+  },
+  "grass-tall": {
+   "rgba_sha256": "6c5053786b1096fd8c17170d2020b3227cdac16641a7d5a02cda68145f439229",
+   "sha256": "59e169c46df821565f9c6302366e8139c3d3247ac382e4f65de718f2407102a7",
+   "thumb_sha256": "4fd1a06a4f0949ce91f4618b499364dc3cbbcc38ef71ba25793f2332e395d99f"
+  },
+  "grass-tuft": {
+   "rgba_sha256": "c440b5f7504e49c8396937ebddec12ae5b1bccc11c65fe9a8456d6901dda319d",
+   "sha256": "1ce5b00593cb645763aa3faef6e2bff28aee2a7fee7d007e7786f0e60f7d419e",
+   "thumb_sha256": "103e01d07728f2ca04f80326b51742adb8fb0b3ad54c5a60a5f23f6a2f11d0c3"
+  },
+  "rock-large": {
+   "rgba_sha256": "cfe9ad2a23f6e3025ac4f6f1acc8ff1151a4cacfa425a4572d7f0a12a499e5c4",
+   "sha256": "6eed434ac7e9ddd2109cc7f4a15486950e7efb5d69eecdd1dbafc4d7eb7f98ba",
+   "thumb_sha256": "049d34134189f61b17c43faf9e0f155fe50f2713580bc56043da934b46464fd5"
+  },
+  "rock-small": {
+   "rgba_sha256": "9f9373901d798e61903e4f50630bdadb225683f10fa71a8651a2a8680c543e5a",
+   "sha256": "a0d2884283af6a2d06f57a19f9f5673c1c588579603bed9e7cf90010e179af25",
+   "thumb_sha256": "694cdf4c0ec3db062fe75287f8e60a1d3e61ce45c46b57a2c9a78a773f6fbb30"
+  },
+  "sign": {
+   "rgba_sha256": "e2f371a90ae895a0f137428490714c34b5885ae6ae6e22de92734fce1b5ff265",
+   "sha256": "410fec8c534946cf34d0d2149f20bb5a3bf2321368c6bb4e0b0b73843fc3d470",
+   "thumb_sha256": "8572314d82dc39eada940ff6a9dce1c2909875dae71eab90310e1add4f585795"
+  },
+  "tree-oak": {
+   "rgba_sha256": "a914805e731d4b99cc8555f0b2f13756338e1d6e60d2bb5b89aceed208c4ac8f",
+   "sha256": "874e99700113ee4fbb69262fe60eb1cfeed3e7e354b576a9d7ff6a0e5698187d",
+   "thumb_sha256": "03e5d1120bf1b3abab323d0c91085e47edf5c190f81402bd9ca250c3ac82f3d0"
+  },
+  "tree-pine": {
+   "rgba_sha256": "018e97403c823e15b82eccc900d834b9972ef0c9bd682d3f7d1789b03463c842",
+   "sha256": "ef1179331ea95d68bfcf0ad4975088ea1d7696fb0ce8fa6236c91fe79fecad9f",
+   "thumb_sha256": "0d12b9fb9ed971b41cbd90acc6e14ba7c6519a90bffd501f54bfcb6f5552a385"
+  }
+ },
+ "generator_sha256": "c0e56f31d0fab9b5a84c5183da943320da0e39b6c5a0265629df2f6a1041dc3b",
+ "license": "Original work generated for Rider; no third-party input.",
+ "ppm": 96,
+ "seed": 5670,
+ "version": 1
+}

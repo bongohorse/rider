@@ -4,7 +4,7 @@ local dense=require 'main.game.dense'
 local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_OFFSET=8,MAX_DISTANCE=100000,PLACEMENTS={behind=true,front=true,body=true}}
 local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
-local function asset_id(a) return type(a)=='string' and #a<=64 and a:match('^[a-z][a-z0-9%-]*$')~=nil end
+local ASSETS=require('main.decorations.assets').ASSETS
 local function unknown(t,allowed,what)
     for k in pairs(t) do if not allowed[k] then return 'Unknown '..what..' field '..tostring(k):sub(1,40) end end
 end
@@ -30,7 +30,7 @@ function M.validate(b)
         if not number(o.offset,M.MAX_OFFSET) then return nil,'Decoration offset is limited to '..M.MAX_OFFSET..' m: '..o.id end
         if not M.PLACEMENTS[o.placement] then return nil,'Decoration placement must be behind, front or body: '..o.id,true end
         if type(o.tilt)~='boolean' then return nil,'Invalid decoration tilt: '..o.id end
-        if not asset_id(o.asset) then return nil,'Invalid decoration asset: '..o.id end
+        if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
     end
     return true
 end
@@ -47,7 +47,8 @@ function M.validate_compiled(c)
         why=unknown(o,{position=true,angle=true,placement=true,asset=true},'compiled decoration')
         if why then return nil,why,true end
         if type(o.position)~='table' or #o.position~=2 or not number(o.position[1],200000) or not number(o.position[2],200000) then return nil,'Invalid compiled decoration position' end
-        if not number(o.angle,math.pi) or not M.PLACEMENTS[o.placement] or not asset_id(o.asset) then return nil,'Invalid compiled decoration' end
+        if not number(o.angle,math.pi) or not M.PLACEMENTS[o.placement] then return nil,'Invalid compiled decoration' end
+        if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
     end
     return true
 end
