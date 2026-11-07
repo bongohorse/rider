@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4+101.0.LTS'
+          java-version: '25.0.5+8.0.LTS'
       - name: Verified Windows software OpenGL
         if: runner.os == 'Windows'
         run: python tools/g2/setup_windows_graphics.py
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4+101.0.LTS'
+          java-version: '25.0.5+8.0.LTS'
       - name: Verified Windows software OpenGL
         if: runner.os == 'Windows'
         run: python tools/g2/setup_windows_graphics.py
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4+101.0.LTS'
+          java-version: '25.0.5+8.0.LTS'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.21.0'
@@ -174,7 +174,7 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
-          java-version: '25.0.4+101.0.LTS'
+          java-version: '25.0.5+8.0.LTS'
       - name: Build shared debug Gym bundle
         run: python tools/gym/bundle.py --output artifacts/g1/gym-bundle
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
