@@ -1,4 +1,5 @@
 components { id: "script" component: "/main/game/controller.script" }
+components { id: "decoration" component: "/main/decorations/decoration.factory" }
 components { id: "checker" component: "/main/game/checker.factory" }
 components { id: "probe" component: "/main/gym/probe.factory" }
 components { id: "chassis" component: "/main/game/chassis.factory" }

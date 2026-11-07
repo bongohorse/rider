@@ -261,7 +261,7 @@ jobs:
           - group: camera
             cases: 'cam443'
           - group: backgrounds
-            cases: 'bg546 bg548 bg549'
+            cases: 'bg546 bg548 bg549 deco558'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -461,6 +461,9 @@ jobs:
       - name: Background source round trip and Play/Edit agreement (#548)
         if: contains(format(' {0} ', matrix.cases), ' bg548 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/background-source --case bg548
+      - name: Decoration draw order, tilt and culling (#558)
+        if: contains(format(' {0} ', matrix.cases), ' deco558 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/decorations --case deco558
       - name: Background panel real input and saved choices (#549)
         if: contains(format(' {0} ', matrix.cases), ' bg549 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/background-panel --case bg549

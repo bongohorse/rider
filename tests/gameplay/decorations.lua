@@ -97,4 +97,21 @@ local c=assert(D.compile(stale));assert(#c.decorations.items==0 and #c.editor.de
 local SIM={'spawn','start_speed','run_in','run_out','bounds','chains','two_sided','hulls','labels','finish','checkpoints','coins','fuel','mechanisms'}
 for _,field in ipairs(SIM) do assert(enc(plain[field])==enc(out[field]),field..' changed by decorations') end
 local undo=D.history();D.record(undo,legacy,1);assert(D.step(undo,d,true,1).editor.decorations==nil,'Undo restores the block')
+-- Draw transforms: order against terrain (-2..-2.8) and vehicle (0..1), upright lift and tilt.
+local L=require 'main.decorations.layout'
+assert(L.Z.behind<-2.8 and L.Z.body>-2 and L.Z.body<0 and L.Z.front>2,'draw order')
+local t=L.transform({asset='cone',position={1,2},angle=0,placement='front'},.01)
+near(t.x,100);near(t.y,(2+.875/2-.02)*100);near(t.z,3);near(t.scale,100/96)
+t=L.transform({asset='cone',position={1,2},angle=math.pi/2,placement='body'},.01)
+near(t.x,(1-(.875/2-.02))*100);near(t.y,200);near(t.angle,math.pi/2);near(t.z,-1.5)
+assert(L.visible(t,0,100,100,300) and not L.visible(t,t.x+t.radius+1,t.x+t.radius+100,100,300),'culling x')
+assert(not L.visible(t,0,100,t.y+t.radius+1,t.y+t.radius+100),'culling y')
+-- Admission counts decorations with what the course already uses, with the actual limit and a correction.
+local budget=require 'main.game.terrain_budget'
+local full=assert(D.compile(d));local before=budget.measure(plain).sprites
+assert(budget.measure(full).sprites==before+2 and budget.measure(full).instances==budget.measure(plain).instances+2,'counted')
+local crowded=J.decode(enc(full));crowded.coins={version=1,items={}}
+for i=1,960 do crowded.coins.items[i]={id='c'..i,position={i%20,2}} end
+local refused,why=budget.check(crowded)
+assert(not refused and why:find('limit 1024',1,true) and why:find('Remove decorations (2 placed)',1,true),tostring(why))
 print('PASS decorations')

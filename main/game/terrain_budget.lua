@@ -24,6 +24,8 @@ function M.measure(d)
     r.physics_vertices=r.physics_vertices+r.hull_vertices+mech.vertices
     r.sprites=#(d.coins and d.coins.items or {})+r.hull_vertices+(d.finish and 1 or 0)+(d.seesaw and 1 or 0)
     if d.mechanisms then r.sprites=r.sprites+math.max(mech.sprites,4*#d.mechanisms.crates+4*#d.mechanisms.plates+5*#d.mechanisms.gates) end
+    r.decorations=#(d.decorations and d.decorations.items or {})
+    r.sprites=r.sprites+r.decorations
     r.labels=r.labels+(d.finish and 1 or 0)
     if d.markers then
         local m=d.markers
@@ -59,9 +61,9 @@ function M.check(d)
         or over('terrain vertex payload bytes at Fit',r.payload,M.PAYLOAD,target)
         or over('estimated CPU working bytes',r.cpu_estimate,M.CPU,'Reduce terrain/content; save separate courses. '..target)
         or over('physics vertices (two-sided copies and hulls included)',r.physics_vertices,M.PHYSICS_VERTICES,'Reduce runs, two-sided terrain or obstacles; split the course.')
-        or over('sprites including vehicle/replay reserve',r.sprites+M.RESERVE,M.SPRITES,'Remove obstacle edges or distance markers.')
+        or over('sprites including vehicle/replay reserve',r.sprites+M.RESERVE,M.SPRITES,(r.decorations>0 and string.format('Remove decorations (%d placed), obstacle edges or distance markers.',r.decorations) or 'Remove obstacle edges or distance markers.'))
         or over('labels including reserve',r.labels+M.RESERVE,M.LABELS,'Remove labels or major distance markers.')
-        or over('GameObjects including reserve',r.instances,M.INSTANCES,'Remove obstacle edges, labels or distance markers; split the course.')
+        or over('GameObjects including reserve',r.instances,M.INSTANCES,(r.decorations>0 and string.format('Remove decorations (%d placed), obstacle edges, labels or distance markers; split the course.',r.decorations) or 'Remove obstacle edges, labels or distance markers; split the course.'))
     if err then return nil,err,r end
     return r
 end
