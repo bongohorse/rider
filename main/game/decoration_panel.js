@@ -77,7 +77,7 @@
     bar.addEventListener('pointerdown', () => { bar.dataset.hold = '1'; });
     // Released anywhere: the bar may follow its object again.
     const let_go = () => { if (bar.dataset.hold) { delete bar.dataset.hold;renderBar(); } };
-    for (const type of ['pointerup', 'pointercancel', 'blur']) addEventListener(type, let_go, true);
+    for (const type of ['pointerup', 'pointercancel']) addEventListener(type, let_go, true);
     bar.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(bar);
   }
