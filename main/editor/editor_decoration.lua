@@ -109,7 +109,7 @@ function M.press(p)
         if M.fence_arm=='start' then M.fence_arm=near;M.hover=near;M.message='Move to size the fence, click to end it.';M.shown=nil;editor.touch();return end
         local first=M.fence_arm
         if near.source~=first.source or math.abs(near.distance-first.distance)<.1 then M.message='A fence starts and ends on one terrain piece.';M.shown=nil;return end
-        M.fence_arm='start';M.hover=nil;M.message='Click where the next fence starts.'
+        M.fence_arm=nil;M.hover=nil;M.message='Drag an end to change the length. Pick the fence again for another.'
         local new
         if commit(function(block)
             new=edit.add(block,{source=first.source,distance=math.min(first.distance,near.distance),offset=M.offset,placement=M.placement,tilt=true,asset=M.fence_asset or 'fence-wood'})
@@ -152,7 +152,7 @@ end
 function M.hover_at(p)
     if type(M.fence_arm)~='table' then return end
     local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
-    if near and near.source==M.fence_arm.source then M.hover=near;editor.touch() end
+    if near and near.source==M.fence_arm.source and not (M.hover and M.hover.distance==near.distance) then M.hover=near;editor.touch() end
 end
 function M.move(p)
     M.hover_at(p)
@@ -298,7 +298,7 @@ function M.open()
 end
 function M.handle(m)
     if type(m)~='table' then return end
-    if m.type=='asset' and catalog.FENCES[m.value] then M.fence_asset=m.value;M.fence_arm='start';M.hover=nil;M.selected=nil;M.message='Click where the fence starts.';M.shown=nil
+    if m.type=='asset' and catalog.FENCES[m.value] then M.fence_asset=m.value;M.fence_arm='start';M.hover=nil;M.selected=nil;M.message='Click where the fence starts.';M.shown=nil;editor.touch()
     elseif m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value;M.fence_arm=nil;M.hover=nil;editor.touch()
     elseif m.type=='placement' and source.PLACEMENTS[m.value] then M.placement=m.value;if selected_item() then change({placement=m.value}) end
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end

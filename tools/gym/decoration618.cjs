@@ -57,8 +57,7 @@ async function main(){
   await click([8,.5]);await revision(r+1);
   let list=await items();assert.equal(list.length,1);assert.ok(Math.abs(list[0].distance-21)<.3&&Math.abs(list[0].to-28)<.3,'fence '+list[0].distance+'..'+list[0].to);assert.equal(list[0].asset,'fence-wood');
   await page.waitForFunction(()=>window.riderDecorationState?.fences?.length===1);await page.screenshot({path:path.join(out,'fence-edit.png')});report.cases.placed=list[0];
-  // Length stays editable: drag the selected fence's end.
-  await dom('[data-decoration-asset="cone"]');
+  // Length stays editable: drawing has ended, the new fence is selected; drag its end.
   r=await rev();const grab=await world([8,.5]),drop=await world([10,.5]);
   await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(grab.x,grab.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(drop.x,drop.y,{steps:5});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});await revision(r+1);
   list=await items();assert.equal(list.length,1,'resizing adds nothing');assert.ok(Math.abs(list[0].distance-21)<.3&&Math.abs(list[0].to-30)<.3,'resized '+list[0].distance+'..'+list[0].to);report.cases.resize=list[0];
