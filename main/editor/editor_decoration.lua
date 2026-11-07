@@ -147,7 +147,8 @@ end
 local function change(fields)
     if not selected_item() then return end
     local id=M.selected
-    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do o[k]=v end end)
+    -- false clears a flag: pairs never visits a nil value, so {locked=nil} would change nothing.
+    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do if v==false and (k=='hidden' or k=='locked') then v=nil end;o[k]=v end end)
 end
 function M.copy()
     local o=selected_item()
@@ -157,6 +158,7 @@ function M.copy()
     local new
     if commit(function(b)
         new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset,scale=o.scale})
+        new.hidden,new.locked=o.hidden,o.locked
     end) then M.selected=new.id end
 end
 -- One Undo step. A result the level cannot hold places nothing.
@@ -213,8 +215,8 @@ function M.handle(m)
     elseif m.type=='placement' and source.PLACEMENTS[m.value] then M.placement=m.value;if selected_item() then change({placement=m.value}) end
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;if selected_item() then change({offset=m.value}) end
-    elseif m.type=='hidden' then change({hidden=m.value==true or nil})
-    elseif m.type=='locked' then change({locked=m.value==true or nil})
+    elseif m.type=='hidden' then change({hidden=m.value==true})
+    elseif m.type=='locked' then change({locked=m.value==true})
     elseif m.type=='fence' then M.fence_arm='start';M.selected=nil;M.message='Click where the fence starts.';M.shown=nil
     elseif m.type=='arm' and (m.value=='a' or m.value=='b') then M.arming=m.value
     elseif m.type=='clear_stretch' then M.stretch={};M.arming=nil
