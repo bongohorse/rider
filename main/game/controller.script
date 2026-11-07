@@ -374,7 +374,7 @@ local function sync_edit_decorations(self)
     local tool=require('main.editor.editor_decoration')
     local b=editor.doc.editor.decorations
     local d=tool.drag
-    local key=table.concat({tostring(editor.opened),editor.doc.editor.revision,tostring(editor.shape_version),tostring(tool.selected),d and d.source or '',d and d.distance or ''},':')
+    local key=table.concat({tostring(editor.opened),editor.doc.editor.revision,tostring(editor.shape_version),tostring(tool.selected),d and d.source or '',d and d.distance or '',tool.preview and tool.preview.field..tool.preview.value or ''},':')
     self.decorations=self.decorations or {items={},visible=0}
     if self.decoration_key==key then return end
     self.decoration_key=key
@@ -382,7 +382,7 @@ local function sync_edit_decorations(self)
     local items,fences={},tool.fences()
     for _,o in ipairs(b and b.items or {}) do
         local r=poses[o.id]
-        if r and not o.to then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=o.scale,stale=r.stale} end
+        if r and not o.to then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=tool.live(o,'scale'),stale=r.stale} end
     end
     require("main.decorations.renderer").sync(self.decorations,items,tool.selected)
     require("main.decorations.renderer").sync_fences(self.decorations,fences,tool.selected)

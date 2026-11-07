@@ -19,8 +19,7 @@
     panel.querySelector('#rider-decoration-tilt').checked = item ? item.tilt : state.tilt;
     const offset = item ? item.offset : state.offset;
     const slider = panel.querySelector('#rider-decoration-offset');
-    if (document.activeElement !== slider) slider.value = offset;
-    panel.querySelector('#rider-decoration-offset-output').textContent = Number(offset).toFixed(2) + ' m';
+    if (!slider.dataset.live) { slider.value = offset;panel.querySelector('#rider-decoration-offset-output').textContent = Number(offset).toFixed(2) + ' m'; }
     panel.querySelector('#rider-decoration-selected').textContent = item ? `Selected ${item.id}: ${item.fence ? 'fence' : item.asset}` : 'Click the track to place. Click an object to select or drag it.';
     panel.querySelector('#rider-decoration-hidden').checked = !!item?.hidden;
     panel.querySelector('#rider-decoration-locked').checked = !!item?.locked;
@@ -28,6 +27,54 @@
     const s = state.stretch || {};
     panel.querySelector('#rider-populate-stretch').textContent = state.arming ? 'Click the track for this end.' : s.a !== false && s.b !== false ? `Stretch x ${Number(s.a).toFixed(1)} to ${Number(s.b).toFixed(1)} m` : s.a !== false || s.b !== false ? 'Stretch: set the other end' : 'Stretch: whole track';
     panel.querySelector('#rider-decoration-note').textContent = state.message || '';
+    renderBar();
+  }
+  // Quick bar: the selected object's own controls, drawn just above it.
+  let bar;
+  function slide(id, label, min, max, step, unit, field) {
+    const wrap = document.createElement('label');wrap.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px';
+    const input = document.createElement('input');input.type = 'range';input.id = id;input.min = min;input.max = max;input.step = step;input.style.width = '90px';
+    const out = document.createElement('output');out.id = id + '-output';out.style.cssText = 'min-width:44px;text-align:right';
+    const show = () => { out.textContent = Number(input.value).toFixed(2) + unit; };
+    input.oninput = () => { input.dataset.live = '1';show();send({type: 'preview', field, value: Number(input.value)}); };
+    input.onchange = () => { delete input.dataset.live;send({type: field, value: Number(input.value)}); };
+    wrap.append(label, input, out);return wrap;
+  }
+  function buildBar() {
+    bar = document.createElement('div');bar.id = 'rider-decoration-bar';bar.hidden = true;bar.setAttribute('role', 'toolbar');bar.setAttribute('aria-label', 'Selected decoration');
+    bar.style.cssText = 'position:fixed;z-index:99997;display:flex;flex-direction:column;gap:4px;padding:6px;background:rgba(23,39,47,.94);color:#f1f5f2;border:2px solid #8fe0c0;border-radius:8px;font:13px sans-serif;transform:translate(-50%,-100%)';
+    const small = (label, title, action) => { const b = button(label, action);b.title = title;b.setAttribute('aria-label', title);b.style.padding = '4px 7px';b.style.margin = '0';return b; };
+    const top = document.createElement('div');top.style.cssText = 'display:flex;gap:3px;flex-wrap:nowrap';
+    for (const [id, label] of [['behind', 'Behind'], ['front', 'Front'], ['body', 'Body']]) {
+      const b = small(label, 'Placement ' + label, () => send({type: 'placement', value: id}));b.dataset.barPlacement = id;top.append(b);
+    }
+    const tilt = small('Tilt', 'Tilt with slope', () => send({type: 'tilt', value: !(state?.selected?.tilt)}));tilt.id = 'rider-bar-tilt';
+    const lock = small('Lock', 'Lock', () => send({type: 'locked', value: !(state?.selected?.locked)}));lock.id = 'rider-bar-lock';
+    const hide = small('Hide', 'Hide', () => send({type: 'hidden', value: !(state?.selected?.hidden)}));hide.id = 'rider-bar-hide';
+    const copy = small('Copy', 'Copy', () => send({type: 'copy'}));copy.id = 'rider-bar-copy';
+    const del = small('Delete', 'Delete', () => send({type: 'delete'}));del.id = 'rider-bar-delete';
+    top.append(tilt, lock, hide, copy, del);bar.append(top);
+    const rows = document.createElement('div');rows.style.cssText = 'display:flex;gap:10px';
+    rows.append(slide('rider-bar-scale', 'Size', .25, 3, .05, '×', 'scale'), slide('rider-bar-offset', 'Offset', -8, 8, .05, ' m', 'offset'));bar.append(rows);
+    bar.addEventListener('pointerup', () => send({type: 'release'}));
+    document.body.append(bar);
+  }
+  function renderBar() {
+    const item = state && state.selected, at = state && state.anchor, canvas = document.querySelector('canvas');
+    if (!bar || !item || !at || !canvas || !api.visible || api.blocked) { if (bar) bar.hidden = true;return; }
+    const r = canvas.getBoundingClientRect();
+    const x = Math.max(8, Math.min(innerWidth - 8, r.left + at.x * r.width)), y = Math.max(110, Math.min(innerHeight - 8, r.top + (1 - at.y) * r.height - 10));
+    bar.style.left = x + 'px';bar.style.top = y + 'px';bar.hidden = false;
+    const on = (node, value) => { node.setAttribute('aria-pressed', String(!!value));node.style.outline = value ? '3px solid #8fe0c0' : 'none'; };
+    bar.querySelectorAll('[data-bar-placement]').forEach(n => { on(n, n.dataset.barPlacement === item.placement);n.hidden = !!item.fence && n.dataset.barPlacement === 'body'; });
+    on(bar.querySelector('#rider-bar-tilt'), item.tilt);bar.querySelector('#rider-bar-tilt').hidden = !!item.fence;
+    on(bar.querySelector('#rider-bar-lock'), item.locked);on(bar.querySelector('#rider-bar-hide'), item.hidden);
+    bar.querySelector('#rider-bar-copy').hidden = !!item.fence;
+    const scale = bar.querySelector('#rider-bar-scale');scale.parentNode.hidden = !!item.fence;
+    for (const [node, value, unit] of [[scale, item.scale, '×'], [bar.querySelector('#rider-bar-offset'), item.offset, ' m']]) {
+      if (!node.dataset.live) { node.value = value;node.nextSibling.textContent = Number(value).toFixed(2) + unit; }
+      node.disabled = !!item.locked;
+    }
   }
   function button(label, action) {
     const node = document.createElement('button');node.type = 'button';node.textContent = label;
@@ -59,15 +106,16 @@
     const off = document.createElement('label');off.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px';
     const slider = document.createElement('input');slider.type = 'range';slider.id = 'rider-decoration-offset';slider.min = -8;slider.max = 8;slider.step = .05;slider.style.flex = '1';
     // One Undo step on release.
-    slider.onchange = () => send({type: 'offset', value: Number(slider.value)});
+    slider.onchange = () => { delete slider.dataset.live;send({type: 'offset', value: Number(slider.value)}); };
+    // Live while dragging: the object moves and the number follows; release is the Undo step.
+    slider.oninput = () => { slider.dataset.live = '1';panel.querySelector('#rider-decoration-offset-output').textContent = Number(slider.value).toFixed(2) + ' m';send({type: 'preview', field: 'offset', value: Number(slider.value)}); };
     const out = document.createElement('output');out.id = 'rider-decoration-offset-output';off.append('Offset', slider, out);panel.append(off);
     const sel = document.createElement('div');sel.id = 'rider-decoration-selected';sel.style.margin = '6px 0';panel.append(sel);
     const actions = document.createElement('div');
     const copy = button('Copy', () => send({type: 'copy'}));copy.id = 'rider-decoration-copy';
     const del = button('Delete', () => send({type: 'delete'}));del.id = 'rider-decoration-delete';
     const fence = button('Fence', () => send({type: 'fence'}));fence.id = 'rider-decoration-fence';actions.append(fence);
-    const close = button('Close', () => send({type: 'close'}));close.id = 'rider-decoration-close';
-    actions.append(copy, del, close);panel.append(actions);
+    actions.append(copy, del);panel.append(actions);
     const flags = document.createElement('div');flags.style.marginTop = '6px';
     flags.append(check('rider-decoration-hidden', 'Hide', v => send({type: 'hidden', value: v})), check('rider-decoration-locked', 'Lock', v => send({type: 'locked', value: v})));panel.append(flags);
     const pop = document.createElement('details');pop.id = 'rider-populate';pop.open = true;pop.style.cssText = 'margin-top:8px;border-top:1px solid #4d6b70;padding-top:6px';
@@ -93,13 +141,18 @@
       send({type: 'populate', settings: {assets, density: value('density'), spacing: value('spacing'), size_min: value('size_min'), size_max: value('size_max'), slope: value('slope'), seed: value('seed')}});
     });run.id = 'rider-populate-run';pop.append(run);panel.append(pop);
     const note = document.createElement('div');note.id = 'rider-decoration-note';note.setAttribute('role', 'status');note.style.cssText = 'margin-top:6px;color:#ffd27f';panel.append(note);
+    // Close sits alone at the bottom left, away from the object actions.
+    const foot = document.createElement('div');foot.style.cssText = 'position:sticky;bottom:-10px;margin:10px -10px -10px;padding:8px 10px;background:#17272f;border-top:1px solid #4d6b70';
+    const close = button('Close', () => send({type: 'close'}));close.id = 'rider-decoration-close';close.style.margin = '0';foot.append(close);panel.append(foot);
     // A drag released over the panel never reaches the canvas.
     panel.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(panel);
+    buildBar();
   }
   api.open = list => { if (!panel) build(list);api.queue.length = 0;panel.hidden = false;api.visible = true;render(); };
-  api.close = () => { if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
+  const settle = () => document.querySelectorAll('#rider-decoration-panel [data-live],#rider-decoration-bar [data-live]').forEach(n => delete n.dataset.live);
+  api.close = () => { settle();if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = next => { state = next;render(); };
-  api.suspend = blocked => { if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked; };
+  api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar(); };
   api.take = () => JSON.stringify(api.queue.splice(0, api.queue.length));
 })();

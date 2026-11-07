@@ -2,7 +2,7 @@
 // #560: the decoration tool through real pointer, keyboard and DOM input. Observers only.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{configure}=require('./launch.cjs'),pointer=require('./pointer.cjs');
-const EXPECTED=['place','move','placement','lock_copy_delete','undo_redo','reload_play'];
+const EXPECTED=['place','move','quick_bar','placement','lock_copy_delete','undo_redo','reload_play'];
 async function main(){
  const [output,sha,runId,kind,bundleArg]=process.argv.slice(2);assert.equal(kind,'deco560');
  const out=path.resolve(output),bundle=path.resolve(bundleArg);fs.mkdirSync(out,{recursive:true});
@@ -45,6 +45,25 @@ async function main(){
   r=await rev();const from=await world([2,.5]),to=await world([5,1]);
   await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(from.x,from.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(to.x,to.y,{steps:5});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});await revision(r+1);
   assert.equal(await rev(),r+1,'one drag, one revision');list=await items();assert.equal(list.length,1,'a drag places nothing');assert.ok(Math.abs(list[0].distance-25)<.3,`moved to ${list[0].distance}`);report.cases.move=list[0];
+  // Quick bar above the selected object: a live offset moves it before release, release is one Undo step; size likewise.
+  await page.waitForFunction(()=>{const b=document.querySelector('#rider-decoration-bar');return b&&!b.hidden;});
+  const box=await page.locator('#rider-decoration-bar').boundingBox(),spot=await world([5,1]);assert.ok(Math.abs(box.x+box.width/2-spot.x)<40,'bar centred on the object');assert.ok(box.y+box.height<spot.y,'bar above the object');
+  const y0=(await page.evaluate(()=>window.riderDecorationState.items[0].y));r=await rev();
+  await page.evaluate(()=>{const n=document.querySelector('#rider-bar-offset');n.value='1.5';n.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.waitForFunction(y0=>window.riderDecorationState.items[0].y>y0+50,y0);assert.equal(await rev(),r,'live: no revision');
+  assert.equal(await page.locator('#rider-bar-offset-output').textContent(),'1.50 m');
+  await page.evaluate(()=>{const n=document.querySelector('#rider-bar-offset');n.dispatchEvent(new Event('change',{bubbles:true}));});await revision(r+1);assert.equal((await items())[0].offset,1.5);
+  // An unfinished drag never sticks: Undo drops the live value.
+  await page.evaluate(()=>{const n=document.querySelector('#rider-bar-offset');n.value='3';n.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.waitForFunction(y0=>window.riderDecorationState.items[0].y>y0+200,y0);
+  await key('z',['Control']);await page.waitForFunction(()=>window.riderEditorDoc.decorations.items[0].offset===0);
+  await page.waitForFunction(y0=>Math.abs(window.riderDecorationState.items[0].y-y0)<5,y0);
+  await key('y',['Control']);await page.waitForFunction(()=>window.riderEditorDoc.decorations.items[0].offset===1.5);
+  await page.evaluate(()=>{delete document.querySelector('#rider-bar-offset').dataset.live;});
+  r=await rev();await page.locator('#rider-bar-scale').fill('1.5');await revision(r+1);assert.equal((await items())[0].scale,1.5);
+  r=await rev();await page.locator('#rider-bar-scale').fill('1');await revision(r+1);assert.equal((await items())[0].scale,undefined,'size 1 is stored as default');
+  r=await rev();await page.locator('#rider-bar-offset').fill('0');await revision(r+1);
+  await page.screenshot({path:path.join(out,'decoration-bar.png')});report.cases.quick_bar=await items();
   // Placement of the selected object.
   r=await rev();await dom('[data-decoration-placement="behind"]');await revision(r+1);list=await items();assert.equal(list[0].placement,'behind');
   await page.waitForFunction(()=>window.riderDecorationState?.items?.[0]?.z===-3);report.cases.placement=list[0];

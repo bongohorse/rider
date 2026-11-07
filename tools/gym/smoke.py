@@ -147,7 +147,7 @@ if args.case=='deco617':
 if args.case=='deco560':
     report=json.loads((out/'decoration560-result.json').read_text())
     identity(report)
-    assert set(report['cases'])=={'place','move','placement','lock_copy_delete','undo_redo','reload_play'}
+    assert set(report['cases'])=={'place','move','quick_bar','placement','lock_copy_delete','undo_redo','reload_play'}
     print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='deco558':
     report=json.loads((out/'decoration558-result.json').read_text())

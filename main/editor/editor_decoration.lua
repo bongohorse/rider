@@ -11,6 +11,14 @@ local M={populate=doc.copy(populate.DEFAULTS),arming=nil,stretch={},asset='cone'
 local function parts_of(id)
     for _,o in ipairs(editor.doc.editor.objects) do if o.id==id and doc.terrain(o) then return doc.parts(o) end end
 end
+-- A slider being dragged shows its value live; release commits it as one Undo step.
+function M.live(o,field)
+    -- Only for the selected object in the revision it started in: Undo, a commit or a new selection drops it.
+    local p=M.preview
+    if p and p.id==o.id and p.id==M.selected and p.field==field and p.revision==editor.doc.editor.revision then return p.value end
+    if field=='scale' then return o.scale or 1 end
+    return o[field]
+end
 -- id -> resolved pose for the current source, with a live drag applied.
 function M.resolved()
     local out={}
@@ -19,7 +27,7 @@ function M.resolved()
         if not o.to then
             local distance,src=o.distance,o.source
             if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
-            local x,y,angle=source.resolve(parts_of(src),distance,o.offset,o.tilt)
+            local x,y,angle=source.resolve(parts_of(src),distance,M.live(o,'offset'),o.tilt)
             if x then out[o.id]={x=x,y=y,angle=angle}
             elseif o.at then out[o.id]={x=o.at[1],y=o.at[2],angle=o.at[3],stale=true} end
         end
@@ -34,10 +42,10 @@ function M.fences()
         if o.to then
             local from,to=o.distance,o.to
             if M.drag and M.drag.id==o.id then from,to=M.drag.distance,M.drag.distance+o.to-o.distance end
-            local points=fence.points(parts_of(o.source),from,to,o.offset)
+            local points=fence.points(parts_of(o.source),from,to,M.live(o,'offset'))
             local stale=not points or not source.fits(parts_of(o.source),o.to)
             if stale and M.drag and M.drag.id==o.id and M.drag.source then
-                points=fence.points(parts_of(M.drag.source),from,to,o.offset);stale=not points
+                points=fence.points(parts_of(M.drag.source),from,to,M.live(o,'offset'));stale=not points
             end
             if stale and o.at then points={{o.at[1],o.at[2]},{o.at[3],o.at[4]}} end
             if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source,stale=stale} end
@@ -73,6 +81,7 @@ function M.place(p)
 end
 -- Canvas press: grab the object under the cursor, otherwise place one.
 function M.press(p)
+    M.preview=nil
     if M.arming then
         M.stretch[M.arming]=p[1];M.arming=nil;M.shown=nil
         return
@@ -138,7 +147,10 @@ function M.release()
         o.source,o.distance=d.source,d.distance
     end)
 end
-function M.cancel() if M.drag then M.drag=nil;editor.touch() end end
+function M.cancel()
+    if M.preview then M.preview=nil;editor.touch() end
+    if M.drag then M.drag=nil;editor.touch() end
+end
 function M.delete()
     if not selected_item() then return end
     local id=M.selected
@@ -148,7 +160,7 @@ local function change(fields)
     if not selected_item() then return end
     local id=M.selected
     -- false clears a flag: pairs never visits a nil value, so {locked=nil} would change nothing.
-    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do if v==false and (k=='hidden' or k=='locked') then v=nil end;o[k]=v end end)
+    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do if (v==false and (k=='hidden' or k=='locked')) or (k=='scale' and v==1) then v=nil end;o[k]=v end end)
 end
 function M.copy()
     local o=selected_item()
@@ -189,10 +201,29 @@ function M.suspend(value)
     if blocked then M.cancel() end
     if html5 then html5.run('window.riderDecorationPanel&&window.riderDecorationPanel.suspend('..tostring(blocked)..')') end
 end
+-- Where the quick bar sits: the selected object's top centre, as fractions of the window from its bottom left.
+local function anchor(o)
+    local m=editor.screen
+    if not (o and m) then return false end
+    local x,y
+    if o.to then
+        for _,f in ipairs(M.fences()) do if f.id==o.id then local a,b=f.points[1],f.points[#f.points];x,y=(a[1]+b[1])/2,math.max(a[2],b[2])+1.2 end end
+    else
+        local d=M.drag and M.drag.id==o.id and M.drag
+        local rx,ry,ra=source.resolve(parts_of(d and d.source or o.source),d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
+        local r=rx and {x=rx,y=ry,angle=ra}
+        local a=catalog.ASSETS[o.asset]
+        if r and a then local lift=a.height*M.live(o,'scale');x,y=r.x-math.sin(r.angle)*lift,r.y+math.cos(r.angle)*lift end
+    end
+    if not x then return false end
+    local w,h=window.get_size()
+    if w<=0 or h<=0 then return false end
+    return {x=math.floor((m.ox+x*m.ppm_x)/w*1000+.5)/1000,y=math.floor((m.oy+y*m.ppm_y)/h*1000+.5)/1000}
+end
 local function state()
     local o=selected_item()
-    return {stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
-        selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,hidden=o.hidden or false,locked=o.locked or false} or false}
+    return {anchor=anchor(o),stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
+        selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
     local track=require 'main.editor.editor_track'
@@ -214,7 +245,13 @@ function M.handle(m)
     if m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value
     elseif m.type=='placement' and source.PLACEMENTS[m.value] then M.placement=m.value;if selected_item() then change({placement=m.value}) end
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end
-    elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;if selected_item() then change({offset=m.value}) end
+    elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;M.preview=nil;if selected_item() then change({offset=m.value}) end
+    elseif m.type=='scale' and type(m.value)=='number' and m.value>=source.MIN_SCALE and m.value<=source.MAX_SCALE then M.preview=nil;change({scale=m.value})
+    elseif m.type=='preview' and (m.field=='scale' or m.field=='offset') and type(m.value)=='number' then
+        local o=selected_item()
+        local lo,hi=m.field=='scale' and source.MIN_SCALE or -source.MAX_OFFSET,m.field=='scale' and source.MAX_SCALE or source.MAX_OFFSET
+        if m.field=='offset' and not o then M.offset=math.max(lo,math.min(hi,m.value))
+        elseif o and not o.locked then M.preview={id=o.id,field=m.field,revision=editor.doc.editor.revision,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
     elseif m.type=='hidden' then change({hidden=m.value==true})
     elseif m.type=='locked' then change({locked=m.value==true})
     elseif m.type=='fence' then M.fence_arm='start';M.selected=nil;M.message='Click where the fence starts.';M.shown=nil
