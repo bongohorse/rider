@@ -183,7 +183,8 @@ local F=require 'main.decorations.fence'
 local fp=F.points({{{0,0},{4,0},{7,4}}},2,6.5,0);near(fp[1][1],2);near(fp[2][1],4);near(fp[3][1],5.5);near(fp[3][2],2);assert(#fp==3)
 assert(F.points({{{0,0},{4,0}}},9,10,0)==nil,'beyond the source');assert(#F.points({{{0,0},{2,0}},{{5,0},{9,0}}},1,3,0)==2,'stops at a gap')
 local curve_parts=D.parts(base().editor.objects[2])
-local strip=F.strip(F.points(curve_parts,1,8,.5))
+local strip=F.strip(F.points(curve_parts,1,8,.5),nil,nil,false)
+local posted=F.strip({{0,0},{4,0}});assert(#posted==6+12,'two end posts');near(posted[7][1],-F.POST_WIDTH/2);near(posted[13][1],4-F.POST_WIDTH/2);near(posted[7][3],F.POST_U[1])
 assert(#strip%6==0 and #strip>=6);for i=1,#strip-6,6 do near(strip[i+1][3],strip[i+6][3],'U continues, no gap at repeats');near(strip[i+1][1],strip[i+6][1]);near(strip[i+1][2],strip[i+6][2]) end
 assert(F.points({{{0,0},{4,0}}},4,5,0)==nil,'nothing at the very end');
 local fine={};for i=0,999 do fine[#fine+1]={i*.1,0} end;local thin=F.points({fine},0,99.9,0);assert(#thin==F.MAX_POINTS);near(thin[1][1],0);near(thin[#thin][1],99.9)

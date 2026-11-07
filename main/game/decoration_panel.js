@@ -8,7 +8,7 @@
     if (!panel || !state) return;
     const item = state.selected || null;
     panel.querySelectorAll('[data-decoration-asset]').forEach(node => {
-      const on = node.dataset.decorationAsset === state.asset;
+      const on = state.fence_asset ? node.dataset.decorationAsset === state.fence_asset : node.dataset.decorationAsset === state.asset;
       node.setAttribute('aria-pressed', String(on));node.style.outline = on ? '3px solid #8fe0c0' : 'none';
     });
     const placement = item ? item.placement : state.placement;
@@ -70,7 +70,7 @@
     on(bar.querySelector('#rider-bar-tilt'), item.tilt);bar.querySelector('#rider-bar-tilt').hidden = !!item.fence;
     on(bar.querySelector('#rider-bar-lock'), item.locked);on(bar.querySelector('#rider-bar-hide'), item.hidden);
     bar.querySelector('#rider-bar-copy').hidden = !!item.fence;
-    const scale = bar.querySelector('#rider-bar-scale');scale.parentNode.hidden = !!item.fence;
+    const scale = bar.querySelector('#rider-bar-scale');scale.parentNode.style.display = item.fence ? 'none' : 'flex';
     for (const [node, value, unit] of [[scale, item.scale, '×'], [bar.querySelector('#rider-bar-offset'), item.offset, ' m']]) {
       if (!node.dataset.live) { node.value = value;node.nextSibling.textContent = Number(value).toFixed(2) + unit; }
       node.disabled = !!item.locked;
@@ -93,7 +93,7 @@
       const b = document.createElement('button');b.type = 'button';b.dataset.decorationAsset = a.id;b.title = a.name;b.setAttribute('aria-label', a.name);
       b.style.cssText = 'padding:2px;cursor:pointer;background:#2c4450;border:0';
       const img = document.createElement('img');img.src = a.thumb;img.alt = '';img.width = 56;img.height = 56;b.append(img);
-      b.onclick = () => { state.asset = a.id;render();send({type: 'asset', value: a.id}); };grid.append(b);
+      b.onclick = () => { if (a.fence) state.fence_asset = a.id;else { state.asset = a.id;state.fence_asset = false; }render();send({type: 'asset', value: a.id}); };grid.append(b);
     }
     panel.append(grid);
     const places = document.createElement('div');
@@ -114,14 +114,13 @@
     const actions = document.createElement('div');
     const copy = button('Copy', () => send({type: 'copy'}));copy.id = 'rider-decoration-copy';
     const del = button('Delete', () => send({type: 'delete'}));del.id = 'rider-decoration-delete';
-    const fence = button('Fence', () => send({type: 'fence'}));fence.id = 'rider-decoration-fence';actions.append(fence);
     actions.append(copy, del);panel.append(actions);
     const flags = document.createElement('div');flags.style.marginTop = '6px';
     flags.append(check('rider-decoration-hidden', 'Hide', v => send({type: 'hidden', value: v})), check('rider-decoration-locked', 'Lock', v => send({type: 'locked', value: v})));panel.append(flags);
     const pop = document.createElement('details');pop.id = 'rider-populate';pop.open = true;pop.style.cssText = 'margin-top:8px;border-top:1px solid #4d6b70;padding-top:6px';
     const head = document.createElement('summary');head.textContent = 'Populate';pop.append(head);
     const set = document.createElement('div');set.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;font-size:12px';
-    for (const a of list) {
+    for (const a of list.filter(a => !a.fence)) {
       const wrap = document.createElement('label');const box = document.createElement('input');box.type = 'checkbox';box.dataset.populateAsset = a.id;wrap.append(box, ' ' + a.name);set.append(wrap);
     }
     pop.append(set);

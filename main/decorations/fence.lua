@@ -1,6 +1,7 @@
 -- Pure fence geometry: a strip that follows the driving line between two distances, standing upright.
 -- U runs on with arc length, so the repeating texture has no gap at a repeat or a corner.
-local M={HEIGHT=1,PERIOD=2,MAX_POINTS=256}
+-- POST_U: the post column of fence-wood (centre 0.25 of the period, 0.07 wide); 0.14 m at a 2 m period.
+local M={HEIGHT=1,PERIOD=2,MAX_POINTS=256,POST_WIDTH=.14,POST_U={.215,.285}}
 -- Points of the source between two distances, within one part (a jump gap ends the fence).
 function M.points(parts,from,to,offset)
     local out={}
@@ -39,7 +40,7 @@ function M.points(parts,from,to,offset)
     return clean
 end
 -- Triangle list in metres: {x,y,u,v} per vertex.
-function M.strip(points,height,period)
+function M.strip(points,height,period,posts)
     height,period=height or M.HEIGHT,period or M.PERIOD
     local v,u={},0
     local function add(x,y,tu,tv) v[#v+1]={x,y,tu,tv} end
@@ -49,6 +50,15 @@ function M.strip(points,height,period)
         add(a[1],a[2],u,0);add(b[1],b[2],next_u,0);add(b[1],b[2]+height,next_u,1)
         add(a[1],a[2],u,0);add(b[1],b[2]+height,next_u,1);add(a[1],a[2]+height,u,1)
         u=next_u
+    end
+    -- A post at each end, cut from the texture's post column (#635); drawn last, over the rails.
+    if posts~=false and #points>=2 then
+        local half=M.POST_WIDTH/2
+        for _,q in ipairs({points[1],points[#points]}) do
+            local x,y=q[1],q[2]
+            add(x-half,y,M.POST_U[1],0);add(x+half,y,M.POST_U[2],0);add(x+half,y+height,M.POST_U[2],1)
+            add(x-half,y,M.POST_U[1],0);add(x+half,y+height,M.POST_U[2],1);add(x-half,y+height,M.POST_U[1],1)
+        end
     end
     return v
 end

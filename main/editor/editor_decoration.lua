@@ -34,6 +34,16 @@ function M.resolved()
     end
     return out
 end
+function M.ghost()
+    local a,h=M.fence_arm,M.hover
+    if type(a)~='table' or not h or h.source~=a.source or math.abs(h.distance-a.distance)<.1 then return nil end
+    local points=fence.points(parts_of(a.source),math.min(a.distance,h.distance),math.max(a.distance,h.distance),M.offset)
+    return points and {points=points,placement=M.placement,source=a.source,ghost=true} or nil
+end
+function M.live_key()
+    local a,h,d=M.fence_arm,M.hover,M.drag
+    return (type(a)=='table' and h and a.distance..':'..h.source..':'..h.distance or '')..(d and d.edge and d.edge..d.value or '')
+end
 -- The drawn fences of the current source, with a live drag applied.
 function M.fences()
     local list={}
@@ -41,7 +51,11 @@ function M.fences()
     for _,o in ipairs(b and b.items or {}) do
         if o.to then
             local from,to=o.distance,o.to
-            if M.drag and M.drag.id==o.id then from,to=M.drag.distance,M.drag.distance+o.to-o.distance end
+            local d=M.drag and M.drag.id==o.id and M.drag
+            if d and d.edge then
+                if d.edge=='from' then from=d.value else to=d.value end
+                from,to=math.min(from,to),math.max(from,to)
+            elseif d then from,to=d.distance,d.distance+o.to-o.distance end
             local points=fence.points(parts_of(o.source),from,to,M.live(o,'offset'))
             local stale=not points or not source.fits(parts_of(o.source),o.to)
             if stale and M.drag and M.drag.id==o.id and M.drag.source then
@@ -51,6 +65,9 @@ function M.fences()
             if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source,stale=stale} end
         end
     end
+    -- The fence being drawn follows the cursor from its first click.
+    local g=M.ghost()
+    if g then list[#list+1]=g end
     return list
 end
 -- One Undo step; a change the level cannot hold is refused whole, with the budget's limit and correction.
@@ -89,19 +106,35 @@ function M.press(p)
     if M.fence_arm then
         local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
         if not near then M.message='No visible track within '..edit.SNAP..' m. Click closer to a run.';M.shown=nil;return end
-        if M.fence_arm=='start' then M.fence_arm=near;M.message='Click where the fence ends, on the same terrain piece.';M.shown=nil;return end
-        local first=M.fence_arm;M.fence_arm=nil
+        if M.fence_arm=='start' then M.fence_arm=near;M.hover=near;M.message='Move to size the fence, click to end it.';M.shown=nil;editor.touch();return end
+        local first=M.fence_arm
         if near.source~=first.source or math.abs(near.distance-first.distance)<.1 then M.message='A fence starts and ends on one terrain piece.';M.shown=nil;return end
+        M.fence_arm=nil;M.hover=nil;M.message='Drag an end to change the length. Pick the fence again for another.'
         local new
         if commit(function(block)
-            new=edit.add(block,{source=first.source,distance=math.min(first.distance,near.distance),offset=M.offset,placement=M.placement,tilt=true,asset='fence-wood'})
+            new=edit.add(block,{source=first.source,distance=math.min(first.distance,near.distance),offset=M.offset,placement=M.placement,tilt=true,asset=M.fence_asset or 'fence-wood'})
             new.to=math.max(first.distance,near.distance)
             local points=fence.points(parts_of(first.source),new.distance,new.to,M.offset)
             if not points then return 'That stretch of track is too short for a fence.' end
         end) then M.selected=new.id end
+        editor.touch()
         return
     end
     local b=editor.doc.editor.decorations
+    -- A selected fence's end: drag it to change the length.
+    local sel=selected_item()
+    if sel and sel.to and not sel.locked then
+        for _,f in ipairs(M.fences()) do
+            if f.id==sel.id and not f.stale then
+                for _,e in ipairs({{'from',f.points[1],sel.distance},{'to',f.points[#f.points],sel.to}}) do
+                    local q=e[2]
+                    if math.abs(p[1]-q[1])<=.45 and p[2]>=q[2]-.3 and p[2]<=q[2]+fence.HEIGHT+.3 then
+                        M.drag={id=sel.id,edge=e[1],value=e[3],start=p,moved=false};return
+                    end
+                end
+            end
+        end
+    end
     local hit=b and edit.pick(b,M.resolved(),p,catalog.ASSETS)
     if not hit then
         for _,f in ipairs(M.fences()) do
@@ -116,11 +149,21 @@ function M.press(p)
     end
     M.place(p)
 end
+function M.hover_at(p)
+    if type(M.fence_arm)~='table' then return end
+    local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
+    if near and near.source==M.fence_arm.source and not (M.hover and M.hover.distance==near.distance) then M.hover=near;editor.touch() end
+end
 function M.move(p)
+    M.hover_at(p)
     local d=M.drag
     if not d then return end
     local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
     local item=edit.find(editor.doc.editor.decorations,d.id)
+    if d.edge then
+        if near and item and near.source==item.source and (d.moved or math.abs(p[1]-d.start[1])>.05) then d.value,d.moved=near.distance,true;editor.touch() end
+        return
+    end
     if near and item and item.to then
         if not d.moved and math.abs(p[1]-d.start[1])+math.abs(p[2]-d.start[2])<=.05 then return end
         -- A fence slides along its own piece and keeps its length; a stale one moves onto any run.
@@ -143,11 +186,19 @@ function M.release()
     commit(function(b)
         local o=edit.find(b,d.id)
         if not o then return 'That decoration no longer exists.' end
+        if d.edge then
+            local from,to=o.distance,o.to
+            if d.edge=='from' then from=d.value else to=d.value end
+            from,to=math.min(from,to),math.max(from,to)
+            if to-from<.1 or not fence.points(parts_of(o.source),from,to,o.offset) then return 'A fence needs some length.' end
+            o.distance,o.to=from,to;return
+        end
         if o.to then o.to=d.distance+o.to-o.distance end
         o.source,o.distance=d.source,d.distance
     end)
 end
 function M.cancel()
+    if type(M.fence_arm)=='table' then M.fence_arm='start';M.hover=nil;editor.touch() end
     if M.preview then M.preview=nil;editor.touch() end
     if M.drag then M.drag=nil;editor.touch() end
 end
@@ -165,7 +216,7 @@ end
 function M.copy()
     local o=selected_item()
     if not o then return end
-    if o.to then M.message='Draw another fence with Fence.';M.shown=nil;return end
+    if o.to then M.message='Pick the fence in the list to draw another.';M.shown=nil;return end
     if not parts_of(o.source) then M.message='Drag this object onto a run before copying it.';M.shown=nil;return end
     local new
     if commit(function(b)
@@ -222,7 +273,7 @@ local function anchor(o)
 end
 local function state()
     local o=selected_item()
-    return {anchor=anchor(o),stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
+    return {anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
         selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
@@ -231,6 +282,11 @@ local function palette()
     for _,id in ipairs(catalog.ORDER) do
         local png=sys.load_resource('/main/decorations/meadow/thumbs/'..id..'.png')
         list[#list+1]={id=id,name=catalog.ASSETS[id].name,thumb=png and 'data:image/png;base64,'..track.base64(png) or ''}
+    end
+    -- Fences are drawn, not dropped: click, move, click.
+    for id,f in pairs(catalog.FENCES) do
+        local png=sys.load_resource('/main/decorations/meadow/thumbs/'..id..'.png')
+        list[#list+1]={id=id,name=f.name,fence=true,thumb=png and 'data:image/png;base64,'..track.base64(png) or ''}
     end
     return list
 end
@@ -242,7 +298,8 @@ function M.open()
 end
 function M.handle(m)
     if type(m)~='table' then return end
-    if m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value
+    if m.type=='asset' and catalog.FENCES[m.value] then M.fence_asset=m.value;M.fence_arm='start';M.hover=nil;M.selected=nil;M.message='Click where the fence starts.';M.shown=nil;editor.touch()
+    elseif m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value;M.fence_arm=nil;M.hover=nil;editor.touch()
     elseif m.type=='placement' and source.PLACEMENTS[m.value] then M.placement=m.value;if selected_item() then change({placement=m.value}) end
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;M.preview=nil;if selected_item() then change({offset=m.value}) end
@@ -254,7 +311,6 @@ function M.handle(m)
         elseif o and not o.locked then M.preview={id=o.id,field=m.field,revision=editor.doc.editor.revision,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
     elseif m.type=='hidden' then change({hidden=m.value==true})
     elseif m.type=='locked' then change({locked=m.value==true})
-    elseif m.type=='fence' then M.fence_arm='start';M.selected=nil;M.message='Click where the fence starts.';M.shown=nil
     elseif m.type=='arm' and (m.value=='a' or m.value=='b') then M.arming=m.value
     elseif m.type=='clear_stretch' then M.stretch={};M.arming=nil
     elseif m.type=='populate' and type(m.settings)=='table' then

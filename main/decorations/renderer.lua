@@ -87,7 +87,7 @@ function M.sync_fences(s,list,selected)
             resource.set_buffer(o.res,fence_buffer(f.points),{transfer_ownership=true});o.key=key
         end
         go.set_position(vmath.vector3(0,0,z),o.id)
-        local r,g,b,a=tint_for({stale=f.stale,hidden=f.hidden,placement=f.placement},f.id~=nil and f.id==selected)
+        local r,g,b,a=tint_for({stale=f.stale,hidden=f.hidden,placement=f.placement},f.ghost or (f.id~=nil and f.id==selected))
         go.set(o.url,'tint',vmath.vector4(r,g,b,a))
         o.placement,o.source_id,o.points=f.placement,f.id,#f.points
     end

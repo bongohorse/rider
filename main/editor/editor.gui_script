@@ -2205,6 +2205,8 @@ function on_input(self,action_id,action)
         return true
     end
     if action_id==nil then
+        -- A fence being drawn follows the cursor before its second click.
+        if editor.tool=='decoration' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then decoration_tool.hover_at(p) end end
         if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
         else cursor(self,action);set_hover(self,{}) end
         return true
@@ -2307,7 +2309,7 @@ function on_input(self,action_id,action)
     elseif editor.tool=="prefab" and KIND_KEYS[action_id] then
         -- 1-7 pick the prefab type (the game's station keys are editor input while editing).
         editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
-    elseif action_id==hash("editor_cancel") and decoration_tool.drag then decoration_tool.cancel()
+    elseif action_id==hash("editor_cancel") and (decoration_tool.drag or type(decoration_tool.fence_arm)=="table") then decoration_tool.cancel()
     elseif action_id==hash("editor_cancel") then
         if self.auto_plan then clear_auto(self);editor.message="Coin preview cancelled.";return true end
         -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
