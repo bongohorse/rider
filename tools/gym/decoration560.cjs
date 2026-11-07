@@ -70,7 +70,7 @@ async function main(){
   r=await rev();await dom('#rider-bar-offset-reset');await revision(r+1);assert.equal((await items())[0].offset,0,'reset');
   // Transform box: a corner drag sizes, the top handle moves the offset, a knob rotates; each release is one step.
   const drag=async(sel,dx,dy)=>{const b=await page.locator(sel).boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:6});await pointer.frames(page,{n:6});await page.mouse.up();await pointer.frames(page,{n:8});};
-  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-gizmo').hidden);
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-gizmo')).display!=='none');
   r=await rev();await drag('#rider-gizmo-tr',30,-30);await revision(r+1);assert.ok((await items())[0].scale>1.1,'corner sizes '+(await items())[0].scale);
   r=await rev();await drag('#rider-gizmo-top',0,-40);await revision(r+1);assert.ok((await items())[0].offset>.2,'top handle offsets '+(await items())[0].offset);
   r=await rev();await drag('#rider-gizmo-rot-r',0,60);await revision(r+1);assert.ok(Math.abs((await items())[0].rotation||0)>5,'knob rotates '+(await items())[0].rotation);
@@ -93,15 +93,15 @@ async function main(){
   await key('y',['Control']);await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===1);report.cases.undo_redo={after:await items()};
   // Leaving the tool hides the quick bar with the panel, whichever way it closes.
   const at=async()=>{const o=await page.evaluate(()=>window.riderDecorationState.items[0]);return [o.x/100,o.y/100];};
-  await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await tapButton('tool_select');await pointer.frames(page,{n:10});await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
-  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'bar gone with another tool');
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'bar gone with another tool');
+  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await tapButton('tool_decoration');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
-  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'Decor toggles off with its bar');
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'Decor toggles off with its bar');
+  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await dom('#rider-decoration-close');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
-  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'bar gone with Close');
+  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'bar gone with Close');
   // Durable reload, then Play shows it.
   const kept=await items();await page.waitForTimeout(1100);await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved',null,{timeout:20000});
   await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderEditor||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(1000);
@@ -110,14 +110,14 @@ async function main(){
   // Play with an object selected: no Decor overlay stays on the drive.
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
   {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
-  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   // Picking another asset ends the selection: bar and box go.
-  await dom('[data-decoration-asset="cone"]');await page.waitForFunction(()=>document.querySelector('#rider-decoration-bar').hidden&&document.querySelector('#rider-decoration-gizmo').hidden);
+  await dom('[data-decoration-asset="cone"]');await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'&&getComputedStyle(document.querySelector('#rider-decoration-gizmo')).display==='none');
   {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
-  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await tapButton('play');await page.waitForFunction(()=>window.riderEditor?.mode!=='edit'&&window.riderDecorationState?.objects===1&&window.riderDecorationState?.items?.[0]?.id==null,null,{timeout:30000});
   await pointer.frames(page,{n:20});
-  assert.deepEqual(await page.evaluate(()=>['#rider-decoration-bar','#rider-decoration-gizmo','#rider-decoration-panel'].filter(s=>{const n=document.querySelector(s);return n&&!n.hidden;})),[],'no Decor overlay in Play');
+  assert.deepEqual(await page.evaluate(()=>['#rider-decoration-bar','#rider-decoration-gizmo','#rider-decoration-panel'].filter(s=>{const n=document.querySelector(s);return n&&getComputedStyle(n).display!=='none';})),[],'no Decor overlay in Play');
   report.cases.reload_play=await page.evaluate(()=>window.riderDecorationState);await page.screenshot({path:path.join(out,'decoration-play.png')});
   assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'decoration-failure.png')}).catch(()=>{});}
