@@ -16,6 +16,10 @@ local function apply(o,item,scale,selected)
     if not o.t or o.t.x~=t.x or o.t.y~=t.y or o.t.z~=t.z then go.set_position(p,o.id) end
     if not o.t or o.t.angle~=t.angle then go.set_rotation(vmath.quat_rotation_z(t.angle),o.id) end
     if not o.t or o.t.scale~=t.scale then go.set_scale(vmath.vector3(t.scale,t.scale,1),o.id) end
+    -- A sprite sets premultiplied blending and a later mesh keeps it: a Behind sprite drawn in the tile pass
+    -- before the terrain would brighten the frayed surface edge along the whole track (#632).
+    local m=M.materials
+    if m and (o.placement=='behind')~=(item.placement=='behind') then go.set(o.url,'material',item.placement=='behind' and m.behind or m.other) end
     if o.asset~=item.asset then sprite.play_flipbook(o.url,hash(item.asset)) end
     local r,g,b,a=tint_for(item,selected)
     local key=r..':'..g..':'..b..':'..a
