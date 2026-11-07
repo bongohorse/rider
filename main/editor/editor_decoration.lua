@@ -369,7 +369,7 @@ end
 function M.handle(m)
     if type(m)~='table' then return end
     if m.type=='asset' and catalog.FENCES[m.value] then M.fence_asset=m.value;M.fence_arm='start';M.hover=nil;M.selected=nil;M.message='Click where the fence starts.';M.shown=nil;editor.touch()
-    elseif m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value;M.fence_arm=nil;M.hover=nil;editor.touch()
+    elseif m.type=='asset' and catalog.ASSETS[m.value] then M.asset=m.value;M.fence_arm=nil;M.hover=nil;M.selected=nil;M.preview=nil;M.shown=nil;editor.touch()
     elseif m.type=='placement' and source.PLACEMENTS[m.value] then M.placement=m.value;if selected_item() then change({placement=m.value}) end
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;M.preview=nil;if selected_item() then change({offset=m.value}) end
