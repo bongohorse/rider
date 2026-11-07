@@ -178,6 +178,25 @@ for i=2,#result.items do assert(result.items[i].source=='o1','hidden terrain get
 local kept_at={version=1,next_id=2,items={{id='d1',source='o1',distance=20,offset=2,placement='front',tilt=true,asset='cone'}}}
 local near_check=assert(Pop.run(kept_at,{two_runs[1]},settings{offset=2,density=40,spacing=2}))
 for i=2,#near_check.items do assert(math.abs(near_check.items[i].distance-20)>=2-1e-9,'spacing measured at the real offset') end
+-- #618: fences.
+local F=require 'main.decorations.fence'
+local fp=F.points({{{0,0},{4,0},{7,4}}},2,6.5,0);near(fp[1][1],2);near(fp[2][1],4);near(fp[3][1],5.5);near(fp[3][2],2);assert(#fp==3)
+assert(F.points({{{0,0},{4,0}}},9,10,0)==nil,'beyond the source');assert(#F.points({{{0,0},{2,0}},{{5,0},{9,0}}},1,3,0)==2,'stops at a gap')
+local curve_parts=D.parts(base().editor.objects[2])
+local strip=F.strip(F.points(curve_parts,1,8,.5))
+assert(#strip%6==0 and #strip>=6);for i=1,#strip-6,6 do near(strip[i+1][3],strip[i+6][3],'U continues, no gap at repeats');near(strip[i+1][1],strip[i+6][1]);near(strip[i+1][2],strip[i+6][2]) end
+assert(F.points({{{0,0},{4,0}}},4,5,0)==nil,'nothing at the very end');
+local fine={};for i=0,999 do fine[#fine+1]={i*.1,0} end;local thin=F.points({fine},0,99.9,0);assert(#thin==F.MAX_POINTS);near(thin[1][1],0);near(thin[#thin][1],99.9)
+assert(budget.preview(60,10,1,0,{decorations={items={{to=1},{to=2},{to=3},{to=4},{to=5},{to=6},{to=7},{to=8},{to=9}}}})==false,'fences share the mesh pool')
+local lockf=base();assert(D.set_decorations(lockf.editor,{version=1,next_id=2,items={item{asset='fence-wood',to=9,locked=true}}}))
+local fm=D.copy(lockf.editor);fm.decorations.items[1].to=8;assert(D.lock_conflict(lockf.editor,fm),'a locked fence keeps its end')
+assert(F.hit({{0,0},{4,0}},{2,.5}) and not F.hit({{0,0},{4,0}},{2,1.5}) and not F.hit({{0,0},{4,0}},{6,.5}),'pick')
+local fenced=base();assert(D.set_decorations(fenced.editor,{version=1,next_id=2,items={item{asset='fence-wood',to=9}}}))
+local fc=assert(D.compile(fenced));assert(#fc.decorations.fences==1 and #fc.decorations.items==0 and data.validate(J.decode(enc(fc))))
+assert(budget.measure(fc).mesh_peak==budget.measure(plain).mesh_peak+1,'a fence counts as a mesh')
+assert(not S.validate(block(item{asset='fence-wood',to=1})),'ends before start');assert(not S.validate(block(item{asset='cone',to=9})),'cone is no fence');assert(not S.validate(block(item{asset='fence-wood'})),'fence asset needs an end')
+local crowd={version=1,next_id=40,items={}};for i=1,33 do crowd.items[i]=item{id='d'..i,asset='fence-wood',to=9} end;assert(not S.validate(crowd),'fence limit')
+for _,field in ipairs(SIM) do assert(enc(plain[field])==enc(fc[field]),field..' changed by a fence') end
 -- Size reaches layout and compile.
 local sized=L.transform({asset='cone',position={0,0},angle=0,placement='front',scale=2},.01);near(sized.scale,2*100/96);near(sized.y,2*(.875/2-.02)*100)
 print('PASS decorations')

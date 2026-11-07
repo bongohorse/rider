@@ -375,17 +375,18 @@ local function sync_edit_decorations(self)
     if self.decoration_key==key then return end
     self.decoration_key=key
     local poses=tool.resolved()
-    local items={}
+    local items,fences={},tool.fences()
     for _,o in ipairs(b and b.items or {}) do
         local r=poses[o.id]
-        if r then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=o.scale} end
+        if r and not o.to then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=o.scale} end
     end
     require("main.decorations.renderer").sync(self.decorations,items,tool.selected)
+    require("main.decorations.renderer").sync_fences(self.decorations,fences,tool.selected)
 end
 local function update_decorations(self)
     if self.edit then sync_edit_decorations(self) end
     local s=self.decorations
-    if not s or #s.items==0 then return end
+    if not s or (not self.edit and #s.items==0 and #(s.fences or {})==0) then return end
     local renderer=require("main.decorations.renderer")
     -- Read-only camera inputs; the orthographic projection's scale gives the half extents.
     local c,p=go.get_position("/camera"),camera.get_projection("/camera#camera")
@@ -816,6 +817,7 @@ function fixed_update(self, dt)
     if self.time_probe then self.time_probe.fixed(self,dt) end
 end
 function final(self)
+    require("main.decorations.renderer").final(self.decorations)
     backgrounds.final(self.backgrounds)
     if self.fps356runtime then self.fps356runtime.restore(self) end
     editor_view.final(self)

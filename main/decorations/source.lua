@@ -1,10 +1,12 @@
 -- Decorations anchored to the track (level visuals contract). Pure: source model, validation and anchor
 -- resolution on compiled samples. Decorations never reach collision, physics or replay.
 local dense=require 'main.game.dense'
-local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,PLACEMENTS={behind=true,front=true,body=true}}
-local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true}
+local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_FENCES=32,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,PLACEMENTS={behind=true,front=true,body=true}}
+local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true,to=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
 local ASSETS=require('main.decorations.assets').ASSETS
+local FENCES=require('main.decorations.assets').FENCES
+local fence=require 'main.decorations.fence'
 local function unknown(t,allowed,what)
     for k in pairs(t) do if not allowed[k] then return 'Unknown '..what..' field '..tostring(k):sub(1,40) end end
 end
@@ -17,7 +19,7 @@ function M.validate(b)
     if type(b.next_id)~='number' or b.next_id<1 or b.next_id%1~=0 then return nil,'Invalid decoration next_id' end
     local n,err=dense.length(b.items,M.MAX_ITEMS)
     if not n then return nil,'Decorations are limited to '..M.MAX_ITEMS..' in a dense list: '..tostring(err) end
-    local ids={}
+    local ids,fences={},0
     for _,o in ipairs(b.items) do
         if type(o)~='table' then return nil,'Invalid decoration' end
         why=unknown(o,ITEM,'decoration')
@@ -30,7 +32,12 @@ function M.validate(b)
         if not number(o.offset,M.MAX_OFFSET) then return nil,'Decoration offset is limited to '..M.MAX_OFFSET..' m: '..o.id end
         if not M.PLACEMENTS[o.placement] then return nil,'Decoration placement must be behind, front or body: '..o.id,true end
         if type(o.tilt)~='boolean' then return nil,'Invalid decoration tilt: '..o.id end
-        if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
+        if o.to~=nil then
+            fences=fences+1
+            if type(o.asset)~='string' or not FENCES[o.asset] then return nil,'Unknown fence asset '..tostring(o.asset):sub(1,40),true end
+            if not number(o.to,M.MAX_DISTANCE) or o.to<=o.distance then return nil,'A fence must end after it starts: '..o.id end
+            if fences>M.MAX_FENCES then return nil,'Fences are limited to '..M.MAX_FENCES..' a level; remove one.' end
+        elseif type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
         if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Decoration size must be '..M.MIN_SCALE..' to '..M.MAX_SCALE..': '..o.id end
         if o.generated~=nil and type(o.generated)~='boolean' then return nil,'Invalid decoration generated flag: '..o.id end
         if (o.hidden~=nil and type(o.hidden)~='boolean') or (o.locked~=nil and type(o.locked)~='boolean') then return nil,'Invalid decoration visibility/lock: '..o.id end
@@ -41,7 +48,7 @@ end
 function M.validate_compiled(c)
     if c==nil then return true end
     if type(c)~='table' or c.version~=M.COMPILED_VERSION then return nil,'Unsupported compiled decorations version',true end
-    local why=unknown(c,{version=true,items=true},'compiled decorations')
+    local why=unknown(c,{version=true,items=true,fences=true},'compiled decorations')
     if why then return nil,why,true end
     local n,err=dense.length(c.items,M.MAX_ITEMS)
     if not n then return nil,'Decorations are limited to '..M.MAX_ITEMS..' in a dense list: '..tostring(err) end
@@ -53,6 +60,18 @@ function M.validate_compiled(c)
         if not number(o.angle,math.pi) or not M.PLACEMENTS[o.placement] then return nil,'Invalid compiled decoration' end
         if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Invalid compiled decoration size' end
         if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
+    end
+    local count,fence_err=dense.length(c.fences or {},M.MAX_FENCES)
+    if not count then return nil,'Fences are limited to '..M.MAX_FENCES..': '..tostring(fence_err) end
+    for _,f in ipairs(c.fences or {}) do
+        if type(f)~='table' or not M.PLACEMENTS[f.placement] or type(f.asset)~='string' or not FENCES[f.asset] then return nil,'Invalid compiled fence' end
+        why=unknown(f,{points=true,placement=true,asset=true},'compiled fence')
+        if why then return nil,why,true end
+        local points=dense.length(f.points,fence.MAX_POINTS)
+        if not points or points<2 then return nil,'Invalid compiled fence points' end
+        for _,p in ipairs(f.points) do
+            if type(p)~='table' or #p~=2 or not number(p[1],200000) or not number(p[2],200000) then return nil,'Invalid compiled fence point' end
+        end
     end
     return true
 end
@@ -95,10 +114,15 @@ end
 function M.compile(b,parts_of)
     if not b or #b.items==0 then return nil end
     local items={}
+    local fences={}
     for _,o in ipairs(b.items) do
-        local x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt)
+        local x,y,angle
+        if o.to then
+            local points=fence.points(parts_of(o.source),o.distance,o.to,o.offset)
+            if points then fences[#fences+1]={points=points,placement=o.placement,asset=o.asset} end
+        else x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt) end
         if x then items[#items+1]={position={x,y},angle=angle,placement=o.placement,asset=o.asset,scale=o.scale} end
     end
-    return {version=M.COMPILED_VERSION,items=items}
+    return {version=M.COMPILED_VERSION,items=items,fences=#fences>0 and fences or nil}
 end
 return M

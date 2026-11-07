@@ -1,0 +1,5 @@
+material: "/main/decorations/fence.material"
+vertices: "/main/terrain_perspective/empty.buffer"
+primitive_type: PRIMITIVE_TRIANGLES
+position_stream: "position"
+textures: "/main/decorations/meadow/fence-wood.png"

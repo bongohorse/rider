@@ -5,6 +5,7 @@ local source=require 'main.decorations.source'
 local edit=require 'main.decorations.edit'
 local catalog=require 'main.decorations.assets'
 local populate=require 'main.decorations.populate'
+local fence=require 'main.decorations.fence'
 local M={populate=doc.copy(populate.DEFAULTS),arming=nil,stretch={},asset='cone',placement='front',tilt=true,offset=0,selected=nil,drag=nil,message=''}
 -- Every terrain piece's sampled parts, read once per call site.
 local function parts_of(id)
@@ -15,12 +16,28 @@ function M.resolved()
     local out={}
     local b=editor.doc and editor.doc.editor.decorations
     for _,o in ipairs(b and b.items or {}) do
-        local distance,src=o.distance,o.source
-        if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
-        local x,y,angle=source.resolve(parts_of(src),distance,o.offset,o.tilt)
-        if x then out[o.id]={x=x,y=y,angle=angle} end
+        if not o.to then
+            local distance,src=o.distance,o.source
+            if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
+            local x,y,angle=source.resolve(parts_of(src),distance,o.offset,o.tilt)
+            if x then out[o.id]={x=x,y=y,angle=angle} end
+        end
     end
     return out
+end
+-- The drawn fences of the current source, with a live drag applied.
+function M.fences()
+    local list={}
+    local b=editor.doc and editor.doc.editor.decorations
+    for _,o in ipairs(b and b.items or {}) do
+        if o.to then
+            local from,to=o.distance,o.to
+            if M.drag and M.drag.id==o.id then from,to=M.drag.distance,M.drag.distance+o.to-o.distance end
+            local points=fence.points(parts_of(o.source),from,to,o.offset)
+            if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source} end
+        end
+    end
+    return list
 end
 -- One Undo step; a change the level cannot hold is refused whole, with the budget's limit and correction.
 local function commit(fn)
@@ -54,8 +71,28 @@ function M.press(p)
         M.stretch[M.arming]=p[1];M.arming=nil;M.shown=nil
         return
     end
+    if M.fence_arm then
+        local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
+        if not near then M.message='No visible track within '..edit.SNAP..' m. Click closer to a run.';M.shown=nil;return end
+        if M.fence_arm=='start' then M.fence_arm=near;M.message='Click where the fence ends, on the same terrain piece.';M.shown=nil;return end
+        local first=M.fence_arm;M.fence_arm=nil
+        if near.source~=first.source or math.abs(near.distance-first.distance)<.1 then M.message='A fence starts and ends on one terrain piece.';M.shown=nil;return end
+        local new
+        if commit(function(block)
+            new=edit.add(block,{source=first.source,distance=math.min(first.distance,near.distance),offset=M.offset,placement=M.placement,tilt=true,asset='fence-wood'})
+            new.to=math.max(first.distance,near.distance)
+            local points=fence.points(parts_of(first.source),new.distance,new.to,M.offset)
+            if not points then return 'That stretch of track is too short for a fence.' end
+        end) then M.selected=new.id end
+        return
+    end
     local b=editor.doc.editor.decorations
     local hit=b and edit.pick(b,M.resolved(),p,catalog.ASSETS)
+    if not hit then
+        for _,f in ipairs(M.fences()) do
+            if fence.hit(f.points,p) then hit=edit.find(b,f.id) end
+        end
+    end
     if hit then
         M.selected=hit.id
         if hit.locked then M.message='Locked: '..hit.id..'. Unlock it before moving it.';return end
@@ -68,7 +105,17 @@ function M.move(p)
     local d=M.drag
     if not d then return end
     local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
-    if near and (d.moved or math.abs(p[1]-d.start[1])+math.abs(p[2]-d.start[2])>.05) then
+    local item=edit.find(editor.doc.editor.decorations,d.id)
+    if near and item and item.to then
+        if not d.moved and math.abs(p[1]-d.start[1])+math.abs(p[2]-d.start[2])<=.05 then return end
+        -- A fence slides along its own piece and keeps its length.
+        if near.source==item.source then
+            local span=item.to-item.distance
+            local start=d.anchor or near.distance;d.anchor=start
+            d.distance=math.max(0,math.min(source.length(parts_of(item.source))-span,item.distance+near.distance-start))
+            d.moved=true;editor.touch()
+        end
+    elseif near and (d.moved or math.abs(p[1]-d.start[1])+math.abs(p[2]-d.start[2])>.05) then
         d.source,d.distance,d.moved=near.source,near.distance,true;editor.touch()
     end
 end
@@ -78,6 +125,7 @@ function M.release()
     commit(function(b)
         local o=edit.find(b,d.id)
         if not o then return 'That decoration no longer exists.' end
+        if o.to then o.to=d.distance+o.to-o.distance end
         o.source,o.distance=d.source,d.distance
     end)
 end
@@ -95,6 +143,7 @@ end
 function M.copy()
     local o=selected_item()
     if not o then return end
+    if o.to then M.message='Draw another fence with Fence.';M.shown=nil;return end
     local new
     if commit(function(b)
         new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset,scale=o.scale})
@@ -131,7 +180,7 @@ end
 local function state()
     local o=selected_item()
     return {stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
-        selected=o and {id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,hidden=o.hidden or false,locked=o.locked or false} or false}
+        selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
     local track=require 'main.editor.editor_track'
@@ -144,7 +193,7 @@ local function palette()
 end
 function M.open()
     if not html5 or not editor.doc then return end
-    M.instance=editor.opened;M.suspended=false;M.selected=nil;M.message='';M.shown=nil;M.stretch={};M.arming=nil
+    M.instance=editor.opened;M.suspended=false;M.selected=nil;M.message='';M.shown=nil;M.stretch={};M.arming=nil;M.fence_arm=nil
     html5.run(assert(sys.load_resource('/main/game/decoration_panel.js'),'Missing Decoration panel'))
     html5.run('window.riderDecorationPanel.open('..json.encode(palette())..')')
 end
@@ -156,6 +205,7 @@ function M.handle(m)
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;if selected_item() then change({offset=m.value}) end
     elseif m.type=='hidden' then change({hidden=m.value==true or nil})
     elseif m.type=='locked' then change({locked=m.value==true or nil})
+    elseif m.type=='fence' then M.fence_arm='start';M.selected=nil;M.message='Click where the fence starts.';M.shown=nil
     elseif m.type=='arm' and (m.value=='a' or m.value=='b') then M.arming=m.value
     elseif m.type=='clear_stretch' then M.stretch={};M.arming=nil
     elseif m.type=='populate' and type(m.settings)=='table' then

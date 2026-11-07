@@ -41,7 +41,9 @@ function M.measure(d)
     r.visible_max=r.sections;r.allocated_max=r.sections;r.cached_max=math.min(2,r.sections)
     r.mesh_peak=2*r.sections -- retiring old + incoming, before end-of-frame deletion
     r.mesh_peak=r.mesh_peak+require('main.terrain_perspective.material').held_presets(d) -- hidden override chunks
-    r.instances=r.sections+r.sprites+r.labels+M.RESERVE
+    r.fences=#(d.decorations and d.decorations.fences or {})
+    r.mesh_peak=r.mesh_peak+r.fences
+    r.instances=r.sections+r.sprites+r.labels+r.fences+M.RESERVE
     -- Conservative CPU working envelope: retained editor arrays (including base colors),
     -- staging/replacement arrays, descriptors and two engine-owned buffer copies.
     r.cpu_estimate=r.vertices*working+r.physics_vertices*512+r.payload*2
@@ -71,9 +73,12 @@ function M.preview(sections,vertices,sprites,labels,document)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled({editor=document})
     -- Decorations are rebuilt whole, one copy at a time, so they count once.
-    local placed=#(document and document.decorations and document.decorations.items or {})
-    return sections*2<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride_for({editor=document}) or 36)<=M.PAYLOAD and
+    local placed,fences=0,0
+    for _,o in ipairs(document and document.decorations and document.decorations.items or {}) do
+        if type(o)=='table' and o.to then fences=fences+1 else placed=placed+1 end
+    end
+    return sections*2+fences<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride_for({editor=document}) or 36)<=M.PAYLOAD and
         2*sprites+placed+12<=M.SPRITES and 2*labels+4<=M.LABELS and
-        2*(sections+sprites+labels)+placed+16<=M.INSTANCES
+        2*(sections+sprites+labels)+placed+fences+16<=M.INSTANCES
 end
 return M

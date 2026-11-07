@@ -1,0 +1,8 @@
+name: "decoration_fence"
+tags: "tile"
+vertex_program: "/main/decorations/fence.vp"
+fragment_program: "/main/decorations/fence.fp"
+vertex_space: VERTEX_SPACE_LOCAL
+vertex_constants { name: "world_view_proj" type: CONSTANT_TYPE_WORLDVIEWPROJ }
+fragment_constants { name: "tint" type: CONSTANT_TYPE_USER value { x: 1 y: 1 z: 1 w: 1 } }
+samplers { name: "tex0" wrap_u: WRAP_MODE_REPEAT wrap_v: WRAP_MODE_CLAMP_TO_EDGE filter_min: FILTER_MODE_MIN_LINEAR filter_mag: FILTER_MODE_MAG_LINEAR }
