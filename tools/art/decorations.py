@@ -20,16 +20,20 @@ SEED = 5670
 ASSETS = {
     'tree-oak': ('Oak tree', 3.0, 4.0, .10),
     'tree-pine': ('Pine tree', 2.0, 4.5, .10),
-    'bush-round': ('Round bush', 1.5, 1.0, .06),
+    'bush-round': ('Bush', 1.5, 1.0, .06),
     'bush-berry': ('Berry bush', 1.75, 1.25, .06),
     'grass-tuft': ('Grass tuft', 1.0, .5, .03),
     'grass-tall': ('Tall grass', 1.25, 1.0, .03),
     'flowers': ('Flowers', 1.25, .625, .03),
     'rock-small': ('Small rock', 1.0, .625, .08),
-    'rock-large': ('Large rock', 2.25, 1.5, .12),
+    'rock-large': ('Rock', 2.25, 1.5, .12),
     'sign': ('Wooden sign', 1.25, 1.5, .08),
     'cone': ('Traffic cone', .625, .875, .02),
+    'stump': ('Tree stump', 1.25, .875, .06),
+    'mushrooms': ('Mushrooms', 1.0, .625, .03),
 }
+# Kept so saved courses still draw them, but no longer offered: too close to bush-round and rock-large (#633).
+LEGACY = ('bush-berry', 'rock-small')
 # Repeating fence textures: pixels at 128 per metre, 2 m period, 1 m tall.
 FENCES = {'fence-wood': ('Wooden fence', (256, 128))}
 LEAF = ((46, 92, 60), (74, 132, 72), (122, 172, 88), (172, 208, 112))
@@ -115,10 +119,43 @@ def paint(asset, w, h, rng):
         for y in (.2, .3, .4):
             d.rectangle((w*.18, h*(y-.012), w*.68, h*(y+.012)), fill=(*BARK[0], 255))
     elif asset == 'cone':
-        d.polygon([(w*.04, h*.93), (w*.96, h*.93), (w*.96, h), (w*.04, h)], fill=(52, 50, 50, 255))
-        d.polygon([(w*.45, 0), (w*.55, 0), (w*.82, h*.93), (w*.18, h*.93)], fill=(232, 104, 36, 255))
-        d.polygon([(w*.36, h*.34), (w*.64, h*.34), (w*.72, h*.6), (w*.28, h*.6)], fill=(246, 242, 232, 255))
-        d.polygon([(w*.45, 0), (w*.48, 0), (w*.3, h*.93), (w*.18, h*.93)], fill=(255, 255, 255, 56))
+        # Every part is opaque and inside the outline: ImageDraw replaces pixels, a translucent fill would cut a hole (#633).
+        orange, light, white = (232, 104, 36), (250, 146, 72), (246, 242, 232)
+        left, right = lambda y: w*(.45-.27*y/h), lambda y: w*(.55+.27*y/h)
+        d.rounded_rectangle((w*.04, h*.9, w*.96, h), radius=w*.04, fill=(52, 50, 50, 255))
+        d.polygon([(w*.45, h*.02), (w*.55, h*.02), (right(h*.9), h*.9), (left(h*.9), h*.9)], fill=(*orange, 255))
+        for top, bottom in ((.3, .44), (.6, .74)):
+            d.polygon([(left(h*top), h*top), (right(h*top), h*top), (right(h*bottom), h*bottom), (left(h*bottom), h*bottom)], fill=(*white, 255))
+        d.polygon([(w*.45, h*.02), (w*.49, h*.02), (left(h*.9)+w*.1, h*.9), (left(h*.9), h*.9)], fill=(*light, 255))
+        for top, bottom in ((.3, .44), (.6, .74)):
+            d.polygon([(left(h*top), h*top), (left(h*top)+w*.04, h*top), (left(h*bottom)+w*.05, h*bottom), (left(h*bottom), h*bottom)], fill=(255, 255, 255, 255))
+        d.ellipse((w*.44, 0, w*.56, h*.05), fill=(*orange, 255))
+    elif asset == 'stump':
+        d.polygon([(w*.12, h), (w*.22, h*.82), (w*.24, h*.3), (w*.76, h*.3), (w*.78, h*.82), (w*.9, h)], fill=(*BARK[1], 255))
+        for x in (.32, .46, .6, .7):
+            d.line((w*x, h*.36, w*(x+rng.uniform(-.03, .03)), h*.92), fill=(*BARK[0], 255), width=max(1, round(w*.02)))
+        d.polygon([(w*.12, h), (w*.22, h*.82), (w*.24, h*.3), (w*.32, h*.3), (w*.3, h*.86), (w*.2, h)], fill=(*BARK[2], 255))
+        d.ellipse((w*.22, h*.18, w*.78, h*.42), fill=(*BARK[0], 255))
+        d.ellipse((w*.25, h*.2, w*.75, h*.39), fill=(214, 176, 120, 255))
+        for k in (.7, .45, .2):
+            d.ellipse((w*(.5-.25*k), h*(.295-.095*k), w*(.5+.25*k), h*(.295+.095*k)), outline=(176, 132, 84, 255), width=max(1, round(w*.012)))
+        d.polygon([(w*.6, h*.36), (w*.72, h*.12), (w*.7, h*.36)], fill=(*BARK[1], 255))
+        for x in (.1, .86):
+            blade(d, w*x, h, h*.3, w*.03, w*.03, LEAF[2])
+    elif asset == 'mushrooms':
+        for x, s, hgt in ((.28, .26, .62), (.62, .36, .92), (.86, .18, .42)):
+            stem = w*s*.28
+            d.rounded_rectangle((w*x-stem, h*(1-hgt*.7), w*x+stem, h), radius=stem*.6, fill=(240, 232, 214, 255))
+            d.rectangle((w*x-stem, h*(1-hgt*.7), w*x-stem*.4, h), fill=(255, 250, 240, 255))
+            top = h*(1-hgt)
+            d.pieslice((w*(x-s), top, w*(x+s), top+h*hgt*.62), 180, 360, fill=(196, 48, 44, 255))
+            d.pieslice((w*(x-s*.9), top+h*hgt*.04, w*(x-s*.2), top+h*hgt*.5), 180, 270, fill=(226, 92, 76, 255))
+            for dx, dy in ((-.45, .14), (.1, .07), (.5, .2), (-.1, .22)):
+                r = w*s*.13
+                cx, cy = w*(x+s*dx), top+h*hgt*dy+r
+                d.ellipse((cx-r, cy-r, cx+r, cy+r), fill=(250, 246, 236, 255))
+        for _ in range(10):
+            blade(d, rng.uniform(.05, .95)*w, h, h*rng.uniform(.15, .35), rng.uniform(-.04, .04)*w, w*.015, LEAF[rng.randrange(1, 4)])
     return image
 
 
@@ -159,7 +196,7 @@ def digest(path):
 
 def lua_catalog():
     rows = ''.join(f"    ['{a}']={{name='{n}',width={w},height={h},sink={s}}},\n" for a, (n, w, h, s) in ASSETS.items())
-    order = ','.join(f"'{a}'" for a in ASSETS)
+    order = ','.join(f"'{a}'" for a in ASSETS if a not in LEGACY)
     fences = ''.join(f"['{a}']={{name='{v[0]}'}}," for a, v in FENCES.items())
     return ('-- Generated by tools/art/decorations.py. Stable IDs of the preset decorations; sizes in metres.\n'
             f'return {{ORDER={{{order}}},FENCES={{{fences}}},ASSETS={{\n{rows}}}}}\n')

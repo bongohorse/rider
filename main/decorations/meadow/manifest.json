@@ -11,9 +11,9 @@
    "thumb_sha256": "39a355eb1046972e7dce109633a9bae8b5c166ba4ca4dd54d1a48f5ccca45710"
   },
   "cone": {
-   "rgba_sha256": "eba572e7359878065a787b41dfddcd7bd680c7481c2254f80682c1bd9d013a1f",
-   "sha256": "e7fd88ffeee06d9e1ddcab18a8ce775322ad8d8a8a0daa6706c2b6381f9574fb",
-   "thumb_sha256": "0df6cce9faef3615353046dd6ea616247ca4a3173a5cc17c587f87db490be39c"
+   "rgba_sha256": "b0c2c9f57eba199e7ce2057af06910556134d47cdb404af98b0551341de70584",
+   "sha256": "9f7eb35f47e375d8113ce1ccb24aa15843ec3a2ab88874ae9468c76efd86defd",
+   "thumb_sha256": "6a415c05ccd1a68b540ba4a86fe33ef469f4dc2a1bf21d9fdb0b6c668e4d372e"
   },
   "fence-wood": {
    "rgba_sha256": "6c4e6bf1fd8f4df18950b40184a4219835f8d3b130ea1ca6b97346d3909f3a00",
@@ -34,6 +34,11 @@
    "sha256": "1ce5b00593cb645763aa3faef6e2bff28aee2a7fee7d007e7786f0e60f7d419e",
    "thumb_sha256": "103e01d07728f2ca04f80326b51742adb8fb0b3ad54c5a60a5f23f6a2f11d0c3"
   },
+  "mushrooms": {
+   "rgba_sha256": "9f48fb5a7bc24890a330540bbe02f36f97d2523b71f4e122f3e82e481c891692",
+   "sha256": "41e3b1646adde1ae4722cdb1eddadec47f1f9fd0189659a960e87e1ac19b97b2",
+   "thumb_sha256": "3d2fecd66d9525fe3cf66c79b7de9780082f5150860c0b80c4313dd9f0c2e4a2"
+  },
   "rock-large": {
    "rgba_sha256": "cfe9ad2a23f6e3025ac4f6f1acc8ff1151a4cacfa425a4572d7f0a12a499e5c4",
    "sha256": "6eed434ac7e9ddd2109cc7f4a15486950e7efb5d69eecdd1dbafc4d7eb7f98ba",
@@ -49,6 +54,11 @@
    "sha256": "410fec8c534946cf34d0d2149f20bb5a3bf2321368c6bb4e0b0b73843fc3d470",
    "thumb_sha256": "8572314d82dc39eada940ff6a9dce1c2909875dae71eab90310e1add4f585795"
   },
+  "stump": {
+   "rgba_sha256": "e7d3e84999982320485143687cef094d1f7d8a20ecc27efdd2ae269daeba082a",
+   "sha256": "4044acaef950a79abadcd351798f002611287b0ca76bba6b32d4d3f08e9944ef",
+   "thumb_sha256": "1efc315e23942c550e9b479b397eaee35c5cc3964849d258f0fc62e2284786f7"
+  },
   "tree-oak": {
    "rgba_sha256": "a914805e731d4b99cc8555f0b2f13756338e1d6e60d2bb5b89aceed208c4ac8f",
    "sha256": "874e99700113ee4fbb69262fe60eb1cfeed3e7e354b576a9d7ff6a0e5698187d",
@@ -60,7 +70,7 @@
    "thumb_sha256": "0d12b9fb9ed971b41cbd90acc6e14ba7c6519a90bffd501f54bfcb6f5552a385"
   }
  },
- "generator_sha256": "c92b004be6001be80fecf044d8fefed67cfe87ca16595e96f431c77e5152ede4",
+ "generator_sha256": "b440804e59686f098e2a72b24dae05abf4b1676f4e1516d5115444155b298842",
  "license": "Original work generated for Rider; no third-party input.",
  "ppm": 96,
  "seed": 5670,

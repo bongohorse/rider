@@ -43,3 +43,11 @@ animations {
   id: "cone"
   images { image: "/main/decorations/meadow/cone.png" }
 }
+animations {
+  id: "stump"
+  images { image: "/main/decorations/meadow/stump.png" }
+}
+animations {
+  id: "mushrooms"
+  images { image: "/main/decorations/meadow/mushrooms.png" }
+}
