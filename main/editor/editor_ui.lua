@@ -545,7 +545,8 @@ function M.render(u,d)
         button('zoom_in',524,h-56,32,'+',false,'Zoom in to the next step (maximum 400%).')
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         -- On the button row, after Decor and clear of the page's Quality/Fullscreen buttons.
-        text(768,h-40,d.cursor_text,C.secondary,12,math.max(0,math.min(296,w-768-300)))
+        local room=math.min(296,w-768-300)
+        if room>=140 then text(768,h-40,d.cursor_text,C.secondary,12,room) end
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2

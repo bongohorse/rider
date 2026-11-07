@@ -51,9 +51,8 @@
     input.onchange = () => { delete input.dataset.live;send({type: field, value: Number(input.value)}); };
     wrap.append(label, input, out);
     if (field === 'offset') {
-      // Double-click or the reset button: back to the track.
+      // Reset button: back to the track (a double-click would first move the knob, adding Undo steps).
       const zero = () => { input.value = '0';show();delete input.dataset.live;send({type: 'offset', value: 0}); };
-      input.addEventListener('dblclick', zero);
       const reset = document.createElement('button');reset.type = 'button';reset.id = id + '-reset';reset.textContent = '↺';reset.title = 'Reset offset';reset.setAttribute('aria-label', 'Reset offset');
       reset.style.cssText = 'padding:1px 6px;margin:0;cursor:pointer';reset.onclick = zero;wrap.append(reset);
     }
@@ -77,7 +76,8 @@
     rows.append(slide('rider-bar-scale', 'Size', .25, 3, .05, '×', 'scale'), slide('rider-bar-offset', 'Offset', -8, 8, .05, ' m', 'offset'));bar.append(rows);
     bar.addEventListener('pointerdown', () => { bar.dataset.hold = '1'; });
     // Released anywhere: the bar may follow its object again.
-    addEventListener('pointerup', () => { if (bar.dataset.hold) { delete bar.dataset.hold;renderBar(); } }, true);
+    const let_go = () => { if (bar.dataset.hold) { delete bar.dataset.hold;renderBar(); } };
+    for (const type of ['pointerup', 'pointercancel', 'blur']) addEventListener(type, let_go, true);
     bar.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(bar);
   }
@@ -137,7 +137,8 @@
     // Live while dragging: the object moves and the number follows; release is the Undo step.
     slider.oninput = () => { slider.dataset.live = '1';panel.querySelector('#rider-decoration-offset-output').textContent = Number(slider.value).toFixed(2) + ' m';send({type: 'preview', field: 'offset', value: Number(slider.value)}); };
     const out = document.createElement('output');out.id = 'rider-decoration-offset-output';off.append('Offset', slider, out);panel.append(off);
-    slider.addEventListener('dblclick', () => { slider.value = '0';delete slider.dataset.live;out.textContent = '0.00 m';send({type: 'offset', value: 0}); });
+    const zero = document.createElement('button');zero.type = 'button';zero.id = 'rider-decoration-offset-reset';zero.textContent = '↺';zero.title = 'Reset offset';zero.setAttribute('aria-label', 'Reset offset');
+    zero.style.cssText = 'padding:1px 6px;cursor:pointer';zero.onclick = () => { slider.value = '0';delete slider.dataset.live;out.textContent = '0.00 m';send({type: 'offset', value: 0}); };off.append(zero);
     const sel = document.createElement('div');sel.id = 'rider-decoration-selected';sel.style.margin = '6px 0';panel.append(sel);
     const actions = document.createElement('div');
     const copy = button('Copy', () => send({type: 'copy'}));copy.id = 'rider-decoration-copy';
