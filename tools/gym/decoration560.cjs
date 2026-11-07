@@ -51,7 +51,7 @@ async function main(){
   // Lock refuses change; copy and delete work; Delete key too.
   r=await rev();await dom('#rider-decoration-locked');await revision(r+1);assert.equal((await items())[0].locked,true);
   r=await rev();await dom('[data-decoration-placement="body"]');await page.waitForFunction(()=>/Locked/.test(document.querySelector('#rider-decoration-note').textContent));assert.equal(await rev(),r,'locked: no revision');assert.equal((await items())[0].placement,'behind');
-  await dom('#rider-decoration-locked');await revision(r+1);
+  await dom('#rider-decoration-locked');await revision(r+1);assert.equal((await items())[0].locked,undefined,'unlock clears the flag');
   r=await rev();await dom('#rider-decoration-copy');await revision(r+1);list=await items();assert.equal(list.length,2);assert.notEqual(list[0].id,list[1].id);
   r=await rev();await key('Delete');await revision(r+1);assert.equal((await items()).length,1);report.cases.lock_copy_delete=await items();
   // Undo restores the delete, Redo repeats it.
