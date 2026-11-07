@@ -11,11 +11,11 @@ Two UI technologies are in use. Defold GUI draws the top bar, the tool rail, Pro
 | Area | Today | Problem |
 | --- | --- | --- |
 | Type | Monospace in Defold GUI; system sans in HTML panels | Two faces; cramped labels ("Start FinishCoin Fuel") |
-| Controls | Flat teal Defold buttons; browser-default number fields, buttons, checkboxes, selects and ranges in HTML | Two control families on one screen |
-| Panel placement | Texture floats in the centre, Decor covers Properties on the right, 3D sits centre-right, Versions is a modal | Every panel opens somewhere else |
-| Icons | Line icons for tools; letters "v" and ">" for collapse; "Close", "Close [Esc]" or nothing for close | No single icon set for actions |
+| Controls | Flat teal Defold buttons; in HTML styled preset tiles but browser-default tabs, action buttons, number fields, checkboxes, selects and ranges | Two control families on one screen |
+| Panel placement | Texture, Background, Decor and 3D all open at the right edge over Properties, with different widths (340–700 px), heights and borders; Versions is a centred modal | Panels stack over each other with no shared frame |
+| Icons | Line icons for tools; letters "v", ">" and "<" for collapse; "Close", "Close [Esc]" or nothing for close | No single icon set for actions |
 | States | Active is filled teal, a light border or white text depending on the panel | Selection is hard to read at a glance |
-| Colour | Turquoise and green throughout | Claudio ruled out turquoise/green as the mobile UI default on 2026-11-01 ([#358](https://github.com/bongohorse/rider/issues/358)) |
+| Colour | Turquoise and green throughout | Claudio rejected green/turquoise as the automatic primary UI colour on 2026-11-01 ([#358](https://github.com/bongohorse/rider/issues/358)) |
 
 ## Shared rules
 
@@ -24,7 +24,7 @@ Both directions use the same structure, so only the skin differs:
 - One font for UI text and one monospace face for numbers and units; both under the SIL Open Font License, bundled for Defold and the HTML panels.
 - One stroke icon family (1.75 px line, round caps, 16/18 px) for every tool, collapse, close and action button.
 - Spacing steps 4 · 6 · 8 · 12 · 16 px. Targets 34 px on desktop, 44 px on touch.
-- Every tool panel (Texture, Background, Decor, 3D, Properties) opens in the right inspector with the same header and close icon; Versions stays the only modal.
+- Every tool panel (Texture, Background, Decor, 3D, Properties) becomes one right inspector with the same width, frame, header and close icon instead of panels stacked over Properties; Versions stays the only modal.
 - Control set: icon button, text button, primary button, danger button, segmented control, switch, slider with number field, number field with unit, chip, collapsible section, toast. No browser-default control remains.
 - One state language: hover = raised surface; active/selected = accent tint with accent border; primary action = filled accent; destructive = danger outline.
 
