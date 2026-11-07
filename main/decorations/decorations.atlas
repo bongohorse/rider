@@ -1,0 +1,45 @@
+extrude_borders: 2
+animations {
+  id: "tree-oak"
+  images { image: "/main/decorations/meadow/tree-oak.png" }
+}
+animations {
+  id: "tree-pine"
+  images { image: "/main/decorations/meadow/tree-pine.png" }
+}
+animations {
+  id: "bush-round"
+  images { image: "/main/decorations/meadow/bush-round.png" }
+}
+animations {
+  id: "bush-berry"
+  images { image: "/main/decorations/meadow/bush-berry.png" }
+}
+animations {
+  id: "grass-tuft"
+  images { image: "/main/decorations/meadow/grass-tuft.png" }
+}
+animations {
+  id: "grass-tall"
+  images { image: "/main/decorations/meadow/grass-tall.png" }
+}
+animations {
+  id: "flowers"
+  images { image: "/main/decorations/meadow/flowers.png" }
+}
+animations {
+  id: "rock-small"
+  images { image: "/main/decorations/meadow/rock-small.png" }
+}
+animations {
+  id: "rock-large"
+  images { image: "/main/decorations/meadow/rock-large.png" }
+}
+animations {
+  id: "sign"
+  images { image: "/main/decorations/meadow/sign.png" }
+}
+animations {
+  id: "cone"
+  images { image: "/main/decorations/meadow/cone.png" }
+}

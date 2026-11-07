@@ -59,6 +59,8 @@ for why,bad in pairs({
     offset=item{offset=9},placement=item{placement='above'},tilt=item{tilt=1},asset=item{asset='../x.png'},field=item{extra=1},
 }) do assert(not S.validate(block(bad)),why) end
 assert(not S.validate({version=1,next_id=3,items={item(),item()}}),'duplicate id')
+local _,_,unknown_asset=S.validate(block(item{asset='no-such-asset'}));assert(unknown_asset,'an unknown asset keeps the file')
+for _,id in ipairs(require('main.decorations.assets').ORDER) do assert(S.validate(block(item{asset=id})),id) end
 assert(not S.validate({version=1,next_id=2,items={[2]=item()}}),'sparse list')
 local _,_,future=S.validate({version=2,next_id=1,items={}});assert(future,'unknown version keeps the file')
 local over={version=1,next_id=S.MAX_ITEMS+2,items={}}
