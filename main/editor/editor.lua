@@ -223,8 +223,12 @@ end
 -- a result that fails the source validator (R16) is refused too. Either way nothing changes.
 function M.commit(fn,geometry)
     local before=doc_lib.copy(M.doc)
+    -- An older file has no recorded poses yet: take them from the line this edit starts from.
+    doc_lib.refit_decorations(M.doc.editor)
     local _,err=fn(M.doc.editor,M.doc)
     if not err then err=doc_lib.lock_conflict(before.editor,M.doc.editor) end
+    -- Decorations follow the terrain on release, in the same Undo step.
+    if not err then doc_lib.refit_decorations(M.doc.editor) end
     if not err then
         local valid,verr=doc_lib.validate(M.doc)
         if not valid then err="Edit refused: "..verr end
@@ -303,7 +307,7 @@ end
 function M.set_preview(objects)
     if objects then
         local current=M.doc.editor
-        local e={objects={},connections=current.connections,mechanism_links=current.mechanism_links}
+        local e={objects={},connections=current.connections,mechanism_links=current.mechanism_links,decorations=current.decorations}
         for i,o in ipairs(current.objects) do e.objects[i]=objects[o.id] or o end
         local err=doc_lib.lock_conflict(M.doc.editor,e)
         if err then objects=nil;M.message=err end

@@ -20,7 +20,8 @@ function M.resolved()
             local distance,src=o.distance,o.source
             if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
             local x,y,angle=source.resolve(parts_of(src),distance,o.offset,o.tilt)
-            if x then out[o.id]={x=x,y=y,angle=angle} end
+            if x then out[o.id]={x=x,y=y,angle=angle}
+            elseif o.at then out[o.id]={x=o.at[1],y=o.at[2],angle=o.at[3],stale=true} end
         end
     end
     return out
@@ -34,7 +35,12 @@ function M.fences()
             local from,to=o.distance,o.to
             if M.drag and M.drag.id==o.id then from,to=M.drag.distance,M.drag.distance+o.to-o.distance end
             local points=fence.points(parts_of(o.source),from,to,o.offset)
-            if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source} end
+            local stale=not points or not source.fits(parts_of(o.source),o.to)
+            if stale and M.drag and M.drag.id==o.id and M.drag.source then
+                points=fence.points(parts_of(M.drag.source),from,to,o.offset);stale=not points
+            end
+            if stale and o.at then points={{o.at[1],o.at[2]},{o.at[3],o.at[4]}} end
+            if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source,stale=stale} end
         end
     end
     return list
@@ -108,8 +114,11 @@ function M.move(p)
     local item=edit.find(editor.doc.editor.decorations,d.id)
     if near and item and item.to then
         if not d.moved and math.abs(p[1]-d.start[1])+math.abs(p[2]-d.start[2])<=.05 then return end
-        -- A fence slides along its own piece and keeps its length.
-        if near.source==item.source then
+        -- A fence slides along its own piece and keeps its length; a stale one moves onto any run.
+        local parts=parts_of(item.source)
+        if not parts or not source.fits(parts,item.to) then
+            d.source,d.distance,d.moved=near.source,math.max(0,math.min(source.length(parts_of(near.source))-(item.to-item.distance),near.distance)),true;editor.touch()
+        elseif near.source==item.source then
             local span=item.to-item.distance
             local start=d.anchor or near.distance;d.anchor=start
             d.distance=math.max(0,math.min(source.length(parts_of(item.source))-span,item.distance+near.distance-start))
@@ -144,6 +153,7 @@ function M.copy()
     local o=selected_item()
     if not o then return end
     if o.to then M.message='Draw another fence with Fence.';M.shown=nil;return end
+    if not parts_of(o.source) then M.message='Drag this object onto a run before copying it.';M.shown=nil;return end
     local new
     if commit(function(b)
         new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset,scale=o.scale})

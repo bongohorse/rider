@@ -197,6 +197,23 @@ assert(budget.measure(fc).mesh_peak==budget.measure(plain).mesh_peak+1,'a fence 
 assert(not S.validate(block(item{asset='fence-wood',to=1})),'ends before start');assert(not S.validate(block(item{asset='cone',to=9})),'cone is no fence');assert(not S.validate(block(item{asset='fence-wood'})),'fence asset needs an end')
 local crowd={version=1,next_id=40,items={}};for i=1,33 do crowd.items[i]=item{id='d'..i,asset='fence-wood',to=9} end;assert(not S.validate(crowd),'fence limit')
 for _,field in ipairs(SIM) do assert(enc(plain[field])==enc(fc[field]),field..' changed by a fence') end
+-- #561: refit at commit, stale state, one-step Undo.
+local rf=base();assert(D.set_decorations(rf.editor,{version=1,next_id=4,items={item{distance=10},item{id='d2',asset='fence-wood',distance=5,to=15},item{id='d3',source='o1',distance=20,generated=true}}}))
+D.refit_decorations(rf.editor);near(rf.editor.decorations.items[1].at[1],5);near(rf.editor.decorations.items[1].at[2],0)
+local hist=D.history();D.record(hist,rf,1);local rf_before=enc(rf.editor.decorations)
+local line=rf.editor.objects[1];line.points={{-5,0},{20,5}};rf.editor.objects[2].anchors[1].p={20,5}
+assert(#D.refit_decorations(rf.editor)==0);local placed1=rf.editor.decorations.items[1];local ax,ay,aa=S.resolve(D.parts(line),10,0,true)
+near(placed1.at[1],math.floor(ax*1000+.5)/1000);near(placed1.at[2],math.floor(ay*1000+.5)/1000);near(placed1.at[3],math.floor(aa*1000+.5)/1000);assert(aa>0,'tilts with the new line')
+assert(rf.editor.decorations.items[3].generated==true and #rf.editor.decorations.items==3,'a refit does not re-run Populate')
+assert(enc(D.step(hist,rf,true,1).editor.decorations)==rf_before,'one Undo restores terrain and decorations together')
+local lost=base();assert(D.set_decorations(lost.editor,{version=1,next_id=3,items={item{distance=10},item{id='d2',asset='fence-wood',distance=5,to=15}}}));D.refit_decorations(lost.editor)
+local at1=lost.editor.decorations.items[1].at[1]
+table.remove(lost.editor.objects,1);lost.editor.connections={}
+local stale_now=D.refit_decorations(lost.editor);assert(#stale_now==2,'both stale');near(lost.editor.decorations.items[1].at[1],at1,'keeps the last pose')
+assert(D.validate(lost));local _,warns=D.problems(lost.editor);local says=false;for _,w in ipairs(warns) do says=says or w:find('d1 lost its track',1,true)~=nil end;assert(says,'visible warning')
+local cl=assert(D.compile(lost));assert(#cl.decorations.items==0 and #cl.editor.decorations.items==2,'stale stays in the source, out of Play')
+local short=base();assert(D.set_decorations(short.editor,{version=1,next_id=2,items={item{distance=20}}}));short.editor.objects[1].points={{-5,0},{5,0}};short.editor.objects[2].anchors[1].p={5,0}
+assert(#D.refit_decorations(short.editor)==1,'shortened source is stale')
 -- Size reaches layout and compile.
 local sized=L.transform({asset='cone',position={0,0},angle=0,placement='front',scale=2},.01);near(sized.scale,2*100/96);near(sized.y,2*(.875/2-.02)*100)
 print('PASS decorations')

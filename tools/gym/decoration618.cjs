@@ -54,6 +54,11 @@ async function main(){
   await page.waitForFunction(()=>window.riderDecorationState?.fences?.length===1);await page.screenshot({path:path.join(out,'fence-edit.png')});report.cases.placed=list[0];
   r=await rev();await tapButton('undo');await page.waitForFunction(()=>!window.riderEditorDoc?.decorations);await page.waitForFunction(()=>(window.riderDecorationState?.fences?.length||0)===0);
   await tapButton('redo');await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===1);report.cases.undo=true;
+  // Removing the terrain under a fence keeps it visible as stale; one Undo restores both.
+  await tapButton('tool_select');await click([3,0]);await page.waitForFunction(()=>window.riderEditor?.selection!=='' );
+  r=await rev();await key('Delete');await revision(r+1);assert.equal((await doc()).objects.length,0);assert.equal((await items()).length,1);
+  await pointer.frames(page,{n:10});assert.equal(await page.evaluate(()=>window.riderDecorationState.fences.length),1,'stale fence stays visible');assert.ok((await items())[0].at,'last pose recorded');
+  await tapButton('undo');await page.waitForFunction(()=>window.riderEditorDoc.objects.length===1);
   const kept=await items();await page.waitForTimeout(1100);await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved',null,{timeout:20000});
   await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderEditor||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(1000);
   if(await page.evaluate(()=>window.riderEditor?.mode!=='edit'))await key('e');

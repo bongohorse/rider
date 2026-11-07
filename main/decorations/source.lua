@@ -2,7 +2,7 @@
 -- resolution on compiled samples. Decorations never reach collision, physics or replay.
 local dense=require 'main.game.dense'
 local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_FENCES=32,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,PLACEMENTS={behind=true,front=true,body=true}}
-local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true,to=true}
+local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true,to=true,at=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
 local ASSETS=require('main.decorations.assets').ASSETS
 local FENCES=require('main.decorations.assets').FENCES
@@ -39,6 +39,11 @@ function M.validate(b)
             if fences>M.MAX_FENCES then return nil,'Fences are limited to '..M.MAX_FENCES..' a level; remove one.' end
         elseif type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
         if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Decoration size must be '..M.MIN_SCALE..' to '..M.MAX_SCALE..': '..o.id end
+        if o.at~=nil then
+            local n=o.to and 4 or 3
+            if type(o.at)~='table' or #o.at~=n then return nil,'Invalid decoration last pose: '..o.id end
+            for _,v in ipairs(o.at) do if not number(v,200000) then return nil,'Invalid decoration last pose: '..o.id end end
+        end
         if o.generated~=nil and type(o.generated)~='boolean' then return nil,'Invalid decoration generated flag: '..o.id end
         if (o.hidden~=nil and type(o.hidden)~='boolean') or (o.locked~=nil and type(o.locked)~='boolean') then return nil,'Invalid decoration visibility/lock: '..o.id end
     end
@@ -109,6 +114,29 @@ function M.resolve(parts,distance,offset,tilt)
     local nx,ny=-dy/l,dx/l
     return a[1]+last[3]*t+nx*offset,a[2]+last[4]*t+ny*offset,tilt and math.atan2(dy,dx) or 0
 end
+-- A fence's far end still lies on the source, allowing for rounding at the very end.
+function M.fits(parts,to) return M.length(parts)>=to-1e-6 end
+-- At a commit: every anchor that still resolves records its pose. One that no longer does keeps its last
+-- pose, so it stays visible as stale and fixable instead of vanishing. Returns the stale items.
+function M.refit(b,parts_of)
+    local stale={}
+    local function round(v) return math.floor(v*1000+.5)/1000 end
+    for _,o in ipairs(b and b.items or {}) do
+        local parts=parts_of(o.source)
+        if o.to then
+            local points=fence.points(parts,o.distance,o.to,o.offset)
+            -- A shortened source would end the fence early; only its far end shows that.
+            if points and M.fits(parts,o.to) then
+                local z=points[#points]
+                o.at={round(points[1][1]),round(points[1][2]),round(z[1]),round(z[2])}
+            else stale[#stale+1]=o end
+        else
+            local x,y,angle=M.resolve(parts,o.distance,o.offset,o.tilt)
+            if x then o.at={round(x),round(y),round(angle)} else stale[#stale+1]=o end
+        end
+    end
+    return stale
+end
 -- The authored block -> compiled block. parts_of(source id) gives the source's polylines or nil. Unresolved
 -- anchors are left out of Play; the source block keeps them. No block compiles to no block.
 function M.compile(b,parts_of)
@@ -119,7 +147,7 @@ function M.compile(b,parts_of)
         local x,y,angle
         if o.to then
             local points=fence.points(parts_of(o.source),o.distance,o.to,o.offset)
-            if points then fences[#fences+1]={points=points,placement=o.placement,asset=o.asset} end
+            if points and M.fits(parts_of(o.source),o.to) then fences[#fences+1]={points=points,placement=o.placement,asset=o.asset} end
         else x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt) end
         if x then items[#items+1]={position={x,y},angle=angle,placement=o.placement,asset=o.asset,scale=o.scale} end
     end
