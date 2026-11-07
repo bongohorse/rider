@@ -13,6 +13,7 @@ EXPECTED = {
     'deco558': ('decoration558.cjs', 180),
     'deco560': ('decoration560.cjs', 240),
     'deco617': ('decoration617.cjs', 240),
+    'deco618': ('decoration618.cjs', 240),
     'bg549': ('background549.cjs', 240),
  'w114': ('wheel114.cjs', 600),
  'fps417': ('fps417.cjs', 360),

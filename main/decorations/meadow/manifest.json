@@ -15,6 +15,10 @@
    "sha256": "e7fd88ffeee06d9e1ddcab18a8ce775322ad8d8a8a0daa6706c2b6381f9574fb",
    "thumb_sha256": "0df6cce9faef3615353046dd6ea616247ca4a3173a5cc17c587f87db490be39c"
   },
+  "fence-wood": {
+   "rgba_sha256": "6c4e6bf1fd8f4df18950b40184a4219835f8d3b130ea1ca6b97346d3909f3a00",
+   "sha256": "ceae1760a71b7e7c47946dfb4651d701c24c33ca0702958866fcb3b634d1a038"
+  },
   "flowers": {
    "rgba_sha256": "b684a97b36ec055db391199e8b4a6a287c194389f092a55923c06cab3bb63c49",
    "sha256": "34bfb2b60f5db230d51dfd7d1c20b09ae0b3c5ade30ec1f96e4d2c2af0e98077",
@@ -56,7 +60,7 @@
    "thumb_sha256": "0d12b9fb9ed971b41cbd90acc6e14ba7c6519a90bffd501f54bfcb6f5552a385"
   }
  },
- "generator_sha256": "a55ca2a1e9d0b2652e679f980e5befc95b588cb6496c71d72f54fb63da515d53",
+ "generator_sha256": "c92b004be6001be80fecf044d8fefed67cfe87ca16595e96f431c77e5152ede4",
  "license": "Original work generated for Rider; no third-party input.",
  "ppm": 96,
  "seed": 5670,

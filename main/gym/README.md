@@ -209,6 +209,8 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 
 `deco617` uses real DOM and pointer input to populate a stretch, repeat it with the same seed, Undo, save and reload. Whether the result looks good remains Claudio's drive test.
 
+`deco618` renders a fence over flat, slope and curve in Play and checks pixel columns for gaps, then draws one with real input, Undo, save and reload. The look remains Claudio's drive test.
+
 `bg549` uses normal DOM and canvas input to choose all four presets, switch each of six slots, tune manual Depth and Auto without losing the manual value, cycle master OFF/ON, store each choice and each Depth drag as one Undo step, Undo/Redo, reload the durable editor save and Play the same source. It checks input capture, image override, tab switching, panel state through Help/Versions and reachable controls at 844×390 and 1920×1080. The observer is read-only; art/Auto direction and physical-device performance remain human checks.
 
 `python tools/gym/smoke.py --case <id>` (HTML5 debug gym):

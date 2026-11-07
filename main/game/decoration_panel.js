@@ -21,7 +21,7 @@
     const slider = panel.querySelector('#rider-decoration-offset');
     if (document.activeElement !== slider) slider.value = offset;
     panel.querySelector('#rider-decoration-offset-output').textContent = Number(offset).toFixed(2) + ' m';
-    panel.querySelector('#rider-decoration-selected').textContent = item ? `Selected ${item.id}: ${item.asset}` : 'Click the track to place. Click an object to select or drag it.';
+    panel.querySelector('#rider-decoration-selected').textContent = item ? `Selected ${item.id}: ${item.fence ? 'fence' : item.asset}` : 'Click the track to place. Click an object to select or drag it.';
     panel.querySelector('#rider-decoration-hidden').checked = !!item?.hidden;
     panel.querySelector('#rider-decoration-locked').checked = !!item?.locked;
     for (const id of ['copy', 'delete', 'hidden', 'locked']) panel.querySelector(`#rider-decoration-${id}`).disabled = !item;
@@ -65,6 +65,7 @@
     const actions = document.createElement('div');
     const copy = button('Copy', () => send({type: 'copy'}));copy.id = 'rider-decoration-copy';
     const del = button('Delete', () => send({type: 'delete'}));del.id = 'rider-decoration-delete';
+    const fence = button('Fence', () => send({type: 'fence'}));fence.id = 'rider-decoration-fence';actions.append(fence);
     const close = button('Close', () => send({type: 'close'}));close.id = 'rider-decoration-close';
     actions.append(copy, del, close);panel.append(actions);
     const flags = document.createElement('div');flags.style.marginTop = '6px';
