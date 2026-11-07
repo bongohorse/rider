@@ -1,8 +1,8 @@
 -- Decorations anchored to the track (level visuals contract). Pure: source model, validation and anchor
 -- resolution on compiled samples. Decorations never reach collision, physics or replay.
 local dense=require 'main.game.dense'
-local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_FENCES=32,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,PLACEMENTS={behind=true,front=true,body=true}}
-local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,generated=true,to=true,at=true}
+local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_FENCES=32,MAX_OFFSET=8,MAX_DISTANCE=100000,MIN_SCALE=.25,MAX_SCALE=3,MAX_ROTATION=180,PLACEMENTS={behind=true,front=true,body=true}}
+local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true,scale=true,rotation=true,generated=true,to=true,at=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
 local ASSETS=require('main.decorations.assets').ASSETS
 local FENCES=require('main.decorations.assets').FENCES
@@ -39,6 +39,8 @@ function M.validate(b)
             if fences>M.MAX_FENCES then return nil,'Fences are limited to '..M.MAX_FENCES..' a level; remove one.' end
         elseif type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
         if o.scale~=nil and not (type(o.scale)=='number' and o.scale>=M.MIN_SCALE and o.scale<=M.MAX_SCALE) then return nil,'Decoration size must be '..M.MIN_SCALE..' to '..M.MAX_SCALE..': '..o.id end
+        -- Rotation: degrees on top of the slope (or upright) angle; objects only.
+        if o.rotation~=nil and (o.to~=nil or not number(o.rotation,M.MAX_ROTATION)) then return nil,'Decoration rotation must be -'..M.MAX_ROTATION..' to '..M.MAX_ROTATION..' degrees: '..o.id end
         if o.at~=nil then
             local n=o.to and 4 or 3
             if type(o.at)~='table' or #o.at~=n then return nil,'Invalid decoration last pose: '..o.id end
@@ -112,7 +114,15 @@ function M.resolve(parts,distance,offset,tilt)
     local t=last.done and 1 or left/l
     if dx<0 or (dx==0 and dy<0) then dx,dy=-dx,-dy end
     local nx,ny=-dy/l,dx/l
-    return a[1]+last[3]*t+nx*offset,a[2]+last[4]*t+ny*offset,tilt and math.atan2(dy,dx) or 0
+    -- Fourth value: the track's own angle, along whose normal the offset runs, also for an upright object.
+    return a[1]+last[3]*t+nx*offset,a[2]+last[4]*t+ny*offset,tilt and math.atan2(dy,dx) or 0,math.atan2(dy,dx)
+end
+-- The drawn angle: the anchor's angle turned by the item's rotation, kept within -pi..pi.
+function M.angle(base,rotation)
+    local a=base+math.rad(rotation or 0)
+    while a>math.pi do a=a-2*math.pi end
+    while a<-math.pi do a=a+2*math.pi end
+    return a
 end
 -- A fence's far end still lies on the source, allowing for rounding at the very end.
 function M.fits(parts,to) return M.length(parts)>=to-1e-6 end
@@ -148,7 +158,7 @@ function M.compile(b,parts_of)
         if o.to then
             local points=fence.points(parts_of(o.source),o.distance,o.to,o.offset)
             if points and M.fits(parts_of(o.source),o.to) then fences[#fences+1]={points=points,placement=o.placement,asset=o.asset} end
-        else x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt) end
+        else x,y,angle=M.resolve(parts_of(o.source),o.distance,o.offset,o.tilt);if x then angle=M.angle(angle,o.rotation) end end
         if x then items[#items+1]={position={x,y},angle=angle,placement=o.placement,asset=o.asset,scale=o.scale} end
     end
     return {version=M.COMPILED_VERSION,items=items,fences=#fences>0 and fences or nil}
