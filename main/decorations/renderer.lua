@@ -3,6 +3,7 @@ local layout=require 'main.decorations.layout'
 local M={}
 local ENABLE,DISABLE=hash('enable'),hash('disable')
 local function tint_for(item,selected)
+    if item.stale then return 1,.3,.3,.8 end
     if item.hidden then return .35,.35,.35,.35 end
     if selected then return 1,.82,.45,1 end
     if item.placement=='body' then local c=layout.BODY_TINT;return c[1],c[2],c[3],c[4] end
@@ -82,7 +83,7 @@ function M.sync_fences(s,list,selected)
             resource.set_buffer(o.res,fence_buffer(f.points),{transfer_ownership=true});o.key=key
         end
         go.set_position(vmath.vector3(0,0,z),o.id)
-        local r,g,b,a=tint_for({hidden=f.hidden,placement=f.placement},f.id~=nil and f.id==selected)
+        local r,g,b,a=tint_for({stale=f.stale,hidden=f.hidden,placement=f.placement},f.id~=nil and f.id==selected)
         go.set(o.url,'tint',vmath.vector4(r,g,b,a))
         o.placement,o.source_id,o.points=f.placement,f.id,#f.points
     end

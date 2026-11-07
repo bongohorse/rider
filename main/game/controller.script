@@ -378,7 +378,7 @@ local function sync_edit_decorations(self)
     local items,fences={},tool.fences()
     for _,o in ipairs(b and b.items or {}) do
         local r=poses[o.id]
-        if r and not o.to then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=o.scale} end
+        if r and not o.to then items[#items+1]={id=o.id,position={r.x,r.y},angle=r.angle,placement=o.placement,asset=o.asset,hidden=o.hidden,scale=o.scale,stale=r.stale} end
     end
     require("main.decorations.renderer").sync(self.decorations,items,tool.selected)
     require("main.decorations.renderer").sync_fences(self.decorations,fences,tool.selected)

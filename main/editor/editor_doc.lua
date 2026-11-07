@@ -640,6 +640,16 @@ function M.problems(e)
             j=j+1
         end
     end
+    if e.decorations then
+        for _,o in ipairs(e.decorations.items) do
+            local parts=pieces[o.source] and M.parts(pieces[o.source])
+            local gone=not parts or (o.to and not decorations.fits(parts,o.to)) or (not o.to and not decorations.resolve(parts,o.distance,o.offset,o.tilt))
+            if gone then
+                warnings[#warnings+1]="Decoration "..o.id.." lost its track: it is not in Play. Open Decor and drag it onto a run, or delete it."
+                warning_at[#warnings]=o.at and {at={o.at[1],o.at[2]}} or nil
+            end
+        end
+    end
     if not M.surface(e,e.start.position) then
         warnings[#warnings+1]="START has no terrain below it.";warning_at[#warnings]={start=true,at={e.start.position[1],e.start.position[2]}}
     end
@@ -838,6 +848,12 @@ function M.set_backgrounds(e,b)
     local version=visual_version(e)
     e.editor_version,e.compiler_version=version,version
     return true
+end
+-- Commit-time refit: anchors re-resolve on the new line; a lost source keeps the object at its last pose.
+function M.refit_decorations(e)
+    if not e.decorations then return {} end
+    local pieces=M.pieces(e)
+    return decorations.refit(e.decorations,function(id) return pieces[id] and M.parts(pieces[id]) end)
 end
 -- Atomic authored decoration update; nil or an empty list removes the block.
 function M.set_decorations(e,b)
