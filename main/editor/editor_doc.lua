@@ -161,6 +161,16 @@ local function equal(a,b)
     return true
 end
 function M.lock_conflict(before,after)
+    local placed={};for _,o in ipairs(after.decorations and after.decorations.items or {}) do placed[o.id]=o end
+    for _,o in ipairs(before.decorations and before.decorations.items or {}) do
+        if o.locked then
+            local n,changed=placed[o.id],false
+            if not n then changed=true else
+                for _,k in ipairs({'source','distance','offset','placement','tilt','asset'}) do changed=changed or o[k]~=n[k] end
+            end
+            if changed then return "Locked: decoration "..o.id..". Unlock it before changing it." end
+        end
+    end
     local ids={};for _,o in ipairs(after.objects) do ids[o.id]=o end
     local function incident(e,id)
         -- Terrain connections and typed mechanism links (O2) both belong to their locked ends.

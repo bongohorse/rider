@@ -2,7 +2,7 @@
 -- resolution on compiled samples. Decorations never reach collision, physics or replay.
 local dense=require 'main.game.dense'
 local M={VERSION=1,COMPILED_VERSION=1,MAX_ITEMS=512,MAX_OFFSET=8,MAX_DISTANCE=100000,PLACEMENTS={behind=true,front=true,body=true}}
-local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true}
+local ITEM={id=true,source=true,distance=true,offset=true,placement=true,tilt=true,asset=true,hidden=true,locked=true}
 local function number(n,limit) return type(n)=='number' and n==n and math.abs(n)<=limit end
 local ASSETS=require('main.decorations.assets').ASSETS
 local function unknown(t,allowed,what)
@@ -31,6 +31,7 @@ function M.validate(b)
         if not M.PLACEMENTS[o.placement] then return nil,'Decoration placement must be behind, front or body: '..o.id,true end
         if type(o.tilt)~='boolean' then return nil,'Invalid decoration tilt: '..o.id end
         if type(o.asset)~='string' or not ASSETS[o.asset] then return nil,'Unknown decoration asset '..tostring(o.asset):sub(1,40),true end
+        if (o.hidden~=nil and type(o.hidden)~='boolean') or (o.locked~=nil and type(o.locked)~='boolean') then return nil,'Invalid decoration visibility/lock: '..o.id end
     end
     return true
 end
