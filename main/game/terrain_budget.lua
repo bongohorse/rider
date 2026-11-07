@@ -70,8 +70,10 @@ end
 function M.preview(sections,vertices,sprites,labels,document)
     -- Edit updates can overlap old/new components. Leave START/FINISH/headroom independent.
     local projected=M.COMPARISON or require('main.terrain_perspective.profile').enabled({editor=document})
+    -- Decorations are rebuilt whole, one copy at a time, so they count once.
+    local placed=#(document and document.decorations and document.decorations.items or {})
     return sections*2<=M.MESHES and vertices*(projected and require('main.terrain_perspective.material').stride_for({editor=document}) or 36)<=M.PAYLOAD and
-        2*sprites+12<=M.SPRITES and 2*labels+4<=M.LABELS and
-        2*(sections+sprites+labels)+16<=M.INSTANCES
+        2*sprites+placed+12<=M.SPRITES and 2*labels+4<=M.LABELS and
+        2*(sections+sprites+labels)+placed+16<=M.INSTANCES
 end
 return M

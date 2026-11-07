@@ -17,6 +17,20 @@ function M.build(compiled)
     s.visible=#s.items
     return s
 end
+-- Edit: replaces every object when the drawn list changes; a drag moves only its object.
+function M.clear(s)
+    for _,o in ipairs(s.items) do go.delete(o.id) end
+    s.items,s.visible={},0
+end
+function M.sync(s,items,selected)
+    M.clear(s)
+    local fresh=M.build({items=items})
+    s.items,s.visible=fresh.items,fresh.visible
+    for i,o in ipairs(s.items) do
+        o.source_id=items[i].id
+        if o.source_id==selected then go.set(o.url,'tint',vmath.vector4(1,.82,.45,1)) end
+    end
+end
 -- Sprites outside the view are disabled; a message is sent only on a change.
 -- The projection is one frame old (engine pitfall 11), so the view gets a margin against popping during a zoom.
 function M.update(s,camera_x,camera_y,half_width,half_height)
@@ -32,7 +46,7 @@ function M.report(s)
     local r={objects=#s.items,visible=s.visible,items={}}
     for i,o in ipairs(s.items) do
         local p=go.get_position(o.id)
-        r.items[i]={asset=o.asset,placement=o.placement,on=o.on,x=p.x,y=p.y,z=p.z,angle=o.t.angle,rotation_z=go.get(o.id,'euler.z')}
+        r.items[i]={id=o.source_id,asset=o.asset,placement=o.placement,on=o.on,x=p.x,y=p.y,z=p.z,angle=o.t.angle,rotation_z=go.get(o.id,'euler.z')}
     end
     return r
 end

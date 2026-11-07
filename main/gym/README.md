@@ -205,6 +205,8 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 
 `deco558` imports a decorated level through the ordinary custom-file path and checks draw order against terrain and vehicle with engine transforms and canvas pixels, tilt at fixed poses and culling by camera position. The observer is read-only; art and device cost remain human checks.
 
+`deco560` uses real pointer, keyboard and DOM input to place, move, change placement, lock, copy, delete, Undo and Redo decorations, then reloads the durable save and Plays it. Tool feel, art and device behavior remain human checks.
+
 `bg549` uses normal DOM and canvas input to choose all four presets, switch each of six slots, tune manual Depth and Auto without losing the manual value, cycle master OFF/ON, store each choice and each Depth drag as one Undo step, Undo/Redo, reload the durable editor save and Play the same source. It checks input capture, image override, tab switching, panel state through Help/Versions and reachable controls at 844×390 and 1920×1080. The observer is read-only; art/Auto direction and physical-device performance remain human checks.
 
 `python tools/gym/smoke.py --case <id>` (HTML5 debug gym):

@@ -114,4 +114,27 @@ local crowded=J.decode(enc(full));crowded.coins={version=1,items={}}
 for i=1,960 do crowded.coins.items[i]={id='c'..i,position={i%20,2}} end
 local refused,why=budget.check(crowded)
 assert(not refused and why:find('limit 1024',1,true) and why:find('Remove decorations (2 placed)',1,true),tostring(why))
+-- #560: edits, picking, snapping, locks.
+local Ed=require 'main.decorations.edit'
+local assets=require('main.decorations.assets').ASSETS
+local run=base()
+local snapped=Ed.nearest(run.editor.objects,D.parts,D.terrain,{10,3})
+assert(snapped.source=='o1');near(snapped.distance,15)
+snapped=Ed.nearest(run.editor.objects,D.parts,D.terrain,{30,5.2});assert(snapped.source=='o2','nearest run wins')
+assert(Ed.nearest(run.editor.objects,D.parts,D.terrain,{10,30})==nil,'too far from any track')
+run.editor.objects[1].hidden=true;assert(Ed.nearest(run.editor.objects,D.parts,D.terrain,{-4,1}).source~='o1','hidden terrain is skipped');run.editor.objects[1].hidden=nil
+local bk=Ed.block(run.editor);local one=Ed.add(bk,{source='o1',distance=5,asset='cone',placement='body'})
+local two=Ed.add(bk,{source='o1',distance=5,asset='rock-large'})
+assert(one.id=='d1' and two.id=='d2' and bk.next_id==3 and one.tilt==true and one.offset==0 and S.validate(bk))
+local poses={d1={x=0,y=0,angle=0},d2={x=0,y=0,angle=0}}
+assert(Ed.pick(bk,poses,{0,.4},assets)==two,'last placed first');assert(Ed.pick(bk,poses,{5,.4},assets)==nil,'miss')
+two.hidden=true;assert(Ed.pick(bk,poses,{0,.4},assets)==one,'hidden cannot be picked');assert(S.validate(bk));two.hidden=nil
+two.hidden='no';assert(not S.validate(bk),'hidden is boolean');two.hidden=nil
+local locked=base();assert(D.set_decorations(locked.editor,{version=1,next_id=2,items={item{locked=true}}}))
+local moved=D.copy(locked.editor);moved.decorations.items[1].distance=9;assert(D.lock_conflict(locked.editor,moved):find('Locked',1,true),'moving a locked one')
+local gone=D.copy(locked.editor);gone.decorations=nil;assert(D.lock_conflict(locked.editor,gone),'deleting a locked one')
+local free=D.copy(locked.editor);free.decorations.items[1].locked=nil;free.decorations.items[1].hidden=true;assert(not D.lock_conflict(locked.editor,free),'unlock and hide stay available')
+-- Edit preview counts each decoration once beside doubled line sprites.
+assert(budget.preview(1,10,100,0,{decorations={items={1,2,3}}})==true)
+local many={items={}};for i=1,512 do many.items[i]=i end;assert(budget.preview(1,10,300,0,{decorations=many})==false,'pool shared with decorations')
 print('PASS decorations')
