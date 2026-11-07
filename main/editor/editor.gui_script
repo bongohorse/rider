@@ -2205,6 +2205,8 @@ function on_input(self,action_id,action)
         return true
     end
     if action_id==nil then
+        -- A fence being drawn follows the cursor before its second click.
+        if editor.tool=='decoration' and not editor_ui.area(self.ui,action) then local p=cursor(self,action);if p then decoration_tool.hover_at(p) end end
         if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
         else cursor(self,action);set_hover(self,{}) end
         return true

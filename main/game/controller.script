@@ -374,7 +374,7 @@ local function sync_edit_decorations(self)
     local tool=require('main.editor.editor_decoration')
     local b=editor.doc.editor.decorations
     local d=tool.drag
-    local key=table.concat({tostring(editor.opened),editor.doc.editor.revision,tostring(editor.shape_version),tostring(tool.selected),d and d.source or '',d and d.distance or '',tool.preview and tool.preview.field..tool.preview.value or ''},':')
+    local key=table.concat({tostring(editor.opened),editor.doc.editor.revision,tostring(editor.shape_version),tostring(tool.selected),d and d.source or '',d and d.distance or '',tool.preview and tool.preview.field..tool.preview.value or '',tool.live_key()},':')
     self.decorations=self.decorations or {items={},visible=0}
     if self.decoration_key==key then return end
     self.decoration_key=key

@@ -137,7 +137,7 @@ if args.case=='cam443':
 if args.case=='deco618':
     report=json.loads((out/'decoration618-result.json').read_text())
     identity(report)
-    assert set(report['cases'])=={'no_gap','placed','undo','reload'}
+    assert set(report['cases'])=={'no_gap','placed','resize','undo','reload'}
     print(json.dumps({'status':report['status'],'cases':list(report['cases'])}));raise SystemExit(0)
 if args.case=='deco617':
     report=json.loads((out/'decoration617-result.json').read_text())

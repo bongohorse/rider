@@ -17,7 +17,8 @@
   },
   "fence-wood": {
    "rgba_sha256": "6c4e6bf1fd8f4df18950b40184a4219835f8d3b130ea1ca6b97346d3909f3a00",
-   "sha256": "ceae1760a71b7e7c47946dfb4651d701c24c33ca0702958866fcb3b634d1a038"
+   "sha256": "ceae1760a71b7e7c47946dfb4651d701c24c33ca0702958866fcb3b634d1a038",
+   "thumb_sha256": "fdd9142ea84e72846e395d6ee71fc17e9802be3850f13ee85f5de81ae9d73fa9"
   },
   "flowers": {
    "rgba_sha256": "b684a97b36ec055db391199e8b4a6a287c194389f092a55923c06cab3bb63c49",
@@ -70,7 +71,7 @@
    "thumb_sha256": "0d12b9fb9ed971b41cbd90acc6e14ba7c6519a90bffd501f54bfcb6f5552a385"
   }
  },
- "generator_sha256": "b440804e59686f098e2a72b24dae05abf4b1676f4e1516d5115444155b298842",
+ "generator_sha256": "316ec9423621cdfb3342317f701ba9896ab918d783c46653a564b0c11342272b",
  "license": "Original work generated for Rider; no third-party input.",
  "ppm": 96,
  "seed": 5670,

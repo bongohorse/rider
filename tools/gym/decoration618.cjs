@@ -2,7 +2,7 @@
 // #618: fences through real pointer, keyboard and DOM input. Observers only.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{configure}=require('./launch.cjs'),pointer=require('./pointer.cjs');
-const EXPECTED=['no_gap','placed','undo','reload'];
+const EXPECTED=['no_gap','placed','resize','undo','reload'];
 async function main(){
  const [output,sha,runId,kind,bundleArg]=process.argv.slice(2);assert.equal(kind,'deco618');
  const out=path.resolve(output),bundle=path.resolve(bundleArg);fs.mkdirSync(out,{recursive:true});
@@ -49,9 +49,20 @@ async function main(){
   // Real input: draw, Undo, save, reload.
   await importLevel(fixture);await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
-  let r=await rev();await dom('#rider-decoration-fence');await click([1,.5]);await click([8,.5]);await revision(r+1);
+  // Fence from the asset list: click, move (it follows live, nothing stored yet), click.
+  let r=await rev();await dom('[data-decoration-asset="fence-wood"]');await click([1,.5]);
+  const hover=await world([5,.5]);await page.mouse.move(hover.x,hover.y,{steps:4});await pointer.frames(page,{n:8});
+  await page.waitForFunction(()=>window.riderDecorationState?.fences?.length===1);assert.equal(await rev(),r,'live fence: nothing stored');
+  const end=await world([8,.5]);await page.mouse.move(end.x,end.y,{steps:4});await pointer.frames(page,{n:8});
+  await click([8,.5]);await revision(r+1);
   let list=await items();assert.equal(list.length,1);assert.ok(Math.abs(list[0].distance-21)<.3&&Math.abs(list[0].to-28)<.3,'fence '+list[0].distance+'..'+list[0].to);assert.equal(list[0].asset,'fence-wood');
   await page.waitForFunction(()=>window.riderDecorationState?.fences?.length===1);await page.screenshot({path:path.join(out,'fence-edit.png')});report.cases.placed=list[0];
+  // Length stays editable: drag the selected fence's end.
+  await dom('[data-decoration-asset="cone"]');
+  r=await rev();const grab=await world([8,.5]),drop=await world([10,.5]);
+  await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(grab.x,grab.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(drop.x,drop.y,{steps:5});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});await revision(r+1);
+  list=await items();assert.equal(list.length,1,'resizing adds nothing');assert.ok(Math.abs(list[0].distance-21)<.3&&Math.abs(list[0].to-30)<.3,'resized '+list[0].distance+'..'+list[0].to);report.cases.resize=list[0];
+  r=await rev();await tapButton('undo');await revision(r+1);
   r=await rev();await tapButton('undo');await page.waitForFunction(()=>!window.riderEditorDoc?.decorations);await page.waitForFunction(()=>(window.riderDecorationState?.fences?.length||0)===0);
   await tapButton('redo');await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===1);report.cases.undo=true;
   // Removing the terrain under a fence keeps it visible as stale; one Undo restores both.
