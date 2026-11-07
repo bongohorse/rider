@@ -35,9 +35,10 @@
     const wrap = document.createElement('label');wrap.style.cssText = 'display:inline-flex;gap:6px;align-items:center;margin-right:12px';
     const box = document.createElement('input');box.type = 'checkbox';box.id = id;box.onchange = () => action(box.checked);wrap.append(box, label);return wrap;
   }
+  // Same top and bottom margin: a compositor can mirror a panel's rectangle over the WebGL canvas, seen as a blank block in Chromium.
   function build(list) {
     panel = document.createElement('section');panel.id = 'rider-decoration-panel';panel.setAttribute('aria-label', 'Decorations');
-    panel.style.cssText = 'position:fixed;right:16px;top:64px;z-index:99998;box-sizing:border-box;width:min(330px,calc(100vw - 32px));max-height:calc(100vh - 150px);overflow:auto;padding:10px;background:#17272f;color:#f1f5f2;border:2px solid #8fe0c0;font:14px sans-serif';
+    panel.style.cssText = 'position:fixed;right:16px;top:64px;bottom:64px;z-index:99998;box-sizing:border-box;width:min(330px,calc(100vw - 32px));overflow:auto;padding:10px;background:#17272f;color:#f1f5f2;border:2px solid #8fe0c0;font:14px sans-serif';
     const grid = document.createElement('div');grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px';
     for (const a of list) {
       const b = document.createElement('button');b.type = 'button';b.dataset.decorationAsset = a.id;b.title = a.name;b.setAttribute('aria-label', a.name);

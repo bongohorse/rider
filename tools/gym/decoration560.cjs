@@ -33,7 +33,7 @@ async function main(){
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
-  await page.waitForTimeout(800);await page.screenshot({path:path.join(out,'decoration-panel.png')});report.panel_probe=await page.evaluate(()=>{const e=document.elementFromPoint(1100,600);return {tag:e?.tagName,id:e?.id,panel:document.querySelector('#rider-decoration-panel').getBoundingClientRect().toJSON()};});
+  await page.waitForTimeout(800);await page.screenshot({path:path.join(out,'decoration-panel.png')});
   // Place: choose an asset and placement in the panel, click near the run; snaps onto the line.
   let r=await rev();
   await dom('[data-decoration-asset="rock-large"]');await dom('[data-decoration-placement="front"]');
