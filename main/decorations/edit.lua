@@ -31,7 +31,7 @@ function M.block(e) return e.decorations or {version=source.VERSION,next_id=1,it
 function M.find(b,id) for i,o in ipairs(b and b.items or {}) do if o.id==id then return o,i end end end
 function M.add(b,fields)
     local o={id='d'..b.next_id,source=fields.source,distance=fields.distance,offset=fields.offset or 0,
-        placement=fields.placement or 'front',tilt=fields.tilt~=false,asset=fields.asset}
+        placement=fields.placement or 'front',tilt=fields.tilt~=false,asset=fields.asset,scale=fields.scale}
     b.next_id=b.next_id+1;b.items[#b.items+1]=o
     return o
 end
@@ -41,11 +41,12 @@ function M.pick(b,resolved,p,assets)
     for i=#b.items,1,-1 do
         local o=b.items[i];local r=resolved[o.id];local a=assets[o.asset]
         if r then
+            local size=o.scale or 1
             local c,s=math.cos(-r.angle),math.sin(-r.angle)
             local dx,dy=p[1]-r.x,p[2]-r.y
             local u,v=dx*c-dy*s,dx*s+dy*c
-            if math.abs(u)<=a.width/2+.1 and v>=-a.sink-.1 and v<=a.height-a.sink+.1 then
-                local d=u*u+(v-a.height/2)^2
+            if math.abs(u)<=a.width*size/2+.1 and v>=-a.sink*size-.1 and v<=(a.height-a.sink)*size+.1 then
+                local d=u*u+(v-a.height*size/2)^2
                 if not best or d<best then hit,best=o,d end
             end
         end

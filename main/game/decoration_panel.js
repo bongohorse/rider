@@ -25,6 +25,8 @@
     panel.querySelector('#rider-decoration-hidden').checked = !!item?.hidden;
     panel.querySelector('#rider-decoration-locked').checked = !!item?.locked;
     for (const id of ['copy', 'delete', 'hidden', 'locked']) panel.querySelector(`#rider-decoration-${id}`).disabled = !item;
+    const s = state.stretch || {};
+    panel.querySelector('#rider-populate-stretch').textContent = state.arming ? 'Click the track for this end.' : s.a !== false && s.b !== false ? `Stretch x ${Number(s.a).toFixed(1)} to ${Number(s.b).toFixed(1)} m` : s.a !== false || s.b !== false ? 'Stretch: set the other end' : 'Stretch: whole track';
     panel.querySelector('#rider-decoration-note').textContent = state.message || '';
   }
   function button(label, action) {
@@ -67,6 +69,28 @@
     actions.append(copy, del, close);panel.append(actions);
     const flags = document.createElement('div');flags.style.marginTop = '6px';
     flags.append(check('rider-decoration-hidden', 'Hide', v => send({type: 'hidden', value: v})), check('rider-decoration-locked', 'Lock', v => send({type: 'locked', value: v})));panel.append(flags);
+    const pop = document.createElement('details');pop.id = 'rider-populate';pop.open = true;pop.style.cssText = 'margin-top:8px;border-top:1px solid #4d6b70;padding-top:6px';
+    const head = document.createElement('summary');head.textContent = 'Populate';pop.append(head);
+    const set = document.createElement('div');set.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;font-size:12px';
+    for (const a of list) {
+      const wrap = document.createElement('label');const box = document.createElement('input');box.type = 'checkbox';box.dataset.populateAsset = a.id;wrap.append(box, ' ' + a.name);set.append(wrap);
+    }
+    pop.append(set);
+    const fields = [['density', 'Per 10 m', 4, .1, 40, .1], ['spacing', 'Spacing m', 1.5, .25, 50, .25], ['size_min', 'Size min', .8, .25, 3, .05], ['size_max', 'Size max', 1.2, .25, 3, .05], ['slope', 'Max slope°', 35, 0, 90, 1], ['seed', 'Seed', 1, 0, 2147483646, 1]];
+    for (const [id, label, value, min, max, step] of fields) {
+      const wrap = document.createElement('label');wrap.style.cssText = 'display:flex;justify-content:space-between;margin:2px 0';
+      const input = document.createElement('input');input.type = 'number';input.id = 'rider-populate-' + id;input.value = value;input.min = min;input.max = max;input.step = step;input.style.width = '110px';wrap.append(label, input);pop.append(wrap);
+    }
+    const stretch = document.createElement('div');stretch.id = 'rider-populate-stretch';stretch.style.margin = '4px 0';pop.append(stretch);
+    const a = button('Stretch start', () => send({type: 'arm', value: 'a'}));a.id = 'rider-populate-a';
+    const b = button('Stretch end', () => send({type: 'arm', value: 'b'}));b.id = 'rider-populate-b';
+    const whole = button('Whole track', () => send({type: 'clear_stretch'}));whole.id = 'rider-populate-whole';
+    pop.append(a, b, whole);
+    const run = button('Populate', () => {
+      const value = id => Number(panel.querySelector('#rider-populate-' + id).value);
+      const assets = [...panel.querySelectorAll('[data-populate-asset]')].filter(n => n.checked).map(n => n.dataset.populateAsset);
+      send({type: 'populate', settings: {assets, density: value('density'), spacing: value('spacing'), size_min: value('size_min'), size_max: value('size_max'), slope: value('slope'), seed: value('seed')}});
+    });run.id = 'rider-populate-run';pop.append(run);panel.append(pop);
     const note = document.createElement('div');note.id = 'rider-decoration-note';note.setAttribute('role', 'status');note.style.cssText = 'margin-top:6px;color:#ffd27f';panel.append(note);
     // A drag released over the panel never reaches the canvas.
     panel.addEventListener('pointerup', () => send({type: 'release'}));

@@ -155,7 +155,7 @@ function init(self)
     self.templates={}
     for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
     local case=sys.get_config_string("rider.gym_test","")
-    self.debug=html5 and sys.get_engine_info().is_debug and (case=="bg548" or case=="bg549" or case=="deco560" or case=="ea3" or case=="ea2" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
+    self.debug=html5 and sys.get_engine_info().is_debug and (case=="bg548" or case=="bg549" or case=="deco560" or case=="deco617" or case=="ea3" or case=="ea2" or case=="le2" or case=="le3" or case=="le4" or case=="le5a" or case=="le5b" or case=="le5c" or case=="le5d" or case=="le6")
     self.gui_nodes=self.overlay.nodes+self.extra_nodes+editor_ui.BOXES+editor_ui.TEXTS
     msg.post(".","acquire_input_focus")
     window.set_listener(function(_,event)

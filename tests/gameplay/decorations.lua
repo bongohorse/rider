@@ -137,4 +137,47 @@ local free=D.copy(locked.editor);free.decorations.items[1].locked=nil;free.decor
 -- Edit preview counts each decoration once beside doubled line sprites.
 assert(budget.preview(1,10,100,0,{decorations={items={1,2,3}}})==true)
 local many={items={}};for i=1,512 do many.items[i]=i end;assert(budget.preview(1,10,300,0,{decorations=many})==false,'pool shared with decorations')
+-- #617: Populate.
+local Pop=require 'main.decorations.populate'
+local hill={{id='o1',parts={{{0,0},{40,0},{50,10},{90,10}}}}}
+local function settings(t) local s={assets={'bush-round','rock-small'},placement='behind',density=5,spacing=1,size_min=.8,size_max=1.2,slope=30,seed=7};for k,v in pairs(t or {}) do s[k]=v end;return s end
+local empty={version=1,next_id=1,items={}}
+local first=assert(Pop.run(empty,hill,settings()));local again=assert(Pop.run(empty,hill,settings()))
+assert(#first.items>20 and enc(first)==enc(again),'same seed, same result')
+assert(enc(assert(Pop.run(empty,hill,settings{seed=8})))~=enc(first),'another seed differs')
+assert(S.validate(first),'writes ordinary valid decorations')
+local poses_of=function(b) local t={};for i,o in ipairs(b.items) do local x,y,a=S.resolve(hill[1].parts,o.distance,o.offset,true);t[i]={x,y,a,o} end;return t end
+local poses2=poses_of(first)
+for i,p in ipairs(poses2) do
+    assert(math.abs(p[3])<=math.rad(30)+1e-9,'slope limit');assert(p[4].generated==true and p[4].scale>=.8 and p[4].scale<=1.2,'size range')
+    assert(p[4].asset=='bush-round' or p[4].asset=='rock-small','asset set')
+    for j=i+1,#poses2 do assert((p[1]-poses2[j][1])^2+(p[2]-poses2[j][2])^2>=1-1e-9,'spacing') end
+end
+local ruled=assert(Pop.run(empty,hill,settings(),nil,{{10,0}}))
+for _,p in ipairs(poses_of(ruled)) do assert(math.abs(p[1]-10)>=Pop.EXCLUSION,'exclusion zone') end
+local part=assert(Pop.run(empty,hill,settings(),{10,20}));assert(#part.items>0)
+for _,p in ipairs(poses_of(part)) do assert(p[1]>=10 and p[1]<=20,'stretch') end
+-- A re-run replaces only unlocked generated objects; hand-placed and locked ones survive.
+local mixed=D.copy(first)
+mixed.items[1].locked=true;local lock_id=mixed.items[1].id
+mixed.items[#mixed.items+1]={id='d'..mixed.next_id,source='o1',distance=30,offset=0,placement='front',tilt=true,asset='cone'};local hand_id=mixed.items[#mixed.items].id;mixed.next_id=mixed.next_id+1
+local rerun=assert(Pop.run(mixed,hill,settings{seed=9}))
+local has={};local ids={};for _,o in ipairs(rerun.items) do assert(not ids[o.id],'unique ids');ids[o.id]=true;has[o.id]=o end
+assert(has[lock_id] and has[lock_id].locked and has[hand_id] and has[hand_id].asset=='cone','kept');assert(S.validate(rerun))
+local old=0;for _,o in ipairs(first.items) do if o.id~=lock_id and has[o.id] then old=old+1 end end;assert(old==0,'old generated objects are replaced')
+local random_before=math.random();math.randomseed(42);local a1=math.random();math.randomseed(42);assert(Pop.run(empty,hill,settings()));assert(math.random()==a1,'gameplay random stream untouched');assert(random_before==random_before)
+local long={{id='o1',parts={{{0,0},{3000,0}}}}}
+local nope,why=Pop.run(empty,long,settings{density=40,spacing=.25});assert(not nope and why:find('limit is 512',1,true),'over the limit places nothing')
+assert(not Pop.run(empty,hill,settings{assets={}}),'no assets')
+-- Hidden terrain keeps its generated objects and gets no new ones; offset counts in the rules.
+local two_runs={{id='o1',parts={{{0,0},{40,0}}}},{id='o2',hidden=true,parts={{{100,0},{140,0}}}}}
+local hidden_block={version=1,next_id=2,items={{id='d1',source='o2',distance=5,offset=0,placement='front',tilt=true,asset='cone',generated=true}}}
+local result=assert(Pop.run(hidden_block,two_runs,settings()))
+assert(result.items[1].id=='d1','a generated object on hidden terrain stays')
+for i=2,#result.items do assert(result.items[i].source=='o1','hidden terrain gets none') end
+local kept_at={version=1,next_id=2,items={{id='d1',source='o1',distance=20,offset=2,placement='front',tilt=true,asset='cone'}}}
+local near_check=assert(Pop.run(kept_at,{two_runs[1]},settings{offset=2,density=40,spacing=2}))
+for i=2,#near_check.items do assert(math.abs(near_check.items[i].distance-20)>=2-1e-9,'spacing measured at the real offset') end
+-- Size reaches layout and compile.
+local sized=L.transform({asset='cone',position={0,0},angle=0,placement='front',scale=2},.01);near(sized.scale,2*100/96);near(sized.y,2*(.875/2-.02)*100)
 print('PASS decorations')

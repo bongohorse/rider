@@ -6,11 +6,12 @@ local M={PPM=96,BODY_TINT={.42,.38,.36,1},
 function M.transform(item,scale)
     local a=assets[item.asset]
     -- The sprite is centred; lift its centre along the object's own up axis, base sunk into the ground.
-    local lift=a.height/2-a.sink
+    local size=item.scale or 1
+    local lift=(a.height/2-a.sink)*size
     local x,y=item.position[1]-math.sin(item.angle)*lift,item.position[2]+math.cos(item.angle)*lift
-    return {x=x/scale,y=y/scale,z=M.Z[item.placement],angle=item.angle,scale=1/scale/M.PPM,
+    return {x=x/scale,y=y/scale,z=M.Z[item.placement],angle=item.angle,scale=size/scale/M.PPM,
         -- Half diagonal in engine units: a safe visibility radius at any tilt.
-        radius=math.sqrt(a.width*a.width+a.height*a.height)/2/scale}
+        radius=size*math.sqrt(a.width*a.width+a.height*a.height)/2/scale}
 end
 function M.visible(t,left,right,bottom,top) return t.x+t.radius>=left and t.x-t.radius<=right and t.y+t.radius>=bottom and t.y-t.radius<=top end
 return M

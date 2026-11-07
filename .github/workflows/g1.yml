@@ -261,7 +261,7 @@ jobs:
           - group: camera
             cases: 'cam443'
           - group: backgrounds
-            cases: 'bg546 bg548 bg549 deco558 deco560'
+            cases: 'bg546 bg548 bg549 deco558 deco560 deco617'
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -467,6 +467,9 @@ jobs:
       - name: Decoration tool real input (#560)
         if: contains(format(' {0} ', matrix.cases), ' deco560 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/decoration-tool --case deco560
+      - name: Decoration Populate real input (#617)
+        if: contains(format(' {0} ', matrix.cases), ' deco617 ')
+        run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/decoration-populate --case deco617
       - name: Background panel real input and saved choices (#549)
         if: contains(format(' {0} ', matrix.cases), ' bg549 ')
         run: python tools/gym/smoke.py --bundle artifacts/g1/gym-bundle --output artifacts/g1/background-panel --case bg549

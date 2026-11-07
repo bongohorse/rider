@@ -4,7 +4,8 @@ local doc=require 'main.editor.editor_doc'
 local source=require 'main.decorations.source'
 local edit=require 'main.decorations.edit'
 local catalog=require 'main.decorations.assets'
-local M={asset='cone',placement='front',tilt=true,offset=0,selected=nil,drag=nil,message=''}
+local populate=require 'main.decorations.populate'
+local M={populate=doc.copy(populate.DEFAULTS),arming=nil,stretch={},asset='cone',placement='front',tilt=true,offset=0,selected=nil,drag=nil,message=''}
 -- Every terrain piece's sampled parts, read once per call site.
 local function parts_of(id)
     for _,o in ipairs(editor.doc.editor.objects) do if o.id==id and doc.terrain(o) then return doc.parts(o) end end
@@ -49,6 +50,10 @@ function M.place(p)
 end
 -- Canvas press: grab the object under the cursor, otherwise place one.
 function M.press(p)
+    if M.arming then
+        M.stretch[M.arming]=p[1];M.arming=nil;M.shown=nil
+        return
+    end
     local b=editor.doc.editor.decorations
     local hit=b and edit.pick(b,M.resolved(),p,catalog.ASSETS)
     if hit then
@@ -92,8 +97,24 @@ function M.copy()
     if not o then return end
     local new
     if commit(function(b)
-        new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset})
+        new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset,scale=o.scale})
     end) then M.selected=new.id end
+end
+-- One Undo step. A result the level cannot hold places nothing.
+function M.run_populate(settings)
+    local e=editor.doc.editor
+    local pieces={}
+    for _,o in ipairs(e.objects) do if doc.terrain(o) then pieces[#pieces+1]={id=o.id,parts=doc.parts(o),hidden=o.hidden} end end
+    if #pieces==0 then M.message='Draw some track before Populate.';return end
+    local a,b=M.stretch.a,M.stretch.b
+    local stretch=a and b and {math.min(a,b),math.max(a,b)} or nil
+    local exclude={e.start.position};if e.finish then exclude[2]=e.finish.position end
+    local result,why=populate.run(edit.block(e),pieces,settings,stretch,exclude)
+    if not result then M.message=why;M.shown=nil;return end
+    M.selected=nil
+    commit(function(b2)
+        b2.next_id,b2.items=result.next_id,result.items
+    end)
 end
 function M.visible() return html5 and html5.run('!!window.riderDecorationPanel?.visible')=='true' end
 function M.close()
@@ -109,7 +130,7 @@ function M.suspend(value)
 end
 local function state()
     local o=selected_item()
-    return {asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
+    return {stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
         selected=o and {id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
@@ -123,7 +144,7 @@ local function palette()
 end
 function M.open()
     if not html5 or not editor.doc then return end
-    M.instance=editor.opened;M.suspended=false;M.selected=nil;M.message='';M.shown=nil
+    M.instance=editor.opened;M.suspended=false;M.selected=nil;M.message='';M.shown=nil;M.stretch={};M.arming=nil
     html5.run(assert(sys.load_resource('/main/game/decoration_panel.js'),'Missing Decoration panel'))
     html5.run('window.riderDecorationPanel.open('..json.encode(palette())..')')
 end
@@ -135,6 +156,17 @@ function M.handle(m)
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;if selected_item() then change({offset=m.value}) end
     elseif m.type=='hidden' then change({hidden=m.value==true or nil})
     elseif m.type=='locked' then change({locked=m.value==true or nil})
+    elseif m.type=='arm' and (m.value=='a' or m.value=='b') then M.arming=m.value
+    elseif m.type=='clear_stretch' then M.stretch={};M.arming=nil
+    elseif m.type=='populate' and type(m.settings)=='table' then
+        local s=m.settings
+        local function range(v,lo,hi) return type(v)=='number' and v==v and v>=lo and v<=hi end
+        local known=type(s.assets)=='table'
+        for _,id in ipairs(known and s.assets or {}) do known=known and catalog.ASSETS[id]~=nil end
+        if known and range(s.density,.1,40) and range(s.spacing,.25,50) and range(s.size_min,source.MIN_SCALE,source.MAX_SCALE) and range(s.size_max,s.size_min,source.MAX_SCALE) and range(s.slope,0,90) and range(s.seed,0,2147483646) and s.seed%1==0 then
+            s.placement,s.tilt,s.offset=M.placement,M.tilt,M.offset
+            M.run_populate(s)
+        else M.message='Invalid Populate settings.';M.shown=nil end
     elseif m.type=='release' then M.release()
     elseif m.type=='delete' then M.delete()
     elseif m.type=='copy' then M.copy()
