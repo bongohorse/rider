@@ -109,6 +109,8 @@ function M.press(p)
             if math.abs(p[1]-M.stretch[k])<=tol then M.drag={range=k,start=p,moved=false};return end
         end
     end
+    -- The live result is not stored yet: objects are edited after Apply, so a click never edits an unseen one.
+    if M.pop then M.selected=nil;M.message='Live Populate: Apply, or untick all objects, to edit single objects.';M.shown=nil;return end
     if M.fence_arm then
         local near=edit.nearest(editor.doc.editor.objects,doc.parts,doc.terrain,p)
         if not near then M.message='No visible track within '..edit.SNAP..' m. Click closer to a run.';M.shown=nil;return end
@@ -206,6 +208,7 @@ function M.release()
     end)
 end
 function M.cancel()
+    if M.arming then M.arming=nil;M.stretch=M.stretch_before or {};editor.touch() end
     if type(M.fence_arm)=='table' then M.fence_arm='start';M.hover=nil;editor.touch() end
     if M.preview then M.preview=nil;editor.touch() end
     if M.drag then M.drag=nil;editor.touch() end
@@ -251,8 +254,10 @@ function M.block()
     s.placement,s.tilt,s.offset=M.placement,M.tilt,M.offset
     local key=table.concat({editor.doc.editor.revision,tostring(editor.shape_version),json.encode(s),tostring(M.stretch.a),tostring(M.stretch.b)},':')
     if M.pop_cache and M.pop_cache.key==key then return M.pop_cache.block or b end
-    local result=compute(s)
+    local result,why=compute(s)
     M.pop_cache={key=key,block=result and {version=source.VERSION,next_id=result.next_id,items=result.items} or nil}
+    -- A result the level cannot hold says so now, not only on Apply.
+    M.pop_why=not result and why or nil
     return M.pop_cache.block or b
 end
 function M.pop_key() return M.pop and M.pop_cache and M.pop_cache.key or '' end
@@ -260,9 +265,10 @@ function M.run_populate(settings)
     local result,why=compute(settings)
     if not result then M.message=why;M.shown=nil;return end
     M.selected=nil
-    commit(function(b2)
+    -- Applied: the track shows what is stored, so Undo visibly takes it back; the next change goes live again.
+    if commit(function(b2)
         b2.next_id,b2.items=result.next_id,result.items
-    end)
+    end) then M.pop,M.pop_cache,M.pop_why=nil,nil,nil;M.message='Applied. Change a setting to preview again.';M.shown=nil end
 end
 function M.visible() return html5 and html5.run('!!window.riderDecorationPanel?.visible')=='true' end
 function M.close()
@@ -303,7 +309,7 @@ local function state()
         local fx=function(x) return math.floor((m.ox+x*m.ppm_x)/w*1000+.5)/1000 end
         range={a=fx(math.min(M.stretch.a,M.stretch.b)),b=fx(math.max(M.stretch.a,M.stretch.b))}
     end
-    return {range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.message,
+    return {range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
         selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
@@ -347,7 +353,7 @@ function M.handle(m)
         elseif o and not o.locked then M.preview={id=o.id,field=m.field,revision=editor.doc.editor.revision,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
     elseif m.type=='hidden' then change({hidden=m.value==true})
     elseif m.type=='locked' then change({locked=m.value==true})
-    elseif m.type=='arm' and m.value=='range' then M.arming='range';M.stretch={};M.selected=nil;M.message='Click where the range starts.';M.shown=nil;editor.touch()
+    elseif m.type=='arm' and m.value=='range' then M.arming='range';M.stretch_before=M.stretch;M.stretch={};M.selected=nil;M.message='Click where the range starts.';M.shown=nil;editor.touch()
     elseif m.type=='clear_stretch' then M.stretch={};M.arming=nil;editor.touch()
     elseif m.type=='populate' and type(m.settings)=='table' then
         local s=m.settings
@@ -358,7 +364,7 @@ function M.handle(m)
     elseif m.type=='populate_live' then
         -- Live only with something to place; otherwise the track shows what is stored.
         local s=type(m.settings)=='table' and m.settings
-        M.pop=s and valid(s) and #s.assets>0 and s or nil;editor.touch()
+        M.pop=s and valid(s) and #s.assets>0 and s or nil;M.pop_why=nil;if M.pop then M.selected=nil end;editor.touch()
     elseif m.type=='release' then M.release()
     elseif m.type=='delete' then M.delete()
     elseif m.type=='copy' then M.copy()

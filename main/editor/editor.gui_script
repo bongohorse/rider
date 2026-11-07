@@ -2309,7 +2309,7 @@ function on_input(self,action_id,action)
     elseif editor.tool=="prefab" and KIND_KEYS[action_id] then
         -- 1-7 pick the prefab type (the game's station keys are editor input while editing).
         editor.prefab_kind=KIND_KEYS[action_id];self.place=self.cursor and placement(self,self.cursor) or nil;editor.touch()
-    elseif action_id==hash("editor_cancel") and (decoration_tool.drag or type(decoration_tool.fence_arm)=="table") then decoration_tool.cancel()
+    elseif action_id==hash("editor_cancel") and (decoration_tool.drag or type(decoration_tool.fence_arm)=="table" or decoration_tool.arming) then decoration_tool.cancel()
     elseif action_id==hash("editor_cancel") then
         if self.auto_plan then clear_auto(self);editor.message="Coin preview cancelled.";return true end
         -- Esc first cancels the current action (drag, unfinished piece), then clears the selection.
