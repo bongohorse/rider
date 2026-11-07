@@ -31,21 +31,24 @@ local function list(t,what,name)
     return nil,"Invalid "..what..": "..name.." "..why
 end
 function M.validate(d)
-    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
-    if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 then return nil,"Ordinary coins require station schema 2",true end
+    if type(d)~="table" or (d.schema~=1 and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8) or d.units~="metres" then return nil,"Unsupported station schema/units",true end
+    if d.coins~=nil and d.schema~=2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,"Ordinary coins require station schema 2",true end
     -- The schema gates below read coins.version: a scalar coins is refused first (#388), not indexed.
     if d.coins~=nil and type(d.coins)~="table" then return nil,require('main.game.coin_data').NOT_OBJECT end
-    if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 then return nil,'Wonder Gems require station schema 3',true end
+    if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Wonder Gems require station schema 3',true end
     if d.fuel~=nil or d.coins and d.coins.version==3 then
-        if d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 then return nil,'Fuel requires station schema 4',true end
+        if d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Fuel requires station schema 4',true end
         if d.coins and d.coins.version==3 and not d.fuel then return nil,'Canisters require fuel settings' end
     end
-    if d.mechanisms~=nil and d.schema~=5 and d.schema~=6 and d.schema~=7 then return nil,'Mechanisms require station schema 5',true end
-    if d.material~=nil and d.schema~=6 and d.schema~=7 then return nil,'A level material requires station schema 6',true end
+    if d.mechanisms~=nil and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Mechanisms require station schema 5',true end
+    if d.material~=nil and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'A level material requires station schema 6',true end
     if d.material~=nil and not (type(d.editor)=='table' and d.editor.road_profile==require('main.terrain_perspective.look').ID) then
         return nil,'A level material needs the authored 3D look'
     end
-    if d.backgrounds~=nil and d.schema~=7 then return nil,'Backgrounds require station schema 7',true end
+    if d.backgrounds~=nil and d.schema~=7 and d.schema~=8 then return nil,'Backgrounds require station schema 7',true end
+    if d.decorations~=nil and d.schema~=8 then return nil,'Decorations require station schema 8',true end
+    local deco_ok,deco_err,deco_unknown=require('main.decorations.source').validate_compiled(d.decorations)
+    if not deco_ok then return nil,deco_err,deco_unknown end
     local bg_ok,bg_err,bg_unknown=require('main.backgrounds.source').validate(d.backgrounds)
     if not bg_ok then return nil,bg_err,bg_unknown end
     local material_ok,material_err,material_unknown=require('main.terrain_perspective.material').validate(d.material)
