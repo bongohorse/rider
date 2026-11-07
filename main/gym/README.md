@@ -203,6 +203,8 @@ Official gameplay progression uses a separate three-course catalogue (First run,
 
 `bg548` imports versioned backgrounds through the ordinary custom-file path, checks real image resources in Play and Edit, reopens the durable custom save, and verifies master OFF/ON preserves individual visibility, Auto, manual Depth and missing-image references. Its debug observer only reports state; it does not configure the renderer or camera. It does not prove the later Background panel's real controls or human/device acceptance.
 
+`deco558` imports a decorated level through the ordinary custom-file path and checks draw order against terrain and vehicle with engine transforms and canvas pixels, tilt at fixed poses and culling by camera position. The observer is read-only; art and device cost remain human checks.
+
 `bg549` uses normal DOM and canvas input to choose all four presets, switch each of six slots, tune manual Depth and Auto without losing the manual value, cycle master OFF/ON, store each choice and each Depth drag as one Undo step, Undo/Redo, reload the durable editor save and Play the same source. It checks input capture, image override, tab switching, panel state through Help/Versions and reachable controls at 844×390 and 1920×1080. The observer is read-only; art/Auto direction and physical-device performance remain human checks.
 
 `python tools/gym/smoke.py --case <id>` (HTML5 debug gym):

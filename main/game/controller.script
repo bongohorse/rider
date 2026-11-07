@@ -203,6 +203,7 @@ local function setup(self)
         else
             self.decor_sprites,self.decor_labels=require("main.game.terrain_mesh").build(self,self.station)
         end
+        self.decorations=require("main.decorations.renderer").build(self.station.decorations)
         self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
     if not built then
@@ -363,7 +364,16 @@ function init(self)
     end
     msg.post(".", "acquire_input_focus")
 end
+local function update_decorations(self)
+    local s=self.decorations
+    if not s or #s.items==0 then return end
+    local renderer=require("main.decorations.renderer")
+    -- Read-only camera inputs; the orthographic projection's x scale gives the half width.
+    renderer.update(s,go.get_position("/camera").x,1/camera.get_projection("/camera#camera").m00)
+    if html5 and sys.get_engine_info().is_debug then html5.run("window.riderDecorationState="..json.encode(renderer.report(s))) end
+end
 local function update_backgrounds(self)
+    update_decorations(self)
     -- Same camera owner; the bg546 fixture supplies named poses only in debug tests.
     if self.background_probe then
         local pose=self.background_probe.before(self)
@@ -796,7 +806,7 @@ function final(self)
     -- Body/chain lifetime belongs to Defold's world. Drop session references;
     -- do not destroy a chain again while its world is being unloaded.
     self.terrain, self.chain, self.segments, self.probe, self.vehicle = nil, nil, nil, nil, nil
-    self.seesaw = nil;self.mechanisms=nil
+    self.seesaw = nil;self.mechanisms=nil;self.decorations=nil
 end
 function on_message(self,id,data,sender)
     if id==hash("configure_station") and not self.ready and data.edit then
