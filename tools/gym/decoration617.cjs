@@ -33,11 +33,30 @@ async function main(){
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
-  const stretchClick=async(which,x)=>{await dom('#rider-populate-'+which);await pointer.frames(page,{n:8});await click([x,.5]);};
-  await stretchClick('a',5.5);await stretchClick('b',9);await page.locator('#rider-populate-density').fill('20');await page.locator('#rider-populate-spacing').fill('0.25');
-  await page.waitForFunction(()=>/Stretch x 5\.\d to \d\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
-  await page.locator('[data-populate-asset="bush-round"]').check();await page.locator('[data-populate-asset="flowers"]').check();await dom('[data-decoration-placement="behind"]');
-  let r=await rev();await dom('#rider-populate-run');await revision(r+1);assert.equal(await rev(),r+1,'one action, one revision');
+  // Range: click, move (the edge follows), click; shown on the track.
+  await dom('#rider-populate-range-button');await click([5.5,.5]);
+  const mid=await world([7,.5]);await page.mouse.move(mid.x,mid.y,{steps:4});await pointer.frames(page,{n:8});
+  await page.waitForFunction(()=>/Range x 5\.\d to 7\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
+  await click([9,.5]);await page.waitForFunction(()=>/Range x 5\.\d to 9\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
+  const band=await page.locator('#rider-populate-range').boundingBox(),e0=await world([5.5,.5]),e1=await world([9,.5]);
+  assert.ok(Math.abs(band.x-e0.x)<6&&Math.abs(band.x+band.width-e1.x)<6,'range drawn over the track');
+  await page.locator('#rider-populate-density').fill('20');await page.locator('#rider-populate-spacing').fill('0.25');
+  await dom('[data-decoration-placement="behind"]');
+  // Live: checking assets shows the result at once, nothing stored.
+  let r=await rev();await page.locator('[data-populate-asset="bush-round"]').check();await page.locator('[data-populate-asset="flowers"]').check();
+  await page.waitForFunction(()=>(window.riderDecorationState?.objects||0)>3);assert.equal(await rev(),r,'live: no revision');
+  // A range edge drags; the live result follows.
+  const before=await page.evaluate(()=>window.riderDecorationState.objects);const g0=await world([9,.5]),g1=await world([12,.5]);
+  await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(g0.x,g0.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(g1.x,g1.y,{steps:5});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});
+  await page.waitForFunction(()=>/Range x 5\.\d to 1[12]\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
+  await page.waitForFunction(n=>window.riderDecorationState.objects>n,before);assert.equal(await rev(),r,'edge drag: no revision');
+  const back=await world([9,.5]);const now=await world([12,.5]);
+  await page.mouse.move(now.x,now.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);await page.mouse.move(back.x,back.y,{steps:5});await pointer.frames(page);await page.mouse.up();await pointer.frames(page,{n:8});
+  await page.waitForFunction(()=>/Range x 5\.\d to 9\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
+  // Random seed changes the live result.
+  const seed0=await page.locator('#rider-populate-seed').inputValue();await dom('#rider-populate-random');assert.notEqual(await page.locator('#rider-populate-seed').inputValue(),seed0,'random seed');
+  await page.locator('#rider-populate-seed').fill('1');await pointer.frames(page,{n:8});
+  r=await rev();await dom('#rider-populate-run');await revision(r+1);assert.equal(await rev(),r+1,'one action, one revision');
   let list=await items();assert.ok(list.length>3,`populated ${list.length}`);for(const o of list){assert.equal(o.generated,true);assert.equal(o.placement,'behind');assert.equal(o.source,'o1');assert.ok(o.distance>=25&&o.distance<=29.6,'inside the stretch: '+o.distance);assert.ok(Math.abs(o.distance-20)>=5,'clear of START');}
   await page.waitForFunction(n=>window.riderDecorationState?.objects===n,list.length);await page.screenshot({path:path.join(out,'populate.png')});report.cases.populate={count:list.length};
   const shape=l=>l.map(o=>[o.distance,o.asset,o.scale]);const once=shape(list);

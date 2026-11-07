@@ -25,12 +25,19 @@
     panel.querySelector('#rider-decoration-locked').checked = !!item?.locked;
     for (const id of ['copy', 'delete', 'hidden', 'locked']) panel.querySelector(`#rider-decoration-${id}`).disabled = !item;
     const s = state.stretch || {};
-    panel.querySelector('#rider-populate-stretch').textContent = state.arming ? 'Click the track for this end.' : s.a !== false && s.b !== false ? `Stretch x ${Number(s.a).toFixed(1)} to ${Number(s.b).toFixed(1)} m` : s.a !== false || s.b !== false ? 'Stretch: set the other end' : 'Stretch: whole track';
+    panel.querySelector('#rider-populate-stretch').textContent = state.arming === 'range' ? 'Click where the range starts.' : s.a !== false && s.b !== false ? `Range x ${Number(Math.min(s.a, s.b)).toFixed(1)} to ${Number(Math.max(s.a, s.b)).toFixed(1)} m${state.arming === 'range_b' ? ' · click to end' : state.live ? ' · live' : ''}` : `Range: whole track${state.live ? ' · live' : ''}`;
     panel.querySelector('#rider-decoration-note').textContent = state.message || '';
-    renderBar();
+    renderBar();renderRange();
   }
   // Quick bar: the selected object's own controls, drawn just above it.
-  let bar;
+  let bar, rangeBox;
+  function renderRange() {
+    const g = state && state.range, canvas = document.querySelector('canvas');
+    if (!rangeBox || !g || !canvas || !api.visible || api.blocked) { if (rangeBox) rangeBox.hidden = true;return; }
+    const r = canvas.getBoundingClientRect(), x0 = r.left + g.a * r.width, x1 = r.left + g.b * r.width;
+    rangeBox.style.left = Math.max(r.left, x0) + 'px';rangeBox.style.width = Math.max(3, Math.min(r.right, x1) - Math.max(r.left, x0)) + 'px';
+    rangeBox.style.top = r.top + 'px';rangeBox.style.height = r.height + 'px';rangeBox.hidden = x1 < r.left || x0 > r.right;
+  }
   function slide(id, label, min, max, step, unit, field) {
     const wrap = document.createElement('label');wrap.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px';
     const input = document.createElement('input');input.type = 'range';input.id = id;input.min = min;input.max = max;input.step = step;input.style.width = '90px';
@@ -129,16 +136,27 @@
       const wrap = document.createElement('label');wrap.style.cssText = 'display:flex;justify-content:space-between;margin:2px 0';
       const input = document.createElement('input');input.type = 'number';input.id = 'rider-populate-' + id;input.value = value;input.min = min;input.max = max;input.step = step;input.style.width = '110px';wrap.append(label, input);pop.append(wrap);
     }
+    // Seed: type one or roll a random one.
+    const seed = pop.querySelector('#rider-populate-seed');
+    const dice = button('Random', () => { seed.value = String(1 + Math.floor(Math.random() * 2147483645));live(); });dice.id = 'rider-populate-random';dice.title = 'Random seed';
+    dice.style.cssText += ';padding:2px 8px;margin:0 0 0 6px';seed.style.width = '80px';seed.parentNode.append(dice);
     const stretch = document.createElement('div');stretch.id = 'rider-populate-stretch';stretch.style.margin = '4px 0';pop.append(stretch);
-    const a = button('Stretch start', () => send({type: 'arm', value: 'a'}));a.id = 'rider-populate-a';
-    const b = button('Stretch end', () => send({type: 'arm', value: 'b'}));b.id = 'rider-populate-b';
+    const a = button('Draw range', () => send({type: 'arm', value: 'range'}));a.id = 'rider-populate-range-button';
     const whole = button('Whole track', () => send({type: 'clear_stretch'}));whole.id = 'rider-populate-whole';
-    pop.append(a, b, whole);
-    const run = button('Populate', () => {
+    pop.append(a, whole);
+    const settings = () => {
       const value = id => Number(panel.querySelector('#rider-populate-' + id).value);
       const assets = [...panel.querySelectorAll('[data-populate-asset]')].filter(n => n.checked).map(n => n.dataset.populateAsset);
-      send({type: 'populate', settings: {assets, density: value('density'), spacing: value('spacing'), size_min: value('size_min'), size_max: value('size_max'), slope: value('slope'), seed: value('seed')}});
-    });run.id = 'rider-populate-run';pop.append(run);panel.append(pop);
+      return {assets, density: value('density'), spacing: value('spacing'), size_min: value('size_min'), size_max: value('size_max'), slope: value('slope'), seed: value('seed')};
+    };
+    // Live: every change shows its result on the track at once; Apply stores it as one Undo step.
+    function live() { send(pop.open ? {type: 'populate_live', settings: settings()} : {type: 'populate_live'}); }
+    pop.addEventListener('input', live);pop.addEventListener('change', live);pop.addEventListener('toggle', live);
+    const run = button('Apply', () => send({type: 'populate', settings: settings()}));run.id = 'rider-populate-run';pop.append(run);panel.append(pop);
+    // The range drawn on the track: shaded between two edges, which drag.
+    rangeBox = document.createElement('div');rangeBox.id = 'rider-populate-range';rangeBox.hidden = true;
+    rangeBox.style.cssText = 'position:fixed;z-index:99990;pointer-events:none;background:rgba(143,224,192,.14);border-left:3px solid #8fe0c0;border-right:3px solid #8fe0c0;box-sizing:border-box';
+    document.body.append(rangeBox);
     const note = document.createElement('div');note.id = 'rider-decoration-note';note.setAttribute('role', 'status');note.style.cssText = 'margin-top:6px;color:#ffd27f';panel.append(note);
     // Close sits alone at the bottom left, away from the object actions.
     const foot = document.createElement('div');foot.style.cssText = 'position:sticky;bottom:-10px;margin:10px -10px -10px;padding:8px 10px;background:#17272f;border-top:1px solid #4d6b70';
@@ -150,8 +168,8 @@
   }
   api.open = list => { if (!panel) build(list);api.queue.length = 0;panel.hidden = false;api.visible = true;render(); };
   const settle = () => document.querySelectorAll('#rider-decoration-panel [data-live],#rider-decoration-bar [data-live]').forEach(n => delete n.dataset.live);
-  api.close = () => { settle();if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
+  api.close = () => { settle();if (rangeBox) rangeBox.hidden = true;if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = next => { state = next;render(); };
-  api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar(); };
+  api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar();renderRange(); };
   api.take = () => JSON.stringify(api.queue.splice(0, api.queue.length));
 })();
