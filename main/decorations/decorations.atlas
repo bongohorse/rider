@@ -1,14 +1,3 @@
-images { image: "/main/decorations/meadow/tree-oak.png" }
-images { image: "/main/decorations/meadow/tree-pine.png" }
-images { image: "/main/decorations/meadow/bush-round.png" }
-images { image: "/main/decorations/meadow/bush-berry.png" }
-images { image: "/main/decorations/meadow/grass-tuft.png" }
-images { image: "/main/decorations/meadow/grass-tall.png" }
-images { image: "/main/decorations/meadow/flowers.png" }
-images { image: "/main/decorations/meadow/rock-small.png" }
-images { image: "/main/decorations/meadow/rock-large.png" }
-images { image: "/main/decorations/meadow/sign.png" }
-images { image: "/main/decorations/meadow/cone.png" }
 extrude_borders: 2
 animations {
   id: "tree-oak"

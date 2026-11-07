@@ -148,9 +148,8 @@ def lua_catalog():
 
 
 def atlas_text():
-    head = ''.join(f'images {{ image: "/main/decorations/meadow/{a}.png" }}\n' for a in ASSETS)
     anims = ''.join(f'animations {{\n  id: "{a}"\n  images {{ image: "/main/decorations/meadow/{a}.png" }}\n}}\n' for a in ASSETS)
-    return head+'extrude_borders: 2\n'+anims
+    return 'extrude_borders: 2\n'+anims
 
 
 def write(out=OUT):
@@ -184,6 +183,8 @@ def check(out=OUT):
             errors.append('license differs')
         if manifest.get('generator_sha256') != digest(__file__):
             errors.append('generator differs')
+        if manifest.get('version') != 1 or manifest.get('seed') != SEED or manifest.get('ppm') != PPM:
+            errors.append('layout differs')
         if list(sorted(manifest['assets'])) != sorted(ASSETS):
             errors.append('asset IDs differ')
         if {p.name for p in (out/'thumbs').iterdir()} != {f'{a}.png' for a in ASSETS}:
@@ -204,7 +205,7 @@ def check(out=OUT):
             box = alpha.getbbox()
             if alpha.getextrema() != (0, 255) or not box or box[3] != image.height:
                 errors.append(f'{asset}: must be cut out and stand on its bottom edge')
-            if digest(out/'thumbs'/f'{asset}.png') != entry['thumb_sha256']:
+            if Image.open(out/'thumbs'/f'{asset}.png').tobytes() != thumbnail(image).tobytes() or digest(out/'thumbs'/f'{asset}.png') != entry['thumb_sha256']:
                 errors.append(f'{asset}: thumbnail differs')
     except (OSError, ValueError, KeyError, TypeError) as exc:
         errors.append(str(exc))
