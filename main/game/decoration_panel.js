@@ -2,6 +2,8 @@
   if (window.riderDecorationPanel) return;
   // DOM presents; Lua validates and owns source, Undo and storage.
   const api = window.riderDecorationPanel = {visible: false, queue: []};
+  // Inline display (flex) would override the hidden attribute: hidden always wins for Decor overlays.
+  const rule = document.createElement('style');rule.textContent = '#rider-decoration-panel[hidden],#rider-decoration-bar[hidden],#rider-decoration-gizmo[hidden],#rider-populate-range[hidden],.rider-grip[hidden],#rider-decoration-gizmo [hidden]{display:none!important}';document.head.append(rule);
   let panel, state = null;
   const send = message => { if (api.queue.length < 16) api.queue.push(message); };
   // Active: filled, not outlined.
