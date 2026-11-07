@@ -90,7 +90,26 @@
     // A small object keeps its corners reachable: the offset handles step aside.
     for (const part of ['top', 'bottom']) if (w < 44 || h < 44) gizmo.querySelector(`[data-part="${part}"]`).hidden = true;at('rot-l', -w / 2 - 16, -top - 16);at('rot-r', w / 2 + 16, -top - 16);
   }
+  // Drag grips: visual only; the canvas takes the press.
+  const grips = [];
+  function grip(i) {
+    if (!grips[i]) {
+      const g = document.createElement('div');g.id = 'rider-fence-grip-' + i;g.className = 'rider-grip';
+      g.style.cssText = 'position:fixed;z-index:99995;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border-radius:50%;background:#fff;border:3px solid #8fe0c0;box-shadow:0 0 0 2px #17272f;pointer-events:none';
+      document.body.append(g);grips[i] = g;
+    }
+    return grips[i];
+  }
+  function renderGrips() {
+    const e = state && state.ends, canvas = document.querySelector('canvas');
+    const show = !!(e && canvas && api.visible && !api.blocked);
+    for (let i = 0; i < 2; i++) {
+      const g = grip(i);g.hidden = !show;
+      if (show) { const r = canvas.getBoundingClientRect();g.style.left = r.left + e[i].x * r.width + 'px';g.style.top = r.top + (1 - e[i].y) * r.height + 'px'; }
+    }
+  }
   function renderRange() {
+    renderGrips();
     const g = state && state.range, canvas = document.querySelector('canvas');
     if (!rangeBox || !g || !canvas || !api.visible || api.blocked) { if (rangeBox) rangeBox.hidden = true;return; }
     const r = canvas.getBoundingClientRect(), x0 = r.left + g.a * r.width, x1 = r.left + g.b * r.width;
@@ -233,6 +252,12 @@
     // The range drawn on the track: shaded between two edges, which drag.
     rangeBox = document.createElement('div');rangeBox.id = 'rider-populate-range';rangeBox.hidden = true;
     rangeBox.style.cssText = 'position:fixed;z-index:99990;pointer-events:none;background:rgba(143,224,192,.14);border-left:3px solid #8fe0c0;border-right:3px solid #8fe0c0;box-sizing:border-box';
+    // A handle on each edge, at mid height: drag there.
+    for (const side of ['left', 'right']) {
+      const h = document.createElement('div');h.id = 'rider-populate-range-' + side;h.className = 'rider-grip';
+      h.style.cssText = `position:absolute;top:50%;${side}:-9px;width:14px;height:44px;margin-top:-22px;box-sizing:border-box;border-radius:7px;background:#fff;border:3px solid #8fe0c0;box-shadow:0 0 0 2px #17272f`;
+      rangeBox.append(h);
+    }
     document.body.append(rangeBox);
     const note = document.createElement('div');note.id = 'rider-decoration-note';note.setAttribute('role', 'status');note.style.cssText = 'margin-top:6px;color:#ffd27f';panel.append(note);
     // Close sits alone at the bottom left, away from the object actions.
@@ -245,7 +270,7 @@
   }
   api.open = list => { if (!panel) build(list);api.queue.length = 0;panel.hidden = false;api.visible = true;render(); };
   const settle = () => document.querySelectorAll('#rider-decoration-panel [data-live],#rider-decoration-bar [data-live]').forEach(n => delete n.dataset.live);
-  api.close = () => { settle();if (gizmo) gizmo.hidden = true;if (rangeBox) rangeBox.hidden = true;if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
+  api.close = () => { settle();grips.forEach(g => { g.hidden = true; });if (gizmo) gizmo.hidden = true;if (rangeBox) rangeBox.hidden = true;if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = next => { state = next;render(); };
   api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar();renderRange();renderGizmo(); };
   api.take = () => JSON.stringify(api.queue.splice(0, api.queue.length));
