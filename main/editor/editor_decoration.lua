@@ -318,6 +318,17 @@ local function box(o)
     return {x=r((m.ox+x*m.ppm_x)/w),y=r((m.oy+y*m.ppm_y)/h),kx=r(m.ppm_x/w),ky=r(m.ppm_y/h),angle=r(source.angle(base,M.live(o,'rotation'))),normal=r(track),
         w=r(a.width*size),h=r(a.height*size),sink=r(a.sink*size),scale=size,offset=M.live(o,'offset'),rotation=M.live(o,'rotation'),locked=o.locked or false}
 end
+-- Grips at a selected fence's ends (or both ends of the one being drawn), in window fractions.
+local function ends(o)
+    local m=editor.screen
+    local w,h=window.get_size()
+    if not m or w<=0 or h<=0 or not ((o and o.to) or type(M.fence_arm)=='table') then return false end
+    local f
+    for _,x in ipairs(M.fences()) do if (o and o.to and x.id==o.id and not o.locked and not x.stale) or x.ghost then f=x end end
+    if not f then return false end
+    local r=function(p) return {x=math.floor((m.ox+p[1]*m.ppm_x)/w*1000+.5)/1000,y=math.floor((m.oy+(p[2]+fence.HEIGHT/2)*m.ppm_y)/h*1000+.5)/1000} end
+    return {r(f.points[1]),r(f.points[#f.points])}
+end
 local function state()
     local o=selected_item()
     local m,range=editor.screen,false
@@ -326,7 +337,7 @@ local function state()
         local fx=function(x) return math.floor((m.ox+x*m.ppm_x)/w*1000+.5)/1000 end
         range={a=fx(math.min(M.stretch.a,M.stretch.b)),b=fx(math.max(M.stretch.a,M.stretch.b))}
     end
-    return {box=box(o),range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
+    return {ends=ends(o),box=box(o),range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
         selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,rotation=o.rotation or 0,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()

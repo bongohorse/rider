@@ -40,6 +40,7 @@ async function main(){
   await click([9,.5]);await page.waitForFunction(()=>/Range x 5\.\d to 9\.\d/.test(document.querySelector('#rider-populate-stretch').textContent));
   const band=await page.locator('#rider-populate-range').boundingBox(),e0=await world([5.5,.5]),e1=await world([9,.5]);
   assert.ok(Math.abs(band.x-e0.x)<6&&Math.abs(band.x+band.width-e1.x)<6,'range drawn over the track');
+  for(const side of ['left','right'])assert.ok(await page.locator('#rider-populate-range-'+side).isVisible(),side+' edge grip');
   await page.locator('#rider-populate-density').fill('20');await page.locator('#rider-populate-spacing').fill('0.25');
   await dom('[data-decoration-placement="behind"]');
   // Live: checking assets shows the result at once, nothing stored.
