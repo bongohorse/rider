@@ -41,10 +41,10 @@ function M.fences()
         if o.to then
             local from,to=o.distance,o.to
             if M.drag and M.drag.id==o.id then from,to=M.drag.distance,M.drag.distance+o.to-o.distance end
-            local points=fence.points(parts_of(o.source),from,to,o.offset)
+            local points=fence.points(parts_of(o.source),from,to,M.live(o,'offset'))
             local stale=not points or not source.fits(parts_of(o.source),o.to)
             if stale and M.drag and M.drag.id==o.id and M.drag.source then
-                points=fence.points(parts_of(M.drag.source),from,to,o.offset);stale=not points
+                points=fence.points(parts_of(M.drag.source),from,to,M.live(o,'offset'));stale=not points
             end
             if stale and o.at then points={{o.at[1],o.at[2]},{o.at[3],o.at[4]}} end
             if points then list[#list+1]={id=o.id,points=points,placement=o.placement,hidden=o.hidden,source=o.source,stale=stale} end
