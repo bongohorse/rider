@@ -322,9 +322,9 @@ end
 local function ends(o)
     local m=editor.screen
     local w,h=window.get_size()
-    if not m or w<=0 or h<=0 then return false end
+    if not m or w<=0 or h<=0 or not ((o and o.to) or type(M.fence_arm)=='table') then return false end
     local f
-    for _,x in ipairs(M.fences()) do if (o and o.to and x.id==o.id and not o.locked) or x.ghost then f=x end end
+    for _,x in ipairs(M.fences()) do if (o and o.to and x.id==o.id and not o.locked and not x.stale) or x.ghost then f=x end end
     if not f then return false end
     local r=function(p) return {x=math.floor((m.ox+p[1]*m.ppm_x)/w*1000+.5)/1000,y=math.floor((m.oy+(p[2]+fence.HEIGHT/2)*m.ppm_y)/h*1000+.5)/1000} end
     return {r(f.points[1]),r(f.points[#f.points])}
