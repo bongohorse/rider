@@ -13,8 +13,9 @@ local function parts_of(id)
 end
 -- A slider being dragged shows its value live; release commits it as one Undo step.
 function M.live(o,field)
+    -- Only for the selected object in the revision it started in: Undo, a commit or a new selection drops it.
     local p=M.preview
-    if p and p.id==o.id and p.field==field then return p.value end
+    if p and p.id==o.id and p.id==M.selected and p.field==field and p.revision==editor.doc.editor.revision then return p.value end
     if field=='scale' then return o.scale or 1 end
     return o[field]
 end
@@ -146,7 +147,10 @@ function M.release()
         o.source,o.distance=d.source,d.distance
     end)
 end
-function M.cancel() if M.drag then M.drag=nil;editor.touch() end end
+function M.cancel()
+    if M.preview then M.preview=nil;editor.touch() end
+    if M.drag then M.drag=nil;editor.touch() end
+end
 function M.delete()
     if not selected_item() then return end
     local id=M.selected
@@ -205,7 +209,9 @@ local function anchor(o)
     if o.to then
         for _,f in ipairs(M.fences()) do if f.id==o.id then local a,b=f.points[1],f.points[#f.points];x,y=(a[1]+b[1])/2,math.max(a[2],b[2])+1.2 end end
     else
-        local r=M.resolved()[o.id]
+        local d=M.drag and M.drag.id==o.id and M.drag
+        local rx,ry,ra=source.resolve(parts_of(d and d.source or o.source),d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
+        local r=rx and {x=rx,y=ry,angle=ra}
         local a=catalog.ASSETS[o.asset]
         if r and a then local lift=a.height*M.live(o,'scale');x,y=r.x-math.sin(r.angle)*lift,r.y+math.cos(r.angle)*lift end
     end
@@ -245,7 +251,7 @@ function M.handle(m)
         local o=selected_item()
         local lo,hi=m.field=='scale' and source.MIN_SCALE or -source.MAX_OFFSET,m.field=='scale' and source.MAX_SCALE or source.MAX_OFFSET
         if m.field=='offset' and not o then M.offset=math.max(lo,math.min(hi,m.value))
-        elseif o and not o.locked then M.preview={id=o.id,field=m.field,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
+        elseif o and not o.locked then M.preview={id=o.id,field=m.field,revision=editor.doc.editor.revision,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
     elseif m.type=='hidden' then change({hidden=m.value==true})
     elseif m.type=='locked' then change({locked=m.value==true})
     elseif m.type=='fence' then M.fence_arm='start';M.selected=nil;M.message='Click where the fence starts.';M.shown=nil

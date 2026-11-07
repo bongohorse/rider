@@ -53,6 +53,13 @@ async function main(){
   await page.waitForFunction(y0=>window.riderDecorationState.items[0].y>y0+50,y0);assert.equal(await rev(),r,'live: no revision');
   assert.equal(await page.locator('#rider-bar-offset-output').textContent(),'1.50 m');
   await page.evaluate(()=>{const n=document.querySelector('#rider-bar-offset');n.dispatchEvent(new Event('change',{bubbles:true}));});await revision(r+1);assert.equal((await items())[0].offset,1.5);
+  // An unfinished drag never sticks: Undo drops the live value.
+  await page.evaluate(()=>{const n=document.querySelector('#rider-bar-offset');n.value='3';n.dispatchEvent(new Event('input',{bubbles:true}));});
+  await page.waitForFunction(y0=>window.riderDecorationState.items[0].y>y0+200,y0);
+  await key('z',['Control']);await page.waitForFunction(()=>window.riderEditorDoc.decorations.items[0].offset===0);
+  await page.waitForFunction(y0=>Math.abs(window.riderDecorationState.items[0].y-y0)<5,y0);
+  await key('y',['Control']);await page.waitForFunction(()=>window.riderEditorDoc.decorations.items[0].offset===1.5);
+  await page.evaluate(()=>{delete document.querySelector('#rider-bar-offset').dataset.live;});
   r=await rev();await page.locator('#rider-bar-scale').fill('1.5');await revision(r+1);assert.equal((await items())[0].scale,1.5);
   r=await rev();await page.locator('#rider-bar-scale').fill('1');await revision(r+1);assert.equal((await items())[0].scale,undefined,'size 1 is stored as default');
   r=await rev();await page.locator('#rider-bar-offset').fill('0');await revision(r+1);
