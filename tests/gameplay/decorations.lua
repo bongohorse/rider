@@ -122,7 +122,7 @@ local snapped=Ed.nearest(run.editor.objects,D.parts,D.terrain,{10,3})
 assert(snapped.source=='o1');near(snapped.distance,15)
 snapped=Ed.nearest(run.editor.objects,D.parts,D.terrain,{30,5.2});assert(snapped.source=='o2','nearest run wins')
 assert(Ed.nearest(run.editor.objects,D.parts,D.terrain,{10,30})==nil,'too far from any track')
-run.editor.objects[1].hidden=true;assert(Ed.nearest(run.editor.objects,D.parts,D.terrain,{-4,1}).source~='o1','hidden terrain is skipped');run.editor.objects[1].hidden=nil
+run.editor.objects[1].hidden=true;assert(Ed.nearest(run.editor.objects,D.parts,D.terrain,{19,1}).source~='o1','hidden terrain is skipped');run.editor.objects[1].hidden=nil
 local bk=Ed.block(run.editor);local one=Ed.add(bk,{source='o1',distance=5,asset='cone',placement='body'})
 local two=Ed.add(bk,{source='o1',distance=5,asset='rock-large'})
 assert(one.id=='d1' and two.id=='d2' and bk.next_id==3 and one.tilt==true and one.offset==0 and S.validate(bk))

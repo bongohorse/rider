@@ -28,7 +28,7 @@ async function main(){
   const world=async p=>{const s=(await page.evaluate(()=>window.riderEditor.screen));return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);};
   async function revision(n){await page.waitForFunction(n=>window.riderEditorDoc?.revision>=n,n,{timeout:10000});}
   const rev=async()=>(await doc()).revision;
-  async function tapButton(name){await page.locator('canvas').focus();await page.waitForTimeout(1100);const point=await page.evaluate(name=>{const b=window.riderEditor.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!b)throw Error('Missing editor button '+name);return {x:r.x+(b.x+b.w/2)/c.width*r.width,y:r.y+(1-(b.y+b.h/2)/c.height)*r.height};},name);await pointer.tap(page,point);await pointer.frames(page,{n:8});}
+  async function tapButton(name){await page.locator('canvas').focus();await page.waitForTimeout(1100);const point=await page.evaluate(name=>{const b=window.riderEditor.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!b)throw Error('Missing editor button '+name);return {x:r.x+b.x*r.width/c.width,y:r.y+r.height-b.y*r.height/c.height};},name);await pointer.tap(page,point);await pointer.frames(page,{n:8});}
   async function click(p){await page.locator('canvas').focus();await page.waitForTimeout(1100);const q=await world(p);await pointer.tap(page,q);await pointer.frames(page,{n:8});}
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
