@@ -35,7 +35,7 @@ function M.add(b,fields)
     b.next_id=b.next_id+1;b.items[#b.items+1]=o
     return o
 end
--- Picks the decoration whose drawn box holds p, nearest and last placed first. resolved: id -> {x,y,angle}.
+-- Picks the decoration whose drawn box holds p and whose centre lies nearest, so a small one in front of a large one stays reachable. resolved: id -> {x,y,angle}.
 function M.pick(b,resolved,p,assets)
     local hit,best
     for i=#b.items,1,-1 do

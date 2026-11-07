@@ -33,7 +33,7 @@ async function main(){
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
-  await page.screenshot({path:path.join(out,'decoration-panel.png')});
+  await page.waitForTimeout(800);await page.screenshot({path:path.join(out,'decoration-panel.png')});report.panel_probe=await page.evaluate(()=>{const e=document.elementFromPoint(1100,600);return {tag:e?.tagName,id:e?.id,panel:document.querySelector('#rider-decoration-panel').getBoundingClientRect().toJSON()};});
   // Place: choose an asset and placement in the panel, click near the run; snaps onto the line.
   let r=await rev();
   await dom('[data-decoration-asset="rock-large"]');await dom('[data-decoration-placement="front"]');
@@ -59,9 +59,10 @@ async function main(){
   await key('y',['Control']);await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===1);report.cases.undo_redo={after:await items()};
   // Durable reload, then Play shows it.
   const kept=await items();await page.waitForTimeout(1100);await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved',null,{timeout:20000});
-  await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderTelemetry?.sequence>2,null,{timeout:60000});
-  await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});assert.deepEqual(await items(),kept);
-  await key('Enter');await page.waitForFunction(()=>window.riderEditor?.mode!=='edit'&&window.riderDecorationState?.objects===1,null,{timeout:30000});
+  await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderEditor||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(1000);
+  if(await page.evaluate(()=>window.riderEditor?.mode!=='edit'))await key('e');
+  await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen&&window.riderEditorDoc?.decorations,null,{timeout:30000});assert.deepEqual(await items(),kept);
+  await tapButton('play');await page.waitForFunction(()=>window.riderEditor?.mode!=='edit'&&window.riderDecorationState?.objects===1&&window.riderDecorationState?.items?.[0]?.id==null,null,{timeout:30000});
   report.cases.reload_play=await page.evaluate(()=>window.riderDecorationState);await page.screenshot({path:path.join(out,'decoration-play.png')});
   assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;if(page)await page.screenshot({path:path.join(out,'decoration-failure.png')}).catch(()=>{});}

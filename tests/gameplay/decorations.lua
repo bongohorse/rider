@@ -127,7 +127,7 @@ local bk=Ed.block(run.editor);local one=Ed.add(bk,{source='o1',distance=5,asset=
 local two=Ed.add(bk,{source='o1',distance=5,asset='rock-large'})
 assert(one.id=='d1' and two.id=='d2' and bk.next_id==3 and one.tilt==true and one.offset==0 and S.validate(bk))
 local poses={d1={x=0,y=0,angle=0},d2={x=0,y=0,angle=0}}
-assert(Ed.pick(bk,poses,{0,.4},assets)==two,'last placed first');assert(Ed.pick(bk,poses,{5,.4},assets)==nil,'miss')
+assert(Ed.pick(bk,poses,{0,.4},assets)==one,'the object centred nearest wins, so a small one stays reachable');assert(Ed.pick(bk,poses,{0,1.2},assets)==two,'only the tall one');assert(Ed.pick(bk,poses,{5,.4},assets)==nil,'miss')
 two.hidden=true;assert(Ed.pick(bk,poses,{0,.4},assets)==one,'hidden cannot be picked');assert(S.validate(bk));two.hidden=nil
 two.hidden='no';assert(not S.validate(bk),'hidden is boolean');two.hidden=nil
 local locked=base();assert(D.set_decorations(locked.editor,{version=1,next_id=2,items={item{locked=true}}}))
