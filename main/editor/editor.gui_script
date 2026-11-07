@@ -1483,6 +1483,8 @@ local function on_button(self,name)
         opened(self)
         editor.message="Opened the compiled geometry as editable lines (one Undo step back to the source)."
     elseif name=="play" then play(self)
+    -- Decor toggles: a second press leaves the tool and closes its panel and quick bar.
+    elseif name=="tool_decoration" and editor.tool=="decoration" then set_tool(self,"select")
     elseif name:match("^tool_") then set_tool(self,name:sub(6))
     elseif name:match("^template_") then open_template(self,name:sub(10))
     elseif name=="minus" or name=="plus" then

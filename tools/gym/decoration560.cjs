@@ -62,7 +62,13 @@ async function main(){
   await page.evaluate(()=>{delete document.querySelector('#rider-bar-offset').dataset.live;});
   r=await rev();await page.locator('#rider-bar-scale').fill('1.5');await revision(r+1);assert.equal((await items())[0].scale,1.5);
   r=await rev();await page.locator('#rider-bar-scale').fill('1');await revision(r+1);assert.equal((await items())[0].scale,undefined,'size 1 is stored as default');
-  r=await rev();await page.locator('#rider-bar-offset').fill('0');await revision(r+1);
+  // Reset: double-click or ↺ puts the offset back to 0; the bar does not move while a control is held.
+  const held=await page.locator('#rider-decoration-bar').boundingBox();const knob=await page.locator('#rider-bar-offset').boundingBox();
+  await page.mouse.move(knob.x+knob.width/2,knob.y+knob.height/2);await page.mouse.down();await page.mouse.move(knob.x+knob.width*.9,knob.y+knob.height/2,{steps:4});await pointer.frames(page,{n:10});
+  const moved=await page.locator('#rider-decoration-bar').boundingBox();assert.ok(Math.abs(moved.y-held.y)<1&&Math.abs(moved.x-held.x)<1,'bar holds still while dragging');
+  await page.mouse.up();await pointer.frames(page,{n:10});
+  r=await rev();await dom('#rider-bar-offset-reset');await revision(r+1);assert.equal((await items())[0].offset,0,'reset');
+  assert.equal(await page.locator('[data-bar-placement="front"]').evaluate(n=>getComputedStyle(n).backgroundColor),'rgb(143, 224, 192)','active is filled');
   await page.screenshot({path:path.join(out,'decoration-bar.png')});report.cases.quick_bar=await items();
   // Placement of the selected object.
   r=await rev();await dom('[data-decoration-placement="behind"]');await revision(r+1);list=await items();assert.equal(list[0].placement,'behind');
@@ -76,6 +82,17 @@ async function main(){
   // Undo restores the delete, Redo repeats it.
   r=await rev();await key('z',['Control']);await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===2);
   await key('y',['Control']);await page.waitForFunction(()=>window.riderEditorDoc?.decorations?.items?.length===1);report.cases.undo_redo={after:await items()};
+  // Leaving the tool hides the quick bar with the panel, whichever way it closes.
+  const at=async()=>{const o=await page.evaluate(()=>window.riderDecorationState.items[0]);return [o.x/100,o.y/100];};
+  await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await tapButton('tool_select');await pointer.frames(page,{n:10});await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
+  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'bar gone with another tool');
+  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await tapButton('tool_decoration');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
+  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'Decor toggles off with its bar');
+  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>!document.querySelector('#rider-decoration-bar').hidden);
+  await dom('#rider-decoration-close');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
+  assert.ok(await page.evaluate(()=>document.querySelector('#rider-decoration-bar').hidden),'bar gone with Close');
   // Durable reload, then Play shows it.
   const kept=await items();await page.waitForTimeout(1100);await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty&&window.riderCustom.syncState()==='saved',null,{timeout:20000});
   await page.goto(base+'?station=custom');await page.waitForFunction(()=>window.riderEditor||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(1000);
