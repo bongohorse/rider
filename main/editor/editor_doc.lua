@@ -21,8 +21,13 @@ local dense=require "main.game.dense"
 -- in mechanism_links (editor_mechanisms); a version-12 e.mechanisms block opens migrated, same IDs and
 -- settings. The compiled O1 mechanisms (station schema 5) are unchanged.
 local mechanisms=require "main.editor.editor_mechanisms"
--- New documents stay at 13; material raises to 14, authored backgrounds to 15. Older readers refuse new data.
-local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15}
+-- New documents stay at 13; material raises to 14, authored backgrounds to 15, decorations to 16. Older readers refuse new data.
+local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15,DECORATION_EDITOR_VERSION=16}
+local decorations=require 'main.decorations.source'
+-- The lowest version that holds a document's optional visual blocks.
+local function visual_version(e)
+    return e.decorations and M.DECORATION_EDITOR_VERSION or e.backgrounds and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
+end
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
 M.SAMPLING={tolerance=sample.TOLERANCE,max_segment=sample.MAX_SEGMENT}
@@ -249,7 +254,7 @@ function M.open_level(d)
 end
 -- First difference between a recompile of doc and the compiled fields of station d, or nil (R1).
 -- Only the compiled fields are compared, absent lists as empty and unknown extra fields ignored.
-local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms","material","backgrounds"}
+local COMPILED={"spawn","start_speed","run_in","run_out","bounds","chains","two_sided","hulls","labels","finish","medal_times","coins","fuel","mechanisms","material","backgrounds","decorations"}
 -- An O1 block without any crate, plate, gate or link compiles to no block (editor 13): compare them as equal.
 local function mechanism_block(m)
     if type(m)=='table' and type(m.crates)=='table' and next(m.crates)==nil and type(m.plates)=='table' and next(m.plates)==nil
@@ -257,7 +262,7 @@ local function mechanism_block(m)
     return m
 end
 local function compiled(d)
-    local t={backgrounds=d.backgrounds,material=d.material,mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
+    local t={decorations=d.decorations,backgrounds=d.backgrounds,material=d.material,mechanisms=mechanism_block(d.mechanisms),fuel=d.fuel,coins=d.coins,medal_times=d.medal_times,spawn=d.spawn,start_speed=d.start_speed or 0,run_in=d.run_in or 0,run_out=d.run_out or 0,bounds=d.bounds,chains=d.chains or {},hulls={},labels={},two_sided={}}
     for i,h in ipairs(d.hulls or {}) do t.hulls[i]={vertices=h.vertices} end
     for i,l in ipairs(d.labels or {}) do t.labels[i]={position=l.position,text=l.text} end
     -- An absent two_sided list means all one-sided.
@@ -306,7 +311,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION and e.editor_version~=M.DECORATION_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -335,6 +340,9 @@ function M.validate(doc)
     if e.medal_times~=nil and e.editor_version<8 then return nil,'Medal targets require editor/compiler version 8',true end
     local medal_ok,medal_err,medal_unknown=require('main.game.medals').validate(e.medal_times)
     if not medal_ok then return nil,medal_err,medal_unknown end
+    if e.decorations~=nil and e.editor_version<M.DECORATION_EDITOR_VERSION then return nil,'Decorations need editor/compiler 16',true end
+    local deco_ok,deco_err,deco_unknown=decorations.validate(e.decorations)
+    if not deco_ok then return nil,deco_err,deco_unknown end
     if e.backgrounds~=nil and e.editor_version<M.BACKGROUND_EDITOR_VERSION then return nil,'Backgrounds need editor/compiler 15',true end
     local bg_ok,bg_err,bg_unknown=require('main.backgrounds.source').validate(e.backgrounds)
     if not bg_ok then return nil,bg_err,bg_unknown end
@@ -435,7 +443,7 @@ function M.validate(doc)
         e.editor_version,e.compiler_version,e.connections=6,6,e.connections or {}
     end
     mechanisms.migrate(e)
-    local current=e.backgrounds and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
+    local current=visual_version(e)
     e.editor_version,e.compiler_version=current,current
     return doc
 end
@@ -754,6 +762,7 @@ function M.compile(doc,test,errors)
     d.mechanisms=mechanisms.runtime(e);if d.mechanisms then d.schema=5 end
     d.material=copy(e.material);if d.material then d.schema=6 end
     d.backgrounds=copy(e.backgrounds);if d.backgrounds then d.schema=7 end
+    d.decorations=decorations.compile(e.decorations,function(id) return pieces[id] and M.parts(pieces[id]) end);if d.decorations then d.schema=8 end
     d.medal_times=copy(e.medal_times)
     d.editor=copy(e);d.editor.compiled_revision=e.revision
     local valid,err=data.validate(d)
@@ -806,9 +815,9 @@ function M.set_material(e,m)
         e.road_look={version=1,params=projection.validate(projection.DEFAULT_V2)}
         e.road_profile=require('main.terrain_perspective.look').ID
     end
-    local version=e.backgrounds and M.BACKGROUND_EDITOR_VERSION or M.MATERIAL_EDITOR_VERSION
-    e.editor_version,e.compiler_version=version,version
     e.material=copy(m)
+    local version=visual_version(e)
+    e.editor_version,e.compiler_version=version,version
     return true
 end
 -- Atomic authored background update; nil removes only this block.
@@ -816,7 +825,16 @@ function M.set_backgrounds(e,b)
     local ok,err=require('main.backgrounds.source').validate(b)
     if not ok then return nil,err end
     e.backgrounds=copy(b)
-    local version=b and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
+    local version=visual_version(e)
+    e.editor_version,e.compiler_version=version,version
+    return true
+end
+-- Atomic authored decoration update; nil or an empty list removes the block.
+function M.set_decorations(e,b)
+    local ok,err=decorations.validate(b)
+    if not ok then return nil,err end
+    e.decorations=b and #b.items>0 and copy(b) or nil
+    local version=visual_version(e)
     e.editor_version,e.compiler_version=version,version
     return true
 end

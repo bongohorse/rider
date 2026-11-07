@@ -112,6 +112,8 @@ A soft ellipse lies on the driving line below the vehicle and follows the slope.
 - Placements are Behind, Front and Body. Body is darkened inside the terrain body.
 - Anchors resolve to a position and angle on compiled samples, and a track edit refits them on release.
 - Decorations have no collider and no effect on physics or replay. Rendering stays within the 1024 sprite and game object pools, with an actionable refusal.
+- The authored block is `editor.decorations`: `{version: 1, next_id, items}` with up to 512 items `{id: "dN", source: "oN", distance, offset, placement, tilt, asset}`. `source` is the stable ID of a terrain piece: a line, curve or terrain prefab. `distance` is in metres along that piece from its entry, a jump gap adding nothing. `offset` is at most 8 m along the line's upward normal. `placement` is `behind`, `front` or `body`. With `tilt` the object follows the segment, read left to right; without it the object stays upright.
+- The block needs editor/compiler 16. It compiles to `decorations` in station schema 8: `{version: 1, items: [{position, angle, placement, asset}]}`, world transforms that the renderer reads. An anchor whose source is missing or too short stays in the source and is left out of the compiled list. The block touches no field the simulation reads, and bounds ignore it. Removing the last decoration removes the block and lowers the document again, so older readers keep opening it. Opening compiled geometry as lines (no usable source) has no anchors and drops the compiled decorations from that copy; the file stays unchanged.
 
 ## Local textures
 
