@@ -17,6 +17,7 @@ function M.live(o,field)
     local p=M.preview
     if p and p.id==o.id and p.id==M.selected and p.field==field and p.revision==editor.doc.editor.revision then return p.value end
     if field=='scale' then return o.scale or 1 end
+    if field=='rotation' then return o.rotation or 0 end
     return o[field]
 end
 -- id -> resolved pose for the current source, with a live drag applied.
@@ -28,7 +29,7 @@ function M.resolved()
             local distance,src=o.distance,o.source
             if M.drag and M.drag.id==o.id then distance,src=M.drag.distance,M.drag.source end
             local x,y,angle=source.resolve(parts_of(src),distance,M.live(o,'offset'),o.tilt)
-            if x then out[o.id]={x=x,y=y,angle=angle}
+            if x then out[o.id]={x=x,y=y,angle=source.angle(angle,M.live(o,'rotation')),base=angle}
             elseif o.at then out[o.id]={x=o.at[1],y=o.at[2],angle=o.at[3],stale=true} end
         end
     end
@@ -222,7 +223,7 @@ local function change(fields)
     if not selected_item() then return end
     local id=M.selected
     -- false clears a flag: pairs never visits a nil value, so {locked=nil} would change nothing.
-    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do if (v==false and (k=='hidden' or k=='locked')) or (k=='scale' and v==1) then v=nil end;o[k]=v end end)
+    commit(function(b) local o=edit.find(b,id);for k,v in pairs(fields) do if (v==false and (k=='hidden' or k=='locked')) or (k=='scale' and v==1) or (k=='rotation' and v==0) then v=nil end;o[k]=v end end)
 end
 function M.copy()
     local o=selected_item()
@@ -232,7 +233,7 @@ function M.copy()
     local new
     if commit(function(b)
         new=edit.add(b,{source=o.source,distance=math.min(o.distance+1,source.length(parts_of(o.source))),offset=o.offset,placement=o.placement,tilt=o.tilt,asset=o.asset,scale=o.scale})
-        new.hidden,new.locked=o.hidden,o.locked
+        new.hidden,new.locked,new.rotation=o.hidden,o.locked,o.rotation
     end) then M.selected=new.id end
 end
 -- One Undo step. A result the level cannot hold places nothing.
@@ -292,7 +293,7 @@ local function anchor(o)
     else
         local d=M.drag and M.drag.id==o.id and M.drag
         local rx,ry,ra=source.resolve(parts_of(d and d.source or o.source),d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
-        local r=rx and {x=rx,y=ry,angle=ra}
+        local r=rx and {x=rx,y=ry,angle=source.angle(ra,M.live(o,'rotation'))}
         local a=catalog.ASSETS[o.asset]
         if r and a then local lift=a.height*M.live(o,'scale');x,y=r.x-math.sin(r.angle)*lift,r.y+math.cos(r.angle)*lift end
     end
@@ -300,6 +301,22 @@ local function anchor(o)
     local w,h=window.get_size()
     if w<=0 or h<=0 then return false end
     return {x=math.floor((m.ox+x*m.ppm_x)/w*1000+.5)/1000,y=math.floor((m.oy+y*m.ppm_y)/h*1000+.5)/1000}
+end
+-- The selected object's transform box for the handles, in window fractions from the bottom left.
+local function box(o)
+    local m=editor.screen
+    if not (o and m) or o.to then return false end
+    local d=M.drag and M.drag.id==o.id and M.drag
+    local parts=parts_of(d and d.source or o.source)
+    local x,y,base=source.resolve(parts,d and d.distance or o.distance,M.live(o,'offset'),o.tilt)
+    local a=catalog.ASSETS[o.asset]
+    if not (x and a) then return false end
+    local w,h=window.get_size()
+    if w<=0 or h<=0 then return false end
+    local size=M.live(o,'scale')
+    local r=function(v) return math.floor(v*10000+.5)/10000 end
+    return {x=r((m.ox+x*m.ppm_x)/w),y=r((m.oy+y*m.ppm_y)/h),kx=r(m.ppm_x/w),ky=r(m.ppm_y/h),angle=r(source.angle(base,M.live(o,'rotation'))),normal=r(base),
+        w=r(a.width*size),h=r(a.height*size),sink=r(a.sink*size),scale=size,offset=M.live(o,'offset'),rotation=M.live(o,'rotation'),locked=o.locked or false}
 end
 local function state()
     local o=selected_item()
@@ -309,8 +326,8 @@ local function state()
         local fx=function(x) return math.floor((m.ox+x*m.ppm_x)/w*1000+.5)/1000 end
         range={a=fx(math.min(M.stretch.a,M.stretch.b)),b=fx(math.max(M.stretch.a,M.stretch.b))}
     end
-    return {range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
-        selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,hidden=o.hidden or false,locked=o.locked or false} or false}
+    return {box=box(o),range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
+        selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,rotation=o.rotation or 0,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
 local function palette()
     local track=require 'main.editor.editor_track'
@@ -346,9 +363,11 @@ function M.handle(m)
     elseif m.type=='tilt' then M.tilt=m.value==true;if selected_item() then change({tilt=M.tilt}) end
     elseif m.type=='offset' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_OFFSET then M.offset=m.value;M.preview=nil;if selected_item() then change({offset=m.value}) end
     elseif m.type=='scale' and type(m.value)=='number' and m.value>=source.MIN_SCALE and m.value<=source.MAX_SCALE then M.preview=nil;change({scale=m.value})
-    elseif m.type=='preview' and (m.field=='scale' or m.field=='offset') and type(m.value)=='number' then
+    elseif m.type=='rotation' and type(m.value)=='number' and math.abs(m.value)<=source.MAX_ROTATION then M.preview=nil;change({rotation=m.value})
+    elseif m.type=='preview' and (m.field=='scale' or m.field=='offset' or m.field=='rotation') and type(m.value)=='number' then
         local o=selected_item()
-        local lo,hi=m.field=='scale' and source.MIN_SCALE or -source.MAX_OFFSET,m.field=='scale' and source.MAX_SCALE or source.MAX_OFFSET
+        local LIMITS={scale={source.MIN_SCALE,source.MAX_SCALE},offset={-source.MAX_OFFSET,source.MAX_OFFSET},rotation={-source.MAX_ROTATION,source.MAX_ROTATION}}
+        local lo,hi=LIMITS[m.field][1],LIMITS[m.field][2]
         if m.field=='offset' and not o then M.offset=math.max(lo,math.min(hi,m.value))
         elseif o and not o.locked then M.preview={id=o.id,field=m.field,revision=editor.doc.editor.revision,value=math.max(lo,math.min(hi,m.value))};editor.touch() end
     elseif m.type=='hidden' then change({hidden=m.value==true})

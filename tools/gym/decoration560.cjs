@@ -68,6 +68,15 @@ async function main(){
   const moved=await page.locator('#rider-decoration-bar').boundingBox();assert.ok(Math.abs(moved.y-held.y)<1&&Math.abs(moved.x-held.x)<1,'bar holds still while dragging');
   await page.mouse.up();await pointer.frames(page,{n:10});
   r=await rev();await dom('#rider-bar-offset-reset');await revision(r+1);assert.equal((await items())[0].offset,0,'reset');
+  // Transform box: a corner drag sizes, the top handle moves the offset, a knob rotates; each release is one step.
+  const drag=async(sel,dx,dy)=>{const b=await page.locator(sel).boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:6});await pointer.frames(page,{n:6});await page.mouse.up();await pointer.frames(page,{n:8});};
+  await page.waitForFunction(()=>!document.querySelector('#rider-decoration-gizmo').hidden);
+  r=await rev();await drag('#rider-gizmo-tr',30,-30);await revision(r+1);assert.ok((await items())[0].scale>1.1,'corner sizes '+(await items())[0].scale);
+  r=await rev();await drag('#rider-gizmo-top',0,-40);await revision(r+1);assert.ok((await items())[0].offset>.2,'top handle offsets '+(await items())[0].offset);
+  r=await rev();await drag('#rider-gizmo-rot-r',0,60);await revision(r+1);assert.ok(Math.abs((await items())[0].rotation||0)>5,'knob rotates '+(await items())[0].rotation);
+  report.gizmo=await items();
+  for(let i=0;i<3;i++){r=await rev();await key('z',['Control']);await revision(r+1);}
+  assert.equal((await items())[0].rotation,undefined);assert.equal((await items())[0].scale,undefined);
   assert.equal(await page.locator('[data-bar-placement="front"]').evaluate(n=>getComputedStyle(n).backgroundColor),'rgb(143, 224, 192)','active is filled');
   await page.screenshot({path:path.join(out,'decoration-bar.png')});report.cases.quick_bar=await items();
   // Placement of the selected object.

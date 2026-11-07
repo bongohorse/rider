@@ -31,10 +31,63 @@
     const s = state.stretch || {};
     panel.querySelector('#rider-populate-stretch').textContent = state.arming === 'range' ? 'Click where the range starts.' : s.a !== false && s.b !== false ? `Range x ${Number(Math.min(s.a, s.b)).toFixed(1)} to ${Number(Math.max(s.a, s.b)).toFixed(1)} m${state.arming === 'range_b' ? ' · click to end' : state.live ? ' · live' : ''}` : `Range: whole track${state.live ? ' · live' : ''}`;
     panel.querySelector('#rider-decoration-note').textContent = state.message || '';
-    renderBar();renderRange();
+    renderBar();renderRange();renderGizmo();
   }
   // Quick bar: the selected object's own controls, drawn just above it.
-  let bar, rangeBox;
+  let bar, rangeBox, gizmo;
+  // Transform box: corners size, top and bottom move the offset, the round knobs rotate. Live; release is one Undo step.
+  function buildGizmo() {
+    gizmo = document.createElement('div');gizmo.id = 'rider-decoration-gizmo';gizmo.hidden = true;
+    gizmo.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:99996;pointer-events:none;transform-origin:0 0';
+    const frame = document.createElement('div');frame.dataset.part = 'frame';frame.style.cssText = 'position:absolute;border:2px dashed #8fe0c0;box-sizing:border-box;pointer-events:none';gizmo.append(frame);
+    const handle = (kind, id, round) => {
+      const h = document.createElement('div');h.dataset.kind = kind;h.id = 'rider-gizmo-' + id;h.dataset.part = id;
+      h.style.cssText = `position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;box-sizing:border-box;background:#fff;border:2px solid #17272f;pointer-events:auto;touch-action:none;border-radius:${round ? '50%' : '2px'};cursor:${kind === 'rotate' ? 'grab' : kind === 'offset' ? 'ns-resize' : 'nwse-resize'}`;
+      h.addEventListener('pointerdown', e => start(e, kind));gizmo.append(h);
+    };
+    for (const id of ['tl', 'tr', 'bl', 'br']) handle('scale', id);
+    handle('offset', 'top');handle('offset', 'bottom');handle('rotate', 'rot-l', true);handle('rotate', 'rot-r', true);
+    document.body.append(gizmo);
+  }
+  let grab = null;
+  const ROUND = {scale: .05, offset: .05, rotation: 1};
+  function value(e) {
+    const g = grab, px = e.clientX, py = e.clientY;
+    if (g.kind === 'scale') return Math.max(.25, Math.min(3, g.scale * Math.hypot(px - g.bx, py - g.by) / Math.max(1, g.d0)));
+    if (g.kind === 'offset') return Math.max(-8, Math.min(8, g.offset + ((px - g.px) * -Math.sin(g.normal) + (py - g.py) * -Math.cos(g.normal)) / g.k));
+    let r = g.rotation + (Math.atan2(-(py - g.by), px - g.bx) - g.phi) * 180 / Math.PI;
+    while (r > 180) r -= 360;while (r < -180) r += 360;return r;
+  }
+  function start(e, kind) {
+    const b = state && state.box;if (!b || b.locked) return;
+    e.preventDefault();e.stopPropagation();e.target.setPointerCapture(e.pointerId);
+    const p = place(b);
+    grab = {kind, field: kind === 'rotate' ? 'rotation' : kind, bx: p.x, by: p.y, k: p.k, px: e.clientX, py: e.clientY, d0: Math.hypot(e.clientX - p.x, e.clientY - p.y),
+      phi: Math.atan2(-(e.clientY - p.y), e.clientX - p.x), scale: b.scale, offset: b.offset, rotation: b.rotation, normal: b.normal, last: null};
+    if (bar) bar.dataset.hold = '1';
+    const move = ev => { const step = ROUND[grab.field], v = Math.round(value(ev) / step) * step;if (v !== grab.last) { grab.last = v;send({type: 'preview', field: grab.field, value: v}); } };
+    const end = () => {
+      e.target.removeEventListener('pointermove', move);e.target.removeEventListener('pointerup', end);e.target.removeEventListener('pointercancel', end);
+      if (grab && grab.last !== null) send({type: grab.field, value: grab.last});
+      grab = null;if (bar) { delete bar.dataset.hold;renderBar(); }
+    };
+    e.target.addEventListener('pointermove', move);e.target.addEventListener('pointerup', end);e.target.addEventListener('pointercancel', end);
+  }
+  // Window fractions from the bottom left to CSS pixels on the canvas.
+  function place(b) {
+    const r = document.querySelector('canvas').getBoundingClientRect();
+    return {x: r.left + b.x * r.width, y: r.top + (1 - b.y) * r.height, k: b.kx * r.width};
+  }
+  function renderGizmo() {
+    const b = state && state.box, canvas = document.querySelector('canvas');
+    if (!gizmo || !b || !canvas || !api.visible || api.blocked) { if (gizmo) gizmo.hidden = true;return; }
+    const p = place(b), w = b.w * p.k, h = b.h * p.k, top = (b.h - b.sink) * p.k;
+    gizmo.hidden = false;gizmo.style.transform = `translate(${p.x}px,${p.y}px) rotate(${-b.angle}rad)`;
+    const at = (part, x, y) => { const n = gizmo.querySelector(`[data-part="${part}"]`);n.style.left = x + 'px';n.style.top = y + 'px';n.hidden = b.locked && part !== 'frame'; };
+    const frame = gizmo.querySelector('[data-part="frame"]');frame.style.left = -w / 2 + 'px';frame.style.top = -top + 'px';frame.style.width = w + 'px';frame.style.height = h + 'px';
+    at('tl', -w / 2, -top);at('tr', w / 2, -top);at('bl', -w / 2, h - top);at('br', w / 2, h - top);
+    at('top', 0, -top);at('bottom', 0, h - top);at('rot-l', -w / 2 - 16, -top - 16);at('rot-r', w / 2 + 16, -top - 16);
+  }
   function renderRange() {
     const g = state && state.range, canvas = document.querySelector('canvas');
     if (!rangeBox || !g || !canvas || !api.visible || api.blocked) { if (rangeBox) rangeBox.hidden = true;return; }
@@ -87,7 +140,7 @@
     const r = canvas.getBoundingClientRect();
     // Held still while a control is used: the object moves, the bar does not.
     if (bar.dataset.hold && !bar.hidden) { syncBar(item);return; }
-    const x = Math.max(8, Math.min(innerWidth - 8, r.left + at.x * r.width)), y = Math.max(110, Math.min(innerHeight - 8, r.top + (1 - at.y) * r.height - 10));
+    const x = Math.max(8, Math.min(innerWidth - 8, r.left + at.x * r.width)), y = Math.max(110, Math.min(innerHeight - 8, r.top + (1 - at.y) * r.height - 34));
     bar.style.left = x + 'px';bar.style.top = y + 'px';bar.hidden = false;
     syncBar(item);
   }
@@ -186,12 +239,12 @@
     // A drag released over the panel never reaches the canvas.
     panel.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(panel);
-    buildBar();
+    buildBar();buildGizmo();
   }
   api.open = list => { if (!panel) build(list);api.queue.length = 0;panel.hidden = false;api.visible = true;render(); };
   const settle = () => document.querySelectorAll('#rider-decoration-panel [data-live],#rider-decoration-bar [data-live]').forEach(n => delete n.dataset.live);
-  api.close = () => { settle();if (rangeBox) rangeBox.hidden = true;if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
+  api.close = () => { settle();if (gizmo) gizmo.hidden = true;if (rangeBox) rangeBox.hidden = true;if (bar) bar.hidden = true;if (panel) panel.hidden = true;api.visible = false;api.queue.length = 0;document.querySelector('canvas')?.focus(); };
   api.show = next => { state = next;render(); };
-  api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar();renderRange(); };
+  api.suspend = blocked => { if (blocked) settle();api.blocked = !!blocked;if (blocked) api.queue.length = 0;if (panel) panel.hidden = !api.visible || !!blocked;renderBar();renderRange();renderGizmo(); };
   api.take = () => JSON.stringify(api.queue.splice(0, api.queue.length));
 })();

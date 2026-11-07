@@ -130,6 +130,8 @@ local poses={d1={x=0,y=0,angle=0},d2={x=0,y=0,angle=0}}
 assert(Ed.pick(bk,poses,{0,.4},assets)==one,'the object centred nearest wins, so a small one stays reachable');assert(Ed.pick(bk,poses,{0,1.2},assets)==two,'only the tall one');assert(Ed.pick(bk,poses,{5,.4},assets)==nil,'miss')
 two.hidden=true;assert(Ed.pick(bk,poses,{0,1.2},assets)==two,'hidden stays reachable, to show it again');assert(S.validate(bk));two.hidden=nil
 two.hidden='no';assert(not S.validate(bk),'hidden is boolean');two.hidden=nil
+two.rotation=45;assert(S.validate(bk),'rotation');two.rotation=181;assert(not S.validate(bk),'rotation limit');two.rotation=nil
+assert(math.abs(S.angle(math.pi*.9,90)-(math.pi*.9+math.pi/2-2*math.pi))<1e-9,'angle wraps');assert(S.angle(.2)==.2)
 local locked=base();assert(D.set_decorations(locked.editor,{version=1,next_id=2,items={item{locked=true}}}))
 local moved=D.copy(locked.editor);moved.decorations.items[1].distance=9;assert(D.lock_conflict(locked.editor,moved):find('Locked',1,true),'moving a locked one')
 local gone=D.copy(locked.editor);gone.decorations=nil;assert(D.lock_conflict(locked.editor,gone),'deleting a locked one')
@@ -192,6 +194,7 @@ assert(budget.preview(60,10,1,0,{decorations={items={{to=1},{to=2},{to=3},{to=4}
 local lockf=base();assert(D.set_decorations(lockf.editor,{version=1,next_id=2,items={item{asset='fence-wood',to=9,locked=true}}}))
 local fm=D.copy(lockf.editor);fm.decorations.items[1].to=8;assert(D.lock_conflict(lockf.editor,fm),'a locked fence keeps its end')
 assert(F.hit({{0,0},{4,0}},{2,.5}) and not F.hit({{0,0},{4,0}},{2,1.5}) and not F.hit({{0,0},{4,0}},{6,.5}),'pick')
+local turned=base();assert(D.set_decorations(turned.editor,{version=1,next_id=2,items={item{rotation=90,tilt=false}}}));local tc=assert(D.compile(turned));near(tc.decorations.items[1].angle,math.pi/2)
 local fenced=base();assert(D.set_decorations(fenced.editor,{version=1,next_id=2,items={item{asset='fence-wood',to=9}}}))
 local fc=assert(D.compile(fenced));assert(#fc.decorations.fences==1 and #fc.decorations.items==0 and data.validate(J.decode(enc(fc))))
 assert(budget.measure(fc).mesh_peak==budget.measure(plain).mesh_peak+1,'a fence counts as a mesh')

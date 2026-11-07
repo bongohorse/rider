@@ -166,7 +166,7 @@ function M.lock_conflict(before,after)
         if o.locked then
             local n,changed=placed[o.id],false
             if not n then changed=true else
-                for _,k in ipairs({'source','distance','offset','placement','tilt','asset','scale','to'}) do changed=changed or o[k]~=n[k] end
+                for _,k in ipairs({'source','distance','offset','placement','tilt','asset','scale','rotation','to'}) do changed=changed or o[k]~=n[k] end
             end
             if changed then return "Locked: decoration "..o.id..". Unlock it before changing it." end
         end
