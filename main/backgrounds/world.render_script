@@ -2,7 +2,7 @@
 -- Preserve the default world/GUI passes; own background/foreground blending explicitly.
 function init(self)
     self.predicates={}
-    for _,tag in ipairs({"background","tile","particle","model","foreground","gui","debug_text"}) do self.predicates[tag]=render.predicate({tag}) end
+    for _,tag in ipairs({"background","decoration_behind","tile","particle","model","foreground","gui","debug_text"}) do self.predicates[tag]=render.predicate({tag}) end
     self.color=vmath.vector4(sys.get_config_number("render.clear_color_red",0),sys.get_config_number("render.clear_color_green",0),sys.get_config_number("render.clear_color_blue",0),sys.get_config_number("render.clear_color_alpha",0))
     self.view=vmath.matrix4()
 end
@@ -32,6 +32,9 @@ function update(self)
     render.draw(p.model)
     render.set_depth_mask(false);render.disable_state(graphics.STATE_CULL_FACE)
     render.enable_state(graphics.STATE_BLEND)
+    -- Behind decorations: before the terrain, then restore straight alpha that their sprites replaced (#632).
+    render.draw(p.decoration_behind)
+    render.set_blend_func(graphics.BLEND_FACTOR_SRC_ALPHA,graphics.BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
     render.draw(p.tile);render.draw(p.particle)
     render.disable_state(graphics.STATE_DEPTH_TEST)
     render.draw_debug3d()

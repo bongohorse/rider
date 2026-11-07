@@ -1,4 +1,7 @@
 local backgrounds=require "main.backgrounds.renderer"
+-- Behind decorations draw in their own pass before the terrain (#632).
+go.property("decoration_behind_material",resource.material("/main/decorations/behind.material"))
+go.property("decoration_sprite_material",resource.material("/builtins/materials/sprite.material"))
 local stations=require "main.game.stations"
 local mobile=require "main.game.mobile"
 -- Read-only wheel-support helper for the LE5b reference drive (debug only).
@@ -203,6 +206,7 @@ local function setup(self)
         else
             self.decor_sprites,self.decor_labels=require("main.game.terrain_mesh").build(self,self.station)
         end
+        require("main.decorations.renderer").materials={behind=self.decoration_behind_material,other=self.decoration_sprite_material}
         self.decorations=require("main.decorations.renderer").build(self.station.decorations)
         self.load.build_ms,self.load.decorate_ms=(built_at-started)*1000,(socket.gettime()-built_at)*1000
     end)
