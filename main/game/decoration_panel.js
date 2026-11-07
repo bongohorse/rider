@@ -4,17 +4,21 @@
   const api = window.riderDecorationPanel = {visible: false, queue: []};
   let panel, state = null;
   const send = message => { if (api.queue.length < 16) api.queue.push(message); };
+  // Active: filled, not outlined.
+  function mark(node, value) {
+    node.setAttribute('aria-pressed', String(!!value));node.style.outline = 'none';
+    node.style.background = value ? '#8fe0c0' : '';node.style.color = value ? '#10232a' : '';node.style.fontWeight = value ? '700' : '';
+  }
   function render() {
     if (!panel || !state) return;
     const item = state.selected || null;
     panel.querySelectorAll('[data-decoration-asset]').forEach(node => {
       const on = state.fence_asset ? node.dataset.decorationAsset === state.fence_asset : node.dataset.decorationAsset === state.asset;
-      node.setAttribute('aria-pressed', String(on));node.style.outline = on ? '3px solid #8fe0c0' : 'none';
+      node.setAttribute('aria-pressed', String(on));node.style.outline = 'none';node.style.background = on ? '#8fe0c0' : '#2c4450';
     });
     const placement = item ? item.placement : state.placement;
     panel.querySelectorAll('[data-decoration-placement]').forEach(node => {
-      const on = node.dataset.decorationPlacement === placement;
-      node.setAttribute('aria-pressed', String(on));node.style.outline = on ? '3px solid #8fe0c0' : 'none';
+      mark(node, node.dataset.decorationPlacement === placement);
     });
     panel.querySelector('#rider-decoration-tilt').checked = item ? item.tilt : state.tilt;
     const offset = item ? item.offset : state.offset;
@@ -45,7 +49,14 @@
     const show = () => { out.textContent = Number(input.value).toFixed(2) + unit; };
     input.oninput = () => { input.dataset.live = '1';show();send({type: 'preview', field, value: Number(input.value)}); };
     input.onchange = () => { delete input.dataset.live;send({type: field, value: Number(input.value)}); };
-    wrap.append(label, input, out);return wrap;
+    wrap.append(label, input, out);
+    if (field === 'offset') {
+      // Reset button: back to the track (a double-click would first move the knob, adding Undo steps).
+      const zero = () => { input.value = '0';show();delete input.dataset.live;send({type: 'offset', value: 0}); };
+      const reset = document.createElement('button');reset.type = 'button';reset.id = id + '-reset';reset.textContent = '↺';reset.title = 'Reset offset';reset.setAttribute('aria-label', 'Reset offset');
+      reset.style.cssText = 'padding:1px 6px;margin:0;cursor:pointer';reset.onclick = zero;wrap.append(reset);
+    }
+    return wrap;
   }
   function buildBar() {
     bar = document.createElement('div');bar.id = 'rider-decoration-bar';bar.hidden = true;bar.setAttribute('role', 'toolbar');bar.setAttribute('aria-label', 'Selected decoration');
@@ -63,6 +74,10 @@
     top.append(tilt, lock, hide, copy, del);bar.append(top);
     const rows = document.createElement('div');rows.style.cssText = 'display:flex;gap:10px';
     rows.append(slide('rider-bar-scale', 'Size', .25, 3, .05, '×', 'scale'), slide('rider-bar-offset', 'Offset', -8, 8, .05, ' m', 'offset'));bar.append(rows);
+    bar.addEventListener('pointerdown', () => { bar.dataset.hold = '1'; });
+    // Released anywhere: the bar may follow its object again.
+    const let_go = () => { if (bar.dataset.hold) { delete bar.dataset.hold;renderBar(); } };
+    for (const type of ['pointerup', 'pointercancel']) addEventListener(type, let_go, true);
     bar.addEventListener('pointerup', () => send({type: 'release'}));
     document.body.append(bar);
   }
@@ -70,9 +85,14 @@
     const item = state && state.selected, at = state && state.anchor, canvas = document.querySelector('canvas');
     if (!bar || !item || !at || !canvas || !api.visible || api.blocked) { if (bar) bar.hidden = true;return; }
     const r = canvas.getBoundingClientRect();
+    // Held still while a control is used: the object moves, the bar does not.
+    if (bar.dataset.hold && !bar.hidden) { syncBar(item);return; }
     const x = Math.max(8, Math.min(innerWidth - 8, r.left + at.x * r.width)), y = Math.max(110, Math.min(innerHeight - 8, r.top + (1 - at.y) * r.height - 10));
     bar.style.left = x + 'px';bar.style.top = y + 'px';bar.hidden = false;
-    const on = (node, value) => { node.setAttribute('aria-pressed', String(!!value));node.style.outline = value ? '3px solid #8fe0c0' : 'none'; };
+    syncBar(item);
+  }
+  function syncBar(item) {
+    const on = mark;
     bar.querySelectorAll('[data-bar-placement]').forEach(n => { on(n, n.dataset.barPlacement === item.placement);n.hidden = !!item.fence && n.dataset.barPlacement === 'body'; });
     on(bar.querySelector('#rider-bar-tilt'), item.tilt);bar.querySelector('#rider-bar-tilt').hidden = !!item.fence;
     on(bar.querySelector('#rider-bar-lock'), item.locked);on(bar.querySelector('#rider-bar-hide'), item.hidden);
@@ -117,6 +137,8 @@
     // Live while dragging: the object moves and the number follows; release is the Undo step.
     slider.oninput = () => { slider.dataset.live = '1';panel.querySelector('#rider-decoration-offset-output').textContent = Number(slider.value).toFixed(2) + ' m';send({type: 'preview', field: 'offset', value: Number(slider.value)}); };
     const out = document.createElement('output');out.id = 'rider-decoration-offset-output';off.append('Offset', slider, out);panel.append(off);
+    const zero = document.createElement('button');zero.type = 'button';zero.id = 'rider-decoration-offset-reset';zero.textContent = '↺';zero.title = 'Reset offset';zero.setAttribute('aria-label', 'Reset offset');
+    zero.style.cssText = 'padding:1px 6px;cursor:pointer';zero.onclick = () => { slider.value = '0';delete slider.dataset.live;out.textContent = '0.00 m';send({type: 'offset', value: 0}); };off.append(zero);
     const sel = document.createElement('div');sel.id = 'rider-decoration-selected';sel.style.margin = '6px 0';panel.append(sel);
     const actions = document.createElement('div');
     const copy = button('Copy', () => send({type: 'copy'}));copy.id = 'rider-decoration-copy';
