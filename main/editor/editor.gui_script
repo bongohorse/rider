@@ -20,10 +20,11 @@ local track_panel=require "main.editor.editor_track"
 local background_panel=require "main.editor.editor_background"
 local decoration_tool=require "main.editor.editor_decoration"
 -- Closing the panel (its button, Play, another document) also leaves the tool.
-decoration_tool.on_close=function()
+local function close_decoration_tool()
     decoration_tool.close()
     if editor.tool=='decoration' then editor.tool='select';editor.touch() end
 end
+decoration_tool.on_close=close_decoration_tool
 track_panel.background=background_panel
 local stations=require "main.game.stations"
 local custom=require "main.game.custom"
