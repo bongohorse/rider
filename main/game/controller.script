@@ -368,9 +368,10 @@ local function update_decorations(self)
     local s=self.decorations
     if not s or #s.items==0 then return end
     local renderer=require("main.decorations.renderer")
-    -- Read-only camera inputs; the orthographic projection's x scale gives the half width.
-    renderer.update(s,go.get_position("/camera").x,1/camera.get_projection("/camera#camera").m00)
-    if html5 and sys.get_engine_info().is_debug then html5.run("window.riderDecorationState="..json.encode(renderer.report(s))) end
+    -- Read-only camera inputs; the orthographic projection's scale gives the half extents.
+    local c,p=go.get_position("/camera"),camera.get_projection("/camera#camera")
+    renderer.update(s,c.x,c.y,1/p.m00,1/p.m11)
+    if html5 and sys.get_engine_info().is_debug and sys.get_config_string("rider.gym_test","")~="" then html5.run("window.riderDecorationState="..json.encode(renderer.report(s))) end
 end
 local function update_backgrounds(self)
     update_decorations(self)

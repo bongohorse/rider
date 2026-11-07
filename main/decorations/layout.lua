@@ -12,5 +12,5 @@ function M.transform(item,scale)
         -- Half diagonal in engine units: a safe visibility radius at any tilt.
         radius=math.sqrt(a.width*a.width+a.height*a.height)/2/scale}
 end
-function M.visible(t,left,right) return t.x+t.radius>=left and t.x-t.radius<=right end
+function M.visible(t,left,right,bottom,top) return t.x+t.radius>=left and t.x-t.radius<=right and t.y+t.radius>=bottom and t.y-t.radius<=top end
 return M

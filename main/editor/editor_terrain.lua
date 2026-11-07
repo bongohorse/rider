@@ -27,7 +27,7 @@ function M.admitted(e,compiled_budget)
     if compiled_budget then
         -- Reuse the existing live validation result; a drag's actual plan is guarded below.
         return require("main.game.terrain_budget").preview(compiled_budget.sections,compiled_budget.vertices,
-            compiled_budget.sprites-(e.finish and 1 or 0),compiled_budget.labels-(e.finish and 1 or 0),e)
+            compiled_budget.sprites-(compiled_budget.decorations or 0)-(e.finish and 1 or 0),compiled_budget.labels-(e.finish and 1 or 0),e)
     end
     local sections,vertices,sprites,labels=0,0,0,0
     local pieces=doc.pieces(e)

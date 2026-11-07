@@ -18,10 +18,12 @@ function M.build(compiled)
     return s
 end
 -- Sprites outside the view are disabled; a message is sent only on a change.
-function M.update(s,camera_x,half_width)
-    local left,right=camera_x-half_width,camera_x+half_width
+-- The projection is one frame old (engine pitfall 11), so the view gets a margin against popping during a zoom.
+function M.update(s,camera_x,camera_y,half_width,half_height)
+    local w,h=half_width*1.25,half_height*1.25
+    local left,right,bottom,top=camera_x-w,camera_x+w,camera_y-h,camera_y+h
     for _,o in ipairs(s.items) do
-        local on=layout.visible(o.t,left,right)
+        local on=layout.visible(o.t,left,right,bottom,top)
         if on~=o.on then o.on=on;s.visible=s.visible+(on and 1 or -1);msg.post(o.url,on and ENABLE or DISABLE) end
     end
 end

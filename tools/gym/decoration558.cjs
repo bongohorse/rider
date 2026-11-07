@@ -43,7 +43,8 @@ async function main(){
    return page.evaluate(()=>window.riderDecorationState);
   }
   // Count pixels that differ from a decoration-free frame in a box clear of HUD and vehicle.
-  let shots=0;const shot=async()=>{const b=await page.screenshot({clip:{x:900,y:540,width:270,height:140}});fs.writeFileSync(path.join(out,`deco-${++shots}.png`),b);return b.toString('base64');};
+  const TERRAIN={x:900,y:540,width:270,height:140},VEHICLE={x:560,y:500,width:160,height:90};
+  let shots=0,clip=TERRAIN;const shot=async()=>{const b=await page.screenshot({clip});fs.writeFileSync(path.join(out,`deco-${++shots}.png`),b);return b.toString('base64');};
   const diff=(a,b)=>page.evaluate(async([a,b])=>{
    const read=async s=>{const i=await createImageBitmap(await (await fetch('data:image/png;base64,'+s)).blob());const c=new OffscreenCanvas(i.width,i.height),g=c.getContext('2d');g.drawImage(i,0,0);return g.getImageData(0,0,i.width,i.height).data;};
    const x=await read(a),y=await read(b);let n=0,sum=0;
@@ -63,6 +64,13 @@ async function main(){
   assert.ok(bodyDiff.changed>1000&&frontDiff.changed>1000,'Body and Front draw over terrain');
   assert.ok(bodyDiff.brightness<frontDiff.brightness*.7,'Body is darkened');
   report.cases.order={behind:behindDiff,body:bodyDiff,front:frontDiff,z:[behind.items[0].z,body.items[0].z,front.items[0].z]};
+  // The same cone at the vehicle: Front covers it; Body and Behind stay behind it.
+  clip=VEHICLE;const atVehicle=placement=>[{distance:20,placement,asset:'cone'}];
+  await load([]);const clear=await settled();const seen={};
+  for(const p of ['behind','body','front']){await load(atVehicle(p));seen[p]=await diff(clear,await settled());}
+  assert.ok(seen.front.changed>1500,`Front covers the vehicle: ${seen.front.changed}`);
+  assert.ok(seen.behind.changed<seen.front.changed/4&&seen.body.changed<seen.front.changed*.8,'vehicle stays in front of Behind and Body');
+  report.cases.order.vehicle=seen;clip=TERRAIN;
   // Fixed poses on a slope: engine rotation equals the segment angle, and tilt off stays upright.
   const slope=[{source:'o2',distance:5,placement:'front',asset:'cone'},{source:'o2',distance:5,tilt:false,placement:'front',asset:'cone'}];
   const tilted=await load(slope);

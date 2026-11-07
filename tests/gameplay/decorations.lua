@@ -104,7 +104,8 @@ local t=L.transform({asset='cone',position={1,2},angle=0,placement='front'},.01)
 near(t.x,100);near(t.y,(2+.875/2-.02)*100);near(t.z,3);near(t.scale,100/96)
 t=L.transform({asset='cone',position={1,2},angle=math.pi/2,placement='body'},.01)
 near(t.x,(1-(.875/2-.02))*100);near(t.y,200);near(t.angle,math.pi/2);near(t.z,-1.5)
-assert(L.visible(t,0,10) and not L.visible(t,t.x+t.radius+1,t.x+t.radius+100),'culling')
+assert(L.visible(t,0,100,100,300) and not L.visible(t,t.x+t.radius+1,t.x+t.radius+100,100,300),'culling x')
+assert(not L.visible(t,0,100,t.y+t.radius+1,t.y+t.radius+100),'culling y')
 -- Admission counts decorations with what the course already uses, with the actual limit and a correction.
 local budget=require 'main.game.terrain_budget'
 local full=assert(D.compile(d));local before=budget.measure(plain).sprites
