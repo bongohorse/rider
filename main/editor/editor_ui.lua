@@ -129,7 +129,7 @@ function M.usable(u)
     if u.chrome then
         -- #685: the HTML library dock (392 or 84 CSS px wide, zoomed like the chrome) covers the left edge.
         local css=s/(u.density or 1);local zoom=css>=0.5 and math.max(css,0.75) or css
-        return {x0=(u.tools and 84 or 392)*zoom/css*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
+        return {x0=(u.tools and 84 or 392)*zoom/css*s,x1=w*s-(u.properties and 72 or 312)*zoom/css*s,y0=80*s,y1=(h-104)*s}
     end
     return {x0=(u.tools and 72 or 216)*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
 end
@@ -209,11 +209,15 @@ function M.scrollbar_input(u,id,action)
     return false
 end
 function M.render(u,d)
+    u.rec=nil -- never left over from an interrupted render
     local w,h=M.size(u);u.k=d.k;u.chrome=d.chrome;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
     u.scrollbars={};u.error_banner,u.error_text=nil,nil
     u.scroll_key=d.selection..':'..d.tool
     if u.scroll_key~=u.last_scroll_key then u.scroll,u.last_scroll_key=0,u.scroll_key end
+    -- #686: while u.rec is set (Properties under the HTML chrome), primitives record rows instead of GUI nodes.
+    local function role(c) return c==C.error and 'error' or c==C.secondary and 'muted' or c==C.selected and 'selected' or c==C.active and 'active' or 'text' end
     local function box(x,y,bw,bh,c)
+        if u.rec then return nil end
         u.nb=u.nb+1;local n=assert(u.boxes[u.nb],'editor UI box pool exhausted')
         gui.set_enabled(n,true);gui.set_screen_position(n,vmath.vector3((x+bw/2)*u.scale,(h-y-bh/2)*u.scale,0))
         gui.set_texture(n,'editor_solid');gui.set_slice9(n,vmath.vector4())
@@ -221,6 +225,7 @@ function M.render(u,d)
         gui.set_color(n,c or C.control);return n
     end
     local function text(x,y,t,c,size,width)
+        if u.rec then u.rec[#u.rec+1]={k='t',y=y,t=t,role=role(c),size=size or 14};return nil end
         u.nt=u.nt+1;local n=assert(u.texts[u.nt],'editor UI text pool exhausted')
         gui.set_enabled(n,true);gui.set_screen_position(n,vmath.vector3(x*u.scale,(h-y)*u.scale,0))
         gui.set_text(n,width and shorten(t,width,size) or t);gui.set_color(n,c or C.text)
@@ -233,6 +238,12 @@ function M.render(u,d)
         local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_') or name:match('^fuel_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         u.labels[name]=label
+        if u.rec then
+            u.tips[name]=tip or label;u.rec_labels[name]=label
+            u.rec[#u.rec+1]={k='b',y=y,x=x,w=bw,name=name,label=label,active=active and true or false,tip=tip or label,disabled=disabled and true or false,
+                field=field or false,focused=d.field and d.field.key==name or false,danger=(name=='delete' or label:match('^Sure%?')) and true or false,icon=icon and icon_name or false}
+            return nil
+        end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
         if hover then box(x-1,y-1,bw+2,bh+2,C.hover) end
         local blocked=name=='warnings' and d.blocking
@@ -421,13 +432,21 @@ function M.render(u,d)
         else u.tool_scroll,u.tool_max_scroll=0,0;u.object_rect=nil end
         end
         local rx=w-(u.properties and 56 or 296)
-        local property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
+        local property_panel
+        if d.chrome then
+            -- #686: the HTML inspector dock shows these rows (recorded below); collapse is a chrome button.
+            u.properties_rect,u.inspector=nil,nil
+            if not u.properties then u.rec,u.rec_labels={},{} end
+        else
+        property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
         u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}
         button('collapse_properties',rx+(u.properties and 4 or 12),112,u.properties and 32 or 256,u.properties and '<' or 'PROPERTIES  >',false,'Collapse or expand Properties')
+        end
         if not u.properties then
             -- The inspector ends where a 1080-pixel-high window ends it (984): taller windows scroll it instead
             -- of showing more rows, so its worst content (e.g. the largest O2 plate) fits the fixed pools.
             local clip={156,math.min(h-96,984)};local start=170;local y=start-u.scroll
+            if u.rec then clip,u.scroll,y={-1e9,1e9},0,start end
             local function row(name,label,unit,value,err,choices)
                 local rowh=unit~=nil and 66 or 44
                 if u.reveal==name then
@@ -486,8 +505,11 @@ function M.render(u,d)
                         button('mode_angle',rx+16,y+12,64,'Angle',f.value=='angle')
                         button('mode_height',rx+88,y+12,72,'Height',f.value=='height')
                         -- Existing tests/keyboard actions retain a single choice-field target.
+                        if u.rec then u.rec[#u.rec+1]={k='alias',name=f.name,target=f.value=='angle' and 'mode_height' or 'mode_angle'}
+                        else
                         u.buttons[f.name]=u.buttons[f.value=='angle' and 'mode_height' or 'mode_angle']
                         u.visible[#u.visible+1]=f.name
+                        end
                     end
                     y=y+64
                     if f.error then y=paragraph(rx+16,y-8,f.error,248,C.error,12,clip)+8 end
@@ -529,12 +551,14 @@ function M.render(u,d)
                     y=y+44
                 elseif v.name~='mirror_right' then row(v.name,v.label,nil,nil,nil,v.tip) end
             end
+            if u.rec then u.inspector,u.inspector_labels,u.rec=u.rec,u.rec_labels,nil;u.max_scroll=0 else
             local content_end=y+u.scroll+8
             local panel_end=math.min(clip[2]+16,math.max(160,content_end+16))
             u.properties_rect.h=panel_end-104
             gui.set_screen_position(property_panel,vmath.vector3((rx+140)*u.scale,(h-104-u.properties_rect.h/2)*u.scale,0))
             gui.set_size(property_panel,vmath.vector3(280*u.scale/u.k,u.properties_rect.h*u.scale/u.k,0))
             scrollbar('scroll',w-26,156,panel_end-16,content_end-156)
+            end
         else u.scroll,u.max_scroll=0,0 end
         if d.play_error then
             local width=math.max(240,w-528);local lines=wrap('Cannot play: '..d.play_error,width-24,14)
@@ -656,7 +680,8 @@ function M.render(u,d)
     local modal=d.modal
     if not modal and not d.play and u.pointer and inside(u.status_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='status',d.status end
     if not modal and not d.play and u.pointer and inside(u.title_rect,u.pointer[1],u.pointer[2]) then u.hover,u.tip='title',d.title end
-    if d.field and not u.hover and u.tips[d.field.key] then
+    -- #686: the HTML inspector shows a focused field's tip itself (title); no canvas tooltip over the workspace.
+    if d.field and not d.chrome and not u.hover and u.tips[d.field.key] then
         u.hover,u.tip=d.field.key,u.tips[d.field.key]
     end
     u.tooltip_text=nil
