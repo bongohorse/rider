@@ -50,17 +50,16 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stro
 .toast .ic svg{width:15px;height:15px}
 
 /* docks */
-.dock{position:absolute;top:126px;bottom:12px;display:flex;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overflow:hidden;z-index:4;max-height:calc(100% - 138px)}
+.dock{position:absolute;top:126px;display:flex;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overflow:hidden;z-index:4;max-height:calc(100% - 138px)}
 .dock.left{left:12px}
 .dock.right{right:12px}
-.dock.closed{bottom:auto}
 .dock.closed .pane{display:none}
 .rail{display:flex;flex-direction:column;gap:6px;padding:6px;background:#16181dcc;overflow-y:auto;scrollbar-width:none}
 .right .rail{border-left:var(--ol) solid var(--ink);order:2}
 .left .rail{border-right:var(--ol) solid var(--ink)}
 .dock.closed .rail{border:none}
 .rail .b{--h:46px;flex:none}
-.rail .grow{flex:1;min-height:6px}
+.rail .grow{flex:1;min-height:0}
 .pane{width:var(--dock-w);display:flex;flex-direction:column;min-height:0}
 .ph{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 10px;background:var(--c);color:var(--ink);border-bottom:var(--ol) solid var(--ink);flex:none}
 .ph h3{margin:0;font:800 19px/1 var(--disp);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -171,7 +170,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stro
   .lvlchip{top:8px;left:8px}.counts{display:none}.tools{top:8px}.sys{top:8px;right:8px}
   .lvlchip b{font-size:14px}
   .play{height:42px;width:52px}
-  .dock{top:64px;bottom:8px;max-height:calc(100% - 72px)}
+  .dock{top:64px;max-height:calc(100% - 72px)}
   .cats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cat{height:32px;min-width:32px;flex:none}
   .search{height:34px}.pbody{padding:6px;gap:6px}.ph{padding:5px 6px 5px 8px}.ph .ic{width:26px;height:26px}.ph .b{--h:30px}
   .label{font-size:11px}.dock.left{left:8px}.dock.right{right:8px}
