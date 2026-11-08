@@ -161,7 +161,7 @@ function mount() {
   root.addEventListener('keydown', e => { if (e.target.matches('.kf:not(.lib-find)') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); document.querySelector('canvas')?.focus(); return; }
     if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
   const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
-  document.addEventListener('pointerdown', e => { if (!root.contains(e.target)) closeMenu(); }, true);
+  document.addEventListener('pointerdown', e => { if (!root.contains(e.target) || e.target.closest('.insp-host')) closeMenu(); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
   // Like the Defold editor buttons, a chrome button acts on press. preventDefault keeps keyboard focus on
   // the canvas (the editor treats canvas blur as focus loss).
@@ -207,7 +207,7 @@ function build() {
 const q = sel => root.querySelector(sel);
 const noop = () => {};
 // Hosted panels (.insp-host) keep their own focus behaviour: their fields and sliders take the keyboard.
-function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.closest('.insp-host')) e.focus = noop; }
+function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.closest('.insp-host,#rider-chrome-park')) e.focus = noop; }
 function setOn(b, on) { b.classList.toggle('on', on); if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed'); }
 function update(s) {
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
@@ -397,7 +397,6 @@ function inspector(s) {
   inspKey = key;
   park();
   dock.classList.toggle('closed', !!I.collapsed);
-  dock.classList.toggle('hosting', !!host && !I.collapsed);
   if (I.collapsed) {
     dock.innerHTML = '<div class="rail">' + UI.button({icon: 'chevl', title: 'Open Properties', variant: 'plain', d: {cmd: 'collapse_properties'}}) + '</div>';
     unfocusable(); return;

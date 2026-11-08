@@ -3109,7 +3109,10 @@ function update(self,dt)
                     if ok and type(value)=="table" then
                         if name:sub(1,3)=="tex" then track_panel.op(value) else background_panel.op(value) end
                     end
-                elseif name=="bg_layers" then background_panel.open()
+                elseif name=="bg_layers" then
+                    -- One hosted panel at a time: the layer settings leave the Decor tool first.
+                    if editor.tool=="decoration" then set_tool(self,"select") end
+                    background_panel.open()
                 else on_button(self,name) end
             end
         end
