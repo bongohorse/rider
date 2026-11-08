@@ -14,10 +14,6 @@
   function render() {
     if (!panel || !state) return;
     const item = state.selected || null;
-    panel.querySelectorAll('[data-decoration-asset]').forEach(node => {
-      const on = state.fence_asset ? node.dataset.decorationAsset === state.fence_asset : node.dataset.decorationAsset === state.asset;
-      node.setAttribute('aria-pressed', String(on));node.style.outline = 'none';node.style.background = on ? '#8fe0c0' : '#2c4450';
-    });
     const placement = item ? item.placement : state.placement;
     panel.querySelectorAll('[data-decoration-placement]').forEach(node => {
       mark(node, node.dataset.decorationPlacement === placement);
@@ -191,14 +187,7 @@
   function build(list) {
     panel = document.createElement('section');panel.id = 'rider-decoration-panel';panel.setAttribute('aria-label', 'Decorations');
     panel.style.cssText = 'position:fixed;right:16px;top:64px;bottom:64px;z-index:99998;box-sizing:border-box;width:min(330px,calc(100vw - 32px));overflow:auto;padding:10px;background:#17272f;color:#f1f5f2;border:2px solid #8fe0c0;font:14px sans-serif';
-    const grid = document.createElement('div');grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px';
-    for (const a of list) {
-      const b = document.createElement('button');b.type = 'button';b.dataset.decorationAsset = a.id;b.title = a.name;b.setAttribute('aria-label', a.name);
-      b.style.cssText = 'padding:2px;cursor:pointer;background:#2c4450;border:0';
-      const img = document.createElement('img');img.src = a.thumb;img.alt = '';img.width = 56;img.height = 56;b.append(img);
-      b.onclick = () => { if (a.fence) state.fence_asset = a.id;else { state.asset = a.id;state.fence_asset = false; }render();send({type: 'asset', value: a.id}); };grid.append(b);
-    }
-    panel.append(grid);
+    // #705: the presets are picked in the editor library's Decor tab (main/editor/web/chrome.js); `list` feeds Populate.
     const places = document.createElement('div');
     for (const [id, label] of [['behind', 'Behind'], ['front', 'Front'], ['body', 'Body']]) {
       const b = button(label, () => send({type: 'placement', value: id}));b.dataset.decorationPlacement = id;places.append(b);

@@ -50,7 +50,7 @@ async function main(){
   await importLevel(fixture);await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
   // Fence from the asset list: click, move (it follows live, nothing stored yet), click.
-  let r=await rev();await dom('[data-decoration-asset="fence-wood"]');await click([1,.5]);
+  let r=await rev();await dom('[data-cmd="decor_asset_fence-wood"]');await click([1,.5]);
   const hover=await world([5,.5]);await page.mouse.move(hover.x,hover.y,{steps:4});await pointer.frames(page,{n:8});
   await page.waitForFunction(()=>window.riderDecorationState?.fences?.length===1);assert.equal(await rev(),r,'live fence: nothing stored');
   const end=await world([8,.5]);await page.mouse.move(end.x,end.y,{steps:4});await pointer.frames(page,{n:8});

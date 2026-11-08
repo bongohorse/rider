@@ -340,20 +340,27 @@ local function state()
     return {ends=ends(o),box=box(o),range=range,live=M.pop~=nil,anchor=anchor(o),fence_asset=M.fence_arm and (M.fence_asset or 'fence-wood') or false,stretch={a=M.stretch.a or false,b=M.stretch.b or false},arming=M.arming or false,asset=M.asset,placement=M.placement,tilt=M.tilt,offset=M.offset,message=M.pop_why or M.message,
         selected=o and {fence=o.to~=nil,id=o.id,asset=o.asset,placement=o.placement,tilt=o.tilt,offset=o.offset,scale=o.scale or 1,rotation=o.rotation or 0,hidden=o.hidden or false,locked=o.locked or false} or false}
 end
+-- The presets with their thumbnails, world and category (#705: the editor library's Decor tab shows them).
+local palette_cache
 local function palette()
+    if palette_cache then return palette_cache end
     local track=require 'main.editor.editor_track'
+    local tags=require('main.decorations.library').TAGS
     local list={}
-    for _,id in ipairs(catalog.ORDER) do
+    local function add(id,name,fence)
         local png=sys.load_resource('/main/decorations/meadow/thumbs/'..id..'.png')
-        list[#list+1]={id=id,name=catalog.ASSETS[id].name,thumb=png and 'data:image/png;base64,'..track.base64(png) or ''}
+        local tag=tags[id] or {}
+        list[#list+1]={id=id,name=name,fence=fence,world=tag.world or 'meadow',category=tag.category or (fence and 'fences' or 'props'),thumb=png and 'data:image/png;base64,'..track.base64(png) or ''}
     end
+    for _,id in ipairs(catalog.ORDER) do add(id,catalog.ASSETS[id].name,false) end
     -- Fences are drawn, not dropped: click, move, click.
-    for id,f in pairs(catalog.FENCES) do
-        local png=sys.load_resource('/main/decorations/meadow/thumbs/'..id..'.png')
-        list[#list+1]={id=id,name=f.name,fence=true,thumb=png and 'data:image/png;base64,'..track.base64(png) or ''}
-    end
+    for id,f in pairs(catalog.FENCES) do add(id,f.name,true) end
+    palette_cache=list
     return list
 end
+M.palette=palette
+-- The armed preset or fence, for the library's on-state.
+function M.armed() return {asset=M.asset or false,fence=M.fence_arm and (M.fence_asset or 'fence-wood') or false} end
 function M.open()
     if not html5 or not editor.doc then return end
     M.instance=editor.opened;M.suspended=false;M.selected=nil;M.message='';M.shown=nil;M.stretch={};M.arming=nil;M.fence_arm=nil;M.pop=nil;M.pop_cache=nil
