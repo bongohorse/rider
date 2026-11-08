@@ -4,7 +4,7 @@ Binding rules for the developer level editor ([epic #118](https://github.com/bon
 
 Rules apply from the task named in them; a task issue lists the rules it implements. Where engine behaviour is assumed, verify it against the pinned engine ([engine references](../ENGINE_REFERENCES.md)) and record the sources in the PR.
 
-**Contents:** [Rules (R1–R18)](#rules-r1r18) · [Screen layout (desktop, Defold GUI)](#screen-layout-desktop-defold-gui) · [Controls (Edit mode only; game keys keep working in Play)](#controls-edit-mode-only-game-keys-keep-working-in-play) · [Editing basics (part of the first usable version)](#editing-basics-part-of-the-first-usable-version) · [3D look (#278)](#3d-look-278) · [Data model](#data-model) · [Prefab library v1 (static, parametric, each with handles)](#prefab-library-v1-static-parametric-each-with-handles) · [Storage](#storage) · [Additional implementation and acceptance checks](#additional-implementation-and-acceptance-checks) · [Technical constraints](#technical-constraints)
+**Contents:** [Rules (R1–R18)](#rules-r1r18) · [Screen layout (desktop, Defold GUI)](#screen-layout-desktop-defold-gui) · [Controls (Edit mode only; game keys keep working in Play)](#controls-edit-mode-only-game-keys-keep-working-in-play) · [Editing basics (part of the first usable version)](#editing-basics-part-of-the-first-usable-version) · [3D look (#278)](#3d-look-278) · [Data model](#data-model) · [Prefab library v1 (static, parametric, each with handles)](#prefab-library-v1-static-parametric-each-with-handles) · [Storage](#storage) · [Additional implementation and acceptance checks](#additional-implementation-and-acceptance-checks) · [Technical constraints](#technical-constraints) · [Editor chrome technology (#682)](#editor-chrome-technology-682)
 
 ## Rules (R1–R18)
 **R1 Source vs. compiled data.** In the editor the **source objects** (lines, curves, prefabs, connections) are authoritative. Play and Export always **recompile** `chains`/`hulls`/`labels`/`spawn`/`start_speed`/`finish`/`bounds` from them (full field contract in "Data model"). The `editor` block carries its own `editor_version` and `compiler_version` **from the first saved draft (LE2)**. Opening never silently overwrites geometry:
@@ -526,3 +526,12 @@ Evidence each task must provide in addition to its issue's acceptance criteria. 
 
 ## Technical constraints
 Single tick owner, once-only unit conversion, Defold-owned bodies/worlds, unchanged reset contract and vehicle tuning, no custom physics or manual stepping. The terrain is rebuilt only through the existing station build path. Editor handles/lines count against the sprite/label limits (1024 each).
+
+## Editor chrome technology (#682)
+
+Decided 2026-11-08 for the rebuild in [#659](https://github.com/bongohorse/rider/issues/659): the new editor chrome (tool bar, library, inspector, minimap, dialogs) is HTML/CSS over the game canvas, built from the accepted prototype in `tools/ui_prototype/editor/` (#699). Defold GUI keeps the driving HUD and in-world handles.
+
+- **Why:** the editor already needs the web build. Decor, Background and Texture panels and Import/Export only exist in HTML5 (`main/editor/editor_decoration.lua`, `editor_background.lua`, `editor_track.lua`, `editor.gui_script` "needs the web build"). The editor GUI was near its 640-node pool at #281, and Defold GUI has no native text input, scrolling or clipping for a searchable asset library.
+- **Cost measured:** headless Chromium (SwiftShader) on the public preview in Edit mode, 6 s per run: baseline 16.63 ms average / 16.7 ms p95; with two prototype docks over the canvas 16.63 / 16.8; while switching library tabs every 60 ms 17.36 / 16.8 with one 133 ms frame, caused by the prototype redrawing its whole level SVG per click. Not phone evidence.
+- **Rules:** Lua stays the owner of the level document and Undo; the chrome sends commands and renders state through one bridge module (today's `html5.run` + `take()` polling pattern). While the chrome has pointer capture or keyboard focus, game and editor input stay blocked, as the existing panels do with `suspend`. A native (non-web) editor is out of scope until a later decision.
+

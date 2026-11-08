@@ -87,7 +87,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [road-look.md](contracts/road-look.md) | Bounded look parameters and consumer boundary | Scope and activation · Parameter set v1 · Projection and spaces · Geometry and resources · Controls and retention · Production compatibility · Editor authoring · Consumer boundary |
 | [contracts/evidence.md](contracts/evidence.md) | PASS/FAIL/BLOCKED/NOT RUN and reporting | — |
 | [contracts/level-visuals.md](contracts/level-visuals.md) | Vocabulary and data model for materials, depth, light, backgrounds, decorations and local textures | Boundary · Vocabulary · Track material · Depth look · Vehicle position · Facing · Run order · Light · Vehicle shadow · Backgrounds and foreground · Decorations · Local textures · Format and compatibility · Assets · Measurement · Task map |
-| [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints |
+| [contracts/level-editor.md](contracts/level-editor.md) | Level editor rules R1–R18, data model | Rules · Screen layout · Controls · Editing basics · Data model · Prefab library v1 · Storage · Additional checks · Technical constraints · Editor chrome technology |
 | [main/gym/README.md](../main/gym/README.md) | Gym implementation and test protocols | See its Contents line |
 | [ideas/](ideas/README.md) | Feature ideas, archived plans, active-issue reference briefs and closed-epic history | Roadmap · vehicle builder · procedural generation · feature briefs · history |
 
