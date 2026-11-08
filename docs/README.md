@@ -76,7 +76,7 @@ Progress, GOs, owners, blockers and open drive tests change with every merge, so
 | [ENGINE_REFERENCES.md](ENGINE_REFERENCES.md) | Official Defold/Box2D sources | Read only what the task needs · Defold · Box2D · Automation Bridge · Build, platforms and gameplay evidence · Maintenance |
 | [PLATFORM_MATRIX.md](PLATFORM_MATRIX.md) | Evidence per platform and device | — |
 | [MOBILE_TRIAL.md](MOBILE_TRIAL.md) | Reference-phone test procedure | Touch and layout · Coasting and HUD · Comparable phone captures · Tilt comparison |
-| [ui/editor-style.md](ui/editor-style.md) | Editor UI inventory and the two style directions for one consistent look (#674, epic #659) | Inventory · Shared rules · Direction A: Workbench · Direction B: Toybox · Recommendation |
+| [ui/editor-style.md](ui/editor-style.md) | Accepted editor layout, tokens, components and rules of the HTML UI kit (#683, epic #659) | Layout · Tokens · Components · Rules · Fonts |
 | [A18_SEAM_PROTOCOL.md](A18_SEAM_PROTOCOL.md) | Chain vs hull seam experiment (`a18` case) | Revision history · Fixed commands and qualification · Sampling and bump definition · Reproduction · Engine boundary |
 | [contracts/physics.md](contracts/physics.md) | Binding physics rules | API and platform · Units · Lifecycle and tick owner · Ownership and reset · Collisions and sensors · Scenario and result data · Pause, slow motion and live tuning · Command playback and ghosts |
 | [contracts/g1-baseline.md](contracts/g1-baseline.md) | Measured G1 API/unit matrix and fixture | API and units · Start state · Ownership and cleanup · Running and protocol |

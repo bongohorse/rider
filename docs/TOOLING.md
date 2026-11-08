@@ -50,7 +50,7 @@ Every change runs the baseline: `python tools/bootstrap_check.py`, `python tools
 | Gameplay or editor Lua under `main/`, `tests/gameplay/*.lua` | `python tools/gameplay/lua_tests.py` (`tests/gameplay/*.lua`) plus the affected [Gym cases](#gym-tests) |
 | Storage, best time, level progress, coin bank, `tests/engine/persistence/` | `python -m unittest discover -s tests/engine/persistence -v` · `python tools/g2/persistence_385.py --output <fresh dir>` on a clean tree ([harness](ci/persistence-engine-harness.md)) |
 | Vehicle, physics, presets, stations, editor UI, `main/game/`, `main/editor/`, `main/gym/` | the affected [Gym cases](#gym-tests); `a22` replays `tests/regress/` (regenerate only for an intended physics change) |
-| Touch, tilt, HTML5 presentation | `node --test tests/mobile/*.cjs` |
+| Touch, tilt, HTML5 presentation, editor UI kit (`main/editor/web/`, `tools/ui/`) | `node --test tests/mobile/*.cjs` · `python tools/ui/build_ui_fonts.py --check` |
 | `tools/preview/`, release preview, `tests/preview/`, object fixtures in `tests/objects/` | `node --test tests/preview/*.test.cjs`; the release verification groups (`tools/preview/verify.cjs`, incl. `check_objects`) run in the preview CI job ([preview deployment](#preview-deployment)) |
 | Dependencies, `renovate.json` | Renovate validation and extraction ([Renovate](#dependencies-and-renovate)) |
 | Markdown only | baseline; CI also checks changed relative links (`tools/ci/check_docs_links.py`) |
