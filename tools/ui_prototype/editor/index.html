@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rider Editor Prototype</title>
+<!-- #699: clickable UI prototype only. No game, editor or save wiring; all data is fake. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="icons"></defs></svg>
+<div id="app" class="app">
+  <svg id="level" class="level" aria-label="Level preview"></svg>
+
+  <div class="float lvlchip">
+    <button class="b" data-act="menu" title="Menu"></button>
+    <span class="name"><b id="lvlName">Meadow run</b><small id="saveState" class="dirty">Unsaved</small></span>
+  </div>
+  <div class="float counts" id="counts"></div>
+
+  <div class="float tools" id="tools"></div>
+  <div class="float sys" id="sys"></div>
+  <div class="toast" id="toast" hidden></div>
+
+  <aside class="dock left" id="left">
+    <div class="rail" id="leftRail"></div>
+    <div class="pane" id="libPane"></div>
+  </aside>
+  <aside class="dock right" id="right">
+    <div class="rail" id="rightRail"></div>
+    <div class="pane" id="inspPane"></div>
+  </aside>
+
+  <div class="mini" id="mini"><svg id="miniSvg" preserveAspectRatio="none"></svg><span class="win" id="miniWin"></span></div>
+  <div class="float view" id="view"></div>
+  <button class="b stopbtn" id="stop" hidden title="Stop test drive"></button>
+  <div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+</div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
