@@ -136,7 +136,9 @@ async function main(){
   await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    await page.setViewportSize(viewport);await pointer.frames(page,{n:15});
-   const box=await page.locator('#rider-background-panel').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+   // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
+   const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+   assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
    await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
    await page.screenshot({path:path.join(out,`layout-${viewport.width}x${viewport.height}.png`)});
   }
