@@ -196,7 +196,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   e=await settle();assert.ok(e.camera.zoom>fitted.zoom*1.5,'zoomed in');
   await button('view_fit');e=await settle();
   // Repeatable within the float32 screen mapping (sub-millimetre). #685: the library dock narrows the fit area, which
-  // raises the float32 round-off of the zoom ratio to a few 1e-6; position stays within 1e-3 m.
+  // raises the measured zoom-ratio drift to 2.4e-6 (0.0314181909 vs 0.0314181140); position stays within 1e-3 m.
   assert.ok(near(e.camera.zoom/fitted.zoom,1,1e-5)&&near(e.camera.x,fitted.x,1e-3)&&near(e.camera.y,fitted.y,1e-3),'Fit level is not repeatable: '+JSON.stringify([e.camera,fitted]));
   measurements.fit={extent:x,zoom:e.camera.zoom};
   // Two objects selected: the box of both is centred and the zoom is kept when it fits.

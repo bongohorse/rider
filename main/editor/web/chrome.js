@@ -31,8 +31,10 @@ const art = k => `<svg class="art" viewBox="0 0 48 48" aria-hidden="true">${ART[
 const GAMEPLAY = [['start','Start'],['finish','Finish'],['coin','Coin'],['fuel','Fuel'],['gem','Gem'],['crate','Crate'],['plate','Plate'],['gate','Gate']];
 const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
 // Rail: tabs built here, and launchers that open the existing panels until #705/#706 move them into the library.
-const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor (opens the Decor tool)','tool_decoration'],
-  ['bg','mountain','var(--k-bg)','Background (opens Track textures)','track_textures'],['tex','texture','var(--k-tex)','Ground texture (opens Track textures)','track_textures'],['objects','list','var(--k-obj)','Level objects']];
+// Launchers use their own names (lib_decor, lib_bg, lib_tex), mapped in editor.gui_script, so the footer's
+// tool_decoration/track_textures buttons keep theirs.
+const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor (opens the Decor tool)','lib_decor'],
+  ['bg','mountain','var(--k-bg)','Background (opens Track textures)','lib_bg'],['tex','texture','var(--k-tex)','Ground texture (opens Track textures)','lib_tex'],['objects','list','var(--k-obj)','Level objects']];
 const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan']];
 function mount() {
   UI.install();
@@ -58,7 +60,8 @@ function mount() {
  #rider-chrome .chrome-sys{gap:4px}}
 #rider-chrome .chrome-dock{position:fixed;left:12px;top:72px;bottom:auto;max-height:calc(100vh - 160px);z-index:390}
 #rider-chrome .chrome-dock .pane{width:292px}
-#rider-chrome .chrome-dock .rail{overflow-y:auto}
+#rider-chrome .chrome-dock .rail{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+@media (max-height:560px){#rider-chrome .chrome-dock .rail{gap:4px;padding:4px}#rider-chrome .chrome-dock .rail .b{--h:38px}}
 #rider-chrome .chrome-dock.closed .pane{display:none}
 #rider-chrome .chrome-dock .rail .b{color:var(--c)}#rider-chrome .chrome-dock .rail .b.on{color:var(--ink)}#rider-chrome .chrome-dock .rail .b.plain{color:var(--text)}
 #rider-chrome .lib-grid3{grid-template-columns:repeat(3,1fr)}
@@ -93,7 +96,7 @@ function mount() {
     e.preventDefault();
     if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
-    if (b.dataset.tab) { tab = b.dataset.tab; libKey = ''; library(state); return; }
+    if (b.dataset.tab) { tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
     if (!b.dataset.cmd) return;
     if (menuOpen) { menuOpen = false; render(state); }
     queue.push(b.dataset.cmd);
@@ -179,7 +182,7 @@ function library(s) {
   libKey = key;
   dock.classList.toggle('closed', !!L.collapsed);
   q('#rider-lib-rail').innerHTML = UI.button({icon: L.collapsed ? 'chevr' : 'chevl', title: L.collapsed ? 'Open the library' : 'Collapse the library', variant: 'plain', d: {cmd: 'collapse_tools'}})
-    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('');
+    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, on: cmd === 'lib_decor' && s.tool === 'decoration', d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('');
   if (L.collapsed) { q('#rider-lib-pane').innerHTML = ''; unfocusable(); return; }
   const R = Object.fromEntries(RAIL.map(r => [r[0], r]));
   const head = id => UI.dockHeader({title: R[id][3], icon: R[id][1], color: R[id][2]});
@@ -222,7 +225,7 @@ function rects() {
   const r = c.getBoundingClientRect();
   for (const b of root.querySelectorAll('[data-cmd],[data-tab]')) {
     const q = b.getBoundingClientRect(); if (!q.width) continue;
-    const clip = (b.closest('.lib-rows') || b.closest('.pbody'))?.getBoundingClientRect();
+    const clip = (b.closest('.lib-rows') || b.closest('.pbody') || b.closest('.chrome-dock .rail'))?.getBoundingClientRect();
     if (q.bottom <= 0 || q.top >= innerHeight || q.right <= 0 || q.left >= innerWidth) continue;
     if (clip && (q.top < clip.top - 1 || q.bottom > clip.bottom + 1)) continue;
     const name = b.dataset.cmd || 'lib_' + b.dataset.tab;

@@ -3082,7 +3082,7 @@ function update(self,dt)
                 -- field is focused only confirms (or keeps) the field.
                 if modal or editor.mode~="edit" then break
                 elseif self.field then confirm_name(self,true)
-                else on_button(self,name) end
+                else on_button(self,name=='lib_decor' and 'tool_decoration' or (name=='lib_bg' or name=='lib_tex') and 'track_textures' or name) end
             end
         end
     elseif self.overlay_shown then
