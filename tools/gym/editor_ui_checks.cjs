@@ -22,15 +22,19 @@ module.exports=async function uiChecks(h){
  for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
   await page.setViewportSize(size);await pointer.frames(page);await button('collapse_prefabs');
   let state=await ed(),r=state.ui.rects;
-  for(const name of ['collapse_tool_category','collapse_gameplay','collapse_prefabs','collapse_objects','tool_coin'])await require('./editor_ui_target.cjs').reveal(page,name);
-  // Collapse Prefabs makes all four headings reachable together without scrolling in the desktop view.
-  if(size.width===1280){r=(await ed()).ui.rects;assert.ok(r.collapse_tool_category.y<r.collapse_gameplay.y&&r.collapse_gameplay.y<r.collapse_prefabs.y&&r.collapse_prefabs.y<r.collapse_objects.y);}
-  await button('collapse_tool_category');state=await ed();assert.ok(!state.visible.includes('tool_select'));assert.ok(state.visible.includes('tool_coin'));
+  for(const name of ['collapse_gameplay','collapse_prefabs','collapse_objects','tool_coin'])await require('./editor_ui_target.cjs').reveal(page,name);
+  // Collapse Prefabs makes all three palette headings reachable together without scrolling in the desktop view.
+  if(size.width===1280){r=(await ed()).ui.rects;assert.ok(r.collapse_gameplay.y<r.collapse_prefabs.y&&r.collapse_prefabs.y<r.collapse_objects.y);}
+  // #684: the drawing tools live in the floating top bar, independent of the palette categories.
+  state=await ed();assert.ok(!state.visible.includes('collapse_tool_category'));assert.ok(state.visible.includes('tool_select'));assert.ok(state.visible.includes('tool_coin'));
   await button('collapse_gameplay');state=await ed();assert.ok(!state.visible.includes('tool_coin')&&!state.visible.includes('tool_start')&&!state.visible.includes('tool_finish'));
-  await button('collapse_tool_category');await button('tool_select');assert.equal((await ed()).tool,'select');
+  assert.ok((await ed()).visible.includes('tool_select'),'top-bar tools stay with Gameplay collapsed');await button('tool_select');assert.equal((await ed()).tool,'select');
   await button('collapse_gameplay');await button('tool_coin');assert.equal((await ed()).tool,'coin');
   state=await ed();r=state.ui.rects;assert.ok(r.tool_coin.y>r.collapse_gameplay.y&&r.tool_coin.y+r.tool_coin.h<r.collapse_prefabs.y);
-  assert.equal(r.undo.y,r.redo.y);assert.equal(r.redo.y,r.play.y);assert.equal(r.undo.x+r.play.x+r.play.w,size.width/state.ui.scale);assert.equal(r.undo.y,8);
+  // #684: one floating bar, centred, above the palette.
+  assert.ok(Math.abs(r.undo.y+r.undo.h/2-(r.play.y+r.play.h/2))<=1&&Math.abs(r.redo.y-r.undo.y)<=1,JSON.stringify([r.undo,r.redo,r.play]));
+  assert.ok(Math.abs((r.tool_select.x+r.play.x+r.play.w)/2-size.width/state.ui.scale/2)<=2,'top bar centred at '+size.width);
+  assert.ok(r.play.y+r.play.h<=r.collapse_gameplay.y,'top bar above the palette at '+size.width);
   assert.ok(r.tool_coin.y!==r.play.y);assert.equal(state.overlay.nodes,628);await unchanged(categoryBefore,'category collapse/tool choice/viewport');
   await page.screenshot({path:path.join(out,`editor-categories-${size.width}x${size.height}.png`)});
   await button('collapse_prefabs');
@@ -81,7 +85,7 @@ module.exports=async function uiChecks(h){
  for(let i=0;i<12&&!(await ed()).visible.includes('kind_wave');i++){await page.mouse.wheel(0,120);await pointer.frames(page);}
  e=await settle();
  assert.ok(e.ui.tool_scroll>0);assert.ok(e.visible.includes('kind_wave'),'last prefab is unreachable');
- await seekScrollbar('tool_scroll',false);e=await settle();assert.equal(e.ui.tool_scroll,0);assert.ok(e.visible.includes('tool_select'));
+ await seekScrollbar('tool_scroll',false);e=await settle();assert.equal(e.ui.tool_scroll,0);assert.ok(e.visible.includes('collapse_gameplay'),'palette top reachable');
  await button('rename');assert.notEqual((await ed()).field,false);
  await seekScrollbar('scroll',true);e=await settle();assert.equal(e.field,false,'scrollbar does not commit valid focused input');assert.ok(e.ui.scroll>0);assert.ok(e.visible.includes('inc_test_speed'));
  await seekScrollbar('scroll',false);e=await settle();assert.equal(e.ui.scroll,0);
@@ -103,12 +107,12 @@ module.exports=async function uiChecks(h){
  for(const size of [{width:1280,height:720},{width:1920,height:1080}]){
   await page.setViewportSize(size);await pointer.frames(page);await key('Home');await key('Escape');await key('p');await key('2');await hover([6,3]);e=await settle();
   assert.equal(e.prefab_kind,'ramp');assert.equal(e.tool,'prefab');
-  assert.equal(e.ui.rects.new.y,8);assert.equal(e.ui.rects.new.x,size.width-264);
-  // #602: Undo, Redo and Play sit in the top bar, left of Versions, without overlap.
-  for(const name of ['undo','redo','play'])assert.equal(e.ui.rects[name].y,8,name+' top bar');
-  assert.ok(e.ui.rects.undo.x+e.ui.rects.undo.w<=e.ui.rects.redo.x&&e.ui.rects.redo.x+e.ui.rects.redo.w<=e.ui.rects.play.x&&e.ui.rects.play.x+e.ui.rects.play.w<=e.ui.rects.versions.x,'top-bar commands overlap');
-  assert.equal(e.ui.rects.play.x,size.width/2+20);
-  assert.equal(e.ui.rects.undo.x,size.width/2-60);assert.equal(e.ui.rects.redo.x,size.width/2-20);
+  // #684: file commands sit in the system group at the top right, right of the floating tool bar.
+  const rr=e.ui.rects;assert.ok(rr.new.y<32&&rr.new.x>rr.play.x+rr.play.w&&rr.new.x+rr.new.w<=size.width-12+1,JSON.stringify(rr.new));
+  // #602/#684: Undo, Redo and Play sit in one row of the centred floating bar, left of Versions, without overlap.
+  for(const name of ['undo','redo','play'])assert.ok(rr[name].y<32&&Math.abs(rr[name].y+rr[name].h/2-(rr.play.y+rr.play.h/2))<=1,name+' top bar');
+  assert.ok(rr.undo.x+rr.undo.w<=rr.redo.x&&rr.redo.x+rr.redo.w<=rr.play.x&&rr.play.x+rr.play.w<=rr.versions.x,'top-bar commands overlap');
+  assert.ok(Math.abs((rr.tool_select.x+rr.play.x+rr.play.w)/2-size.width/2)<=2,'top bar centred at '+size.width);
   assert.equal(e.ui.scale,1);assert.equal(e.usable.x1-e.usable.x0,size.width-528);
   const nodes=e.overlay.nodes;assert.ok(nodes<=640);assert.equal(nodes,628);
   const pageTools=await page.locator('#page-tools').boundingBox();
@@ -124,7 +128,8 @@ module.exports=async function uiChecks(h){
   let before=await snapshot(),u={...e.usable};
   await button('collapse_tools');await button('collapse_properties');e=await settle();
   assert.equal(e.usable.x0,u.x0-144);assert.equal(e.usable.x1,u.x1+240);
-  assert.ok(!e.visible.includes('tool_select')&&!e.visible.includes('param_2'));
+  assert.ok(!e.visible.includes('tool_coin')&&!e.visible.includes('param_2'));
+  assert.ok(e.visible.includes('tool_select'),'#684: the floating tool bar stays when the palette collapses');
   await unchanged(before,'collapse panels');
   await key('Home');e=await settle();
   const ext=e.extent;for(const p of [[ext[0],ext[2]],[ext[1],ext[3]]]){
@@ -146,7 +151,8 @@ module.exports=async function uiChecks(h){
  await hi.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor.ui.rects.play);
  const high=await hi.evaluate(()=>({state:window.riderEditor,canvas:document.querySelector('canvas').width,css:document.querySelector('canvas').clientWidth}));
  assert.equal(high.canvas/high.css,2);assert.equal(high.state.ui.scale,2);
- assert.equal(high.state.ui.rects.play.x,high.css/2+20);assert.equal(high.state.ui.rects.play.h,32);
+ // #684: the chrome keeps its CSS-pixel size and centre at DPR 2.
+ {const hr=high.state.ui.rects;assert.ok(Math.abs((hr.tool_select.x+hr.play.x+hr.play.w)/2-high.css/2)<=2,'hidpi top bar centred');assert.ok(Math.abs(hr.play.h-50)<=1,'hidpi play size '+hr.play.h);}
  assert.equal(high.state.usable.x0,432);assert.equal(high.state.usable.x1,1936);assert.equal(high.state.overlay.nodes,628);
  await hi.screenshot({path:path.join(out,'editor-a-hidpi.png')});assert.deepEqual(hiErrors,[]);
  layouts.hidpi={canvas:high.canvas,css:high.css,scale:high.state.ui.scale,nodes:high.state.overlay.nodes};

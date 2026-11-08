@@ -57,7 +57,7 @@ end
 -- Gameplay tools (O2 added Crate, Plate and Gate) bake control and icon into one 36 x 32 quad, so the
 -- eight tiles take fewer pooled boxes than the five separate control + icon pairs did (Codex a10d648).
 local TILES={tool_start=true,tool_finish=true,tool_coin=true,tool_gem=true,tool_fuel=true,tool_crate=true,tool_plate=true,tool_gate=true}
-local function inside(r,x,y) return x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
+local function inside(r,x,y) return r and x and y and x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h end
 function M.init()
     -- Three tiny code-native UI masks, uploaded once. Direct textures avoid sampling adjacent
     -- atlas frames when a solid panel is stretched to the viewport size.
@@ -278,6 +278,9 @@ function M.render(u,d)
         button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'Change the 3D look live in this run; changes save to the level.')
         if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
     elseif not modal then
+        -- #684: with the HTML chrome the top bar and the Tools section live in main/editor/web/chrome.js.
+        -- The chrome draws the Problems button; the shared problem colour stays published for it.
+        if d.chrome then u.title_rect,u.status_rect=nil,nil;u.problem_colour=d.blocking and 'error' or 'normal' else
         box(0,0,w,48,C.panel);text(16,24,'RIDER',C.active,18)
         local title_width=math.min(160,math.max(96,#d.title*10.5+4))
         text(96,24,d.title,C.text,18,title_width)
@@ -303,8 +306,9 @@ function M.render(u,d)
         button('undo',commands,8,32,'Undo',false,'Undo [Ctrl+Z]')
         button('redo',commands+40,8,32,'Redo',false,'Redo [Ctrl+Y]')
         button('play',commands+80,8,40,'Play',true,'Play from START [E]')
+        end
         local lw=u.tools and 40 or 184
-        local gameplay_top=152+(u.tool_category and 0 or 80)
+        local gameplay_top=d.chrome and 112 or 152+(u.tool_category and 0 or 80)
         -- Gameplay: eight 36 x 32 tiles in two rows of four (Start, Finish, Coin, Fuel / Gem, Crate, Plate,
         -- Gate), so the section keeps its pre-O2 height and every prefab kind stays visible at 1280 x 720.
         -- Gem keeps its first-column place in the second row.
@@ -333,8 +337,8 @@ function M.render(u,d)
             scrollbar('tool_scroll',190,top,bottom,objects_top+object_height-top)
             local function shown(y,bh) return y>=top and y+bh<=bottom end
             local ty=112-u.tool_scroll
-            if shown(ty,32) then button('collapse_tool_category',28,ty,152,u.tool_category and 'TOOLS  >' or 'TOOLS  v',false,'Collapse or expand Tools') end
-            if not u.tool_category then
+            if not d.chrome and shown(ty,32) then button('collapse_tool_category',28,ty,152,u.tool_category and 'TOOLS  >' or 'TOOLS  v',false,'Collapse or expand Tools') end
+            if not d.chrome and not u.tool_category then
                 local i=0
                 for _,tool in ipairs(d.tools) do
                     if tool[1]~='start' and tool[1]~='finish' then
