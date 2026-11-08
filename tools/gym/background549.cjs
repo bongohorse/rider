@@ -29,38 +29,45 @@ async function main(){
   }
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen&&window.riderBackgroundState?.edit,null,{timeout:30000});await pointer.frames(page,{n:20});
   const initial=await page.evaluate(()=>({revision:window.riderEditor.revision,undo:window.riderEditor.undo}));
+  // #706: presets, ON/OFF, layer visibility, Depth and Auto are in the library's Background tab; the
+  // Layer images and height panel keeps each layer's image and vertical settings.
   async function open(){
-   await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('track_textures');
-   await page.waitForFunction(()=>window.riderTrackPanel?.visible,null,{timeout:10000});
-   await page.locator('#rider-track-panel').getByRole('tab',{name:'Background',exact:true}).click();
-   await page.waitForFunction(()=>window.riderBackgroundPanel?.visible&&!window.riderTrackPanel?.visible,null,{timeout:10000});
+   await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('lib_bg');
+   await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4,null,{timeout:10000});
   }
-  await open();assert.equal(await page.locator('[data-background-preset]').count(),4);
+  async function layers(){
+   await page.getByRole('button',{name:'Layer images and height',exact:true}).click();
+   await page.waitForFunction(()=>window.riderBackgroundPanel?.visible,null,{timeout:10000});
+  }
+  await open();assert.equal(await page.locator('[data-preset-bg]').count(),4);
   for(const id of ['meadow','quarry','city','volcano']){
-   await page.locator(`[data-background-preset=${id}]`).click();
+   await page.locator(`[data-preset-bg=${id}]`).click();
    await page.waitForFunction(id=>window.riderBackgroundState?.source?.preset===id&&window.riderBackgroundState?.objects===6,id,{timeout:10000});
    await page.waitForFunction(id=>window.riderEditorDoc.backgrounds?.preset===id,id);await page.screenshot({path:path.join(out,'preset-'+id+'.png')});
   }
   assert.equal(await page.evaluate(()=>window.riderEditor.undo),initial.undo+4,'one Undo step per preset');assert.equal(await page.locator('#rider-background-apply').count(),0);assert.equal(await page.locator('#rider-background-discard').count(),0);report.cases.preview_presets={presets:['meadow','quarry','city','volcano'],undo_steps:4};
-  const checkbox=(i,name)=>page.getByRole('checkbox',{name:`${i===6?'Foreground':'Layer '+i} ${name}`,exact:true});
+  // Tab switches (aria-pressed); the helper keeps the checkbox wording of the old panel.
+  const checkbox=(i,name)=>{const b=page.getByRole('button',{name:`${i===6?'Foreground':'Layer '+i} ${name}`,exact:true});
+   const set=async on=>{await b.waitFor();if(((await b.getAttribute('aria-pressed'))==='true')!==on){await b.click();await page.waitForFunction(([label,on])=>((document.querySelector(`#rider-chrome [aria-label="${label}"]`)?.getAttribute('aria-pressed'))==='true')===on,[`${i===6?'Foreground':'Layer '+i} ${name}`,on]);}};
+   return {check:()=>set(true),uncheck:()=>set(false),isChecked:async()=>(await b.getAttribute('aria-pressed'))==='true'};};
   const slots=[];
   for(let i=1;i<=6;i++){
    await checkbox(i,'ON/OFF').uncheck();await page.waitForFunction(i=>!window.riderBackgroundState.layers[i-1].visible&&window.riderBackgroundState.objects===5,i);
    await checkbox(i,'ON/OFF').check();await page.waitForFunction(i=>window.riderBackgroundState.layers[i-1].visible&&window.riderBackgroundState.objects===6,i);slots.push(i);
   }
   await checkbox(2,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
-  await checkbox(3,'Auto').uncheck();const depth=page.getByRole('slider',{name:'Layer 3 Depth',exact:true});await depth.focus();
+  await checkbox(3,'Auto').uncheck();const depth=page.getByRole('slider',{name:'Layer 3 Depth',exact:true});await depth.click();
   await page.keyboard.press('End');for(let i=0;i<50;i++)await page.keyboard.press('ArrowLeft');
   await page.waitForFunction(()=>window.riderBackgroundState?.source?.layers[2].depth===.5&&!window.riderBackgroundState.source.layers[2].auto);
   await checkbox(3,'Auto').check();await page.waitForFunction(()=>window.riderBackgroundState.layers[2].effective_depth===.55&&window.riderBackgroundState.source.layers[2].depth===.5);
   await checkbox(3,'Auto').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.layers[2].effective_depth===.5);
-  await page.getByRole('combobox',{name:'Layer 4 image',exact:true}).selectOption('quarry');await page.waitForFunction(()=>window.riderBackgroundState.source.layers[3].image?.preset==='quarry');
+  await layers();await page.getByRole('combobox',{name:'Layer 4 image',exact:true}).selectOption('quarry');await page.waitForFunction(()=>window.riderBackgroundState.source.layers[3].image?.preset==='quarry');
   // #604: one mouse drag previews live and stores one Undo step on release.
   const track=await depth.boundingBox(),beforeDrag=await page.evaluate(()=>window.riderEditor.undo);
   await page.mouse.move(track.x+track.width*.3,track.y+track.height/2);await page.mouse.down();await page.mouse.move(track.x+track.width*.5,track.y+track.height/2,{steps:6});await page.mouse.move(track.x+track.width*.7,track.y+track.height/2,{steps:6});await pointer.frames(page,{n:8});
   assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeDrag,'a drag only previews');await page.mouse.up();await page.waitForFunction(n=>window.riderEditor.undo===n+1,beforeDrag);await pointer.frames(page,{n:8});assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeDrag+1);
-  const beforeKeys=await page.evaluate(()=>window.riderEditor.undo);await depth.focus();await page.keyboard.press('e');await page.keyboard.press('Delete');await pointer.frames(page,{n:8});
-  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),beforeKeys);
+  const beforeKeys=await page.evaluate(()=>window.riderEditor.undo);await depth.click();await page.waitForFunction(n=>window.riderEditor.undo===n+1,beforeKeys);const afterClick=beforeKeys+1;await page.keyboard.press('e');await page.keyboard.press('Delete');await pointer.frames(page,{n:8});
+  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),afterClick);
   report.cases.layer_controls={slots,state:await state()};
   // #614: both sliders in every background slot use real pointer drags.
   // Keep the panel open during Undo/Redo to verify its values follow the source.
@@ -89,7 +96,8 @@ async function main(){
   }
   assert.equal(await page.getByRole('slider',{name:/Foreground Vertical/}).count(),0);
   report.cases.layer_controls.vertical=vertical;
-  const master=page.getByRole('checkbox',{name:'Background ON/OFF',exact:true});const choices=(await state()).source.layers;
+  const masterButton=page.getByRole('button',{name:'Background ON/OFF',exact:true});
+  const master={check:async()=>{if((await masterButton.getAttribute('aria-pressed'))!=='true')await masterButton.click();},uncheck:async()=>{if((await masterButton.getAttribute('aria-pressed'))==='true')await masterButton.click();},isChecked:async()=>(await masterButton.getAttribute('aria-pressed'))==='true'};const choices=(await state()).source.layers;
   await master.uncheck();await page.waitForFunction(()=>!window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===0&&window.riderBackgroundState.buffers===0);
   let off=await state();assert.equal(off.texture_bytes,0);assert.deepEqual(off.source.layers,choices);
   await master.check();await page.waitForFunction(()=>window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===5);
@@ -98,7 +106,7 @@ async function main(){
   await master.uncheck();await page.waitForFunction(()=>!window.riderBackgroundState.enabled&&window.riderBackgroundState.objects===0);
   const expected=structuredClone((await state()).source);
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===false);assert.deepEqual((await document()).backgrounds,expected);
-  await page.locator('#rider-background-close').click();await page.waitForFunction(()=>!window.riderBackgroundPanel.visible);await tap('undo');
+  await page.locator('canvas').focus();await page.waitForTimeout(1100);await tap('undo');
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===true&&window.riderBackgroundState.objects===5);await tap('redo');
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds?.enabled===false);assert.deepEqual((await document()).backgrounds,expected);
   report.cases.apply_undo_redo={saved:expected,undo_steps:1};await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty,null,{timeout:30000});
@@ -108,12 +116,12 @@ async function main(){
   assert.deepEqual((await document()).backgrounds,expected);await open();assert.equal(await master.isChecked(),false);assert.equal(await checkbox(2,'ON/OFF').isChecked(),false);
   await master.check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds.enabled===true);expected.enabled=true;
-  await page.locator('#rider-background-close').click();await tap('play');
+  await tap('play');
   await page.waitForFunction(()=>window.riderEditor?.mode==='play'&&!window.riderBackgroundState?.edit&&window.riderBackgroundState?.objects===5,null,{timeout:30000});
   assert.deepEqual((await state()).source,expected);await page.locator('canvas').focus();await page.keyboard.down('w');await pointer.frames(page,{n:60});await page.keyboard.up('w');
   await page.screenshot({path:path.join(out,'drive.png')});report.cases.reload_play={source:expected,play:await state()};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderBackgroundState?.edit,null,{timeout:30000});await open();
-  const undo=await page.evaluate(()=>window.riderEditor.undo);await page.locator('[data-background-preset=meadow]').click();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='meadow');
+  const undo=await page.evaluate(()=>window.riderEditor.undo);await page.locator('[data-preset-bg=meadow]').click();await layers();await page.waitForFunction(()=>window.riderBackgroundState.source.preset==='meadow');
   await page.waitForFunction(()=>window.riderEditorDoc.backgrounds.preset==='meadow');assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo+1,'preset is one Undo step');expected.preset='meadow';
   // Canvas dialogs take precedence and keep the panel state.
   for(const modal of [{open:'view_help',field:'help_open',close:'help_close'},{open:'versions',field:'versions_open',close:'dialog_close'}]){
@@ -123,9 +131,9 @@ async function main(){
    await page.waitForFunction(field=>!window.riderEditor[field]&&!window.riderBackgroundPanel.suspended,modal.field);
    assert.equal(await page.locator('#rider-background-panel').isVisible(),true);assert.equal((await state()).source.preset,'meadow');
   }
-  // Tabs switch freely: nothing is pending.
-  await page.locator('#rider-background-panel').getByRole('tab',{name:'Texture',exact:true}).click();await page.waitForFunction(()=>window.riderTrackPanel.visible&&!window.riderBackgroundPanel.visible);
-  await page.locator('#rider-track-panel').getByRole('tab',{name:'Background',exact:true}).click();await page.waitForFunction(()=>window.riderBackgroundPanel.visible);
+  // Library tabs switch freely: nothing is pending; the footer Texture button shows the Texture tab.
+  await tap('track_textures');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-tex]').length===7&&!window.riderBackgroundPanel.visible);
+  await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    await page.setViewportSize(viewport);await pointer.frames(page,{n:15});
    const box=await page.locator('#rider-background-panel').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);

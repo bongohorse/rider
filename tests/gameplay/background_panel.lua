@@ -47,4 +47,23 @@ assert(not B.draft(bad) and E.background_preview==nil and E.doc.editor.backgroun
 -- An old draft can never apply to another document, including one with the same ID and revision.
 assert(B.draft(next_b));E.opened=2;E.doc=fresh();assert(not B.apply() and E.doc.editor.backgrounds==nil and E.background_preview==nil)
 B.handle('bad');B.handle({type='unknown'});B.close()
-print('PASS #549 Background session: preview copy, Apply once, refusal, Undo/Redo, preserved master/Auto choices, Discard and document isolation')
+-- #706 Background tab operations on the stored (or previewed) source.
+E.opened=3;E.doc=fresh();E.history=D.history();commits=0
+B.op('x');B.op(nil);B.op({op='enabled'});B.op({op='visible',layer=1});assert(commits==0 and E.doc.editor.backgrounds==nil,'nothing to toggle yet')
+assert(B.op({op='preset',id='quarry'}) and commits==1);local s=E.doc.editor.backgrounds
+assert(s.preset=='quarry' and s.enabled and #s.layers==6 and s.layers[3].auto and s.layers[3].depth==.55)
+assert(B.op({op='preset',id='city'}) and commits==2 and E.doc.editor.backgrounds.preset=='city')
+assert(B.op({op='visible',layer=2}) and not E.doc.editor.backgrounds.layers[2].visible and commits==3)
+assert(B.op({op='auto',layer=3}) and not E.doc.editor.backgrounds.layers[3].auto and commits==4)
+for _,bad in ipairs({0,7,1.5,'1'}) do B.op({op='visible',layer=bad}) end;B.op({op='depth',layer=3,value='x'});B.op({op='nope'});assert(commits==4)
+-- A Depth drag previews, then its release is one commit; an unknown preset is refused with a message.
+assert(B.op({op='depth',layer=3,value=.4}));assert(commits==4 and E.background_preview and E.doc.editor.backgrounds.layers[3].depth==.55)
+assert(B.op({op='depth',layer=3,value=.42,commit=true}));assert(commits==5 and E.background_preview==nil and E.doc.editor.backgrounds.layers[3].depth==.42)
+assert(not B.op({op='preset',id='moon'}) and commits==5 and B.message~='')
+assert(B.op({op='enabled'}) and E.doc.editor.backgrounds.enabled==false and E.doc.editor.backgrounds.layers[3].depth==.42 and commits==6)
+-- A drag preview that is never released is dropped by a document change (e.g. Undo), so the next choice
+-- starts from the stored source and cannot revert that change.
+assert(B.op({op='depth',layer=4,value=.3}));E.doc.editor.revision=E.doc.editor.revision+1;E.doc.editor.backgrounds.preset='volcano'
+B.tick();assert(B.current==nil and E.background_preview==nil)
+assert(B.op({op='visible',layer=1}) and E.doc.editor.backgrounds.preset=='volcano' and E.doc.editor.backgrounds.layers[4].depth==.35 and commits==7)
+print('PASS #549/#706 Background session and tab operations: preview copy, Apply once, refusal, Undo/Redo, preserved master/Auto choices, Discard and document isolation')

@@ -1,4 +1,4 @@
--- Track textures panel session (#543): a choice commits at once as one Undo step; refused choices show the stored material.
+-- Track texture session (#543): a choice commits at once as one Undo step; a refused choice keeps the stored material and a message.
 local editor=require 'main.editor.editor'
 local doc=require 'main.editor.editor_doc'
 local material=require 'main.terrain_perspective.material'
@@ -80,19 +80,19 @@ function M.commit(m)
     if not ok then local message=M.message;M.discard();M.message=message;return nil,why end
     return true
 end
-local close
--- Messages from the page, bounded by the page's queue. Returns true when the panel asks to refresh.
-function M.handle(message)
-    if type(message)~='table' then return end
-    if message.type=='draft' then M.draft(message.material)
-    elseif message.type=='commit' then M.commit(message.material)
-    elseif message.type=='close' then close()
-    elseif message.type=='background' then
-        if M.background then M.close();M.background.open() end
-    end
+-- #706: the library's Texture tab (main/editor/web/chrome.js) replaced the DOM panel; it commits through M.commit.
+-- A choice from the library's Texture tab: a preset (overrides kept) or one override ('' inherits).
+function M.op(o)
+    if type(o)~='table' or not editor.doc then return end
+    local m=editor.doc.editor.material
+    if type(o.preset)=='string' then
+        m=doc.copy(m or {});m.version=material.MATERIAL_VERSION;m.preset=o.preset
+    elseif m and (o.key=='surface' or o.key=='band' or o.key=='fill') then
+        m=doc.copy(m);m[o.key]=type(o.value)=='string' and o.value~='' and o.value or nil
+    else return end
+    return M.commit(m)
 end
-function M.visible() return html5 and html5.run('!!window.riderTrackPanel?.visible')=='true' end
-local function presets()
+function M.presets()
     local list={}
     local names={meadow='Meadow',quarry='Quarry',volcano='Volcano',city='City street',inca='Inca stone',glacier='Glacier',scrapyard='Scrapyard'}
     for _,id in ipairs(material.PRESETS) do
@@ -101,37 +101,6 @@ local function presets()
     end
     return list
 end
-function M.open()
-    if not html5 then return end
-    local bg=M.background -- supplied by the GUI owner; avoid a circular Defold resource dependency
-    if bg then bg.close() end
-    M.current=nil
-    html5.run(assert(sys.load_resource('/main/game/track_panel.js'),'Missing track panel'))
-    html5.run('window.riderTrackPanel.open('..json.encode(presets())..','..json.encode(editor.doc.editor.material or false)..')')
-end
-function M.close()
-    M.discard()
-    if html5 then html5.run('window.riderTrackPanel&&window.riderTrackPanel.close()') end
-end
-close=M.close
-function M.tick()
-    if not (html5 and M.visible()) then return end
-    -- The editor stays usable: a draft follows edits made while it is open.
-    if M.current and editor.doc and M.revision~=editor.doc.editor.revision then
-        local kept=M.draft(M.current)
-        if not kept then html5.run('window.riderTrackPanel.show('..json.encode(editor.doc.editor.material or false)..','..json.encode(M.message or '')..')') end
-    end
-    local revision=editor.doc and editor.doc.editor.revision
-    local changed=M.seen~=revision;M.seen=revision
-    local text=html5.run('window.riderTrackPanel.take()')
-    if text=='[]' then
-        if changed and not M.current then html5.run('window.riderTrackPanel.show('..json.encode(editor.doc.editor.material or false)..','..json.encode(M.message or '')..')') end
-        return
-    end
-    local ok,list=pcall(json.decode,text)
-    if not ok or type(list)~='table' then return end
-    for _,message in ipairs(list) do M.handle(message);if not M.visible() then break end end
-    if not M.visible() then return end
-    html5.run('window.riderTrackPanel.show('..json.encode(M.current or editor.doc.editor.material or false)..','..json.encode(M.message or '')..')')
-end
+-- A refused choice keeps its message until the next choice; closing only drops a draft.
+function M.close() M.discard() end
 return M

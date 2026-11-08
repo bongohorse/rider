@@ -1,4 +1,4 @@
--- #543: the Track textures session: immediate commit, drag-style draft, locks, bounded input.
+-- #543, #706: the track texture session (Texture tab): immediate commit, drag-style draft, locks, bounded input.
 local J=require 'tests.gameplay.lib.json'
 local function enc(v) if type(v)~='table' then return tostring(v) end;local k={};for x in pairs(v) do k[#k+1]=tostring(x) end;table.sort(k);local o={};for i,x in ipairs(k) do o[i]=x..'='..enc(v[x] or v[tonumber(x)]) end;return '{'..table.concat(o,',')..'}' end
 json={decode=J.decode,encode=enc}
@@ -31,20 +31,28 @@ assert(T.draft({preset='city',band='city'}));assert(E.look_preview.material.band
 T.discard();assert(E.look_preview==nil and T.current==nil and E.doc.editor.material==nil)
 -- Unknown input is refused, the draft unchanged.
 assert(not T.draft({preset='nope'}) and T.message:find('Unknown',1,true) and E.look_preview==nil)
-assert(not T.draft('x'));T.handle('x');T.handle({type='other'})
+assert(not T.draft('x'));T.op('x');T.op(nil);T.op({type='other'});T.op({key='band',value='meadow'})
+assert(commits==0 and E.doc.editor.material==nil,'an override needs a material first')
 assert(not T.apply(),'nothing to apply')
 -- Apply is one commit and clears the preview.
-T.handle({type='commit',material={preset='quarry',fill='volcano'}})
+assert(T.commit({preset='quarry',fill='volcano'}))
 assert(commits==1 and E.doc.editor.material.preset=='quarry' and E.doc.editor.material.fill=='volcano' and E.look_preview==nil)
 assert(E.doc.editor.editor_version==14 and E.undo_doc.editor.material==nil)
+-- #706 Texture tab operations: a preset keeps the overrides; '' inherits; an unknown key is ignored.
+local before=commits
+assert(T.op({preset='city'}));assert(E.doc.editor.material.preset=='city' and E.doc.editor.material.fill=='volcano' and commits==before+1)
+assert(T.op({key='band',value='glacier'}));assert(E.doc.editor.material.band=='glacier' and commits==before+2)
+assert(T.op({key='band',value=''}));assert(E.doc.editor.material.band==nil and E.doc.editor.material.fill=='volcano' and commits==before+3)
+T.op({key='colour',value='city'});T.op({preset=7});assert(commits==before+3)
+assert(T.commit({preset='quarry',fill='volcano'}) and commits==before+4)
 -- A second material keeps the author's look.
-E.doc.editor.road_look.params.width=1.1;T.draft({preset='inca'});T.apply();assert(E.doc.editor.road_look.params.width==1.1 and commits==2)
+E.doc.editor.road_look.params.width=1.1;T.draft({preset='inca'});T.apply();assert(E.doc.editor.road_look.params.width==1.1 and commits==before+5)
 -- Locked terrain refuses.
 E.doc=fresh();E.doc.editor.objects[1].locked=true;T.draft({preset='city'})
-local ok,why=T.apply();assert(not ok and why:find('Locked',1,true) and commits==2 and E.doc.editor.material==nil)
+local ok,why=T.apply();assert(not ok and why:find('Locked',1,true) and commits==before+5 and E.doc.editor.material==nil)
 T.discard();
 -- A refused immediate choice keeps the reason and leaves no preview of the refused material.
-ok=T.commit({preset='city'});assert(not ok and T.message:find('Locked',1,true) and T.current==nil and E.look_preview==nil and commits==2);T.discard();
+ok=T.commit({preset='city'});assert(not ok and T.message:find('Locked',1,true) and T.current==nil and E.look_preview==nil and commits==before+5);T.discard();
 assert(plain.editor.material==nil)
 -- A level that only fits at the smaller stride is refused, with no draft.
 local big=fresh();local line={};for i=0,1300 do line[#line+1]={i*.6,0} end;big.editor.objects[1].points=line;E.doc=big
