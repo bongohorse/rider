@@ -2984,7 +2984,7 @@ local function publish(self)
             local s=self.ui.scale or 1
             for name,r in pairs(cr) do
                 buttons[name]={x=r.x,y=r.y};visible[#visible+1]=name
-                rects[name]={x=r.left/s,y=r.top/s,w=r.w/s,h=r.h/s};labels[name]=labels[name] or r.label
+                rects[name]={x=r.left/s,y=r.top/s,w=r.w/s,h=r.h/s};labels[name]=(self.ui.inspector_labels or {})[name] or r.label
             end
             -- The test-speed (or START speed) steppers keep their plus/minus aliases, as on the Defold panel.
             local inc,dec=cr.inc_test_speed and 'inc_test_speed' or editor.selection=="start" and cr.inc_speed and 'inc_speed',cr.dec_test_speed and 'dec_test_speed' or editor.selection=="start" and cr.dec_speed and 'dec_speed'

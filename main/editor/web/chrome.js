@@ -233,7 +233,7 @@ function library(s) {
   lastSel = sel; lastList = list;
 }
 
-let inspKey = '', lastFocus = null;
+let inspKey = '', lastFocus = null, inspHead = '';
 function inspector(s) {
   const dock = q('#rider-chrome-insp'), I = s && s.insp;
   dock.hidden = !I;
@@ -249,7 +249,6 @@ function inspector(s) {
   }
   const aliases = {};
   for (const it of items) if (it.k === 'alias') aliases[it.target] = it.name;
-  // Rows: items recorded at the same y form one line (label + field + unit + steppers).
   // Rows: items recorded at the same y form one line (field + steppers); a short muted text just below a
   // field is its unit and joins that line.
   const rows = [], byY = new Map();
@@ -268,7 +267,7 @@ function inspector(s) {
   const btn = it => {
     const step = /^(dec|inc)_/.test(it.name);
     const cls = ['b', step && 'step', it.field && 'field', it.focused && 'focus', it.active && 'on', it.danger && 'del'].filter(Boolean).join(' ');
-    const label = step ? (it.name.startsWith('dec_') ? '−' : '+') : (it.label || it.name);
+    const label = step ? (it.name.startsWith('dec_') ? '−' : '+') : (it.label || (it.field ? '' : it.name));
     const alias = aliases[it.name] ? ` data-alias="${UI.esc(aliases[it.name])}"` : '';
     return `<button type="button" class="${cls}" data-cmd="${UI.esc(it.name)}"${alias} title="${UI.esc(it.tip || label)}"${it.disabled ? ' disabled' : ''}>${UI.esc(label)}</button>`;
   };
@@ -278,7 +277,10 @@ function inspector(s) {
   const old = q('#rider-chrome-insp .insp-body'), top = old ? old.scrollTop : 0;
   dock.innerHTML = '<div class="ph" style="--c:var(--accent)"><span class="ic">' + UI.icon('cursor') + '</span><h3>Properties</h3>'
     + UI.button({icon: 'chevr', title: 'Collapse Properties', d: {cmd: 'collapse_properties'}}) + `</div><div class="insp-body">${body}</div>`;
-  const nb = q('#rider-chrome-insp .insp-body'); if (nb) nb.scrollTop = top;
+  // A new selection or tool starts at the top, like the Defold panel; otherwise keep the scroll position.
+  const head = (items.find(it => it.k === 't') || {}).t || '';
+  const nb = q('#rider-chrome-insp .insp-body'); if (nb) nb.scrollTop = head === inspHead ? top : 0;
+  inspHead = head;
   const focus = (items.find(it => it.focused) || {}).name || null;
   if (focus && focus !== lastFocus) q(`#rider-chrome-insp [data-cmd="${CSS.escape(focus)}"]`)?.scrollIntoView({block: 'nearest'});
   lastFocus = focus;

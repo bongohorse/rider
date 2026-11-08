@@ -129,7 +129,7 @@ function M.usable(u)
     if u.chrome then
         -- #685: the HTML library dock (392 or 84 CSS px wide, zoomed like the chrome) covers the left edge.
         local css=s/(u.density or 1);local zoom=css>=0.5 and math.max(css,0.75) or css
-        return {x0=(u.tools and 84 or 392)*zoom/css*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
+        return {x0=(u.tools and 84 or 392)*zoom/css*s,x1=w*s-(u.properties and 72 or 312)*zoom/css*s,y0=80*s,y1=(h-104)*s}
     end
     return {x0=(u.tools and 72 or 216)*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
 end
@@ -209,6 +209,7 @@ function M.scrollbar_input(u,id,action)
     return false
 end
 function M.render(u,d)
+    u.rec=nil -- never left over from an interrupted render
     local w,h=M.size(u);u.k=d.k;u.chrome=d.chrome;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
     u.scrollbars={};u.error_banner,u.error_text=nil,nil
     u.scroll_key=d.selection..':'..d.tool
@@ -238,7 +239,7 @@ function M.render(u,d)
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         u.labels[name]=label
         if u.rec then
-            u.tips[name]=tip or label
+            u.tips[name]=tip or label;u.rec_labels[name]=label
             u.rec[#u.rec+1]={k='b',y=y,x=x,w=bw,name=name,label=label,active=active and true or false,tip=tip or label,disabled=disabled and true or false,
                 field=field or false,focused=d.field and d.field.key==name or false,danger=(name=='delete' or label:match('^Sure%?')) and true or false,icon=icon and icon_name or false}
             return nil
@@ -435,7 +436,7 @@ function M.render(u,d)
         if d.chrome then
             -- #686: the HTML inspector dock shows these rows (recorded below); collapse is a chrome button.
             u.properties_rect,u.inspector=nil,nil
-            if not u.properties then u.rec={} end
+            if not u.properties then u.rec,u.rec_labels={},{} end
         else
         property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
         u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}
@@ -550,7 +551,7 @@ function M.render(u,d)
                     y=y+44
                 elseif v.name~='mirror_right' then row(v.name,v.label,nil,nil,nil,v.tip) end
             end
-            if u.rec then u.inspector,u.rec=u.rec,nil;u.max_scroll=0 else
+            if u.rec then u.inspector,u.inspector_labels,u.rec=u.rec,u.rec_labels,nil;u.max_scroll=0 else
             local content_end=y+u.scroll+8
             local panel_end=math.min(clip[2]+16,math.max(160,content_end+16))
             u.properties_rect.h=panel_end-104

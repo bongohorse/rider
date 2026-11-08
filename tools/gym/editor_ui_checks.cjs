@@ -98,10 +98,10 @@ module.exports=async function uiChecks(h){
  for(let i=0;i<12&&!(await ed()).visible.includes('kind_flat');i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
  e=await settle();assert.ok(e.visible.includes('kind_flat'),'library top reachable');
  await button('rename');assert.notEqual((await ed()).field,false);
- // #686: wheel scrolling the inspector keeps the focused field open and uncommitted (no press reaches the editor).
- const nameBefore=(await doc()).name??(await ed()).name;
+ // #686: wheel scrolling the inspector keeps the focused field open with its typed text, uncommitted (no press reaches the editor).
+ const nameBefore=(await ed()).name;await page.keyboard.type('Q',{delay:40});const typed=(await ed()).field;assert.ok(String(typed).endsWith('Q'),String(typed));
  for(let i=0;i<12&&(await inspScroll()).top<(await inspScroll()).overflow;i++)await panelWheel(120);
- e=await settle();assert.notEqual(e.field,false,'inspector scrolling keeps the focused field');assert.ok((await inspScroll()).top>0);assert.ok(e.visible.includes('inc_test_speed'));
+ e=await settle();assert.equal(e.field,typed,'inspector scrolling keeps the focused field and its text');assert.equal(e.name,nameBefore,'nothing committed while scrolling');assert.ok((await inspScroll()).top>0);assert.ok(e.visible.includes('inc_test_speed'));
  await key('Escape');e=await settle();assert.equal(e.field,false);assert.equal(e.name,nameBefore,'scrolling committed nothing');
  for(let i=0;i<12&&(await inspScroll()).top>0;i++)await panelWheel(-120);
  assert.equal((await inspScroll()).top,0);
@@ -213,10 +213,10 @@ module.exports=async function uiChecks(h){
  seven.editor.connections=[{from:'o1',to:'o2'}];seven.editor.next_id=3;
  await importText(JSON.stringify(seven),'ea1-seven.json');await key('Home');await at([11,.25]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');e=await settle();
  const beforeScroll=await snapshot(),zoom=e.camera.zoom;
- const p7AtTop=e.visible.includes('param_7');
+ // Wheel over the inspector both ways: it scrolls the dock only, never the camera or the document.
+ for(const d of [120,120,-120,-120])await panelWheel(d);e=await ed();assert.equal(e.camera.zoom,zoom,'inspector wheel zoomed the camera');
  for(let i=0;i<12&&!e.visible.includes('param_7');i++){await panelWheel(120);e=await ed();}
- // #686: the HTML rows are more compact; scrolling is required only when param_7 starts below the fold.
- assert.ok(e.visible.includes('param_7'),'seventh parameter unreachable');{const sc=await inspScroll();assert.ok(sc.top>0||p7AtTop,JSON.stringify(sc));}assert.equal(e.camera.zoom,zoom);await unchanged(beforeScroll,'inspector scrolling');
+ assert.ok(e.visible.includes('param_7'),'seventh parameter unreachable');assert.equal(e.camera.zoom,zoom);await unchanged(beforeScroll,'inspector scrolling');
  await button('param_7');assert.equal((await ed()).field_param,'landing_angle');await key('Escape');
  await key('h');e=await settle();assert.equal(e.help_open,true);const mode=e.mode,tool=e.tool;
  await key('e');await key('s');await key('z',['Control']);e=await ed();assert.equal(e.mode,mode);assert.equal(e.tool,tool);assert.equal(e.revision,beforeScroll.revision);
