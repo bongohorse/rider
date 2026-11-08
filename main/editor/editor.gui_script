@@ -152,6 +152,7 @@ function init(self)
     self.buttons,self.held={},{}
     self.ghost,self.last_ghost=silhouette(self),silhouette(self)
     self.ui=editor_ui.init()
+    require('main.editor.editor_ui_kit').ensure()
     self.templates={}
     for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
     local case=sys.get_config_string("rider.gym_test","")

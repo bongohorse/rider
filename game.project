@@ -1,7 +1,7 @@
 [project]
 title = RiderG1
 version = 0.1.0
-custom_resources = /main/game/budget.json,/main/game/stations,/main/game/presets,/main/game/feedback.js,/main/game/custom.js,/main/game/mobile.js,/main/game/tilt.js,/main/game/level_menu.js,/main/game/track_panel.js,/main/game/background_panel.js,/main/game/decoration_panel.js,/main/decorations/meadow/thumbs,/main/terrain_material/presets/meadow/thumb.png,/main/terrain_material/presets/quarry/thumb.png,/main/terrain_material/presets/volcano/thumb.png,/main/terrain_material/presets/city/thumb.png,/main/terrain_material/presets/inca/thumb.png,/main/terrain_material/presets/glacier/thumb.png,/main/terrain_material/presets/scrapyard/thumb.png,/main/backgrounds/fixtures,/main/background_presets
+custom_resources = /main/game/budget.json,/main/game/stations,/main/game/presets,/main/game/feedback.js,/main/game/custom.js,/main/game/mobile.js,/main/game/tilt.js,/main/game/level_menu.js,/main/game/track_panel.js,/main/game/background_panel.js,/main/game/decoration_panel.js,/main/editor/web/ui_kit.js,/main/editor/web/ui_fonts.js,/main/decorations/meadow/thumbs,/main/terrain_material/presets/meadow/thumb.png,/main/terrain_material/presets/quarry/thumb.png,/main/terrain_material/presets/volcano/thumb.png,/main/terrain_material/presets/city/thumb.png,/main/terrain_material/presets/inca/thumb.png,/main/terrain_material/presets/glacier/thumb.png,/main/terrain_material/presets/scrapyard/thumb.png,/main/backgrounds/fixtures,/main/background_presets
 dependencies#0 = https://github.com/defold/extension-automation-bridge/archive/567c7efb2f72626af71967984bd33dde856f0d36.zip
 
 [bootstrap]
