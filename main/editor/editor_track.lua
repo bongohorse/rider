@@ -81,10 +81,9 @@ function M.commit(m)
     return true
 end
 -- #706: the library's Texture tab (main/editor/web/chrome.js) replaced the DOM panel; it commits through M.commit.
-function M.visible() return false end
 -- A choice from the library's Texture tab: a preset (overrides kept) or one override ('' inherits).
 function M.op(o)
-    if not editor.doc then return end
+    if type(o)~='table' or not editor.doc then return end
     local m=editor.doc.editor.material
     if type(o.preset)=='string' then
         m=doc.copy(m or {});m.version=material.MATERIAL_VERSION;m.preset=o.preset
@@ -104,8 +103,4 @@ function M.presets()
 end
 -- A refused choice keeps its message until the next choice; closing only drops a draft.
 function M.close() M.discard() end
--- The draft follows edits made meanwhile (a commit normally leaves none).
-function M.tick()
-    if M.current and editor.doc and M.revision~=editor.doc.editor.revision then M.draft(M.current) end
-end
 return M

@@ -26,7 +26,6 @@ local function close_decoration_tool()
     if editor.tool=='decoration' then editor.tool='select';editor.touch() end
 end
 decoration_tool.on_close=close_decoration_tool
-track_panel.background=background_panel
 local stations=require "main.game.stations"
 local custom=require "main.game.custom"
 local socket=require "socket"
@@ -2222,9 +2221,9 @@ function on_input(self,action_id,action)
             -- The click that returns focus to the canvas never edits the level.
             if self.refocus then
                 self.refocus=false
-                -- Returning from the open Track textures panel or the library's Decor search is ordinary work, not a window switch.
+                -- Returning from an open DOM panel or a library control that took the keyboard is ordinary work, not a window switch.
                 local searched=chrome.took_focus()
-                if not (searched or track_panel.visible() or background_panel.visible() or decoration_tool.visible()) and (not self.refocus_until or socket.gettime()<self.refocus_until) then return true end
+                if not (searched or background_panel.visible() or decoration_tool.visible()) and (not self.refocus_until or socket.gettime()<self.refocus_until) then return true end
             end
             local name=hit(self,action)
             if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" or name=="chrome_panel" then return true
@@ -2737,7 +2736,7 @@ end
 local function render_ui(self)
     -- Dialogs take over from the panels, which would hide them.
     if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
-    terrain_look.tick();track_panel.tick();background_panel.tick();decoration_tool.tick()
+    terrain_look.tick();background_panel.tick();decoration_tool.tick()
     background_panel.suspend(editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or editor.conflict))
     decoration_tool.suspend(editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or editor.conflict))
     local vh=select(2,window.get_size())/(self.ui.scale or 1)
@@ -3049,7 +3048,7 @@ function update(self,dt)
     editor.sync()
     -- Dialogs take over from the panels, which would hide them.
     if terrain_look.session and terrain_look.session.open and editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or self.version_dialog or editor.conflict) then terrain_look.close() end
-    terrain_look.tick();track_panel.tick();background_panel.tick();decoration_tool.tick()
+    terrain_look.tick();background_panel.tick();decoration_tool.tick()
     background_panel.suspend(editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or editor.conflict))
     decoration_tool.suspend(editor.mode=='edit' and (self.help_open or self.open_dialog or self.warnings_open or editor.conflict))
     local look_open=editor.mode=='play' and terrain_look.session and terrain_look.session.open or false

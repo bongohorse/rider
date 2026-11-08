@@ -51,18 +51,13 @@ function M.commit(b)
 end
 -- #706: a choice from the library's Background tab (main/editor/web/chrome.js), on the stored or previewed
 -- source: preset, enabled, layer visible/auto toggles, and Depth (a drag previews until its commit).
-local AUTO={.9,.75,.55,.35,.15,-.1}
 function M.op(o)
-    if not editor.doc then return end
+    if type(o)~='table' or not editor.doc then return end
     local base=M.current or editor.doc.editor.backgrounds
     local b=base and doc.copy(base)
     local layer=b and type(o.layer)=='number' and b.layers[o.layer]
     if o.op=='preset' and type(o.id)=='string' then
-        if not b then
-            b={version=1,preset=o.id,enabled=true,layers={}}
-            for i,d in ipairs(AUTO) do b.layers[i]={visible=true,auto=true,depth=d} end
-        end
-        b.preset=o.id
+        b=b or source.defaults(o.id);b.preset=o.id
     elseif not b then return
     elseif o.op=='enabled' then b.enabled=not b.enabled
     elseif (o.op=='visible' or o.op=='auto') and layer then layer[o.op]=not layer[o.op]
@@ -119,6 +114,9 @@ function show()
     html5.run('window.riderBackgroundPanel.show('..json.encode(b or false)..','..json.encode(M.message~='' and M.message or warning or '')..')')
 end
 function M.tick()
+    -- #706: a Background tab drag preview that was never released must not outlive a document change (Undo,
+    -- another edit): it is dropped, so the next choice starts from the stored source.
+    if M.current and editor.doc and M.revision~=editor.doc.editor.revision and not (html5 and M.visible()) then M.discard() end
     if not (html5 and M.visible()) then return end
     if editor.mode~='edit' or M.instance~=editor.opened then M.close();return end
     if M.suspended then return end

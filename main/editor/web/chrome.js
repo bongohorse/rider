@@ -16,7 +16,7 @@ const FAVS = 'rider.editor.decorFavourites';
 let favs = new Set(), tookFocus = false;
 // #706 Background and Texture tabs: presets from Lua (looks(), sent once); the stored or previewed source
 // comes with each state (lib.look). Choices build the same draft/commit messages the old panels sent.
-let looks = {bg: [], tex: []}, lastShow = null, sliding = false;
+let looks = {bg: [], tex: []}, lastShow = null, sliding = null;
 const AUTO = [.9, .75, .55, .35, .15, -.1], OVERRIDES = [['surface', 'Surface'], ['band', 'Band'], ['fill', 'Fill']];
 
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
@@ -140,9 +140,11 @@ function mount() {
   root.addEventListener('focusout', e => { if (e.target.matches('.kf:not(.lib-find)') && e.target.isConnected && !sliding) setTimeout(() => { libKey = ''; library(state); }); });
   root.addEventListener('input', e => { if (e.target.matches('.lib-range')) depth(e.target, false); });
   root.addEventListener('change', e => { if (e.target.matches('.lib-range')) depth(e.target, true); else if (e.target.matches('.lib-select')) override(e.target); });
-  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range')) sliding = true; }, true);
-  addEventListener('pointerup', () => { if (sliding) { sliding = false; libKey = ''; setTimeout(() => library(state)); } }, true);
-  root.addEventListener('pointercancel', e => { if (e.target.matches?.('.lib-range')) { sliding = false; depth(e.target, true); } }, true);
+  // A drag always ends with a commit, also when it returns to its start value (no change event); Lua
+  // stores nothing for an unchanged value, so it adds no Undo step.
+  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range') && !e.target.disabled) sliding = e.target; }, true);
+  const release = () => { const s = sliding; if (!s) return; sliding = null; depth(s, true); libKey = ''; setTimeout(() => library(state)); };
+  addEventListener('pointerup', release, true); addEventListener('pointercancel', release, true);
   root.addEventListener('input', e => { if (e.target.matches('.lib-find')) { find = e.target.value; decorGrid(); } });
   root.addEventListener('keydown', e => { if (e.target.matches('.kf:not(.lib-find)') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); document.querySelector('canvas')?.focus(); return; }
     if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
@@ -156,7 +158,7 @@ function mount() {
     e.preventDefault();
     if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
-    if (b.dataset.tab) { tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
+    if (b.dataset.tab) { document.querySelector('canvas')?.focus(); tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
     if (b.dataset.dcat || b.dataset.dworld) { if (b.dataset.dcat) cat = b.dataset.dcat; else world = b.dataset.dworld; libKey = ''; library(state); return; }
     if (b.dataset.look) { look(b.dataset); document.querySelector('canvas')?.focus(); return; }
     if (b.dataset.fav) { const id = b.dataset.fav; if (favs.has(id)) favs.delete(id); else favs.add(id); try { localStorage.setItem(FAVS, JSON.stringify([...favs])); } catch (e) { /* favourites stay for this session */ } decorGrid(); return; }
