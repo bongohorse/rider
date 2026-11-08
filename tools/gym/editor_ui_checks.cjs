@@ -50,6 +50,14 @@ module.exports=async function uiChecks(h){
   if((await ed()).mode==='play'){await key('e');await edit();}
  }
  await page.setViewportSize({width:1280,height:720});await key('s');await key('Home');
+ // #684: dialogs hide the chrome (no chrome button is published or pressable), and a chrome press while a
+ // field is focused only confirms the field, like a Defold button press.
+ await button('view_help');await page.waitForFunction(()=>window.riderEditor.help_open);await pointer.frames(page);
+ e=await ed();assert.ok(!e.visible.includes('undo')&&!e.buttons.undo&&!e.visible.includes('tool_select'),'chrome hidden under Help');
+ await button('help_close');await page.waitForFunction(()=>!window.riderEditor.help_open&&window.riderEditor.visible.includes('undo'));
+ await button('rename');assert.notEqual((await ed()).field,false);const chromeUndo=(await ed()).undo,chromeTool=(await ed()).tool;
+ await button('tool_draw');e=await ed();assert.equal(e.field,false,'chrome press confirms the focused field');
+ assert.equal(e.tool,chromeTool,'chrome press with a focused field does not run its command');assert.equal(e.undo,chromeUndo);
  cases.push('coin_editor_categories_independent_and_top_bar_commands');checkpoint('coin_editor_categories_independent_and_top_bar_commands');
 
  const bad=structuredClone(base);bad.id='ea1-error';bad.name='Invalid line';

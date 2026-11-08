@@ -30,12 +30,15 @@ function mount() {
  #rider-chrome .chrome-sys{gap:4px}}
 `;
   document.head.append(style); document.body.append(root);
+  const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
+  document.addEventListener('pointerdown', e => { if (!root.contains(e.target)) closeMenu(); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
   // Like the Defold editor buttons, a chrome button acts on press. preventDefault keeps keyboard focus on
   // the canvas (the editor treats canvas blur as focus loss).
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b) return;
     e.preventDefault();
-    if (e.button !== 0 || b.disabled) return;
+    if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
     if (!b.dataset.cmd) return;
     if (menuOpen) { menuOpen = false; render(state); }
@@ -95,7 +98,7 @@ function fit() {
 function render(s) {
   if (!root) { mount(); build(); fit(); addEventListener('resize', fit); }
   state = s;
-  if (!s.visible) menuOpen = false;
+  if (!s.visible) { menuOpen = false; queue.length = 0; }
   root.hidden = !s.visible;
   const key = JSON.stringify(s) + menuOpen;
   if (key === last || !s.visible) return;
