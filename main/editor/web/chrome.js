@@ -90,6 +90,18 @@ function mount() {
 #rider-chrome .insp-row .b.field.focus{border-color:var(--accent);box-shadow:0 0 0 2px #ffd23f55}
 #rider-chrome .insp-row .b.field.bad{border-color:var(--danger)}
 #rider-chrome .insp-row .unit{font:800 11px var(--body);color:var(--muted);flex:none}
+#rider-chrome .insp-host>section{position:static!important;inset:auto!important;width:auto!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;font:700 13px/1.35 var(--body)!important;color:var(--text)!important;z-index:auto!important}
+#rider-chrome .insp-host h2{display:none}
+#rider-chrome .insp-host button{background:var(--btn)!important;color:var(--text)!important;border:var(--ol) solid var(--ink)!important;border-radius:10px!important;box-shadow:0 3px 0 var(--ink)!important;font:800 12px var(--body)!important;padding:6px 10px!important;margin:0 4px 6px 0;cursor:pointer;outline:none!important}
+#rider-chrome .insp-host button[aria-pressed=true]{background:var(--c)!important;color:var(--ink)!important}
+#rider-chrome .insp-host button:disabled{opacity:.45;cursor:default}
+#rider-chrome .insp-host input[type=number],#rider-chrome .insp-host select{background:var(--field)!important;color:var(--text)!important;border:var(--ol) solid var(--ink)!important;border-radius:8px!important;height:30px;padding:0 6px;font:800 12.5px var(--body)}
+#rider-chrome .insp-host input[type=range],#rider-chrome .insp-host input[type=checkbox]{accent-color:var(--c)}
+#rider-chrome .insp-host input[type=checkbox]{width:16px;height:16px}
+#rider-chrome .insp-host fieldset,#rider-chrome .insp-host details{border-color:var(--line)!important;border-radius:10px}
+#rider-chrome .insp-host summary,#rider-chrome .insp-host legend{font:800 13px var(--disp);color:var(--text)}
+#rider-chrome .insp-host output{font-variant-numeric:tabular-nums}
+#rider-chrome .insp-host div[style*="sticky"]{position:static!important;background:none!important;padding:4px 0 0!important}
 #rider-chrome .lib-counts{display:flex;gap:6px}
 #rider-chrome .lib-counts span{display:flex;align-items:center;gap:4px;height:28px;padding:0 9px 0 6px;border-radius:10px;background:var(--field);font:900 12px var(--body)}
 #rider-chrome .lib-counts svg{width:16px;height:16px}
@@ -130,11 +142,11 @@ function mount() {
   // Keyboard focus never leaves the canvas: editor shortcuts (Ctrl+Z, E, Delete …) are read there. The Defold
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.
-  root.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+  root.addEventListener('mousedown', e => { if (e.target.closest('button') && !e.target.closest('.insp-host')) e.preventDefault(); });
   // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
   // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
   // #706: the Background Depth sliders and Texture override lists (.kf) follow the same rule as the search.
-  root.addEventListener('focusin', e => { if (e.target.matches('.kf')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
+  root.addEventListener('focusin', e => { if (e.target.matches('.kf') || e.target.closest('.insp-host')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
   // A slider or list keeps its element while focused or dragged; the tab catches up when it lets go.
   // (Only a slider or list that is still in the page: a rebuild's own removal must not start another rebuild.)
   root.addEventListener('focusout', e => { if (e.target.matches('.kf:not(.lib-find)') && e.target.isConnected && !sliding) setTimeout(() => { libKey = ''; library(state); }); });
@@ -149,12 +161,12 @@ function mount() {
   root.addEventListener('keydown', e => { if (e.target.matches('.kf:not(.lib-find)') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); document.querySelector('canvas')?.focus(); return; }
     if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
   const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
-  document.addEventListener('pointerdown', e => { if (!root.contains(e.target)) closeMenu(); }, true);
+  document.addEventListener('pointerdown', e => { if (!root.contains(e.target) || e.target.closest('.insp-host')) closeMenu(); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
   // Like the Defold editor buttons, a chrome button acts on press. preventDefault keeps keyboard focus on
   // the canvas (the editor treats canvas blur as focus loss).
   root.addEventListener('pointerdown', e => {
-    const b = e.target.closest('button'); if (!b) return;
+    const b = e.target.closest('button'); if (!b || b.closest('.insp-host')) return;
     e.preventDefault();
     if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
@@ -194,7 +206,8 @@ function build() {
 }
 const q = sel => root.querySelector(sel);
 const noop = () => {};
-function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) e.focus = noop; }
+// Hosted panels (.insp-host) keep their own focus behaviour: their fields and sliders take the keyboard.
+function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.closest('.insp-host,#rider-chrome-park')) e.focus = noop; }
 function setOn(b, on) { b.classList.toggle('on', on); if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed'); }
 function update(s) {
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
@@ -365,17 +378,34 @@ function setPalette(p) {
 }
 
 let inspKey = '', lastFocus = null, inspHead = '';
+// #686: DOM panels hosted in the inspector dock (their controls, Undo and storage stay as they are).
+const HOSTS = {decor: ['#rider-decoration-panel', 'Decor', 'tree', 'var(--k-decor)'], layers: ['#rider-background-panel', 'Background layers', 'layers', 'var(--k-bg)']};
+// Before the dock is rewritten, hosted panels move to a hidden holder so they are never destroyed.
+function park() {
+  let holder = q('#rider-chrome-park');
+  if (!holder) { holder = document.createElement('div'); holder.id = 'rider-chrome-park'; holder.hidden = true; root.append(holder); }
+  for (const [sel] of Object.values(HOSTS)) { const p = document.querySelector('#rider-chrome-insp ' + sel); if (p) holder.append(p); }
+}
 function inspector(s) {
   const dock = q('#rider-chrome-insp'), I = s && s.insp;
   dock.hidden = !I;
   if (!I) return;
   const items = Array.isArray(I.items) ? I.items : [];
-  const key = JSON.stringify(I);
+  const host = HOSTS[I.host] && document.querySelector(HOSTS[I.host][0]);
+  const key = JSON.stringify([I.collapsed, I.host ? I.host + !!host : I.items]);
   if (key === inspKey) return;
   inspKey = key;
+  park();
   dock.classList.toggle('closed', !!I.collapsed);
   if (I.collapsed) {
     dock.innerHTML = '<div class="rail">' + UI.button({icon: 'chevl', title: 'Open Properties', variant: 'plain', d: {cmd: 'collapse_properties'}}) + '</div>';
+    unfocusable(); return;
+  }
+  if (host) {
+    const [, title, icon, color] = HOSTS[I.host];
+    dock.innerHTML = `<div class="ph" style="--c:${color}"><span class="ic">${UI.icon(icon)}</span><h3>${UI.esc(title)}</h3>`
+      + UI.button({icon: 'chevr', title: 'Collapse Properties', d: {cmd: 'collapse_properties'}}) + `</div><div class="insp-body insp-host" style="--c:${color}"></div>`;
+    q('#rider-chrome-insp .insp-host').append(host);
     unfocusable(); return;
   }
   const aliases = {};

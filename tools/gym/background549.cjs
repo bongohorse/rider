@@ -134,9 +134,20 @@ async function main(){
   // Library tabs switch freely: nothing is pending; the footer Texture button shows the Texture tab.
   await tap('track_textures');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-tex]').length===7&&!window.riderBackgroundPanel.visible);
   await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
+  // #686: the hosted panel survives collapse/expand, and the Decor tool and the layer settings take turns in the dock.
+  const hosted=sel=>page.evaluate(sel=>!!document.querySelector('#rider-chrome-insp .insp-host '+sel),sel);
+  await tap('collapse_properties');await page.waitForFunction(()=>document.querySelector('#rider-chrome-insp').classList.contains('closed')&&window.riderBackgroundPanel.visible);
+  assert.equal(await page.evaluate(()=>document.querySelectorAll('#rider-background-panel').length),1,'parked, not destroyed');
+  await tap('collapse_properties');await page.waitForFunction(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
+  await tap('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible&&!window.riderBackgroundPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-decoration-panel'));
+  await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
+  await page.waitForFunction(()=>window.riderEditor.tool==='select'&&!window.riderDecorationPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
+  assert.equal(await hosted('#rider-decoration-panel'),false);
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    await page.setViewportSize(viewport);await pointer.frames(page,{n:15});
-   const box=await page.locator('#rider-background-panel').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+   // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
+   const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+   assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
    await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
    await page.screenshot({path:path.join(out,`layout-${viewport.width}x${viewport.height}.png`)});
   }

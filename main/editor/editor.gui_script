@@ -3086,7 +3086,9 @@ function update(self,dt)
             -- Like the Defold buttons, the chrome yields to dialogs, the Problems list and the Import/Export panel.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,insp=cs.insp})
+                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,
+                -- #686: an open Decor or Background layers panel is shown inside the inspector dock.
+                insp=cs.insp and {collapsed=cs.insp.collapsed,items=cs.insp.items,host=decoration_tool.visible() and 'decor' or background_panel.visible() and 'layers' or false} or nil})
             for _,name in ipairs(chrome.take()) do
                 -- Same gates as a Defold button press: nothing runs behind a dialog, and a press while a
                 -- field is focused only confirms (or keeps) the field.
@@ -3107,7 +3109,10 @@ function update(self,dt)
                     if ok and type(value)=="table" then
                         if name:sub(1,3)=="tex" then track_panel.op(value) else background_panel.op(value) end
                     end
-                elseif name=="bg_layers" then background_panel.open()
+                elseif name=="bg_layers" then
+                    -- One hosted panel at a time: the layer settings leave the Decor tool first.
+                    if editor.tool=="decoration" then set_tool(self,"select") end
+                    background_panel.open()
                 else on_button(self,name) end
             end
         end
