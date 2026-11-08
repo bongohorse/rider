@@ -2913,6 +2913,8 @@ local function render_ui(self)
     end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
+    -- #686: the HTML inspector shows the recorded Properties rows (nil while collapsed).
+    if d.chrome then self.chrome_state.insp={collapsed=self.ui.properties and true or false,items=self.ui.inspector or {}} end
     if self.buttons.inc_test_speed then self.buttons.plus=self.buttons.inc_test_speed;self.buttons.minus=self.buttons.dec_test_speed
         self.ui.visible[#self.ui.visible+1]="plus";self.ui.visible[#self.ui.visible+1]="minus"
     elseif self.buttons.inc_speed and editor.selection=="start" then
@@ -2982,7 +2984,12 @@ local function publish(self)
             local s=self.ui.scale or 1
             for name,r in pairs(cr) do
                 buttons[name]={x=r.x,y=r.y};visible[#visible+1]=name
-                rects[name]={x=r.left/s,y=r.top/s,w=r.w/s,h=r.h/s};labels[name]=r.label
+                rects[name]={x=r.left/s,y=r.top/s,w=r.w/s,h=r.h/s};labels[name]=labels[name] or r.label
+            end
+            -- The test-speed (or START speed) steppers keep their plus/minus aliases, as on the Defold panel.
+            local inc,dec=cr.inc_test_speed and 'inc_test_speed' or editor.selection=="start" and cr.inc_speed and 'inc_speed',cr.dec_test_speed and 'dec_test_speed' or editor.selection=="start" and cr.dec_speed and 'dec_speed'
+            for alias,target in pairs({plus=inc,minus=dec}) do
+                if target and not buttons[alias] then buttons[alias]=buttons[target];rects[alias]=rects[target];labels[alias]=labels[target];visible[#visible+1]=alias end
             end
         end
     end
@@ -3076,12 +3083,17 @@ function update(self,dt)
             -- Like the Defold buttons, the chrome yields to dialogs, the Problems list and the Import/Export panel.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib})
+                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,insp=cs.insp})
             for _,name in ipairs(chrome.take()) do
                 -- Same gates as a Defold button press: nothing runs behind a dialog, and a press while a
                 -- field is focused only confirms (or keeps) the field.
                 if modal or editor.mode~="edit" then break
-                elseif self.field then confirm_name(self,true)
+                elseif self.field then
+                    -- Same rule as a Defold press with a focused field: steppers step that field (or confirm and
+                    -- then act), any other press only confirms the field.
+                    if name:match("^[di][en]c_") or name=="plus" or name=="minus" or name=="zoom_in" or name=="zoom_out" or name=="drop_to_track" or name:match("^auto_") then
+                        if not step_focused(self,name) then confirm_name(self);if not self.field then on_button(self,name) end end
+                    else confirm_name(self,true) end
                 else on_button(self,name=='lib_decor' and 'tool_decoration' or (name=='lib_bg' or name=='lib_tex') and 'track_textures' or name) end
             end
         end

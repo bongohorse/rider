@@ -19,8 +19,17 @@ async function revealLibrary(page,name){
  await page.evaluate(n=>document.querySelector(`#rider-chrome [data-cmd="${n}"]`)?.scrollIntoView({block:'nearest'}),name);
  await pointer.frames(page,{n:4});
 }
+// #686: an inspector control is reached by opening the inspector and scrolling the control into its body.
+async function revealInspector(page,name){
+ let e=await page.evaluate(()=>window.riderEditor);
+ if(e?.open_dialog||e?.help_open||e?.warnings_open||e.visible.includes(name))return;
+ if(e.ui.properties_collapsed){await libraryTap(page,'collapse_properties');await pointer.frames(page,{n:4});}
+ await page.evaluate(n=>document.querySelector(`#rider-chrome-insp [data-cmd="${n}"],#rider-chrome-insp [data-alias="${n}"]`)?.scrollIntoView({block:'nearest'}),name);
+ await pointer.frames(page,{n:4});
+}
 async function reveal(page,name){
  if((await page.evaluate(()=>window.riderEditor?.buttons?.lib_play))&&/^(object_(?!name$)|kind_|tool_)/.test(name))return revealLibrary(page,name);
+ if(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp')&&!document.querySelector('#rider-chrome-insp').hidden))return revealInspector(page,name);
  if(/^(object_(?!name$)|collapse_objects|kind_|collapse_prefabs|collapse_gameplay|collapse_tool_category|tool_)/.test(name)){
   let e=await page.evaluate(()=>window.riderEditor);
   if(e?.visible.includes(name)||e?.open_dialog||e?.help_open||e?.warnings_open)return;

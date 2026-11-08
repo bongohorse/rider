@@ -41,7 +41,8 @@ function mount() {
   root = document.createElement('div');
   root.id = 'rider-chrome'; root.className = 'rider-ui';
   root.innerHTML = '<div class="float chrome-chip" id="rider-chrome-chip"></div><div class="float chrome-tools" id="rider-chrome-tools"></div><div class="float chrome-sys" id="rider-chrome-sys"></div>'
-    + '<aside class="dock chrome-dock" id="rider-chrome-dock" hidden><div class="rail" id="rider-lib-rail"></div><div class="pane" id="rider-lib-pane"></div></aside>';
+    + '<aside class="dock chrome-dock" id="rider-chrome-dock" hidden><div class="rail" id="rider-lib-rail"></div><div class="pane" id="rider-lib-pane"></div></aside>'
+    + '<aside class="dock chrome-insp" id="rider-chrome-insp" hidden></aside>';
   const style = document.createElement('style'); style.id = 'rider-chrome-style';
   style.textContent = `#rider-chrome .float{position:fixed;z-index:400}
 #rider-chrome .chrome-chip{left:12px;top:8px;padding:5px 12px 5px 6px;max-width:min(360px,30vw)}
@@ -65,6 +66,21 @@ function mount() {
 #rider-chrome .chrome-dock.closed .pane{display:none}
 #rider-chrome .chrome-dock .rail .b{color:var(--c)}#rider-chrome .chrome-dock .rail .b.on{color:var(--ink)}#rider-chrome .chrome-dock .rail .b.plain{color:var(--text)}
 #rider-chrome .lib-grid3{grid-template-columns:repeat(3,1fr)}
+#rider-chrome .chrome-insp{position:fixed;right:12px;left:auto;top:72px;bottom:auto;max-height:calc(100vh - 160px);z-index:390;flex-direction:column;width:276px}
+#rider-chrome .chrome-insp.closed{width:auto}
+#rider-chrome .chrome-insp .ph .b{--h:32px}
+#rider-chrome .insp-body{padding:10px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#rider-chrome .insp-row{display:flex;gap:5px;align-items:center;min-width:0}
+#rider-chrome .insp-t{font:800 12px var(--body);color:var(--muted);line-height:1.3;overflow-wrap:anywhere}
+#rider-chrome .insp-t.s18{font:800 17px var(--disp);color:var(--text)}#rider-chrome .insp-t.s14{font-size:13px;color:var(--text)}
+#rider-chrome .insp-t.error{color:var(--danger)}#rider-chrome .insp-t.selected{color:var(--k-decor)}#rider-chrome .insp-t.active{color:var(--accent)}
+#rider-chrome .insp-row .b{--h:36px;font:800 12.5px var(--body);flex:1;justify-content:flex-start;padding:0 10px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rider-chrome .insp-row .b.on{--c:var(--accent)}
+#rider-chrome .insp-row .b.step{flex:none;width:36px;justify-content:center;padding:0;font-size:16px}
+#rider-chrome .insp-row .b.field{background:var(--field);background-image:none;box-shadow:none;font-variant-numeric:tabular-nums}
+#rider-chrome .insp-row .b.field.focus{border-color:var(--accent);box-shadow:0 0 0 2px #ffd23f55}
+#rider-chrome .insp-row .b.field.bad{border-color:var(--danger)}
+#rider-chrome .insp-row .unit{font:800 11px var(--body);color:var(--muted);flex:none}
 #rider-chrome .lib-counts{display:flex;gap:6px}
 #rider-chrome .lib-counts span{display:flex;align-items:center;gap:4px;height:28px;padding:0 9px 0 6px;border-radius:10px;background:var(--field);font:900 12px var(--body)}
 #rider-chrome .lib-counts svg{width:16px;height:16px}
@@ -165,6 +181,7 @@ function render(s) {
   last = key;
   update(s);
   library(s);
+  inspector(s);
 }
 
 function library(s) {
@@ -215,6 +232,58 @@ function library(s) {
   if (sel && (sel !== lastSel || list !== lastList)) q(`#rider-lib-pane [data-cmd="object_select_${CSS.escape(sel)}"]`)?.scrollIntoView({block: 'nearest'});
   lastSel = sel; lastList = list;
 }
+
+let inspKey = '', lastFocus = null;
+function inspector(s) {
+  const dock = q('#rider-chrome-insp'), I = s && s.insp;
+  dock.hidden = !I;
+  if (!I) return;
+  const items = Array.isArray(I.items) ? I.items : [];
+  const key = JSON.stringify(I);
+  if (key === inspKey) return;
+  inspKey = key;
+  dock.classList.toggle('closed', !!I.collapsed);
+  if (I.collapsed) {
+    dock.innerHTML = '<div class="rail">' + UI.button({icon: 'chevl', title: 'Open Properties', variant: 'plain', d: {cmd: 'collapse_properties'}}) + '</div>';
+    unfocusable(); return;
+  }
+  const aliases = {};
+  for (const it of items) if (it.k === 'alias') aliases[it.target] = it.name;
+  // Rows: items recorded at the same y form one line (label + field + unit + steppers).
+  // Rows: items recorded at the same y form one line (field + steppers); a short muted text just below a
+  // field is its unit and joins that line.
+  const rows = [], byY = new Map();
+  for (const it of items) {
+    if (it.k === 'alias') continue;
+    let row = [...byY.values()].find(r => Math.abs(r.y - it.y) < 1);
+    if (!row && it.k === 't' && it.size === 12 && it.role === 'muted' && it.t.length <= 5)
+      row = [...byY.values()].find(r => r.field && it.y > r.y && it.y - r.y <= 20);
+    if (!row) { row = {y: it.y, items: [], field: false}; byY.set(it.y + ':' + byY.size, row); rows.push(row); }
+    if (it.k === 'b' && it.field) row.field = true;
+    row.items.push(it);
+  }
+  // Inside a row: field, unit, then the steppers.
+  const order = it => it.k === 'b' && /^(dec|inc)_/.test(it.name) ? 2 : it.k === 't' ? 1 : 0;
+  for (const r of rows) if (r.field) r.items.sort((a, b) => order(a) - order(b));
+  const btn = it => {
+    const step = /^(dec|inc)_/.test(it.name);
+    const cls = ['b', step && 'step', it.field && 'field', it.focused && 'focus', it.active && 'on', it.danger && 'del'].filter(Boolean).join(' ');
+    const label = step ? (it.name.startsWith('dec_') ? '−' : '+') : (it.label || it.name);
+    const alias = aliases[it.name] ? ` data-alias="${UI.esc(aliases[it.name])}"` : '';
+    return `<button type="button" class="${cls}" data-cmd="${UI.esc(it.name)}"${alias} title="${UI.esc(it.tip || label)}"${it.disabled ? ' disabled' : ''}>${UI.esc(label)}</button>`;
+  };
+  const body = rows.map(r => '<div class="insp-row">' + r.items.map(it => it.k === 't'
+    ? (r.items.length > 1 && r.items.some(x => x.k === 'b') ? `<span class="unit">${UI.esc(it.t)}</span>` : `<div class="insp-t s${it.size} ${it.role}">${UI.esc(it.t)}</div>`)
+    : btn(it)).join('') + '</div>').join('');
+  const old = q('#rider-chrome-insp .insp-body'), top = old ? old.scrollTop : 0;
+  dock.innerHTML = '<div class="ph" style="--c:var(--accent)"><span class="ic">' + UI.icon('cursor') + '</span><h3>Properties</h3>'
+    + UI.button({icon: 'chevr', title: 'Collapse Properties', d: {cmd: 'collapse_properties'}}) + `</div><div class="insp-body">${body}</div>`;
+  const nb = q('#rider-chrome-insp .insp-body'); if (nb) nb.scrollTop = top;
+  const focus = (items.find(it => it.focused) || {}).name || null;
+  if (focus && focus !== lastFocus) q(`#rider-chrome-insp [data-cmd="${CSS.escape(focus)}"]`)?.scrollIntoView({block: 'nearest'});
+  lastFocus = focus;
+  unfocusable();
+}
 // Commands since the last call, as JSON (Lua decodes them).
 function take() { return JSON.stringify(queue.splice(0)); }
 // Button centres in the engine's canvas space (x right, y up), so automation can tap them like Defold buttons.
@@ -225,14 +294,16 @@ function rects() {
   const r = c.getBoundingClientRect();
   for (const b of root.querySelectorAll('[data-cmd],[data-tab]')) {
     const q = b.getBoundingClientRect(); if (!q.width) continue;
-    const clip = (b.closest('.lib-rows') || b.closest('.pbody') || b.closest('.chrome-dock .rail'))?.getBoundingClientRect();
+    const clip = (b.closest('.lib-rows') || b.closest('.pbody') || b.closest('.insp-body') || b.closest('.chrome-dock .rail'))?.getBoundingClientRect();
     if (q.bottom <= 0 || q.top >= innerHeight || q.right <= 0 || q.left >= innerWidth) continue;
     if (clip && (q.top < clip.top - 1 || q.bottom > clip.bottom + 1)) continue;
     const name = b.dataset.cmd || 'lib_' + b.dataset.tab;
     const kx = c.width / r.width, ky = c.height / r.height;
     const x = q.x + q.width / 2 - r.x, y = q.y + q.height / 2 - r.y;
     // x/y: centre in canvas pixels, y up (like Defold screen positions); left/top/w/h: canvas pixels, y down.
-    out[name] = {x: x * kx, y: (r.height - y) * ky, left: (q.x - r.x) * kx, top: (q.y - r.y) * ky, w: q.width * kx, h: q.height * ky, label: b.getAttribute('title') || ''};
+    const rect = {x: x * kx, y: (r.height - y) * ky, left: (q.x - r.x) * kx, top: (q.y - r.y) * ky, w: q.width * kx, h: q.height * ky, label: b.getAttribute('title') || ''};
+    out[name] = rect;
+    if (b.dataset.alias) out[b.dataset.alias] = rect;
   }
   return JSON.stringify(out);
 }

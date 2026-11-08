@@ -15,7 +15,9 @@ module.exports=async function uiChecks(h){
  const ramp=()=>doc().then(d=>d.objects.find(o=>o.id==='o2'));
  async function selectRamp(){await key('s');await key('Home');await at([14,4*Math.tan(20*Math.PI/180)]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');}
  async function field(name,value){await button(name);await page.waitForFunction(()=>window.riderEditor.field!==false);await page.keyboard.type(String(value),{delay:20});await key('Enter');}
- async function panelWheel(delta){const e=await ed(),c=await canvas((e.ui.rects.collapse_properties.x+140)*e.ui.scale,400*e.ui.scale);await page.mouse.move(c.x,c.y);await page.mouse.wheel(0,delta);await pointer.frames(page);}
+ // #686: the inspector is the HTML dock; it scrolls inside its own body.
+ const inspScroll=()=>page.evaluate(()=>{const b=document.querySelector('#rider-chrome-insp .insp-body');return b?{top:b.scrollTop,overflow:b.scrollHeight-b.clientHeight}:null;});
+ async function panelWheel(delta){const b=await page.locator('#rider-chrome-insp .insp-body').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.wheel(0,delta);await pointer.frames(page);}
  let e=await importText(JSON.stringify(base),'ea1-ui.json');await key('Home');
  // #685: the library tabs (Gameplay, Track parts, Objects) and the centred command group are view-only at all
  // supported sizes; one tab shows at a time and the floating tool bar is independent of the library.
@@ -80,8 +82,8 @@ module.exports=async function uiChecks(h){
  assert.equal(e.ui.error_banner,false,'a new document keeps the previous Play error');
  viewBefore=await snapshot();await page.setViewportSize({width:1280,height:480});e=await settle();
  assert.equal(e.ui.scale,1,'short desktop windows must keep control size');
- assert.ok(e.ui.max_scroll>0,'the inspector needs overflow scrolling');assert.ok(e.ui.scrollbars.scroll,'the inspector scrollbar must be visible');
- assert.ok(e.ui.properties_panel.y+e.ui.properties_panel.h<=400,'sidebar covers the footer');
+ assert.ok((await inspScroll()).overflow>0,'the inspector needs overflow scrolling');
+ {const insp=await page.locator('#rider-chrome-insp').boundingBox();assert.ok(insp.y+insp.height<=400,'sidebar covers the footer');}
  {const dock=await page.locator('#rider-chrome-dock').boundingBox();assert.ok(dock&&dock.y+dock.height<=400,'library covers the footer');}
  async function seekScrollbar(name,bottom){
   const r=(await ed()).ui.scrollbars[name];assert.ok(r,name+' missing');
@@ -96,14 +98,19 @@ module.exports=async function uiChecks(h){
  for(let i=0;i<12&&!(await ed()).visible.includes('kind_flat');i++){await page.mouse.wheel(0,-120);await pointer.frames(page);}
  e=await settle();assert.ok(e.visible.includes('kind_flat'),'library top reachable');
  await button('rename');assert.notEqual((await ed()).field,false);
- await seekScrollbar('scroll',true);e=await settle();assert.equal(e.field,false,'scrollbar does not commit valid focused input');assert.ok(e.ui.scroll>0);assert.ok(e.visible.includes('inc_test_speed'));
- await seekScrollbar('scroll',false);e=await settle();assert.equal(e.ui.scroll,0);
+ // #686: wheel scrolling the inspector keeps the focused field open and uncommitted (no press reaches the editor).
+ const nameBefore=(await doc()).name??(await ed()).name;
+ for(let i=0;i<12&&(await inspScroll()).top<(await inspScroll()).overflow;i++)await panelWheel(120);
+ e=await settle();assert.notEqual(e.field,false,'inspector scrolling keeps the focused field');assert.ok((await inspScroll()).top>0);assert.ok(e.visible.includes('inc_test_speed'));
+ await key('Escape');e=await settle();assert.equal(e.field,false);assert.equal(e.name,nameBefore,'scrolling committed nothing');
+ for(let i=0;i<12&&(await inspScroll()).top>0;i++)await panelWheel(-120);
+ assert.equal((await inspScroll()).top,0);
  await unchanged(viewBefore,'scrollbar drag/wheel and resize');
  await page.screenshot({path:path.join(out,'editor-a-scrollbars-1280x480.png')});
  await page.setViewportSize({width:1280,height:720});await libReveal('tool_coin');e=await settle();
  {const dock=await page.locator('#rider-chrome-dock').boundingBox();assert.ok(dock.y+dock.height<600,'library dock hugs its content');}
- assert.ok(e.ui.properties_panel.y+e.ui.properties_panel.h<600,'Properties panel has empty solid background');
- assert.equal(e.ui.max_scroll,0);
+ {const insp=await page.locator('#rider-chrome-insp').boundingBox();assert.ok(insp.y+insp.height<600,'Properties panel hugs its content');}
+ assert.equal((await inspScroll()).overflow,0);
  // The empty area below a short panel belongs to the canvas, including pointer input.
  const freeBefore=await doc(),freeRevision=(await ed()).revision;
  await key('d');await pointer.tap(page,{x:1100,y:560});await pointer.tap(page,{x:1160,y:600});await key('Enter');
@@ -206,14 +213,16 @@ module.exports=async function uiChecks(h){
  seven.editor.connections=[{from:'o1',to:'o2'}];seven.editor.next_id=3;
  await importText(JSON.stringify(seven),'ea1-seven.json');await key('Home');await at([11,.25]);await page.waitForFunction(()=>window.riderEditor.selection==='o2');e=await settle();
  const beforeScroll=await snapshot(),zoom=e.camera.zoom;
+ const p7AtTop=e.visible.includes('param_7');
  for(let i=0;i<12&&!e.visible.includes('param_7');i++){await panelWheel(120);e=await ed();}
- assert.ok(e.visible.includes('param_7'),'seventh parameter unreachable');assert.ok(e.ui.scroll>0);assert.equal(e.camera.zoom,zoom);await unchanged(beforeScroll,'inspector scrolling');
+ // #686: the HTML rows are more compact; scrolling is required only when param_7 starts below the fold.
+ assert.ok(e.visible.includes('param_7'),'seventh parameter unreachable');{const sc=await inspScroll();assert.ok(sc.top>0||p7AtTop,JSON.stringify(sc));}assert.equal(e.camera.zoom,zoom);await unchanged(beforeScroll,'inspector scrolling');
  await button('param_7');assert.equal((await ed()).field_param,'landing_angle');await key('Escape');
  await key('h');e=await settle();assert.equal(e.help_open,true);const mode=e.mode,tool=e.tool;
  await key('e');await key('s');await key('z',['Control']);e=await ed();assert.equal(e.mode,mode);assert.equal(e.tool,tool);assert.equal(e.revision,beforeScroll.revision);
  await page.mouse.wheel(0,120);await key('h');await unchanged(beforeScroll,'modal keys and scroll');
  await page.screenshot({path:path.join(out,'editor-a-seven-parameters.png')});
- measurements.editor_a_scroll={scroll:(await ed()).ui.scroll,gui_nodes:(await ed()).overlay.nodes};cases.push('a1b_scrolling_and_modal_capture');checkpoint('a1b_scrolling_and_modal_capture');
+ measurements.editor_a_scroll={scroll:(await inspScroll()).top,gui_nodes:(await ed()).overlay.nodes};cases.push('a1b_scrolling_and_modal_capture');checkpoint('a1b_scrolling_and_modal_capture');
  // Current component headroom at the unchanged 800 render-object limit, not the old LE1b vehicle.
  const full=JSON.parse(JSON.stringify(base));full.id='ea1-budget';full.name='800 segments';full.editor.connections=[];full.editor.next_id=2;
  full.editor.objects=[{id:'o1',type:'line',points:Array.from({length:801},(_,i)=>[i*.5,0])}];
