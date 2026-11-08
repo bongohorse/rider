@@ -13,7 +13,7 @@ let tab = 'play', libKey = '', lastTool = null, lastSel = null, lastList = '';
 // search text and favourites (this browser only).
 let decor = {worlds: [], categories: [], items: []}, world = 'meadow', cat = 'all', find = '';
 const FAVS = 'rider.editor.decorFavourites';
-let favs = new Set();
+let favs = new Set(), tookFocus = false;
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
 const INK = '#0d0f13';
 const ART = {
@@ -115,8 +115,9 @@ function mount() {
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.
   root.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-  // The Decor search is the one exception: it takes the keyboard while typing (Esc or Enter hand it back).
-  root.addEventListener('focusin', e => { if (!e.target.matches('.lib-find')) document.querySelector('canvas')?.focus(); });
+  // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
+  // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
+  root.addEventListener('focusin', e => { if (e.target.matches('.lib-find')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
   root.addEventListener('input', e => { if (e.target.matches('.lib-find')) { find = e.target.value; decorGrid(); } });
   root.addEventListener('keydown', e => { if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
   const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
@@ -164,7 +165,7 @@ function build() {
 }
 const q = sel => root.querySelector(sel);
 const noop = () => {};
-function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.matches('.lib-find')) e.focus = noop; }
+function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) e.focus = noop; }
 function setOn(b, on) { b.classList.toggle('on', on); if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed'); }
 function update(s) {
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
@@ -250,8 +251,12 @@ function library(s) {
   // Re-rendering keeps the list's scroll position; a new selection is scrolled into view.
   const scroller = () => q('#rider-lib-pane .lib-rows') || q('#rider-lib-pane .pbody');
   const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.tab;
+  const typing = document.activeElement?.matches?.('.lib-find') ? document.activeElement.selectionStart : null;
   q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.tab = tab;
   if (tab === 'decor') decorGrid();
+  // A rebuild while typing (category or world chip) keeps the keyboard in the new search box.
+  const input = q('#rider-lib-pane .lib-find');
+  if (typing !== null) { if (input) { HTMLElement.prototype.focus.call(input); input.setSelectionRange(typing, typing); } else document.querySelector('canvas')?.focus(); }
   unfocusable();
   const body = scroller();
   if (body && oldTab === tab) body.scrollTop = top;
@@ -270,7 +275,7 @@ function decorGrid() {
     && words.every(w => (a.name + ' ' + a.id + ' ' + a.category).toLowerCase().includes(w)));
   grid.innerHTML = shown.length ? shown.map(a => {
     const on = a.fence ? armed.fence === a.id : !armed.fence && armed.asset === a.id;
-    return `<div class="dt"><button type="button" class="tile named${on ? ' on' : ''}" data-cmd="decor_asset_${UI.esc(a.id)}" title="${UI.esc(a.name)}${a.fence ? ': click where it starts, then where it ends' : ': click the track to place'}"><img src="${a.thumb}" alt=""><span class="nm">${UI.esc(a.name)}</span></button>`
+    return `<div class="dt"><button type="button" class="tile named${on ? ' on' : ''}" data-cmd="decor_asset_${UI.esc(a.id)}" title="${UI.esc(a.name)}${a.fence ? ': click where it starts, then where it ends' : ': click the track to place'}"><img src="${UI.esc(a.thumb)}" alt=""><span class="nm">${UI.esc(a.name)}</span></button>`
       + `<button type="button" class="fav${favs.has(a.id) ? ' on' : ''}" data-fav="${UI.esc(a.id)}" title="${favs.has(a.id) ? 'Remove from' : 'Add to'} favourites" aria-pressed="${favs.has(a.id)}">${UI.icon('star')}</button></div>`;
   }).join('') : `<p class="hint">${cat === 'fav' && !words.length ? 'No favourites yet: tap a star.' : 'No decor found'}</p>`;
   unfocusable();
@@ -357,5 +362,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();

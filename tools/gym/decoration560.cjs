@@ -35,8 +35,12 @@ async function main(){
   // #705: the library's Decor tab finds presets by search, category and favourites; a tile arms it and opens the Decor tool.
   const tiles=()=>page.evaluate(()=>[...document.querySelectorAll('#rider-decor-grid [data-cmd]')].map(b=>b.dataset.cmd.slice(12)));
   await dom('[data-tab="decor"]');assert.equal(await page.evaluate(()=>window.riderEditor.tool),'select','opening the tab arms nothing');
-  assert.ok((await tiles()).length>=12,'all presets and the fence');
+  assert.equal((await tiles()).length,12,'all presets and the fence');
   await page.locator('.lib-find').click();await page.keyboard.type('rock');await pointer.frames(page,{n:4});assert.deepEqual(await tiles(),['rock-large']);
+  assert.equal(await page.evaluate(()=>window.riderEditor.tool),'select','typed letters stay in the search box (c is Curve)');
+  // A category press while typing keeps the keyboard in the search box.
+  await dom('[data-dcat="trees"]');assert.ok(await page.evaluate(()=>document.activeElement?.matches('.lib-find')),'search keeps focus');
+  assert.deepEqual(await tiles(),[]);await dom('[data-dcat="rocks"]');assert.deepEqual(await tiles(),['rock-large']);await dom('[data-dcat="all"]');
   await page.keyboard.press('Escape');await pointer.frames(page,{n:4});assert.equal(await page.locator('.lib-find').inputValue(),'');
   assert.ok(await page.evaluate(()=>document.activeElement===document.querySelector('canvas')),'Esc hands the keyboard back to the canvas');
   await dom('[data-dcat="props"]');assert.deepEqual(await tiles(),['sign','cone']);

@@ -2220,8 +2220,9 @@ function on_input(self,action_id,action)
             -- The click that returns focus to the canvas never edits the level.
             if self.refocus then
                 self.refocus=false
-                -- Returning from the open Track textures panel is ordinary work, not a window switch.
-                if not (track_panel.visible() or background_panel.visible() or decoration_tool.visible()) and (not self.refocus_until or socket.gettime()<self.refocus_until) then return true end
+                -- Returning from the open Track textures panel or the library's Decor search is ordinary work, not a window switch.
+                local searched=chrome.took_focus()
+                if not (searched or track_panel.visible() or background_panel.visible() or decoration_tool.visible()) and (not self.refocus_until or socket.gettime()<self.refocus_until) then return true end
             end
             local name=hit(self,action)
             if name=="warning_panel" or name=="dialog_panel" or name=="conflict_panel" or name=="chrome_panel" then return true

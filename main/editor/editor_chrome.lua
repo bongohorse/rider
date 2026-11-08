@@ -27,6 +27,8 @@ function M.palette(list)
     local lib=require 'main.decorations.library'
     html5.run('window.riderChrome.palette('..json.encode({worlds=lib.WORLDS,categories=lib.CATEGORIES,items=list})..')')
 end
+-- #705: true once after the Decor search took the keyboard from the canvas (that blur is not a window switch).
+function M.took_focus() return M.loaded and html5.run('window.riderChrome.tookFocus()')=='true' end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end
