@@ -29,6 +29,11 @@ function M.palette(list)
 end
 -- #705: true once after the Decor search took the keyboard from the canvas (that blur is not a window switch).
 function M.took_focus() return M.loaded and html5.run('window.riderChrome.tookFocus()')=='true' end
+-- #706: Background and Texture presets (thumbnails included) for the library tabs, sent once.
+function M.looks(bg,tex)
+    if not M.loaded then return end
+    html5.run('window.riderChrome.looks('..json.encode({bg=bg,tex=tex})..')')
+end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end

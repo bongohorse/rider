@@ -14,6 +14,11 @@ let tab = 'play', libKey = '', lastTool = null, lastSel = null, lastList = '';
 let decor = {worlds: [], categories: [], items: []}, world = 'meadow', cat = 'all', find = '';
 const FAVS = 'rider.editor.decorFavourites';
 let favs = new Set(), tookFocus = false;
+// #706 Background and Texture tabs: presets from Lua (looks(), sent once); the stored or previewed source
+// comes with each state (lib.look). Choices build the same draft/commit messages the old panels sent.
+let looks = {bg: [], tex: []}, lastShow = null, sliding = false;
+const AUTO = [.9, .75, .55, .35, .15, -.1], OVERRIDES = [['surface', 'Surface'], ['band', 'Band'], ['fill', 'Fill']];
+
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
 const INK = '#0d0f13';
 const ART = {
@@ -36,11 +41,9 @@ const ART = {
 const art = k => `<svg class="art" viewBox="0 0 48 48" aria-hidden="true">${ART[k] || ART.crate}</svg>`;
 const GAMEPLAY = [['start','Start'],['finish','Finish'],['coin','Coin'],['fuel','Fuel'],['gem','Gem'],['crate','Crate'],['plate','Plate'],['gate','Gate']];
 const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
-// Rail: tabs built here, and launchers that open the existing panels until #706 moves them into the library.
-// Launchers use their own names (lib_bg, lib_tex), mapped in editor.gui_script, so the footer's
-// track_textures button keeps its name.
+// Rail: one tab per library page; tabs are view state of the chrome and publish as lib_<id>.
 const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor'],
-  ['bg','mountain','var(--k-bg)','Background (opens Track textures)','lib_bg'],['tex','texture','var(--k-tex)','Ground texture (opens Track textures)','lib_tex'],['objects','list','var(--k-obj)','Level objects']];
+  ['bg','mountain','var(--k-bg)','Background'],['tex','texture','var(--k-tex)','Ground texture'],['objects','list','var(--k-obj)','Level objects']];
 const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan']];
 function mount() {
   UI.install();
@@ -102,6 +105,19 @@ function mount() {
 #rider-chrome .lib-row .sel.on small{color:var(--ink)}
 #rider-chrome .lib-row .b{--h:40px}
 #rider-chrome .lib-decor{overflow:hidden}
+#rider-chrome .lib-look .tile.wide{aspect-ratio:2;--c:var(--k-bg)}#rider-chrome .lib-look .tile img{width:100%;height:100%;object-fit:cover;border-radius:9px;pointer-events:none}
+#rider-chrome .lib-look .tile.wide .nm{background:#0d0f13b0;border-radius:6px;color:var(--text)}
+#rider-chrome .lib-tex .tile{--c:var(--k-tex)}#rider-chrome .lib-tex .tile img{width:76%;height:62%;object-fit:cover;border-radius:6px;margin-bottom:10px;pointer-events:none}
+#rider-chrome .lib-grid2{grid-template-columns:repeat(2,1fr)}
+#rider-chrome .look-row{display:grid;grid-template-columns:62px 36px 1fr 34px 46px;gap:5px;align-items:center}
+#rider-chrome .look-row .lbl{font:800 11.5px var(--body);color:var(--muted);white-space:nowrap}
+#rider-chrome .look-row .b{--h:32px;padding:0;min-width:0;font:900 10.5px var(--body)}#rider-chrome .look-row .b.on{--c:var(--k-bg)}
+#rider-chrome .look-row output{font:800 11px var(--body);color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+#rider-chrome .lib-range{width:100%;min-width:0;accent-color:var(--k-bg)}
+#rider-chrome .look-master{display:flex;gap:6px}#rider-chrome .look-master .b{--h:36px;flex:1;font:800 12.5px var(--body)}#rider-chrome .look-master .b.on{--c:var(--k-bg)}
+#rider-chrome .ovr-row{display:grid;grid-template-columns:62px 1fr;gap:6px;align-items:center}#rider-chrome .ovr-row .lbl{font:800 12px var(--body);color:var(--muted)}
+#rider-chrome .lib-select{height:34px}
+#rider-chrome .look-note{min-height:1.2em;color:var(--accent)}
 #rider-chrome .lib-cats{display:flex;gap:4px}#rider-chrome .lib-cats .b{--h:34px;flex:1;min-width:0;padding:0}
 #rider-chrome .lib-cats .b.on{--c:var(--k-decor)}
 #rider-chrome .lib-decor .chips .chip{display:inline-flex;align-items:center;gap:4px;--c:var(--k-decor)}#rider-chrome .lib-decor .chips svg{width:14px;height:14px}
@@ -117,9 +133,19 @@ function mount() {
   root.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
   // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
   // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
-  root.addEventListener('focusin', e => { if (e.target.matches('.lib-find')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
+  // #706: the Background Depth sliders and Texture override lists (.kf) follow the same rule as the search.
+  root.addEventListener('focusin', e => { if (e.target.matches('.kf')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
+  // A slider or list keeps its element while focused or dragged; the tab catches up when it lets go.
+  // (Only a slider or list that is still in the page: a rebuild's own removal must not start another rebuild.)
+  root.addEventListener('focusout', e => { if (e.target.matches('.kf:not(.lib-find)') && e.target.isConnected && !sliding) setTimeout(() => { libKey = ''; library(state); }); });
+  root.addEventListener('input', e => { if (e.target.matches('.lib-range')) depth(e.target, false); });
+  root.addEventListener('change', e => { if (e.target.matches('.lib-range')) depth(e.target, true); else if (e.target.matches('.lib-select')) override(e.target); });
+  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range')) sliding = true; }, true);
+  addEventListener('pointerup', () => { if (sliding) { sliding = false; libKey = ''; setTimeout(() => library(state)); } }, true);
+  root.addEventListener('pointercancel', e => { if (e.target.matches?.('.lib-range')) { sliding = false; depth(e.target, true); } }, true);
   root.addEventListener('input', e => { if (e.target.matches('.lib-find')) { find = e.target.value; decorGrid(); } });
-  root.addEventListener('keydown', e => { if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
+  root.addEventListener('keydown', e => { if (e.target.matches('.kf:not(.lib-find)') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); document.querySelector('canvas')?.focus(); return; }
+    if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
   const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
   document.addEventListener('pointerdown', e => { if (!root.contains(e.target)) closeMenu(); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
@@ -132,6 +158,7 @@ function mount() {
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
     if (b.dataset.tab) { tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
     if (b.dataset.dcat || b.dataset.dworld) { if (b.dataset.dcat) cat = b.dataset.dcat; else world = b.dataset.dworld; libKey = ''; library(state); return; }
+    if (b.dataset.look) { look(b.dataset); document.querySelector('canvas')?.focus(); return; }
     if (b.dataset.fav) { const id = b.dataset.fav; if (favs.has(id)) favs.delete(id); else favs.add(id); try { localStorage.setItem(FAVS, JSON.stringify([...favs])); } catch (e) { /* favourites stay for this session */ } decorGrid(); return; }
     if (!b.dataset.cmd) return;
     if (menuOpen) { menuOpen = false; render(state); }
@@ -214,8 +241,14 @@ function library(s) {
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
   if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
+  // The footer Texture button asks for the Texture tab.
+  const show = L.look && L.look.show;
+  if (show !== lastShow) { if (lastShow !== null && show) tab = 'tex'; lastShow = show; }
+  // A focused slider or list, or a slider drag, keeps its element: the tab catches up afterwards.
+  if ((tab === 'bg' || tab === 'tex') && (sliding || document.activeElement?.matches?.('#rider-lib-pane .kf:not(.lib-find)'))) return;
   // The Decor tab is rebuilt only for its own data, so a level edit does not reset the search box while typing.
-  const key = tab === 'decor' ? JSON.stringify(['decor', L.collapsed, L.decor, s.tool === 'decoration', world, cat, decor.items.length]) : JSON.stringify([L, s.tool, tab]);
+  const key = tab === 'decor' ? JSON.stringify(['decor', L.collapsed, L.decor, s.tool === 'decoration', world, cat, decor.items.length])
+    : tab === 'bg' || tab === 'tex' ? JSON.stringify([tab, L.collapsed, L.look, looks.bg.length, looks.tex.length]) : JSON.stringify([L, s.tool, tab]);
   if (key === libKey) return;
   libKey = key;
   dock.classList.toggle('closed', !!L.collapsed);
@@ -233,11 +266,33 @@ function library(s) {
     h = head('track') + '<div class="pbody"><div class="grid lib-grid3" style="--c:var(--k-track)">' + L.kinds.map((k, i) =>
       `<button type="button" class="tile named${s.tool === 'prefab' && L.kind === k.id ? ' on' : ''}" data-cmd="kind_${UI.esc(k.id)}" title="${i + 1}: ${UI.esc(k.full)} — click to place; Esc cancels">${art(k.id)}<span class="nm">${UI.esc(k.name)}</span></button>`).join('')
       + '</div><p class="hint">Keys 1–7 pick a part while Prefab [P] is active.</p></div>';
+  } else if (tab === 'bg') {
+    const b = L.look && L.look.bg || null;
+    h = head('bg') + '<div class="pbody lib-look"><div class="look-master">'
+      + UI.button({icon: b && b.enabled ? 'eye' : 'eyeoff', label: b && b.enabled ? 'Background ON' : 'Background OFF', on: !!(b && b.enabled), disabled: !b, title: 'Background ON/OFF', d: {look: 'enabled'}})
+      + '</div><div class="grid lib-grid2">' + looks.bg.map(p => `<button type="button" class="tile wide named${b && b.preset === p.id ? ' on' : ''}" data-look="preset" data-id="${UI.esc(p.id)}" data-preset-bg="${UI.esc(p.id)}" title="Background: ${UI.esc(p.name)}"><img src="${UI.esc(p.thumb)}" alt=""><span class="nm">${UI.esc(p.name)}</span></button>`).join('')
+      + '</div>' + AUTO.map((auto, i) => {
+        const layer = b && b.layers && b.layers[i] || null, title = i === 5 ? 'Foreground' : `Layer ${i + 1}`;
+        const value = layer ? (layer.auto ? auto : layer.depth ?? auto) : auto;
+        return `<div class="look-row" data-bg-layer="${i + 1}"><span class="lbl">${title}</span>`
+          + UI.button({icon: layer && layer.visible ? 'eye' : 'eyeoff', on: !!(layer && layer.visible), disabled: !b, title: `${title} ON/OFF`, d: {look: 'visible', layer: i}})
+          + `<input type="range" class="lib-range kf" min="-0.25" max="1" step=".01" value="${value}" data-layer="${i}" aria-label="${title} Depth" title="Higher Depth moves more slowly. Turn Auto off to use your manual value."${!b || !layer || layer.auto ? ' disabled' : ''}>`
+          + `<output>${Number(value).toFixed(2)}</output>`
+          + UI.button({label: 'Auto', on: !!(layer && layer.auto), disabled: !b, title: `${title} Auto`, d: {look: 'auto', layer: i}}) + '</div>';
+      }).join('')
+      + UI.button({icon: 'layers', label: 'Layer images and height', disabled: !b, title: 'Layer images and height', d: {cmd: 'bg_layers'}}).replace('class="b', 'class="b look-more')
+      + `<p class="hint look-note">${UI.esc(L.look && L.look.bg_msg || (!b ? 'Choose a background.' : ''))}</p></div>`;
+  } else if (tab === 'tex') {
+    const m = L.look && L.look.tex || null;
+    h = head('tex') + '<div class="pbody lib-look lib-tex"><div class="grid lib-grid3">' + looks.tex.map(p => `<button type="button" class="tile named${m && m.preset === p.id ? ' on' : ''}" data-look="material" data-id="${UI.esc(p.id)}" data-preset-tex="${UI.esc(p.id)}" title="Ground: ${UI.esc(p.name)}"><img src="${UI.esc(p.thumb)}" alt=""><span class="nm">${UI.esc(p.name)}</span></button>`).join('')
+      + '</div>' + OVERRIDES.map(([k, label]) => `<label class="ovr-row"><span class="lbl">${label}</span><select class="field lib-select kf" data-key="${k}" aria-label="${label} override"${m ? '' : ' disabled'}>`
+        + `<option value="">Inherit</option>` + looks.tex.map(p => `<option value="${UI.esc(p.id)}"${m && m[k] === p.id ? ' selected' : ''}>${UI.esc(p.name)}</option>`).join('') + '</select></label>').join('')
+      + `<p class="hint look-note">${UI.esc(L.look && L.look.tex_msg || (!m ? 'Choose a ground texture; Surface, Band and Fill can then differ.' : ''))}</p></div>`;
   } else if (tab === 'decor') {
     const cats = [['all', 'grid', 'All decor'], ['fav', 'star', 'Favourites'], ...decor.categories.map(c => [c.id, c.icon, c.name])];
     h = head('decor') + '<div class="pbody lib-decor"><div class="chips">' + decor.worlds.map(w =>
       `<button type="button" class="chip${w.id === world ? ' on' : ''}" data-dworld="${UI.esc(w.id)}" title="World: ${UI.esc(w.name)}">${UI.icon('mountain')}${UI.esc(w.name)}</button>`).join('')
-      + `</div><label class="search" title="Search decor by name; Esc clears">${UI.icon('search')}<input class="lib-find" type="search" placeholder="Search decor" value="${UI.esc(find)}" spellcheck="false" autocomplete="off" aria-label="Search decor"></label>`
+      + `</div><label class="search" title="Search decor by name; Esc clears">${UI.icon('search')}<input class="lib-find kf" type="search" placeholder="Search decor" value="${UI.esc(find)}" spellcheck="false" autocomplete="off" aria-label="Search decor"></label>`
       + '<div class="lib-cats">' + cats.map(([id, icon, title]) => UI.button({icon, title, on: cat === id, d: {dcat: id}})).join('') + '</div>'
       + '<div class="lib-rows"><div class="grid lib-grid3" id="rider-decor-grid"></div></div></div>';
   } else {
@@ -279,6 +334,27 @@ function decorGrid() {
       + `<button type="button" class="fav${favs.has(a.id) ? ' on' : ''}" data-fav="${UI.esc(a.id)}" title="${favs.has(a.id) ? 'Remove from' : 'Add to'} favourites" aria-pressed="${favs.has(a.id)}">${UI.icon('star')}</button></div>`;
   }).join('') : `<p class="hint">${cat === 'fav' && !words.length ? 'No favourites yet: tap a star.' : 'No decor found'}</p>`;
   unfocusable();
+}
+// #706: Background and Texture choices are sent as operations; Lua applies them to the stored (or previewed)
+// source, so a choice never starts from an older copy. Each is one commit (one Undo step); a Depth drag
+// previews (draft) until release.
+function queueLook(kind, value) {
+  const text = kind + ':' + JSON.stringify(value), last = queue[queue.length - 1];
+  if (value.op === 'depth' && !value.commit && last && last.startsWith('bg_op:') && JSON.parse(last.slice(6)).op === 'depth' && !JSON.parse(last.slice(6)).commit) queue[queue.length - 1] = text;
+  else queue.push(text);
+}
+function look(d) {
+  if (d.look === 'material') queueLook('tex_op', {preset: d.id});
+  else queueLook('bg_op', d.layer != null ? {op: d.look, layer: +d.layer + 1} : {op: d.look, id: d.id});
+}
+function depth(input, commit) {
+  const out = input.parentNode.querySelector('output'); if (out) out.textContent = Number(input.value).toFixed(2);
+  queueLook('bg_op', {op: 'depth', layer: +input.dataset.layer + 1, value: Number(input.value), commit});
+}
+function override(select) { queueLook('tex_op', {key: select.dataset.key, value: select.value}); }
+function setLooks(p) {
+  looks = {bg: Array.isArray(p?.bg) ? p.bg : [], tex: Array.isArray(p?.tex) ? p.tex : []};
+  libKey = ''; if (state) library(state);
 }
 function setPalette(p) {
   decor = {worlds: Array.isArray(p?.worlds) ? p.worlds : [], categories: Array.isArray(p?.categories) ? p.categories : [], items: Array.isArray(p?.items) ? p.items : []};
@@ -362,5 +438,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();

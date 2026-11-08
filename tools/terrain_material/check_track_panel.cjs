@@ -1,5 +1,5 @@
-// #543, #604: real input: open the panel, each choice is stored at once as one Undo step, Undo,
-// Redo, reload, and drive. Keys typed in the panel do not reach the editor.
+// #543, #604, #706: real input: the footer Texture button opens the library's Texture tab, each choice is
+// stored at once as one Undo step, Undo, Redo, reload, and drive. Keys typed in an override list do not reach the editor.
 //   node tools/terrain_material/check_track_panel.cjs <verified debug bundle> <out dir>
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
@@ -23,16 +23,16 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  const tap=async name=>{const q=await page.evaluate(n=>{const e=window.riderEditor,b=e.buttons[n],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!b||!e.visible.includes(n))return null;return {x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};},name);assert.ok(q,'invisible '+name);await pointer.tap(page,q);await pointer.frames(page,{n:6});};
  const stride=()=>page.evaluate(()=>window.riderRoadProjection?.stride);
  const material=()=>page.evaluate(()=>window.riderEditorDoc.material||null);
- for(let i=0;i<5&&!await page.evaluate(()=>window.riderTrackPanel?.visible);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('track_textures');await page.waitForTimeout(300);}
- assert.equal(await page.evaluate(()=>window.riderTrackPanel.visible),true,'panel');
- assert.equal(await page.locator('#rider-track-panel [data-preset]').count(),7);
+ const band=page.locator('#rider-chrome select[data-key=band]');
+ for(let i=0;i<5&&!await page.evaluate(()=>document.querySelectorAll('[data-preset-tex]').length);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('track_textures');await page.waitForTimeout(300);}
+ assert.equal(await page.locator('#rider-chrome [data-preset-tex]').count(),7,'Texture tab');
  // A choice is stored at once as one Undo step.
- await page.locator('[data-preset=volcano]').click();await page.waitForFunction(()=>window.riderRoadProjection?.material?.preset==='volcano',null,{timeout:10000});
+ await page.locator('[data-preset-tex=volcano]').click();await page.waitForFunction(()=>window.riderRoadProjection?.material?.preset==='volcano',null,{timeout:10000});
  await page.waitForFunction(()=>window.riderEditorDoc.material?.preset==='volcano',null,{timeout:10000});
- await page.locator('#rider-track-band').selectOption('meadow');await pointer.frames(page,{n:10});await page.waitForTimeout(500);
+ await band.selectOption('meadow');await pointer.frames(page,{n:10});await page.waitForTimeout(500);
  await page.screenshot({path:path.join(out,'draft.png')});
  // Keys in the panel do not reach the editor.
- await page.locator('#rider-track-band').focus();const undo=await page.evaluate(()=>window.riderEditor.undo);await page.keyboard.press('Delete');await page.keyboard.press('e');await pointer.frames(page,{n:6});
+ await band.evaluate(n=>HTMLElement.prototype.focus.call(n));const undo=await page.evaluate(()=>window.riderEditor.undo);await page.keyboard.press('Delete');await page.keyboard.press('e');await pointer.frames(page,{n:6});
  assert.equal(await page.evaluate(()=>window.riderEditor.mode),'edit');assert.equal(await page.evaluate(()=>window.riderEditor.undo),undo);
  // #590: the editor keeps working beside the panel, and the draft follows the edit.
  await page.locator('canvas').focus();await page.mouse.move(640,70);await pointer.frames(page,{n:6});const q=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+(e.screen.ox+15*e.screen.ppm_x)*r.width/c.width,y:r.y+r.height-(e.screen.oy+.1*e.screen.ppm_y)*r.width/c.width};});
@@ -41,12 +41,11 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  // Each choice is one Undo step; there is no Apply or Discard.
  assert.equal(await page.locator('#rider-track-apply').count(),0);assert.equal(await page.locator('#rider-track-discard').count(),0);
  const before=await page.evaluate(()=>window.riderEditor.undo);
- await page.locator('[data-preset=inca]').click();await page.waitForFunction(()=>window.riderEditorDoc.material?.preset==='inca',null,{timeout:10000});
+ await page.locator('[data-preset-tex=inca]').click();await page.waitForFunction(()=>window.riderEditorDoc.material?.preset==='inca',null,{timeout:10000});
  assert.equal(await page.evaluate(()=>window.riderEditor.undo),before+1);
- await page.locator('#rider-track-band').selectOption('glacier');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='glacier',null,{timeout:10000});
+ await band.selectOption('glacier');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='glacier',null,{timeout:10000});
  assert.equal((await material()).band,'glacier');assert.equal(await page.evaluate(()=>window.riderEditor.undo),before+2);
- await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('undo');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='meadow',null,{timeout:10000});await page.waitForFunction(()=>document.querySelector('#rider-track-band').value==='meadow',null,{timeout:10000});await tap('redo');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='glacier',null,{timeout:10000});
- await page.locator('#rider-track-close').click();await page.waitForFunction(()=>!window.riderTrackPanel.visible);await pointer.frames(page,{n:6});
+ await page.locator('canvas').focus();await page.waitForTimeout(1100);await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('undo');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='meadow',null,{timeout:10000});await page.waitForFunction(()=>document.querySelector('#rider-chrome select[data-key=band]').value==='meadow',null,{timeout:10000});await tap('redo');await page.waitForFunction(()=>window.riderEditorDoc.material?.band==='glacier',null,{timeout:10000});
  await page.waitForFunction(()=>window.riderRoadProjection?.material?.preset==='inca',null,{timeout:10000});
  await page.waitForFunction(()=>window.riderEditor.status==='Saved'&&!window.riderEditor.dirty,null,{timeout:20000});
  await page.reload();await page.waitForFunction(()=>window.riderEditor?.mode==='edit'||window.riderTelemetry?.sequence>2,null,{timeout:60000});await page.waitForTimeout(800);

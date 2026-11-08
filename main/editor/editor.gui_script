@@ -153,7 +153,7 @@ function init(self)
     self.buttons,self.held={},{}
     self.ghost,self.last_ghost=silhouette(self),silhouette(self)
     self.ui=editor_ui.init()
-    if chrome.ensure() then chrome.palette(decoration_tool.palette()) end
+    if chrome.ensure() then chrome.palette(decoration_tool.palette());chrome.looks(background_panel.presets(),track_panel.presets()) end
     self.templates={}
     for _,id in ipairs(stations.ids) do self.templates[#self.templates+1]="template_"..id end
     local case=sys.get_config_string("rider.gym_test","")
@@ -1449,7 +1449,9 @@ local function on_button(self,name)
                 if ok then editor.syncing=true;editor.status="Saving..." else editor.message="Save failed (versions: "..tostring(err)..")";editor.version_error=editor.message;editor.status=editor.message end
             end
         end
-    elseif name=="track_textures" then decoration_tool.on_close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;if not (terrain_look.session and terrain_look.session.dirty) then terrain_look.close() end;track_panel.open()
+    elseif name=="track_textures" then decoration_tool.on_close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;if not (terrain_look.session and terrain_look.session.dirty) then terrain_look.close() end
+        -- #706: Texture lives in the library: show its tab (and open a collapsed library).
+        background_panel.close();self.ui.tools=false;self.lib_show=(self.lib_show or 0)+1
     elseif name=="terrain_look" then decoration_tool.on_close();track_panel.close();background_panel.close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
@@ -2910,7 +2912,8 @@ local function render_ui(self)
         for _,kind in ipairs(prefab.ORDER) do kinds[#kinds+1]={id=kind,name=d.names[kind],full=d.full_names[kind]} end
         for _,o in ipairs(object_rows) do rows[#rows+1]={id=o.id,title=o.title,subtitle=o.subtitle,tip=o.tip,hidden=o.hidden and true or false,locked=o.locked and true or false,selected=o.selected and true or false} end
         self.chrome_state.lib={collapsed=self.ui.tools and true or false,kind=editor.prefab_kind,kinds=kinds,gold=gold,gems=gems,objects=rows,
-            searching=f and f.search and true or false,search=f and f.search and f.text or self.ui.object_query or "",decor=decoration_tool.armed()}
+            searching=f and f.search and true or false,search=f and f.search and f.text or self.ui.object_query or "",decor=decoration_tool.armed(),
+            look={tex=e.material or false,tex_msg=track_panel.message or '',bg=background_panel.current or e.backgrounds or false,bg_msg=background_panel.message or '',show=self.lib_show or 0}}
     end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
@@ -3099,7 +3102,14 @@ function update(self,dt)
                     -- #705: a Decor tile arms that preset (or fence) in the Decor tool, opening the tool if needed.
                     if editor.tool~="decoration" then set_tool(self,"decoration") end
                     decoration_tool.handle({type='asset',value=name:sub(13)})
-                else on_button(self,(name=='lib_bg' or name=='lib_tex') and 'track_textures' or name) end
+                elseif name:match("^bg_op:") or name:match("^tex_op:") then
+                    -- #706: a Background or Texture tab choice, applied to the stored (or previewed) source.
+                    local ok,value=pcall(json.decode,name:match("^[%a_]+:(.*)$"))
+                    if ok and type(value)=="table" then
+                        if name:sub(1,3)=="tex" then track_panel.op(value) else background_panel.op(value) end
+                    end
+                elseif name=="bg_layers" then background_panel.open()
+                else on_button(self,name) end
             end
         end
     elseif self.overlay_shown then
