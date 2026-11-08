@@ -37,12 +37,12 @@ const artKey = it => it.tab==='track' ? ((TABS.track.items.find(t=>t[0]===it.a)|
 const isPickup = a => ['coin','coin5','gem','fuel','coinpath'].includes(a);
 
 // ---------- history ----------
-const snap = () => JSON.stringify({items:S.items, bg:S.bg, tex:S.tex, level:S.level});
+const snap = () => JSON.stringify({items:S.items, bg:S.bg, tex:S.tex, level:S.level}, (k,v)=>k==='_hidden'?undefined:v);
 function commit(label){ S.undo.push(S._pre ?? snap()); S._pre=null; S.redo=[]; if(S.undo.length>60) S.undo.shift(); S.saved=false; if(label) toast(label,'check','var(--go)'); render(); }
 function begin(){ S._pre = snap(); }
 function restore(s){ const o=JSON.parse(s); S.items=o.items; S.bg=o.bg; S.tex=o.tex; S.level=o.level; if(!S.items.find(i=>i.id===S.sel)) S.sel=null; }
-function undo(){ if(!S.undo.length) return; S.redo.push(snap()); restore(S.undo.pop()); toast('Undone','undo'); render(); }
-function redo(){ if(!S.redo.length) return; S.undo.push(snap()); restore(S.redo.pop()); toast('Redone','redo'); render(); }
+function undo(){ if(!S.undo.length||S.playing) return; S.redo.push(snap()); restore(S.undo.pop()); toast('Undone','undo'); render(); }
+function redo(){ if(!S.redo.length||S.playing) return; S.undo.push(snap()); restore(S.redo.pop()); toast('Redone','redo'); render(); }
 
 // ---------- toast ----------
 let toastT;
