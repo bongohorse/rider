@@ -32,11 +32,22 @@ async function main(){
   async function click(p){await page.locator('canvas').focus();await page.waitForTimeout(1100);const q=await world(p);await pointer.tap(page,q);await pointer.frames(page,{n:8});}
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
+  // #705: the library's Decor tab finds presets by search, category and favourites; a tile arms it and opens the Decor tool.
+  const tiles=()=>page.evaluate(()=>[...document.querySelectorAll('#rider-decor-grid [data-cmd]')].map(b=>b.dataset.cmd.slice(12)));
+  await dom('[data-tab="decor"]');assert.equal(await page.evaluate(()=>window.riderEditor.tool),'select','opening the tab arms nothing');
+  assert.ok((await tiles()).length>=12,'all presets and the fence');
+  await page.locator('.lib-find').click();await page.keyboard.type('rock');await pointer.frames(page,{n:4});assert.deepEqual(await tiles(),['rock-large']);
+  await page.keyboard.press('Escape');await pointer.frames(page,{n:4});assert.equal(await page.locator('.lib-find').inputValue(),'');
+  assert.ok(await page.evaluate(()=>document.activeElement===document.querySelector('canvas')),'Esc hands the keyboard back to the canvas');
+  await dom('[data-dcat="props"]');assert.deepEqual(await tiles(),['sign','cone']);
+  await dom('[data-fav="cone"]');await dom('[data-dcat="fav"]');assert.deepEqual(await tiles(),['cone']);
+  await dom('[data-fav="cone"]');assert.deepEqual(await tiles(),[]);await dom('[data-dcat="all"]');
+  await dom('[data-cmd="decor_asset_rock-large"]');await page.waitForFunction(()=>window.riderDecorationPanel?.visible&&window.riderEditor?.tool==='decoration');
+  await page.waitForFunction(()=>document.querySelector('[data-cmd="decor_asset_rock-large"]')?.classList.contains('on'));
   await page.waitForTimeout(800);await page.screenshot({path:path.join(out,'decoration-panel.png')});
-  // Place: choose an asset and placement in the panel, click near the run; snaps onto the line.
+  // Place: the armed asset and a placement from the panel, click near the run; snaps onto the line.
   let r=await rev();
-  await dom('[data-decoration-asset="rock-large"]');await dom('[data-decoration-placement="front"]');
+  await dom('[data-decoration-placement="front"]');
   await click([2,1.5]);await revision(r+1);
   let list=await items();assert.equal(list.length,1);assert.equal(list[0].asset,'rock-large');assert.equal(list[0].placement,'front');assert.equal(list[0].source,'o1');
   assert.ok(Math.abs(list[0].distance-22)<.3,`snapped distance ${list[0].distance}`);assert.equal(list[0].offset,0);assert.equal((await doc()).editor_version,16);
@@ -112,7 +123,7 @@ async function main(){
   {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   // Picking another asset ends the selection: bar and box go.
-  await dom('[data-decoration-asset="cone"]');await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'&&getComputedStyle(document.querySelector('#rider-decoration-gizmo')).display==='none');
+  await dom('[data-cmd="decor_asset_cone"]');await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'&&getComputedStyle(document.querySelector('#rider-decoration-gizmo')).display==='none');
   {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await tapButton('play');await page.waitForFunction(()=>window.riderEditor?.mode!=='edit'&&window.riderDecorationState?.objects===1&&window.riderDecorationState?.items?.[0]?.id==null,null,{timeout:30000});

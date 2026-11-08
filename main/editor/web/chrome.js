@@ -9,6 +9,12 @@ const queue = [];
 let root = null, state = null, last = '', menuOpen = false;
 // #685 library: the tab is view state of the chrome; everything else comes from Lua.
 let tab = 'play', libKey = '', lastTool = null, lastSel = null, lastList = '';
+// #705 Decor tab: presets from Lua (palette(), sent once) and the chrome's own view state: world, category,
+// search text and favourites (this browser only).
+let decor = {worlds: [], categories: [], items: []}, world = 'meadow', cat = 'all', find = '';
+const FAVS = 'rider.editor.decorFavourites';
+let favs = new Set();
+try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
 const INK = '#0d0f13';
 const ART = {
   start:`<path d="M14 42V8" stroke="${INK}" stroke-width="3"/><path d="M14 8h22l-5 7 5 7H14z" fill="#ff7b54" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`,
@@ -30,10 +36,10 @@ const ART = {
 const art = k => `<svg class="art" viewBox="0 0 48 48" aria-hidden="true">${ART[k] || ART.crate}</svg>`;
 const GAMEPLAY = [['start','Start'],['finish','Finish'],['coin','Coin'],['fuel','Fuel'],['gem','Gem'],['crate','Crate'],['plate','Plate'],['gate','Gate']];
 const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
-// Rail: tabs built here, and launchers that open the existing panels until #705/#706 move them into the library.
-// Launchers use their own names (lib_decor, lib_bg, lib_tex), mapped in editor.gui_script, so the footer's
-// tool_decoration/track_textures buttons keep theirs.
-const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor (opens the Decor tool)','lib_decor'],
+// Rail: tabs built here, and launchers that open the existing panels until #706 moves them into the library.
+// Launchers use their own names (lib_bg, lib_tex), mapped in editor.gui_script, so the footer's
+// track_textures button keeps its name.
+const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor'],
   ['bg','mountain','var(--k-bg)','Background (opens Track textures)','lib_bg'],['tex','texture','var(--k-tex)','Ground texture (opens Track textures)','lib_tex'],['objects','list','var(--k-obj)','Level objects']];
 const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan']];
 function mount() {
@@ -95,13 +101,24 @@ function mount() {
 #rider-chrome .lib-row .sel small{font:800 10.5px var(--body);color:var(--muted);line-height:1.1;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #rider-chrome .lib-row .sel.on small{color:var(--ink)}
 #rider-chrome .lib-row .b{--h:40px}
+#rider-chrome .lib-decor{overflow:hidden}
+#rider-chrome .lib-cats{display:flex;gap:4px}#rider-chrome .lib-cats .b{--h:34px;flex:1;min-width:0;padding:0}
+#rider-chrome .lib-cats .b.on{--c:var(--k-decor)}
+#rider-chrome .lib-decor .chips .chip{display:inline-flex;align-items:center;gap:4px;--c:var(--k-decor)}#rider-chrome .lib-decor .chips svg{width:14px;height:14px}
+#rider-chrome .dt{position:relative}#rider-chrome .dt .tile{width:100%;--c:var(--k-decor)}
+#rider-chrome .dt .tile img{width:62%;height:62%;object-fit:contain;margin-bottom:10px;pointer-events:none}
+#rider-chrome .dt .fav{position:absolute;left:3px;top:3px;width:22px;height:22px;display:grid;place-items:center;color:#ffffff50;background:none;border:0;padding:0;cursor:pointer}
+#rider-chrome .dt .fav svg{width:14px;height:14px;fill:currentColor;stroke:none}#rider-chrome .dt .fav.on{color:var(--accent)}
 `;
   document.head.append(style); document.body.append(root);
   // Keyboard focus never leaves the canvas: editor shortcuts (Ctrl+Z, E, Delete …) are read there. The Defold
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.
   root.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-  root.addEventListener('focusin', () => document.querySelector('canvas')?.focus());
+  // The Decor search is the one exception: it takes the keyboard while typing (Esc or Enter hand it back).
+  root.addEventListener('focusin', e => { if (!e.target.matches('.lib-find')) document.querySelector('canvas')?.focus(); });
+  root.addEventListener('input', e => { if (e.target.matches('.lib-find')) { find = e.target.value; decorGrid(); } });
+  root.addEventListener('keydown', e => { if (e.target.matches('.lib-find') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); if (e.key === 'Escape') { find = e.target.value = ''; decorGrid(); } document.querySelector('canvas')?.focus(); } });
   const closeMenu = () => { if (menuOpen) { menuOpen = false; render(state); } };
   document.addEventListener('pointerdown', e => { if (!root.contains(e.target)) closeMenu(); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
@@ -113,6 +130,8 @@ function mount() {
     if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
     if (b.dataset.tab) { tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
+    if (b.dataset.dcat || b.dataset.dworld) { if (b.dataset.dcat) cat = b.dataset.dcat; else world = b.dataset.dworld; libKey = ''; library(state); return; }
+    if (b.dataset.fav) { const id = b.dataset.fav; if (favs.has(id)) favs.delete(id); else favs.add(id); try { localStorage.setItem(FAVS, JSON.stringify([...favs])); } catch (e) { /* favourites stay for this session */ } decorGrid(); return; }
     if (!b.dataset.cmd) return;
     if (menuOpen) { menuOpen = false; render(state); }
     queue.push(b.dataset.cmd);
@@ -145,7 +164,7 @@ function build() {
 }
 const q = sel => root.querySelector(sel);
 const noop = () => {};
-function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) e.focus = noop; }
+function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.matches('.lib-find')) e.focus = noop; }
 function setOn(b, on) { b.classList.toggle('on', on); if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed'); }
 function update(s) {
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
@@ -192,14 +211,15 @@ function library(s) {
   if (!Array.isArray(L.objects)) L.objects = [];
   if (!Array.isArray(L.kinds)) L.kinds = [];
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
-  if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; lastTool = s.tool; }
+  if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
-  const key = JSON.stringify([L, s.tool, tab]);
+  // The Decor tab is rebuilt only for its own data, so a level edit does not reset the search box while typing.
+  const key = tab === 'decor' ? JSON.stringify(['decor', L.collapsed, L.decor, s.tool === 'decoration', world, cat, decor.items.length]) : JSON.stringify([L, s.tool, tab]);
   if (key === libKey) return;
   libKey = key;
   dock.classList.toggle('closed', !!L.collapsed);
   q('#rider-lib-rail').innerHTML = UI.button({icon: L.collapsed ? 'chevr' : 'chevl', title: L.collapsed ? 'Open the library' : 'Collapse the library', variant: 'plain', d: {cmd: 'collapse_tools'}})
-    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, on: cmd === 'lib_decor' && s.tool === 'decoration', d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('');
+    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('');
   if (L.collapsed) { q('#rider-lib-pane').innerHTML = ''; unfocusable(); return; }
   const R = Object.fromEntries(RAIL.map(r => [r[0], r]));
   const head = id => UI.dockHeader({title: R[id][3], icon: R[id][1], color: R[id][2]});
@@ -212,6 +232,13 @@ function library(s) {
     h = head('track') + '<div class="pbody"><div class="grid lib-grid3" style="--c:var(--k-track)">' + L.kinds.map((k, i) =>
       `<button type="button" class="tile named${s.tool === 'prefab' && L.kind === k.id ? ' on' : ''}" data-cmd="kind_${UI.esc(k.id)}" title="${i + 1}: ${UI.esc(k.full)} — click to place; Esc cancels">${art(k.id)}<span class="nm">${UI.esc(k.name)}</span></button>`).join('')
       + '</div><p class="hint">Keys 1–7 pick a part while Prefab [P] is active.</p></div>';
+  } else if (tab === 'decor') {
+    const cats = [['all', 'grid', 'All decor'], ['fav', 'star', 'Favourites'], ...decor.categories.map(c => [c.id, c.icon, c.name])];
+    h = head('decor') + '<div class="pbody lib-decor"><div class="chips">' + decor.worlds.map(w =>
+      `<button type="button" class="chip${w.id === world ? ' on' : ''}" data-dworld="${UI.esc(w.id)}" title="World: ${UI.esc(w.name)}">${UI.icon('mountain')}${UI.esc(w.name)}</button>`).join('')
+      + `</div><label class="search" title="Search decor by name; Esc clears">${UI.icon('search')}<input class="lib-find" type="search" placeholder="Search decor" value="${UI.esc(find)}" spellcheck="false" autocomplete="off" aria-label="Search decor"></label>`
+      + '<div class="lib-cats">' + cats.map(([id, icon, title]) => UI.button({icon, title, on: cat === id, d: {dcat: id}})).join('') + '</div>'
+      + '<div class="lib-rows"><div class="grid lib-grid3" id="rider-decor-grid"></div></div></div>';
   } else {
     const text = L.searching ? `${UI.esc(L.search)}<span class="caret"></span>` : L.search ? UI.esc(L.search) : 'Search objects';
     h = head('objects') + `<div class="pbody lib-objects"><button type="button" class="b lib-search${L.searching ? ' typing' : ''}" data-cmd="object_search" title="Search by type, name or id; Esc cancels">${UI.icon('search')}<span>${text}</span></button><div class="lib-rows">`
@@ -224,6 +251,7 @@ function library(s) {
   const scroller = () => q('#rider-lib-pane .lib-rows') || q('#rider-lib-pane .pbody');
   const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.tab;
   q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.tab = tab;
+  if (tab === 'decor') decorGrid();
   unfocusable();
   const body = scroller();
   if (body && oldTab === tab) body.scrollTop = top;
@@ -231,6 +259,26 @@ function library(s) {
   const list = tab === 'objects' ? [L.search, L.searching, L.objects.length, oldTab].join('|') : '';
   if (sel && (sel !== lastSel || list !== lastList)) q(`#rider-lib-pane [data-cmd="object_select_${CSS.escape(sel)}"]`)?.scrollIntoView({block: 'nearest'});
   lastSel = sel; lastList = list;
+}
+
+// Decor tiles: the armed preset is on while the Decor tool is active; a tile arms it (and opens the tool).
+function decorGrid() {
+  const grid = q('#rider-decor-grid'); if (!grid) return;
+  const words = find.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const armed = state?.tool === 'decoration' && state?.lib?.decor || {};
+  const shown = decor.items.filter(a => a.world === world && (cat === 'all' || (cat === 'fav' ? favs.has(a.id) : a.category === cat))
+    && words.every(w => (a.name + ' ' + a.id + ' ' + a.category).toLowerCase().includes(w)));
+  grid.innerHTML = shown.length ? shown.map(a => {
+    const on = a.fence ? armed.fence === a.id : !armed.fence && armed.asset === a.id;
+    return `<div class="dt"><button type="button" class="tile named${on ? ' on' : ''}" data-cmd="decor_asset_${UI.esc(a.id)}" title="${UI.esc(a.name)}${a.fence ? ': click where it starts, then where it ends' : ': click the track to place'}"><img src="${a.thumb}" alt=""><span class="nm">${UI.esc(a.name)}</span></button>`
+      + `<button type="button" class="fav${favs.has(a.id) ? ' on' : ''}" data-fav="${UI.esc(a.id)}" title="${favs.has(a.id) ? 'Remove from' : 'Add to'} favourites" aria-pressed="${favs.has(a.id)}">${UI.icon('star')}</button></div>`;
+  }).join('') : `<p class="hint">${cat === 'fav' && !words.length ? 'No favourites yet: tap a star.' : 'No decor found'}</p>`;
+  unfocusable();
+}
+function setPalette(p) {
+  decor = {worlds: Array.isArray(p?.worlds) ? p.worlds : [], categories: Array.isArray(p?.categories) ? p.categories : [], items: Array.isArray(p?.items) ? p.items : []};
+  if (decor.worlds.length && !decor.worlds.some(w => w.id === world)) world = decor.worlds[0].id;
+  libKey = ''; if (state) library(state);
 }
 
 let inspKey = '', lastFocus = null, inspHead = '';
@@ -309,5 +357,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, get visible() { return !!(root && !root.hidden); }};
 })();
