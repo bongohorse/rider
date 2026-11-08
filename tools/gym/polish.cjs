@@ -195,8 +195,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   for(let i=0;i<4;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}
   e=await settle();assert.ok(e.camera.zoom>fitted.zoom*1.5,'zoomed in');
   await button('view_fit');e=await settle();
-  // Repeatable within the float32 screen mapping (sub-millimetre).
-  assert.ok(near(e.camera.zoom/fitted.zoom,1,1e-6)&&near(e.camera.x,fitted.x,1e-3)&&near(e.camera.y,fitted.y,1e-3),'Fit level is not repeatable: '+JSON.stringify([e.camera,fitted]));
+  // Repeatable within the float32 screen mapping (sub-millimetre). #685: the library dock narrows the fit area, which
+  // raises the measured zoom-ratio drift to 2.4e-6 (0.0314181909 vs 0.0314181140); position stays within 1e-3 m.
+  assert.ok(near(e.camera.zoom/fitted.zoom,1,1e-5)&&near(e.camera.x,fitted.x,1e-3)&&near(e.camera.y,fitted.y,1e-3),'Fit level is not repeatable: '+JSON.stringify([e.camera,fitted]));
   measurements.fit={extent:x,zoom:e.camera.zoom};
   // Two objects selected: the box of both is centred and the zoom is kept when it fits.
   await at([10,0]);await at([47,0],['Shift']);e=await settle();assert.deepEqual(e.selected.sort(),['o1','o3']);
@@ -218,7 +219,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('Escape');await key('Home');await at([47,0]);await at([80,5],['Shift']);e=await settle();assert.deepEqual(e.selected.sort(),['o3','o4']);
   await key('Delete');e=await revision(before.revision+1);e=await settle();
   assert.equal(e.problem,'');
-  await key('Home');await hover([12,3]);await key('f');await played('le6-nav');
+  // #685: the narrower workspace lowers the fitted zoom; zoom in around the target so one pixel stays well under the 5 cm tolerance.
+  await key('Home');{const z=await world([12,3]);await page.mouse.move(z.x,z.y);await pointer.frames(page);for(let i=0;i<3;i++){await page.mouse.wheel(0,-120);await page.waitForTimeout(80);}}
+  await hover([12,3]);await key('f');await played('le6-nav');
   await key('e');e=await edit();
   assert.ok(e.last_test&&near(e.last_test[0],12,0.05)&&near(e.last_test[1],0.9,0.01),JSON.stringify(e.last_test));
   const launched=e.last_test;
@@ -422,6 +425,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await key('h');await key('h');e=await settle();assert.equal(e.help_open,false);
   await unchanged(before,'help');
   // A piece being drawn stays as it is behind the help (not finished, not dropped).
+  // #685: bring the piece into the workspace beside the wider library dock first.
+  {const t=require('./editor_ui_target.cjs');await t.ensureWorld(page,ed,canvas,[20,6]);await t.ensureWorld(page,ed,canvas,[24,7]);}
   await key('d');await at([20,6]);await at([24,7]);e=await settle();assert.equal(e.drawing,2);
   await key('h');e=await settle();assert.equal(e.help_open,true);assert.equal(e.drawing,2);
   await key('Escape');e=await settle();assert.equal(e.help_open,false);assert.equal(e.drawing,2,'help changed the piece being drawn');

@@ -78,7 +78,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.goto(base+'?station=straight');await page.waitForFunction(()=>window.riderTelemetry?.station==='straight'&&window.riderTelemetry.sequence>2);
   await page.locator('canvas').focus();await key('e');let e=await edit();
   e=await importText(JSON.stringify(fixture),'ea2.json');await settle();assert.equal((await doc()).editor_version,13);
-  await button('collapse_prefabs');await button('object_select_o2');e=await settle();assert.equal(e.selection,'o2');
+  await button('object_select_o2');e=await settle();assert.equal(e.selection,'o2');
   let before=await snapshot();await button('view_centre');await unchanged(before,'list selection centre');
   await button('object_name');await type('Main ramp');await key('Enter');e=await settle();
   assert.equal((await doc()).objects.find(o=>o.id==='o2').name,'Main ramp');assert.equal(e.undo,before.undo+1);
@@ -139,7 +139,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   await page.setViewportSize({width:1280,height:720});
   await page.waitForFunction(()=>!window.riderEditor.dirty&&!window.riderEditor.unsynced,null,{timeout:10000});
-  await page.reload();await edit();await page.locator('canvas').focus();await button('collapse_prefabs');
+  await page.reload();await edit();await page.locator('canvas').focus();
   d=await doc();assert.equal(d.objects.find(o=>o.id==='o2').name,'Main ramp');assert.equal(d.objects.find(o=>o.id==='o2').locked,true);assert.equal(d.objects.find(o=>o.id==='o2').hidden,true);
   e=await importText(JSON.stringify(stored),'ea2-export.json');await settle();d=await doc();
   assert.deepEqual(d.objects,stored.editor.objects);assert.deepEqual(d.connections,stored.editor.connections);
@@ -150,11 +150,13 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const seven=JSON.parse(JSON.stringify(fixture));seven.id='ea2-seven';seven.editor.connections=[];
   seven.editor.objects[1]={id:'o2',type:'prefab',kind:'kicker',at:[12,0],params:{facing:'right',angle:15,lip:1,gap:2,landing:'down',landing_length:6,landing_angle:15}};
   await page.setViewportSize({width:1920,height:1080});await pointer.frames(page);
-  await importText(JSON.stringify(seven),'ea2-seven.json');await button('collapse_prefabs');await button('object_select_o2');e=await settle();
-  assert.ok(e.visible.includes('param_7'));assert.ok(e.visible.includes('object_lock_o4'));assert.ok(e.visible.includes('kind_wave'));
+  await importText(JSON.stringify(seven),'ea2-seven.json');await button('object_select_o2');e=await settle();
+  assert.ok(e.visible.includes('param_7'));assert.ok(e.visible.includes('object_lock_o4'));
+  // #685: prefab cards live in the library's Track parts tab; the inspector keeps its fields meanwhile.
+  await require('./editor_ui_target.cjs').reveal(page,'kind_wave');e=await settle();assert.ok(e.visible.includes('kind_wave'));assert.ok(e.visible.includes('param_7'));
   assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);measurements.seven_fields={boxes:e.ui.boxes,texts:e.ui.texts};
   await page.mouse.move(800,90);await pointer.frames(page);await page.screenshot({path:path.join(out,'objects-seven-fields-1920x1080.png')});
-  await button('collapse_prefabs');await page.setViewportSize({width:1280,height:720});await pointer.frames(page);
+  await page.setViewportSize({width:1280,height:720});await pointer.frames(page);
 
   // Maximum list length uses the same fixed pools; search and scrolling can reach the final object.
   const large=JSON.parse(JSON.stringify(fixture));large.id='ea2-many';large.editor.next_id=257;
@@ -168,9 +170,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   for(const size of [{width:1280,height:720},{width:1920,height:1080},{width:1280,height:480}]){
    await page.setViewportSize(size);await pointer.frames(page);await button('object_search');await key('Escape');e=await settle();
    if(size.height===480){
-    const r=e.ui.scrollbars.tool_scroll;assert.ok(r);
-    await page.mouse.move(r.x+r.w/2,r.y+r.knob/2);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
-    await page.mouse.move(r.x+r.w/2,r.y+r.h,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);e=await settle();
+    // #685: the library list scrolls inside the dock; the final row is reachable in a short window.
+    await require('./editor_ui_target.cjs').reveal(page,'object_lock_o256');e=await settle();
     assert.ok(e.visible.includes('object_lock_o256'),'short window cannot reach the final object row');
    }
    assert.equal(e.overlay.nodes,628);assert.ok(e.ui.boxes<=128&&e.ui.texts<=128);
@@ -179,21 +180,16 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await page.screenshot({path:path.join(out,`objects-${size.width}x${size.height}.png`)});
   }
   await page.setViewportSize({width:1280,height:720});await pointer.frames(page);await button('object_search');await key('Escape');e=await settle();
-  // Search expansion keeps the selected row visible; drag the bounded list to both ends.
-  assert.equal(e.ui.object_scroll,252);
+  // Search expansion keeps the selected row visible; the wheel scrolls the library list to both ends.
+  assert.ok(e.visible.includes('object_select_o256'),'selected row visible after the search is cleared');
   before=await snapshot();
-  const scrollbar=e.ui.scrollbars.object_scroll;assert.ok(scrollbar);
-  for(const end of [false,true]){
-   const cur=(await ed()).ui.scrollbars.object_scroll;
-   const start=cur.y+(cur.h-cur.knob)*(await ed()).ui.object_scroll/252+cur.knob/2;
-   await page.mouse.move(cur.x+cur.w/2,start);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
-   await page.mouse.move(cur.x+cur.w/2,end?cur.y+cur.h:cur.y,{steps:6});await pointer.frames(page);await page.mouse.up();await pointer.frames(page);
-   assert.equal((await ed()).ui.object_scroll,end?252:0);
-  }
-  const rows=(await ed()).ui.scrollbars.object_scroll;
-  await page.mouse.move(90,rows.y+20);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page);
-  assert.equal((await ed()).ui.object_scroll,251);await page.mouse.wheel(0,120);await pointer.frames(page);assert.equal((await ed()).ui.object_scroll,252);
-  await unchanged(before,'object scrollbar drag and wheel');
+  const list=await page.locator('#rider-chrome .chrome-dock .lib-rows').boundingBox();assert.ok(list,'library list');
+  await page.mouse.move(list.x+list.width/2,list.y+list.height/2);await pointer.frames(page);
+  for(let i=0;i<120&&!(await ed()).visible.includes('object_select_o1');i++){await page.mouse.wheel(0,-600);await pointer.frames(page,{n:2});}
+  e=await ed();assert.ok(e.visible.includes('object_select_o1')&&!e.visible.includes('object_select_o256'),'wheel reaches the first row');
+  for(let i=0;i<120&&!(await ed()).visible.includes('object_select_o256');i++){await page.mouse.wheel(0,600);await pointer.frames(page,{n:2});}
+  e=await ed();assert.ok(e.visible.includes('object_select_o256')&&!e.visible.includes('object_select_o1'),'wheel reaches the last row');
+  await unchanged(before,'object list wheel');
   await button('object_select_o256');before=await snapshot();await key('Delete');await settle();assert.ok(!(await doc()).objects.some(o=>o.id==='o256'));
   await key('z',['Control']);await settle();assert.ok((await doc()).objects.some(o=>o.id==='o256'));
   measurements.budget={gui_nodes:628,max_nodes:640,objects:256,world_sprites_added:0};cases.push('bounded_list_and_viewports');

@@ -114,7 +114,6 @@ module.exports=async function(h){
  cases.push('mechanism_two_plates_three_gates_five_links');
 
  // 4. Locks protect settings, position, delete and incident links; hide is editor-only.
- await button('collapse_prefabs');
  await button('object_lock_'+g1);assert.equal((await find(g1)).locked,true);
  before=await snapshot();
  await select(plateA);await button('unlink_'+plateA+'_'+g1);e=await settle();assert.match(e.message,/Locked: Gate /);

@@ -120,12 +120,17 @@ function M.size(u)
     -- the same desktop layout, without claiming a mobile-authoring UI.
     local density=html5 and tonumber(html5.run("(function(){var c=document.querySelector('canvas');return c&&c.clientWidth?c.width/c.clientWidth:1;})()")) or 1
     if not density or density<=0 or density~=density then density=1 end
-    u.scale=density*math.min(1,math.max(1,w)/density/1280)
+    u.scale=density*math.min(1,math.max(1,w)/density/1280);u.density=density
     u.w,u.h=math.max(1,w)/u.scale,math.max(1,h)/u.scale
     return u.w,u.h
 end
 function M.usable(u)
     local w,h=M.size(u);local s=u.scale
+    if u.chrome then
+        -- #685: the HTML library dock (392 or 84 CSS px wide, zoomed like the chrome) covers the left edge.
+        local css=s/(u.density or 1);local zoom=css>=0.5 and math.max(css,0.75) or css
+        return {x0=(u.tools and 84 or 392)*zoom/css*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
+    end
     return {x0=(u.tools and 72 or 216)*s,x1=(w-(u.properties and 72 or 312))*s,y0=80*s,y1=(h-104)*s}
 end
 function M.pointer(u,action)
@@ -204,7 +209,7 @@ function M.scrollbar_input(u,id,action)
     return false
 end
 function M.render(u,d)
-    local w,h=M.size(u);u.k=d.k;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
+    local w,h=M.size(u);u.k=d.k;u.chrome=d.chrome;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
     u.scrollbars={};u.error_banner,u.error_text=nil,nil
     u.scroll_key=d.selection..':'..d.tool
     if u.scroll_key~=u.last_scroll_key then u.scroll,u.last_scroll_key=0,u.scroll_key end
@@ -307,6 +312,18 @@ function M.render(u,d)
         button('redo',commands+40,8,32,'Redo',false,'Redo [Ctrl+Y]')
         button('play',commands+80,8,40,'Play',true,'Play from START [E]')
         end
+        local function scrollbar(key,x,top,bottom,content)
+            local height=math.max(24,bottom-top);local maximum=math.max(0,content-height)
+            local value=math.max(0,math.min(maximum,u[key] or 0));u[key]=value
+            if key=='scroll' then u.max_scroll=maximum else u.tool_max_scroll=maximum end
+            if maximum<=0 then return end
+            local knob=math.max(24,height*height/(height+maximum))
+            local y=top+(height-knob)*value/maximum
+            box(x,top,8,height,C.control);box(x+1,y,6,knob,C.secondary)
+            u.scrollbars[key]={x=x-3,y=top,w=14,h=height,knob=knob,maximum=maximum}
+        end
+        -- #685: with the HTML chrome the library dock replaces this palette (Gameplay, Prefabs, Objects).
+        if d.chrome then u.tools_rect,u.object_rect,u.tool_scroll,u.tool_max_scroll,u.object_max_scroll=nil,nil,0,0,0 else
         local lw=u.tools and 40 or 184
         local gameplay_top=d.chrome and 112 or 152+(u.tool_category and 0 or 80)
         -- Gameplay: eight 36 x 32 tiles in two rows of four (Start, Finish, Coin, Fuel / Gem, Crate, Plate,
@@ -322,16 +339,6 @@ function M.render(u,d)
         u.tools_rect={x=16,y=104,w=lw,h=math.max(56,tools_end-104)}
         box(16,104,lw,u.tools_rect.h,C.panel)
         button('collapse_tools',u.tools and 20 or 16,u.tools and 112 or 56,32,u.tools and '>' or '<',false,'Collapse or expand the whole tool palette')
-        local function scrollbar(key,x,top,bottom,content)
-            local height=math.max(24,bottom-top);local maximum=math.max(0,content-height)
-            local value=math.max(0,math.min(maximum,u[key] or 0));u[key]=value
-            if key=='scroll' then u.max_scroll=maximum else u.tool_max_scroll=maximum end
-            if maximum<=0 then return end
-            local knob=math.max(24,height*height/(height+maximum))
-            local y=top+(height-knob)*value/maximum
-            box(x,top,8,height,C.control);box(x+1,y,6,knob,C.secondary)
-            u.scrollbars[key]={x=x-3,y=top,w=14,h=height,knob=knob,maximum=maximum}
-        end
         if not u.tools then
             local top,bottom=112,tools_end-12
             scrollbar('tool_scroll',190,top,bottom,objects_top+object_height-top)
@@ -412,6 +419,7 @@ function M.render(u,d)
                 if count>rows and shown(oy+224,16) then text(28,oy+232,(u.object_scroll+1)..'-'..math.min(count,u.object_scroll+rows)..' / '..count,C.secondary,12) end
             else u.object_rect=nil end
         else u.tool_scroll,u.tool_max_scroll=0,0;u.object_rect=nil end
+        end
         local rx=w-(u.properties and 56 or 296)
         local property_panel=box(rx,104,u.properties and 40 or 280,56,C.panel)
         u.properties_rect={x=rx,y=104,w=u.properties and 40 or 280,h=56}

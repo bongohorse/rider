@@ -29,14 +29,14 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   }
   const canvas=(x,y)=>page.evaluate(([x,y])=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect();return {x:r.x+x/c.width*r.width,y:r.y+(1-y/c.height)*r.height};},[x,y]);
   async function world(p){const s=(await ed()).screen;return canvas(s.ox+p[0]*s.ppm_x,s.oy+p[1]*s.ppm_y);}
-  async function hover(p){const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
+  async function hover(p){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);const a=await world(p);await page.mouse.move(a.x,a.y);await page.waitForTimeout(120);}
   async function click(at,mods=[]){
    for(const m of mods)await page.keyboard.down(m);
    if(mods.length)await page.waitForTimeout(60);
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  const at=async(p,mods)=>click(await world(p),mods);
+  const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
   async function drag(from,to,steps=6){
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);

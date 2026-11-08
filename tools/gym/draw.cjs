@@ -36,7 +36,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    for(const m of mods)await page.keyboard.up(m);
   }
   const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
-  async function dblclick(p){await pointer.dblclick(page,await world(p));}
+  async function dblclick(p){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);await pointer.dblclick(page,await world(p));}
   async function drag(from,to,mods=[],steps=5){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,from);
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
@@ -314,6 +314,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   const segLine=d.objects.find(o=>o.type==='line');const p0=segLine.points.reduce((a,b)=>Math.abs(b[0]-10)<Math.abs(a[0]-10)?b:a);
   // The first click within 1 s of the canvas regaining focus (after the import panel) is ignored (R15).
   await page.waitForTimeout(1100);await at(p0);await page.waitForFunction(()=>window.riderEditor.selection!=='');
+  // #685: fit the whole level first, so the full 800-segment line is on screen whatever the workspace width.
+  await key('Home');await page.waitForTimeout(150);
   const budget=[];
   for(const zoomSteps of [0,6]){
    for(let i=0;i<zoomSteps;i++){await page.mouse.wheel(0,120);await page.waitForTimeout(60);}

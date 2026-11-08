@@ -2902,6 +2902,15 @@ local function render_ui(self)
     end
     d.chrome=chrome.active()
     self.chrome_state={title=d.title,status=d.status,warnings={count=d.blocking and d.error_count or d.warning_count,blocking=d.blocking,label=d.diagnostics}}
+    if d.chrome then
+        -- #685: the library dock replaces the Defold palette (Gameplay, Prefabs, Objects browser).
+        local gold,gems=require('main.game.coin_data').counts(e.objects)
+        local kinds,rows={},{}
+        for _,kind in ipairs(prefab.ORDER) do kinds[#kinds+1]={id=kind,name=d.names[kind],full=d.full_names[kind]} end
+        for _,o in ipairs(object_rows) do rows[#rows+1]={id=o.id,title=o.title,subtitle=o.subtitle,tip=o.tip,hidden=o.hidden and true or false,locked=o.locked and true or false,selected=o.selected and true or false} end
+        self.chrome_state.lib={collapsed=self.ui.tools and true or false,kind=editor.prefab_kind,kinds=kinds,gold=gold,gems=gems,objects=rows,
+            searching=f and f.search and true or false,search=f and f.search and f.text or self.ui.object_query or ""}
+    end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
     if self.buttons.inc_test_speed then self.buttons.plus=self.buttons.inc_test_speed;self.buttons.minus=self.buttons.dec_test_speed
@@ -3067,13 +3076,13 @@ function update(self,dt)
             -- Like the Defold buttons, the chrome yields to dialogs, the Problems list and the Import/Export panel.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0}})
+                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib})
             for _,name in ipairs(chrome.take()) do
                 -- Same gates as a Defold button press: nothing runs behind a dialog, and a press while a
                 -- field is focused only confirms (or keeps) the field.
                 if modal or editor.mode~="edit" then break
                 elseif self.field then confirm_name(self,true)
-                else on_button(self,name) end
+                else on_button(self,name=='lib_decor' and 'tool_decoration' or (name=='lib_bg' or name=='lib_tex') and 'track_textures' or name) end
             end
         end
     elseif self.overlay_shown then
