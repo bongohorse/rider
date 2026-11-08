@@ -202,7 +202,7 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
   await page.waitForFunction(()=>window.riderEditor.status==='Saved');
   await page.goto(base+'?station=custom');e=await edit();
   assert.deepEqual(e.start.position,moved);assert.equal(e.revision,rev+1);assert.equal(e.id,'my-ramps');assert.equal(e.undo,0);
-  await button('tool_finish');await click(await world([moved[0]+22,1.2]));e=await revision(rev+2);assert.equal(e.finish.direction,1);
+  await button('tool_finish');await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,[moved[0]+22,1.2]);await click(await world([moved[0]+22,1.2]));e=await revision(rev+2);assert.equal(e.finish.direction,1);
   await key('e');t=await played('my-ramps');assert.equal(t.finish,true);cases.push('draft_survives_reload');
 
   // 14. Every built-in station opens as a template copy (R3) that compiles without Play errors; Undo brings back the replaced document.

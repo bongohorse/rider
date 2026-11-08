@@ -35,8 +35,8 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    await pointer.tap(page,at);
    for(const m of mods)await page.keyboard.up(m);
   }
-  const at=async(p,mods)=>click(await world(p),mods);
-  async function drag(from,to,steps=5){
+  const at=async(p,mods)=>{await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,p);return click(await world(p),mods);};
+  async function drag(from,to,steps=5){await require('./editor_ui_target.cjs').ensureWorld(page,ed,canvas,from);
    const a=await world(from),b=await world(to);
    await page.mouse.move(a.x,a.y);await pointer.frames(page);await page.mouse.down();await pointer.frames(page);
    for(let i=1;i<=steps;i++){await page.mouse.move(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps);await page.waitForTimeout(40);}

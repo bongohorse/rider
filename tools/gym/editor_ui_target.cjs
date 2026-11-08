@@ -1,7 +1,26 @@
 // Normal pointer gestures to reach controls in the approved scrollable inspector. This does not
 // inject state or relax an assertion: a missing/inapplicable control still fails in the caller.
 const pointer=require('./pointer.cjs');
+// #685: in the HTML library dock a control is reached by opening its tab (and the dock), then scrolling it into
+// the dock's own scroll area; the same real pointer taps a user makes.
+async function libraryTap(page,name){
+ const p=await page.evaluate(n=>{const b=window.riderEditor.buttons[n],c=document.querySelector('canvas'),r=c.getBoundingClientRect();return b&&{x:r.x+b.x/c.width*r.width,y:r.y+(1-b.y/c.height)*r.height};},name);
+ if(!p)return false;await pointer.tap(page,p);await pointer.frames(page,{n:4});return true;
+}
+async function revealLibrary(page,name){
+ let e=await page.evaluate(()=>window.riderEditor);
+ if(e?.open_dialog||e?.help_open||e?.warnings_open)return;
+ const tab=/^kind_/.test(name)?'track':/^object_(?!name$)/.test(name)?'objects':/^tool_(start|finish|coin|fuel|gem|crate|plate|gate)$/.test(name)?'play':null;
+ if(!tab)return;
+ if(!e.visible.includes(name)){
+  if(e.ui.tools_collapsed){await libraryTap(page,'collapse_tools');e=await page.evaluate(()=>window.riderEditor);}
+  if(!e.visible.includes(name))await libraryTap(page,'lib_'+tab);
+ }
+ await page.evaluate(n=>document.querySelector(`#rider-chrome [data-cmd="${n}"]`)?.scrollIntoView({block:'nearest'}),name);
+ await pointer.frames(page,{n:4});
+}
 async function reveal(page,name){
+ if((await page.evaluate(()=>window.riderEditor?.buttons?.lib_play))&&/^(object_(?!name$)|kind_|tool_)/.test(name))return revealLibrary(page,name);
  if(/^(object_(?!name$)|collapse_objects|kind_|collapse_prefabs|collapse_gameplay|collapse_tool_category|tool_)/.test(name)){
   let e=await page.evaluate(()=>window.riderEditor);
   if(e?.visible.includes(name)||e?.open_dialog||e?.help_open||e?.warnings_open)return;
