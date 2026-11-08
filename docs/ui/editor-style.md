@@ -40,4 +40,4 @@ Button (default, on, area colour, badge, disabled, danger, wide, primary), Play/
 
 ## Fonts
 
-`main/editor/web/fonts/` holds the latin subsets of Baloo 2 and Nunito (SIL Open Font License 1.1, licences beside them) from Google Fonts. HTML5 custom resources are not served as files, so `tools/ui/build_ui_fonts.py` embeds them as data URIs in `main/editor/web/ui_fonts.js`; `--check` fails when the file is stale.
+`main/editor/web/fonts/` holds the latin subsets of Baloo 2 and Nunito (SIL Open Font License 1.1, licences beside them), downloaded 2026-11-08 unchanged from the Google Fonts css2 API: `fonts.gstatic.com/s/baloo2/v23/wXKrE3kTposypRyd51jcAA.woff2` (sha256 `26fb4610…dfe59c1`) and `fonts.gstatic.com/s/nunito/v32/XRXV3I6Li01BKofINeaB.woff2` (sha256 `ba344451…cac793`); licence texts from `github.com/google/fonts` `ofl/baloo2` and `ofl/nunito`. HTML5 custom resources are not served as files, so `tools/ui/build_ui_fonts.py` embeds them as data URIs in `main/editor/web/ui_fonts.js`; `--check` fails when the file is stale.

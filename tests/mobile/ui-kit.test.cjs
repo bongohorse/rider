@@ -51,3 +51,12 @@ test('states are visible in markup: on, disabled, pressed and checked',()=>{
   const r=ui.range({key:'size',min:0,max:2,value:1,label:'Size',icon:'size',color:'#4cc9ff',text:'1×'});
   assert.match(r,/--p:50%/);
 });
+
+test('every class the helpers emit has a style rule',()=>{
+  const {ui,appended}=load();ui.install();
+  const css=appended.head[0].textContent;
+  for(const cls of ['b','play','seg','row','lab','range','val','search','ph','ic','chip','chips','ui-toast','cat','tag'])
+    assert.ok(css.includes(`.rider-ui .${cls}`)||css.includes(`.${cls}{`)||css.includes(`.${cls} `),`no rule for .${cls}`);
+  assert.match(ui.seg('n',[[1,'coin','1'],[5,'coin','5']],'5','#fff'),/aria-checked="true" class="b on"[^>]*data-v="5"/);
+  assert.match(ui.range({key:'k',min:1,max:1,value:1,label:'K',icon:'size',color:'#fff'}),/--p:0%/);
+});

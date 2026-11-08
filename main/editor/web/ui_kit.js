@@ -33,8 +33,8 @@ const CSS = `.rider-ui{
 .rider-ui .play:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink),inset 0 -4px 0 #0003}
 .rider-ui .play svg{fill:currentColor;stroke:none;width:26px;height:26px}
 .rider-ui .ui-toast{display:flex;align-items:center;gap:8px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:999px;padding:5px 14px 5px 5px;font:800 13px var(--body);box-shadow:0 3px 0 var(--ink);white-space:nowrap;z-index:6;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}
-.rider-ui .toast .ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--tc,var(--info));color:var(--ink);border:2px solid var(--ink);flex:none}
-.rider-ui .toast .ic svg{width:15px;height:15px}
+.rider-ui .ui-toast .ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--tc,var(--info));color:var(--ink);border:2px solid var(--ink);flex:none}
+.rider-ui .ui-toast .ic svg{width:15px;height:15px}
 .rider-ui .dock{position:absolute;top:126px;display:flex;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overflow:hidden;z-index:4;max-height:calc(100% - 138px)}
 .rider-ui .dock.closed .pane{display:none}
 .rider-ui .rail{display:flex;flex-direction:column;gap:6px;padding:6px;background:#16181dcc;overflow-y:auto;scrollbar-width:none}
@@ -129,6 +129,9 @@ const CSS = `.rider-ui{
 .rider-ui .menu-grid .b{--h:64px;flex-direction:column;font:800 12px var(--disp)}
 .rider-ui .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font:800 13px var(--body)}
 .rider-ui .keys kbd{font:900 12px var(--body);background:var(--btn);border:2px solid var(--ink);border-radius:7px;padding:2px 7px;box-shadow:0 2px 0 var(--ink);text-align:center}
+.rider-ui .chips{display:flex;flex-wrap:wrap;gap:6px}
+.rider-ui .chip{font:800 12px var(--body);padding:3px 10px;border-radius:999px;border:var(--ol) solid var(--ink);background:var(--field);color:var(--muted)}
+.rider-ui .chip.on{background:var(--c,var(--accent));color:var(--ink)}
 .rider-ui .ui-sheet{position:fixed;inset:0;z-index:5000;background:#14161b;color:var(--text);font-family:var(--body);overflow:auto;padding:20px}
 .rider-ui .ui-sheet h1{font:800 26px var(--disp);margin:0 0 4px}
 .rider-ui .ui-sheet h2{font:800 16px var(--disp);margin:18px 0 8px;color:var(--muted)}
@@ -215,6 +218,7 @@ const ICONS = {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const attr = (k, v) => v == null || v === false ? '' : ` ${k}="${esc(v)}"`;
 const data = d => d ? Object.entries(d).map(([k, v]) => attr('data-' + k, v)).join('') : '';
+// cls and colours come from internal callers only; they are not escaped for CSS.
 const icon = (name, cls = 'i') => {
   if (!ICONS[name]) throw new Error('Unknown UI icon: ' + name);
   return `<svg class="${cls}" aria-hidden="true"><use href="#ui-${name}"/></svg>`;
@@ -236,9 +240,9 @@ function button({icon: ic, label, on = false, color, title, act, d, disabled = f
   return `<button type="button" class="${cls}"${style}${attr('title', title)}${attr('aria-label', title || label)}${attr('aria-pressed', on ? 'true' : null)}${attr('data-act', act)}${data(d)}${disabled ? ' disabled' : ''}>${ic ? icon(ic) : ''}${label ? esc(label) : ''}${tag != null ? `<span class="tag">${esc(tag)}</span>` : ''}</button>`;
 }
 const play = ({playing = false, act = 'play', title} = {}) => `<button type="button" class="play"${attr('data-act', act)} title="${esc(title || (playing ? 'Stop' : 'Test drive'))}" aria-label="${esc(title || (playing ? 'Stop' : 'Test drive'))}">${icon(playing ? 'stop' : 'play')}</button>`;
-const seg = (key, options, current, color) => `<div class="seg" role="radiogroup" style="--n:${options.length}">${options.map(([v, ic, l]) => `<button type="button" role="radio" aria-checked="${current === v}" class="b ${current === v ? 'on' : ''}" style="--c:${esc(color)}" data-seg="${esc(key)}" data-v="${esc(v)}" title="${esc(l)}">${icon(ic)}${esc(l)}</button>`).join('')}</div>`;
+const seg = (key, options, current, color) => `<div class="seg" role="radiogroup" style="--n:${options.length}">${options.map(([v, ic, l]) => `<button type="button" role="radio" aria-checked="${String(current) === String(v)}" class="b ${String(current) === String(v) ? 'on' : ''}" style="--c:${esc(color)}" data-seg="${esc(key)}" data-v="${esc(v)}" title="${esc(l)}">${icon(ic)}${esc(l)}</button>`).join('')}</div>`;
 function range({key, min, max, step = 1, value, label, icon: ic, color, text}) {
-  const p = Math.round((value - min) / (max - min) * 100);
+  const p = max > min ? Math.max(0, Math.min(100, Math.round((value - min) / (max - min) * 100))) : 0;
   return `<div class="row"><span class="lab" title="${esc(label)}">${icon(ic)}</span><input class="range" type="range" min="${min}" max="${max}" step="${step}" value="${esc(value)}" data-k="${esc(key)}" style="--p:${p}%;--sc:${esc(color)}" aria-label="${esc(label)}"><span class="val" data-val="${esc(key)}">${esc(text ?? value)}</span></div>`;
 }
 const search = ({id, placeholder, value = '', clear = 'clearsearch'}) => `<label class="search">${icon('search')}<input id="${esc(id)}" type="search" placeholder="${esc(placeholder)}" value="${esc(value)}" autocomplete="off">${value ? button({icon: 'close', title: 'Clear search', act: clear}) : ''}</label>`;
