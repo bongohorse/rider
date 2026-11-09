@@ -631,7 +631,9 @@ function M.render(u,d)
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2
-        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16;if overlay then mx=w-mw-72;my=56;mh=math.min(580,h-136) end end
+        if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16;if overlay then mx=w-mw-72;my=56;mh=math.min(580,h-136) end
+            -- #678: while driving in HTML5 the 3D panel starts below the play bar's row.
+            if d.play and d.bar then my=80;mh=math.min(580,h-96) end end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
             draw_look(mx,my,mw,mh)

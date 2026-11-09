@@ -163,7 +163,8 @@ function mount() {
 #rider-chrome .dt .fav{position:absolute;left:3px;top:3px;width:22px;height:22px;display:grid;place-items:center;color:#ffffff50;background:none;border:0;padding:0;cursor:pointer}
 #rider-chrome .dt .fav svg{width:14px;height:14px;fill:currentColor;stroke:none}#rider-chrome .dt .fav.on{color:var(--accent)}
 `;
-  document.head.append(style); document.body.append(root);
+  // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
+  document.head.append(style); (document.getElementById('app-container') || document.body).append(root);
   // Keyboard focus never leaves the canvas: editor shortcuts (Ctrl+Z, E, Delete …) are read there. The Defold
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.

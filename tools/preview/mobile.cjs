@@ -110,7 +110,8 @@ module.exports=async function mobile(browser,url,sha,out){
       const block=document.getElementById('rider-mobile-portrait-block'),style=getComputedStyle(block);
       const centre=node=>{const r=node.getBoundingClientRect();return r.width&&r.height?[r.x+r.width/2,r.y+r.height/2]:null;};
       const inside=([x,y])=>x>=0&&y>=0&&x<innerWidth&&y<innerHeight;
-      const hud=[...document.querySelectorAll('#rider-mobile button')].map(centre).filter(Boolean).filter(inside);
+      // #678: the play bar lives in #app-container like the touch HUD; the portrait block must cover it too.
+      const hud=[...document.querySelectorAll('#rider-mobile button,#rider-playbar button')].map(centre).filter(Boolean).filter(inside);
       const body=[...document.querySelectorAll(selector)].map(centre).filter(Boolean).filter(inside);
       const spots=hud.concat(body,[[innerWidth/2,innerHeight/2]]);
       return {text:block.textContent,children:block.childElementCount,role:block.getAttribute('role'),live:block.getAttribute('aria-live'),
@@ -126,7 +127,7 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(state.shown,true,'Portrait input block is active');
     assert(state.spots>1,'Former control spots are checked');
     assert.equal(state.hits,state.spots,'Portrait block intercepts touch at the centre and every former control spot');
-    assert(state.levelSpots>=1&&state.bodySpots>=state.levelSpots,'Body-level Levels/Next Level spots are checked (#678: Levels is in the play bar)');
+    assert(state.levelSpots>=1,'Levels/Next Level spots are checked (#678: Levels is in the play bar, inside #app-container)');
     assert.equal(state.bodyVisible,0,'No body-level overlay control is visible in portrait');
     for(const name of ['Retry','Pause','Resume','More'])assert.equal(await page.getByRole('button',{name,exact:true}).isVisible(),false,name+' is not offered in portrait');
     for(const command of ['left','right','brake','throttle'])assert.equal(await page.locator(`[data-command="${command}"]`).isVisible(),false,'No portrait drive zone '+command);
