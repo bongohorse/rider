@@ -36,7 +36,10 @@ module.exports=async function(h){
  const a=await at(.25),b=await at(.75);
  for(const [c,fx] of [[a,.25],[b,.75]])assert.ok(Math.abs(c[0]-expect(fx))<=.02*(x[1]-x[0])+.5,'minimap press centres the view: '+JSON.stringify({c,expect:expect(fx)}));
  await page.mouse.move(mp.x+mp.w*.25,mp.y+mp.h/2);await page.mouse.down();await page.mouse.move(mp.x+mp.w*.5,mp.y+mp.h/2,{steps:6});await pointer.frames(page,{n:6});
- const mid=centre(await ed());await page.mouse.up();assert.ok(Math.abs(mid[0]-expect(.5))<=.02*(x[1]-x[0])+.5,'minimap drag pans the view');
+ // Still dragging: the view follows (polled, as a slow runner may need more frames for the last move).
+ const near=c=>Math.abs(c[0]-expect(.5))<=.02*(x[1]-x[0])+.5;let mid=centre(await ed());
+ for(let i=0;i<40&&!near(mid);i++){await pointer.frames(page,{n:2});mid=centre(await ed());}
+ await page.mouse.up();assert.ok(near(mid),'minimap drag pans the view: '+JSON.stringify({mid,expect:expect(.5),a,b}));
  // y: a press near the top centres higher than one near the bottom.
  const tb=async fy=>{await page.mouse.click(mp.x+mp.w*.5,mp.y+mp.h*fy);await pointer.frames(page,{n:8});return centre(await ed())[1];};
  const top=await tb(.15),bottom=await tb(.85);assert.ok(top>bottom,'minimap y orientation: '+JSON.stringify({top,bottom}));
