@@ -44,7 +44,8 @@ const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
 // Rail: one tab per library page; tabs are view state of the chrome and publish as lib_<id>.
 const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor'],
   ['bg','mountain','var(--k-bg)','Background'],['tex','texture','var(--k-tex)','Ground texture'],['objects','list','var(--k-obj)','Level objects']];
-const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan']];
+const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan'],
+  ['decoration','tree','Decor: place trees, rocks, signs and cones along the track (or pick one in the library\'s Decor tab)']];
 function mount() {
   UI.install();
   root = document.createElement('div');
@@ -52,6 +53,7 @@ function mount() {
   root.innerHTML = '<div class="float chrome-chip" id="rider-chrome-chip"></div><div class="float chrome-tools" id="rider-chrome-tools"></div><div class="float chrome-sys" id="rider-chrome-sys"></div>'
     + '<aside class="dock chrome-dock" id="rider-chrome-dock" hidden><div class="rail" id="rider-lib-rail"></div><div class="pane" id="rider-lib-pane"></div></aside>'
     + '<aside class="dock chrome-insp" id="rider-chrome-insp" hidden></aside>'
+    + '<div class="chrome-line" id="rider-chrome-line"><span class="msg"></span><span class="cur"></span></div>'
     + '<div class="float chrome-view" id="rider-chrome-view" hidden></div><div class="float chrome-map" id="rider-chrome-map" hidden><svg viewBox="0 0 640 128" preserveAspectRatio="none" role="img" aria-label="Minimap: press or drag to move the view"><g class="course"></g><rect class="win"></rect></svg></div>';
   const style = document.createElement('style'); style.id = 'rider-chrome-style';
   style.textContent = `#rider-chrome .float{position:fixed;z-index:400}
@@ -62,6 +64,8 @@ function mount() {
 #rider-chrome .chrome-chip small.warn{color:var(--accent)}#rider-chrome .chrome-chip small.error{color:var(--danger)}
 #rider-chrome .chrome-tools{left:50%;top:8px;transform:translateX(-50%)}
 #rider-chrome .chrome-tools .b{--c:var(--accent)}
+/* #688: seven tools: slightly tighter spacing keeps the bar clear of the system buttons at 1280 px. */
+#rider-chrome .chrome-tools{gap:4px;padding:5px}#rider-chrome .chrome-tools .sep{margin:6px 1px}
 #rider-chrome .chrome-sys{right:12px;top:8px}
 #rider-chrome .b.warnings-on{color:var(--accent)}#rider-chrome .b.warnings-block{color:var(--danger)}
 #rider-chrome button *{pointer-events:none}
@@ -107,6 +111,8 @@ function mount() {
 #rider-chrome .insp-host summary,#rider-chrome .insp-host legend{font:800 13px var(--disp);color:var(--text)}
 #rider-chrome .insp-host output{font-variant-numeric:tabular-nums}
 #rider-chrome .insp-host div[style*="sticky"]{position:static!important;background:none!important;padding:4px 0 0!important}
+#rider-chrome .chrome-line{position:fixed;left:16px;right:330px;bottom:3px;display:flex;gap:16px;font:700 11.5px var(--body);color:var(--muted);white-space:nowrap;pointer-events:none;z-index:380}
+#rider-chrome .chrome-line .msg{overflow:hidden;text-overflow:ellipsis;min-width:0;pointer-events:auto}#rider-chrome .chrome-line .cur{flex:none;font-variant-numeric:tabular-nums}
 #rider-chrome .chrome-view{left:12px;bottom:22px;padding:3px 5px;gap:3px}
 #rider-chrome .chrome-view .b{--h:32px;min-width:32px;padding:0 4px}#rider-chrome .chrome-view .sep{margin:0 1px}#rider-chrome .chrome-view .b.on{--c:var(--accent)}
 #rider-chrome .chrome-view .zoomv{min-width:56px;font:800 12.5px var(--body);font-variant-numeric:tabular-nums;justify-content:center}
@@ -259,6 +265,7 @@ function update(s) {
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
   q('[data-cmd="undo"]').disabled = !s.undo;
   q('[data-cmd="redo"]').disabled = !s.redo;
+
   q('.chrome-files').classList.toggle('open', menuOpen);
   setOn(q('[data-act="chrome-menu"]'), menuOpen);
   const w = s.warnings || {}, warn = q('[data-cmd="warnings"]'), alert = w.count > 0 || w.blocking;
@@ -303,7 +310,7 @@ function library(s) {
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
   if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
-  // The footer Texture button asks for the Texture tab.
+  // The Texture button (track_textures) asks for the Texture tab.
   const show = L.look && L.look.show;
   if (show !== lastShow) { if (lastShow !== null && show) tab = 'tex'; lastShow = show; }
   // A focused slider or list, or a slider drag, keeps its element: the tab catches up afterwards.
@@ -450,7 +457,7 @@ function viewBar(s) {
   bar.hidden = !V; q('#rider-chrome-map').hidden = !V || !mapOn || !course || !!(s.lib && s.lib.collapsed);
   root.classList.toggle('with-map', !q('#rider-chrome-map').hidden);
   if (!V) return;
-  const key = JSON.stringify([V.grid, V.grid_on, V.zoom, V.on, V.reasons, mapOn]);
+  const key = JSON.stringify([V.grid, V.grid_on, V.zoom, V.on, V.reasons, mapOn, !!s.look_dirty]);
   if (key !== viewKey) {
     viewKey = key;
     const z = V.zoom || {};
@@ -459,10 +466,20 @@ function viewBar(s) {
       + '<span class="sep"></span>' + UI.button({label: '−', title: 'Zoom out to the previous step (minimum 1%).', d: {cmd: 'zoom_out'}})
       + `<button type="button" class="b zoomv${z.edit ? ' edit' : ''}${z.error ? ' bad' : ''}" data-cmd="zoom_value" title="${UI.esc(z.error || 'Zoom 1-400%: type a value; Enter applies, Esc cancels.')}">${UI.esc(z.edit ? z.text + '_' : z.text + '%')}</button>`
       + UI.button({label: '+', title: 'Zoom in to the next step (maximum 400%).', d: {cmd: 'zoom_in'}})
-      + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'});
+      + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'})
+      // #688: from the old bottom bar: the 3D look (a dot while a change is unfinished) and the ground texture.
+      + '<span class="sep"></span>' + UI.button({icon: 'cube', title: '3D look: level or selected terrain sections. Each finished change is one Undo step.', tag: s.look_dirty ? '•' : null, d: {cmd: 'terrain_look'}})
+      + UI.button({icon: 'texture', title: 'Ground texture (library tab)', d: {cmd: 'track_textures'}});
     unfocusable();
   }
   drawMap(viewWin);
+}
+// #688: the bottom status line (message or readout, cursor position), sent by Lua when it changes.
+function statusLine(l) {
+  if (!root) return;
+  const line = q('#rider-chrome-line');
+  line.querySelector('.msg').textContent = (l && l.text) || ''; line.querySelector('.msg').title = (l && l.text) || '';
+  line.querySelector('.cur').textContent = (l && l.cursor) || '';
 }
 function viewRect(r) { viewWin = r || null; if (state) drawMap(viewWin); }
 // The course profile, START/FINISH and the view window; x and y scale separately (a long course stays readable).
@@ -597,5 +614,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, get mapLog() { return mapLog.slice(); }, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, statusLine, get mapLog() { return mapLog.slice(); }, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();

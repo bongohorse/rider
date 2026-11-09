@@ -46,6 +46,14 @@ function M.view_rect(rect)
     M.last_rect=text
     html5.run('window.riderChrome.viewRect('..text..')')
 end
+-- #688: the bottom status line, sent only when it changes.
+function M.status(s)
+    if not M.loaded then return end
+    local text=json.encode(s or false)
+    if text==M.last_status then return end
+    M.last_status=text
+    html5.run('window.riderChrome.statusLine('..text..')')
+end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end

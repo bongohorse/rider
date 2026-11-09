@@ -36,6 +36,8 @@ module.exports=async function uiChecks(h){
   // #684: one floating bar, centred, above the library.
   assert.ok(Math.abs(r.undo.y+r.undo.h/2-(r.play.y+r.play.h/2))<=1&&Math.abs(r.redo.y-r.undo.y)<=1,JSON.stringify([r.undo,r.redo,r.play]));
   assert.ok(Math.abs((r.tool_select.x+r.play.x+r.play.w)/2-size.width/state.ui.scale/2)<=2,'top bar centred at '+size.width);
+  // #688: the tool bar never reaches the system buttons on its right.
+  {const g=await page.evaluate(()=>[document.getElementById('rider-chrome-tools').getBoundingClientRect().right,document.getElementById('rider-chrome-sys').getBoundingClientRect().left]);assert.ok(g[0]<g[1],'tool bar overlaps the system buttons at '+size.width+': '+g);}
   assert.ok(r.play.y+r.play.h<=r.lib_play.y,'top bar above the library at '+size.width);
   assert.ok(r.tool_coin.y!==r.play.y);assert.equal(state.overlay.nodes,628);await unchanged(categoryBefore,'library tabs/tool choice/viewport');
   await page.screenshot({path:path.join(out,`editor-categories-${size.width}x${size.height}.png`)});
@@ -43,9 +45,15 @@ module.exports=async function uiChecks(h){
  for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
   await page.setViewportSize(size);await pointer.frames(page);const state=await ed();
   // #602: real clicks at the top-bar positions on every layout, plus the rendered names.
-  assert.equal(state.ui.labels.terrain_look,'3D');assert.equal(state.ui.labels.track_textures,'Texture');
+  // #688: 3D, Texture and the Decor tool moved from the Defold bottom bar into the chrome's top bar.
+  for(const n of ['terrain_look','track_textures','tool_decoration'])assert.ok(state.visible.includes(n),n+' offered');
+  assert.match(state.ui.labels.terrain_look,/^3D look/);assert.match(state.ui.labels.track_textures,/^Ground texture/);
   const undoBefore=(await ed()).undo;await button('undo');await pointer.frames(page);
   const undone=await ed();assert.ok(undone.undo!==undoBefore||/Nothing to undo/.test(undone.message),'Undo click had no effect at '+size.width);
+  // #688: the chrome's status line shows the editor message (or the readout) and stays clear of the view bar.
+  {const l=await page.evaluate(()=>{const m=document.querySelector('#rider-chrome-line .msg'),v=document.getElementById('rider-chrome-view').getBoundingClientRect(),r=m.getBoundingClientRect();return {text:m.textContent,top:r.top,bar:v.bottom};});
+   const want=undone.message||undone.readout||'';if(want)await page.waitForFunction(t=>document.querySelector('#rider-chrome-line .msg').textContent===t,want,{timeout:5000});
+   assert.ok(l.top>=l.bar-.5,'status line under the view bar at '+size.width+': '+JSON.stringify(l));}
   await button('redo');await pointer.frames(page);const redone=await ed();assert.ok(redone.undo===undoBefore||/Nothing to redo/.test(redone.message),'Redo click had no effect at '+size.width);
   await button('play');await page.waitForFunction(()=>window.riderEditor?.mode==='play'||window.riderEditor?.ui?.error_banner,null,{timeout:20000});
   if((await ed()).mode==='play'){await key('e');await edit();}

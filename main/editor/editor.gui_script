@@ -2957,6 +2957,8 @@ local function render_ui(self)
     d.chrome=chrome.active()
     self.chrome_state={title=d.title,status=d.status,warnings={count=d.blocking and d.error_count or d.warning_count,blocking=d.blocking,label=d.diagnostics},
         -- #687: the floating view controls (the minimap's window is added each frame in update).
+        look_dirty=d.look and d.look.dirty and true or false,
+        line={text=d.message~='' and d.message or d.readout or '',cursor=d.cursor_text or ''},
         view={grid=d.grid,grid_on=editor.grid and true or false,on={view_bounds=d.on.view_bounds and true or false,view_ghost=d.on.view_ghost and true or false},
             reasons={view_centre=d.reasons.view_centre or false,view_test=d.reasons.view_test or false},
             zoom={text=d.zoom_text,edit=d.zoom_edit and true or false,error=d.zoom_error or false}}}
@@ -3151,7 +3153,7 @@ function update(self,dt)
             -- In Edit the 3D look is in the inspector dock (#686), so it no longer hides the chrome.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (editor.mode~='edit' and terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view,
+                title=cs.title or '',status=cs.status or '',look_dirty=cs.look_dirty or false,warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view,
                 -- #686: an open Decor or Background layers panel is shown inside the inspector dock.
                 insp=cs.insp and {collapsed=cs.insp.collapsed,items=cs.insp.items,title=cs.insp.title,host=decoration_tool.visible() and 'decor' or background_panel.visible() and 'layers' or false} or nil})
             -- #687: the minimap's course profile follows each revision.
@@ -3166,6 +3168,8 @@ function update(self,dt)
             end
             -- The view window moves with every pan or zoom: its own small call, not the whole state.
             chrome.view_rect(view_rect(self))
+            -- #688: the status line (message or readout, cursor position) changes with every mouse move.
+            chrome.status(cs.line)
             for _,name in ipairs(chrome.take()) do
                 -- Same gates as a Defold button press: nothing runs behind a dialog, and a press while a
                 -- field is focused only confirms (or keeps) the field.
