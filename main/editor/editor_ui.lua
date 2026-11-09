@@ -605,8 +605,10 @@ function M.render(u,d)
             box(216,52,width,height,C.error)
             for i=1,math.min(3,#lines) do text(228,60+i*20-10,lines[i],C.canvas,14,width-24) end
         else u.error_text=nil end
+        -- #688: with the HTML chrome the whole bottom bar is gone: view controls (#687), Decor, 3D and Texture
+        -- are chrome buttons and the status line is the chrome's (main/editor/web/chrome.js).
+        if not d.chrome then
         box(0,h-64,w,64,C.panel)
-        -- #687: with the HTML chrome the view buttons, the grid readout and zoom are its floating view bar.
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
         if not d.chrome then for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end end
@@ -624,6 +626,7 @@ function M.render(u,d)
         -- On the button row, after Decor and clear of the page's Quality/Fullscreen buttons.
         local room=math.min(296,w-768-300)
         if room>=140 then text(768,h-40,d.cursor_text,C.secondary,12,room) end
+        end
     else
         if modal~='terrain_look' then box(0,0,w,h,C.canvas) end
         local mw,mh=math.min(1120,w-64),math.min(620,h-64);local mx,my=(w-mw)/2,(h-mh)/2

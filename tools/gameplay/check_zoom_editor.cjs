@@ -21,10 +21,12 @@ module.exports=async function(h){
  const p=await canvas(...q);await page.mouse.move(p.x,p.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:8});e=await ed();assert.ok(e.camera.zoom>.25);assert.ok(Math.abs(e.screen.ox+world[0]*e.screen.ppm_x-q[0])<2);assert.ok(Math.abs(e.screen.oy+world[1]*e.screen.ppm_y-q[1])<2);
  const extents=[];for(const size of [{width:1280,height:720},{width:1280,height:480},{width:844,height:390},{width:390,height:844}]){
   await page.setViewportSize(size);await pointer.frames(page);await value('100');e=await ed();assert.equal(e.camera.zoom,1);assert.equal(e.overlay.nodes,628);
-  // #687: under the HTML chrome the zoom controls are its floating view bar: in order, and clear of the 3D button.
-  const z=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),cr=c.getBoundingClientRect(),q=n=>document.querySelector(`#rider-chrome-view [data-cmd="${n}"]`)?.getBoundingClientRect();
-   const b=e.buttons.terrain_look,w=e.ui.rects.terrain_look.w*e.ui.scale/c.width*cr.width;return {out:q('zoom_out'),value:q('zoom_value'),in:q('zoom_in'),bar:document.getElementById('rider-chrome-view').getBoundingClientRect(),look:cr.x+b.x/c.width*cr.width-w/2};});
-  assert.ok(z.out.right<=z.value.left&&z.value.right<=z.in.left,'zoom order');assert.ok(z.bar.right<=z.look+.5,'view bar clear of 3D at '+JSON.stringify(size)+': '+JSON.stringify({bar:z.bar.right,look:z.look}));
+  // #687/#688: under the HTML chrome the zoom controls are its floating view bar: in order, and clear of the page's
+  // Quality/Fullscreen buttons.
+  const z=await page.evaluate(()=>{const q=n=>document.querySelector(`#rider-chrome-view [data-cmd="${n}"]`)?.getBoundingClientRect();
+   return {out:q('zoom_out'),value:q('zoom_value'),in:q('zoom_in'),bar:document.getElementById('rider-chrome-view').getBoundingClientRect(),tools:document.getElementById('page-tools').getBoundingClientRect()};});
+  assert.ok(z.out.right<=z.value.left&&z.value.right<=z.in.left,'zoom order');
+  assert.ok(z.bar.right<=z.tools.left+.5||z.bar.bottom<=z.tools.top+.5,'view bar clear of the page buttons at '+JSON.stringify(size)+': '+JSON.stringify({bar:z.bar,tools:z.tools}));
   extents.push({viewport:size,ppm:e.screen.ppm_x,world_width:size.width/e.screen.ppm_x});await page.screenshot({path:path.join(out,`editor-zoom-${size.width}x${size.height}.png`)});
  }
  assert.ok(Math.abs(extents[0].world_width-extents[1].world_width)>.1,'100% incorrectly forces equal world area across aspect ratios');
