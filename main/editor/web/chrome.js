@@ -90,6 +90,10 @@ function mount() {
 #rider-chrome .insp-row .b.field.focus{border-color:var(--accent);box-shadow:0 0 0 2px #ffd23f55}
 #rider-chrome .insp-row .b.field.bad{border-color:var(--danger)}
 #rider-chrome .insp-row .unit{font:800 11px var(--body);color:var(--muted);flex:none}
+#rider-chrome .insp-row .lbl{flex:1 1 auto;min-width:0;font:800 12px var(--body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rider-chrome .insp-row .lbl~.b.field{flex:0 0 92px}
+#rider-chrome .insp-row.foot{position:sticky;bottom:-10px;background:var(--panel);padding:6px 0 8px;margin-bottom:-10px;z-index:1}
+#rider-chrome .insp-range{width:100%;accent-color:var(--k-tex);margin:-2px 0 4px}
 #rider-chrome .insp-host>section{position:static!important;inset:auto!important;width:auto!important;max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;font:700 13px/1.35 var(--body)!important;color:var(--text)!important;z-index:auto!important}
 #rider-chrome .insp-host h2{display:none}
 #rider-chrome .insp-host button{background:var(--btn)!important;color:var(--text)!important;border:var(--ol) solid var(--ink)!important;border-radius:10px!important;box-shadow:0 3px 0 var(--ink)!important;font:800 12px var(--body)!important;padding:6px 10px!important;margin:0 4px 6px 0;cursor:pointer;outline:none!important}
@@ -142,20 +146,36 @@ function mount() {
   // Keyboard focus never leaves the canvas: editor shortcuts (Ctrl+Z, E, Delete …) are read there. The Defold
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.
-  root.addEventListener('mousedown', e => { if (e.target.closest('button') && !e.target.closest('.insp-host')) e.preventDefault(); });
+  // A press anywhere on the chrome (a button, a label, the dock background) keeps the keyboard on the canvas;
+  // only inputs and hosted panels take it.
+  root.addEventListener('mousedown', e => { if (!e.target.closest('input,select,textarea,.insp-host')) e.preventDefault(); });
   // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
   // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
   // #706: the Background Depth sliders and Texture override lists (.kf) follow the same rule as the search.
   root.addEventListener('focusin', e => { if (e.target.matches('.kf') || e.target.closest('.insp-host')) tookFocus = true; else document.querySelector('canvas')?.focus(); });
   // A slider or list keeps its element while focused or dragged; the tab catches up when it lets go.
   // (Only a slider or list that is still in the page: a rebuild's own removal must not start another rebuild.)
-  root.addEventListener('focusout', e => { if (e.target.matches('.kf:not(.lib-find)') && e.target.isConnected && !sliding) setTimeout(() => { libKey = ''; library(state); }); });
-  root.addEventListener('input', e => { if (e.target.matches('.lib-range')) depth(e.target, false); });
-  root.addEventListener('change', e => { if (e.target.matches('.lib-range')) depth(e.target, true); else if (e.target.matches('.lib-select')) override(e.target); });
+  root.addEventListener('focusout', e => {
+    if (!e.target.matches('.kf:not(.lib-find)') || !e.target.isConnected || sliding) return;
+    // Only the dock that held the control catches up (rewriting the other could move a hosted panel mid-drag).
+    const lib = !!e.target.closest('#rider-chrome-dock');
+    setTimeout(() => { if (lib) { libKey = ''; library(state); } else { inspKey = ''; inspector(state); } });
+  });
+  root.addEventListener('input', e => { if (e.target.matches('.lib-range')) depth(e.target, false); else if (e.target.matches('.insp-range')) lookSlide(e.target); });
+  root.addEventListener('change', e => {
+    if (e.target.matches('.lib-range')) depth(e.target, true);
+    else if (e.target.matches('.lib-select')) override(e.target);
+    // A 3D look slider changed by keyboard (no pointer release) also ends its preview.
+    else if (e.target.matches('.insp-range') && !sliding) lookDrop(e.target);
+  });
   // A drag always ends with a commit, also when it returns to its start value (no change event); Lua
   // stores nothing for an unchanged value, so it adds no Undo step.
-  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range') && !e.target.disabled) sliding = e.target; }, true);
-  const release = () => { const s = sliding; if (!s) return; sliding = null; depth(s, true); libKey = ''; setTimeout(() => library(state)); };
+  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range,.insp-range') && !e.target.disabled) sliding = e.target; }, true);
+  const release = () => {
+    const s = sliding; if (!s) return; sliding = null;
+    if (s.matches('.insp-range')) { lookDrop(s); return; }
+    depth(s, true); libKey = ''; setTimeout(() => library(state));
+  };
   addEventListener('pointerup', release, true); addEventListener('pointercancel', release, true);
   root.addEventListener('input', e => { if (e.target.matches('.lib-find')) { find = e.target.value; decorGrid(); } });
   root.addEventListener('keydown', e => { if (e.target.matches('.kf:not(.lib-find)') && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); document.querySelector('canvas')?.focus(); return; }
@@ -366,6 +386,19 @@ function depth(input, commit) {
   const out = input.parentNode.querySelector('output'); if (out) out.textContent = Number(input.value).toFixed(2);
   queueLook('bg_op', {op: 'depth', layer: +input.dataset.layer + 1, value: Number(input.value), commit});
 }
+// #686: a 3D look slider in the inspector previews while dragged (one coalesced message per frame); release commits.
+function lookSlide(input) {
+  const text = 'look_drag:' + JSON.stringify({key: input.dataset.key, value: Number(input.value)}), last = queue[queue.length - 1];
+  if (last && last.startsWith('look_drag:')) queue[queue.length - 1] = text; else queue.push(text);
+  // The value field above follows the drag (the dock is not rebuilt meanwhile).
+  const field = q(`#rider-chrome-insp [data-cmd="look_value_${CSS.escape(input.dataset.key)}"]`); if (field) field.textContent = String(+Number(input.value).toPrecision(4));
+}
+// The release stores the look (one Undo step); the keyboard returns to the canvas and the dock catches up.
+function lookDrop(input) {
+  queue.push('look_drop:' + JSON.stringify({key: input.dataset.key}));
+  document.querySelector('canvas')?.focus();
+  inspKey = ''; setTimeout(() => inspector(state));
+}
 function override(select) { queueLook('tex_op', {key: select.dataset.key, value: select.value}); }
 function setLooks(p) {
   looks = {bg: Array.isArray(p?.bg) ? p.bg : [], tex: Array.isArray(p?.tex) ? p.tex : []};
@@ -391,8 +424,10 @@ function inspector(s) {
   dock.hidden = !I;
   if (!I) return;
   const items = Array.isArray(I.items) ? I.items : [];
+  // A 3D look slider keeps its element while dragged or focused; the dock catches up afterwards.
+  if (sliding?.matches?.('.insp-range')) return;
   const host = HOSTS[I.host] && document.querySelector(HOSTS[I.host][0]);
-  const key = JSON.stringify([I.collapsed, I.host ? I.host + !!host : I.items]);
+  const key = JSON.stringify([I.collapsed, I.title, I.host ? I.host + !!host : I.items]);
   if (key === inspKey) return;
   inspKey = key;
   park();
@@ -423,7 +458,8 @@ function inspector(s) {
     row.items.push(it);
   }
   // Inside a row: field, unit, then the steppers.
-  const order = it => it.k === 'b' && /^(dec|inc)_/.test(it.name) ? 2 : it.k === 't' ? 1 : 0;
+  // A longer text on a field's line is its label (3D look) and leads; a short one is the unit after it.
+  const order = it => it.k === 'b' && /^(dec|inc)_/.test(it.name) ? 2 : it.k === 't' ? (it.t.length > 5 ? -1 : 1) : 0;
   for (const r of rows) if (r.field) r.items.sort((a, b) => order(a) - order(b));
   const btn = it => {
     const step = /^(dec|inc)_/.test(it.name);
@@ -432,11 +468,13 @@ function inspector(s) {
     const alias = aliases[it.name] ? ` data-alias="${UI.esc(aliases[it.name])}"` : '';
     return `<button type="button" class="${cls}" data-cmd="${UI.esc(it.name)}"${alias} title="${UI.esc(it.tip || label)}"${it.disabled ? ' disabled' : ''}>${UI.esc(label)}</button>`;
   };
-  const body = rows.map(r => '<div class="insp-row">' + r.items.map(it => it.k === 't'
-    ? (r.items.length > 1 && r.items.some(x => x.k === 'b') ? `<span class="unit">${UI.esc(it.t)}</span>` : `<div class="insp-t s${it.size} ${it.role}">${UI.esc(it.t)}</div>`)
+  const slider = it => `<input type="range" class="insp-range kf" min="${it.min}" max="${it.max}" step="${it.step || 'any'}" value="${it.value}" data-key="${UI.esc(it.name.replace(/^look_slider_/, ''))}" aria-label="${UI.esc(it.label || it.name)}" title="${UI.esc(it.label || '')}: drag to preview; release stores one Undo step"${it.disabled ? ' disabled' : ''}>`;
+  // The 3D look's Reset/Close line stays at the bottom of the dock while the controls scroll.
+  const body = rows.map(r => '<div class="insp-row' + (r.items.some(it => it.name === 'look_close') ? ' foot' : '') + '">' + r.items.map(it => it.k === 's' ? slider(it) : it.k === 't'
+    ? (r.items.length > 1 && r.items.some(x => x.k === 'b') ? (it.t.length > 5 ? `<span class="lbl" title="${UI.esc(it.t)}">${UI.esc(it.t)}</span>` : `<span class="unit">${UI.esc(it.t)}</span>`) : `<div class="insp-t s${it.size} ${it.role}">${UI.esc(it.t)}</div>`)
     : btn(it)).join('') + '</div>').join('');
   const old = q('#rider-chrome-insp .insp-body'), top = old ? old.scrollTop : 0;
-  dock.innerHTML = '<div class="ph" style="--c:var(--accent)"><span class="ic">' + UI.icon('cursor') + '</span><h3>Properties</h3>'
+  dock.innerHTML = '<div class="ph" style="--c:' + (I.title ? 'var(--k-tex)' : 'var(--accent)') + '"><span class="ic">' + UI.icon(I.title ? 'cube' : 'cursor') + '</span><h3>' + UI.esc(I.title || 'Properties') + '</h3>'
     + UI.button({icon: 'chevr', title: 'Collapse Properties', d: {cmd: 'collapse_properties'}}) + `</div><div class="insp-body">${body}</div>`;
   // A new selection or tool starts at the top, like the Defold panel; otherwise keep the scroll position.
   const head = (items.find(it => it.k === 't') || {}).t || '';
