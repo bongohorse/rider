@@ -148,6 +148,8 @@ const ICONS = {
   brush:'<path d="M3 19c4 0 5-2 6-5l9-9 2 2-9 9c-3 1-5 2-5 5z"/>',
   hand:'<path d="M7 11V6a1.5 1.5 0 013 0v4M10 10V4.5a1.5 1.5 0 013 0V10M13 10V5.5a1.5 1.5 0 013 0V11M16 11V8a1.5 1.5 0 013 0v6a7 7 0 01-7 7h-1a6 6 0 01-5-3l-3-5a1.5 1.5 0 012.5-1.5L7 14"/>',
   undo:'<path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 010 12"/>',
+  retry:'<path d="M20 12a8 8 0 11-2.4-5.7"/><path d="M20 4v5h-5"/>',
+  pause:'<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   redo:'<path d="M15 7l5 5-5 5"/><path d="M20 12H10a6 6 0 000 12"/>',
   play:'<path d="M7 4l13 8-13 8z"/>', stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',

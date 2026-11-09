@@ -1,6 +1,6 @@
 # Driving HUD and result-screen audit (#342)
 
-**Contents:** [Scope and evidence](#scope-and-evidence) · [Ownership and state](#ownership-and-state) · [Prioritized follow-ups](#prioritized-follow-ups) · [Reproduction and gates](#reproduction-and-gates)
+**Contents:** [Scope and evidence](#scope-and-evidence) · [Ownership and state](#ownership-and-state) · [Prioritized follow-ups](#prioritized-follow-ups) · [Reproduction and gates](#reproduction-and-gates) · [Play bar (#678)](#play-bar-678)
 
 ## Scope and evidence
 
@@ -47,3 +47,12 @@ node tools/gameplay/check_levels.cjs '<base-url>' '<full-main-sha>' artifacts/ui
 Those commands are **NOT RUN in this audit**; a running release bundle, verified build identity and Chromium are prerequisites. In a follow-up targeted real-input test, capture ready/running/finished at 1280×720 desktop and 1080×486 plus 960×540 synthetic touch. Use `getBoundingClientRect()` on every visible toolbar button, readout, level action and drive zone; capture native result text bounds through supported debug GUI geometry, not invented CSS coordinates. Assert zero clipped/overlapping interactive elements, source SHA, state and touch mode; attach screenshots and JSON measurements. Explicitly check safe-area offsets on an actual device before phone acceptance.
 
 **Stop:** this issue authorizes **documentation/audit only**. Follow-up UI code needs its own Director-scoped issue/GO, independent QA, exact-current-head `required` CI and maintainer visual/physical-phone acceptance. Do not modify Codex-owned #281, editor #331, camera #337, FPS #340, fixed physics or the required test gate.
+
+## Play bar (#678)
+
+Claudio's zone layout of 2026-11-09 (debug card top left, player strip top centre, one button row top right, reserved callout and edge areas, drive zones only at the bottom on touch) is built in slices. **Slice 1, the button row:** in HTML5, desktop and touch, [`play_bar.js`](../../main/game/play_bar.js) draws one row in the editor kit style. It holds Retry (circular arrow), Pause/Resume (a normal button while driving, green Play while paused), Tuning (`Close tuning` while open), 3D look, Edit level, Levels and More. More holds Help and, on desktop, Import level, Quality and Fullscreen. On touch it holds the adapter's existing tools, which already include those three. Commands use the existing owners:
+- Retry and Pause are the touch adapter's one-shot requests (`riderMobile.request`, read by the controller), on desktop too.
+- Levels uses `riderLevelsRequest`, and Import uses `riderCustom`.
+- Tuning, Help, 3D and Edit level are queued for `ui.gui_script` (`toggle_tuning`, `toggle_help`, `terrain_look_open`, `editor_enter`).
+
+The row replaces the touch toolbar's own buttons, the native T/H/Pause and run Levels buttons, the floating Levels button (Next Level stays), the page buttons while driving and the Play-mode 3D/Edit hints. While the native tuning panel is open, the row moves left of it so the preset tabs stay free. The FPS counter and the camera control avoid the row like any DOM control. The native HUD remains the fallback outside HTML5.

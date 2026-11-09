@@ -24,7 +24,11 @@ const ROOT=path.resolve(__dirname,'../..'),SAMPLES=path.join(ROOT,'main/gym/samp
    return state();
   }
   async function importFile(name){
-   if(!await page.evaluate(()=>window.riderCustom.visible))await page.getByRole('button',{name:'Import level',exact:true}).click();
+   // #678: while driving, Import level is in the play bar's More menu.
+   if(!await page.evaluate(()=>window.riderCustom.visible)){
+    if(await page.locator('#rider-playbar .pb-row').isVisible())await page.locator('#rider-playbar [data-act=more]').click();
+    await page.getByRole('button',{name:'Import level',exact:true}).first().click();
+   }
    await page.locator('#rider-custom-file').setInputFiles(sample(name));
   }
   async function importText(value){

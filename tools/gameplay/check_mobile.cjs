@@ -5,7 +5,8 @@ function intersects(a,b){return a.left<b.right-1&&a.right>b.left+1&&a.top<b.bott
 async function checkHudGeometry(page,viewport,moreOpen=false){
  const g=await page.evaluate(()=>{
   const box=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
-  const toolbar=document.querySelector('#rider-mobile .toolbar'),menu=document.querySelector('#rider-mobile .toolbar-more');
+  // #678: the play bar's row and menu (the touch tools live in its menu).
+  const toolbar=document.querySelector('#rider-playbar .pb-row'),menu=document.querySelector('#rider-playbar .pb-menu');
   const visible=e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).display!=='none';
   return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
     zones:box(document.querySelector('#rider-mobile .zones')),
@@ -52,7 +53,7 @@ module.exports=async function check(browser,base,sha,out){
    if(viewport.width===960)await page.screenshot({path:path.join(out,'progress-phone-landscape-960.png')});
    await page.getByRole('button',{name:'More',exact:true}).tap();
    assert.equal(await page.getByRole('button',{name:'More',exact:true}).getAttribute('aria-expanded'),'true');
-   const menu=page.locator('#rider-mobile .toolbar-more');
+   const menu=page.locator('#rider-mobile-more');
    await menu.waitFor({state:'visible'});
    assert.equal(await menu.locator('button').count(),12,'all existing secondary actions retained');
    assert.equal(await menu.locator('button').filter({hasText:'Next section'}).count(),1);
@@ -73,7 +74,7 @@ module.exports=async function check(browser,base,sha,out){
   await page.getByRole('button',{name:'More',exact:true}).tap();
   await page.getByRole('button',{name:'Layout A · mirror',exact:true}).tap();
   assert.equal(await page.evaluate(()=>window.riderMobile.mirrored),true);
-  assert.equal(await page.locator('#rider-mobile .toolbar-more').isHidden(),true);
+  assert.equal(await page.locator('#rider-mobile-more').isHidden(),true);
   await page.getByRole('button',{name:'More',exact:true}).tap();
   await page.getByRole('button',{name:'Layout B · mirror',exact:true}).tap();
   assert.equal(await page.evaluate(()=>window.riderMobile.mirrored),false);

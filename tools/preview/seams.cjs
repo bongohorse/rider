@@ -34,7 +34,7 @@ module.exports=async function seams(browser,url,sha,out){
   assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
   await more.tap();
   assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real touch');
-  await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next station',exact:true}).tap();
+  await mobile.locator('#rider-mobile-more').getByRole('button',{name:'Next station',exact:true}).tap();
   assert.equal(await more.getAttribute('aria-expanded'),'false','Next station closes More');
   await mobile.waitForFunction(()=>window.riderStationReport?.station==='seams-hull');
   await mobile.screenshot({path:path.join(out,'seams-release-phone.png')});cases.push('mobile_emulation_next_station');

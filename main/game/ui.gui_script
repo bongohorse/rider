@@ -22,7 +22,7 @@ local MAX_NODES=600
 local DOM_CONTROLS=[[(()=>{const c=document.querySelector('canvas');if(!c)return '[]';const r=c.getBoundingClientRect();
 if(!(r.width>0&&r.height>0))return '[]';const sx=c.width/r.width,sy=c.height/r.height,out=[];
 for(const e of document.querySelectorAll('button,select,input,textarea,a[href],[role=button],[data-command]')){
-if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more'))continue;const b=e.getBoundingClientRect();
+if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu'))continue;const b=e.getBoundingClientRect();
 if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue;
 if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
 out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
@@ -35,7 +35,7 @@ const ro=window.ResizeObserver?new ResizeObserver(()=>{L.seq++;}):null;
 const rects=sel=>{const c=document.querySelector('canvas');if(!c)return [];const r=c.getBoundingClientRect();
 if(!(r.width>0&&r.height>0))return [];const sx=c.width/r.width,sy=c.height/r.height,out=[];
 for(const e of document.querySelectorAll(sel)){
-if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more'))continue;const b=e.getBoundingClientRect();
+if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu'))continue;const b=e.getBoundingClientRect();
 if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue;
 if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
 out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
@@ -232,6 +232,12 @@ function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
     feedback.init()
+    -- #678: in HTML5 the play bar (main/game/play_bar.js, editor kit style) replaces the scattered run buttons.
+    if html5 then
+        require('main.editor.editor_ui_kit').ensure()
+        html5.run(assert(sys.load_resource('/main/game/play_bar.js'),'Missing play bar'))
+        self.playbar=true;run_ui.bar=true
+    end
     hud_textures()
     self.station_next=layout.box(vmath.vector3(270,390,0),vmath.vector3(54,24,0),"left_top")
     gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
@@ -588,6 +594,25 @@ local function copy_feedback(self)
 end
 function update(self,dt)
     levels_ui.update(self.levels_ui)
+    -- #678: the HTML5 play bar: render its state and run its queued commands through the existing owners.
+    if self.playbar then
+        -- An open tuning panel keeps its top (preset tabs): the bar moves left of it (canvas pixels from the left).
+        local left=false
+        if self.panel_open and self.tuning_panel then
+            local r=gui_rect(self.tuning_panel)
+            left=r and r.x0 or false
+        end
+        html5.run('window.riderPlayBar.render('..json.encode({panel_left=left})..')')
+        local text=html5.run('window.riderPlayBar.take()')
+        if text~='[]' then
+            local ok,list=pcall(json.decode,text)
+            for _,a in ipairs(ok and type(list)=='table' and list or {}) do
+                if a=='tuning' then toggle_tuning(self) elseif a=='help' then toggle_help(self)
+                elseif a=='3d' then msg.post('main:/loader#script','terrain_look_open')
+                elseif a=='edit' then msg.post('main:/loader#script','editor_enter') end
+            end
+        end
+    end
     -- #417: one engine frame per update(); wall time keeps the reading honest under any cap.
     local now=socket.gettime()
     if fps_counter.frame(self.fps,now) or self.fps_label_shown and now>=self.fps_label_until then show_fps(self,now) end
@@ -619,8 +644,10 @@ function update(self,dt)
     end
     self.toast_time=math.max(0,(self.toast_time or 0)-dt)
     gui.set_visible(self.reason,self.toast_time>0 and not enabled and not self.run_ui.data)
-    gui.set_visible(self.tuning_button,not enabled);gui.set_visible(self.help_button,not enabled)
-    for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled) end
+    -- #678: in HTML5 the play bar has Tuning, Help and Pause.
+    gui.set_visible(self.tuning_button,not enabled and not self.playbar);gui.set_visible(self.help_button,not enabled and not self.playbar)
+    for _,n in ipairs(self.toggle_labels) do gui.set_visible(n,not enabled and not self.playbar) end
+    if self.playbar then gui.set_visible(self.time_buttons.pause.box,false);gui.set_visible(self.time_buttons.pause.label,false) end
     if self.run_ui.data then
         run_ui.show(self.run_ui,self.run_ui.data,mobile.enabled())
         gui.set_visible(self.time_line,false)
@@ -693,7 +720,7 @@ function update(self,dt)
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
         html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
-            pause=point(self.time_buttons.pause.box),step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),preset_note=gui.get_text(self.preset_note),
+            pause=not self.playbar and point(self.time_buttons.pause.box) or nil,step=point(self.time_buttons.step.box),struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),preset_note=gui.get_text(self.preset_note),
             record=point(self.replay_buttons.record.box),replay=point(self.replay_buttons.replay.box),fps=point(self.fps_hit),
             fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}}))
     end
@@ -754,7 +781,8 @@ function on_input(self,id,action)
     if id==hash("time_step") and action.pressed then msg.post("main:/loader#script","time_control",{action="step"});return true end
     if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
         for name,b in pairs(self.time_buttons) do
-            if gui.pick_node(b.box,action.x,action.y) then msg.post("main:/loader#script","time_control",{action=name});return true end
+            -- pick_node ignores visibility: a button hidden for the play bar (#678) must not answer.
+            if gui.get_visible(b.box) and gui.pick_node(b.box,action.x,action.y) then msg.post("main:/loader#script","time_control",{action=name});return true end
         end
         for name,b in pairs(self.replay_buttons) do
             if not self.panel_open and gui.pick_node(b.box,action.x,action.y) and self.owner then msg.post(self.owner,"replay_control",{action=name});return true end
@@ -762,7 +790,7 @@ function on_input(self,id,action)
     end
     if id==hash("tuning_toggle") and action.pressed then toggle_tuning(self);return true end
     if id==hash("help_toggle") and action.pressed then toggle_help(self);return true end
-    if not mobile.enabled() and id==hash("ui_pointer") and action.pressed then
+    if not mobile.enabled() and not self.playbar and id==hash("ui_pointer") and action.pressed then
         if gui.pick_node(self.tuning_button,action.x,action.y) then toggle_tuning(self);return true end
         if gui.pick_node(self.help_button,action.x,action.y) then toggle_help(self);return true end
     end

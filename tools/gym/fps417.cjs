@@ -164,7 +164,8 @@ if(require.main===module){
      const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),q=window.riderHud.fps_rect;
      const css=v=>({x:r.x+v.x/c.width*r.width,y:r.y+(1-v.y/c.height)*r.height});
      const a=css(q.top_left),b=css(q.bottom_right);
-     const controls=['pause','step','record','replay','crash','struts'].map(name=>({name,...css(window.riderHud[name])}))
+     // #678: Pause is a play bar (DOM) button in HTML5; only native buttons that exist are listed here.
+     const controls=['pause','step','record','replay','crash','struts'].filter(name=>window.riderHud[name]).map(name=>({name,...css(window.riderHud[name])}))
       .concat(Object.entries(window.riderHud.presets).map(([k,v])=>({name:'preset '+k,...css(v)})));
      return {rect:{x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)},controls};
     });

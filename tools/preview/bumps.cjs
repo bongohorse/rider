@@ -31,7 +31,7 @@ module.exports=async function bumps(browser,url,sha,out){
     const more=mobile.getByRole('button',{name:'More',exact:true});
     assert.equal(await more.getAttribute('aria-expanded'),'false');
     await more.tap();assert.equal(await more.getAttribute('aria-expanded'),'true');
-    await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).tap();
+    await mobile.locator('#rider-mobile-more').getByRole('button',{name:label,exact:true}).tap();
     assert.equal(await more.getAttribute('aria-expanded'),'false',label+' closes More');
   }
   await tapSecondary('Next station');

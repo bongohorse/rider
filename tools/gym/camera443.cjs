@@ -251,11 +251,12 @@ if(require.main===module){
     const pt=q=>q&&({x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height});
     const dom=[];
     // Touch status line (.readout): not a control, but above the canvas, so it would hide panel buttons.
-    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-mobile .toolbar > button','toolbar'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout']]){
+    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-mobile .toolbar > button','toolbar'],['#rider-playbar .pb-row > button','playbar'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout']]){
      for(const e of document.querySelectorAll(sel)){const b=e.getBoundingClientRect();
-      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim().slice(0,24)),left:b.left,top:b.top,right:b.right,bottom:b.bottom});}
+      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.dataset.act||e.textContent.trim().slice(0,24)),left:b.left,top:b.top,right:b.right,bottom:b.bottom});}
     }
-    if(!window.riderEditing){const k=Math.min(1,r.width/1280);
+    // #678: with the HTML5 play bar the 3D button is in the bar, not drawn by the editor GUI.
+    if(!window.riderEditing&&!document.getElementById('rider-playbar')){const k=Math.min(1,r.width/1280);
      dom.push({name:'editor:3D',left:r.x+560*k,right:r.x+592*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
     const touch=!!window.riderMobile?.enabled;
     let fps=null,unit=0;

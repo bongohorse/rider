@@ -69,7 +69,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
   const more=phone.getByRole('button',{name:'More',exact:true});
   await more.tap();
   assert.equal(await more.getAttribute('aria-expanded'),'true','More must open via real touch');
-  await phone.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  await phone.locator('#rider-mobile-more').getByRole('button',{name:'Next section',exact:true}).tap();
   assert.equal(await more.getAttribute('aria-expanded'),'false','Next section must close More');
   await phone.waitForFunction(()=>window.riderStationReport.section==='10');
   await phone.screenshot({path:path.join(out,'ramps-phone.png')});await ctx.close();

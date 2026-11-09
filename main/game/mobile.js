@@ -9,6 +9,9 @@
   let browserIdentity={userAgent:navigator.userAgent};
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
+  // #678: the HTML play bar (main/game/play_bar.js) asks for the same one-shot requests as the touch toolbar.
+  // On touch a request releases held drive pointers, as the toolbar did; a desktop press keeps held keys, as R does.
+  api.request=name=>{if(enabled){api.clear(true);pending.clear=true;}pending[name]=true;};
   api.cancel=()=>{api.closeMore?.();api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}if(api.blocked){pending.clear=true;pending.background=true;}};
   // away (#439: focus, visibility, viewport or orientation change) pauses tilt but keeps its
   // calibrated neutral; any other clear (reset, UI capture) asks for a new calibration.
@@ -173,6 +176,8 @@
     if(opening){measure?.classList.remove('open');tiltPanel?.classList.remove('open');}
     overflow.hidden=!opening;moreButton.setAttribute('aria-expanded',String(opening));
   });
+  // #678: the play bar's More dismisses the Measure and Tilt panels on opening, as this More did.
+  api.closePanels=()=>{measure?.classList.remove('open');tiltPanel?.classList.remove('open');};
   moreButton.setAttribute('aria-controls',overflow.id);
   moreButton.setAttribute('aria-haspopup','true');
   moreButton.setAttribute('aria-expanded','false');
@@ -231,7 +236,7 @@
   toastNode=document.createElement('div');toastNode.className='toast';toastNode.hidden=true;root.append(toastNode);
   api.toast=message=>{
     toastNode.textContent=message;toastNode.hidden=false;
-    toastNode.style.top=Math.max(toolbar.getBoundingClientRect().bottom+8,56)+'px';
+    toastNode.style.top=Math.max((document.querySelector('#rider-playbar .pb-row')||toolbar).getBoundingClientRect().bottom+8,56)+'px';
     clearTimeout(api.toastTimer);api.toastTimer=setTimeout(()=>{toastNode.hidden=true;},1500);
   };
   measure=document.createElement('div');measure.className='measure';
@@ -295,7 +300,9 @@
   // Follow the *rendered* primary toolbar, including wrapping and safe-area insets.
   // Keep the scrollable More menu above the driving targets even on short landscape screens.
   const positionOverlays=()=>{
-    const toolbarRect=toolbar.getBoundingClientRect(),rootRect=root.getBoundingClientRect(),zonesRect=zones.getBoundingClientRect();
+    // #678: with the HTML5 play bar the readout sits under its row.
+    const bar=document.querySelector('#rider-playbar .pb-row');
+    const toolbarRect=(bar||toolbar).getBoundingClientRect(),rootRect=root.getBoundingClientRect(),zonesRect=zones.getBoundingClientRect();
     const levelActions=document.getElementById('rider-level-actions');
     const levelTop=levelActions?.getClientRects().length?levelActions.getBoundingClientRect().top:Infinity;
     const lowerEdge=Math.min(zonesRect.top,levelTop);
@@ -305,7 +312,7 @@
     tiltPanel.style.top=top+'px';
     readout.style.maxHeight=Math.max(0,Math.floor(lowerEdge-rootRect.top-top-8))+'px';
     readout.style.overflowY='hidden';
-    overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
+    if(!bar)overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
   };
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
   window.addEventListener('resize',positionOverlays);
