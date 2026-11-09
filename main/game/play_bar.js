@@ -71,12 +71,12 @@ function render(opts) {
   // Tuning is open: the touch adapter's details or the native panel (body.rider-tuning, set by ui.gui_script).
   const tuning = !!window.riderMobile?.details || document.body.classList.contains('rider-tuning');
   const row = root.querySelector('.pb-row');
-  const k = JSON.stringify([paused, terminal, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight]);
+  const k = JSON.stringify([paused, terminal && run.state, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight]);
   if (k === key) return; key = k;
   const btn = (act, icon, title, extra = {}) => UI.button(Object.assign({icon, title, d: {act}}, extra));
   root.querySelector('.pb-row').innerHTML =
     btn('retry', 'retry', 'Retry')
-    + UI.button({icon: paused ? 'play' : 'pause', title: terminal ? 'Run ended' : paused ? 'Resume' : 'Pause', disabled: terminal, d: {act: 'pause'}}).replace('class="b', 'class="b ' + (paused ? 'resume' : 'pause'))
+    + UI.button({icon: paused ? 'play' : 'pause', title: terminal ? (run.state === 'finished' ? 'Finished' : 'Attempt ended') : paused ? 'Resume' : 'Pause', disabled: terminal, d: {act: 'pause'}}).replace('class="b', 'class="b ' + (paused ? 'resume' : 'pause'))
     + btn('tuning', 'speed', tuning ? 'Close tuning' : 'Tuning', {on: tuning})
     + btn('3d', 'cube', '3D look')
     + btn('edit', 'pencil', 'Edit level')
