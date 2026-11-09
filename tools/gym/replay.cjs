@@ -184,7 +184,9 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
   // (engine pitfall 5). The shared helper (tools/gym/pointer.cjs) waits after mouse.up for two more controller
   // updates while the vehicle is ready (riderReplay.frames), so the next mouse.down cannot land in the same engine
   // frame as this release (#224, #227).
-  const click=async(name,until,arg)=>pointer.click(page,await pointer.hudPoint(page,name),{until,arg,counter:'window.riderReplay.frames',label:'click '+name,
+  // #678: in HTML5 Record and Replay are the play bar's debug group buttons (data-act record / replay).
+  const point=async name=>{const sel=`#rider-playbar [data-act=${name}]`;if(await page.$(sel))return page.evaluate(sel=>{const b=document.querySelector(sel).getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};},sel);return pointer.hudPoint(page,name);};
+  const click=async(name,until,arg)=>pointer.click(page,await point(name),{until,arg,counter:'window.riderReplay.frames',label:'click '+name,
    state:async()=>{const r=await R().catch(()=>null);return `play ${JSON.stringify(r?.play&&{active:r.play.active,index:r.play.index,ticks:r.play.ticks,ended:r.play.ended})}, resets ${r?.resets}`;}});
   s=await R();
   await click('replay',r=>window.riderReplay.play?.active&&window.riderReplay.resets===r+1,s.resets);

@@ -130,7 +130,8 @@ const STEP=1/60;
   // Frame-based press/release (tools/gym/pointer.cjs, #227): after the release wait for two engine frames
   // (riderClock.frames, a20's unscaled engine frame counter) so the next click is a new press edge (pitfall 5).
   // #678: Pause is the HTML5 play bar's button (Speed stays a native overlay button).
-  const point=async name=>name==='pause'&&await page.$('#rider-playbar [data-act=pause]')?await page.evaluate(()=>{const b=document.querySelector('#rider-playbar [data-act=pause]').getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};}):pointer.hudPoint(page,name);
+  // #678: in HTML5 Pause is the play bar's button and Speed its debug group's (data-act pause / step).
+  const point=async name=>{const sel=`#rider-playbar [data-act=${name}]`;if(await page.$(sel))return page.evaluate(sel=>{const b=document.querySelector(sel).getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};},sel);return pointer.hudPoint(page,name);};
   const click=async(name,until,arg)=>pointer.click(page,await point(name),{until,arg,counter:'window.riderClock.frames',label:'click '+name});
   await click('pause',()=>window.riderTime.paused&&window.riderTimeState.paused);
   checkPaused(await measure(400),'overlay pause');
