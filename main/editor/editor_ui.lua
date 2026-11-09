@@ -611,17 +611,15 @@ function M.render(u,d)
         box(0,h-64,w,64,C.panel)
         local views={{'view_fit','Fit level [Home]'},{'view_centre','Centre selection [.]'},{'view_start','Go to START'},
             {'view_test','Go to last test start'},{'view_bounds','Show level bounds'},{'view_ghost','Ghost: preview test start (off by default)'}}
-        if not d.chrome then for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end end
+        for i,v in ipairs(views) do button(v[1],16+(i-1)*40,h-56,32,v[2],d.on[v[1]],d.reasons[v[1]] or v[2],32,d.reasons[v[1]]~=nil) end
         button('track_textures',616,h-56,132,'Texture',false,'Texture: choose the level material. Each choice is one Undo step')
         button('tool_decoration',696,h-56,132,'Decor',d.tool=='decoration','Decorations: place trees, rocks, signs and cones along the track. Each finished change is one Undo step.')
         button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'3D: level or selected terrain sections. Each finished change is one Undo step.')
-        if not d.chrome then
         text(268,h-40,'Grid '..d.grid..' [G]',C.active,12)
         button('zoom_out',404,h-56,32,'-',false,'Zoom out to the previous step (minimum 1%).')
         if d.zoom_edit then box(442,h-58,76,36,d.zoom_error and C.error or C.active) end
         button('zoom_value',444,h-56,72,d.zoom_edit and d.zoom_text..'_' or d.zoom_text..'%',false,d.zoom_error or 'Zoom 1-400%: type a value; Enter applies, Esc cancels. 100% = standard view scale; the visible area depends on the window.')
         button('zoom_in',524,h-56,32,'+',false,'Zoom in to the next step (maximum 400%).')
-        end
         text(16,h-12,d.message~='' and d.message or d.readout,C.secondary,12,w-344)
         -- On the button row, after Decor and clear of the page's Quality/Fullscreen buttons.
         local room=math.min(296,w-768-300)

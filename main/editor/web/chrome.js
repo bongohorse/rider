@@ -112,7 +112,7 @@ function mount() {
 #rider-chrome .insp-host output{font-variant-numeric:tabular-nums}
 #rider-chrome .insp-host div[style*="sticky"]{position:static!important;background:none!important;padding:4px 0 0!important}
 #rider-chrome .chrome-line{position:fixed;left:16px;right:330px;bottom:3px;display:flex;gap:16px;font:700 11.5px var(--body);color:var(--muted);white-space:nowrap;pointer-events:none;z-index:380}
-#rider-chrome .chrome-line .msg{overflow:hidden;text-overflow:ellipsis;min-width:0}#rider-chrome .chrome-line .cur{flex:none;font-variant-numeric:tabular-nums}
+#rider-chrome .chrome-line .msg{overflow:hidden;text-overflow:ellipsis;min-width:0;pointer-events:auto}#rider-chrome .chrome-line .cur{flex:none;font-variant-numeric:tabular-nums}
 #rider-chrome .chrome-view{left:12px;bottom:22px;padding:3px 5px;gap:3px}
 #rider-chrome .chrome-view .b{--h:32px;min-width:32px;padding:0 4px}#rider-chrome .chrome-view .sep{margin:0 1px}#rider-chrome .chrome-view .b.on{--c:var(--accent)}
 #rider-chrome .chrome-view .zoomv{min-width:56px;font:800 12.5px var(--body);font-variant-numeric:tabular-nums;justify-content:center}
@@ -310,7 +310,7 @@ function library(s) {
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
   if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
-  // The footer Texture button asks for the Texture tab.
+  // The Texture button (track_textures) asks for the Texture tab.
   const show = L.look && L.look.show;
   if (show !== lastShow) { if (lastShow !== null && show) tab = 'tex'; lastShow = show; }
   // A focused slider or list, or a slider drag, keeps its element: the tab catches up afterwards.
@@ -468,7 +468,7 @@ function viewBar(s) {
       + UI.button({label: '+', title: 'Zoom in to the next step (maximum 400%).', d: {cmd: 'zoom_in'}})
       + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'})
       // #688: from the old bottom bar: the 3D look (a dot while a change is unfinished) and the ground texture.
-      + '<span class="sep"></span>' + UI.button({icon: 'cube', title: '3D look: level or selected terrain sections. Each finished change is one Undo step.', on: !!s.look_dirty, d: {cmd: 'terrain_look'}})
+      + '<span class="sep"></span>' + UI.button({icon: 'cube', title: '3D look: level or selected terrain sections. Each finished change is one Undo step.', tag: s.look_dirty ? '•' : null, d: {cmd: 'terrain_look'}})
       + UI.button({icon: 'texture', title: 'Ground texture (library tab)', d: {cmd: 'track_textures'}});
     unfocusable();
   }

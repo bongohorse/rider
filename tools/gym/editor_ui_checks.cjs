@@ -50,6 +50,10 @@ module.exports=async function uiChecks(h){
   assert.match(state.ui.labels.terrain_look,/^3D look/);assert.match(state.ui.labels.track_textures,/^Ground texture/);
   const undoBefore=(await ed()).undo;await button('undo');await pointer.frames(page);
   const undone=await ed();assert.ok(undone.undo!==undoBefore||/Nothing to undo/.test(undone.message),'Undo click had no effect at '+size.width);
+  // #688: the chrome's status line shows the editor message (or the readout) and stays clear of the view bar.
+  {const l=await page.evaluate(()=>{const m=document.querySelector('#rider-chrome-line .msg'),v=document.getElementById('rider-chrome-view').getBoundingClientRect(),r=m.getBoundingClientRect();return {text:m.textContent,top:r.top,bar:v.bottom};});
+   const want=undone.message||undone.readout||'';if(want)await page.waitForFunction(t=>document.querySelector('#rider-chrome-line .msg').textContent===t,want,{timeout:5000});
+   assert.ok(l.top>=l.bar-.5,'status line under the view bar at '+size.width+': '+JSON.stringify(l));}
   await button('redo');await pointer.frames(page);const redone=await ed();assert.ok(redone.undo===undoBefore||/Nothing to redo/.test(redone.message),'Redo click had no effect at '+size.width);
   await button('play');await page.waitForFunction(()=>window.riderEditor?.mode==='play'||window.riderEditor?.ui?.error_banner,null,{timeout:20000});
   if((await ed()).mode==='play'){await key('e');await edit();}
