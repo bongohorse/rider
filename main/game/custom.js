@@ -63,7 +63,8 @@
       const state = document.createElement('p');state.id = 'rider-custom-status';state.setAttribute('aria-live', 'polite');state.style.margin = '8px 0 0';
       panel.append(heading, note, file, field, row, error, state);
       panel.addEventListener('keydown', event => {if (event.key === 'Escape') api.close();});
-      document.body.append(panel);
+      // Inside #app-container: the fullscreen element, so the panel shows in fullscreen too (#678).
+      (document.getElementById('app-container') || document.body).append(panel);
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     }
     panel.querySelector('#rider-custom-note').textContent = message || 'Choose a level file (.json) or paste its JSON. The last valid level is saved in this browser.';
@@ -96,7 +97,7 @@
     const close = document.createElement('button');close.type = 'button';close.textContent = 'Close export';close.onclick = closeExport;
     exported.append(heading, note, field, close);
     exported.addEventListener('keydown', event => {if (event.key === 'Escape') closeExport();});
-    document.body.append(exported);
+    (document.getElementById('app-container') || document.body).append(exported);
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     api.visible = true;field.focus();field.select();
   };

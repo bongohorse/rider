@@ -57,6 +57,7 @@ function mount() {
     + '<div class="float chrome-view" id="rider-chrome-view" hidden></div><div class="float chrome-map" id="rider-chrome-map" hidden><svg viewBox="0 0 640 128" preserveAspectRatio="none" role="img" aria-label="Minimap: press or drag to move the view"><g class="course"></g><rect class="win"></rect></svg></div>';
   const style = document.createElement('style'); style.id = 'rider-chrome-style';
   style.textContent = `#rider-chrome .float{position:fixed;z-index:400}
+body.rider-portrait #rider-chrome{visibility:hidden}
 #rider-chrome .chrome-chip{left:12px;top:8px;padding:5px 12px 5px 6px;max-width:min(360px,30vw)}
 #rider-chrome .chrome-chip .name{display:flex;flex-direction:column;line-height:1.1;min-width:0}
 #rider-chrome .chrome-chip b{font:800 16px var(--disp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -163,7 +164,8 @@ function mount() {
 #rider-chrome .dt .fav{position:absolute;left:3px;top:3px;width:22px;height:22px;display:grid;place-items:center;color:#ffffff50;background:none;border:0;padding:0;cursor:pointer}
 #rider-chrome .dt .fav svg{width:14px;height:14px;fill:currentColor;stroke:none}#rider-chrome .dt .fav.on{color:var(--accent)}
 `;
-  document.head.append(style); document.body.append(root);
+  // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
+  document.head.append(style); (document.getElementById('app-container') || document.body).append(root);
   // Keyboard focus never leaves the canvas: editor shortcuts (Ctrl+Z, E, Delete …) are read there. The Defold
   // engine focuses the target of every mouse and wheel event (GLFW.isCanvasActive), so chrome elements ignore
   // focus() (see unfocusable) and only buttons are pointer targets.

@@ -15,7 +15,10 @@ function M.init() M.roots={};M.nodes={};M.parents={};M.text_nodes={};M.authored_
 local function group(name)
     if M.roots[name] then return M.roots[name] end
     local s=specs[name]
-    local root=gui.new_box_node(vmath.vector3(s[1],s[2],0),vmath.vector3(1,1,0))
+    -- right_top_inset (#678): the whole top-right group starts lower, below the HTML5 play bar; children keep
+    -- their authored positions relative to the group (M.position).
+    local dy=name=='right_top' and M.right_top_inset or 0
+    local root=gui.new_box_node(vmath.vector3(s[1],s[2]-dy,0),vmath.vector3(1,1,0))
     M.created=M.created+1
     gui.set_color(root,vmath.vector4(0,0,0,0))
     gui.set_xanchor(root,s[3]);gui.set_yanchor(root,s[4])

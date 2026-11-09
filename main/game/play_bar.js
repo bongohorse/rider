@@ -28,10 +28,12 @@ function mount() {
 #rider-playbar .pb-menu .touch-tools{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;position:static;width:auto;padding:0;border:0;background:none;max-height:none;overflow:visible}
 #rider-playbar .pb-menu .touch-tools button{min-height:44px;border:var(--ol) solid var(--ink);border-radius:12px;background:var(--btn);color:var(--text);font:800 13px var(--body);text-align:left;padding:0 10px}
 body.rider-editing #rider-playbar{display:none}
+body.rider-portrait #rider-playbar{visibility:hidden}
 body.rider-playbar:not(.rider-editing) #page-tools{display:none}
 body.rider-playbar #rider-level-actions>button:first-child{display:none}
 body.rider-playbar #rider-mobile .toolbar>button{display:none}`;
-  document.head.append(style); document.body.append(root); document.body.classList.add('rider-playbar');
+  // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
+  document.head.append(style); (document.getElementById('app-container') || document.body).append(root); document.body.classList.add('rider-playbar');
   root.addEventListener('contextmenu', e => e.preventDefault());
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
@@ -55,16 +57,8 @@ function run(act) {
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
   queue.push(act); canvasFocus();
 }
-function render(opts) {
+function render() {
   if (!root) mount();
-  // #678: an open native tuning panel (canvas pixels from the left) keeps the top right: the row moves left of it.
-  if (opts) {
-    const c = document.querySelector('canvas'), row = root.querySelector('.pb-row');
-    if (opts.panel_left !== false && c) {
-      const r = c.getBoundingClientRect(), x = r.left + opts.panel_left * r.width / c.width;
-      row.style.right = Math.max(8, Math.round(innerWidth - x + 8)) + 'px';
-    } else row.style.right = '';
-  }
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';

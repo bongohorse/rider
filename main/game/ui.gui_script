@@ -231,13 +231,15 @@ end
 function init(self)
     layout.init()
     gui.set_safe_area_mode(gui.SAFE_AREA_BOTH)
-    feedback.init()
     -- #678: in HTML5 the play bar (main/game/play_bar.js, editor kit style) replaces the scattered run buttons.
+    -- The native top-right group (tuning panel, Record/Replay) starts below its row: about 62 CSS px, i.e. 60
+    -- authored units at 960x540 and fewer on larger windows, where the row is relatively smaller.
     if html5 then
         require('main.editor.editor_ui_kit').ensure()
         html5.run(assert(sys.load_resource('/main/game/play_bar.js'),'Missing play bar'))
-        self.playbar=true;run_ui.bar=true
+        self.playbar=true;run_ui.bar=true;layout.right_top_inset=60
     end
+    feedback.init()
     hud_textures()
     self.station_next=layout.box(vmath.vector3(270,390,0),vmath.vector3(54,24,0),"left_top")
     gui.set_color(self.station_next,vmath.vector4(0.12,0.3,0.3,1))
@@ -596,19 +598,16 @@ function update(self,dt)
     levels_ui.update(self.levels_ui)
     -- #678: the HTML5 play bar: render its state and run its queued commands through the existing owners.
     if self.playbar then
-        -- An open tuning panel keeps its top (preset tabs): the bar moves left of it (canvas pixels from the left).
-        local left=false
-        if self.panel_open and self.tuning_panel then
-            local r=gui_rect(self.tuning_panel)
-            left=r and r.x0 or false
-        end
-        html5.run('window.riderPlayBar.render('..json.encode({panel_left=left})..')')
+        html5.run('window.riderPlayBar.render()')
         local text=html5.run('window.riderPlayBar.take()')
         if text~='[]' then
             local ok,list=pcall(json.decode,text)
             for _,a in ipairs(ok and type(list)=='table' and list or {}) do
                 if a=='tuning' then toggle_tuning(self) elseif a=='help' then toggle_help(self)
-                elseif a=='3d' then msg.post('main:/loader#script','terrain_look_open')
+                elseif a=='3d' then
+                    -- The 3D button toggles: a second press closes the open 3D look (like its Close).
+                    local look=require('main.editor.editor_look')
+                    if look.session and look.session.open then look.confirm();look.close() else msg.post('main:/loader#script','terrain_look_open') end
                 elseif a=='edit' then msg.post('main:/loader#script','editor_enter') end
             end
         end
@@ -702,7 +701,8 @@ function update(self,dt)
     gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
     local height=html5 and tonumber(html5.run("innerHeight")) or 540
     local bottom=html5 and not enabled and 52 or 16
-    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-bottom)/(446*base)))
+    -- The group's inset below the play bar (#678, unscaled authored units) also takes room from the panel's height.
+    local editor_scale=math.min(panel_scale,math.max(0.1,(((height or 540)-bottom)/base-(layout.right_top_inset or 0))/446))
     gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
     layout.readable(base)
     -- #444: re-place the counter when the screen, its size, the controls or the setting changed (not mid-drag).

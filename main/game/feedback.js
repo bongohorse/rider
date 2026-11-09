@@ -17,7 +17,7 @@
     field.style.cssText='box-sizing:border-box;width:100%;height:230px;font:12px monospace';
     const retry=document.createElement('button');retry.textContent='Try copy again';retry.onclick=()=>api.copy();
     const close=document.createElement('button');close.textContent='Close';close.onclick=api.close;
-    panel.append(heading,field,retry,close);document.body.append(panel);
+    panel.append(heading,field,retry,close);(document.getElementById('app-container')||document.body).append(panel);
     api.visible=true;api.status='Select text to copy';field.focus();field.select();
     if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{api.status='Exit fullscreen to copy report';});
   };

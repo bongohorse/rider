@@ -151,6 +151,7 @@
     #app-container.mobile-driving #page-tools{display:none}
     #rider-mobile.portrait{visibility:hidden}
     body.rider-portrait>:not(#app-container){visibility:hidden!important}
+    body.rider-portrait :is(#rider-custom-panel,#rider-export-panel,#rider-feedback-panel){visibility:hidden!important}
     #rider-mobile-portrait-block{position:fixed;inset:0;z-index:2147483647;background:transparent;pointer-events:auto;touch-action:none}
     #rider-mobile-portrait-block[hidden]{display:none}
   `;
@@ -320,9 +321,11 @@
   // Portrait shows no prompt (#359, Claudio 2026-11-03): the touch HUD is hidden and a
   // transparent, text-free layer outside the HUD swallows canvas/editor taps.
   // #app-container is position:fixed, its own stacking context, so the layer cannot cover
-  // overlays appended to <body> (level actions/menu, import, export, feedback). Those are
-  // hidden by a body class instead (visibility: no taps, no focus); their own hidden/open
-  // state is untouched and returns as it was in landscape.
+  // overlays appended to <body> (level actions). Those are hidden by a body class instead
+  // (visibility: no taps, no focus); their own hidden/open state is untouched and returns as
+  // it was in landscape. The play bar, editor chrome, Levels dialog and the import, export and
+  // feedback panels live inside #app-container (the fullscreen element, #678) and are hidden
+  // by their own portrait rules.
   // The loader already implements an idempotent 'run_focus_lost' suspend; reuse it
   // instead of toggling pause or introducing a second physics/time-step owner.
   const block=document.createElement('div');
