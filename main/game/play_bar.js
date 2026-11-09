@@ -20,7 +20,9 @@ function mount() {
     + '<span class="pb-chip pb-fuel">' + UI.icon('fuel') + '<span class="pb-fuelbar"><i></i></span></span></div>'
     + '<div class="float pb-progress" hidden><span class="pb-pi" title="Start">' + UI.icon('flag') + '</span>'
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
-    + '<b class="pb-pct"></b><span class="pb-reason"></span></div>';
+    + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
+    // Slice 3: the desktop debug group (touch keeps these tools in More).
+    + '<div class="float pb-debug" hidden></div>';
   const style = document.createElement('style');
   style.textContent = `#rider-playbar .pb-row{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:1100;gap:5px;padding:5px}
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
@@ -54,6 +56,9 @@ function mount() {
 #rider-playbar .pb-car{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--ink);transform:translate(-50%,-50%)}
 #rider-playbar .pb-pct{color:var(--text);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 #rider-playbar .pb-reason{color:var(--muted)}
+#rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
+#rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
+body.rider-playbar #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
 body.rider-playbar:not(.rider-editing) #page-tools{display:none}
@@ -83,12 +88,13 @@ function run(act) {
   if (act === 'tuning' && touch()) { m.toggleDetails(); key = ''; return; }
   if (act === 'levels') { m?.clear(); window.riderLevelsRequest = {action: 'open'}; return; }
   if (act === 'import') { m?.clear(); window.riderCustom?.open(); return; }
+  if (act === 'freecam') { window.riderFreeCam?.set(!window.riderFreeCam.on); debugKey = ''; canvasFocus(); return; }
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
   queue.push(act); canvasFocus();
 }
 function render() {
   if (!root) mount();
-  strip();
+  strip(); debugGroup();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -198,6 +204,23 @@ function strip() {
       const n = p.querySelector('.pb-pct'); if (n.textContent !== t) n.textContent = t;
     }
   }
+}
+// Slice 3: the desktop debug group, with the visibility rules of the native buttons it replaces.
+let debugKey = '';
+function debugGroup() {
+  const g = root.querySelector('.pb-debug'), run = window.riderRun, t = window.riderTelemetry || {}, time = window.riderTimeState || {};
+  const tuning = document.body.classList.contains('rider-tuning'), fc = window.riderFreeCam;
+  const show = {station: !run, section: (t.section_count || 0) > 1, step: !run, rec: !run && !tuning, fc: !!fc};
+  const k = JSON.stringify([touch(), show, time.step || 1, fc && fc.on]);
+  if (k === debugKey) return; debugKey = k;
+  g.hidden = touch() || !Object.values(show).some(Boolean);
+  if (g.hidden) return;
+  const b = (act, icon, label, title, extra = {}) => UI.button(Object.assign({icon, label, title, d: {act}}, extra));
+  g.innerHTML = (show.station ? b('station_next', 'arrows', 'Next', 'Next station') : '')
+    + (show.section ? b('next_section', 'ramp', 'Section [V]', 'Next section') : '')
+    + (show.step ? b('step', 'speed', 'Speed ' + (time.step || 1) + 'x [X]', 'Speed (slow motion) [X]') : '')
+    + (show.rec ? b('record', 'history', 'Record [B]', 'Record run [B]') + b('replay', 'play', 'Replay [G]', 'Replay run [G]') : '')
+    + (show.fc ? b('freecam', 'hand', fc.on ? 'Free cam ON [O]' : 'Free cam [O]', 'Free camera [O]', {on: fc.on}) : '');
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }

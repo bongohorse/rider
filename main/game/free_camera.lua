@@ -3,7 +3,7 @@
 local M={}
 local FREE_CAM=[==[(()=>{if(window.riderFreeCam)return;const k={},moves=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyQ','KeyE','ShiftLeft','ShiftRight'];
 let on=false,x=0,y=0,z=.8,last=0,drag=null;
-const b=document.createElement('button');b.type='button';b.textContent='Free cam [O]';b.style.cssText='position:fixed;left:16px;bottom:64px;z-index:9;padding:6px 10px;font:600 13px sans-serif;background:#1d3a44;color:#fff;border:1px solid #6fb;border-radius:4px;opacity:.9';
+const b=document.createElement('button');b.type='button';b.id='rider-freecam-button';b.textContent='Free cam [O]';b.style.cssText='position:fixed;left:16px;bottom:64px;z-index:9;padding:6px 10px;font:600 13px sans-serif;background:#1d3a44;color:#fff;border:1px solid #6fb;border-radius:4px;opacity:.9';
 let step;const set=v=>{on=v;b.textContent=on?'Free cam ON [O]':'Free cam [O]';b.style.background=on?'#2c8a5e':'#1d3a44';if(on){addEventListener('wheel',onWheel,{capture:true,passive:false});const c=window.riderRoadProjection&&window.riderRoadProjection.camera;if(c){x=c[0];y=c[1];}last=performance.now();requestAnimationFrame(step);}else{removeEventListener('wheel',onWheel,{capture:true});delete window.riderFreeCamPose;for(const m of moves)k[m]=0;drag=null;}};
 b.onclick=()=>{set(!on);document.querySelector('canvas')?.focus();};document.body.append(b);
 const cancel=e=>{e.stopImmediatePropagation();e.preventDefault();};
