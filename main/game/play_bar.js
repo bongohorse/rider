@@ -18,8 +18,8 @@ function mount() {
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
 #rider-playbar button{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #rider-playbar .pb-menu{overscroll-behavior:contain}
-#rider-playbar .pb-row .b.pause{--c:#ffd23f}#rider-playbar .pb-row .b.resume{--c:var(--go)}
-#rider-playbar .pb-row .b.pause,#rider-playbar .pb-row .b.resume{background:var(--c);color:var(--ink)}
+/* Claudio 2026-11-09: Pause is a normal button while driving; only a paused run shows a green Play. */
+#rider-playbar .pb-row .b.resume{--c:var(--go);background:var(--c);color:var(--ink)}
 #rider-playbar .pb-menu{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 62px);right:max(8px,env(safe-area-inset-right));z-index:1101;
  width:min(340px,calc(100vw - 16px));max-height:calc(100vh - 90px);overflow-y:auto;box-sizing:border-box;padding:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
  background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;touch-action:pan-y}
