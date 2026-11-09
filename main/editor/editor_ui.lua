@@ -210,6 +210,7 @@ function M.scrollbar_input(u,id,action)
 end
 function M.render(u,d)
     u.rec=nil -- never left over from an interrupted render
+    u.look_rows=nil
     local w,h=M.size(u);u.k=d.k;u.chrome=d.chrome;u.nb,u.nt=0,0;u.buttons,u.visible,u.rects,u.tips={},{},{},{}
     u.scrollbars={};u.error_banner,u.error_text=nil,nil
     u.scroll_key=d.selection..':'..d.tool
@@ -235,13 +236,13 @@ function M.render(u,d)
         bh=bh or 32
         local icon_name=d.icons and d.icons[name] or name
         local icon=ICONS[icon_name]
-        local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_') or name:match('^fuel_')
+        local field=name=='auto_count' or name=='auto_spacing' or name=='auto_randomness' or name=='auto_height' or name=='along_track' or name=='track_height' or name=='zoom_value' or name=='object_name' or name=='object_search' or name:match('^object_select_') or name=='rename' or name=='snapshot' or name=='speed' or name=='test_speed' or name:match('^param_') or name:match('^medal_') or name:match('^fuel_') or name:match('^look_value_')
         if not icon and not field and label~='' and not name:match('^collapse_') then bw=math.min(bw,math.max(32,#label*8+16)) end
         u.labels[name]=label
         if u.rec then
             u.tips[name]=tip or label;u.rec_labels[name]=label
             u.rec[#u.rec+1]={k='b',y=y,x=x,w=bw,name=name,label=label,active=active and true or false,tip=tip or label,disabled=disabled and true or false,
-                field=field or false,focused=d.field and d.field.key==name or false,danger=(name=='delete' or label:match('^Sure%?')) and true or false,icon=icon and icon_name or false}
+                field=field or false,focused=(d.field and d.field.key==name) or (d.look and d.look.field and 'look_value_'..d.look.field.key==name) or false,danger=(name=='delete' or label:match('^Sure%?')) and true or false,icon=icon and icon_name or false}
             return nil
         end
         local r={x=x,y=y,w=bw,h=bh};local hover=u.pointer and inside(r,u.pointer[1],u.pointer[2])
@@ -276,6 +277,40 @@ function M.render(u,d)
         if not THUMBS[kind] then return end
         local n=box(x-2,y-10,42,42,kind==d.prefab_kind and C.selected or C.secondary)
         gui.set_texture(n,'editor_icon_thumb_'..kind)
+    end
+    -- 3D look panel: drawn as a Defold modal, or (#686, Edit under the HTML chrome) recorded for the inspector dock.
+    local function draw_look(mx,my,mw,mh)
+        local s=d.look
+        if not u.rec then text(mx+16,my+24,'3D',C.active,18) end
+        button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
+        button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
+        text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. A level change enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; a change unifies them.' or ' source sections')),C.secondary,12,mw-32)
+        local top,bottom=my+104,my+mh-104
+        local height=#require('main.terrain_perspective.projection').controls(s.params)*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
+        for i,spec in ipairs(require('main.terrain_perspective.projection').controls(s.params)) do
+            local y=top+(i-1)*44-u.look_scroll;local key=spec.key
+            if y>=top and y+40<=bottom then
+                local disabled=s.scope=='selected' and (key=='perspective' or key=='angle' or key=='vehicle_position')
+                local value=s.field and s.field.key==key and (s.field.text..'_') or string.format('%.4g',s.params[key])
+                -- Recorded for the dock: the label shares the value's line and the slider is its own row.
+                text(mx+16,u.rec and y or y+10,spec.label,disabled and C.secondary or C.text,12,268)
+                button('look_value_'..key,mx+300,y,100,value,false,'Numeric '..spec.label,24,disabled)
+                local r=require('main.terrain_perspective.projection').ranges(s.params)[key];local x=mx+16;local width=mw-36
+                if u.rec then u.rec[#u.rec+1]={k='s',y=y+30,name='look_slider_'..key,label=spec.label,value=s.params[key],min=r[1],max=r[2],step=spec.step,disabled=disabled and true or false}
+                else
+                local track=box(x,y+30,width,8,C.border);u.buttons['look_slider_'..key]={box=track};u.visible[#u.visible+1]='look_slider_'..key
+                u.rects['look_slider_'..key]={x=x,y=y+24,w=width,h=18}
+                local fraction=(s.params[key]-r[1])/(r[2]-r[1]);box(x+fraction*(width-8),y+26,8,16,disabled and C.secondary or C.active)
+                end
+            end
+        end
+        if s.error then paragraph(mx+16,my+mh-96,s.error,mw-32,C.error,12,{my+mh-104,my+mh-40})
+        else
+            text(mx+16,my+mh-86,u.rec and 'Strength / angle: level-wide.' or 'Strength / angle: level-wide. Scroll for all controls.',C.secondary,12,mw-32)
+            paragraph(mx+16,my+mh-68,'Each finished change is one Undo step: '..d.status,mw-32,C.secondary,12,{my+mh-84,my+mh-36})
+        end
+        button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset this scope. Selected reset restores inheritance.',28)
+        button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
     end
     u.hover,u.tip=nil,nil
     -- In Edit, 3D look lies over the working editor: the chrome draws first, the panel on top.
@@ -551,7 +586,10 @@ function M.render(u,d)
                     y=y+44
                 elseif v.name~='mirror_right' then row(v.name,v.label,nil,nil,nil,v.tip) end
             end
-            if u.rec then u.inspector,u.inspector_labels,u.rec=u.rec,u.rec_labels,nil;u.max_scroll=0 else
+            if u.rec then u.inspector,u.inspector_labels,u.rec=u.rec,u.rec_labels,nil;u.max_scroll=0
+                -- #686: in Edit the open 3D look is recorded for the inspector dock instead of a modal.
+                if d.look_dock then u.rec,u.rec_labels={},{};u.look_scroll=0;draw_look(0,0,276,100000);u.look_rows,u.look_labels,u.rec=u.rec,u.rec_labels,nil else u.look_rows=nil end
+            else
             local content_end=y+u.scroll+8
             local panel_end=math.min(clip[2]+16,math.max(160,content_end+16))
             u.properties_rect.h=panel_end-104
@@ -589,33 +627,7 @@ function M.render(u,d)
         if modal=='terrain_look' then mw=420;mh=math.min(580,h-96);mx=w-mw-16;my=16;if overlay then mx=w-mw-72;my=56;mh=math.min(580,h-136) end end
         local panel=box(mx,my,mw,mh,C.panel);u.modal_rect={x=mx,y=my,w=mw,h=mh}
         if modal=='terrain_look' then
-            local s=d.look
-            text(mx+16,my+24,'3D',C.active,18)
-            button('look_scope_level',mx+16,my+40,120,'Level',s.scope=='level')
-            button('look_scope_selected',mx+148,my+40,200,'Selected sections',s.scope=='selected')
-            text(mx+16,my+88,s.scope=='level' and (d.look_legacy and 'Legacy unchanged. A level change enables perspective.' or (d.play and 'Gym live preview; manual section looks stay intact.' or 'Level defaults; manual section looks stay intact.')) or ('Selected '..#(s.ids or {})..(s.mixed and ': mixed locals; a change unifies them.' or ' source sections')),C.secondary,12,mw-32)
-            local top,bottom=my+104,my+mh-104
-            local height=#require('main.terrain_perspective.projection').controls(s.params)*44;u.look_max=math.max(0,height-(bottom-top));u.look_scroll=math.max(0,math.min(u.look_max,u.look_scroll or 0))
-            for i,spec in ipairs(require('main.terrain_perspective.projection').controls(s.params)) do
-                local y=top+(i-1)*44-u.look_scroll;local key=spec.key
-                if y>=top and y+40<=bottom then
-                    local disabled=s.scope=='selected' and (key=='perspective' or key=='angle' or key=='vehicle_position')
-                    local value=s.field and s.field.key==key and (s.field.text..'_') or string.format('%.4g',s.params[key])
-                    text(mx+16,y+10,spec.label,disabled and C.secondary or C.text,12,268)
-                    button('look_value_'..key,mx+300,y,100,value,false,'Numeric '..spec.label,24,disabled)
-                    local r=require('main.terrain_perspective.projection').ranges(s.params)[key];local x=mx+16;local width=mw-36
-                    local track=box(x,y+30,width,8,C.border);u.buttons['look_slider_'..key]={box=track};u.visible[#u.visible+1]='look_slider_'..key
-                    u.rects['look_slider_'..key]={x=x,y=y+24,w=width,h=18}
-                    local fraction=(s.params[key]-r[1])/(r[2]-r[1]);box(x+fraction*(width-8),y+26,8,16,disabled and C.secondary or C.active)
-                end
-            end
-            if s.error then paragraph(mx+16,my+mh-96,s.error,mw-32,C.error,12,{my+mh-104,my+mh-40})
-            else
-                text(mx+16,my+mh-86,'Strength / angle: level-wide. Scroll for all controls.',C.secondary,12,mw-32)
-                paragraph(mx+16,my+mh-68,'Each finished change is one Undo step: '..d.status,mw-32,C.secondary,12,{my+mh-84,my+mh-36})
-            end
-            button('look_reset',mx+16,my+mh-36,92,'Reset',false,'Reset this scope. Selected reset restores inheritance.',28)
-            button('look_close',mx+mw-104,my+mh-36,88,'Close',false,'Close without resetting settings',28)
+            draw_look(mx,my,mw,mh)
         elseif modal=='help' then
             u.help_panel=panel
             for col,lines in ipairs(d.help) do
