@@ -10,6 +10,13 @@ async function main(){
  const indexes=Object.keys(manifest.files).filter(x=>x.endsWith('/index.html')||x==='index.html');assert.equal(indexes.length,1);
  const web=path.dirname(path.join(bundle,indexes[0]));let browser,page,server;
  const report={schema_version:1,source_sha:sha,run_id:runId,status:'FAIL',cases:{},errors:[],not_run:['physical device','phone/GPU performance','human art and Auto acceptance']};
+ // #703: a whole-run watchdog. The last action is logged every 20 s; 30 s before smoke.py's kill (360 s in
+ // tools/gym/dispatch.py) the report is written with that action and the run exits, so a slow or stuck run
+ // still reports where it was. (Only Node timers: they fire even when the page itself is stuck.)
+ let last='start';const mark=what=>{last=what;report.last_action=what;};
+ const beat=setInterval(()=>console.log('bg549 at '+last),20000);beat.unref();
+ const dog=setTimeout(()=>{report.failure='bg549 stalled at: '+last;console.log(report.failure);
+  try{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');}finally{process.exit(1);}},330000);dog.unref();
  try{
   server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/octet-stream');fs.createReadStream(file).pipe(res);});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));browser=await chromium.launch();report.browser=browser.version();
@@ -17,11 +24,11 @@ async function main(){
   page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))report.errors.push(m.text());});
   const base=`http://127.0.0.1:${server.address().port}/index.html`;
   await page.goto(base+'?station=first-run');await page.waitForFunction(()=>window.riderTelemetry?.sequence>5,null,{timeout:60000});
-  async function key(name){await page.locator('canvas').focus();await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);await pointer.frames(page,{n:6});}
+  async function key(name){mark('key '+name);await page.locator('canvas').focus();await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);await pointer.frames(page,{n:6});}
   const state=()=>page.evaluate(()=>window.riderBackgroundState);
   const document=()=>page.evaluate(()=>window.riderEditorDoc);
   async function tap(name){
-   await page.locator('canvas').focus();
+   mark('tap '+name);await page.locator('canvas').focus();
    // Returning from DOM controls uses the editor's existing one-second canvas refocus guard.
    await page.waitForTimeout(1100);
    const point=await page.evaluate(name=>{const b=window.riderEditor.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!b)throw Error('Missing editor button '+name);return {x:r.x+b.x*r.width/c.width,y:r.y+r.height-b.y*r.height/c.height};},name);
@@ -31,11 +38,11 @@ async function main(){
   const initial=await page.evaluate(()=>({revision:window.riderEditor.revision,undo:window.riderEditor.undo}));
   // #706: presets, ON/OFF, layer visibility, Depth and Auto are in the library's Background tab; the
   // Layer images and height panel keeps each layer's image and vertical settings.
-  async function open(){
+  async function open(){mark('open Background tab');
    await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('lib_bg');
    await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4,null,{timeout:10000});
   }
-  async function layers(){
+  async function layers(){mark('layers');
    await page.getByRole('button',{name:'Layer images and height',exact:true}).click();
    await page.waitForFunction(()=>window.riderBackgroundPanel?.visible,null,{timeout:10000});
   }
@@ -143,18 +150,31 @@ async function main(){
   await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
   await page.waitForFunction(()=>window.riderEditor.tool==='select'&&!window.riderDecorationPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
   assert.equal(await hosted('#rider-decoration-panel'),false);
+  // #703: CI sometimes hangs here until smoke.py's 4-minute kill, with no result. Each viewport step has its
+  // own 25 s limit (the run reaches this loop after about 2 minutes) and logs its progress, so a stall fails
+  // in time with the step name and failure.png.
+  const step=async(label,run)=>{report.step=label;mark('step '+label);console.log('bg549 step '+label);let timer;
+   try{return await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('bg549 step timed out after 25 s: '+label)),25000);})]);}finally{clearTimeout(timer);}};
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
-   await page.setViewportSize(viewport);await pointer.frames(page,{n:15});
-   // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
-   const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
-   assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
-   await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);
-   await page.screenshot({path:path.join(out,`layout-${viewport.width}x${viewport.height}.png`)});
+   const tag=viewport.width+'x'+viewport.height;
+   await step('resize '+tag,async()=>{await page.setViewportSize(viewport);await pointer.frames(page,{n:15});});
+   await step('layout '+tag,async()=>{
+    // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
+    const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+    assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
+   });
+   await step('foreground toggle '+tag,async()=>{await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);});
+   await step('screenshot '+tag,()=>page.screenshot({path:path.join(out,`layout-${tag}.png`)}));
   }
+  delete report.step;
   await page.locator('#rider-background-close').click();assert.deepEqual((await document()).backgrounds.preset,'meadow');
   report.cases.discard_tabs_layout={viewports:['844x390','1920x1080'],modal_draft_preserved:['help','versions']};assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
- }catch(e){report.failure=e.stack;if(page)report.observed=await page.evaluate(()=>({editor:window.riderEditor,document:window.riderEditorDoc,background:window.riderBackgroundState})).catch(()=>null);if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});}
- finally{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
+ }catch(e){report.failure=e.stack;
+  // A stalled page must not stall the report: each capture gets at most 10 s.
+  const capped=p=>{let t;return Promise.race([p.catch(()=>null),new Promise(ok=>{t=setTimeout(()=>ok(null),10000);})]).finally(()=>clearTimeout(t));};
+  console.log('bg549 failure: '+String(e.message||e).slice(0,400));
+  if(page)report.observed=await capped(page.evaluate(()=>({editor:window.riderEditor,document:window.riderEditorDoc,background:window.riderBackgroundState})));if(page)await capped(page.screenshot({path:path.join(out,'failure.png')}));}
+ finally{clearTimeout(dog);clearInterval(beat);if(report.status==='PASS')delete report.last_action;fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
  console.log(JSON.stringify({status:report.status,cases:Object.keys(report.cases),failure:report.failure}));return report.status==='PASS'?0:1;
 }
 module.exports={EXPECTED};if(require.main===module)main().then(code=>process.exitCode=code).catch(e=>{console.error(e);process.exitCode=1;});
