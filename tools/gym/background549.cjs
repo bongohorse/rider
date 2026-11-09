@@ -10,13 +10,13 @@ async function main(){
  const indexes=Object.keys(manifest.files).filter(x=>x.endsWith('/index.html')||x==='index.html');assert.equal(indexes.length,1);
  const web=path.dirname(path.join(bundle,indexes[0]));let browser,page,server;
  const report={schema_version:1,source_sha:sha,run_id:runId,status:'FAIL',cases:{},errors:[],not_run:['physical device','phone/GPU performance','human art and Auto acceptance']};
- // #703: a whole-run watchdog. CI sometimes stalls this case until smoke.py's 240 s kill, with no result.
- // The last action is logged every 20 s; at 210 s the report is written with that action and the run exits,
- // so the stall's place is known. (Only Node timers: they fire even when the page itself is stuck.)
+ // #703: a whole-run watchdog. The last action is logged every 20 s; 30 s before smoke.py's kill (360 s in
+ // tools/gym/dispatch.py) the report is written with that action and the run exits, so a slow or stuck run
+ // still reports where it was. (Only Node timers: they fire even when the page itself is stuck.)
  let last='start';const mark=what=>{last=what;report.last_action=what;};
  const beat=setInterval(()=>console.log('bg549 at '+last),20000);beat.unref();
  const dog=setTimeout(()=>{report.failure='bg549 stalled at: '+last;console.log(report.failure);
-  try{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');}finally{process.exit(1);}},210000);dog.unref();
+  try{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');}finally{process.exit(1);}},330000);dog.unref();
  try{
   server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/octet-stream');fs.createReadStream(file).pipe(res);});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));browser=await chromium.launch();report.browser=browser.version();

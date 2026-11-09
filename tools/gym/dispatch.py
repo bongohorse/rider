@@ -4,7 +4,7 @@
 RUNNERS = {
     'bg546': ('background546.cjs', 180),
     'bg548': ('background548.cjs', 180),
-    'bg549': ('background549.cjs', 240),
+    'bg549': ('background549.cjs', 360),
     'deco558': ('decoration558.cjs', 180),
     'deco560': ('decoration560.cjs', 240),
     'deco617': ('decoration617.cjs', 240),
