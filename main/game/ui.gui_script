@@ -662,6 +662,9 @@ function update(self,dt)
     if html5 then
         local d=self.fuel_data;local encoded=json.encode(d)
         if self.fuel_published~=encoded then self.fuel_published=encoded;html5.run('window.riderFuel='..encoded) end
+        -- #678: the refill gain while it flashes, for the play bar's strip.
+        local gain=self.fuel_flash>0 and self.fuel_gain or false
+        if self.fuel_gain_published~=gain then self.fuel_gain_published=gain;html5.run('window.riderFuelGain='..json.encode(gain)) end
     end
     self.coin_flash=math.max(0,(self.coin_flash or 0)-dt)
     run_ui.show_coins(self.run_ui,self.coin_data,self.coin_bank_data,enabled,self.coin_flash>0 and (self.coin_flash_amount or 1) or false)

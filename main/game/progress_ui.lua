@@ -26,7 +26,7 @@ function M.show(t,data,touch)
  if not data then return end
  if not data.available then
   for _,n in ipairs(t.nodes)do gui.set_visible(n,false)end
-  gui.set_visible(t.label,visible and true or false);gui.set_text(t.label,'Progress unavailable: '..data.reason);return
+  gui.set_visible(t.label,visible);gui.set_text(t.label,'Progress unavailable: '..data.reason);return
  end
  local x=360+240*data.fraction
  layout.position(t.marker.body,vmath.vector3(x,467,0));layout.position(t.marker.roof,vmath.vector3(x,472,0))

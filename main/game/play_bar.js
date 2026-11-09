@@ -38,8 +38,9 @@ function mount() {
 #rider-playbar .pb-strip{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1050;gap:12px;padding:6px 14px;pointer-events:none;
  font:800 13px var(--body);color:var(--muted);white-space:nowrap;flex-wrap:wrap;justify-content:center;row-gap:2px;box-sizing:border-box}
 #rider-playbar [hidden]{display:none!important}
-#rider-playbar .pb-strip.two .pb-best{order:9;flex-basis:100%;text-align:center;font-size:11.5px}
-#rider-playbar .pb-time{font:800 22px var(--disp);color:var(--text);font-variant-numeric:tabular-nums}
+/* The info line (state, best, banks, fuel notes) is always the strip's second row and wraps inside it. */
+#rider-playbar .pb-best{order:9;flex-basis:100%;white-space:normal;text-align:center;font-size:11.5px;line-height:1.3}
+#rider-playbar .pb-time{font:800 22px var(--disp);color:var(--text);font-variant-numeric:tabular-nums;min-width:4.6em;text-align:right}
 #rider-playbar .pb-chip{display:inline-flex;align-items:center;gap:4px;color:var(--text)}#rider-playbar .pb-chip svg{width:18px;height:18px}
 #rider-playbar .pb-coins{color:#ffd23f}#rider-playbar .pb-coins b,#rider-playbar .pb-gems b{color:var(--text);font-variant-numeric:tabular-nums}
 #rider-playbar .pb-gems{color:#b48cff}#rider-playbar .pb-fuel{color:#ff4f5e}
@@ -59,7 +60,7 @@ body.rider-playbar:not(.rider-editing) #page-tools{display:none}
 body.rider-playbar #rider-level-actions>button:first-child{display:none}
 body.rider-playbar #rider-mobile .toolbar>button{display:none}
 body.rider-playbar #rider-mobile .readout>:is(.run-line,.coin-count,.fuel-count,.fuel-bar,.course-progress){display:none!important}
-body.rider-playbar #rider-mobile .readout{background:transparent}`;
+body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1px 2px #000,0 0 3px #000}`;
   // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
   document.head.append(style); (document.getElementById('app-container') || document.body).append(root); document.body.classList.add('rider-playbar');
   root.addEventListener('contextmenu', e => e.preventDefault());
@@ -131,41 +132,71 @@ function render() {
 }
 // #678 slice 2: the player strip and progress bar, from the run state the game already publishes
 // (riderRun, riderCoins, riderFuel, riderProgress). Text nodes are updated in place every frame.
+let stripKey = '';
+const MEDALS = ['None', 'Bronze', 'Silver', 'Gold'];
 function strip() {
-  const run = window.riderRun, coins = window.riderCoins, fuel = window.riderFuel, prog = window.riderProgress;
+  const run = window.riderRun, coins = window.riderCoins, fuel = window.riderFuel, prog = window.riderProgress, gain = window.riderFuelGain;
   const s = root.querySelector('.pb-strip'), p = root.querySelector('.pb-progress');
   const set = (sel, t) => { const n = s.querySelector(sel); if (n.textContent !== t) n.textContent = t; };
-  s.hidden = !run;
-  if (run) {
-    set('.pb-time', run.time.toFixed(2) + ' s');
-    const state = run.state === 'ready' ? 'Drive to start' : run.state === 'paused' ? 'Paused' : run.state === 'failed' ? 'Attempt ended' : run.state === 'finished' ? 'Finished' : '';
-    set('.pb-best', [state, 'Best ' + (run.best > 0 ? run.best.toFixed(2) + ' s' : '--'), run.official ? (run.has_medals ? ['None', 'Bronze', 'Silver', 'Gold'][run.highest_medal] : 'Official') : 'Practice', run.save === 'saved' ? '' : run.save].filter(Boolean).join(' · '));
+  const terminal = run && (run.state === 'finished' || run.state === 'failed');
+  // Hidden while touch tuning is open (as the touch readout was) and when there is nothing to show.
+  const tuning = !!window.riderMobile?.details;
+  const hasCoins = !!(coins && (coins.total > 0 || coins.gem_total > 0)) && !terminal;
+  const hasFuel = !!fuel && !terminal;
+  s.hidden = tuning || !(run || hasCoins || hasFuel);
+  if (!s.hidden) {
+    // Time and run line only with a timed run; coins, gems and fuel on any course that has them (custom levels too).
+    s.querySelector('.pb-time').hidden = !run;
+    if (run) set('.pb-time', run.time.toFixed(2) + ' s');
+    // Same words as the native run line (run_ui.lua) and the touch readout.
+    const state = !run ? '' : run.state === 'ready' ? 'Drive to start' : run.state === 'paused' ? 'Paused' : run.state === 'failed' ? 'Attempt ended' : run.state === 'finished' ? 'Finished' : (run.course_name || 'Run');
+    const parts = run ? [state, 'Best ' + (run.best > 0 ? run.best.toFixed(2) + ' s' : '--'), run.has_medals ? MEDALS[run.highest_medal || 0] : '', run.official ? 'Official' : 'Practice', run.save === 'saved' ? '' : run.save] : [];
+    if (hasCoins) {
+      parts.push('Bank ' + coins.bank + (coins.practice ? ' (practice, not banked)' : ''));
+      if (coins.gem_total) parts.push('Earned ' + coins.gem_earned + '/' + coins.gem_total + ' · Gem bank ' + coins.gem_bank);
+      if (coins.save && coins.save !== 'saved') parts.push(coins.save);
+    }
+    if (hasFuel) {
+      // The fuel guidance (LOW FUEL, EMPTY …) and refills stay readable text, not only a bar.
+      if (fuel.low || fuel.empty) parts.push(fuel.text);
+      if (fuel.collected) parts.push('Refills ' + fuel.collected + (gain ? ' (+' + Number(gain).toFixed(1) + '%)' : ''));
+    }
+    set('.pb-best', parts.filter(Boolean).join(' · '));
     const c = s.querySelector('.pb-coins'), g = s.querySelector('.pb-gems'), f = s.querySelector('.pb-fuel');
-    c.hidden = !coins; g.hidden = !(coins && coins.gem_total);
-    if (coins) { set('.pb-coins b', coins.count + '/' + coins.total); set('.pb-flash', coins.flash ? '+' + coins.flash : ''); c.title = 'Coins · bank ' + coins.bank; }
-    if (coins && coins.gem_total) { set('.pb-gems b', coins.gems + '/' + coins.gem_total); g.title = 'Wonder Gems · earned ' + coins.gem_earned + ' · gem bank ' + coins.gem_bank; }
-    f.hidden = !fuel;
-    if (fuel) { f.querySelector('.pb-fuelbar i').style.width = Math.max(0, Math.min(100, fuel.amount)) + '%'; f.classList.toggle('low', !!fuel.low); f.title = fuel.text + ' · refills ' + fuel.collected; }
+    c.hidden = !hasCoins; g.hidden = !(hasCoins && coins.gem_total);
+    if (hasCoins) { set('.pb-coins b', coins.count + '/' + coins.total); set('.pb-flash', coins.flash ? '+' + coins.flash : ''); }
+    if (hasCoins && coins.gem_total) set('.pb-gems b', coins.gems + '/' + coins.gem_total);
+    f.hidden = !hasFuel;
+    if (hasFuel) { const w = Math.max(0, Math.min(100, fuel.amount)) + '%', bar = f.querySelector('.pb-fuelbar i'); if (bar.style.width !== w) bar.style.width = w; f.classList.toggle('low', !!(fuel.low || fuel.empty)); }
   }
-  // Centred when there is room; otherwise it ends left of the button row and wraps to two lines.
+  // Layout only when what sizes the strip changes (not the ticking time: it has a fixed width).
   let box = null;
-  if (run) {
-    // Keeps clear of the button row (right) and of the debug corner (about 150 px on the left).
-    const R = root.querySelector('.pb-row').getBoundingClientRect().left - 12;
-    s.classList.remove('two'); s.style.maxWidth = Math.max(160, R - 8) + 'px'; s.style.left = '50%'; s.style.transform = 'translateX(-50%)';
+  if (!s.hidden) {
+    const key = [innerWidth, innerHeight, s.querySelector('.pb-best').textContent, s.querySelector('.pb-coins b').textContent, s.querySelector('.pb-flash').textContent, s.querySelector('.pb-gems b').textContent, !!run, hasCoins, hasFuel, menuOpen].join('|');
+    if (key !== stripKey) {
+      stripKey = key;
+      // Keeps clear of the button row (right) and, where possible, of the debug corner (about 150 px).
+      const R = root.querySelector('.pb-row').getBoundingClientRect().left - 12;
+      s.style.maxWidth = Math.max(220, Math.min(R - 158, 440)) + 'px'; s.style.left = '50%'; s.style.transform = 'translateX(-50%)';
+      const b = s.getBoundingClientRect();
+      if (b.right > R) { s.style.transform = 'none'; s.style.left = Math.max(8, R - b.width) + 'px'; }
+    }
     box = s.getBoundingClientRect();
-    // Two lines: the status line below; the strip keeps the width of its first line.
-    if (box.width > R - 150) { s.classList.add('two'); s.style.maxWidth = Math.max(160, Math.min(R - 150, 330)) + 'px'; box = s.getBoundingClientRect(); }
-    if (box.right > R) { s.style.transform = 'none'; s.style.left = Math.max(8, R - box.width) + 'px'; box = s.getBoundingClientRect(); }
-  }
-  const showProg = !!(run && prog && prog.enabled && !prog.modal && !window.riderTelemetry?.ui_captured);
+  } else stripKey = '';
+  const showProg = !!(!s.hidden && prog && prog.enabled && !prog.modal && !window.riderTelemetry?.ui_captured);
   p.hidden = !showProg;
   if (showProg) {
-    const w = Math.min(360, box.width); p.style.top = (box.bottom + 6) + 'px'; p.style.width = w + 'px'; p.style.left = (box.left + (box.width - w) / 2) + 'px';
+    const w = Math.min(360, box.width);
+    const top = (box.bottom + 6) + 'px', width = w + 'px', left = (box.left + (box.width - w) / 2) + 'px';
+    if (p.style.top !== top) p.style.top = top; if (p.style.width !== width) p.style.width = width; if (p.style.left !== left) p.style.left = left;
     const ok = !!prog.available;
     for (const n of p.querySelectorAll('.pb-pi,.pb-track,.pb-pct')) n.hidden = !ok;
-    const r = p.querySelector('.pb-reason'); r.hidden = ok; r.textContent = ok ? '' : 'Progress unavailable: ' + prog.reason;
-    if (ok) { const pct = 100 * prog.fraction; p.querySelector('.pb-fill').style.width = pct + '%'; p.querySelector('.pb-car').style.left = pct + '%'; p.querySelector('.pb-pct').textContent = Math.floor(pct + .000001) + '%'; }
+    const r = p.querySelector('.pb-reason'); r.hidden = ok; const reason = ok ? '' : 'Progress unavailable: ' + prog.reason; if (r.textContent !== reason) r.textContent = reason;
+    if (ok) {
+      const pct = 100 * prog.fraction, t = Math.floor(pct + .000001) + '%' + (prog.phase === 'paused' ? ' · Paused' : '');
+      p.querySelector('.pb-fill').style.width = pct + '%'; p.querySelector('.pb-car').style.left = pct + '%';
+      const n = p.querySelector('.pb-pct'); if (n.textContent !== t) n.textContent = t;
+    }
   }
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.

@@ -10,6 +10,7 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   const visible=e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).display!=='none';
   return {toolbar:box(toolbar),menu:menu&&!menu.hidden?box(menu):null,readout:box(document.querySelector('#rider-mobile .readout')),
     zones:box(document.querySelector('#rider-mobile .zones')),
+    strip:box(document.querySelector('#rider-playbar .pb-strip:not([hidden])')),progress:box(document.querySelector('#rider-playbar .pb-progress:not([hidden])')),
     levelActions:box(document.querySelector('#rider-level-actions')),
     readoutClipped:(()=>{const e=document.querySelector('#rider-mobile .readout');return e.scrollHeight>e.clientHeight+1;})(),
     buttons:[...toolbar.querySelectorAll('button')].filter(visible).map(e=>({label:e.textContent,rect:box(e)}))};
@@ -23,6 +24,13 @@ async function checkHudGeometry(page,viewport,moreOpen=false){
   if(g.levelActions)assert.equal(intersects(rect,g.levelActions),false,'toolbar overlaps level actions: '+label);
  }
  assert.ok(g.toolbar.left>=-1&&g.toolbar.right<=screen.right+1,'toolbar outside viewport');
+ // #678: the player strip and progress bar stay inside the screen, clear of the button row and the drive zones.
+ for(const [name,r] of [['player strip',g.strip],['progress bar',g.progress]]){
+  if(!r)continue;
+  assert.ok(r.left>=-1&&r.right<=screen.right+1&&r.top>=-1,name+' outside viewport');
+  assert.equal(intersects(r,g.toolbar),false,name+' overlaps the button row');
+  assert.equal(intersects(r,g.zones),false,name+' overlaps drive zones');
+ }
  if(moreOpen){
   assert.ok(g.menu,'More must have a visible panel');
   assert.ok(g.menu.left>=-1&&g.menu.right<=screen.right+1&&g.menu.bottom<=screen.bottom+1,'More outside viewport');
@@ -43,7 +51,7 @@ module.exports=async function check(browser,base,sha,out){
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
  try{
   await page.goto(new URL('index.html?station=first-run&touch=1',base).href);await page.waitForFunction(()=>window.riderRun?.state==='ready'&&window.riderTelemetry?.sequence>2&&window.riderMobile?.enabled);assert.equal(await page.evaluate(()=>window.riderBuild),sha);
-  assert.match(await page.locator('#rider-playbar .pb-strip').innerText(),/Drive to start/);await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-playbar .pb-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-playbar .pb-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
+  assert.match(await page.locator('#rider-playbar .pb-strip').innerText(),/Drive to start/);await page.waitForFunction(()=>window.riderProgress?.available&&window.riderProgress.fraction===0);await page.locator('#rider-playbar .pb-progress').waitFor({state:'visible',timeout:5000});assert.equal(await page.locator('#rider-playbar .pb-progress').isVisible(),true);await page.waitForFunction(()=>window.riderCoins?.total===9);assert.match(await page.locator('#rider-mobile .coin-count').innerText(),/Coins 0\/9/);assert.match(await page.locator('#rider-playbar .pb-coins').innerText(),/^0\/9/,'visible coin chip');assert.match(await page.locator('#rider-playbar .pb-gems').innerText(),/^0\/2/,'visible gem chip');assert.equal(await page.evaluate(()=>window.riderCoins.gem_total),2);await page.screenshot({path:path.join(out,'run-phone-ready.png')});
   const hudLayouts=[];
   for(const viewport of [{width:960,height:540},{width:1080,height:486},{width:1280,height:720}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(250);
