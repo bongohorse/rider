@@ -57,6 +57,7 @@ function mount() {
     + '<div class="float chrome-view" id="rider-chrome-view" hidden></div><div class="float chrome-map" id="rider-chrome-map" hidden><svg viewBox="0 0 640 128" preserveAspectRatio="none" role="img" aria-label="Minimap: press or drag to move the view"><g class="course"></g><rect class="win"></rect></svg></div>';
   const style = document.createElement('style'); style.id = 'rider-chrome-style';
   style.textContent = `#rider-chrome .float{position:fixed;z-index:400}
+body.rider-portrait #rider-chrome{visibility:hidden}
 #rider-chrome .chrome-chip{left:12px;top:8px;padding:5px 12px 5px 6px;max-width:min(360px,30vw)}
 #rider-chrome .chrome-chip .name{display:flex;flex-direction:column;line-height:1.1;min-width:0}
 #rider-chrome .chrome-chip b{font:800 16px var(--disp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

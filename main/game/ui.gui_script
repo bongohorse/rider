@@ -701,7 +701,8 @@ function update(self,dt)
     gui.set_scale(root,vmath.vector3(panel_scale,panel_scale,1))
     local height=html5 and tonumber(html5.run("innerHeight")) or 540
     local bottom=html5 and not enabled and 52 or 16
-    local editor_scale=math.min(panel_scale,math.max(0.1,((height or 540)-bottom)/(446*base)))
+    -- The group's inset below the play bar (#678, unscaled authored units) also takes room from the panel's height.
+    local editor_scale=math.min(panel_scale,math.max(0.1,(((height or 540)-bottom)/base-(layout.right_top_inset or 0))/446))
     gui.set_scale(layout.roots.right_top,vmath.vector3(editor_scale,editor_scale,1))
     layout.readable(base)
     -- #444: re-place the counter when the screen, its size, the controls or the setting changed (not mid-drag).
