@@ -29,7 +29,8 @@ function M.new()
 end
 function M.show(t,r,touch)
  t.data=r;local active=r~=nil;local done=active and (r.state=='finished' or r.state=='failed')
- for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch) end
+ -- #678: in HTML5 the play bar's player strip shows time, best, coins, gems and fuel (these keep their texts).
+ for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch and not M.bar) end
  for _,n in ipairs({t.card,t.result,t.detail,t.medal,t.next,t.retry,t.retry_label}) do gui.set_visible(n,done or false) end
  -- #678: in HTML5 the play bar has Levels.
  gui.set_visible(t.entry,not touch and not M.bar);gui.set_visible(t.entry_label,not touch and not M.bar)
@@ -50,7 +51,7 @@ function M.show(t,r,touch)
 end
 function M.show_coins(t,c,b,touch,flash)
  local enabled=c and (c.total>0 or (c.gem_total or 0)>0)
- gui.set_visible(t.coinhud,enabled and not touch and not (t.data and (t.data.state=='finished' or t.data.state=='failed')) or false)
+ gui.set_visible(t.coinhud,enabled and not touch and not M.bar and not (t.data and (t.data.state=='finished' or t.data.state=='failed')) or false)
  local r=t.data;local finished=r and (r.state=='finished' or r.state=='failed')
  gui.set_visible(t.coins,enabled and finished or false)
  if not enabled then return end
@@ -66,7 +67,7 @@ function M.show_coins(t,c,b,touch,flash)
 end
 function M.show_fuel(t,d,touch,gain)
  local terminal=t.data and (t.data.state=='finished' or t.data.state=='failed')
- local shown=d and not touch and not terminal or false
+ local shown=d and not touch and not terminal and not M.bar or false
  for _,n in ipairs({t.fueltext,t.fuelbg,t.fuelfill}) do gui.set_visible(n,shown) end
  if not d then return end
  local colour=d.low and vmath.vector4(1,.65,.25,1) or vmath.vector4(.35,.85,.65,1)

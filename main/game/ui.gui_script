@@ -43,7 +43,7 @@ return out;};
 L.watch=()=>{const e=document.querySelector('#rider-mobile .readout');
 if(e!==L.el){if(L.el&&ro)ro.unobserve(L.el);L.el=e;if(e&&ro)ro.observe(e);L.seq++;}return L.seq;};
 L.query=()=>JSON.stringify({seq:L.watch(),controls:rects('button,select,input,textarea,a[href],[role=button],[data-command]'),
-readouts:rects('#rider-mobile .readout')});})()]]
+readouts:rects('#rider-mobile .readout,#rider-playbar .pb-strip,#rider-playbar .pb-progress')});})()]]
 -- Visible screen area (safe area where the platform reports one), GUI screen pixels.
 local function fps_area()
     local w,h=window.get_size()
@@ -237,7 +237,7 @@ function init(self)
     if html5 then
         require('main.editor.editor_ui_kit').ensure()
         html5.run(assert(sys.load_resource('/main/game/play_bar.js'),'Missing play bar'))
-        self.playbar=true;run_ui.bar=true;layout.right_top_inset=60
+        self.playbar=true;run_ui.bar=true;require('main.game.progress_ui').bar=true;layout.right_top_inset=60
     end
     feedback.init()
     hud_textures()

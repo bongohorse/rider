@@ -20,12 +20,13 @@ function M.new()
 end
 function M.show(t,data,touch)
  t.data=data
- local visible=data and data.enabled and not touch or false
+ -- #678: in HTML5 the play bar's progress bar replaces this one (geometry and label stay for checks).
+ local visible=data and data.enabled and not touch and not M.bar or false
  for _,n in ipairs(t.nodes)do gui.set_visible(n,visible)end
  if not data then return end
  if not data.available then
   for _,n in ipairs(t.nodes)do gui.set_visible(n,false)end
-  gui.set_visible(t.label,visible);gui.set_text(t.label,'Progress unavailable: '..data.reason);return
+  gui.set_visible(t.label,visible and true or false);gui.set_text(t.label,'Progress unavailable: '..data.reason);return
  end
  local x=360+240*data.fraction
  layout.position(t.marker.body,vmath.vector3(x,467,0));layout.position(t.marker.roof,vmath.vector3(x,472,0))
