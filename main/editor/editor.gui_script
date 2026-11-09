@@ -2296,6 +2296,8 @@ function on_input(self,action_id,action)
         if action.pressed and action.screen_x then self.pan={action.screen_x,action.screen_y} elseif action.released then self.pan=nil end
         return true
     end
+    -- #717: a wheel over the HTML chrome scrolls that panel (the browser does it); the world stays put.
+    if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and chrome.over() then return true end
     if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
         local up=action_id==hash("editor_zoom_in")
         -- Over the Open dialog the wheel pages its list (templates on the right half, My levels on the left).
@@ -3153,7 +3155,7 @@ function update(self,dt)
             -- In Edit the 3D look is in the inspector dock (#686), so it no longer hides the chrome.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (editor.mode~='edit' and terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',look_dirty=cs.look_dirty or false,warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view,
+                title=cs.title or '',status=cs.status or '',look_dirty=cs.look_dirty or false,look_open=terrain_look.session and terrain_look.session.open or false,warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view,
                 -- #686: an open Decor or Background layers panel is shown inside the inspector dock.
                 insp=cs.insp and {collapsed=cs.insp.collapsed,items=cs.insp.items,title=cs.insp.title,host=decoration_tool.visible() and 'decor' or background_panel.visible() and 'layers' or false} or nil})
             -- #687: the minimap's course profile follows each revision.

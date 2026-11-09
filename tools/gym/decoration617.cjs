@@ -32,7 +32,7 @@ async function main(){
   async function click(p){await page.locator('canvas').focus();await page.waitForTimeout(1100);const q=await world(p);await pointer.tap(page,q);await pointer.frames(page,{n:8});}
   const dom=async sel=>{await page.locator(sel).click();await pointer.frames(page,{n:10});};
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
+  await tapButton('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
   // Range: click, move (the edge follows), click; shown on the track.
   await dom('#rider-populate-range-button');await click([5.5,.5]);
   const mid=await world([7,.5]);await page.mouse.move(mid.x,mid.y,{steps:4});await pointer.frames(page,{n:8});

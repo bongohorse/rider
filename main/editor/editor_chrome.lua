@@ -54,6 +54,8 @@ function M.status(s)
     M.last_status=text
     html5.run('window.riderChrome.statusLine('..text..')')
 end
+-- #717: true while the pointer is over a chrome element (the world wheel zoom/scroll then stays off).
+function M.over() return M.loaded and html5.run('window.riderChrome.over()')=='true' end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end

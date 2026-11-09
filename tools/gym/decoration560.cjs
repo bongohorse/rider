@@ -34,10 +34,11 @@ async function main(){
   await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
   // #705: the library's Decor tab finds presets by search, category and favourites; a tile arms it and opens the Decor tool.
   const tiles=()=>page.evaluate(()=>[...document.querySelectorAll('#rider-decor-grid [data-cmd]')].map(b=>b.dataset.cmd.slice(12)));
-  await dom('[data-tab="decor"]');assert.equal(await page.evaluate(()=>window.riderEditor.tool),'select','opening the tab arms nothing');
+  // #717: the Decor tab is the Decor tool (the tool bar's Decor button is gone).
+  await dom('[data-tab="decor"]');await page.waitForFunction(()=>window.riderEditor.tool==='decoration'&&window.riderDecorationPanel?.visible);
   assert.equal((await tiles()).length,12,'all presets and the fence');
   await page.locator('.lib-find').click();await page.keyboard.type('rock');await pointer.frames(page,{n:4});assert.deepEqual(await tiles(),['rock-large']);
-  assert.equal(await page.evaluate(()=>window.riderEditor.tool),'select','typed letters stay in the search box (c is Curve)');
+  assert.equal(await page.evaluate(()=>window.riderEditor.tool),'decoration','typed letters stay in the search box (c is Curve)');
   // A category press while typing keeps the keyboard in the search box.
   await dom('[data-dcat="trees"]');assert.ok(await page.evaluate(()=>document.activeElement?.matches('.lib-find')),'search keeps focus');
   assert.deepEqual(await tiles(),[]);await dom('[data-dcat="rocks"]');assert.deepEqual(await tiles(),['rock-large']);await dom('[data-dcat="all"]');
@@ -111,10 +112,11 @@ async function main(){
   await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await tapButton('tool_select');await pointer.frames(page,{n:10});await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
   assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'bar gone with another tool');
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
-  await tapButton('tool_decoration');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
-  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'Decor toggles off with its bar');
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
+  await tapButton('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
+  // #717: the Decor tool is the library's Decor tab; another tool (here Select) leaves it, with its bar.
+  await tapButton('tool_select');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
+  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'Decor ends with its bar');
+  await tapButton('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);await click(await at());await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   await dom('#rider-decoration-close');await page.waitForFunction(()=>!window.riderDecorationPanel.visible);
   assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display==='none'),'bar gone with Close');
   // Durable reload, then Play shows it.
@@ -123,7 +125,7 @@ async function main(){
   if(await page.evaluate(()=>window.riderEditor?.mode!=='edit'))await key('e');
   await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen&&window.riderEditorDoc?.decorations,null,{timeout:30000});assert.deepEqual(await items(),kept);
   // Play with an object selected: no Decor overlay stays on the drive.
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
+  await tapButton('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
   {const o=await page.evaluate(()=>window.riderDecorationState.items[0]);await click([o.x/100,o.y/100]);}
   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#rider-decoration-bar')).display!=='none');
   // Picking another asset ends the selection: bar and box go.
