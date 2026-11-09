@@ -39,6 +39,13 @@ function M.minimap(data)
     if not M.loaded then return end
     html5.run('window.riderChrome.minimap('..json.encode(data)..')')
 end
+function M.view_rect(rect)
+    if not M.loaded then return end
+    local text=json.encode(rect or false)
+    if text==M.last_rect then return end
+    M.last_rect=text
+    html5.run('window.riderChrome.viewRect('..text..')')
+end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end

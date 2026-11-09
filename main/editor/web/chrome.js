@@ -107,19 +107,19 @@ function mount() {
 #rider-chrome .insp-host summary,#rider-chrome .insp-host legend{font:800 13px var(--disp);color:var(--text)}
 #rider-chrome .insp-host output{font-variant-numeric:tabular-nums}
 #rider-chrome .insp-host div[style*="sticky"]{position:static!important;background:none!important;padding:4px 0 0!important}
-#rider-chrome .chrome-view{left:12px;bottom:10px;padding:3px 5px;gap:3px}
+#rider-chrome .chrome-view{left:12px;bottom:22px;padding:3px 5px;gap:3px}
 #rider-chrome .chrome-view .b{--h:32px;min-width:32px;padding:0 4px}#rider-chrome .chrome-view .sep{margin:0 1px}#rider-chrome .chrome-view .b.on{--c:var(--accent)}
 #rider-chrome .chrome-view .zoomv{min-width:56px;font:800 12.5px var(--body);font-variant-numeric:tabular-nums;justify-content:center}
 #rider-chrome .chrome-view .zoomv.edit{border-color:var(--accent)}#rider-chrome .chrome-view .zoomv.bad{border-color:var(--danger)}
 #rider-chrome .chrome-view .b.dim{opacity:.5}
 /* The minimap sits under the library, outside the workspace; the library leaves it room. */
-#rider-chrome .chrome-map{left:12px;bottom:66px;padding:4px}
-#rider-chrome.with-map .chrome-dock{max-height:calc(100vh - 252px)}
+#rider-chrome .chrome-map{left:12px;bottom:72px;padding:4px}
+#rider-chrome.with-map .chrome-dock{max-height:calc(100vh - 258px)}
 #rider-chrome .chrome-map svg{display:block;width:344px;height:72px;border-radius:10px;background:var(--field);cursor:crosshair;touch-action:none}
 #rider-chrome .chrome-map svg *{pointer-events:none}
 #rider-chrome .chrome-map .course polyline{fill:none;stroke:var(--k-track);stroke-width:3;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 #rider-chrome .chrome-map .win{fill:#ffd23f24;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke}
-@media (max-height:560px){#rider-chrome .chrome-map svg{height:44px}#rider-chrome.with-map .chrome-dock{max-height:calc(100vh - 224px)}}
+@media (max-height:560px){#rider-chrome .chrome-map svg{height:44px}#rider-chrome.with-map .chrome-dock{max-height:calc(100vh - 230px)}}
 #rider-chrome .lib-counts{display:flex;gap:6px}
 #rider-chrome .lib-counts span{display:flex;align-items:center;gap:4px;height:28px;padding:0 9px 0 6px;border-radius:10px;background:var(--field);font:900 12px var(--body)}
 #rider-chrome .lib-counts svg{width:16px;height:16px}
@@ -198,10 +198,16 @@ function mount() {
   document.addEventListener('pointerdown', e => { if (!root.contains(e.target) || e.target.closest('.insp-host')) closeMenu(); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); }, true);
   // #687: minimap press and drag.
-  let mapDrag = false;
-  root.addEventListener('pointerdown', e => { if (e.button === 0 && e.target.closest('#rider-chrome-map svg')) { mapDrag = true; e.preventDefault(); mapTo(e); document.querySelector('canvas')?.focus(); } });
-  addEventListener('pointermove', e => { if (mapDrag) mapTo(e); });
-  addEventListener('pointerup', () => { mapDrag = false; });
+  // One primary pointer, captured; a cancel or release ends the drag.
+  let mapDrag = null;
+  root.addEventListener('pointerdown', e => {
+    const svg = e.target.closest('#rider-chrome-map svg'); if (!svg || e.button !== 0 || !e.isPrimary) return;
+    mapDrag = e.pointerId; e.preventDefault(); try { svg.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
+    mapTo(e); document.querySelector('canvas')?.focus();
+  });
+  addEventListener('pointermove', e => { if (mapDrag !== null && e.pointerId === mapDrag && (e.buttons & 1)) mapTo(e); });
+  const endMap = e => { if (e.pointerId === mapDrag) mapDrag = null; };
+  addEventListener('pointerup', endMap); addEventListener('pointercancel', endMap);
   // Like the Defold editor buttons, a chrome button acts on press. preventDefault keeps keyboard focus on
   // the canvas (the editor treats canvas blur as focus loss).
   root.addEventListener('pointerdown', e => {
@@ -433,29 +439,31 @@ function setPalette(p) {
 
 let inspKey = '', lastFocus = null, inspHead = '';
 // #687: floating view controls and the minimap (course profile from Lua, sent per revision).
-let course = null, mapOn = true, viewKey = '';
+let course = null, mapOn = true, viewKey = '', viewWin = null;
 try { mapOn = localStorage.getItem('rider.editor.minimap') !== 'off'; } catch (e) { mapOn = true; }
 const VIEWS = [['view_fit', 'fit', 'Fit level [Home]'], ['view_centre', 'arrows', 'Centre selection [.]'], ['view_start', 'flag', 'Go to START'],
   ['view_test', 'checkpoint', 'Go to last test start'], ['view_bounds', 'size', 'Show level bounds'], ['view_ghost', 'car', 'Ghost: preview test start (off by default)']];
 function viewBar(s) {
   const bar = q('#rider-chrome-view'), V = s && s.view;
-  bar.hidden = !V; q('#rider-chrome-map').hidden = !V || !mapOn || !course;
+  // The minimap lives under the library: with the library collapsed it would cover the workspace, so it hides.
+  bar.hidden = !V; q('#rider-chrome-map').hidden = !V || !mapOn || !course || !!(s.lib && s.lib.collapsed);
   root.classList.toggle('with-map', !q('#rider-chrome-map').hidden);
   if (!V) return;
-  const key = JSON.stringify([V.grid, V.zoom, V.on, V.reasons, mapOn]);
+  const key = JSON.stringify([V.grid, V.grid_on, V.zoom, V.on, V.reasons, mapOn]);
   if (key !== viewKey) {
     viewKey = key;
     const z = V.zoom || {};
     bar.innerHTML = VIEWS.map(([cmd, icon, title]) => UI.button({icon, title: V.reasons[cmd] || title, on: !!V.on[cmd], d: {cmd}}).replace('class="b', V.reasons[cmd] ? 'aria-disabled="true" class="b dim' : 'class="b')).join('')
-      + '<span class="sep"></span>' + UI.button({icon: 'grid', title: `Grid ${V.grid} [G]: snap on/off`, on: V.grid !== 'off', d: {cmd: 'grid_toggle'}})
+      + '<span class="sep"></span>' + UI.button({icon: 'grid', title: `Grid ${V.grid} [G]: snap on/off`, on: !!V.grid_on, d: {cmd: 'grid_toggle'}})
       + '<span class="sep"></span>' + UI.button({label: '−', title: 'Zoom out to the previous step (minimum 1%).', d: {cmd: 'zoom_out'}})
       + `<button type="button" class="b zoomv${z.edit ? ' edit' : ''}${z.error ? ' bad' : ''}" data-cmd="zoom_value" title="${UI.esc(z.error || 'Zoom 1-400%: type a value; Enter applies, Esc cancels.')}">${UI.esc(z.edit ? z.text + '_' : z.text + '%')}</button>`
       + UI.button({label: '+', title: 'Zoom in to the next step (maximum 400%).', d: {cmd: 'zoom_in'}})
       + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'});
     unfocusable();
   }
-  drawMap(V.rect);
+  drawMap(viewWin);
 }
+function viewRect(r) { viewWin = r || null; if (state) drawMap(viewWin); }
 // The course profile, START/FINISH and the view window; x and y scale separately (a long course stays readable).
 const MAP_W = 640, MAP_H = 128, MAP_PAD = 8;
 let mapScale = null, mapCourse = null;
@@ -586,5 +594,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();

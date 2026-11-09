@@ -37,6 +37,12 @@ module.exports=async function(h){
  for(const [c,fx] of [[a,.25],[b,.75]])assert.ok(Math.abs(c[0]-expect(fx))<=.02*(x[1]-x[0])+.5,'minimap press centres the view: '+JSON.stringify({c,expect:expect(fx)}));
  await page.mouse.move(mp.x+mp.w*.25,mp.y+mp.h/2);await page.mouse.down();await page.mouse.move(mp.x+mp.w*.5,mp.y+mp.h/2,{steps:6});await pointer.frames(page,{n:6});
  const mid=centre(await ed());await page.mouse.up();assert.ok(Math.abs(mid[0]-expect(.5))<=.02*(x[1]-x[0])+.5,'minimap drag pans the view');
+ // y: a press near the top centres higher than one near the bottom.
+ const tb=async fy=>{await page.mouse.click(mp.x+mp.w*.5,mp.y+mp.h*fy);await pointer.frames(page,{n:8});return centre(await ed())[1];};
+ const top=await tb(.15),bottom=await tb(.85);assert.ok(top>bottom,'minimap y orientation: '+JSON.stringify({top,bottom}));
+ // The status line under the view bar stays readable: the bar ends above it.
+ const line=await page.evaluate(()=>{const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),b=document.getElementById('rider-chrome-view').getBoundingClientRect();return {bar:b.bottom,text:r.bottom-18*r.height/720};});
+ assert.ok(line.bar<=line.text,'view bar clear of the status line: '+JSON.stringify(line));
  const win=await page.evaluate(()=>{const r=document.querySelector('#rider-chrome-map .win');return +r.getAttribute('width');});assert.ok(win>0,'view window drawn');
  await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),false,'toggle hides the minimap');
  await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),true);

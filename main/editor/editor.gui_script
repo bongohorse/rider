@@ -1152,16 +1152,21 @@ end
 -- #687: the minimap's course profile (terrain parts, thinned) and the box it spans, once per revision.
 local function minimap_data()
     local e=editor.doc.editor
-    local lines={}
+    local lines,parts,total={},{},0
     for _,o in ipairs(e.objects) do if doc_lib.terrain(o) then
-        for _,part in ipairs(doc_lib.parts(o)) do
-            local n=#part;local step=math.max(1,math.ceil(n/120));local pts={}
+        for _,part in ipairs(doc_lib.parts(o)) do parts[#parts+1]=part;total=total+#part end
+    end end
+    -- At most about 4000 points in all, whatever the level size.
+    local thin=math.max(1,math.ceil(total/4000))
+    do
+        for _,part in ipairs(parts) do
+            local n=#part;local step=math.max(thin,math.ceil(n/120));local pts={}
             local function add(p) pts[#pts+1]=math.floor(p[1]*10+.5)/10;pts[#pts+1]=math.floor(p[2]*10+.5)/10 end
             for i=1,n,step do add(part[i]) end
             if n>1 and (n-1)%step~=0 then add(part[n]) end
             if #pts>=4 and #lines<600 then lines[#lines+1]=pts end
         end
-    end end
+    end
     local b=doc_lib.extent(e)
     return {box=b,lines=lines,start=e.start.position,finish=e.finish and e.finish.position or false}
 end
@@ -2948,7 +2953,7 @@ local function render_ui(self)
     d.chrome=chrome.active()
     self.chrome_state={title=d.title,status=d.status,warnings={count=d.blocking and d.error_count or d.warning_count,blocking=d.blocking,label=d.diagnostics},
         -- #687: the floating view controls (the minimap's window is added each frame in update).
-        view={grid=d.grid,on={view_bounds=d.on.view_bounds and true or false,view_ghost=d.on.view_ghost and true or false},
+        view={grid=d.grid,grid_on=editor.grid and true or false,on={view_bounds=d.on.view_bounds and true or false,view_ghost=d.on.view_ghost and true or false},
             reasons={view_centre=d.reasons.view_centre or false,view_test=d.reasons.view_test or false},
             zoom={text=d.zoom_text,edit=d.zoom_edit and true or false,error=d.zoom_error or false}}}
     if d.chrome then
@@ -3011,7 +3016,7 @@ local function view_rects(self)
     -- #687: with the HTML chrome the View row is its floating view bar (rects in canvas pixels, y down).
     local cr=chrome.active() and chrome.rects() or {}
     for _,v in ipairs(VIEW) do
-        local r,q=self.ui.rects[v[1]],cr[v[1]]
+        local r,q=self.ui.rects[v[1]],v[1]~='view_help' and cr[v[1]] or nil
         if q then list[#list+1]={name=v[1],x0=q.left,x1=q.left+q.w,y0=h-(q.top+q.h),y1=h-q.top}
         elseif r then list[#list+1]={name=v[1],x0=r.x*s,x1=(r.x+r.w)*s,y0=h-(r.y+r.h)*s,y1=h-r.y*s} end
     end
@@ -3142,12 +3147,14 @@ function update(self,dt)
             -- In Edit the 3D look is in the inspector dock (#686), so it no longer hides the chrome.
             local modal=self.help_open or self.open_dialog or self.warnings_open or self.panel_open or editor.conflict or (editor.mode~='edit' and terrain_look.session and terrain_look.session.open)
             chrome.render({visible=not modal,tool=editor.tool,undo=editor.history and #editor.history.undo or 0,redo=editor.history and #editor.history.redo or 0,
-                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view and {grid=cs.view.grid,zoom=cs.view.zoom,on=cs.view.on,reasons=cs.view.reasons,rect=view_rect(self)} or nil,
+                title=cs.title or '',status=cs.status or '',warnings=cs.warnings or {count=0},lib=cs.lib,view=cs.view,
                 -- #686: an open Decor or Background layers panel is shown inside the inspector dock.
                 insp=cs.insp and {collapsed=cs.insp.collapsed,items=cs.insp.items,title=cs.insp.title,host=decoration_tool.visible() and 'decor' or background_panel.visible() and 'layers' or false} or nil})
             -- #687: the minimap's course profile follows each revision.
             local map_key=tostring(editor.doc)..':'..editor.doc.editor.revision
             if self.map_key~=map_key then self.map_key=map_key;chrome.minimap(minimap_data()) end
+            -- The view window moves with every pan or zoom: its own small call, not the whole state.
+            chrome.view_rect(view_rect(self))
             for _,name in ipairs(chrome.take()) do
                 -- Same gates as a Defold button press: nothing runs behind a dialog, and a press while a
                 -- field is focused only confirms (or keeps) the field.
