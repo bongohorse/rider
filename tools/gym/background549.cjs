@@ -144,16 +144,17 @@ async function main(){
   await page.waitForFunction(()=>window.riderEditor.tool==='select'&&!window.riderDecorationPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
   assert.equal(await hosted('#rider-decoration-panel'),false);
   // #703: CI sometimes hangs here until smoke.py's 4-minute kill, with no result. Each viewport step has its
-  // own time limit and logs its progress, so a stall fails in time with the step name and failure.png.
+  // own 25 s limit (the run reaches this loop after about 2 minutes) and logs its progress, so a stall fails
+  // in time with the step name and failure.png.
   const step=async(label,run)=>{report.step=label;console.log('bg549 step '+label);let timer;
-   try{return await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('bg549 step timed out after 60 s: '+label)),60000);})]);}finally{clearTimeout(timer);}};
+   try{return await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('bg549 step timed out after 25 s: '+label)),25000);})]);}finally{clearTimeout(timer);}};
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    const tag=viewport.width+'x'+viewport.height;
    await step('resize '+tag,async()=>{await page.setViewportSize(viewport);await pointer.frames(page,{n:15});});
    await step('layout '+tag,async()=>{
-   // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
-   const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
-   assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
+    // #686: the layer settings scroll inside the inspector dock, which must fit the viewport.
+    const box=await page.locator('#rider-chrome-insp').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);
+    assert.ok(await page.evaluate(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel')),'layer settings in the dock');
    });
    await step('foreground toggle '+tag,async()=>{await checkbox(6,'ON/OFF').uncheck();await page.waitForFunction(()=>window.riderBackgroundState.objects===4);await checkbox(6,'ON/OFF').check();await page.waitForFunction(()=>window.riderBackgroundState.objects===5);});
    await step('screenshot '+tag,()=>page.screenshot({path:path.join(out,`layout-${tag}.png`)}));
@@ -163,7 +164,8 @@ async function main(){
   report.cases.discard_tabs_layout={viewports:['844x390','1920x1080'],modal_draft_preserved:['help','versions']};assert.deepEqual(report.errors,[]);assert.deepEqual(Object.keys(report.cases),EXPECTED);report.status='PASS';
  }catch(e){report.failure=e.stack;
   // A stalled page must not stall the report: each capture gets at most 10 s.
-  const capped=p=>Promise.race([p.catch(()=>null),new Promise(ok=>setTimeout(()=>ok(null),10000))]);
+  const capped=p=>{let t;return Promise.race([p.catch(()=>null),new Promise(ok=>{t=setTimeout(()=>ok(null),10000);})]).finally(()=>clearTimeout(t));};
+  console.log('bg549 failure: '+String(e.message||e).slice(0,400));
   if(page)report.observed=await capped(page.evaluate(()=>({editor:window.riderEditor,document:window.riderEditorDoc,background:window.riderBackgroundState})));if(page)await capped(page.screenshot({path:path.join(out,'failure.png')}));}
  finally{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
  console.log(JSON.stringify({status:report.status,cases:Object.keys(report.cases),failure:report.failure}));return report.status==='PASS'?0:1;
