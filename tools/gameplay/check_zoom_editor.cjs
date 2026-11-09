@@ -21,10 +21,26 @@ module.exports=async function(h){
  const p=await canvas(...q);await page.mouse.move(p.x,p.y);await pointer.frames(page);await page.mouse.wheel(0,-120);await pointer.frames(page,{n:8});e=await ed();assert.ok(e.camera.zoom>.25);assert.ok(Math.abs(e.screen.ox+world[0]*e.screen.ppm_x-q[0])<2);assert.ok(Math.abs(e.screen.oy+world[1]*e.screen.ppm_y-q[1])<2);
  const extents=[];for(const size of [{width:1280,height:720},{width:1280,height:480},{width:844,height:390},{width:390,height:844}]){
   await page.setViewportSize(size);await pointer.frames(page);await value('100');e=await ed();assert.equal(e.camera.zoom,1);assert.equal(e.overlay.nodes,628);
-  const r=e.ui.rects;assert.ok(r.zoom_out.x+r.zoom_out.w<r.zoom_value.x&&r.zoom_value.x+r.zoom_value.w<r.zoom_in.x);assert.ok(r.zoom_in.x+r.zoom_in.w<=r.terrain_look.x);
+  // #687: under the HTML chrome the zoom controls are its floating view bar: in order, and clear of the 3D button.
+  const z=await page.evaluate(()=>{const e=window.riderEditor,c=document.querySelector('canvas'),cr=c.getBoundingClientRect(),q=n=>document.querySelector(`#rider-chrome-view [data-cmd="${n}"]`)?.getBoundingClientRect();
+   const b=e.buttons.terrain_look,w=e.ui.rects.terrain_look.w*e.ui.scale/c.width*cr.width;return {out:q('zoom_out'),value:q('zoom_value'),in:q('zoom_in'),bar:document.getElementById('rider-chrome-view').getBoundingClientRect(),look:cr.x+b.x/c.width*cr.width-w/2};});
+  assert.ok(z.out.right<=z.value.left&&z.value.right<=z.in.left,'zoom order');assert.ok(z.bar.right<=z.look+.5,'view bar clear of 3D at '+JSON.stringify(size)+': '+JSON.stringify({bar:z.bar.right,look:z.look}));
   extents.push({viewport:size,ppm:e.screen.ppm_x,world_width:size.width/e.screen.ppm_x});await page.screenshot({path:path.join(out,`editor-zoom-${size.width}x${size.height}.png`)});
  }
  assert.ok(Math.abs(extents[0].world_width-extents[1].world_width)>.1,'100% incorrectly forces equal world area across aspect ratios');
- await page.setViewportSize({width:1280,height:720});await key('Home');await unchanged(before,'zoom entry/buttons/wheel/Fit/resize');
+ await page.setViewportSize({width:1280,height:720});await key('Home');
+ // #687: the minimap (real pointer input): a press centres the view at that course point, a drag pans, the toggle hides it.
+ e=await ed();const x=e.extent,mp=await page.evaluate(()=>{const s=document.querySelector('#rider-chrome-map svg')?.getBoundingClientRect();return s&&{x:s.left,y:s.top,w:s.width,h:s.height};});
+ assert.ok(mp&&mp.w>0,'minimap shown');const expect=fx=>x[0]+(fx*640-8)/624*(x[1]-x[0]);
+ const at=async fx=>{await page.mouse.click(mp.x+mp.w*fx,mp.y+mp.h/2);await pointer.frames(page,{n:8});return centre(await ed());};
+ const a=await at(.25),b=await at(.75);
+ for(const [c,fx] of [[a,.25],[b,.75]])assert.ok(Math.abs(c[0]-expect(fx))<=.02*(x[1]-x[0])+.5,'minimap press centres the view: '+JSON.stringify({c,expect:expect(fx)}));
+ await page.mouse.move(mp.x+mp.w*.25,mp.y+mp.h/2);await page.mouse.down();await page.mouse.move(mp.x+mp.w*.5,mp.y+mp.h/2,{steps:6});await pointer.frames(page,{n:6});
+ const mid=centre(await ed());await page.mouse.up();assert.ok(Math.abs(mid[0]-expect(.5))<=.02*(x[1]-x[0])+.5,'minimap drag pans the view');
+ const win=await page.evaluate(()=>{const r=document.querySelector('#rider-chrome-map .win');return +r.getAttribute('width');});assert.ok(win>0,'view window drawn');
+ await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),false,'toggle hides the minimap');
+ await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),true);
+ measurements.minimap={presses:[a[0],b[0]],drag:mid[0],extent:x};
+ await key('Home');await unchanged(before,'zoom entry/buttons/wheel/Fit/resize/minimap');
  measurements.editor_zoom={limits:[1,400],exact_100:true,invalid_preserved:true,fit,extents};cases.push('editor_zoom_entry_steps_anchor_limits_and_source_invariance');
 };

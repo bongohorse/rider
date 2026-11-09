@@ -34,6 +34,11 @@ function M.looks(bg,tex)
     if not M.loaded then return end
     html5.run('window.riderChrome.looks('..json.encode({bg=bg,tex=tex})..')')
 end
+-- #687: the course profile for the minimap (sent when the revision changes, not with every state).
+function M.minimap(data)
+    if not M.loaded then return end
+    html5.run('window.riderChrome.minimap('..json.encode(data)..')')
+end
 -- Button names clicked since the last call.
 function M.take()
     if not M.loaded then return {} end
