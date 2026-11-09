@@ -52,9 +52,11 @@
     api.setRun?.(run);
     if(enabled&&run){
       const label=run.state==='ready'?'Drive to start':run.state==='paused'?'Paused':run.state==='failed'?'Attempt ended':run.state==='finished'?'Finished':run.course_name||'Run';
+      // #678: with the play bar this run line is its player strip (hidden here; the station line stays).
+      hud.classList.add('run-line');
       hud.textContent=`${label} · ${run.time.toFixed(2)} s · Best ${run.best>0?run.best.toFixed(2)+' s':'--'} · ${run.official?'Official':'Practice'}${run.has_medals?' · Saved '+['None','Bronze','Silver','Gold'][run.highest_medal]:''}${run.save==='saved'?'':' · '+run.save}`;
     }else if(enabled&&data&&data.sequence!==lastSequence){
-      lastSequence=data.sequence;
+      lastSequence=data.sequence;hud.classList.remove('run-line');
       hud.textContent=data.station_result?`${data.station_name} · start ${data.start_speed.toFixed(1)} m/s · ${data.station_result}`:`${data.station_name||'Straight'} · start ${(data.start_speed||0).toFixed(1)} m/s · x ${(data.station_distance||0).toFixed(1)} m · top ${(data.station_top_speed||0).toFixed(1)} m/s · brake ${(data.station_brake_distance||0).toFixed(1)} m${window.riderStationError?' · '+window.riderStationError:data.station_note?' · '+data.station_note:''}`;
     }
     if(enabled&&mechanismHud){const m=window.riderMechanisms;mechanismHud.hidden=!m;if(m)mechanismHud.textContent='Plates '+m.plates.filter(p=>p.active).length+'/'+m.plates.length+' active · Gate '+(m.gates[0]?.state||'none')+(m.plates.some(p=>p.mode==='pulse'&&p.pressed&&!p.active)?' · Release to rearm':'');}

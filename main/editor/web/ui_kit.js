@@ -161,6 +161,7 @@ const ICONS = {
   gem:'<path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M9 4l3 16 3-16"/>',
   fuel:'<path d="M6 21V6a2 2 0 012-2h6a2 2 0 012 2v15M4 21h14M8 9h6"/><path d="M16 10l3 2v6a1 1 0 002 0V9l-3-3"/>',
   flag:'<path d="M6 21V4M6 4h11l-2 4 2 4H6"/>',
+  finish:'<path d="M6 21V4"/><path d="M6 4h12v8H6z"/><path d="M6 4h3v4H6zM12 4h3v4h-3zM9 8h3v4H9zM15 8h3v4h-3z" fill="currentColor"/>',
   ramp:'<path d="M3 18h18L21 7z"/>',
   tree:'<path d="M12 21v-6M9 18l3-2 3 2"/><path d="M7 15a4 4 0 01-1-7.5A5 5 0 0115.5 5 4.5 4.5 0 0118 15z"/>',
   mountain:'<path d="M2 20l7-12 4 6 3-4 6 10z"/>',

@@ -12,7 +12,15 @@ const canvasFocus = () => document.querySelector('canvas')?.focus();
 function mount() {
   UI.install();
   root = document.createElement('div'); root.id = 'rider-playbar'; root.className = 'rider-ui';
-  root.innerHTML = '<div class="float pb-row"></div><div class="pb-menu" hidden></div>';
+  root.innerHTML = '<div class="float pb-row"></div><div class="pb-menu" hidden></div>'
+    // Slice 2: the player strip (time, best, coins, gems, fuel) and the progress bar under it, top centre.
+    + '<div class="float pb-strip" hidden><span class="pb-time"></span><span class="pb-best"></span>'
+    + '<span class="pb-chip pb-coins">' + UI.icon('coin') + '<b></b><i class="pb-flash"></i></span>'
+    + '<span class="pb-chip pb-gems">' + UI.icon('gem') + '<b></b></span>'
+    + '<span class="pb-chip pb-fuel">' + UI.icon('fuel') + '<span class="pb-fuelbar"><i></i></span></span></div>'
+    + '<div class="float pb-progress" hidden><span class="pb-pi" title="Start">' + UI.icon('flag') + '</span>'
+    + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
+    + '<b class="pb-pct"></b><span class="pb-reason"></span></div>';
   const style = document.createElement('style');
   style.textContent = `#rider-playbar .pb-row{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:1100;gap:5px;padding:5px}
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
@@ -27,11 +35,32 @@ function mount() {
 #rider-playbar .pb-menu .b{--h:44px;justify-content:flex-start;padding:0 10px;font:800 13px var(--body);gap:8px}
 #rider-playbar .pb-menu .touch-tools{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;position:static;width:auto;padding:0;border:0;background:none;max-height:none;overflow:visible}
 #rider-playbar .pb-menu .touch-tools button{min-height:44px;border:var(--ol) solid var(--ink);border-radius:12px;background:var(--btn);color:var(--text);font:800 13px var(--body);text-align:left;padding:0 10px}
+#rider-playbar .pb-strip{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1050;gap:12px;padding:6px 14px;pointer-events:none;
+ font:800 13px var(--body);color:var(--muted);white-space:nowrap;flex-wrap:wrap;justify-content:center;row-gap:2px;box-sizing:border-box}
+#rider-playbar [hidden]{display:none!important}
+/* The info line (state, best, banks, fuel notes) is always the strip's second row and wraps inside it. */
+#rider-playbar .pb-best{order:9;flex-basis:100%;white-space:normal;text-align:center;font-size:11.5px;line-height:1.3}
+#rider-playbar .pb-time{font:800 22px var(--disp);color:var(--text);font-variant-numeric:tabular-nums;min-width:4.6em;text-align:right}
+#rider-playbar .pb-chip{display:inline-flex;align-items:center;gap:4px;color:var(--text)}#rider-playbar .pb-chip svg{width:18px;height:18px}
+#rider-playbar .pb-coins{color:#ffd23f}#rider-playbar .pb-coins b,#rider-playbar .pb-gems b{color:var(--text);font-variant-numeric:tabular-nums}
+#rider-playbar .pb-gems{color:#b48cff}#rider-playbar .pb-fuel{color:#ff4f5e}
+#rider-playbar .pb-flash{font-style:normal;color:#ffd23f}
+#rider-playbar .pb-fuelbar{width:70px;height:10px;border-radius:5px;background:var(--field);overflow:hidden;border:2px solid var(--ink)}
+#rider-playbar .pb-fuelbar i{display:block;height:100%;background:var(--go)}#rider-playbar .pb-fuel.low .pb-fuelbar i{background:#ffac40}
+#rider-playbar .pb-progress{position:fixed;z-index:1050;gap:8px;padding:4px 10px;box-sizing:border-box;pointer-events:none;font:800 11px var(--body);color:var(--muted)}
+#rider-playbar .pb-pi{display:inline-flex;color:var(--text)}#rider-playbar .pb-pi svg{width:16px;height:16px}
+#rider-playbar .pb-track{flex:1;height:8px;border-radius:4px;background:var(--field);position:relative;min-width:40px}
+#rider-playbar .pb-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent)}
+#rider-playbar .pb-car{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--ink);transform:translate(-50%,-50%)}
+#rider-playbar .pb-pct{color:var(--text);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+#rider-playbar .pb-reason{color:var(--muted)}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
 body.rider-playbar:not(.rider-editing) #page-tools{display:none}
 body.rider-playbar #rider-level-actions>button:first-child{display:none}
-body.rider-playbar #rider-mobile .toolbar>button{display:none}`;
+body.rider-playbar #rider-mobile .toolbar>button{display:none}
+body.rider-playbar #rider-mobile .readout>:is(.run-line,.coin-count,.fuel-count,.fuel-bar,.course-progress){display:none!important}
+body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1px 2px #000,0 0 3px #000}`;
   // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
   document.head.append(style); (document.getElementById('app-container') || document.body).append(root); document.body.classList.add('rider-playbar');
   root.addEventListener('contextmenu', e => e.preventDefault());
@@ -59,6 +88,7 @@ function run(act) {
 }
 function render() {
   if (!root) mount();
+  strip();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -98,6 +128,75 @@ function render() {
     menu.append(tools); tools.hidden = !menuOpen;
     // The adapter hides its menu after a tool runs: close this menu with it.
     if (!tools.dataset.watched) { tools.dataset.watched = '1'; new MutationObserver(() => { if (tools.hidden && menuOpen) { menuOpen = false; key = ''; render(); } }).observe(tools, {attributes: true, attributeFilter: ['hidden']}); }
+  }
+}
+// #678 slice 2: the player strip and progress bar, from the run state the game already publishes
+// (riderRun, riderCoins, riderFuel, riderProgress). Text nodes are updated in place every frame.
+let stripKey = '';
+const MEDALS = ['None', 'Bronze', 'Silver', 'Gold'];
+function strip() {
+  const run = window.riderRun, coins = window.riderCoins, fuel = window.riderFuel, prog = window.riderProgress, gain = window.riderFuelGain;
+  const s = root.querySelector('.pb-strip'), p = root.querySelector('.pb-progress');
+  const set = (sel, t) => { const n = s.querySelector(sel); if (n.textContent !== t) n.textContent = t; };
+  const terminal = run && (run.state === 'finished' || run.state === 'failed');
+  // Hidden while touch tuning is open (as the touch readout was) and when there is nothing to show.
+  const tuning = !!window.riderMobile?.details;
+  const hasCoins = !!(coins && (coins.total > 0 || coins.gem_total > 0)) && !terminal;
+  const hasFuel = !!fuel && !terminal;
+  s.hidden = tuning || !(run || hasCoins || hasFuel);
+  if (!s.hidden) {
+    // Time and run line only with a timed run; coins, gems and fuel on any course that has them (custom levels too).
+    s.querySelector('.pb-time').hidden = !run;
+    if (run) set('.pb-time', run.time.toFixed(2) + ' s');
+    // Same words as the native run line (run_ui.lua) and the touch readout.
+    const state = !run ? '' : run.state === 'ready' ? 'Drive to start' : run.state === 'paused' ? 'Paused' : run.state === 'failed' ? 'Attempt ended' : run.state === 'finished' ? 'Finished' : (run.course_name || 'Run');
+    const parts = run ? [state, 'Best ' + (run.best > 0 ? run.best.toFixed(2) + ' s' : '--'), run.has_medals ? MEDALS[run.highest_medal || 0] : '', run.official ? 'Official' : 'Practice', run.save === 'saved' ? '' : run.save] : [];
+    if (hasCoins) {
+      parts.push('Bank ' + coins.bank + (coins.practice ? ' (practice, not banked)' : ''));
+      if (coins.gem_total) parts.push('Earned ' + coins.gem_earned + '/' + coins.gem_total + ' · Gem bank ' + coins.gem_bank);
+      if (coins.save && coins.save !== 'saved') parts.push(coins.save);
+    }
+    if (hasFuel) {
+      // The fuel guidance (LOW FUEL, EMPTY …) and refills stay readable text, not only a bar.
+      if (fuel.low || fuel.empty) parts.push(fuel.text);
+      if (fuel.collected) parts.push('Refills ' + fuel.collected + (gain ? ' (+' + Number(gain).toFixed(1) + '%)' : ''));
+    }
+    set('.pb-best', parts.filter(Boolean).join(' · '));
+    const c = s.querySelector('.pb-coins'), g = s.querySelector('.pb-gems'), f = s.querySelector('.pb-fuel');
+    c.hidden = !hasCoins; g.hidden = !(hasCoins && coins.gem_total);
+    if (hasCoins) { set('.pb-coins b', coins.count + '/' + coins.total); set('.pb-flash', coins.flash ? '+' + coins.flash : ''); }
+    if (hasCoins && coins.gem_total) set('.pb-gems b', coins.gems + '/' + coins.gem_total);
+    f.hidden = !hasFuel;
+    if (hasFuel) { const w = Math.max(0, Math.min(100, fuel.amount)) + '%', bar = f.querySelector('.pb-fuelbar i'); if (bar.style.width !== w) bar.style.width = w; f.classList.toggle('low', !!(fuel.low || fuel.empty)); }
+  }
+  // Layout only when what sizes the strip changes (not the ticking time: it has a fixed width).
+  let box = null;
+  if (!s.hidden) {
+    const key = [innerWidth, innerHeight, s.querySelector('.pb-best').textContent, s.querySelector('.pb-coins b').textContent, s.querySelector('.pb-flash').textContent, s.querySelector('.pb-gems b').textContent, !!run, hasCoins, hasFuel, menuOpen].join('|');
+    if (key !== stripKey) {
+      stripKey = key;
+      // Keeps clear of the button row (right) and, where possible, of the debug corner (about 150 px).
+      const R = root.querySelector('.pb-row').getBoundingClientRect().left - 12;
+      s.style.maxWidth = Math.max(220, Math.min(R - 158, 440)) + 'px'; s.style.left = '50%'; s.style.transform = 'translateX(-50%)';
+      const b = s.getBoundingClientRect();
+      if (b.right > R) { s.style.transform = 'none'; s.style.left = Math.max(8, R - b.width) + 'px'; }
+    }
+    box = s.getBoundingClientRect();
+  } else stripKey = '';
+  const showProg = !!(!s.hidden && prog && prog.enabled && !prog.modal && !window.riderTelemetry?.ui_captured);
+  p.hidden = !showProg;
+  if (showProg) {
+    const w = Math.min(360, box.width);
+    const top = (box.bottom + 6) + 'px', width = w + 'px', left = (box.left + (box.width - w) / 2) + 'px';
+    if (p.style.top !== top) p.style.top = top; if (p.style.width !== width) p.style.width = width; if (p.style.left !== left) p.style.left = left;
+    const ok = !!prog.available;
+    for (const n of p.querySelectorAll('.pb-pi,.pb-track,.pb-pct')) n.hidden = !ok;
+    const r = p.querySelector('.pb-reason'); r.hidden = ok; const reason = ok ? '' : 'Progress unavailable: ' + prog.reason; if (r.textContent !== reason) r.textContent = reason;
+    if (ok) {
+      const pct = 100 * prog.fraction, t = Math.floor(pct + .000001) + '%' + (prog.phase === 'paused' ? ' · Paused' : '');
+      p.querySelector('.pb-fill').style.width = pct + '%'; p.querySelector('.pb-car').style.left = pct + '%';
+      const n = p.querySelector('.pb-pct'); if (n.textContent !== t) n.textContent = t;
+    }
   }
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
