@@ -1185,8 +1185,9 @@ end
 local function view_to(self,x,y)
     local u,m,c=usable(self),editor.map(),editor.camera
     if not m or m.ppm_x==0 or m.ppm_y==0 then return end
-    local cx,cy=m.ox+c.x*m.ppm_x,m.oy+c.y*m.ppm_y
-    if self.cam_px then cx,cy=self.cam_px[1],self.cam_px[2] end
+    -- Until the first still frame pair the extrapolated mapping is used (the camera is still then too).
+    local cx,cy
+    if self.cam_px then cx,cy=self.cam_px[1],self.cam_px[2] else cx,cy=m.ox+c.x*m.ppm_x,m.oy+c.y*m.ppm_y end
     c.x=x-((u.x0+u.x1)/2-cx)/m.ppm_x
     c.y=y-((u.y0+u.y1)/2-cy)/m.ppm_y
     editor.touch()
@@ -3158,7 +3159,7 @@ function update(self,dt)
             if self.map_key~=map_key then self.map_key=map_key;chrome.minimap(minimap_data()) end
             -- view_to's camera-centre pixel, measured only when the camera stood still since the last frame.
             local sc=editor.screen
-            if sc then
+            if sc and sc.ppm_x~=0 and sc.ppm_y~=0 and sc.opened==editor.opened then
                 local key=sc.cx..':'..sc.cy..':'..sc.zoom..':'..sc.ox..':'..sc.oy
                 if key==self.cam_key then self.cam_px={sc.ox+sc.cx*sc.ppm_x,sc.oy+sc.cy*sc.ppm_y} end
                 self.cam_key=key
@@ -3211,7 +3212,7 @@ function update(self,dt)
             end
         end
     elseif self.overlay_shown then
-        self.overlay_shown=false
+        self.overlay_shown=false;self.cam_key,self.cam_px=nil,nil
         chrome.hide()
         editor_ui.hide(self.ui)
         overlay.hide(self.overlay)
