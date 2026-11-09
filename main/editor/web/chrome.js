@@ -162,13 +162,18 @@ function mount() {
     setTimeout(() => { if (lib) { libKey = ''; library(state); } else { inspKey = ''; inspector(state); } });
   });
   root.addEventListener('input', e => { if (e.target.matches('.lib-range')) depth(e.target, false); else if (e.target.matches('.insp-range')) lookSlide(e.target); });
-  root.addEventListener('change', e => { if (e.target.matches('.lib-range')) depth(e.target, true); else if (e.target.matches('.lib-select')) override(e.target); });
+  root.addEventListener('change', e => {
+    if (e.target.matches('.lib-range')) depth(e.target, true);
+    else if (e.target.matches('.lib-select')) override(e.target);
+    // A 3D look slider changed by keyboard (no pointer release) also ends its preview.
+    else if (e.target.matches('.insp-range') && !sliding) lookDrop(e.target);
+  });
   // A drag always ends with a commit, also when it returns to its start value (no change event); Lua
   // stores nothing for an unchanged value, so it adds no Undo step.
   root.addEventListener('pointerdown', e => { if (e.target.matches?.('.lib-range,.insp-range') && !e.target.disabled) sliding = e.target; }, true);
   const release = () => {
     const s = sliding; if (!s) return; sliding = null;
-    if (s.matches('.insp-range')) { queue.push('look_drop:' + JSON.stringify({key: s.dataset.key})); inspKey = ''; setTimeout(() => inspector(state)); return; }
+    if (s.matches('.insp-range')) { lookDrop(s); return; }
     depth(s, true); libKey = ''; setTimeout(() => library(state));
   };
   addEventListener('pointerup', release, true); addEventListener('pointercancel', release, true);
@@ -385,7 +390,14 @@ function depth(input, commit) {
 function lookSlide(input) {
   const text = 'look_drag:' + JSON.stringify({key: input.dataset.key, value: Number(input.value)}), last = queue[queue.length - 1];
   if (last && last.startsWith('look_drag:')) queue[queue.length - 1] = text; else queue.push(text);
-  const out = input.parentNode.querySelector('output'); if (out) out.textContent = Number(input.value).toPrecision(4).replace(/\.?0+$/, '');
+  // The value field above follows the drag (the dock is not rebuilt meanwhile).
+  const field = q(`#rider-chrome-insp [data-cmd="look_value_${CSS.escape(input.dataset.key)}"]`); if (field) field.textContent = String(+Number(input.value).toPrecision(4));
+}
+// The release stores the look (one Undo step); the keyboard returns to the canvas and the dock catches up.
+function lookDrop(input) {
+  queue.push('look_drop:' + JSON.stringify({key: input.dataset.key}));
+  document.querySelector('canvas')?.focus();
+  inspKey = ''; setTimeout(() => inspector(state));
 }
 function override(select) { queueLook('tex_op', {key: select.dataset.key, value: select.value}); }
 function setLooks(p) {
@@ -413,7 +425,7 @@ function inspector(s) {
   if (!I) return;
   const items = Array.isArray(I.items) ? I.items : [];
   // A 3D look slider keeps its element while dragged or focused; the dock catches up afterwards.
-  if (sliding?.matches?.('.insp-range') || document.activeElement?.matches?.('#rider-chrome-insp .insp-range')) return;
+  if (sliding?.matches?.('.insp-range')) return;
   const host = HOSTS[I.host] && document.querySelector(HOSTS[I.host][0]);
   const key = JSON.stringify([I.collapsed, I.title, I.host ? I.host + !!host : I.items]);
   if (key === inspKey) return;

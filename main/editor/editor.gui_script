@@ -1452,6 +1452,8 @@ local function on_button(self,name)
         -- #706: Texture lives in the library: show its tab (and open a collapsed library).
         background_panel.close();self.ui.tools=false;self.lib_show=(self.lib_show or 0)+1
     elseif name=="terrain_look" then decoration_tool.on_close();track_panel.close();background_panel.close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
+        -- #686: under the chrome the 3D look lives in the inspector dock, so the dock opens with it.
+        if chrome.active() then self.ui.properties=false end
     elseif name=="new" then new_level(self)
     elseif name=="export" then export(self)
     elseif name=="import" then import(self)
@@ -3129,14 +3131,16 @@ function update(self,dt)
                     if ok and type(v)=="table" and ls and ls.open then
                         if name:sub(6,9)=="drop" then ls.drag=nil
                         elseif type(v.key)=="string" and type(v.value)=="number" then
-                            if ls.field then terrain_look.confirm() end
-                            ls.drag=v.key;terrain_look.change(v.key,v.value)
+                            -- Like a Defold slider press: a typed value is confirmed and a changed look committed first.
+                            local ready=ls.drag or (terrain_look.confirm() and not (terrain_look.session.dirty and not terrain_look.commit()))
+                            if ready then ls=terrain_look.session;ls.drag=v.key;terrain_look.change(v.key,v.value) end
                         end
                     end
                 elseif name:match("^look_") then look_press(self,name)
                 elseif name=="bg_layers" then
                     -- One hosted panel at a time: the layer settings leave the Decor tool first.
                     if editor.tool=="decoration" then set_tool(self,"select") end
+                    if terrain_look.session and terrain_look.session.open then terrain_look.confirm();terrain_look.close() end
                     background_panel.open()
                 else on_button(self,name) end
             end
