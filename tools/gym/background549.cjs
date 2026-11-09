@@ -10,6 +10,13 @@ async function main(){
  const indexes=Object.keys(manifest.files).filter(x=>x.endsWith('/index.html')||x==='index.html');assert.equal(indexes.length,1);
  const web=path.dirname(path.join(bundle,indexes[0]));let browser,page,server;
  const report={schema_version:1,source_sha:sha,run_id:runId,status:'FAIL',cases:{},errors:[],not_run:['physical device','phone/GPU performance','human art and Auto acceptance']};
+ // #703: a whole-run watchdog. CI sometimes stalls this case until smoke.py's 240 s kill, with no result.
+ // The last action is logged every 20 s; at 210 s the report is written with that action and the run exits,
+ // so the stall's place is known. (Only Node timers: they fire even when the page itself is stuck.)
+ let last='start';const mark=what=>{last=what;report.last_action=what;};
+ const beat=setInterval(()=>console.log('bg549 at '+last),20000);beat.unref();
+ const dog=setTimeout(()=>{report.failure='bg549 stalled at: '+last;console.log(report.failure);
+  try{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');}finally{process.exit(1);}},210000);dog.unref();
  try{
   server=http.createServer((req,res)=>{const file=path.resolve(web,'.'+new URL(req.url,'http://localhost').pathname);if(!file.startsWith(web+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',file.endsWith('.wasm')?'application/wasm':file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/octet-stream');fs.createReadStream(file).pipe(res);});
   await new Promise(ok=>server.listen(0,'127.0.0.1',ok));browser=await chromium.launch();report.browser=browser.version();
@@ -17,11 +24,11 @@ async function main(){
   page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))report.errors.push(m.text());});
   const base=`http://127.0.0.1:${server.address().port}/index.html`;
   await page.goto(base+'?station=first-run');await page.waitForFunction(()=>window.riderTelemetry?.sequence>5,null,{timeout:60000});
-  async function key(name){await page.locator('canvas').focus();await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);await pointer.frames(page,{n:6});}
+  async function key(name){mark('key '+name);await page.locator('canvas').focus();await page.keyboard.down(name);await pointer.frames(page,{n:6});await page.keyboard.up(name);await pointer.frames(page,{n:6});}
   const state=()=>page.evaluate(()=>window.riderBackgroundState);
   const document=()=>page.evaluate(()=>window.riderEditorDoc);
   async function tap(name){
-   await page.locator('canvas').focus();
+   mark('tap '+name);await page.locator('canvas').focus();
    // Returning from DOM controls uses the editor's existing one-second canvas refocus guard.
    await page.waitForTimeout(1100);
    const point=await page.evaluate(name=>{const b=window.riderEditor.buttons[name],c=document.querySelector('canvas'),r=c.getBoundingClientRect();if(!b)throw Error('Missing editor button '+name);return {x:r.x+b.x*r.width/c.width,y:r.y+r.height-b.y*r.height/c.height};},name);
@@ -31,11 +38,11 @@ async function main(){
   const initial=await page.evaluate(()=>({revision:window.riderEditor.revision,undo:window.riderEditor.undo}));
   // #706: presets, ON/OFF, layer visibility, Depth and Auto are in the library's Background tab; the
   // Layer images and height panel keeps each layer's image and vertical settings.
-  async function open(){
+  async function open(){mark('open Background tab');
    await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('lib_bg');
    await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4,null,{timeout:10000});
   }
-  async function layers(){
+  async function layers(){mark('layers');
    await page.getByRole('button',{name:'Layer images and height',exact:true}).click();
    await page.waitForFunction(()=>window.riderBackgroundPanel?.visible,null,{timeout:10000});
   }
@@ -146,7 +153,7 @@ async function main(){
   // #703: CI sometimes hangs here until smoke.py's 4-minute kill, with no result. Each viewport step has its
   // own 25 s limit (the run reaches this loop after about 2 minutes) and logs its progress, so a stall fails
   // in time with the step name and failure.png.
-  const step=async(label,run)=>{report.step=label;console.log('bg549 step '+label);let timer;
+  const step=async(label,run)=>{report.step=label;mark('step '+label);console.log('bg549 step '+label);let timer;
    try{return await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('bg549 step timed out after 25 s: '+label)),25000);})]);}finally{clearTimeout(timer);}};
   for(const viewport of [{width:844,height:390},{width:1920,height:1080}]){
    const tag=viewport.width+'x'+viewport.height;
@@ -167,7 +174,7 @@ async function main(){
   const capped=p=>{let t;return Promise.race([p.catch(()=>null),new Promise(ok=>{t=setTimeout(()=>ok(null),10000);})]).finally(()=>clearTimeout(t));};
   console.log('bg549 failure: '+String(e.message||e).slice(0,400));
   if(page)report.observed=await capped(page.evaluate(()=>({editor:window.riderEditor,document:window.riderEditorDoc,background:window.riderBackgroundState})));if(page)await capped(page.screenshot({path:path.join(out,'failure.png')}));}
- finally{fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
+ finally{clearTimeout(dog);clearInterval(beat);if(report.status==='PASS')delete report.last_action;fs.writeFileSync(path.join(out,'background549-result.json'),JSON.stringify(report,null,2)+'\n');if(browser)await browser.close();if(server)await new Promise(ok=>server.close(ok));}
  console.log(JSON.stringify({status:report.status,cases:Object.keys(report.cases),failure:report.failure}));return report.status==='PASS'?0:1;
 }
 module.exports={EXPECTED};if(require.main===module)main().then(code=>process.exitCode=code).catch(e=>{console.error(e);process.exitCode=1;});
