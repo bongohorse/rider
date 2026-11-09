@@ -48,6 +48,8 @@ body.rider-playbar #rider-mobile .toolbar>button{display:none}`;
 function run(act) {
   const m = window.riderMobile;
   if (act === 'retry' || act === 'pause') { m?.request(act); canvasFocus(); return; }
+  // Touch tuning toggles the adapter's details at once, as its toolbar did (desktop goes through ui.gui_script).
+  if (act === 'tuning' && touch()) { m.toggleDetails(); key = ''; return; }
   if (act === 'levels') { m?.clear(); window.riderLevelsRequest = {action: 'open'}; return; }
   if (act === 'import') { m?.clear(); window.riderCustom?.open(); return; }
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
