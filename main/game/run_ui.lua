@@ -81,7 +81,8 @@ function M.geometry(t)
 end
 function M.input(t,id,action,owner)
  if id~=hash('ui_pointer') or not action.pressed then return false end
- if gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end
+ -- pick_node ignores visibility: the entry hidden for touch or the play bar (#678) must not answer.
+ if gui.get_visible(t.entry) and gui.pick_node(t.entry,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end
  local r=t.data
  if r and (r.state=='finished' or r.state=='failed') then
   if gui.pick_node(t.levelback,action.x,action.y) then msg.post('main:/loader#script','levels_menu',{open=true});return true end

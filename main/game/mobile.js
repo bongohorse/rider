@@ -10,7 +10,8 @@
   navigator.userAgentData?.getHighEntropyValues?.(['fullVersionList','platformVersion'])
     .then(value=>{browserIdentity={...browserIdentity,...value};}).catch(()=>{});
   // #678: the HTML play bar (main/game/play_bar.js) asks for the same one-shot requests as the touch toolbar.
-  api.request=name=>{api.clear(true);pending.clear=true;pending[name]=true;};
+  // On touch a request releases held drive pointers, as the toolbar did; a desktop press keeps held keys, as R does.
+  api.request=name=>{if(enabled){api.clear(true);pending.clear=true;}pending[name]=true;};
   api.cancel=()=>{api.closeMore?.();api.clear();for(const key of Object.keys(pending))delete pending[key];lastSequence=undefined;lastFrame=undefined;if(trial){trial=null;api.recording=false;status.textContent="Capture cancelled: station switched";}if(api.blocked){pending.clear=true;pending.background=true;}};
   // away (#439: focus, visibility, viewport or orientation change) pauses tilt but keeps its
   // calibrated neutral; any other clear (reset, UI capture) asks for a new calibration.
@@ -311,7 +312,7 @@
     tiltPanel.style.top=top+'px';
     readout.style.maxHeight=Math.max(0,Math.floor(lowerEdge-rootRect.top-top-8))+'px';
     readout.style.overflowY='hidden';
-    overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
+    if(!bar)overflow.style.maxHeight=Math.max(44,Math.floor(lowerEdge-toolbarRect.bottom-16))+'px';
   };
   if(window.ResizeObserver)new ResizeObserver(positionOverlays).observe(toolbar);
   window.addEventListener('resize',positionOverlays);

@@ -16,6 +16,8 @@ function mount() {
   const style = document.createElement('style');
   style.textContent = `#rider-playbar .pb-row{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:1100;gap:5px;padding:5px}
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
+#rider-playbar button{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#rider-playbar .pb-menu{overscroll-behavior:contain}
 #rider-playbar .pb-row .b.pause{--c:#ffd23f}#rider-playbar .pb-row .b.resume{--c:var(--go)}
 #rider-playbar .pb-row .b.pause,#rider-playbar .pb-row .b.resume{background:var(--c);color:var(--ink)}
 #rider-playbar .pb-menu{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 62px);right:max(8px,env(safe-area-inset-right));z-index:1101;
@@ -30,8 +32,9 @@ body.rider-playbar:not(.rider-editing) #page-tools{display:none}
 body.rider-playbar #rider-level-actions>button:first-child{display:none}
 body.rider-playbar #rider-mobile .toolbar>button{display:none}`;
   document.head.append(style); document.body.append(root); document.body.classList.add('rider-playbar');
+  root.addEventListener('contextmenu', e => e.preventDefault());
   root.addEventListener('pointerdown', e => {
-    const b = e.target.closest('button'); if (!b || e.button !== 0) return;
+    const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
     const act = b.dataset.act; if (!act) return;
     e.preventDefault();
     if (act === 'more') { menuOpen = !menuOpen; if (menuOpen) window.riderMobile?.closePanels?.(); render(); return; }
@@ -63,13 +66,16 @@ function render(opts) {
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
-  const k = JSON.stringify([paused, terminal, menuOpen, quality, touch(), !!window.riderMobile?.details]);
+  // Tuning is open: the touch adapter's details or the native panel (body.rider-tuning, set by ui.gui_script).
+  const tuning = !!window.riderMobile?.details || document.body.classList.contains('rider-tuning');
+  const row = root.querySelector('.pb-row');
+  const k = JSON.stringify([paused, terminal, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight]);
   if (k === key) return; key = k;
   const btn = (act, icon, title, extra = {}) => UI.button(Object.assign({icon, title, d: {act}}, extra));
   root.querySelector('.pb-row').innerHTML =
     btn('retry', 'retry', 'Retry')
     + UI.button({icon: paused ? 'play' : 'pause', title: terminal ? 'Run ended' : paused ? 'Resume' : 'Pause', disabled: terminal, d: {act: 'pause'}}).replace('class="b', 'class="b ' + (paused ? 'resume' : 'pause'))
-    + btn('tuning', 'speed', window.riderMobile?.details ? 'Close tuning' : 'Tuning', {on: !!window.riderMobile?.details})
+    + btn('tuning', 'speed', tuning ? 'Close tuning' : 'Tuning', {on: tuning})
     + btn('3d', 'cube', '3D look')
     + btn('edit', 'pencil', 'Edit level')
     + btn('levels', 'flag', 'Levels')
@@ -80,8 +86,10 @@ function render(opts) {
   if (menuOpen) {
     const zones = document.querySelector('#rider-mobile .zones'), level = document.getElementById('rider-level-actions');
     const lows = [zones, level].filter(e => e && e.getClientRects().length).map(e => e.getBoundingClientRect().top);
-    const top = root.querySelector('.pb-row').getBoundingClientRect().bottom + 8;
+    const rr = row.getBoundingClientRect(), top = rr.bottom + 8;
     menu.style.top = top + 'px';
+    // The menu follows the row (it moves left of an open tuning panel).
+    menu.style.right = Math.max(8, Math.round(innerWidth - rr.right)) + 'px';
     menu.style.maxHeight = Math.max(44, Math.floor((lows.length ? Math.min(...lows) : innerHeight) - top - 8)) + 'px';
   }
   // The touch adapter's tools (station, speed, record/replay, layout, measure, tilt, report) move in here.
