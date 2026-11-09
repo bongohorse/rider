@@ -58,7 +58,7 @@ function mount() {
 #rider-playbar .pb-reason{color:var(--muted)}
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
-body.rider-playbar #rider-freecam-button{display:none!important}
+body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
 body.rider-playbar:not(.rider-editing) #page-tools{display:none}
@@ -210,7 +210,9 @@ let debugKey = '';
 function debugGroup() {
   const g = root.querySelector('.pb-debug'), run = window.riderRun, t = window.riderTelemetry || {}, time = window.riderTimeState || {};
   const tuning = document.body.classList.contains('rider-tuning'), fc = window.riderFreeCam;
-  const show = {station: !run, section: (t.section_count || 0) > 1, step: !run, rec: !run && !tuning, fc: !!fc};
+  // On touch the free camera keeps its own button (the group is desktop only).
+  document.body.classList.toggle('rider-playbar-desktop', !touch());
+  const show = {station: !run && !!t.station, section: (t.section_count || 0) > 1, step: !run, rec: !run && !tuning, fc: !!fc};
   const k = JSON.stringify([touch(), show, time.step || 1, fc && fc.on]);
   if (k === debugKey) return; debugKey = k;
   g.hidden = touch() || !Object.values(show).some(Boolean);
