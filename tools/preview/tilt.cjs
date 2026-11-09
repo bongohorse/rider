@@ -21,7 +21,7 @@ module.exports=async function tilt(browser,url,sha,out){
     assert.equal(await m.getAttribute('aria-expanded'),'false','More starts closed');
     await m.tap();
     assert.equal(await m.getAttribute('aria-expanded'),'true','More opens with real touch');
-    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Tilt',exact:true}).tap();
+    await page.locator('#rider-mobile-more').getByRole('button',{name:'Tilt',exact:true}).tap();
     assert.equal(await m.getAttribute('aria-expanded'),'false','Tilt closes More');
   }
   const open=async()=>{if(!await page.locator('.tilt-panel').isVisible()){await toggleTilt();assert.equal(await page.locator('.tilt-panel').isVisible(),true,'Tilt panel opens');}};

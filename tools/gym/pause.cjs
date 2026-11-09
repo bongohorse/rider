@@ -129,7 +129,9 @@ const STEP=1/60;
   // 6. Desktop overlay buttons (mouse): Pause/Resume and Speed, same path as the keys.
   // Frame-based press/release (tools/gym/pointer.cjs, #227): after the release wait for two engine frames
   // (riderClock.frames, a20's unscaled engine frame counter) so the next click is a new press edge (pitfall 5).
-  const click=async(name,until,arg)=>pointer.click(page,await pointer.hudPoint(page,name),{until,arg,counter:'window.riderClock.frames',label:'click '+name});
+  // #678: Pause is the HTML5 play bar's button (Speed stays a native overlay button).
+  const point=async name=>name==='pause'&&await page.$('#rider-playbar [data-act=pause]')?await page.evaluate(()=>{const b=document.querySelector('#rider-playbar [data-act=pause]').getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};}):pointer.hudPoint(page,name);
+  const click=async(name,until,arg)=>pointer.click(page,await point(name),{until,arg,counter:'window.riderClock.frames',label:'click '+name});
   await click('pause',()=>window.riderTime.paused&&window.riderTimeState.paused);
   checkPaused(await measure(400),'overlay pause');
   await click('pause',()=>!window.riderTime.paused&&!window.riderTimeState.paused);
@@ -195,7 +197,7 @@ const STEP=1/60;
   const speedFromMore=async label=>{
    const more=button('More');await more.click();
    assert.equal(await more.getAttribute('aria-expanded'),'true','More must open via real UI input');
-   await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).click();
+   await page.locator('#rider-mobile-more').getByRole('button',{name:label,exact:true}).click();
    assert.equal(await more.getAttribute('aria-expanded'),'false','Speed selection must close More');
   };
   await speedFromMore('Speed 1x');await page.waitForFunction(()=>window.riderTime.factor===0.5);

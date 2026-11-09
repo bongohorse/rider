@@ -240,7 +240,7 @@ const SECTIONS=['beam-2','beam-1.5','beam-1.2','beam-1.05','up','down','seesaw']
    assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
    await more.click();
    assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real pointer input');
-   await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next station',exact:true}).click();
+   await page.locator('#rider-mobile-more').getByRole('button',{name:'Next station',exact:true}).click();
    assert.equal(await more.getAttribute('aria-expanded'),'false','Next station closes More');
    await page.waitForFunction(s=>window.riderTelemetry?.station!==s&&window.riderTelemetry.sequence>2,s);
   }

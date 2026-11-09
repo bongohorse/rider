@@ -3233,7 +3233,7 @@ function update(self,dt)
         if sys.get_config_int("rider.terrain_compare",0)==1 then editor_ui.hide(self.ui);editor.play_ui=nil
         else
             editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session and terrain_look.session.play_generation and terrain_look.session,
-                editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status)
+                editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status,html5~=nil)
             self.buttons=self.ui.buttons
             -- #444: the driving HUD's FPS counter (same GUI Lua state) reads these play buttons (3D look) on demand
             -- (editor_ui.screen_rects); the open 3D look panel is a transient modal and is left out.

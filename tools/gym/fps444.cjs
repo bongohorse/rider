@@ -113,15 +113,17 @@ if(require.main===module){
     const css=q=>q&&({left:r.x+q.x0/c.width*r.width,right:r.x+q.x1/c.width*r.width,top:r.y+(1-q.y1/c.height)*r.height,bottom:r.y+(1-q.y0/c.height)*r.height});
     const pt=q=>q&&({x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height});
     const dom=[];
-    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-mobile .toolbar > button','toolbar'],['#rider-level-actions button','level'],['#page-tools button','page']]){
+    // #678: the play bar's row replaces the touch toolbar and the desktop Pause/Levels/T/H buttons.
+    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-mobile .toolbar > button','toolbar'],['#rider-playbar .pb-row > button','playbar'],['#rider-level-actions button','level'],['#page-tools button','page']]){
      for(const e of document.querySelectorAll(sel)){
       const b=e.getBoundingClientRect();
-      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim()),left:b.left,top:b.top,right:b.right,bottom:b.bottom});
+      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.dataset.act||e.textContent.trim()),left:b.left,top:b.top,right:b.right,bottom:b.bottom});
      }
     }
     // The editor GUI's play-mode 3D button (editor_ui.lua: x 560, 56 units above the bottom, 32x32,
     // scaled by min(1, CSS width / 1280)), drawn while driving on desktop and phone.
-    if(!window.riderEditing){const k=Math.min(1,r.width/1280);
+    // With the HTML5 play bar (#678) that 3D button is in the bar instead.
+    if(!window.riderEditing&&!document.getElementById('rider-playbar')){const k=Math.min(1,r.width/1280);
      dom.push({name:'editor:3D',left:r.x+560*k,right:r.x+592*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
     const touch=!!window.riderMobile?.enabled;
     let hud=null;
@@ -198,7 +200,7 @@ if(require.main===module){
    const menuButton=(p,sel)=>p.locator('#rider-levels '+sel);
    const resetButton=p=>p.locator('#rider-levels').getByRole('button',{name:'Reset position',exact:true});
    async function openMenu(p){
-    await p.locator('#rider-level-actions').getByRole('button',{name:'Levels',exact:true}).click();
+    await p.locator('#rider-playbar').getByRole('button',{name:'Levels',exact:true}).click();
     await p.waitForFunction(()=>window.riderLevels?.open&&!document.getElementById('rider-levels').hidden);
    }
    async function closeMenu(p){
@@ -274,7 +276,8 @@ if(require.main===module){
    await waitStored(page,c0.pos_seq,'corner drag');
    cases.drag_to_corner=(await check(page,'desktop drag to the bottom-right corner')).at;
    // Dropped onto the Pause button: moved clear of it.
-   s=await state(page);const pause=s.gui.find(g=>g.name==='pause');assert(pause,'No desktop Pause button');
+   // #678: Pause is the play bar's button (DOM) now.
+   s=await state(page);const pause=s.gui.find(g=>g.name==='pause')||s.dom.find(d=>d.name==='playbar:pause');assert(pause,'No desktop Pause button');
    c0=await counter(page);
    await mouseDrag(page,centre(s.place.css),centre(pause));
    await waitStored(page,c0.pos_seq,'drag onto Pause');
@@ -287,7 +290,7 @@ if(require.main===module){
    assert.equal((await counter(page)).cap,120,'Drags changed the cap');
    // Dropped onto the DOM Levels button: the engine's mouse-up focuses that button; the canvas must get the keys back,
    // so the arrow keys drive and Space pauses instead of opening Levels.
-   s=await state(page);const levels=s.dom.find(d=>d.name==='level:Levels');assert(levels,'No Levels button');
+   s=await state(page);const levels=s.dom.find(d=>d.name==='level:Levels')||s.dom.find(d=>d.name==='playbar:levels');assert(levels,'No Levels button');
    c0=await counter(page);
    await mouseDrag(page,centre(s.place.css),centre(levels));
    await waitStored(page,c0.pos_seq,'drag onto Levels');

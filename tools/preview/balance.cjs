@@ -36,7 +36,7 @@ module.exports=async function balance(browser,url,sha,out){
   const more=mobile.getByRole('button',{name:'More',exact:true});
   assert.equal(await more.getAttribute('aria-expanded'),'false');
   await more.tap();assert.equal(await more.getAttribute('aria-expanded'),'true');
-  await mobile.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  await mobile.locator('#rider-mobile-more').getByRole('button',{name:'Next section',exact:true}).tap();
   assert.equal(await more.getAttribute('aria-expanded'),'false');
   await mobile.waitForFunction(()=>window.riderStationReport.section==='seesaw');
   await mobile.screenshot({path:path.join(out,'balance-release-phone.png')});cases.push('mobile_emulation_next_section');

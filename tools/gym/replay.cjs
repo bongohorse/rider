@@ -314,7 +314,7 @@ const toA=from=>[...ORDER.slice(ORDER.indexOf(from)+1),ORDER[0]]; // P presses f
     assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
     await more.tap();
     assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real touch');
-    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).tap();
+    await page.locator('#rider-mobile-more').getByRole('button',{name:label,exact:true}).tap();
     assert.equal(await more.getAttribute('aria-expanded'),'false',label+' closes More');
    };
   await tap('Record run');await wait(()=>window.riderReplay.recording?.active);

@@ -59,10 +59,10 @@ module.exports=async function steps(browser,url,sha,out){
   assert.equal(await more.getAttribute('aria-expanded'),'false','More starts closed');
   await more.tap();
   assert.equal(await more.getAttribute('aria-expanded'),'true','More opens with real touch');
-  await phone.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Next section',exact:true}).tap();
+  await phone.locator('#rider-mobile-more').getByRole('button',{name:'Next section',exact:true}).tap();
   assert.equal(await more.getAttribute('aria-expanded'),'false','Next section closes More');
   await phone.waitForFunction(()=>window.riderStationReport.section==='0.15'&&window.riderTelemetry.section_index===3);
-  const toast=await phone.locator('#rider-mobile .toast').boundingBox(),toolbar=await phone.locator('#rider-mobile .toolbar').boundingBox();
+  const toast=await phone.locator('#rider-mobile .toast').boundingBox(),toolbar=await phone.locator('#rider-playbar .pb-row').boundingBox();
   assert(toast&&toolbar&&toast.y>=toolbar.y+toolbar.height&&toast.x>=0&&toast.x+toast.width<=1080);
   await phone.screenshot({path:path.join(out,'steps-release-phone.png')});
   const session=await mobile.newCDPSession(phone),b=await phone.getByRole('button',{name:'Throttle',exact:true}).boundingBox();

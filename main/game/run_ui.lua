@@ -31,7 +31,8 @@ function M.show(t,r,touch)
  t.data=r;local active=r~=nil;local done=active and (r.state=='finished' or r.state=='failed')
  for _,n in ipairs({t.clock,t.best}) do gui.set_visible(n,active and not touch) end
  for _,n in ipairs({t.card,t.result,t.detail,t.medal,t.next,t.retry,t.retry_label}) do gui.set_visible(n,done or false) end
- gui.set_visible(t.entry,not touch);gui.set_visible(t.entry_label,not touch)
+ -- #678: in HTML5 the play bar has Levels.
+ gui.set_visible(t.entry,not touch and not M.bar);gui.set_visible(t.entry_label,not touch and not M.bar)
  local v=require('main.game.levels_runtime').view
  for _,n in ipairs({t.levelback,t.levelback_label}) do gui.set_visible(n,done or false) end
  for _,n in ipairs({t.levelnext,t.levelnext_label}) do gui.set_visible(n,done and v.next_enabled or false) end

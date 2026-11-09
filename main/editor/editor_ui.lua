@@ -178,8 +178,9 @@ function M.screen_rects(u)
     return out
 end
 -- Preserve the existing driving-mode entry hint/message using the same text pool.
-function M.play(u,k,message,session,legacy,status)
-    M.render(u,{play=true,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,
+-- bar: the HTML5 play bar (main/game/play_bar.js) offers 3D and Edit level (#678), so they are not drawn here.
+function M.play(u,k,message,session,legacy,status,bar)
+    M.render(u,{play=true,bar=bar,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,
         look_legacy=legacy,status=status or '',modal=session and session.open and 'terrain_look' or nil})
 end
 function M.scrollbar_hit(u)
@@ -325,8 +326,10 @@ function M.render(u,d)
     if modal and not overlay then u.scroll_drag=nil end
     -- Modal contents share the same pools; no underlying text can render above a modal box.
     if d.play and not modal then
+        if not d.bar then
         text(16,h-40,'Edit level [E]',C.secondary,12)
         button('terrain_look',560,h-56,132,d.look and d.look.dirty and '3D *' or '3D',false,'Change the 3D look live in this run; changes save to the level.')
+        end
         if d.message~='' then text(16,94,d.message,C.error,14,w-32) end
     elseif not modal then
         -- #684: with the HTML chrome the top bar and the Tools section live in main/editor/web/chrome.js.

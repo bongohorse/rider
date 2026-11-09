@@ -7,7 +7,7 @@ module.exports=async function(browser,base,sha,out,{touch=false}={}){
  async function open(id='first-run'){p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});await p.goto(new URL(`index.html?station=${id}&touch=${touch?1:0}`,base).href);await p.waitForFunction(()=>window.riderRun?.state==='ready'&&window.riderLevels?.status==='saved'&&window.riderTelemetry?.sequence>2);assert.equal(await p.evaluate(()=>window.riderBuild),sha);}
  async function click(locator){await locator[touch?'tap':'click']();}
  async function key(k){await p.locator('canvas').focus();await p.keyboard.down(k);await pointer.frames(p,{n:4});await p.keyboard.up(k);await pointer.frames(p,{n:4});}
- async function menu(){await click(p.locator('#rider-level-actions').getByRole('button',{name:'Levels',exact:true}));await p.waitForFunction(()=>window.riderLevels.open);}
+ async function menu(){await click(p.locator('#rider-playbar').getByRole('button',{name:'Levels',exact:true}));await p.waitForFunction(()=>window.riderLevels.open);}
  async function play(id){await click(p.locator(`[data-course="${id}"] button`));await p.waitForFunction(id=>window.riderLevels.station===id&&!window.riderLevels.loading&&!window.riderLevels.open&&window.riderRun?.state==='ready'&&window.riderTelemetry?.station===id,id);}
  async function drive(){
   const cdp=touch?await context.newCDPSession(p):null;

@@ -12,7 +12,7 @@ async function quality(browser,url,sha,out,pass){
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/ERROR:SCRIPT|ERROR:RESOURCE|ERROR:GAMEOBJECT/.test(m.text()))errors.push(m.text());});
   const more=()=>page.getByRole('button',{name:'More',exact:true});
-  const menu=()=>page.locator('#rider-mobile .toolbar-more');
+  const menu=()=>page.locator('#rider-mobile-more');
   const ready=()=>page.waitForFunction(expected=>window.riderReady?.source_sha===expected&&window.riderTelemetry?.sequence>=2&&window.riderMobile?.enabled,sha);
   // The engine's real back-buffer: the WebGL drawing buffer of the canvas it rendered into.
   const observe=()=>page.evaluate(key=>{
@@ -87,7 +87,7 @@ module.exports=async function mobile(browser,url,sha,out){
   }
   async function tapSecondary(label){
     await openMore();
-    await page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:label,exact:true}).tap();
+    await page.locator('#rider-mobile-more').getByRole('button',{name:label,exact:true}).tap();
     assert.equal(await more().getAttribute('aria-expanded'),'false',label+' closes More');
   }
   const point=async(command,id)=>{
@@ -115,7 +115,7 @@ module.exports=async function mobile(browser,url,sha,out){
       const spots=hud.concat(body,[[innerWidth/2,innerHeight/2]]);
       return {text:block.textContent,children:block.childElementCount,role:block.getAttribute('role'),live:block.getAttribute('aria-live'),
         hidden:block.getAttribute('aria-hidden'),background:style.backgroundColor,shown:style.display!=='none',
-        bodySpots:body.length,levelSpots:[...document.querySelectorAll('#rider-level-actions button')].map(centre).filter(Boolean).filter(inside).length,
+        bodySpots:body.length,levelSpots:[...document.querySelectorAll('#rider-level-actions button,#rider-playbar [data-act=levels]')].map(centre).filter(Boolean).filter(inside).length,
         bodyVisible:[...document.querySelectorAll(selector)].filter(n=>n.checkVisibility({visibilityProperty:true})).length,
         spots:spots.length,hits:spots.filter(([x,y])=>document.elementFromPoint(x,y)===block).length,
         prompt:/rotate|landscape only/i.test(document.body.innerText),
@@ -126,7 +126,7 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(state.shown,true,'Portrait input block is active');
     assert(state.spots>1,'Former control spots are checked');
     assert.equal(state.hits,state.spots,'Portrait block intercepts touch at the centre and every former control spot');
-    assert(state.levelSpots>=1&&state.bodySpots>=state.levelSpots,'Body-level Levels/Next Level spots are checked');
+    assert(state.levelSpots>=1&&state.bodySpots>=state.levelSpots,'Body-level Levels/Next Level spots are checked (#678: Levels is in the play bar)');
     assert.equal(state.bodyVisible,0,'No body-level overlay control is visible in portrait');
     for(const name of ['Retry','Pause','Resume','More'])assert.equal(await page.getByRole('button',{name,exact:true}).isVisible(),false,name+' is not offered in portrait');
     for(const command of ['left','right','brake','throttle'])assert.equal(await page.locator(`[data-command="${command}"]`).isVisible(),false,'No portrait drive zone '+command);
@@ -184,7 +184,7 @@ module.exports=async function mobile(browser,url,sha,out){
     await page.waitForFunction(n=>window.riderTelemetry.reset_count===n+1,resets);await neutral();
     await dispatch('touchEnd',[]);pass('same_reset_path_clears_input');
     await page.waitForFunction(()=>!document.querySelector('#rider-mobile .toast').hidden);
-    const toast=await page.locator('#rider-mobile .toast').boundingBox(),bar=await page.locator('#rider-mobile .toolbar').boundingBox();
+    const toast=await page.locator('#rider-mobile .toast').boundingBox(),bar=await page.locator('#rider-playbar .pb-row').boundingBox();
     assert(toast&&bar&&toast.y>=bar.y+bar.height&&toast.x>=0&&toast.x+toast.width<=page.viewportSize().width);
     await page.waitForFunction(()=>document.querySelector('#rider-mobile .toast').hidden,null,{timeout:5000});
     pass('retry_toast_clear_and_expires');
@@ -368,7 +368,7 @@ module.exports=async function mobile(browser,url,sha,out){
     // Imports: from a built-in station, with a saved level, and after a reload of ?station=custom
     // (the saved level restores and the panel no longer opens by itself, as on the phone).
     const sample=name=>path.join(__dirname,'../../main/gym/samples',name+'.json');
-    const importButton=()=>page.locator('#rider-mobile .toolbar-more').getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
+    const importButton=()=>page.locator('#rider-mobile-more').getByRole('button',{name:'Import level',exact:true}).filter({visible:true});
     for(const [step,name] of [[0,'rolling-hills'],[1,'kicker-platform'],[2,'rolling-hills']]){
       if(step===2){
         const custom=new URL(url);custom.search='?station=custom&touch=1';
@@ -439,7 +439,7 @@ module.exports=async function mobile(browser,url,sha,out){
     assert.equal(await page.locator('#rider-custom-text').inputValue(),'{"kept":true}','Import panel keeps its state');
     await page.getByRole('button',{name:'Close import',exact:true}).tap();
     await page.waitForFunction(()=>!window.riderCustom.visible);
-    await page.locator('#rider-level-actions').getByRole('button',{name:'Levels',exact:true}).tap();
+    await page.locator('#rider-playbar').getByRole('button',{name:'Levels',exact:true}).tap();
     await page.waitForFunction(()=>window.riderLevels?.open&&!document.getElementById('rider-levels').hidden);
     await page.getByRole('button',{name:'Back',exact:true}).tap();
     await page.waitForFunction(()=>!window.riderLevels.open&&document.getElementById('rider-levels').hidden);
