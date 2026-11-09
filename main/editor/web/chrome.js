@@ -440,6 +440,7 @@ function setPalette(p) {
 let inspKey = '', lastFocus = null, inspHead = '';
 // #687: floating view controls and the minimap (course profile from Lua, sent per revision).
 let course = null, mapOn = true, viewKey = '', viewWin = null;
+const mapLog = [];
 try { mapOn = localStorage.getItem('rider.editor.minimap') !== 'off'; } catch (e) { mapOn = true; }
 const VIEWS = [['view_fit', 'fit', 'Fit level [Home]'], ['view_centre', 'arrows', 'Centre selection [.]'], ['view_start', 'flag', 'Go to START'],
   ['view_test', 'checkpoint', 'Go to last test start'], ['view_bounds', 'size', 'Show level bounds'], ['view_ghost', 'car', 'Ghost: preview test start (off by default)']];
@@ -495,6 +496,8 @@ function mapTo(e) {
   const r = q('#rider-chrome-map svg').getBoundingClientRect(); if (!mapScale || !r.width) return;
   const px = (e.clientX - r.left) * MAP_W / r.width, py = (e.clientY - r.top) * MAP_H / r.height;
   const text = 'view_to:' + JSON.stringify({x: Math.round(mapScale.wx(px) * 100) / 100, y: Math.round(mapScale.wy(py) * 100) / 100}), last = queue[queue.length - 1];
+  // Debug trace for automation: the last minimap inputs (bounded).
+  mapLog.push({type: e.type, id: e.pointerId, b: e.buttons, cx: Math.round(e.clientX), left: Math.round(r.left), w: Math.round(r.width), px: Math.round(px), wx: Math.round(mapScale.wx(px) * 10) / 10}); if (mapLog.length > 24) mapLog.shift();
   if (last && last.startsWith('view_to:')) queue[queue.length - 1] = text; else queue.push(text);
 }
 // #686: DOM panels hosted in the inspector dock (their controls, Undo and storage stay as they are).
@@ -594,5 +597,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, get mapLog() { return mapLog.slice(); }, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();
