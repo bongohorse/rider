@@ -36,6 +36,8 @@ async function main(){
   const tiles=()=>page.evaluate(()=>[...document.querySelectorAll('#rider-decor-grid [data-cmd]')].map(b=>b.dataset.cmd.slice(12)));
   // #717: the Decor tab is the Decor tool (the tool bar's Decor button is gone).
   await dom('[data-tab="decor"]');await page.waitForFunction(()=>window.riderEditor.tool==='decoration'&&window.riderDecorationPanel?.visible);
+  // A second press on the tab keeps the Decor tool (the tab never toggles it off).
+  await dom('[data-tab="decor"]');await pointer.frames(page,{n:6});assert.equal(await page.evaluate(()=>window.riderEditor.tool),'decoration','a second Decor tab press keeps Decor');
   assert.equal((await tiles()).length,12,'all presets and the fence');
   await page.locator('.lib-find').click();await page.keyboard.type('rock');await pointer.frames(page,{n:4});assert.deepEqual(await tiles(),['rock-large']);
   assert.equal(await page.evaluate(()=>window.riderEditor.tool),'decoration','typed letters stay in the search box (c is Curve)');

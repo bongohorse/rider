@@ -16,7 +16,7 @@ const FAVS = 'rider.editor.decorFavourites';
 let favs = new Set(), tookFocus = false, over = false;
 // #706 Background and Texture tabs: presets from Lua (looks(), sent once); the stored or previewed source
 // comes with each state (lib.look). Choices build the same draft/commit messages the old panels sent.
-let looks = {bg: [], tex: []}, lastShow = null, sliding = null;
+let looks = {bg: [], tex: []}, sliding = null;
 const AUTO = [.9, .75, .55, .35, .15, -.1], OVERRIDES = [['surface', 'Surface'], ['band', 'Band'], ['fill', 'Fill']];
 
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
@@ -171,8 +171,9 @@ function mount() {
   // only inputs and hosted panels take it.
   // #717: whether the pointer is over the chrome; Lua ignores the world zoom/scroll wheel there.
   addEventListener('pointermove', e => { over = root.contains(e.target) && e.target !== root; }, true);
-  // Not a 'wheel' listener: Chromium then stops sending the legacy 'mousewheel' events the engine reads.
-  addEventListener('mousewheel', e => { over = root.contains(e.target) && e.target !== root; }, true);
+  // Not a 'wheel' listener on window: Chromium then stops sending the legacy 'mousewheel' events the engine reads.
+  // DOMMouseScroll is Firefox's legacy event, which the engine also reads.
+  for (const type of ['mousewheel', 'DOMMouseScroll']) addEventListener(type, e => { over = root.contains(e.target) && e.target !== root; }, true);
   root.addEventListener('mousedown', e => { if (!e.target.closest('input,select,textarea,.insp-host')) e.preventDefault(); });
   // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
   // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
@@ -230,7 +231,8 @@ function mount() {
     if (b.dataset.tab) {
       document.querySelector('canvas')?.focus(); tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools');
       // #717: the Decor tab is the Decor tool (it replaced the tool bar's Decor button).
-      if (tab === 'decor' && state?.tool !== 'decoration') queue.push('tool_decoration');
+      // 'decor_tool' only switches the tool on (never off), so a second press keeps Decor.
+      if (tab === 'decor') queue.push('decor_tool');
       library(state); return;
     }
     if (b.dataset.dcat || b.dataset.dworld) { if (b.dataset.dcat) cat = b.dataset.dcat; else world = b.dataset.dworld; libKey = ''; library(state); return; }
@@ -325,9 +327,6 @@ function library(s) {
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
   if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
-  // The Texture button (track_textures) asks for the Texture tab.
-  const show = L.look && L.look.show;
-  if (show !== lastShow) { if (lastShow !== null && show) tab = 'tex'; lastShow = show; }
   // A focused slider or list, or a slider drag, keeps its element: the tab catches up afterwards.
   if ((tab === 'bg' || tab === 'tex') && (sliding || document.activeElement?.matches?.('#rider-lib-pane .kf:not(.lib-find)'))) return;
   // The Decor tab is rebuilt only for its own data, so a level edit does not reset the search box while typing.
@@ -392,9 +391,9 @@ function library(s) {
   }
   // Re-rendering keeps the list's scroll position; a new selection is scrolled into view.
   const scroller = () => q('#rider-lib-pane .lib-rows') || q('#rider-lib-pane .pbody');
-  const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.tab;
+  const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.pane;
   const typing = document.activeElement?.matches?.('.lib-find') ? document.activeElement.selectionStart : null;
-  q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.tab = tab;
+  q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.pane = tab;
   if (tab === 'decor') decorGrid();
   // A rebuild while typing (category or world chip) keeps the keyboard in the new search box.
   const input = q('#rider-lib-pane .lib-find');

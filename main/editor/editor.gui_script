@@ -1493,7 +1493,7 @@ local function on_button(self,name)
         end
     elseif name=="track_textures" then decoration_tool.on_close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;if not (terrain_look.session and terrain_look.session.dirty) then terrain_look.close() end
         -- #706: Texture lives in the library: show its tab (and open a collapsed library).
-        background_panel.close();self.ui.tools=false;self.lib_show=(self.lib_show or 0)+1
+        background_panel.close()
     elseif name=="terrain_look" then decoration_tool.on_close();track_panel.close();background_panel.close();cancel(self);self.field=nil;self.open_dialog,self.warnings_open,self.help_open=false,false,false;terrain_look.open()
         -- #686: under the chrome the 3D look lives in the inspector dock, so the dock opens with it.
         if chrome.active() then self.ui.properties=false end
@@ -2297,7 +2297,7 @@ function on_input(self,action_id,action)
         return true
     end
     -- #717: a wheel over the HTML chrome scrolls that panel (the browser does it); the world stays put.
-    if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and chrome.over() then return true end
+    if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed and chrome.over() then return true end
     if (action_id==hash("editor_zoom_in") or action_id==hash("editor_zoom_out")) and action.pressed then
         local up=action_id==hash("editor_zoom_in")
         -- Over the Open dialog the wheel pages its list (templates on the right half, My levels on the left).
@@ -2972,7 +2972,7 @@ local function render_ui(self)
         for _,o in ipairs(object_rows) do rows[#rows+1]={id=o.id,title=o.title,subtitle=o.subtitle,tip=o.tip,hidden=o.hidden and true or false,locked=o.locked and true or false,selected=o.selected and true or false} end
         self.chrome_state.lib={collapsed=self.ui.tools and true or false,kind=editor.prefab_kind,kinds=kinds,gold=gold,gems=gems,objects=rows,
             searching=f and f.search and true or false,search=f and f.search and f.text or self.ui.object_query or "",decor=decoration_tool.armed(),
-            look={tex=e.material or false,tex_msg=track_panel.message or '',bg=background_panel.current or e.backgrounds or false,bg_msg=background_panel.message or '',show=self.lib_show or 0}}
+            look={tex=e.material or false,tex_msg=track_panel.message or '',bg=background_panel.current or e.backgrounds or false,bg_msg=background_panel.message or ''}}
     end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
@@ -3195,6 +3195,9 @@ function update(self,dt)
                 elseif name:match("^view_to:") then
                     local ok,v=pcall(json.decode,name:sub(9))
                     if ok and type(v)=="table" and type(v.x)=="number" and type(v.y)=="number" and v.x==v.x and v.y==v.y then view_to(self,v.x,v.y) end
+                elseif name=="decor_tool" then
+                    -- #717: the library's Decor tab switches the Decor tool on (never off).
+                    if editor.tool~="decoration" then on_button(self,"tool_decoration") end
                 elseif name=="grid_toggle" then editor.grid=not editor.grid;editor.touch()
                 elseif name:match("^look_drag:") or name:match("^look_drop:") then
                     -- #686: a 3D look slider in the dock: a drag previews (no commit while ls.drag), release commits.
