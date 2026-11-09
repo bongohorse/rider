@@ -1,4 +1,4 @@
-// #543, #604, #706: real input: the footer Texture button opens the library's Texture tab, each choice is
+// #543, #604, #706, #717: real input: the library's Ground texture tab, each choice is
 // stored at once as one Undo step, Undo, Redo, reload, and drive. Keys typed in an override list do not reach the editor.
 //   node tools/terrain_material/check_track_panel.cjs <verified debug bundle> <out dir>
 'use strict';
@@ -24,7 +24,7 @@ const server=http.createServer((q,r)=>{const f=path.join(web,new URL(q.url,'http
  const stride=()=>page.evaluate(()=>window.riderRoadProjection?.stride);
  const material=()=>page.evaluate(()=>window.riderEditorDoc.material||null);
  const band=page.locator('#rider-chrome select[data-key=band]');
- for(let i=0;i<5&&!await page.evaluate(()=>document.querySelectorAll('[data-preset-tex]').length);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('track_textures');await page.waitForTimeout(300);}
+ for(let i=0;i<5&&!await page.evaluate(()=>document.querySelectorAll('[data-preset-tex]').length);i++){await page.mouse.move(640,70);await pointer.frames(page,{n:6});await tap('lib_tex');await page.waitForTimeout(300);}
  assert.equal(await page.locator('#rider-chrome [data-preset-tex]').count(),7,'Texture tab');
  // A choice is stored at once as one Undo step.
  await page.locator('[data-preset-tex=volcano]').click();await page.waitForFunction(()=>window.riderRoadProjection?.material?.preset==='volcano',null,{timeout:10000});

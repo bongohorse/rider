@@ -51,6 +51,16 @@ module.exports=async function(h){
  const win=await page.evaluate(()=>{const r=document.querySelector('#rider-chrome-map .win');return +r.getAttribute('width');});assert.ok(win>0,'view window drawn');
  await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),false,'toggle hides the minimap');
  await page.locator('#rider-chrome-view [data-act=minimap]').click();await pointer.frames(page,{n:4});assert.equal(await page.locator('#rider-chrome-map').isVisible(),true);
+ // #717: collapsing the library keeps the minimap (the toggle alone decides); expanding restores the library.
+ await button('collapse_tools');await page.waitForFunction(()=>document.getElementById('rider-chrome-dock').classList.contains('closed'));
+ assert.equal(await page.locator('#rider-chrome-map').isVisible(),true,'minimap stays with a collapsed library');
+ await button('collapse_tools');await page.waitForFunction(()=>!document.getElementById('rider-chrome-dock').classList.contains('closed'));
+ // #717: a real wheel over the library scrolls the library, never the world; over the canvas it still zooms.
+ {const cam0=JSON.stringify((await ed()).camera),lib=await page.locator('#rider-chrome-dock').boundingBox();
+  await page.mouse.move(lib.x+lib.width/2,lib.y+lib.height/2);await pointer.frames(page,{n:2});await page.mouse.wheel(0,-240);await pointer.frames(page,{n:8});
+  assert.equal(JSON.stringify((await ed()).camera),cam0,'a wheel over the library moved the world');
+  const u=(await ed()).usable,q=await canvas((u.x0+u.x1)/2,(u.y0+u.y1)/2);await page.mouse.move(q.x,q.y);await pointer.frames(page,{n:2});await page.mouse.wheel(0,-120);await pointer.frames(page,{n:8});
+  assert.notEqual(JSON.stringify((await ed()).camera),cam0,'a wheel over the canvas still zooms');}
  measurements.minimap={presses:[a[0],b[0]],drag:mid[0],extent:x};
  await key('Home');await unchanged(before,'zoom entry/buttons/wheel/Fit/resize/minimap');
  measurements.editor_zoom={limits:[1,400],exact_100:true,invalid_preserved:true,fit,extents};cases.push('editor_zoom_entry_steps_anchor_limits_and_source_invariance');

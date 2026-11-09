@@ -48,7 +48,7 @@ async function main(){
   assert.ok(first>=0&&last-first>200,`fence spans ${first}..${last}`);const gaps=columns.slice(first,last+1).filter(n=>n===0).length;assert.equal(gaps,0,'no column without fence');report.cases.no_gap={first,last};
   // Real input: draw, Undo, save, reload.
   await importLevel(fixture);await key('e');await page.waitForFunction(()=>window.riderEditor?.mode==='edit'&&window.riderEditor?.screen,null,{timeout:30000});await pointer.frames(page,{n:10});
-  await tapButton('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
+  await tapButton('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible);
   // Fence from the asset list: click, move (it follows live, nothing stored yet), click.
   let r=await rev();await dom('[data-cmd="decor_asset_fence-wood"]');await click([1,.5]);
   const hover=await world([5,.5]);await page.mouse.move(hover.x,hover.y,{steps:4});await pointer.frames(page,{n:8});

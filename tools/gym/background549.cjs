@@ -138,15 +138,15 @@ async function main(){
    await page.waitForFunction(field=>!window.riderEditor[field]&&!window.riderBackgroundPanel.suspended,modal.field);
    assert.equal(await page.locator('#rider-background-panel').isVisible(),true);assert.equal((await state()).source.preset,'meadow');
   }
-  // Library tabs switch freely: nothing is pending; the footer Texture button shows the Texture tab.
-  await tap('track_textures');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-tex]').length===7&&!window.riderBackgroundPanel.visible);
+  // Library tabs switch freely: nothing is pending (#717: the Ground texture tab is the only Texture control).
+  await tap('lib_tex');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-tex]').length===7);
   await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
   // #686: the hosted panel survives collapse/expand, and the Decor tool and the layer settings take turns in the dock.
   const hosted=sel=>page.evaluate(sel=>!!document.querySelector('#rider-chrome-insp .insp-host '+sel),sel);
   await tap('collapse_properties');await page.waitForFunction(()=>document.querySelector('#rider-chrome-insp').classList.contains('closed')&&window.riderBackgroundPanel.visible);
   assert.equal(await page.evaluate(()=>document.querySelectorAll('#rider-background-panel').length),1,'parked, not destroyed');
   await tap('collapse_properties');await page.waitForFunction(()=>!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
-  await tap('tool_decoration');await page.waitForFunction(()=>window.riderDecorationPanel?.visible&&!window.riderBackgroundPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-decoration-panel'));
+  await tap('lib_decor');await page.waitForFunction(()=>window.riderDecorationPanel?.visible&&!window.riderBackgroundPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-decoration-panel'));
   await tap('lib_bg');await page.waitForFunction(()=>document.querySelectorAll('[data-preset-bg]').length===4);await layers();
   await page.waitForFunction(()=>window.riderEditor.tool==='select'&&!window.riderDecorationPanel.visible&&!!document.querySelector('#rider-chrome-insp .insp-host #rider-background-panel'));
   assert.equal(await hosted('#rider-decoration-panel'),false);

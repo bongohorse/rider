@@ -13,10 +13,10 @@ let tab = 'play', libKey = '', lastTool = null, lastSel = null, lastList = '';
 // search text and favourites (this browser only).
 let decor = {worlds: [], categories: [], items: []}, world = 'meadow', cat = 'all', find = '';
 const FAVS = 'rider.editor.decorFavourites';
-let favs = new Set(), tookFocus = false;
+let favs = new Set(), tookFocus = false, over = false;
 // #706 Background and Texture tabs: presets from Lua (looks(), sent once); the stored or previewed source
 // comes with each state (lib.look). Choices build the same draft/commit messages the old panels sent.
-let looks = {bg: [], tex: []}, lastShow = null, sliding = null;
+let looks = {bg: [], tex: []}, sliding = null;
 const AUTO = [.9, .75, .55, .35, .15, -.1], OVERRIDES = [['surface', 'Surface'], ['band', 'Band'], ['fill', 'Fill']];
 
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
@@ -44,8 +44,8 @@ const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
 // Rail: one tab per library page; tabs are view state of the chrome and publish as lib_<id>.
 const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor'],
   ['bg','mountain','var(--k-bg)','Background'],['tex','texture','var(--k-tex)','Ground texture'],['objects','list','var(--k-obj)','Level objects']];
-const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['prefab','ramp','Prefab parts [P]'],['label','text','Label [L]'],['pan','hand','Pan'],
-  ['decoration','tree','Decor: place trees, rocks, signs and cones along the track (or pick one in the library\'s Decor tab)']];
+// #717: Prefab parts and Decor live in the library (Track parts tiles, Decor tab), not here.
+const TOOLS = [['select','cursor','Select · move [S]'],['draw','pencil','Draw line [D]'],['curve','curve','Draw curve [C]'],['label','text','Label [L]'],['pan','hand','Pan']];
 function mount() {
   UI.install();
   root = document.createElement('div');
@@ -78,6 +78,7 @@ function mount() {
 #rider-chrome .chrome-dock .rail{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 @media (max-height:560px){#rider-chrome .chrome-dock .rail{gap:4px;padding:4px}#rider-chrome .chrome-dock .rail .b{--h:38px}}
 #rider-chrome .chrome-dock.closed .pane{display:none}
+#rider-chrome .chrome-dock .rail .rail-sep{width:auto;height:2px;margin:2px 6px;align-self:stretch}
 #rider-chrome .chrome-dock .rail .b{color:var(--c)}#rider-chrome .chrome-dock .rail .b.on{color:var(--ink)}#rider-chrome .chrome-dock .rail .b.plain{color:var(--text)}
 #rider-chrome .lib-grid3{grid-template-columns:repeat(3,1fr)}
 #rider-chrome .chrome-insp{position:fixed;right:12px;left:auto;top:72px;bottom:auto;max-height:calc(100vh - 160px);z-index:390;flex-direction:column;width:276px}
@@ -168,6 +169,11 @@ function mount() {
   // focus() (see unfocusable) and only buttons are pointer targets.
   // A press anywhere on the chrome (a button, a label, the dock background) keeps the keyboard on the canvas;
   // only inputs and hosted panels take it.
+  // #717: whether the pointer is over the chrome; Lua ignores the world zoom/scroll wheel there.
+  addEventListener('pointermove', e => { over = root.contains(e.target) && e.target !== root; }, true);
+  // Not a 'wheel' listener on window: Chromium then stops sending the legacy 'mousewheel' events the engine reads.
+  // DOMMouseScroll is Firefox's legacy event, which the engine also reads.
+  for (const type of ['mousewheel', 'DOMMouseScroll']) addEventListener(type, e => { over = root.contains(e.target) && e.target !== root; }, true);
   root.addEventListener('mousedown', e => { if (!e.target.closest('input,select,textarea,.insp-host')) e.preventDefault(); });
   // The Decor search is the one exception: a real click into it takes the keyboard while typing (Esc or Enter
   // hand it back). Its focus() is stubbed too, so the engine's mouseup/wheel focus calls never move the keyboard.
@@ -222,7 +228,13 @@ function mount() {
     if (e.button !== 0 || !e.isPrimary || b.disabled) return;
     if (b.dataset.act === 'chrome-menu') { menuOpen = !menuOpen; render(state); return; }
     if (b.dataset.act === 'minimap') { mapOn = !mapOn; try { localStorage.setItem('rider.editor.minimap', mapOn ? 'on' : 'off'); } catch (err) { /* per session */ } viewKey = ''; viewBar(state); return; }
-    if (b.dataset.tab) { document.querySelector('canvas')?.focus(); tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools'); library(state); return; }
+    if (b.dataset.tab) {
+      document.querySelector('canvas')?.focus(); tab = b.dataset.tab; libKey = ''; if (state?.lib?.collapsed) queue.push('collapse_tools');
+      // #717: the Decor tab is the Decor tool (it replaced the tool bar's Decor button).
+      // 'decor_tool' only switches the tool on (never off), so a second press keeps Decor.
+      if (tab === 'decor') queue.push('decor_tool');
+      library(state); return;
+    }
     if (b.dataset.dcat || b.dataset.dworld) { if (b.dataset.dcat) cat = b.dataset.dcat; else world = b.dataset.dworld; libKey = ''; library(state); return; }
     if (b.dataset.look) { look(b.dataset); document.querySelector('canvas')?.focus(); return; }
     if (b.dataset.fav) { const id = b.dataset.fav; if (favs.has(id)) favs.delete(id); else favs.add(id); try { localStorage.setItem(FAVS, JSON.stringify([...favs])); } catch (e) { /* favourites stay for this session */ } decorGrid(); return; }
@@ -261,7 +273,12 @@ const noop = () => {};
 // Hosted panels (.insp-host) keep their own focus behaviour: their fields and sliders take the keyboard.
 function unfocusable() { root.focus = noop; for (const e of root.querySelectorAll('*')) if (!e.closest('.insp-host,#rider-chrome-park')) e.focus = noop; }
 function setOn(b, on) { b.classList.toggle('on', on); if (on) b.setAttribute('aria-pressed', 'true'); else b.removeAttribute('aria-pressed'); }
+function rail3d(s) {
+  const b = root && q('#rider-lib-rail [data-cmd="terrain_look"]'); if (!b || !s) return;
+  setOn(b, !!s.look_open); const t = b.querySelector('.tag'); if (t) { t.textContent = s.look_dirty ? '•' : ''; t.hidden = !s.look_dirty; }
+}
 function update(s) {
+  rail3d(s);
   for (const [id] of TOOLS) setOn(q(`[data-cmd="tool_${id}"]`), s.tool === id);
   q('[data-cmd="undo"]').disabled = !s.undo;
   q('[data-cmd="redo"]').disabled = !s.redo;
@@ -310,9 +327,6 @@ function library(s) {
   // Follow the active tool: a prefab kind shows Track parts, a gameplay tool shows Gameplay, a search Objects.
   if (s.tool !== lastTool) { if (s.tool === 'prefab') tab = 'track'; else if (GAME_TOOLS.has(s.tool)) tab = 'play'; else if (s.tool === 'decoration') tab = 'decor'; lastTool = s.tool; }
   if (L.searching) tab = 'objects';
-  // The Texture button (track_textures) asks for the Texture tab.
-  const show = L.look && L.look.show;
-  if (show !== lastShow) { if (lastShow !== null && show) tab = 'tex'; lastShow = show; }
   // A focused slider or list, or a slider drag, keeps its element: the tab catches up afterwards.
   if ((tab === 'bg' || tab === 'tex') && (sliding || document.activeElement?.matches?.('#rider-lib-pane .kf:not(.lib-find)'))) return;
   // The Decor tab is rebuilt only for its own data, so a level edit does not reset the search box while typing.
@@ -322,7 +336,10 @@ function library(s) {
   libKey = key;
   dock.classList.toggle('closed', !!L.collapsed);
   q('#rider-lib-rail').innerHTML = UI.button({icon: L.collapsed ? 'chevr' : 'chevl', title: L.collapsed ? 'Open the library' : 'Collapse the library', variant: 'plain', d: {cmd: 'collapse_tools'}})
-    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('');
+    + RAIL.map(([id, icon, color, title, cmd]) => cmd ? UI.button({icon, color, title, d: {cmd}}) : UI.button({icon, color, title, on: !L.collapsed && tab === id, d: {tab: id}})).join('')
+    // #717: the 3D look (a dot while a change is unfinished; on while it is open in the dock).
+    + '<span class="sep rail-sep"></span>' + UI.button({icon: 'cube', color: 'var(--k-tex)', title: '3D look: level or selected terrain sections. Each finished change is one Undo step.', tag: '', d: {cmd: 'terrain_look'}});
+  rail3d(s);
   if (L.collapsed) { q('#rider-lib-pane').innerHTML = ''; unfocusable(); return; }
   const R = Object.fromEntries(RAIL.map(r => [r[0], r]));
   const head = id => UI.dockHeader({title: R[id][3], icon: R[id][1], color: R[id][2]});
@@ -374,9 +391,9 @@ function library(s) {
   }
   // Re-rendering keeps the list's scroll position; a new selection is scrolled into view.
   const scroller = () => q('#rider-lib-pane .lib-rows') || q('#rider-lib-pane .pbody');
-  const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.tab;
+  const old = scroller(), top = old ? old.scrollTop : 0, oldTab = q('#rider-lib-pane').dataset.pane;
   const typing = document.activeElement?.matches?.('.lib-find') ? document.activeElement.selectionStart : null;
-  q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.tab = tab;
+  q('#rider-lib-pane').innerHTML = h; q('#rider-lib-pane').dataset.pane = tab;
   if (tab === 'decor') decorGrid();
   // A rebuild while typing (category or world chip) keeps the keyboard in the new search box.
   const input = q('#rider-lib-pane .lib-find');
@@ -454,10 +471,11 @@ const VIEWS = [['view_fit', 'fit', 'Fit level [Home]'], ['view_centre', 'arrows'
 function viewBar(s) {
   const bar = q('#rider-chrome-view'), V = s && s.view;
   // The minimap lives under the library: with the library collapsed it would cover the workspace, so it hides.
-  bar.hidden = !V; q('#rider-chrome-map').hidden = !V || !mapOn || !course || !!(s.lib && s.lib.collapsed);
+  // #717: the toggle alone decides; a collapsed library leaves the minimap in place.
+  bar.hidden = !V; q('#rider-chrome-map').hidden = !V || !mapOn || !course;
   root.classList.toggle('with-map', !q('#rider-chrome-map').hidden);
   if (!V) return;
-  const key = JSON.stringify([V.grid, V.grid_on, V.zoom, V.on, V.reasons, mapOn, !!s.look_dirty]);
+  const key = JSON.stringify([V.grid, V.grid_on, V.zoom, V.on, V.reasons, mapOn]);
   if (key !== viewKey) {
     viewKey = key;
     const z = V.zoom || {};
@@ -466,10 +484,7 @@ function viewBar(s) {
       + '<span class="sep"></span>' + UI.button({label: '−', title: 'Zoom out to the previous step (minimum 1%).', d: {cmd: 'zoom_out'}})
       + `<button type="button" class="b zoomv${z.edit ? ' edit' : ''}${z.error ? ' bad' : ''}" data-cmd="zoom_value" title="${UI.esc(z.error || 'Zoom 1-400%: type a value; Enter applies, Esc cancels.')}">${UI.esc(z.edit ? z.text + '_' : z.text + '%')}</button>`
       + UI.button({label: '+', title: 'Zoom in to the next step (maximum 400%).', d: {cmd: 'zoom_in'}})
-      + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'})
-      // #688: from the old bottom bar: the 3D look (a dot while a change is unfinished) and the ground texture.
-      + '<span class="sep"></span>' + UI.button({icon: 'cube', title: '3D look: level or selected terrain sections. Each finished change is one Undo step.', tag: s.look_dirty ? '•' : null, d: {cmd: 'terrain_look'}})
-      + UI.button({icon: 'texture', title: 'Ground texture (library tab)', d: {cmd: 'track_textures'}});
+      + '<span class="sep"></span>' + UI.button({icon: 'map', title: mapOn ? 'Hide the minimap' : 'Show the minimap', on: mapOn, act: 'minimap'});
     unfocusable();
   }
   drawMap(viewWin);
@@ -614,5 +629,5 @@ function rects() {
   }
   return JSON.stringify(out);
 }
-window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, statusLine, get mapLog() { return mapLog.slice(); }, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
+window.riderChrome = {render, take, rects, palette: setPalette, looks: setLooks, minimap: setMinimap, viewRect, statusLine, over() { return over && !!root && !root.hidden; }, get mapLog() { return mapLog.slice(); }, tookFocus() { const t = tookFocus; tookFocus = false; return t; }, get visible() { return !!(root && !root.hidden); }};
 })();

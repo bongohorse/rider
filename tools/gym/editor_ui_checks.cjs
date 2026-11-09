@@ -45,9 +45,15 @@ module.exports=async function uiChecks(h){
  for(const size of [{width:1280,height:720},{width:844,height:390},{width:390,height:844}]){
   await page.setViewportSize(size);await pointer.frames(page);const state=await ed();
   // #602: real clicks at the top-bar positions on every layout, plus the rendered names.
-  // #688: 3D, Texture and the Decor tool moved from the Defold bottom bar into the chrome's top bar.
-  for(const n of ['terrain_look','track_textures','tool_decoration'])assert.ok(state.visible.includes(n),n+' offered');
-  assert.match(state.ui.labels.terrain_look,/^3D look/);assert.match(state.ui.labels.track_textures,/^Ground texture/);
+  // #688/#717: one place per control: 3D in the library rail; Prefab parts, Decor and Texture only in the library.
+  // The rail scrolls on short windows: the 3D button is brought into view first, like a user would.
+  for(const [n,sel] of [['terrain_look','[data-cmd="terrain_look"]'],['lib_decor','[data-tab="decor"]'],['lib_tex','[data-tab="tex"]'],['lib_track','[data-tab="track"]']]){
+   await page.evaluate(sel=>document.querySelector('#rider-lib-rail '+sel)?.scrollIntoView({block:'nearest'}),sel);await pointer.frames(page);
+   const now=await ed();assert.ok(now.visible.includes(n),n+' offered at '+size.width);
+   if(n==='terrain_look')assert.match(now.ui.labels.terrain_look,/^3D look/);
+  }
+  await page.evaluate(()=>{const r=document.getElementById('rider-lib-rail');if(r)r.scrollTop=0;});await pointer.frames(page);
+  for(const n of ['tool_prefab','tool_decoration','track_textures'])assert.ok(!state.visible.includes(n),n+' no longer in the bars');
   const undoBefore=(await ed()).undo;await button('undo');await pointer.frames(page);
   const undone=await ed();assert.ok(undone.undo!==undoBefore||/Nothing to undo/.test(undone.message),'Undo click had no effect at '+size.width);
   // #688: the chrome's status line shows the editor message (or the readout) and stays clear of the view bar.
