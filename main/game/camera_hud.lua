@@ -83,7 +83,15 @@ function M.show(h)
         gui.set_text(row.label,camera_settings.text(row.spec,s[row.spec.key]))
         gui.set_color(row.label,(row.spec.b and s.mode~="b") and DIM or TEXT)
     end
+    -- #678: with the HTML5 play bar the kit draws this control from riderCamera443; the nodes stay as the transparent
+    -- tap targets (picks, placement and the #443 checks are unchanged).
+    if h.skin then
+        for _,g in ipairs({h.control,h.panel}) do for _,e in ipairs(g) do
+            local col=gui.get_color(e.node);col.w=0;gui.set_color(e.node,col)
+        end end
+    end
 end
+function M.skin(h) h.skin=true;M.show(h) end
 -- The loader applied (and stored) these settings.
 function M.settings(h,data)
     h.settings=camera_settings.sanitize(data)
@@ -216,6 +224,7 @@ function M.publish(h,pixel_ratio,nodes)
         control=h.rect or false,toggle=rect_of(h.toggle) or false,set=rect_of(h.set) or false,
         toggle_screen=(function() local p=gui.get_screen_position(h.toggle);return {x=p.x,y=p.y} end)(),
         panel=h.panel_rect or false,reset=h.open and rect_of(h.reset) or false,close=h.open and rect_of(h.close) or false,
+        b_only=(function() local r={};for i,row in ipairs(h.rows) do r[i]=row.spec.b or false end;return r end)(),
         rows=rows,blocked=h.blocked or {},layout_seq=h.layout_seq,forced=h.forced,nodes=nodes or false}))
 end
 return M
