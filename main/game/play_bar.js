@@ -22,7 +22,7 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="float pb-debug" hidden></div><div class="pb-cam"></div>'
+    + '<div class="float pb-debug" hidden></div><div class="pb-cam" inert aria-hidden="true"></div>'
     + '<div class="float pb-card" hidden><b class="pb-speed"></b><span class="pb-travel"><i class="pb-dot"></i>L <i class="pb-dot"></i>R <em></em></span>'
     + '<span class="pb-station"></span><span class="pb-result"></span><span class="pb-replay"></span></div>';
   const style = document.createElement('style');
