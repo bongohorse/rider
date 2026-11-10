@@ -180,6 +180,8 @@ end
 -- Preserve the existing driving-mode entry hint/message using the same text pool.
 -- bar: the HTML5 play bar (main/game/play_bar.js) offers 3D and Edit level (#678), so they are not drawn here.
 function M.play(u,k,message,session,legacy,status,bar)
+    -- #678: with the play bar the open 3D look is a kit panel there (riderLook3D), not this modal.
+    if bar then session=nil end
     M.render(u,{play=true,bar=bar,k=k,selection='',tool='',now=socket.gettime(),message=message or '',look=session,
         look_legacy=legacy,status=status or '',modal=session and session.open and 'terrain_look' or nil})
 end
