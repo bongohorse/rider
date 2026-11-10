@@ -254,7 +254,7 @@ if(require.main===module){
     const css=q=>q&&({left:r.x+q.x0/c.width*r.width,right:r.x+q.x1/c.width*r.width,top:r.y+(1-q.y1/c.height)*r.height,bottom:r.y+(1-q.y0/c.height)*r.height});
     const box=e=>{const b=e.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom};};
     const dom=[];
-    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout']]){
+    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout'],['#rider-playbar .pb-left > *','left box'],['#rider-playbar .pb-debug','debug group']]){
      for(const e of document.querySelectorAll(sel)){const b=e.getBoundingClientRect();
       if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim().slice(0,24)),...box(e)});}
     }

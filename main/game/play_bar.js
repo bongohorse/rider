@@ -64,7 +64,7 @@ function mount() {
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
 #rider-playbar .pb-left{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
  display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-#rider-playbar .pb-map,#rider-playbar .pb-card{padding:8px 12px;box-sizing:border-box;white-space:nowrap;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+#rider-playbar .pb-map,#rider-playbar .pb-card{padding:8px 12px;box-sizing:border-box;white-space:nowrap;max-width:min(560px,45vw);overflow:hidden;text-overflow:ellipsis;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
 #rider-playbar .pb-left>.float{position:static}#rider-playbar .pb-map{font:800 13px var(--body);color:var(--text)}
 #rider-playbar .pb-card{flex-direction:column;align-items:flex-start;gap:3px}
 #rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
@@ -117,7 +117,7 @@ function run(act) {
   if (act === 'levels') { m?.clear(); window.riderLevelsRequest = {action: 'open'}; return; }
   if (act === 'import') { m?.clear(); window.riderCustom?.open(); return; }
   if (act === 'freecam') { window.riderFreeCam?.set(!window.riderFreeCam.on); debugKey = ''; canvasFocus(); return; }
-  if (act === 'camera') { menuOpen = false; queue.push('cam:open'); canvasFocus(); return; }
+  if (act === 'camera') { menuOpen = false; if (!camState()?.open) window.riderMobile?.closePanels?.(); queue.push('cam:open'); canvasFocus(); return; }
   if (act === 'cam:none') return;
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
   queue.push(act); canvasFocus();

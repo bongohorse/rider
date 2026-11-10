@@ -230,6 +230,7 @@ function M.publish(h,pixel_ratio,nodes)
     html5.run("window.riderCamera443="..json.encode({seq=h.seq,place_seq=h.place_seq,settings_seq=h.settings_seq,mode=s.mode,
         values=values,saved=h.saved,status=h.status,open=h.open,taps=h.taps,label=gui.get_text(h.toggle_label),
         title=gui.get_text(h.title),clear=h.clear or false,panel_clear=h.panel_clear,pixel_ratio=pixel_ratio or 1,
+        -- control: the native rectangle, or true in HTML5 where the play bar's camera button stands in for it.
         control=h.rect or (h.skin and not h.forced) or false,toggle=rect_of(h.toggle) or false,set=rect_of(h.set) or false,
         toggle_screen=(function() local p=gui.get_screen_position(h.toggle);return {x=p.x,y=p.y} end)(),
         panel=h.panel_rect or false,reset=h.open and rect_of(h.reset) or false,close=h.open and rect_of(h.close) or false,
