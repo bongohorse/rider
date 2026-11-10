@@ -22,9 +22,11 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="float pb-debug" hidden></div><div class="pb-cam" aria-hidden="true"></div>'
+    + '<div class="float pb-debug" hidden></div><div class="pb-campanel" hidden></div>'
+    // The level line has its own box above the readouts card; neither wraps.
+    + '<div class="pb-left"><div class="float pb-map" hidden></div>'
     + '<div class="float pb-card" hidden><b class="pb-speed"></b><span class="pb-travel"><i class="pb-dot"></i>L <i class="pb-dot"></i>R <em></em></span>'
-    + '<span class="pb-station"></span><span class="pb-result"></span><span class="pb-replay"></span></div>';
+    + '<span class="pb-result"></span><span class="pb-replay"></span></div></div>';
   const style = document.createElement('style');
   style.textContent = `#rider-playbar .pb-row{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:1100;gap:5px;padding:5px}
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
@@ -60,16 +62,26 @@ function mount() {
 #rider-playbar .pb-reason{color:var(--muted)}
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
-#rider-playbar .pb-card{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
- flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;width:220px;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
-/* A fixed width: longer lines wrap, so the camera control placed beside it does not move while text changes. */
+#rider-playbar .pb-left{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
+ display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+#rider-playbar .pb-map,#rider-playbar .pb-card{padding:8px 12px;box-sizing:border-box;white-space:nowrap;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+#rider-playbar .pb-left>.float{position:static}#rider-playbar .pb-map{font:800 13px var(--body);color:var(--text)}
+#rider-playbar .pb-card{flex-direction:column;align-items:flex-start;gap:3px}
 #rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
 #rider-playbar .pb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#59636e;margin:0 3px 0 0;vertical-align:middle}#rider-playbar .pb-dot.on{background:var(--go)}
-#rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-station{color:var(--text)}#rider-playbar .pb-replay{color:#9ae0ff}
-#rider-playbar .pb-cam,#rider-playbar .pb-cam *{pointer-events:none}
-#rider-playbar .pb-cam>*{position:fixed;box-sizing:border-box;z-index:1040}#rider-playbar .pb-cam .b{--h:100%;width:100%;font:800 13px var(--body);padding:0 6px}
-#rider-playbar .pb-cam .b.big{font-size:20px}#rider-playbar .pb-cam .lab{display:flex;align-items:center;font:700 12px var(--body);color:var(--text);white-space:nowrap;overflow:hidden}
-#rider-playbar .pb-cam .lab.dim{color:var(--muted);opacity:.7}#rider-playbar .pb-cam .ttl{font:800 14px var(--disp)}
+#rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-replay{color:#9ae0ff}
+#rider-playbar .pb-campanel{position:fixed;z-index:1101;width:min(380px,calc(100vw - 16px));max-height:calc(100vh - 90px);overflow-y:auto;box-sizing:border-box;padding:10px;
+ display:flex;flex-direction:column;gap:8px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overscroll-behavior:contain}
+#rider-playbar .pb-campanel[hidden]{display:none}
+#rider-playbar .pb-campanel .hd{display:flex;align-items:center;gap:8px;font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-campanel .hd svg{width:20px;height:20px}
+#rider-playbar .pb-campanel .hd span{flex:1}#rider-playbar .pb-campanel .b{--h:40px;font:800 13px var(--body);padding:0 10px}
+#rider-playbar .pb-campanel .modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}#rider-playbar .pb-campanel .modes .b{width:100%}
+#rider-playbar .pb-campanel .modes .b.on{--c:var(--accent);background:var(--c);color:var(--ink)}
+#rider-playbar .pb-campanel .rw{display:grid;grid-template-columns:1fr 40px 40px;gap:6px;align-items:center;font:700 13px var(--body);color:var(--text);white-space:nowrap}
+#rider-playbar .pb-campanel .rw.dim span{color:var(--muted);opacity:.75}#rider-playbar .pb-campanel .rw .b{width:40px;padding:0}
+#rider-playbar .pb-campanel .reset{width:100%}#rider-playbar .pb-campanel .rows{display:grid;gap:6px}
+#rider-playbar .pb-campanel.compact{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:16px}
+#rider-playbar .pb-campanel.compact .hd .modes{flex:0 0 190px}#rider-playbar .pb-campanel.compact .hd>span{flex:1}
 body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
@@ -85,13 +97,17 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
     const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
     const act = b.dataset.act; if (!act) return;
     e.preventDefault();
-    if (act === 'more') { menuOpen = !menuOpen; if (menuOpen) window.riderMobile?.closePanels?.(); render(); return; }
+    if (act === 'more') { menuOpen = !menuOpen; if (menuOpen) { window.riderMobile?.closePanels?.(); if (camState()?.open) queue.push('cam:close'); } render(); return; }
     if (b.closest('.pb-menu') && !b.closest('.touch-tools')) { menuOpen = false; }
     run(act); render();
   });
   // A press elsewhere closes the menu (touch tools keep it open while a drive pointer is held, as before).
-  document.addEventListener('pointerdown', e => { if (menuOpen && !root.contains(e.target) && !e.target.closest?.('#rider-mobile .zones')) { menuOpen = false; render(); } }, true);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuOpen) { menuOpen = false; render(); } });
+  document.addEventListener('pointerdown', e => {
+    if (root.contains(e.target) || e.target.closest?.('#rider-mobile .zones')) return;
+    if (menuOpen) { menuOpen = false; render(); }
+    if (camState()?.open) queue.push('cam:close');
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (menuOpen) { menuOpen = false; render(); } if (camState()?.open) queue.push('cam:close'); });
 }
 function run(act) {
   const m = window.riderMobile;
@@ -101,25 +117,29 @@ function run(act) {
   if (act === 'levels') { m?.clear(); window.riderLevelsRequest = {action: 'open'}; return; }
   if (act === 'import') { m?.clear(); window.riderCustom?.open(); return; }
   if (act === 'freecam') { window.riderFreeCam?.set(!window.riderFreeCam.on); debugKey = ''; canvasFocus(); return; }
+  if (act === 'camera') { menuOpen = false; queue.push('cam:open'); canvasFocus(); return; }
+  if (act === 'cam:none') return;
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
   queue.push(act); canvasFocus();
 }
 function render() {
   if (!root) mount();
-  strip(); debugGroup(); card(); cam();
+  strip(); debugGroup(); card(); camPanel();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
   // Tuning is open: the touch adapter's details or the native panel (body.rider-tuning, set by ui.gui_script).
   const tuning = !!window.riderMobile?.details || document.body.classList.contains('rider-tuning');
   const row = root.querySelector('.pb-row');
-  const k = JSON.stringify([paused, terminal && run.state, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight]);
+  const cs = camState(), camOpen = !!cs?.open;
+  const k = JSON.stringify([paused, terminal && run.state, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight, !!cs && !cs.forced, camOpen]);
   if (k === key) return; key = k;
   const btn = (act, icon, title, extra = {}) => UI.button(Object.assign({icon, title, d: {act}}, extra));
   root.querySelector('.pb-row').innerHTML =
     btn('retry', 'retry', 'Retry')
     + UI.button({icon: paused ? 'play' : 'pause', title: terminal ? (run.state === 'finished' ? 'Finished' : 'Attempt ended') : paused ? 'Resume' : 'Pause', disabled: terminal, d: {act: 'pause'}}).replace('class="b', 'class="b ' + (paused ? 'resume' : 'pause'))
     + btn('tuning', 'speed', tuning ? 'Close tuning' : 'Tuning', {on: tuning})
+    + (camState() && !camState().forced ? btn('camera', 'camera', camOpen ? 'Close camera' : 'Camera', {on: camOpen}) : '')
     + btn('3d', 'cube', '3D look')
     + btn('edit', 'pencil', 'Edit level')
     + btn('levels', 'flag', 'Levels')
@@ -243,41 +263,47 @@ function card() {
   const k = JSON.stringify(c);
   if (k === cardKey) return; cardKey = k;
   el.hidden = !c;
-  if (!c) return;
+  if (!c) { root.querySelector('.pb-map').hidden = true; return; }
   el.querySelector('.pb-speed').textContent = c.speed || '';
   const dots = el.querySelectorAll('.pb-dot');
   dots.forEach((d, i) => d.classList.toggle('on', !!(c.contact || [])[i]));
   el.querySelector('.pb-travel em').textContent = c.travel || '';
-  for (const [cls, v] of [['station', c.station], ['result', c.result], ['replay', c.replay]]) {
+  const map = root.querySelector('.pb-map'); map.textContent = c.station || ''; map.hidden = !c.station;
+  for (const [cls, v] of [['result', c.result], ['replay', c.replay]]) {
     const s = el.querySelector('.pb-' + cls); s.textContent = v || ''; s.hidden = !v;
   }
 }
-// The #443 camera control in the kit style, drawn over its transparent native tap targets (riderCamera443 rects are
-// GUI screen pixels with the origin bottom left). Purely visual: taps reach the canvas.
+// The #443 camera menu (Claudio 2026-11-10: one camera button in the bar, its settings like Tuning). State comes from
+// riderCamera443; every press is a cam:* command for ui.gui_script (camera_hud.command), so taps never drive.
 let camKey = '';
-function cam() {
-  const c = window.riderCamera443, el = root.querySelector('.pb-cam'), cv = document.querySelector('canvas');
-  const r = cv && cv.getBoundingClientRect();
-  const k = c && r ? [c.seq, r.left, r.top, r.width, r.height, cv.width, cv.height].join() : '';
+const camState = () => window.riderCamera443 || null;
+function camPanel() {
+  const c = camState(), el = root.querySelector('.pb-campanel'), row = root.querySelector('.pb-row');
+  const open = !!(c && c.open && !c.forced);
+  const rr = row.getBoundingClientRect();
+  const k = open ? JSON.stringify([c.seq, c.mode, c.rows, rr.bottom, rr.right, innerWidth, innerHeight, document.querySelector('#rider-mobile .readout')?.getBoundingClientRect().left]) : '';
   if (k === camKey) return; camKey = k;
-  if (!c || !r || !c.control || c.forced) { el.innerHTML = ''; return; }
-  const sx = r.width / cv.width, sy = r.height / cv.height, clean = s => String(s || '').replace(/[<>&]/g, '');
-  const at = q => `left:${r.left + q.x0 * sx}px;top:${r.top + (cv.height - q.y1) * sy}px;width:${(q.x1 - q.x0) * sx}px;height:${(q.y1 - q.y0) * sy}px`;
-  const btn = (q, o, cls = '') => q ? `<div style="${at(q)}">${UI.button(o).replace('class="b', 'class="b' + cls)}</div>` : '';
-  let h = btn(c.toggle, {label: c.label, on: c.mode === 'b', title: 'Switch camera'}) + btn(c.set, {label: 'Set', on: c.open, title: 'Camera settings'});
-  if (c.open && c.panel && c.reset) {
-    const p = c.panel, line = (q, x0, w, cls, text) => `<div class="lab ${cls}" style="left:${r.left + x0 * sx}px;top:${r.top + (cv.height - q.y1) * sy}px;width:${w * sx}px;height:${(q.y1 - q.y0) * sy}px">${clean(text)}</div>`;
-    h += `<div class="float" style="${at(p)}"></div>` + line(c.reset, p.x0 + 12, c.reset.x0 - p.x0 - 16, 'ttl', c.title);
-    h += btn(c.reset, {label: 'Reset', title: 'Reset camera'}) + btn(c.close, {icon: 'close', title: 'Close'});
-    c.rows.forEach((row, i) => {
-      if (!row.minus) return;
-      const x0 = row.minus.x0 - 160 * (row.minus.x1 - row.minus.x0) / 48;
-      h += line(row.minus, x0, row.minus.x0 - x0 - 6, c.b_only?.[i] && c.mode !== 'b' ? 'dim' : '', row.text);
-      h += btn(row.minus, {label: '−', title: 'Less'}, ' big') + btn(row.plus, {icon: 'plus', title: 'More'});
-    });
-  }
-  // Not focusable: `inert` here broke canvas taps under it in Chromium (cam443), so the buttons only leave the Tab order.
-  el.innerHTML = h.replace(/<button /g, '<button tabindex="-1" ');
+  el.hidden = !open;
+  if (!open) return;
+  const zones = document.querySelector('#rider-mobile .zones'), level = document.getElementById('rider-level-actions');
+  const lows = [zones, level].filter(e => e && e.getClientRects().length).map(e => e.getBoundingClientRect().top);
+  // Short views (phones in landscape): two columns, and on touch left of the status line that sits under the bar.
+  const compact = innerHeight < 600;
+  const ro = document.querySelector('#rider-mobile .readout');
+  const rb = ro && ro.getClientRects().length && getComputedStyle(ro).visibility === 'visible' ? ro.getBoundingClientRect() : null;
+  const top = rr.bottom + 8;
+  el.classList.toggle('compact', compact);
+  el.style.top = top + 'px';
+  el.style.right = Math.max(8, Math.round(innerWidth - (rb && rb.top < top + 40 ? rb.left - 8 : rr.right))) + 'px';
+  el.style.maxHeight = Math.max(88, Math.floor((lows.length ? Math.min(...lows) : innerHeight) - top - 8)) + 'px';
+  const b = (act, o) => UI.button(Object.assign({d: {act}}, o));
+  const clean = t => String(t || '').replace(/[<>&]/g, '');
+  const modes = '<div class="modes">' + ['a', 'b'].map(m => b(c.mode === m ? 'cam:none' : 'cam:toggle', {label: 'Cam ' + m.toUpperCase(), on: c.mode === m, title: 'Camera ' + m.toUpperCase()})
+    .replace('<button', '<button data-mode="' + m + '"')).join('') + '</div>';
+  el.innerHTML = '<div class="hd">' + UI.icon('camera') + '<span>Camera</span>' + (compact ? modes : '') + b('cam:close', {icon: 'close', title: 'Close'}) + '</div>'
+    + (compact ? '' : modes) + '<div class="rows">' + c.rows.map((r, i) => '<div class="rw' + (c.b_only?.[i] && c.mode !== 'b' ? ' dim' : '') + '"><span>' + clean(r.text) + '</span>'
+      + b('cam:step:' + r.key + ':-1', {label: '−', title: 'Less'}) + b('cam:step:' + r.key + ':1', {icon: 'plus', title: 'More'}) + '</div>').join('') + '</div>'
+    + b('cam:reset', {label: 'Reset camera', title: 'Reset to camera A and every default', variant: 'wide'}).replace('class="b', 'class="b reset');
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
