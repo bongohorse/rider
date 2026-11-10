@@ -10,6 +10,7 @@ local layout=require "main.game.layout"
 local fps_place=require "main.game.fps_place"
 local camera_settings=require "main.game.camera_settings"
 local M={}
+local function send(command) msg.post("#script","camera_set",command) end
 -- Local units in the left_top root, which the HUD scales to at least 1 CSS px per unit, so 40-46 unit tall buttons
 -- stay near the 44 px touch minimum (the FPS counter's tap area is 46 units for the same reason).
 M.CONTROL={w=132,h=44}
@@ -83,15 +84,18 @@ function M.show(h)
         gui.set_text(row.label,camera_settings.text(row.spec,s[row.spec.key]))
         gui.set_color(row.label,(row.spec.b and s.mode~="b") and DIM or TEXT)
     end
-    -- #678: with the HTML5 play bar the kit draws this control from riderCamera443; the nodes stay as the transparent
-    -- tap targets (picks, placement and the #443 checks are unchanged).
-    if h.skin then
-        for _,g in ipairs({h.control,h.panel}) do for _,e in ipairs(g) do
-            local col=gui.get_color(e.node);col.w=0;gui.set_color(e.node,col)
-        end end
-    end
 end
-function M.skin(h) h.skin=true;M.show(h) end
+-- #678: with the HTML5 play bar the camera is a button in the bar and a kit menu (play_bar.js); these nodes stay
+-- hidden and only the non-HTML5 builds draw them. Commands from the menu arrive through M.command.
+function M.skin(h) h.skin=true end
+function M.command(h,c)
+    if h.forced then return end
+    h.taps=h.taps+1
+    if c.command=="open" then h.open=not h.open
+    elseif c.command=="close" then h.open=false
+    else send(c) end
+    M.show(h)
+end
 -- The loader applied (and stored) these settings.
 function M.settings(h,data)
     h.settings=camera_settings.sanitize(data)
@@ -136,6 +140,12 @@ function M.place(h,area,blocked,gap,layout_seq)
         local changed=not h.forced_published;h.forced_published=true
         return changed
     end
+    if h.skin then
+        for _,g in ipairs({h.control,h.panel}) do for _,e in ipairs(g) do gui.set_visible(e.node,false) end end
+        h.placed,h.clear,h.panel_clear=true,true,true
+        local first=not h.skin_published;h.skin_published=true
+        return first
+    end
     local ux,uy=units(h.hit)
     if not ux then return false end
     local w,hh=M.CONTROL.w*ux,M.CONTROL.h*uy
@@ -170,10 +180,9 @@ function M.place(h,area,blocked,gap,layout_seq)
     h.place_seq=h.place_seq+1
     return true
 end
-local function send(command) msg.post("#script","camera_set",command) end
 -- A press on the control or the open panel. Returns true when consumed (always for a press inside them).
 function M.input(h,id,action)
-    if h.forced or id~=hash("ui_pointer") or not action.pressed or not h.placed then return false end
+    if h.forced or h.skin or id~=hash("ui_pointer") or not action.pressed or not h.placed then return false end
     if gui.pick_node(h.toggle,action.x,action.y) then
         h.taps=h.taps+1;send({command="toggle"});return true
     end
@@ -221,7 +230,8 @@ function M.publish(h,pixel_ratio,nodes)
     html5.run("window.riderCamera443="..json.encode({seq=h.seq,place_seq=h.place_seq,settings_seq=h.settings_seq,mode=s.mode,
         values=values,saved=h.saved,status=h.status,open=h.open,taps=h.taps,label=gui.get_text(h.toggle_label),
         title=gui.get_text(h.title),clear=h.clear or false,panel_clear=h.panel_clear,pixel_ratio=pixel_ratio or 1,
-        control=h.rect or false,toggle=rect_of(h.toggle) or false,set=rect_of(h.set) or false,
+        -- control: the native rectangle, or true in HTML5 where the play bar's camera button stands in for it.
+        control=h.rect or (h.skin and not h.forced) or false,toggle=rect_of(h.toggle) or false,set=rect_of(h.set) or false,
         toggle_screen=(function() local p=gui.get_screen_position(h.toggle);return {x=p.x,y=p.y} end)(),
         panel=h.panel_rect or false,reset=h.open and rect_of(h.reset) or false,close=h.open and rect_of(h.close) or false,
         b_only=(function() local r={};for i,row in ipairs(h.rows) do r[i]=row.spec.b or false end;return r end)(),

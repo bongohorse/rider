@@ -22,7 +22,7 @@ local MAX_NODES=600
 local DOM_CONTROLS=[[(()=>{const c=document.querySelector('canvas');if(!c)return '[]';const r=c.getBoundingClientRect();
 if(!(r.width>0&&r.height>0))return '[]';const sx=c.width/r.width,sy=c.height/r.height,out=[];
 for(const e of document.querySelectorAll('button,select,input,textarea,a[href],[role=button],[data-command]')){
-if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu,#rider-playbar .pb-cam'))continue;const b=e.getBoundingClientRect();
+if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu'))continue;const b=e.getBoundingClientRect();
 if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue;
 if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
 out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
@@ -35,7 +35,7 @@ const ro=window.ResizeObserver?new ResizeObserver(()=>{L.seq++;}):null;
 const rects=sel=>{const c=document.querySelector('canvas');if(!c)return [];const r=c.getBoundingClientRect();
 if(!(r.width>0&&r.height>0))return [];const sx=c.width/r.width,sy=c.height/r.height,out=[];
 for(const e of document.querySelectorAll(sel)){
-if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu,#rider-playbar .pb-cam'))continue;const b=e.getBoundingClientRect();
+if(e.closest('[role=dialog],[aria-modal=true],#rider-mobile-more,#rider-playbar .pb-menu'))continue;const b=e.getBoundingClientRect();
 if(!(b.width>0&&b.height>0)||getComputedStyle(e).visibility!=='visible')continue;
 if(b.right<=r.left||b.left>=r.right||b.bottom<=r.top||b.top>=r.bottom)continue;
 out.push([(b.left-r.left)*sx,(r.bottom-b.bottom)*sy,(b.right-r.left)*sx,(r.bottom-b.top)*sy]);}
@@ -43,7 +43,7 @@ return out;};
 L.watch=()=>{const e=document.querySelector('#rider-mobile .readout');
 if(e!==L.el){if(L.el&&ro)ro.unobserve(L.el);L.el=e;if(e&&ro)ro.observe(e);L.seq++;}return L.seq;};
 L.query=()=>JSON.stringify({seq:L.watch(),controls:rects('button,select,input,textarea,a[href],[role=button],[data-command]'),
-readouts:rects('#rider-mobile .readout,#rider-playbar .pb-strip,#rider-playbar .pb-progress,#rider-playbar .pb-card')});})()]]
+readouts:rects('#rider-mobile .readout,#rider-playbar .pb-strip,#rider-playbar .pb-progress,#rider-playbar .pb-card,#rider-playbar .pb-map,#rider-playbar .pb-campanel')});})()]]
 -- Visible screen area (safe area where the platform reports one), GUI screen pixels.
 local function fps_area()
     local w,h=window.get_size()
@@ -612,6 +612,13 @@ function update(self,dt)
                     local look=require('main.editor.editor_look')
                     if look.session and look.session.open then look.confirm();look.close() else msg.post('main:/loader#script','terrain_look_open') end
                 elseif a=='edit' then msg.post('main:/loader#script','editor_enter')
+                -- The camera menu: cam:open, cam:close, cam:toggle, cam:reset, cam:step:<key>:<dir>.
+                elseif type(a)=='string' and a:sub(1,4)=='cam:' then
+                    local cmd,k,d=a:match('^cam:(%a+):?([%w_]*):?(-?%d*)$')
+                    if cmd and not self.editing then
+                        camera_hud.command(self.camera_hud,{command=cmd,key=k~='' and k or nil,dir=tonumber(d)})
+                        place_camera(self,nil,true)
+                    end
                 -- #678 slice 3: the debug group (desktop), the same messages as the native buttons it replaces.
                 elseif a=='step' then msg.post("main:/loader#script","time_control",{action="step"})
                 elseif (a=='record' or a=='replay') and self.owner then msg.post(self.owner,"replay_control",{action=a})

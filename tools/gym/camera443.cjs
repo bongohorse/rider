@@ -1,5 +1,5 @@
 // #443 in-game camera A/B toggle with live camera settings, debug Gym case `cam443` (real Defold HTML5 debug build,
-// real mouse and CDP touch taps on the HUD camera control, the real controller camera owner).
+// real mouse and CDP touch taps on the play bar's camera button and menu (#678), the real controller camera owner).
 // While driving a scripted, input-independent command per fixed tick (main/gym/camera_drive443.lua) on ramps-long
 // down-30, air/mid (lean -1) and a Straight reverse, at 1280x720:
 // - a camera-A run and a run that taps Cam A -> Cam B and steps a camera setting live have IDENTICAL fixed-tick
@@ -12,11 +12,11 @@
 //   every default and that survives a reload too;
 // - taps on the control and the panel (mouse at 1280x720, touch at 1080x486 with touch controls) record no drive
 //   command on any tick and the car stays at rest;
-// - the control and the open panel stay inside the canvas and clear of the FPS counter, Pause, the drive zones and
-//   every other control.
+// - the camera button and the open menu stay inside the view and clear of the FPS counter, the drive zones and
+//   every other control; the menu buttons are not covered.
 'use strict';
 const assert=require('node:assert/strict');
-const DESKTOP={width:1280,height:720},PHONE={width:1080,height:486},TOL_PX=1.5;
+const DESKTOP={width:1280,height:720},PHONE={width:1080,height:486};
 // toggleAt: the vehicle tick after which the camera is switched; ticks: the compared window (vehicle ticks from the
 // first drive-ready tick; under the probe's 480-entry page buffer); setting: the live step after the switch.
 const SCENARIOS=[
@@ -191,17 +191,20 @@ if(require.main===module){
    const cam=p=>p.evaluate(()=>({...window.riderCamera443}));
    const owner=p=>p.evaluate(()=>({...window.riderCameraOwner}));
    const values=s=>({mode:s.mode,...s.values});
-   // CSS centre of a published GUI rectangle (GUI screen pixels, origin bottom left).
-   const centreOf=(p,name,row)=>p.evaluate(({name,row})=>{
-    const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),C=window.riderCamera443;
-    const q=row?C.rows.find(x=>x.key===row.key)[row.which]:C[name];
-    if(!q)return null;
-    return {x:r.x+(q.x0+q.x1)/2/c.width*r.width,y:r.y+(1-(q.y0+q.y1)/2/c.height)*r.height};
-   },{name,row});
+   // #678: the camera is a play bar button and a kit menu. name: toggle (the other mode), set (the bar button), close,
+   // reset; row: {key, which: plus|minus}. Returns the CSS centre and a selector for the element.
+   const selectorOf=(name,row)=>row?`#rider-playbar .pb-campanel [data-act="cam:step:${row.key}:${row.which==='plus'?1:-1}"]`
+    :{toggle:'#rider-playbar .pb-campanel [data-mode]:not(.on)',set:'#rider-playbar .pb-row [data-act="camera"]',
+      close:'#rider-playbar .pb-campanel [data-act="cam:close"]',reset:'#rider-playbar .pb-campanel [data-act="cam:reset"]'}[name];
+   const centreOf=(p,name,row)=>p.evaluate(sel=>{
+    const e=document.querySelector(sel);if(!e||!e.getClientRects().length)return null;
+    const b=e.getBoundingClientRect();return {x:(b.left+b.right)/2,y:(b.top+b.bottom)/2,sel};
+   },selectorOf(name,row));
    async function tap(p,name,row,label){
+    if(name==='toggle'&&!(await cam(p)).open)await panel(p,true,label+' open menu');
     const pt=await centreOf(p,name,row);assert(pt,label+': no '+name+' on screen');
-    const hit=await p.evaluate(({x,y})=>document.elementFromPoint(x,y)?.tagName,pt);
-    assert.equal(hit,'CANVAS',label+': a DOM overlay covers the camera '+name);
+    const hit=await p.evaluate(({x,y,sel})=>document.elementFromPoint(x,y)?.closest('button')===document.querySelector(sel),pt);
+    assert.equal(hit,true,label+': something covers the camera '+(name||row.key));
     await pointer.tap(p,pt,{counter:FRAMES,label});
    }
    // Tap and wait until the loader applied (and stored) the camera command.
@@ -221,7 +224,7 @@ if(require.main===module){
    async function panel(p,openIt,label){
     const s=await cam(p);if(s.open===openIt)return;
     await tap(p,openIt?'set':'close',null,label);
-    await p.waitForFunction(o=>window.riderCamera443?.open===o&&(!o||window.riderCamera443.panel),openIt,{polling:50,timeout:5000});
+    await p.waitForFunction(o=>window.riderCamera443?.open===o&&!document.querySelector('#rider-playbar .pb-campanel').hidden===o,openIt,{polling:50,timeout:5000});
     await pointer.frames(p,{counter:FRAMES,n:3,label:label+' settle'});
    }
    const tick=p=>p.evaluate(()=>window.riderCamera352PhysicsTrace.at(-1).tick);
@@ -244,62 +247,37 @@ if(require.main===module){
     await pointer.frames(p,{counter:FRAMES,label:'stop key release'});
     return p.evaluate(()=>window.riderReplay.recording);
    }
-   // Placement in CSS pixels: inside the canvas, clear of the FPS counter, desktop GUI buttons and DOM controls.
+   // Placement in CSS pixels: the bar's camera button and the open menu inside the view, clear of the FPS counter, the
+   // drive zones, level actions and status line; every menu button is the element under its centre.
    const placement=p=>p.evaluate(()=>{
-    const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),C=window.riderCamera443,H=window.riderHud||{},F=window.riderFpsPlace;
+    const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),C=window.riderCamera443,F=window.riderFpsPlace;
     const css=q=>q&&({left:r.x+q.x0/c.width*r.width,right:r.x+q.x1/c.width*r.width,top:r.y+(1-q.y1/c.height)*r.height,bottom:r.y+(1-q.y0/c.height)*r.height});
-    const pt=q=>q&&({x:r.x+q.x/c.width*r.width,y:r.y+(1-q.y/c.height)*r.height});
+    const box=e=>{const b=e.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom};};
     const dom=[];
-    // Touch status line (.readout): not a control, but above the canvas, so it would hide panel buttons.
-    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-mobile .toolbar > button','toolbar'],['#rider-playbar .pb-row > button','playbar'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout']]){
+    for(const [sel,kind] of [['#rider-mobile [data-command]','drive'],['#rider-level-actions button','level'],['#page-tools button','page'],['#rider-mobile .readout','readout'],['#rider-playbar .pb-left > *','left box'],['#rider-playbar .pb-debug','debug group']]){
      for(const e of document.querySelectorAll(sel)){const b=e.getBoundingClientRect();
-      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.dataset.act||e.textContent.trim().slice(0,24)),left:b.left,top:b.top,right:b.right,bottom:b.bottom});}
+      if(b.width>0&&b.height>0&&getComputedStyle(e).visibility==='visible')dom.push({name:kind+':'+(e.dataset.command||e.textContent.trim().slice(0,24)),...box(e)});}
     }
-    // #678: with the HTML5 play bar the 3D button is in the bar, not drawn by the editor GUI.
-    if(!window.riderEditing&&!document.getElementById('rider-playbar')){const k=Math.min(1,r.width/1280);
-     dom.push({name:'editor:3D',left:r.x+560*k,right:r.x+592*k,top:r.y+r.height-56*k,bottom:r.y+r.height-24*k});}
-    const touch=!!window.riderMobile?.enabled;
-    let fps=null,unit=0;
-    if(H.fps_rect){const a=pt(H.fps_rect.top_left),b=pt(H.fps_rect.bottom_right);
-     unit=Math.abs(b.x-a.x)/112;}
-    if(F&&F.visible&&F.rect)fps={name:'fps counter',...css(F.rect)};
-    const gui=touch||!unit?[]:[['pause',92],['step',100],['record',84],['replay',84]].filter(([k])=>H[k]).map(([k,w])=>{const q=pt(H[k]);
-     return {name:k,left:q.x-w*unit/2,right:q.x+w*unit/2,top:q.y-12*unit,bottom:q.y+12*unit};});
-    const node=pt(C.toggle_screen);
-    // The game re-places when the touch status line resizes (ResizeObserver count): measure only a placement made
-    // after the latest resize, read in this same evaluation as the DOM.
-    const synced=!window.riderHudLayout||C.layout_seq===window.riderHudLayout.seq;
-    return {synced,layout_seq:C.layout_seq,canvas:{left:r.left,top:r.top,right:r.right,bottom:r.bottom},touch,clear:C.clear,panel_clear:C.panel_clear,open:C.open,
-     control:css(C.control),toggle:css(C.toggle),set:css(C.set),panel:C.panel?css(C.panel):null,toggle_node:node,
-     buttons:C.open?[css(C.reset),css(C.close),...C.rows.flatMap(x=>[css(x.minus),css(x.plus)])]:[],
-     blocked:(C.blocked||[]).map(css),dom,gui,fps,label:C.label};
+    const fps=F&&F.visible&&F.rect?{name:'fps counter',...css(F.rect)}:null;
+    const button=document.querySelector('#rider-playbar .pb-row [data-act="camera"]'),menu=document.querySelector('#rider-playbar .pb-campanel');
+    const open=!!C.open&&!menu.hidden;
+    const covered=open?[...menu.querySelectorAll('button')].filter(e=>{const b=e.getBoundingClientRect();
+     return document.elementFromPoint((b.left+b.right)/2,(b.top+b.bottom)/2)?.closest('button')!==e;}).map(e=>e.dataset.act):[];
+    return {view:{left:0,top:0,right:innerWidth,bottom:innerHeight},touch:!!window.riderMobile?.enabled,open,
+     control:button?box(button):null,row:box(document.querySelector('#rider-playbar .pb-row')),panel:open?box(menu):null,covered,dom,fps,label:C.label};
    });
    async function checkPlacement(p,label){
-    let s;
-    for(let i=0;;i++){
-     s=await placement(p);if(s.synced)break;
-     assert(i<20,label+': the camera control never re-placed after the status line resized');
-     await p.waitForFunction(()=>!window.riderHudLayout||window.riderCamera443.layout_seq===window.riderHudLayout.seq,null,{polling:20,timeout:5000});
-    }
-    const others=[...s.dom,...s.gui,...(s.fps?[s.fps]:[])];
-    assert.equal(s.clear,true,label+': no clear place for the camera control');
-    assert(inside(s.control,s.canvas),`${label}: control ${JSON.stringify(s.control)} leaves the canvas`);
-    for(const o of others)assert(!overlap(s.control,o),`${label}: camera control covers ${o.name} ${JSON.stringify(o)}`);
-    // The node really is where the game placed it.
-    const tc={x:(s.toggle.left+s.toggle.right)/2,y:(s.toggle.top+s.toggle.bottom)/2};
-    assert(Math.abs(tc.x-s.toggle_node.x)<=TOL_PX&&Math.abs(tc.y-s.toggle_node.y)<=TOL_PX,label+': Cam node is not at its published place');
-    // Every control found here independently is one the game keeps clear of.
-    for(const o of others)assert(s.blocked.some(b=>['left','top','right','bottom'].every(k=>Math.abs(b[k]-o[k])<=TOL_PX)),`${label}: the game does not avoid ${o.name}`);
-    const at={control:{left:s.control.left-s.canvas.left,top:s.control.top-s.canvas.top,width:s.control.right-s.control.left,height:s.control.bottom-s.control.top}};
+    const s=await placement(p);
+    const others=[...s.dom,...(s.fps?[s.fps]:[])];
+    assert(s.control,label+': no camera button in the play bar');
+    assert(inside(s.control,s.view),`${label}: camera button ${JSON.stringify(s.control)} leaves the view`);
+    for(const o of others)assert(!overlap(s.control,o),`${label}: camera button covers ${o.name} ${JSON.stringify(o)}`);
+    const at={control:{left:s.control.left,top:s.control.top,width:s.control.right-s.control.left,height:s.control.bottom-s.control.top}};
     if(s.open){
-     assert.equal(s.panel_clear,true,label+': no clear place for the open panel');
-     assert(inside(s.panel,s.canvas),`${label}: panel ${JSON.stringify(s.panel)} leaves the canvas`);
-     for(const o of [...others,{name:'camera control',...s.control}])assert(!overlap(s.panel,o),`${label}: open panel covers ${o.name} ${JSON.stringify(o)}`);
-     for(const b of s.buttons){
-      const hit=await p.evaluate(({x,y})=>document.elementFromPoint(x,y)?.tagName,{x:(b.left+b.right)/2,y:(b.top+b.bottom)/2});
-      assert.equal(hit,'CANVAS',label+': a DOM element covers a panel button');
-     }
-     at.panel={left:s.panel.left-s.canvas.left,top:s.panel.top-s.canvas.top,width:s.panel.right-s.panel.left,height:s.panel.bottom-s.panel.top};
+     assert(inside(s.panel,s.view),`${label}: menu ${JSON.stringify(s.panel)} leaves the view`);
+     for(const o of [...others,{name:'play bar row',...s.row}])assert(!overlap(s.panel,o),`${label}: camera menu covers ${o.name} ${JSON.stringify(o)}`);
+     assert.deepEqual(s.covered,[],label+': menu buttons covered');
+     at.panel={left:s.panel.left,top:s.panel.top,width:s.panel.right-s.panel.left,height:s.panel.bottom-s.panel.top};
     }
     at.avoided=others.map(o=>o.name);
     return at;
@@ -316,6 +294,7 @@ if(require.main===module){
     await waitTick(a.p,scn.ticks);const A=await traces(a.p);A.report=await result(a.p,scn);
     await a.p.screenshot({path:path.join(out,`cam443-${label}-a.png`)});await a.ctx.close();
     const t=await open(label+'-switch',scn.query);
+    await panel(t.p,true,label+' open menu');
     await waitTick(t.p,scn.toggleAt);
     const toggled=await command(t.p,'toggle',null,label+' Cam A -> B',{mode:'b'});
     const toggleSeq=toggled.settings_seq;
@@ -463,6 +442,7 @@ if(require.main===module){
     const c=await cam(p);
     assert.equal(c.forced,'b','?camera352=b not recognised by the HUD');
     assert.equal(c.control,false,'camera control shown although ?camera352 forces the mode');
+    assert.equal(await p.evaluate(()=>!!document.querySelector('#rider-playbar [data-act="camera"]')),false,'camera button shown although ?camera352 forces the mode');
     const frame=await p.evaluate(()=>window.riderCamera352Trace.at(-1));
     assert.equal(frame.mode,'b','?camera352=b does not force camera B');
     cases.camera352_forced={forced:c.forced,control:c.control,mode:frame.mode};
@@ -475,7 +455,7 @@ if(require.main===module){
     const session=await ctx.newCDPSession(p);
     async function touch(name,row,label,expect){
      const before=await cam(p);const pt=await centreOf(p,name,row);assert(pt,label+': nothing to touch');
-     assert.equal(await p.evaluate(({x,y})=>document.elementFromPoint(x,y)?.tagName,pt),'CANVAS',label+': DOM covers the target');
+     assert.equal(await p.evaluate(({x,y,sel})=>document.elementFromPoint(x,y)?.closest('button')===document.querySelector(sel),pt),true,label+': something covers the target');
      await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:pt.x,y:pt.y,id:1}]});
      try{await pointer.frames(p,{counter:FRAMES,label:label+' press'});}finally{await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
      await pointer.frames(p,{counter:FRAMES,label:label+' release'});
@@ -485,9 +465,9 @@ if(require.main===module){
     const closed=await checkPlacement(p,'phone closed');
     await record(p,true);
     const x0=await p.evaluate(()=>window.riderReplay.x);
-    await touch('toggle',null,'phone toggle',{mode:'b'});
     await touch('set',null,'phone open');
-    await p.waitForFunction(()=>window.riderCamera443.open&&window.riderCamera443.panel,null,{timeout:5000});
+    await p.waitForFunction(()=>window.riderCamera443.open&&!document.querySelector('#rider-playbar .pb-campanel').hidden,null,{timeout:5000});
+    await touch('toggle',null,'phone toggle',{mode:'b'});
     await pointer.frames(p,{counter:FRAMES,n:3,label:'phone panel settle'});
     const opened=await checkPlacement(p,'phone open');
     await p.screenshot({path:path.join(out,'cam443-phone-panel.png')});

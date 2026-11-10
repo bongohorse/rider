@@ -215,7 +215,7 @@ const ICONS = {
   warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
   check:'<path d="M5 12l5 5 9-10"/>', plus:'<path d="M12 5v14M5 12h14"/>',
-  speed:'<path d="M4 18a8 8 0 1116 0"/><path d="M12 18l4-6"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  speed:'<path d="M4 18a8 8 0 1116 0"/><path d="M12 18l4-6"/>', camera:'<rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8.5 7l1.5-3h4l1.5 3"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   checkpoint:'<path d="M6 21V4"/><path d="M6 4h12v8H6"/><path d="M10 4v8M14 4v8M6 8h12"/>',
   arrows:'<path d="M3 12h14M13 8l4 4-4 4M7 8l4 4-4 4"/>',
   weight:'<path d="M7 9h10l3 11H4z"/><circle cx="12" cy="6" r="2.5"/>',

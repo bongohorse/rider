@@ -40,20 +40,17 @@ function observe(){
  }
 }
 async function run(page,out,state){
- async function tap(name,key){
-  const pt=await page.evaluate(({name,key})=>{
-   const c=document.querySelector('canvas'),r=c.getBoundingClientRect(),s=window.riderCamera443;
-   const q=key?s.rows.find(x=>x.key===key).plus:s[name];
-   return {x:r.x+(q.x0+q.x1)/2/c.width*r.width,y:r.y+(1-(q.y0+q.y1)/2/c.height)*r.height};
-  },{name,key});
+ // #678: the camera is a play bar button and a kit menu (real mouse clicks on the DOM buttons).
+ async function tap(sel){
+  const pt=await page.evaluate(sel=>{const b=document.querySelector(sel).getBoundingClientRect();return {x:(b.left+b.right)/2,y:(b.top+b.bottom)/2};},sel);
   await pointer.tap(page,pt);
  }
- await page.waitForFunction(()=>window.riderCamera443?.set);
- await tap('set');await page.waitForFunction(()=>window.riderCamera443.open);
- for(let i=0;i<15;i++)await tap(null,'offset');
- for(let i=0;i<8;i++)await tap(null,'zoom');
+ await page.waitForFunction(()=>window.riderCamera443&&document.querySelector('#rider-playbar [data-act="camera"]'));
+ await tap('#rider-playbar [data-act="camera"]');await page.waitForFunction(()=>window.riderCamera443.open&&!document.querySelector('#rider-playbar .pb-campanel').hidden);
+ for(let i=0;i<15;i++)await tap('#rider-playbar [data-act="cam:step:offset:1"]');
+ for(let i=0;i<8;i++)await tap('#rider-playbar [data-act="cam:step:zoom:1"]');
  await page.waitForFunction(()=>window.riderCamera443.values.offset===150&&window.riderCamera443.values.zoom===1.4);
- await tap('close');
+ await tap('#rider-playbar [data-act="cam:close"]');
  // Follow the real moving vehicle: the overlap must be present in the screenshot.
  await page.keyboard.down('ArrowUp');
  let before,after,command;
