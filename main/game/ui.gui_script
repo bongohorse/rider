@@ -615,8 +615,8 @@ function update(self,dt)
                     if look.session and look.session.open then look.confirm();look.close() else msg.post('main:/loader#script','terrain_look_open') end
                 elseif a=='edit' then msg.post('main:/loader#script','editor_enter')
                 -- #678 Tuning panel (desktop HTML5): the same messages as the native panel's presses and sliders.
-                elseif type(a)=='string' and a:sub(1,5)=='tune:' and self.owner then
-                    local k,v=a:match('^tune:([%w_]+):(-?[%d%.e%-]+)$');v=tonumber(v)
+                elseif type(a)=='string' and a:sub(1,5)=='tune:' and self.owner and self.panel_open and self.tune_html then
+                    local k,v=a:match('^tune:([%w_]+):(-?[%d%.eE%-%+]+)$');v=tonumber(v)
                     if k and v and v==v then msg.post(self.owner,"tune",{key=k,value=v}) end
                 elseif a=='tune_grab' or a=='tune_release' then
                     self.tune_drag=a=='tune_grab'
@@ -736,7 +736,9 @@ function update(self,dt)
     if open~=self.panel_open or tune_html~=self.tune_html then
         if html5 then html5.run("document.body.classList.toggle('rider-tuning',"..tostring(open)..")") end
         if not open then cancel_drag(self) end
-        if not open and self.tune_drag then self.tune_drag=false;if self.owner then msg.post(self.owner,"ui_capture",{active=false}) end end
+        -- A drag ends when the panel closes or changes between native and HTML (no release would arrive).
+        if tune_html~=self.tune_html then cancel_drag(self) end
+        if (not open or tune_html~=self.tune_html) and self.tune_drag then self.tune_drag=false;if self.owner then msg.post(self.owner,"ui_capture",{active=false}) end end
         self.panel_open,self.tune_html=open,tune_html
         for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open and not tune_html) end
         gui.set_visible(self.metrics[6],open and not tune_html)

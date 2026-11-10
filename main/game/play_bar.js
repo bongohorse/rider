@@ -124,7 +124,7 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
     const tr = e.target.closest?.('.pb-tunepanel .tr'); if (!tr || e.button !== 0) return;
     e.preventDefault(); tr.setPointerCapture?.(e.pointerId); tuneDrag = tr; queue.push('tune_grab'); tuneAt(tr, e.clientX);
   });
-  root.addEventListener('pointermove', e => { if (tuneDrag) tuneAt(tuneDrag, e.clientX); });
+  root.addEventListener('pointermove', e => { if (tuneDrag && window.riderTuning) tuneAt(tuneDrag, e.clientX); });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) root.addEventListener(ev, () => { if (tuneDrag) { tuneDrag = null; queue.push('tune_release'); tuneKey = ''; canvasFocus(); } });
   // The 3D panel's sliders: a drag previews (look_drag, coalesced), the release commits (look_drop).
   root.addEventListener('pointerdown', e => { if (e.target.matches?.('.pb-lookpanel input[type=range]')) lookSliding = e.target; }, true);
@@ -167,10 +167,16 @@ function tuneAt(tr, x) {
 }
 function tunePanel() {
   const T = window.riderTuning || false, el = root.querySelector('.pb-tunepanel'), row = root.querySelector('.pb-row');
+  if (!T && tuneDrag) tuneDrag = null; // closed mid-drag: the game already released its capture
   if (tuneDrag) return;
   const rr = row.getBoundingClientRect();
-  const k = T ? JSON.stringify([T, rr.bottom, rr.right, innerWidth, innerHeight]) : '';
-  if (k === tuneKey) return; tuneKey = k;
+  // The head and physics lines change every frame: they update in place, not through a rebuild.
+  const k = T ? JSON.stringify([Object.assign({}, T, {head: !!T.head, physics: '', physics_over: false}), rr.bottom, rr.right, innerWidth, innerHeight]) : '';
+  if (k === tuneKey) {
+    if (T) { const h = el.querySelector('.head'); if (h) h.textContent = T.head || ''; const ph = el.querySelector('.phys'); if (ph) { ph.textContent = T.physics || ''; ph.classList.toggle('over', !!T.physics_over); } }
+    return;
+  }
+  tuneKey = k;
   el.hidden = !T;
   if (!T) return;
   const top = rr.bottom + 8;
@@ -183,13 +189,13 @@ function tunePanel() {
     + '<div class="note">' + UI.esc(T.note || '') + '</div>'
     + '<div class="two">' + b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
       + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"') + '</div>'
-    + (T.head ? '<div class="note">' + UI.esc(T.head) + '</div>' : '')
+    + (T.head ? '<div class="note head">' + UI.esc(T.head) + '</div>' : '')
     + (T.rows || []).map(r => {
       const ratio = Math.max(0, Math.min(1, (r.value - r.min) / (r.max - r.min)));
       return `<div class="ts"><span>${UI.esc(r.label)}</span><div class="tr" data-tkey="${UI.esc(r.key)}" role="slider" aria-label="${UI.esc(r.label)}" aria-valuemin="${r.min}" aria-valuemax="${r.max}" aria-valuenow="${r.value}"><i style="left:${ratio * 100}%"></i></div><output>${Number(r.value).toFixed(2)}</output></div>`;
     }).join('')
     + '<div class="two">' + b('tune_audio', {label: T.audio || 'Sound [M]', title: 'Sound [M]'}) + b('tune_copy', {icon: 'copy', label: 'Copy [F]', title: 'Copy report [F]'}) + '</div>'
-    + '<div class="note' + (T.physics_over ? ' over' : '') + '">' + UI.esc(T.physics || '') + '</div>';
+    + '<div class="note phys' + (T.physics_over ? ' over' : '') + '">' + UI.esc(T.physics || '') + '</div>';
   // The published test points follow the panel at once (the game republishes them through the same functions).
   if (Array.isArray(window.riderControls)) window.riderControls = controlsGeometry(window.riderControls);
   if (window.riderHud) window.riderHud = hudGeometry(window.riderHud);
