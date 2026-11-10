@@ -525,8 +525,10 @@ function on_message(self,id,data,sender)
         gui.set_text(self.audio_label,data.audio_muted and "Muted [M]" or data.audio_started and string.format("%.2fx [M]",data.audio_pitch) or "[M]")
         if html5 then
             html5.run("window.riderTelemetry = "..json.encode(data))
-            html5.run("window.riderControls = "..json.encode(controls.geometry(self.controls)))
-            html5.run("window.riderDragging = "..tostring(self.controls.drag~=nil))
+            -- #678: with the play bar's Tuning panel the slider ends are its DOM tracks (same GUI pixel convention).
+            local geo=json.encode(controls.geometry(self.controls))
+            html5.run("window.riderControls = "..(self.tune_html and "window.riderPlayBar.controlsGeometry("..geo..")" or geo))
+            html5.run("window.riderDragging = "..tostring(self.controls.drag~=nil or self.tune_drag==true))
         end
         gui.set_text(self.crash_label,"Crash "..(data.crash_enabled and "ON" or "OFF").." [C]")
         gui.set_text(self.head,"Head: "..tostring(data.head_contact))
@@ -612,6 +614,18 @@ function update(self,dt)
                     local look=require('main.editor.editor_look')
                     if look.session and look.session.open then look.confirm();look.close() else msg.post('main:/loader#script','terrain_look_open') end
                 elseif a=='edit' then msg.post('main:/loader#script','editor_enter')
+                -- #678 Tuning panel (desktop HTML5): the same messages as the native panel's presses and sliders.
+                elseif type(a)=='string' and a:sub(1,5)=='tune:' and self.owner and self.panel_open and self.tune_html then
+                    local k,v=a:match('^tune:([%w_]+):(-?[%d%.eE%-%+]+)$');v=tonumber(v)
+                    if k and v and v==v then msg.post(self.owner,"tune",{key=k,value=v}) end
+                elseif a=='tune_grab' or a=='tune_release' then
+                    self.tune_drag=a=='tune_grab'
+                    if self.owner then msg.post(self.owner,"ui_capture",{active=self.tune_drag or self.feedback_open or self.feedback_modal or false}) end
+                elseif type(a)=='string' and a:sub(1,12)=='tune_preset:' and self.owner then msg.post(self.owner,"select_preset",{key=a:sub(13)})
+                elseif a=='tune_crash' then msg.post("gym:/owner#script","crash_toggle")
+                elseif a=='tune_struts' then msg.post("gym:/owner#script","struts_toggle")
+                elseif a=='tune_audio' and self.owner then msg.post(self.owner,"audio_mute")
+                elseif a=='tune_copy' then copy_feedback(self)
                 -- The camera menu: cam:open, cam:close, cam:toggle, cam:reset, cam:step:<key>:<dir>.
                 elseif type(a)=='string' and a:sub(1,4)=='cam:' then
                     local cmd,k,d=a:match('^cam:(%a+):?([%w_]*):?(-?%d*)$')
@@ -717,13 +731,34 @@ function update(self,dt)
     local compact=mobile.compact()
     self.compact=compact
     local open=mobile.enabled() and not compact or self.tuning_open
-    if open~=self.panel_open then
+    -- #678: on desktop HTML5 the play bar draws Tuning (riderTuning); the native panel stays for touch and non-HTML5.
+    local tune_html=self.playbar and not mobile.enabled() or false
+    if open~=self.panel_open or tune_html~=self.tune_html then
         if html5 then html5.run("document.body.classList.toggle('rider-tuning',"..tostring(open)..")") end
         if not open then cancel_drag(self) end
-        self.panel_open=open
-        for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open) end
-        gui.set_visible(self.metrics[6],open)
+        -- A drag ends when the panel closes or changes between native and HTML (no release would arrive).
+        if tune_html~=self.tune_html then cancel_drag(self) end
+        if (not open or tune_html~=self.tune_html) and self.tune_drag then self.tune_drag=false;if self.owner then msg.post(self.owner,"ui_capture",{active=false}) end end
+        self.panel_open,self.tune_html=open,tune_html
+        for _,node in ipairs(self.panel_nodes) do gui.set_visible(node,open and not tune_html) end
+        gui.set_visible(self.metrics[6],open and not tune_html)
     end
+    if tune_html then
+        local t=false
+        if open then
+            local rows={}
+            for _,row in ipairs(self.controls.rows) do
+                rows[#rows+1]={key=row.spec.key,label=row.spec.label,value=row.value*(row.spec.sign or 1),min=row.spec.min,max=row.spec.max,sign=row.spec.sign or 1}
+            end
+            local b=telemetry.budget
+            local d=self.latest or {}
+            t={preset=self.preset or 'a',presets=feel.order,note=gui.get_text(self.preset_note),crash=gui.get_text(self.crash_label),struts=gui.get_text(self.struts_label),
+                head=gui.get_text(self.head),audio=gui.get_text(self.audio_label),rows=rows,physics=gui.get_text(self.metrics[6]),
+                physics_over=d.physics_ms and telemetry.over(d.physics_ms,b.physics_ms_max) or false}
+        end
+        local encoded=json.encode(t)
+        if encoded~=self.tune_published then self.tune_published=encoded;html5.run('window.riderTuning='..encoded) end
+    elseif self.tune_published then self.tune_published=nil;html5.run('window.riderTuning=false') end
     -- #443: a resized touch status line re-places the camera control this frame (one counter read, no layout query).
     if html5 and enabled then
         local seq=tonumber(html5.run("window.riderHudLayout?window.riderHudLayout.watch():0"))
@@ -759,10 +794,10 @@ function update(self,dt)
         end
         local c=gui.get_color(self.metrics[4])
         html5.run("window.riderCompact = "..tostring(compact))
-        html5.run("window.riderHud = "..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
+        html5.run("window.riderHud = "..(self.tune_html and "window.riderPlayBar.hudGeometry(" or "(")..json.encode({tuning=open,help=self.help_open or false,fps_color={c.x,c.y,c.z},crash=point(self.crash_button),presets=(function() local r={};for key,box in pairs(self.presets) do r[key]=point(box) end;return r end)(),
             pause=not self.playbar and point(self.time_buttons.pause.box) or nil,step=not self.playbar and point(self.time_buttons.step.box) or nil,struts=point(self.struts_button),struts_label=gui.get_text(self.struts_label),preset_note=gui.get_text(self.preset_note),
             record=not self.playbar and point(self.replay_buttons.record.box) or nil,replay=not self.playbar and point(self.replay_buttons.replay.box) or nil,fps=point(self.fps_hit),
-            fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}}))
+            fps_rect={top_left=point(self.fps_corners[1]),bottom_right=point(self.fps_corners[2])}})..")")
     end
     if html5 then
         local status,visible=feedback.state()
@@ -834,7 +869,7 @@ function on_input(self,id,action)
         if gui.pick_node(self.tuning_button,action.x,action.y) then toggle_tuning(self);return true end
         if gui.pick_node(self.help_button,action.x,action.y) then toggle_help(self);return true end
     end
-    if not self.panel_open then return end
+    if not self.panel_open or self.tune_html then return end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.feedback_button,action.x,action.y) then copy_feedback(self);return true end
     if controls.input(self.controls,id,action,self.owner) then return true end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.audio_button,action.x,action.y) then msg.post(self.owner,"audio_mute");return true end

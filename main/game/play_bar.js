@@ -22,7 +22,7 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="pb-lookpanel" hidden></div>'
+    + '<div class="pb-lookpanel" hidden></div><div class="pb-tunepanel" hidden></div>'
     + '<div class="float pb-debug" hidden></div><div class="pb-campanel" hidden></div>'
     // The level line has its own box above the readouts card; neither wraps.
     + '<div class="pb-left"><div class="float pb-map" hidden></div>'
@@ -94,6 +94,25 @@ function mount() {
 #rider-playbar .pb-lookpanel .lk{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;font:700 13px var(--body);color:var(--text);white-space:nowrap}
 #rider-playbar .pb-lookpanel .lk output{font-variant-numeric:tabular-nums;color:var(--text)}#rider-playbar .pb-lookpanel .lk input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
 #rider-playbar .pb-lookpanel .lk.dim{opacity:.5}#rider-playbar .pb-lookpanel .ft{display:flex;gap:6px}#rider-playbar .pb-lookpanel .ft .b{flex:1}
+#rider-playbar .pb-tunepanel{position:fixed;z-index:1101;width:min(360px,calc(100vw - 16px));overflow-y:auto;box-sizing:border-box;padding:10px;
+ display:flex;flex-direction:column;gap:7px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overscroll-behavior:contain}
+#rider-playbar .pb-tunepanel[hidden]{display:none}
+#rider-playbar .pb-tunepanel .hd{display:flex;align-items:center;gap:8px;font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-tunepanel .hd svg{width:20px;height:20px}
+#rider-playbar .pb-tunepanel .hd span{flex:1}#rider-playbar .pb-tunepanel .b{--h:36px;font:800 12.5px var(--body);padding:0 8px}
+#rider-playbar .pb-tunepanel .ps{display:grid;grid-template-columns:repeat(auto-fit,minmax(36px,1fr));gap:5px}#rider-playbar .pb-tunepanel .ps .b{width:100%}
+#rider-playbar .pb-tunepanel .b.on{--c:var(--accent);background:var(--c);color:var(--ink)}
+#rider-playbar .pb-tunepanel .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}#rider-playbar .pb-tunepanel .two .b{width:100%}
+#rider-playbar .pb-tunepanel .note{font:700 12px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#rider-playbar .pb-tunepanel .note.over{color:var(--danger)}
+#rider-playbar .pb-tunepanel .ts{display:grid;grid-template-columns:70px 1fr 62px;gap:8px;align-items:center;font:700 12.5px var(--body);color:var(--text);white-space:nowrap}
+#rider-playbar .pb-tunepanel .ts output{font-variant-numeric:tabular-nums;text-align:right}
+#rider-playbar .pb-tunepanel .rows{display:grid;gap:4px}
+/* Short views: presets in the title row, the four tools in one row, the sliders in two columns. */
+#rider-playbar .pb-tunepanel.compact{width:min(780px,calc(100vw - 16px));gap:6px;padding:8px}#rider-playbar .pb-tunepanel.compact .b{--h:32px}
+#rider-playbar .pb-tunepanel.compact .hd .ps{flex:0 1 300px}#rider-playbar .pb-tunepanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:18px;gap:2px 18px}
+#rider-playbar .pb-tunepanel.compact .two{grid-template-columns:repeat(4,1fr)}#rider-playbar .pb-tunepanel.compact .ts{grid-template-columns:64px 1fr 54px}
+#rider-playbar .pb-tunepanel .tr{position:relative;height:22px;cursor:pointer;touch-action:none}
+#rider-playbar .pb-tunepanel .tr::before{content:'';position:absolute;left:0;right:0;top:8px;height:6px;border-radius:3px;background:var(--field);border:2px solid var(--ink);box-sizing:border-box}
+#rider-playbar .pb-tunepanel .tr i{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--accent);border:2px solid var(--ink);box-sizing:border-box;pointer-events:none}
 body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
@@ -105,6 +124,13 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
   // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
   document.head.append(style); (document.getElementById('app-container') || document.body).append(root); document.body.classList.add('rider-playbar');
   root.addEventListener('contextmenu', e => e.preventDefault());
+  // Tuning sliders: the track maps the pointer linearly (like the native track); a drag captures the game's input.
+  root.addEventListener('pointerdown', e => {
+    const tr = e.target.closest?.('.pb-tunepanel .tr'); if (!tr || e.button !== 0) return;
+    e.preventDefault(); tr.setPointerCapture?.(e.pointerId); tuneDrag = tr; queue.push('tune_grab'); tuneAt(tr, e.clientX);
+  });
+  root.addEventListener('pointermove', e => { if (tuneDrag && window.riderTuning) tuneAt(tuneDrag, e.clientX); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) root.addEventListener(ev, () => { if (tuneDrag) { tuneDrag = null; queue.push('tune_release'); tuneKey = ''; canvasFocus(); } });
   // The 3D panel's sliders: a drag previews (look_drag, coalesced), the release commits (look_drop).
   root.addEventListener('pointerdown', e => { if (e.target.matches?.('.pb-lookpanel input[type=range]')) lookSliding = e.target; }, true);
   root.addEventListener('input', e => {
@@ -118,6 +144,7 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
   for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, () => { if (lookSliding) { lookDrop(lookSliding); canvasFocus(); } }, true);
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
+    if (b.dataset.tune) { e.preventDefault(); queue.push(b.dataset.tune); canvasFocus(); return; }
     if (b.dataset.look) { e.preventDefault(); lookQueue.push(b.dataset.look); lookKey = ''; canvasFocus(); return; }
     const act = b.dataset.act; if (!act) return;
     e.preventDefault();
@@ -132,6 +159,74 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
     if (camState()?.open) queue.push('cam:close');
   }, true);
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (menuOpen) { menuOpen = false; render(); } if (camState()?.open) queue.push('cam:close'); });
+}
+// Tuning (Claudio 2026-11-10: modernised like the camera menu): desktop HTML5 only; touch keeps its details panel.
+let tuneDrag = null, tuneKey = '';
+function tuneAt(tr, x) {
+  const b = tr.getBoundingClientRect(), row = (window.riderTuning?.rows || []).find(r => r.key === tr.dataset.tkey); if (!row || !(b.width > 0)) return;
+  const ratio = Math.max(0, Math.min(1, (x - b.left) / b.width)), display = row.min + ratio * (row.max - row.min);
+  tr.querySelector('i').style.left = ratio * 100 + '%';
+  const out = tr.parentNode.querySelector('output'); if (out) out.textContent = display.toFixed(2);
+  const text = 'tune:' + row.key + ':' + (display * (row.sign || 1)), last = queue[queue.length - 1];
+  if (last && last.startsWith('tune:' + row.key + ':')) queue[queue.length - 1] = text; else queue.push(text);
+}
+function tunePanel() {
+  const T = window.riderTuning || false, el = root.querySelector('.pb-tunepanel'), row = root.querySelector('.pb-row');
+  if (!T && tuneDrag) tuneDrag = null; // closed mid-drag: the game already released its capture
+  if (tuneDrag) return;
+  const rr = row.getBoundingClientRect();
+  // The head and physics lines change every frame: they update in place, not through a rebuild.
+  const k = T ? JSON.stringify([Object.assign({}, T, {head: !!T.head, physics: '', physics_over: false}), rr.bottom, rr.right, innerWidth, innerHeight]) : '';
+  if (k === tuneKey) {
+    if (T) { const h = el.querySelector('.head'); if (h) h.textContent = T.head || ''; const ph = el.querySelector('.phys'); if (ph) { ph.textContent = T.physics || ''; ph.classList.toggle('over', !!T.physics_over); } }
+    return;
+  }
+  tuneKey = k;
+  el.hidden = !T;
+  if (!T) return;
+  const top = rr.bottom + 8;
+  el.style.top = top + 'px'; el.style.right = Math.max(8, Math.round(innerWidth - rr.right)) + 'px';
+  el.style.maxHeight = Math.max(88, innerHeight - top - 8) + 'px';
+  const b = (cmd, o) => UI.button(Object.assign({d: {tune: cmd}}, o));
+  const on = t => / ON\b/.test(t || '');
+  const compact = innerHeight < 640;
+  el.classList.toggle('compact', compact);
+  const presets = '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>';
+  const tools = b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
+    + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"');
+  const footer = b('tune_audio', {label: T.audio || 'Sound [M]', title: 'Sound [M]'}) + b('tune_copy', {icon: 'copy', label: 'Copy [F]', title: 'Copy report [F]'});
+  const sliders = '<div class="rows">' + (T.rows || []).map(r => {
+    const ratio = Math.max(0, Math.min(1, (r.value - r.min) / (r.max - r.min)));
+    return `<div class="ts"><span>${UI.esc(r.label)}</span><div class="tr" data-tkey="${UI.esc(r.key)}" role="slider" aria-label="${UI.esc(r.label)}" aria-valuemin="${r.min}" aria-valuemax="${r.max}" aria-valuenow="${r.value}"><i style="left:${ratio * 100}%"></i></div><output>${Number(r.value).toFixed(2)}</output></div>`;
+  }).join('') + '</div>';
+  const head = '<div class="note head">' + UI.esc(T.head || '') + '</div>', phys = '<div class="note phys' + (T.physics_over ? ' over' : '') + '">' + UI.esc(T.physics || '') + '</div>';
+  el.innerHTML = '<div class="hd">' + UI.icon('speed') + '<span>Tuning</span>' + (compact ? presets : '') + UI.button({icon: 'close', title: 'Close tuning', d: {act: 'tuning'}}) + '</div>'
+    + (compact ? '<div class="two">' + tools + footer + '</div><div class="note">' + UI.esc(T.note || '') + '</div>' + sliders + phys
+      : presets + '<div class="note">' + UI.esc(T.note || '') + '</div><div class="two">' + tools + '</div>' + (T.head ? head : '') + sliders + '<div class="two">' + footer + '</div>' + phys);
+  // The published test points follow the panel at once (the game republishes them through the same functions).
+  if (Array.isArray(window.riderControls)) window.riderControls = controlsGeometry(window.riderControls);
+  if (window.riderHud) window.riderHud = hudGeometry(window.riderHud);
+}
+// GUI screen pixels (canvas pixels, origin bottom left) of a DOM point, for the tests' riderControls/riderHud points.
+function guiPoint(x, y) {
+  const cv = document.querySelector('canvas'), r = cv?.getBoundingClientRect(); if (!r || !(r.width > 0)) return null;
+  return {x: (x - r.left) * cv.width / r.width, y: (r.bottom - y) * cv.height / r.height};
+}
+function controlsGeometry(rows) {
+  const el = root?.querySelector('.pb-tunepanel'); if (!el || el.hidden) return rows;
+  return rows.map(row => {
+    const tr = el.querySelector(`.tr[data-tkey="${row.key}"]`); if (!tr) return row;
+    const b = tr.getBoundingClientRect(), y = (b.top + b.bottom) / 2;
+    return Object.assign({}, row, {left: guiPoint(b.left, y) || row.left, right: guiPoint(b.right, y) || row.right});
+  });
+}
+function hudGeometry(h) {
+  // The game's tuning flag waits until the panel is drawn, so its points are the panel's.
+  const el = root?.querySelector('.pb-tunepanel'); if (!el || el.hidden) return h && h.tuning ? Object.assign({}, h, {tuning: false}) : h;
+  const centre = e => { if (!e) return null; const b = e.getBoundingClientRect(); return guiPoint((b.left + b.right) / 2, (b.top + b.bottom) / 2); };
+  const presets = {};
+  for (const k of Object.keys(h.presets || {})) presets[k] = centre(el.querySelector(`[data-preset="${k}"]`)) || h.presets[k];
+  return Object.assign({}, h, {presets, crash: centre(el.querySelector('[data-tool="crash"]')) || h.crash, struts: centre(el.querySelector('[data-tool="struts"]')) || h.struts});
 }
 const lookQueue = [];
 let lookSliding = null, lookKey = '';
@@ -171,6 +266,9 @@ function run(act) {
   if (act === 'freecam') { window.riderFreeCam?.set(!window.riderFreeCam.on); debugKey = ''; canvasFocus(); return; }
   // One panel at a time: the camera menu and the 3D look close each other.
   if (act === '3d' && camState()?.open) queue.push('cam:close');
+  // Tuning (desktop) also takes the place of the camera menu and the 3D look, and they of it.
+  if (act === 'tuning' && !touch() && !window.riderTuning) { if (camState()?.open) queue.push('cam:close'); if (window.riderLook3D) lookQueue.push('look_close'); }
+  if ((act === 'camera' || act === '3d') && !touch() && window.riderTuning) queue.push('tuning');
   if (act === 'camera' && window.riderLook3D && !camState()?.open) lookQueue.push('look_close');
   if (act === 'camera') { menuOpen = false; if (!camState()?.open) window.riderMobile?.closePanels?.(); queue.push('cam:open'); canvasFocus(); return; }
   if (act === 'cam:none') return;
@@ -179,7 +277,7 @@ function run(act) {
 }
 function render() {
   if (!root) mount();
-  strip(); debugGroup(); card(); camPanel(); lookPanel();
+  strip(); debugGroup(); card(); camPanel(); lookPanel(); tunePanel();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -365,5 +463,5 @@ function camPanel() {
 function take() { return JSON.stringify(queue.splice(0)); }
 // 3D look presses for main/editor/editor.gui_script (its own Lua state owns the look session).
 function takeLook() { return JSON.stringify(lookQueue.splice(0)); }
-window.riderPlayBar = {render, take, takeLook, get open() { return menuOpen; }};
+window.riderPlayBar = {render, take, takeLook, controlsGeometry, hudGeometry, get open() { return menuOpen; }};
 })();
