@@ -109,6 +109,9 @@ const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),
    checkpoint('start:coin_editor');
    await require('../gameplay/check_coin_editor.cjs')(h);
    checkpoint('done:coin_editor');
+   checkpoint('start:coin_path_editor');
+   await require('../gameplay/check_coin_path_editor.cjs')(h);
+   checkpoint('done:coin_path_editor');
    checkpoint('start:drop_editor');
    await require('../gameplay/check_drop_editor.cjs')(h);
    checkpoint('done:drop_editor');
