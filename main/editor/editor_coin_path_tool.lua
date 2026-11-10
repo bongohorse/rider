@@ -23,7 +23,11 @@ local function commit(fn)
     if not ok then editor.message=err or 'Edit refused' end
     return ok
 end
-function M.path() return M.active and P.find(editor.doc.editor,M.active) end
+-- The active path belongs to one opened document; another document (open, new, import) forgets it.
+function M.path()
+    if M.opened~=editor.opened then M.active,M.drag,M.arm,M.opened=nil,nil,nil,editor.opened end
+    return M.active and P.find(editor.doc.editor,M.active)
+end
 -- The points of the path as shown (with a running drag or the path being drawn).
 function M.shown()
     if M.arm and M.hover then return {M.arm,{(M.arm[1]+M.hover[1])/2,(M.arm[2]+M.hover[2])/2},M.hover},true end
@@ -48,6 +52,7 @@ local function nearest_segment(points,p,tol)
     return bi
 end
 function M.press(p,tol,alt)
+    M.drag=nil;M.path()
     local e=editor.doc.editor
     if M.arm then
         local a=M.arm;M.arm=nil
@@ -80,8 +85,11 @@ function M.press(p,tol,alt)
     M.active=nil;M.arm={p[1],p[2]};M.hover={p[1],p[2]}
     editor.message='Move to lay the coins, click to set the end coin. Esc cancels.';editor.touch()
 end
-function M.move(p)
+-- Plain hover (no button) only moves the preview end; a drag whose release was lost never follows it.
+function M.hover_at(p) M.hover={p[1],p[2]};editor.touch() end
+function M.move(p,held)
     M.hover={p[1],p[2]}
+    if M.drag and held==false then M.drag=nil end
     if M.drag then M.drag.points[M.drag.index]={p[1],p[2]};M.drag.moved=true end
     editor.touch()
 end
@@ -100,7 +108,7 @@ end
 -- Typed - and + change the spacing of the active path (any keyboard layout).
 function M.text(t)
     local path=M.path()
-    if not path or (t~='-' and t~='+') then return false end
+    if not path or M.drag or (t~='-' and t~='+') then return false end
     local s=math.max(P.MIN_SPACING,math.min(P.MAX_SPACING,path.spacing+(t=='+' and M.STEP or -M.STEP)))
     if s~=path.spacing then commit(function(x) return P.set(x,path.id,nil,s,new_id,doc.pickup_id,MAX) end) end
     return true

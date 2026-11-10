@@ -2279,7 +2279,7 @@ function on_input(self,action_id,action)
     if action_id==nil then
         -- A fence being drawn follows the cursor before its second click.
         if editor.tool=='decoration' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then decoration_tool.hover_at(p) end end
-        if editor.tool=='coin_path' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then coin_tool.move(snap(self,p)) end end
+        if editor.tool=='coin_path' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then coin_tool.hover_at(snap(self,p)) end end
         if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
         else cursor(self,action);set_hover(self,{}) end
         return true
@@ -2306,7 +2306,7 @@ function on_input(self,action_id,action)
         if not editor_ui.area(self.ui,action) then
             canvas_move(self,action)
             if editor.tool=='decoration' then local p=cursor(self,action);if p then decoration_tool.move(p) end end
-            if editor.tool=='coin_path' then local p=cursor(self,action);if p then coin_tool.move(snap(self,p)) end end
+            if editor.tool=='coin_path' then local p=cursor(self,action);if p then coin_tool.move(snap(self,p),not action.released) end end
         end
         return true
     end
@@ -2346,7 +2346,7 @@ function on_input(self,action_id,action)
     -- "Sure? Make smooth" (LE5d) belongs to the click right after it: any key disarms it.
     self.confirm_bulk=nil
     if editor.conflict then editor.message="Choose how to open this level first.";return true end
-    if self.drag and action_id~=hash("editor_cancel") then return true end
+    if (self.drag or coin_tool.drag) and action_id~=hash("editor_cancel") then return true end
     if action_id==hash("editor_toggle") then play(self)
     elseif action_id==hash("editor_play") then
         -- Enter first completes a piece being drawn; otherwise it is Play.
