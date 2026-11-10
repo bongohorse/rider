@@ -22,7 +22,9 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="float pb-debug" hidden></div>';
+    + '<div class="float pb-debug" hidden></div>'
+    + '<div class="float pb-card" hidden><b class="pb-speed"></b><span class="pb-travel"><i class="pb-dot"></i>L <i class="pb-dot"></i>R <em></em></span>'
+    + '<span class="pb-station"></span><span class="pb-result"></span><span class="pb-replay"></span></div>';
   const style = document.createElement('style');
   style.textContent = `#rider-playbar .pb-row{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:1100;gap:5px;padding:5px}
 #rider-playbar .pb-row .b{--h:44px;min-width:44px}
@@ -58,6 +60,11 @@ function mount() {
 #rider-playbar .pb-reason{color:var(--muted)}
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
+#rider-playbar .pb-card{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
+ flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;max-width:max(160px,min(360px,calc(50vw - 240px)));font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+#rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
+#rider-playbar .pb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#59636e;margin:0 3px 0 0;vertical-align:middle}#rider-playbar .pb-dot.on{background:var(--go)}
+#rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-station{color:var(--text)}#rider-playbar .pb-replay{color:#9ae0ff}
 body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
@@ -94,7 +101,7 @@ function run(act) {
 }
 function render() {
   if (!root) mount();
-  strip(); debugGroup();
+  strip(); debugGroup(); card();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -223,6 +230,22 @@ function debugGroup() {
     + (show.step ? b('step', 'speed', 'Speed ' + (time.step || 1) + 'x [X]', 'Speed (slow motion) [X]') : '')
     + (show.rec ? b('record', 'history', 'Record [B]', 'Record run [B]') + b('replay', 'play', 'Replay [G]', 'Replay run [G]') : '')
     + (show.fc ? b('freecam', 'hand', fc.on ? 'Free cam ON [O]' : 'Free cam [O]', 'Free camera [O]', {on: fc.on}) : '');
+}
+// Slice 3b: the desktop debug card (speed, suspension and wheel contact, station, result, replay), from riderDebugCard.
+let cardKey = '';
+function card() {
+  const c = window.riderDebugCard || false, el = root.querySelector('.pb-card');
+  const k = JSON.stringify(c);
+  if (k === cardKey) return; cardKey = k;
+  el.hidden = !c;
+  if (!c) return;
+  el.querySelector('.pb-speed').textContent = c.speed || '';
+  const dots = el.querySelectorAll('.pb-dot');
+  dots.forEach((d, i) => d.classList.toggle('on', !!(c.contact || [])[i]));
+  el.querySelector('.pb-travel em').textContent = c.travel || '';
+  for (const [cls, v] of [['station', c.station], ['result', c.result], ['replay', c.replay]]) {
+    const s = el.querySelector('.pb-' + cls); s.textContent = v || ''; s.hidden = !v;
+  }
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
