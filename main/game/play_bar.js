@@ -61,7 +61,8 @@ function mount() {
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
 #rider-playbar .pb-card{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
- flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;max-width:max(160px,min(360px,calc(50vw - 240px)));font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+ flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;width:220px;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+/* A fixed width: longer lines wrap, so the camera control placed beside it does not move while text changes. */
 #rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
 #rider-playbar .pb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#59636e;margin:0 3px 0 0;vertical-align:middle}#rider-playbar .pb-dot.on{background:var(--go)}
 #rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-station{color:var(--text)}#rider-playbar .pb-replay{color:#9ae0ff}
