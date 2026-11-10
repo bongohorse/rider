@@ -43,7 +43,7 @@ return out;};
 L.watch=()=>{const e=document.querySelector('#rider-mobile .readout');
 if(e!==L.el){if(L.el&&ro)ro.unobserve(L.el);L.el=e;if(e&&ro)ro.observe(e);L.seq++;}return L.seq;};
 L.query=()=>JSON.stringify({seq:L.watch(),controls:rects('button,select,input,textarea,a[href],[role=button],[data-command]'),
-readouts:rects('#rider-mobile .readout,#rider-playbar .pb-strip,#rider-playbar .pb-progress')});})()]]
+readouts:rects('#rider-mobile .readout,#rider-playbar .pb-strip,#rider-playbar .pb-progress,#rider-playbar .pb-card')});})()]]
 -- Visible screen area (safe area where the platform reports one), GUI screen pixels.
 local function fps_area()
     local w,h=window.get_size()
@@ -351,8 +351,10 @@ function init(self)
         self.metrics[i]=n
     end
     self.contact_dots={icon(32,477,"dot","left_top",6),icon(94,477,"dot","left_top",6)}
+    self.contact_labels={}
     for _,x in ipairs({12,74}) do
         local n=layout.text(vmath.vector3(x,477,0),x==12 and "L" or "R","left_top")
+        self.contact_labels[#self.contact_labels+1]=n
         gui.set_font(n,"default");gui.set_pivot(n,gui.PIVOT_W);gui.set_scale(n,vmath.vector3(0.48,0.48,1))
     end
     gui.set_visible(self.metrics[5],false);gui.set_visible(self.metrics[6],false)
@@ -668,6 +670,20 @@ function update(self,dt)
         gui.set_visible(self.station_next,false);gui.set_visible(self.station_next_label,false)
         local terminal=self.run_ui.data.state=='finished' or self.run_ui.data.state=='failed'
         if terminal then gui.set_visible(self.time_buttons.pause.box,false);gui.set_visible(self.time_buttons.pause.label,false) end
+    end
+    if self.playbar then
+        -- #678 slice 3b: on desktop the play bar's debug card shows these readouts; the native texts stay the fallback.
+        local card=false
+        if not enabled and not self.editing then
+            local function line(n) return gui.get_visible(n) and gui.get_text(n)~="" and gui.get_text(n) or nil end
+            local t=self.latest or {}
+            card={speed=gui.get_text(self.metrics[1]),travel=gui.get_text(self.metrics[3]),
+                contact={t.contact1==true,t.contact2==true},station=line(self.station),result=line(self.station_result),replay=line(self.replay_line)}
+        end
+        for _,n in ipairs({self.metrics[1],self.metrics[3],self.station,self.station_result,self.replay_line,
+            self.contact_dots[1],self.contact_dots[2],self.contact_labels[1],self.contact_labels[2]}) do gui.set_visible(n,card==false and not enabled) end
+        local encoded=json.encode(card)
+        if encoded~=self.card_published then self.card_published=encoded;html5.run('window.riderDebugCard='..encoded) end
     end
     self.fuel_flash=math.max(0,(self.fuel_flash or 0)-dt)
     run_ui.show_fuel(self.run_ui,self.fuel_data,enabled,self.fuel_flash>0 and self.fuel_gain or nil)
