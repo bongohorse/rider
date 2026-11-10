@@ -22,7 +22,7 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="float pb-debug" hidden></div><div class="pb-cam" inert aria-hidden="true"></div>'
+    + '<div class="float pb-debug" hidden></div><div class="pb-cam" aria-hidden="true"></div>'
     + '<div class="float pb-card" hidden><b class="pb-speed"></b><span class="pb-travel"><i class="pb-dot"></i>L <i class="pb-dot"></i>R <em></em></span>'
     + '<span class="pb-station"></span><span class="pb-result"></span><span class="pb-replay"></span></div>';
   const style = document.createElement('style');
@@ -275,7 +275,8 @@ function cam() {
       h += btn(row.minus, {label: '−', title: 'Less'}, ' big') + btn(row.plus, {icon: 'plus', title: 'More'});
     });
   }
-  el.innerHTML = h;
+  // Not focusable: `inert` here broke canvas taps under it in Chromium (cam443), so the buttons only leave the Tab order.
+  el.innerHTML = h.replace(/<button /g, '<button tabindex="-1" ');
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
