@@ -22,6 +22,7 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
+    + '<div class="pb-lookpanel" hidden></div>'
     + '<div class="float pb-debug" hidden></div><div class="pb-campanel" hidden></div>'
     // The level line has its own box above the readouts card; neither wraps.
     + '<div class="pb-left"><div class="float pb-map" hidden></div>'
@@ -82,6 +83,17 @@ function mount() {
 #rider-playbar .pb-campanel .reset{width:100%}#rider-playbar .pb-campanel .rows{display:grid;gap:6px}
 #rider-playbar .pb-campanel.compact{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:16px}
 #rider-playbar .pb-campanel.compact .hd .modes{flex:0 0 190px}#rider-playbar .pb-campanel.compact .hd>span{flex:1}
+#rider-playbar .pb-lookpanel{position:fixed;z-index:1101;width:min(400px,calc(100vw - 16px));overflow-y:auto;box-sizing:border-box;padding:10px;
+ display:flex;flex-direction:column;gap:8px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overscroll-behavior:contain}
+#rider-playbar .pb-lookpanel[hidden]{display:none}
+#rider-playbar .pb-lookpanel .hd{display:flex;align-items:center;gap:8px;font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-lookpanel .hd svg{width:20px;height:20px}
+#rider-playbar .pb-lookpanel .hd span{flex:1}#rider-playbar .pb-lookpanel .b{--h:40px;font:800 13px var(--body);padding:0 10px}
+#rider-playbar .pb-lookpanel .modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}#rider-playbar .pb-lookpanel .modes .b{width:100%}
+#rider-playbar .pb-lookpanel .modes .b.on{--c:var(--accent);background:var(--c);color:var(--ink)}
+#rider-playbar .pb-lookpanel .note{font:700 12px var(--body);color:var(--muted)}#rider-playbar .pb-lookpanel .err{font:800 12px var(--body);color:var(--danger)}
+#rider-playbar .pb-lookpanel .lk{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;font:700 13px var(--body);color:var(--text);white-space:nowrap}
+#rider-playbar .pb-lookpanel .lk output{font-variant-numeric:tabular-nums;color:var(--text)}#rider-playbar .pb-lookpanel .lk input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+#rider-playbar .pb-lookpanel .lk.dim{opacity:.5}#rider-playbar .pb-lookpanel .ft{display:flex;gap:6px}#rider-playbar .pb-lookpanel .ft .b{flex:1}
 body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
@@ -93,8 +105,19 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
   // Inside #app-container: fullscreen shows only that element (index.html full_screen_container).
   document.head.append(style); (document.getElementById('app-container') || document.body).append(root); document.body.classList.add('rider-playbar');
   root.addEventListener('contextmenu', e => e.preventDefault());
+  // The 3D panel's sliders: a drag previews (look_drag, coalesced), the release commits (look_drop).
+  root.addEventListener('pointerdown', e => { if (e.target.matches?.('.pb-lookpanel input[type=range]')) lookSliding = e.target; }, true);
+  root.addEventListener('input', e => {
+    const t = e.target; if (!t.matches('.pb-lookpanel input[type=range]')) return;
+    const out = t.parentNode.querySelector('output'); if (out) out.textContent = fmt(Number(t.value));
+    const text = 'look_drag:' + JSON.stringify({key: t.dataset.key, value: Number(t.value)}), last = lookQueue[lookQueue.length - 1];
+    if (last && last.startsWith('look_drag:')) lookQueue[lookQueue.length - 1] = text; else lookQueue.push(text);
+  });
+  root.addEventListener('change', e => { const t = e.target; if (t.matches('.pb-lookpanel input[type=range]')) lookDrop(t); });
+  document.addEventListener('pointerup', () => { if (lookSliding) lookDrop(lookSliding); }, true);
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
+    if (b.dataset.look) { e.preventDefault(); lookQueue.push(b.dataset.look); lookKey = ''; canvasFocus(); return; }
     const act = b.dataset.act; if (!act) return;
     e.preventDefault();
     if (act === 'more') { menuOpen = !menuOpen; if (menuOpen) { window.riderMobile?.closePanels?.(); if (camState()?.open) queue.push('cam:close'); } render(); return; }
@@ -108,6 +131,33 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
     if (camState()?.open) queue.push('cam:close');
   }, true);
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (menuOpen) { menuOpen = false; render(); } if (camState()?.open) queue.push('cam:close'); });
+}
+const lookQueue = [];
+let lookSliding = null, lookKey = '';
+const fmt = v => Number.isFinite(v) ? String(+v.toPrecision(4)) : '';
+function lookDrop(t) { if (lookSliding === t) lookSliding = null; lookQueue.push('look_drop:' + JSON.stringify({key: t.dataset.key})); lookKey = ''; }
+// The 3D look panel (Claudio 2026-11-10: the kit style, like Tuning), from riderLook3D; presses use the editor's names.
+function lookPanel() {
+  const L = window.riderLook3D || false, el = root.querySelector('.pb-lookpanel'), row = root.querySelector('.pb-row');
+  if (lookSliding) return; // keep the dragged slider until its release
+  const rr = row.getBoundingClientRect();
+  const k = L ? JSON.stringify([L, rr.bottom, rr.right, innerWidth, innerHeight]) : '';
+  if (k === lookKey) return; lookKey = k;
+  el.hidden = !L;
+  if (!L) return;
+  const zones = document.querySelector('#rider-mobile .zones'), level = document.getElementById('rider-level-actions');
+  const lows = [zones, level].filter(e => e && e.getClientRects().length).map(e => e.getBoundingClientRect().top);
+  const top = rr.bottom + 8;
+  el.style.top = top + 'px'; el.style.right = Math.max(8, Math.round(innerWidth - rr.right)) + 'px';
+  el.style.maxHeight = Math.max(88, Math.floor((lows.length ? Math.min(...lows) : innerHeight) - top - 8)) + 'px';
+  const b = (act, o) => UI.button(Object.assign({d: {look: act}}, o));
+  el.innerHTML = '<div class="hd">' + UI.icon('cube') + '<span>3D look' + (L.dirty ? ' •' : '') + '</span>' + b('look_close', {icon: 'close', title: 'Close'}) + '</div>'
+    + '<div class="modes">' + b('look_scope_level', {label: 'Level', on: L.scope === 'level', title: 'Whole level'}) + b('look_scope_selected', {label: 'Selected sections', on: L.scope === 'selected', title: 'Selected sections'}) + '</div>'
+    + '<div class="note">' + UI.esc(L.note || '') + '</div>'
+    + (L.controls || []).map(c => `<label class="lk${c.disabled ? ' dim' : ''}"><span>${UI.esc(c.label)}</span><output>${fmt(c.value)}</output>`
+      + `<input type="range" min="${c.min}" max="${c.max}" step="${c.step || 'any'}" value="${c.value}" data-key="${UI.esc(c.key)}" aria-label="${UI.esc(c.label)}"${c.disabled ? ' disabled' : ''}></label>`).join('')
+    + (L.error ? '<div class="err">' + UI.esc(L.error) + '</div>' : '<div class="note">Strength and angle are level-wide. Each finished change is one Undo step.</div>')
+    + '<div class="ft">' + b('look_reset', {label: 'Reset', title: 'Reset this scope. Selected reset restores inheritance.'}) + b('look_close', {label: 'Close', title: 'Close without resetting settings'}) + '</div>';
 }
 function run(act) {
   const m = window.riderMobile;
@@ -124,7 +174,7 @@ function run(act) {
 }
 function render() {
   if (!root) mount();
-  strip(); debugGroup(); card(); camPanel();
+  strip(); debugGroup(); card(); camPanel(); lookPanel();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -132,7 +182,8 @@ function render() {
   const tuning = !!window.riderMobile?.details || document.body.classList.contains('rider-tuning');
   const row = root.querySelector('.pb-row');
   const cs = camState(), camOpen = !!cs?.open;
-  const k = JSON.stringify([paused, terminal && run.state, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight, !!cs && !cs.forced, camOpen]);
+  const look3d = !!window.riderLook3D;
+  const k = JSON.stringify([paused, terminal && run.state, menuOpen, quality, touch(), tuning, row.style.right, menuOpen && innerWidth, menuOpen && innerHeight, !!cs && !cs.forced, camOpen, look3d]);
   if (k === key) return; key = k;
   const btn = (act, icon, title, extra = {}) => UI.button(Object.assign({icon, title, d: {act}}, extra));
   root.querySelector('.pb-row').innerHTML =
@@ -140,7 +191,7 @@ function render() {
     + UI.button({icon: paused ? 'play' : 'pause', title: terminal ? (run.state === 'finished' ? 'Finished' : 'Attempt ended') : paused ? 'Resume' : 'Pause', disabled: terminal, d: {act: 'pause'}}).replace('class="b', 'class="b ' + (paused ? 'resume' : 'pause'))
     + btn('tuning', 'speed', tuning ? 'Close tuning' : 'Tuning', {on: tuning})
     + (camState() && !camState().forced ? btn('camera', 'camera', camOpen ? 'Close camera' : 'Camera', {on: camOpen}) : '')
-    + btn('3d', 'cube', '3D look')
+    + btn('3d', 'cube', look3d ? 'Close 3D look' : '3D look', {on: look3d})
     + btn('edit', 'pencil', 'Edit level')
     + btn('levels', 'flag', 'Levels')
     + btn('more', 'menu', 'More', {on: menuOpen}).replace('<button', `<button aria-expanded="${menuOpen}" aria-haspopup="true"`);
@@ -307,5 +358,7 @@ function camPanel() {
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
-window.riderPlayBar = {render, take, get open() { return menuOpen; }};
+// 3D look presses for main/editor/editor.gui_script (its own Lua state owns the look session).
+function takeLook() { return JSON.stringify(lookQueue.splice(0)); }
+window.riderPlayBar = {render, take, takeLook, get open() { return menuOpen; }};
 })();

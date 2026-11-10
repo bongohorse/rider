@@ -2110,6 +2110,19 @@ local function canvas_release(self)
 end
 -- A press on a 3D look control (Defold panel or the inspector dock, #686). A pending typed value is confirmed
 -- and a changed look committed first; a refused change keeps its reason and the press waits for the next one.
+-- #686/#678: a 3D look slider in the dock or the play bar: a drag previews (no commit while ls.drag), release commits.
+local function look_slide(name)
+    local ok,v=pcall(json.decode,name:match("^[%a_]+:(.*)$"))
+    local ls=terrain_look.session
+    if ok and type(v)=="table" and ls and ls.open then
+        if name:sub(6,9)=="drop" then ls.drag=nil
+        elseif type(v.key)=="string" and type(v.value)=="number" and v.value==v.value then
+            -- Like a Defold slider press: a typed value is confirmed and a changed look committed first.
+            local ready=ls.drag or (terrain_look.confirm() and not (terrain_look.session.dirty and not terrain_look.commit()))
+            if ready then ls=terrain_look.session;ls.drag=v.key;terrain_look.change(v.key,v.value) end
+        end
+    end
+end
 local function look_press(self,name)
     if not terrain_look.session then return end
     if name=='look_close' then terrain_look.confirm();terrain_look.close();cancel(self);return end
@@ -3199,18 +3212,7 @@ function update(self,dt)
                     -- #717: the library's Decor tab switches the Decor tool on (never off).
                     if editor.tool~="decoration" then on_button(self,"tool_decoration") end
                 elseif name=="grid_toggle" then editor.grid=not editor.grid;editor.touch()
-                elseif name:match("^look_drag:") or name:match("^look_drop:") then
-                    -- #686: a 3D look slider in the dock: a drag previews (no commit while ls.drag), release commits.
-                    local ok,v=pcall(json.decode,name:match("^[%a_]+:(.*)$"))
-                    local ls=terrain_look.session
-                    if ok and type(v)=="table" and ls and ls.open then
-                        if name:sub(6,9)=="drop" then ls.drag=nil
-                        elseif type(v.key)=="string" and type(v.value)=="number" then
-                            -- Like a Defold slider press: a typed value is confirmed and a changed look committed first.
-                            local ready=ls.drag or (terrain_look.confirm() and not (terrain_look.session.dirty and not terrain_look.commit()))
-                            if ready then ls=terrain_look.session;ls.drag=v.key;terrain_look.change(v.key,v.value) end
-                        end
-                    end
+                elseif name:match("^look_drag:") or name:match("^look_drop:") then look_slide(name)
                 elseif name:match("^look_") then look_press(self,name)
                 elseif name=="bg_layers" then
                     -- One hosted panel at a time: the layer settings leave the Decor tool first.
@@ -3235,6 +3237,36 @@ function update(self,dt)
             editor_ui.play(self.ui,self.overlay.k,editor.message,terrain_look.session and terrain_look.session.play_generation and terrain_look.session,
                 editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc),editor.status,html5~=nil)
             self.buttons=self.ui.buttons
+            if html5 then
+                -- #678: the play bar's 3D panel: its state out, its presses in (same names as the editor dock).
+                local ls=terrain_look.session
+                local state=false
+                if ls and ls.open and ls.play_generation then
+                    local projection=require('main.terrain_perspective.projection')
+                    local ranges,controls=projection.ranges(ls.params),{}
+                    for _,spec in ipairs(projection.controls(ls.params)) do
+                        local r=ranges[spec.key]
+                        controls[#controls+1]={key=spec.key,label=spec.label,value=ls.params[spec.key],min=r[1],max=r[2],step=spec.step,
+                            disabled=ls.scope=='selected' and (spec.key=='perspective' or spec.key=='angle' or spec.key=='vehicle_position') or false}
+                    end
+                    local legacy=editor.doc and not require('main.terrain_perspective.profile').enabled(editor.doc)
+                    state={scope=ls.scope,controls=controls,error=ls.error or false,dirty=ls.dirty or false,status=editor.status or '',
+                        note=ls.scope=='level' and (legacy and 'Legacy unchanged. A level change enables perspective.' or 'Live preview; manual section looks stay intact.')
+                            or ('Selected '..#(ls.ids or {})..(ls.mixed and ': mixed locals; a change unifies them.' or ' source sections'))}
+                end
+                local encoded=json.encode(state)
+                if encoded~=self.look3d_published then self.look3d_published=encoded;html5.run('window.riderLook3D='..encoded) end
+                local text=html5.run('window.riderPlayBar&&window.riderPlayBar.takeLook?window.riderPlayBar.takeLook():"[]"')
+                if text~='[]' and text~='' then
+                    local ok,list=pcall(json.decode,text)
+                    for _,name in ipairs(ok and type(list)=='table' and list or {}) do
+                        if type(name)=='string' then
+                            if name:match("^look_drag:") or name:match("^look_drop:") then look_slide(name)
+                            elseif name:match("^look_") then look_press(self,name) end
+                        end
+                    end
+                end
+            end
             -- #444: the driving HUD's FPS counter (same GUI Lua state) reads these play buttons (3D look) on demand
             -- (editor_ui.screen_rects); the open 3D look panel is a transient modal and is left out.
             editor.play_ui,editor.play_ui_modal=self.ui,terrain_look.session and terrain_look.session.open or false
