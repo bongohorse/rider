@@ -105,6 +105,11 @@ function mount() {
 #rider-playbar .pb-tunepanel .note{font:700 12px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#rider-playbar .pb-tunepanel .note.over{color:var(--danger)}
 #rider-playbar .pb-tunepanel .ts{display:grid;grid-template-columns:70px 1fr 62px;gap:8px;align-items:center;font:700 12.5px var(--body);color:var(--text);white-space:nowrap}
 #rider-playbar .pb-tunepanel .ts output{font-variant-numeric:tabular-nums;text-align:right}
+#rider-playbar .pb-tunepanel .rows{display:grid;gap:4px}
+/* Short views: presets in the title row, the four tools in one row, the sliders in two columns. */
+#rider-playbar .pb-tunepanel.compact{width:min(780px,calc(100vw - 16px));gap:6px;padding:8px}#rider-playbar .pb-tunepanel.compact .b{--h:32px}
+#rider-playbar .pb-tunepanel.compact .hd .ps{flex:0 1 300px}#rider-playbar .pb-tunepanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:18px;gap:2px 18px}
+#rider-playbar .pb-tunepanel.compact .two{grid-template-columns:repeat(4,1fr)}#rider-playbar .pb-tunepanel.compact .ts{grid-template-columns:64px 1fr 54px}
 #rider-playbar .pb-tunepanel .tr{position:relative;height:22px;cursor:pointer;touch-action:none}
 #rider-playbar .pb-tunepanel .tr::before{content:'';position:absolute;left:0;right:0;top:8px;height:6px;border-radius:3px;background:var(--field);border:2px solid var(--ink);box-sizing:border-box}
 #rider-playbar .pb-tunepanel .tr i{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--accent);border:2px solid var(--ink);box-sizing:border-box;pointer-events:none}
@@ -184,18 +189,20 @@ function tunePanel() {
   el.style.maxHeight = Math.max(88, innerHeight - top - 8) + 'px';
   const b = (cmd, o) => UI.button(Object.assign({d: {tune: cmd}}, o));
   const on = t => / ON\b/.test(t || '');
-  el.innerHTML = '<div class="hd">' + UI.icon('speed') + '<span>Tuning</span>' + UI.button({icon: 'close', title: 'Close tuning', d: {act: 'tuning'}}) + '</div>'
-    + '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>'
-    + '<div class="note">' + UI.esc(T.note || '') + '</div>'
-    + '<div class="two">' + b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
-      + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"') + '</div>'
-    + (T.head ? '<div class="note head">' + UI.esc(T.head) + '</div>' : '')
-    + (T.rows || []).map(r => {
-      const ratio = Math.max(0, Math.min(1, (r.value - r.min) / (r.max - r.min)));
-      return `<div class="ts"><span>${UI.esc(r.label)}</span><div class="tr" data-tkey="${UI.esc(r.key)}" role="slider" aria-label="${UI.esc(r.label)}" aria-valuemin="${r.min}" aria-valuemax="${r.max}" aria-valuenow="${r.value}"><i style="left:${ratio * 100}%"></i></div><output>${Number(r.value).toFixed(2)}</output></div>`;
-    }).join('')
-    + '<div class="two">' + b('tune_audio', {label: T.audio || 'Sound [M]', title: 'Sound [M]'}) + b('tune_copy', {icon: 'copy', label: 'Copy [F]', title: 'Copy report [F]'}) + '</div>'
-    + '<div class="note phys' + (T.physics_over ? ' over' : '') + '">' + UI.esc(T.physics || '') + '</div>';
+  const compact = innerHeight < 640;
+  el.classList.toggle('compact', compact);
+  const presets = '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>';
+  const tools = b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
+    + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"');
+  const footer = b('tune_audio', {label: T.audio || 'Sound [M]', title: 'Sound [M]'}) + b('tune_copy', {icon: 'copy', label: 'Copy [F]', title: 'Copy report [F]'});
+  const sliders = '<div class="rows">' + (T.rows || []).map(r => {
+    const ratio = Math.max(0, Math.min(1, (r.value - r.min) / (r.max - r.min)));
+    return `<div class="ts"><span>${UI.esc(r.label)}</span><div class="tr" data-tkey="${UI.esc(r.key)}" role="slider" aria-label="${UI.esc(r.label)}" aria-valuemin="${r.min}" aria-valuemax="${r.max}" aria-valuenow="${r.value}"><i style="left:${ratio * 100}%"></i></div><output>${Number(r.value).toFixed(2)}</output></div>`;
+  }).join('') + '</div>';
+  const head = '<div class="note head">' + UI.esc(T.head || '') + '</div>', phys = '<div class="note phys' + (T.physics_over ? ' over' : '') + '">' + UI.esc(T.physics || '') + '</div>';
+  el.innerHTML = '<div class="hd">' + UI.icon('speed') + '<span>Tuning</span>' + (compact ? presets : '') + UI.button({icon: 'close', title: 'Close tuning', d: {act: 'tuning'}}) + '</div>'
+    + (compact ? '<div class="two">' + tools + footer + '</div><div class="note">' + UI.esc(T.note || '') + '</div>' + sliders + phys
+      : presets + '<div class="note">' + UI.esc(T.note || '') + '</div><div class="two">' + tools + '</div>' + (T.head ? head : '') + sliders + '<div class="two">' + footer + '</div>' + phys);
   // The published test points follow the panel at once (the game republishes them through the same functions).
   if (Array.isArray(window.riderControls)) window.riderControls = controlsGeometry(window.riderControls);
   if (window.riderHud) window.riderHud = hudGeometry(window.riderHud);
