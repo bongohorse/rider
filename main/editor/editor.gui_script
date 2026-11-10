@@ -2116,7 +2116,8 @@ local function look_slide(name)
     local ls=terrain_look.session
     if ok and type(v)=="table" and ls and ls.open then
         if name:sub(6,9)=="drop" then ls.drag=nil
-        elseif type(v.key)=="string" and type(v.value)=="number" and v.value==v.value then
+        elseif type(v.key)=="string" and type(v.value)=="number" and v.value==v.value
+            and not (ls.scope=='selected' and (v.key=='perspective' or v.key=='angle' or v.key=='vehicle_position')) then
             -- Like a Defold slider press: a typed value is confirmed and a changed look committed first.
             local ready=ls.drag or (terrain_look.confirm() and not (terrain_look.session.dirty and not terrain_look.commit()))
             if ready then ls=terrain_look.session;ls.drag=v.key;terrain_look.change(v.key,v.value) end
@@ -3256,7 +3257,7 @@ function update(self,dt)
                 end
                 local encoded=json.encode(state)
                 if encoded~=self.look3d_published then self.look3d_published=encoded;html5.run('window.riderLook3D='..encoded) end
-                local text=html5.run('window.riderPlayBar&&window.riderPlayBar.takeLook?window.riderPlayBar.takeLook():"[]"')
+                local text=state and html5.run('window.riderPlayBar&&window.riderPlayBar.takeLook?window.riderPlayBar.takeLook():"[]"') or '[]'
                 if text~='[]' and text~='' then
                     local ok,list=pcall(json.decode,text)
                     for _,name in ipairs(ok and type(list)=='table' and list or {}) do
@@ -3269,7 +3270,8 @@ function update(self,dt)
             end
             -- #444: the driving HUD's FPS counter (same GUI Lua state) reads these play buttons (3D look) on demand
             -- (editor_ui.screen_rects); the open 3D look panel is a transient modal and is left out.
-            editor.play_ui,editor.play_ui_modal=self.ui,terrain_look.session and terrain_look.session.open or false
+            -- With the play bar (HTML5) the open look is a DOM panel, not a modal over these buttons.
+            editor.play_ui,editor.play_ui_modal=self.ui,not html5 and terrain_look.session and terrain_look.session.open or false
         end
     else editor.play_ui=nil end
     -- Test state (debug only): every frame while editing; while driving only on a mode, message or save

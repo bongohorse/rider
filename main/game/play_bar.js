@@ -114,7 +114,8 @@ body.rider-playbar #rider-mobile .readout{background:transparent;text-shadow:0 1
     if (last && last.startsWith('look_drag:')) lookQueue[lookQueue.length - 1] = text; else lookQueue.push(text);
   });
   root.addEventListener('change', e => { const t = e.target; if (t.matches('.pb-lookpanel input[type=range]')) lookDrop(t); });
-  document.addEventListener('pointerup', () => { if (lookSliding) lookDrop(lookSliding); }, true);
+  // A pointer release hands the focus back to the game (keys drive again; the panel refreshes).
+  for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, () => { if (lookSliding) { lookDrop(lookSliding); canvasFocus(); } }, true);
   root.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b || e.button !== 0 || b.disabled) return;
     if (b.dataset.look) { e.preventDefault(); lookQueue.push(b.dataset.look); lookKey = ''; canvasFocus(); return; }
@@ -139,7 +140,8 @@ function lookDrop(t) { if (lookSliding === t) lookSliding = null; lookQueue.push
 // The 3D look panel (Claudio 2026-11-10: the kit style, like Tuning), from riderLook3D; presses use the editor's names.
 function lookPanel() {
   const L = window.riderLook3D || false, el = root.querySelector('.pb-lookpanel'), row = root.querySelector('.pb-row');
-  if (lookSliding) return; // keep the dragged slider until its release
+  // Keep the dragged or keyboard-focused slider; the panel catches up after its release or blur.
+  if (lookSliding || document.activeElement?.matches?.('.pb-lookpanel input[type=range]')) return;
   const rr = row.getBoundingClientRect();
   const k = L ? JSON.stringify([L, rr.bottom, rr.right, innerWidth, innerHeight]) : '';
   if (k === lookKey) return; lookKey = k;
