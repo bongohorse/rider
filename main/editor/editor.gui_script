@@ -2336,6 +2336,8 @@ function on_input(self,action_id,action)
         if self.warnings_open or editor.conflict then return true end
         cursor(self,action);zoom(self,up and 1.2 or 1/1.2);return true
     end
+    -- Typed text has no pressed state: - / + set the coin path spacing (#672).
+    if action_id==hash("editor_text") and editor.tool=='coin_path' and action.text and not self.open_dialog and not self.warnings_open and not editor.conflict then coin_tool.text(action.text);return true end
     if not action.pressed then return true end
     if self.open_dialog or self.warnings_open then
         if action_id==hash("editor_cancel") then self.open_dialog,self.warnings_open=false,false end
@@ -2365,7 +2367,6 @@ function on_input(self,action_id,action)
     elseif action_id==hash("editor_split") then split(self)
     elseif action_id==hash("editor_delete") and editor.tool=='decoration' then decoration_tool.delete()
     elseif action_id==hash("editor_delete") and editor.tool=='coin_path' then coin_tool.delete()
-    elseif action_id==hash("editor_text") and editor.tool=='coin_path' and action.text then coin_tool.text(action.text)
     elseif action_id==hash("editor_cancel") and editor.tool=='coin_path' and coin_tool.busy() then coin_tool.cancel()
     elseif action_id==hash("editor_delete") then
         if self.drawing then
