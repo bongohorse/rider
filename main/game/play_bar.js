@@ -22,7 +22,7 @@ function mount() {
     + '<span class="pb-track"><i class="pb-fill"></i><i class="pb-car"></i></span><span class="pb-pi" title="Finish">' + UI.icon('finish') + '</span>'
     + '<b class="pb-pct"></b><span class="pb-reason"></span></div>'
     // Slice 3: the desktop debug group (touch keeps these tools in More).
-    + '<div class="float pb-debug" hidden></div>'
+    + '<div class="float pb-debug" hidden></div><div class="pb-cam" aria-hidden="true"></div>'
     + '<div class="float pb-card" hidden><b class="pb-speed"></b><span class="pb-travel"><i class="pb-dot"></i>L <i class="pb-dot"></i>R <em></em></span>'
     + '<span class="pb-station"></span><span class="pb-result"></span><span class="pb-replay"></span></div>';
   const style = document.createElement('style');
@@ -61,10 +61,15 @@ function mount() {
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
 #rider-playbar .pb-card{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
- flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;max-width:max(160px,min(360px,calc(50vw - 240px)));font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+ flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;width:220px;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+/* A fixed width: longer lines wrap, so the camera control placed beside it does not move while text changes. */
 #rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
 #rider-playbar .pb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#59636e;margin:0 3px 0 0;vertical-align:middle}#rider-playbar .pb-dot.on{background:var(--go)}
 #rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-station{color:var(--text)}#rider-playbar .pb-replay{color:#9ae0ff}
+#rider-playbar .pb-cam,#rider-playbar .pb-cam *{pointer-events:none}
+#rider-playbar .pb-cam>*{position:fixed;box-sizing:border-box;z-index:1040}#rider-playbar .pb-cam .b{--h:100%;width:100%;font:800 13px var(--body);padding:0 6px}
+#rider-playbar .pb-cam .b.big{font-size:20px}#rider-playbar .pb-cam .lab{display:flex;align-items:center;font:700 12px var(--body);color:var(--text);white-space:nowrap;overflow:hidden}
+#rider-playbar .pb-cam .lab.dim{color:var(--muted);opacity:.7}#rider-playbar .pb-cam .ttl{font:800 14px var(--disp)}
 body.rider-playbar-desktop #rider-freecam-button{display:none!important}
 body.rider-editing #rider-playbar{display:none}
 body.rider-portrait #rider-playbar{visibility:hidden}
@@ -101,7 +106,7 @@ function run(act) {
 }
 function render() {
   if (!root) mount();
-  strip(); debugGroup(); card();
+  strip(); debugGroup(); card(); cam();
   const run = window.riderRun || {}, paused = !!window.riderTimeState?.paused || run.state === 'paused';
   const terminal = run.state === 'finished' || run.state === 'failed';
   const quality = document.getElementById('quality')?.textContent || 'Quality';
@@ -246,6 +251,33 @@ function card() {
   for (const [cls, v] of [['station', c.station], ['result', c.result], ['replay', c.replay]]) {
     const s = el.querySelector('.pb-' + cls); s.textContent = v || ''; s.hidden = !v;
   }
+}
+// The #443 camera control in the kit style, drawn over its transparent native tap targets (riderCamera443 rects are
+// GUI screen pixels with the origin bottom left). Purely visual: taps reach the canvas.
+let camKey = '';
+function cam() {
+  const c = window.riderCamera443, el = root.querySelector('.pb-cam'), cv = document.querySelector('canvas');
+  const r = cv && cv.getBoundingClientRect();
+  const k = c && r ? [c.seq, r.left, r.top, r.width, r.height, cv.width, cv.height].join() : '';
+  if (k === camKey) return; camKey = k;
+  if (!c || !r || !c.control || c.forced) { el.innerHTML = ''; return; }
+  const sx = r.width / cv.width, sy = r.height / cv.height, clean = s => String(s || '').replace(/[<>&]/g, '');
+  const at = q => `left:${r.left + q.x0 * sx}px;top:${r.top + (cv.height - q.y1) * sy}px;width:${(q.x1 - q.x0) * sx}px;height:${(q.y1 - q.y0) * sy}px`;
+  const btn = (q, o, cls = '') => q ? `<div style="${at(q)}">${UI.button(o).replace('class="b', 'class="b' + cls)}</div>` : '';
+  let h = btn(c.toggle, {label: c.label, on: c.mode === 'b', title: 'Switch camera'}) + btn(c.set, {label: 'Set', on: c.open, title: 'Camera settings'});
+  if (c.open && c.panel && c.reset) {
+    const p = c.panel, line = (q, x0, w, cls, text) => `<div class="lab ${cls}" style="left:${r.left + x0 * sx}px;top:${r.top + (cv.height - q.y1) * sy}px;width:${w * sx}px;height:${(q.y1 - q.y0) * sy}px">${clean(text)}</div>`;
+    h += `<div class="float" style="${at(p)}"></div>` + line(c.reset, p.x0 + 12, c.reset.x0 - p.x0 - 16, 'ttl', c.title);
+    h += btn(c.reset, {label: 'Reset', title: 'Reset camera'}) + btn(c.close, {icon: 'close', title: 'Close'});
+    c.rows.forEach((row, i) => {
+      if (!row.minus) return;
+      const x0 = row.minus.x0 - 160 * (row.minus.x1 - row.minus.x0) / 48;
+      h += line(row.minus, x0, row.minus.x0 - x0 - 6, c.b_only?.[i] && c.mode !== 'b' ? 'dim' : '', row.text);
+      h += btn(row.minus, {label: '−', title: 'Less'}, ' big') + btn(row.plus, {icon: 'plus', title: 'More'});
+    });
+  }
+  // Not focusable: `inert` here broke canvas taps under it in Chromium (cam443), so the buttons only leave the Tab order.
+  el.innerHTML = h.replace(/<button /g, '<button tabindex="-1" ');
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
