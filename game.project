@@ -34,6 +34,10 @@ app_manifest = /main/physics.appmanifest
 [input]
 game_binding = /input/game.input_bindingc
 
+[android]
+package = com.bongohorse.rider
+version_code = 1
+
 [html5]
 scale_mode = stretch
 htmlfile = /main/html5/index.html

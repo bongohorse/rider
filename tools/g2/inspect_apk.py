@@ -1,4 +1,5 @@
 """Android build-tool inspection; never substitutes for installation/device tests."""
+import configparser
 import json
 import os
 from pathlib import Path
@@ -20,8 +21,14 @@ try:
         (root/(name+'.log')).write_text(run.stdout+run.stderr)
         if run.returncode:raise RuntimeError(f'{name} inspection failed: exit {run.returncode}')
         details[name]=run.stdout
-    if 'package:' not in details['manifest']:raise RuntimeError('Manifest package missing')
-    report.update(status='PASS',apk=str(apks[0].relative_to(root)),build_tools=tools.name,signature='verified',manifest='parsed')
+    project=configparser.ConfigParser(interpolation=None,strict=False)
+    if not project.read(Path(__file__).resolve().parents[2]/'game.project'):raise RuntimeError('game.project not found')
+    expected=project.get('android','package',fallback='')
+    if not expected:raise RuntimeError('game.project [android] package missing')
+    if f"package: name='{expected}'" not in details['manifest']:
+        found=details['manifest'].split("package: name='",1)[-1].split("'",1)[0] if "package: name='" in details['manifest'] else 'none'
+        raise RuntimeError(f'Manifest package is {found}, expected {expected}')
+    report.update(status='PASS',apk=str(apks[0].relative_to(root)),build_tools=tools.name,signature='verified',manifest='parsed',package=expected)
 except Exception as exc:
     report.update(status='BLOCKED' if 'BLOCKED:' in str(exc) else 'FAIL',error=str(exc))
 (root/'apk-inspection.json').write_text(json.dumps(report,indent=2)+'\n')
