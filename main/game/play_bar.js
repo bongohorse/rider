@@ -61,7 +61,7 @@ function mount() {
 #rider-playbar .pb-debug{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:1050;gap:5px;padding:5px;flex-wrap:wrap;max-width:calc(100vw - 340px)}
 #rider-playbar .pb-debug .b{--h:36px;font:800 12px var(--body);padding:0 10px;gap:6px}#rider-playbar .pb-debug .b.on{--c:var(--go)}
 #rider-playbar .pb-card{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(52px,env(safe-area-inset-top));z-index:1040;pointer-events:none;
- flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;max-width:min(360px,calc(50vw - 240px));font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
+ flex-direction:column;align-items:flex-start;gap:3px;padding:8px 12px;max-width:max(160px,min(360px,calc(50vw - 240px)));font:700 12px var(--body);color:var(--muted);font-variant-numeric:tabular-nums}
 #rider-playbar .pb-card b{font:800 15px var(--disp);color:var(--text)}#rider-playbar .pb-card em{font-style:normal;color:var(--text)}
 #rider-playbar .pb-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#59636e;margin:0 3px 0 0;vertical-align:middle}#rider-playbar .pb-dot.on{background:var(--go)}
 #rider-playbar .pb-travel i+i{margin-left:8px}#rider-playbar .pb-station{color:var(--text)}#rider-playbar .pb-replay{color:#9ae0ff}
@@ -242,7 +242,7 @@ function card() {
   el.querySelector('.pb-speed').textContent = c.speed || '';
   const dots = el.querySelectorAll('.pb-dot');
   dots.forEach((d, i) => d.classList.toggle('on', !!(c.contact || [])[i]));
-  el.querySelector('.pb-travel em').textContent = (c.travel || '').replace(/^L\s*/, '').replace(/\s+R\s*/, ' / ');
+  el.querySelector('.pb-travel em').textContent = c.travel || '';
   for (const [cls, v] of [['station', c.station], ['result', c.result], ['replay', c.replay]]) {
     const s = el.querySelector('.pb-' + cls); s.textContent = v || ''; s.hidden = !v;
   }

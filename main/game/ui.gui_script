@@ -673,15 +673,16 @@ function update(self,dt)
     end
     if self.playbar then
         -- #678 slice 3b: on desktop the play bar's debug card shows these readouts; the native texts stay the fallback.
+        -- Stays after the station/result/replay visibility rules above: it reads what they set this frame.
         local card=false
         if not enabled and not self.editing then
             local function line(n) return gui.get_visible(n) and gui.get_text(n)~="" and gui.get_text(n) or nil end
             local t=self.latest or {}
-            card={speed=gui.get_text(self.metrics[1]),travel=gui.get_text(self.metrics[3]),
+            card={speed=gui.get_text(self.metrics[1]),travel=t.travel1 and string.format("%+.1f / %+.1f u",t.travel1,t.travel2) or "",
                 contact={t.contact1==true,t.contact2==true},station=line(self.station),result=line(self.station_result),replay=line(self.replay_line)}
         end
-        for _,n in ipairs({self.metrics[1],self.metrics[3],self.station,self.station_result,self.replay_line,
-            self.contact_dots[1],self.contact_dots[2],self.contact_labels[1],self.contact_labels[2]}) do gui.set_visible(n,card==false and not enabled) end
+        for _,n in ipairs({self.metrics[1],self.metrics[3],self.contact_dots[1],self.contact_dots[2],self.contact_labels[1],self.contact_labels[2]}) do gui.set_visible(n,card==false) end
+        for _,n in ipairs({self.station,self.station_result,self.replay_line}) do if card then gui.set_visible(n,false) end end
         local encoded=json.encode(card)
         if encoded~=self.card_published then self.card_published=encoded;html5.run('window.riderDebugCard='..encoded) end
     end
