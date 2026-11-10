@@ -20,6 +20,7 @@ local terrain_look=require "main.editor.editor_look"
 local track_panel=require "main.editor.editor_track"
 local background_panel=require "main.editor.editor_background"
 local decoration_tool=require "main.editor.editor_decoration"
+local coin_tool=require "main.editor.editor_coin_path_tool"
 -- Closing the panel (its button, Play, another document) also leaves the tool.
 local function close_decoration_tool()
     decoration_tool.close()
@@ -1117,7 +1118,7 @@ local function set_tool(self,tool)
     if self.drawing and tool~=self.drawing.kind:gsub("line","draw") then finish_drawing(self) end
     if tool=='decoration' and editor.tool~='decoration' then track_panel.close();background_panel.close();terrain_look.close();decoration_tool.open()
     elseif tool~='decoration' and editor.tool=='decoration' then decoration_tool.close() end
-    editor.tool=tool;self.place=nil;editor.touch()
+    editor.tool=tool;self.place=nil;coin_tool.reset();editor.touch()
 end
 -- Navigation (LE6): view only. The camera moves and the selection may change; nothing is committed, so
 -- the document, its dirty state and the Undo history stay unchanged.
@@ -1589,7 +1590,7 @@ local function offered_buttons(self)
         if page>0 then list[#list+1]="warn_prev" end
         if (page+1)*WARN_ROWS<#rows then list[#list+1]="warn_next" end
     end
-    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_decoration","tool_coin","tool_gem","tool_fuel","tool_crate","tool_plate","tool_gate","warnings"}) do list[#list+1]=name end
+    for _,name in ipairs({"undo","redo","new","open","versions","import","export","play","minus","plus","tool_select","tool_draw","tool_curve","tool_prefab","tool_start","tool_finish","tool_label","tool_pan","tool_decoration","tool_coin","tool_coin_path","tool_gem","tool_fuel","tool_crate","tool_plate","tool_gate","warnings"}) do list[#list+1]=name end
     for _,v in ipairs(VIEW) do list[#list+1]=v[1] end
     if editor.tool=="prefab" then for _,kind in ipairs(prefab.ORDER) do list[#list+1]="kind_"..kind end end
     local vs=vertex_state()
@@ -1779,6 +1780,7 @@ local function canvas_press(self,action)
     if not p then return end
     self.confirm_convert,self.confirm_bulk,self.pending=nil,nil,nil
     if editor.tool=='decoration' and not self.held.space then decoration_tool.press(p);return end
+    if editor.tool=='coin_path' and not self.held.space then coin_tool.press(snap(self,p),tolerance(PICK_PX),self.held.alt);return end
     if self.held.space or editor.tool=="pan" then self.pan={action.screen_x,action.screen_y};return end
     if editor.tool=="start" or editor.tool=="finish" then place(editor.tool,p);return end
     if editor.tool=="prefab" then place_prefab(self,p);self.place=nil;return end
@@ -2277,6 +2279,7 @@ function on_input(self,action_id,action)
     if action_id==nil then
         -- A fence being drawn follows the cursor before its second click.
         if editor.tool=='decoration' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then decoration_tool.hover_at(p) end end
+        if editor.tool=='coin_path' and not editor_ui.area(self.ui,action) and not self.open_dialog and not editor.conflict then local p=cursor(self,action);if p then coin_tool.move(snap(self,p)) end end
         if self.drag or self.pan or self.box or not editor_ui.area(self.ui,action) and not self.open_dialog and not self.warnings_open and not editor.conflict then canvas_move(self,action)
         else cursor(self,action);set_hover(self,{}) end
         return true
@@ -2297,11 +2300,13 @@ function on_input(self,action_id,action)
             else canvas_press(self,action) end
         elseif action.released then
             if editor.tool=='decoration' then decoration_tool.release() end
+            if editor.tool=='coin_path' then coin_tool.release() end
             canvas_release(self)
         end
         if not editor_ui.area(self.ui,action) then
             canvas_move(self,action)
             if editor.tool=='decoration' then local p=cursor(self,action);if p then decoration_tool.move(p) end end
+            if editor.tool=='coin_path' then local p=cursor(self,action);if p then coin_tool.move(snap(self,p)) end end
         end
         return true
     end
@@ -2359,6 +2364,9 @@ function on_input(self,action_id,action)
     elseif action_id==hash("editor_connect") then connect(self)
     elseif action_id==hash("editor_split") then split(self)
     elseif action_id==hash("editor_delete") and editor.tool=='decoration' then decoration_tool.delete()
+    elseif action_id==hash("editor_delete") and editor.tool=='coin_path' then coin_tool.delete()
+    elseif action_id==hash("editor_text") and editor.tool=='coin_path' and action.text then coin_tool.text(action.text)
+    elseif action_id==hash("editor_cancel") and editor.tool=='coin_path' and coin_tool.busy() then coin_tool.cancel()
     elseif action_id==hash("editor_delete") then
         if self.drawing then
             table.remove(self.drawing.points)
@@ -2514,6 +2522,7 @@ local function describe(self)
         lines={'Fuel canister','Click to place; all use the level refill value.','FUEL in Level Properties sets refill percentage points.','Collected even when full. Retry restores it.'}
     elseif editor.tool=='gem' then
         lines={'Wonder Gem','Click to place a purple Wonder Gem.','Each new gem is worth +1 on official finish.','Select [S] to move / copy / delete.','Retry restores pickups; practice is unbanked.'}
+    elseif editor.tool=='coin_path' then lines=coin_tool.describe()
     elseif editor.tool=='coin' then
         lines={'Coin','Click to place an ordinary coin.','Select [S] to move / copy / delete.','Retry restores collected coins.','Only official finishes bank coins.'}
     elseif editor.tool=="label" then
@@ -2646,6 +2655,7 @@ local function draw_overlay(self)
     -- O2 links and gate travel first: they always fit the handle pool (32 links x 3 + 8 gates of 192).
     local missing=mui.draw(self,o,s)
     if missing>0 and editor.message=="" then editor.message=missing.." connections are not drawn (overlay limit); zoom in to see them." end
+    if editor.tool=='coin_path' then coin_tool.draw(function(a,b,c,w) overlay.line(o,to_px(a,s),to_px(b,s),c,w) end,handle,{path=C.rubber,active=C.draw,preview=C.connect,point=C.selected}) end
     local hover=editor.hover
     local hovered=editor.tool=="select" and hover and hover.kind=="vertex" and not self.drag and find(hover.id)
     local hover_point=hovered and editor.shape(hovered)[hover.index]

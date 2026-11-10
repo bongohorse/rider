@@ -257,13 +257,16 @@ module.exports=async function uiChecks(h){
  checkpoint('start:medal_editor');
  await require('../gameplay/check_medal_editor.cjs')(h);
  checkpoint('done:medal_editor');
- if(h.part==='1/2')return; // Part 1 stops after 16 cases; full local run still executes all 23.
+ if(h.part==='1/2')return; // Part 1 stops after 16 cases; full local run still executes all 24.
  checkpoint('start:zoom_editor');
  await require('../gameplay/check_zoom_editor.cjs')(h);
  checkpoint('done:zoom_editor');
  checkpoint('start:coin_editor');
  await require('../gameplay/check_coin_editor.cjs')(h);
  checkpoint('done:coin_editor');
+ checkpoint('start:coin_path_editor');
+ await require('../gameplay/check_coin_path_editor.cjs')(h);
+ checkpoint('done:coin_path_editor');
  checkpoint('start:drop_editor');
  await require('../gameplay/check_drop_editor.cjs')(h);
  checkpoint('done:drop_editor');

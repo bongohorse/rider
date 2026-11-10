@@ -10,7 +10,7 @@ async function libraryTap(page,name){
 async function revealLibrary(page,name){
  let e=await page.evaluate(()=>window.riderEditor);
  if(e?.open_dialog||e?.help_open||e?.warnings_open)return;
- const tab=/^kind_/.test(name)?'track':/^object_(?!name$)/.test(name)?'objects':/^tool_(start|finish|coin|fuel|gem|crate|plate|gate)$/.test(name)?'play':null;
+ const tab=/^kind_/.test(name)?'track':/^object_(?!name$)/.test(name)?'objects':/^tool_(start|finish|coin|coin_path|fuel|gem|crate|plate|gate)$/.test(name)?'play':null;
  if(!tab)return;
  if(!e.visible.includes(name)){
   if(e.ui.tools_collapsed){await libraryTap(page,'collapse_tools');e=await page.evaluate(()=>window.riderEditor);}

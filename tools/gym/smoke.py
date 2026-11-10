@@ -35,6 +35,7 @@ LE6_EXPECTED={
     '2/2': [
         "editor_zoom_entry_steps_anchor_limits_and_source_invariance",
         "g4_coin_authoring_stable_ids_undo_and_reload",
+        "g672_coin_path_draw_bend_spacing_undo_export_delete",
         "drop_to_track_selection_height_skips_single_undo_and_reload",
         "along_track_shared_arc_height_mixed_invalidation_and_reload",
         "auto_coins_deterministic_preview_replace_exact_apply_undo_and_reload",

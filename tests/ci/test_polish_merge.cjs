@@ -12,10 +12,10 @@ function fixtures(){
   cases:[...cases],measurements:{['sample'+i]:i}
  }));
 }
-test('LE6 partitions preserve all 23 distinct cases and measurement identities',()=>{
+test('LE6 partitions preserve all 24 distinct cases and measurement identities',()=>{
  const f=fixtures(),m=mergeLe6(f);
  assert.equal(m.status,'PASS');assert.deepEqual(m.parts,['1/2','2/2']);
- assert.equal(m.cases.length,23);assert.equal(new Set(m.cases).size,23);
+ assert.equal(m.cases.length,24);assert.equal(new Set(m.cases).size,24);
  assert.deepEqual(m.cases,LE6_EXPECTED.flat());
  assert.deepEqual(m.run_ids,['independent-0','independent-1']);
  assert.deepEqual(m.measurements,{sample0:0,sample1:1});
@@ -24,7 +24,7 @@ test('LE6 declared inventory matches real source case registration in run order'
  const read=p=>fs.readFileSync(path.join(root,p),'utf8');
  const names=p=>[...read(p).matchAll(/cases\.push\('([^']+)'\)/g)].map(m=>m[1]);
  const parent=names('tools/gym/polish.cjs'),ui=names('tools/gym/editor_ui_checks.cjs');
- const gameplay=['medal','zoom','coin','drop','along','auto','gem','fuel'].map(name=>names('tools/gameplay/check_'+name+'_editor.cjs'));
+ const gameplay=['medal','zoom','coin','coin_path','drop','along','auto','gem','fuel'].map(name=>names('tools/gameplay/check_'+name+'_editor.cjs'));
  assert.equal(parent.length,9);assert.equal(ui.length,6);
  for(const n of gameplay)assert.equal(n.length,1);
  assert.deepEqual([...parent,...ui,...gameplay[0]],LE6_EXPECTED[0]);

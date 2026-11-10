@@ -21,12 +21,14 @@ local dense=require "main.game.dense"
 -- in mechanism_links (editor_mechanisms); a version-12 e.mechanisms block opens migrated, same IDs and
 -- settings. The compiled O1 mechanisms (station schema 5) are unchanged.
 local mechanisms=require "main.editor.editor_mechanisms"
--- New documents stay at 13; material raises to 14, authored backgrounds to 15, decorations to 16. Older readers refuse new data.
-local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15,DECORATION_EDITOR_VERSION=16}
+-- New documents stay at 13; material raises to 14, authored backgrounds to 15, decorations to 16, coin paths (#672) to 17.
+-- Older readers refuse new data.
+local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15,DECORATION_EDITOR_VERSION=16,COIN_PATH_EDITOR_VERSION=17}
+local coin_path=require 'main.editor.editor_coin_path'
 local decorations=require 'main.decorations.source'
 -- The lowest version that holds a document's optional visual blocks.
 local function visual_version(e)
-    return e.decorations and M.DECORATION_EDITOR_VERSION or e.backgrounds and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
+    return e.coin_paths and M.COIN_PATH_EDITOR_VERSION or e.decorations and M.DECORATION_EDITOR_VERSION or e.backgrounds and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
 end
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
 -- reproduced; other values are a newer compiler's and are not recompiled.
@@ -321,7 +323,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION and e.editor_version~=M.DECORATION_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION and e.editor_version~=M.DECORATION_EDITOR_VERSION and e.editor_version~=M.COIN_PATH_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -351,6 +353,7 @@ function M.validate(doc)
     local medal_ok,medal_err,medal_unknown=require('main.game.medals').validate(e.medal_times)
     if not medal_ok then return nil,medal_err,medal_unknown end
     if e.decorations~=nil and e.editor_version<M.DECORATION_EDITOR_VERSION then return nil,'Decorations need editor/compiler 16',true end
+    if e.coin_paths~=nil and e.editor_version<M.COIN_PATH_EDITOR_VERSION then return nil,'Coin paths need editor/compiler 17',true end
     local deco_ok,deco_err,deco_unknown=decorations.validate(e.decorations)
     if not deco_ok then return nil,deco_err,deco_unknown end
     if e.backgrounds~=nil and e.editor_version<M.BACKGROUND_EDITOR_VERSION then return nil,'Backgrounds need editor/compiler 15',true end
@@ -362,6 +365,8 @@ function M.validate(doc)
     if e.material~=nil and e.road_profile~=require('main.terrain_perspective.look').ID then return nil,'A level material needs the authored 3D look' end
     local look_ok,look_err,look_unknown=require("main.terrain_perspective.look").validate(e)
     if not look_ok then return nil,look_err,look_unknown end
+    local path_ok,path_err,path_unknown=coin_path.validate(e)
+    if not path_ok then return nil,path_err,path_unknown end
     local ids,total,pickups,coin_count={},0,{},0
     for _,o in ipairs(e.objects) do
         if type(o)~="table" or type(o.id)~="string" then return nil,"Invalid editor object" end
@@ -855,6 +860,8 @@ function M.refit_decorations(e)
     local pieces=M.pieces(e)
     return decorations.refit(e.decorations,function(id) return pieces[id] and M.parts(pieces[id]) end)
 end
+-- The version a document's optional blocks need (after adding or removing a coin path).
+function M.refresh_version(e) local v=visual_version(e);e.editor_version,e.compiler_version=v,v end
 -- Atomic authored decoration update; nil or an empty list removes the block.
 function M.set_decorations(e,b)
     local ok,err=decorations.validate(b)
