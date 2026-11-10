@@ -80,7 +80,7 @@ bad(function(e) e.material.fill='nope' end,'Unknown material preset nope for fil
 bad(function(e) e.material.version=2 end,'Unsupported level material version')
 bad(function(e) e.material.extra=1 end,'Unknown level material field')
 bad(function(e) e.editor_version,e.compiler_version=13,13 end,'needs editor/compiler 14')
-bad(function(e) e.editor_version,e.compiler_version=17,17 end,'Unsupported editor version')
+bad(function(e) e.editor_version,e.compiler_version=18,18 end,'Unsupported editor version')
 local no_profile=D.copy(d);no_profile.editor.road_profile=nil;no_profile.editor.road_look=nil;rejected(no_profile,'needs the authored 3D look')
 assert(not D.set_material(fresh().editor,{version=1,preset='nope'}),'set_material refuses too')
 -- Station schema gates.

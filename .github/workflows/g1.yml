@@ -515,7 +515,7 @@ jobs:
         env:
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         run: python tools/gym/smoke.py --case a19b --output artifacts/g1/bumps --merge "artifacts/parts/g1-gym-bumps-1-$RUN/bumps" "artifacts/parts/g1-gym-bumps-2-$RUN/bumps"
-      - name: Validate and merge both LE6 parts into all 23 editor cases
+      - name: Validate and merge both LE6 parts into all 24 editor cases
         env:
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         run: python tools/gym/smoke.py --case le6 --output artifacts/g1/polish --merge "artifacts/parts/g1-gym-polish-1-$RUN/polish" "artifacts/parts/g1-gym-polish-2-$RUN/polish"

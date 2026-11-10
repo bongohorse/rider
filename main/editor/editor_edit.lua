@@ -288,7 +288,8 @@ function M.paste(e,clip,d,foreign)
         local n=doc_lib.copy(o)
         n.hidden,n.locked=nil,nil
         n.id=new_id(e);map[o.id]=n.id
-        if n.type=='coin' then n.pickup_id=doc_lib.pickup_id(e,n.id) end
+        -- A pasted path coin is an ordinary free coin (#672): only its path lays members.
+        if n.type=='coin' then n.pickup_id=doc_lib.pickup_id(e,n.id);n.path=nil end
         translate_object(n,d)
         e.objects[#e.objects+1]=n;ids[#ids+1]=n.id
     end

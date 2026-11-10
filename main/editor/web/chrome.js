@@ -22,6 +22,7 @@ const AUTO = [.9, .75, .55, .35, .15, -.1], OVERRIDES = [['surface', 'Surface'],
 try { favs = new Set(JSON.parse(localStorage.getItem(FAVS) || '[]')); } catch (e) { favs = new Set(); }
 const INK = '#0d0f13';
 const ART = {
+  coin_path:`<path d="M6 36C14 10 34 10 42 36" fill="none" stroke="${INK}" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="8" cy="32" r="5" fill="#ffd23f" stroke="${INK}" stroke-width="2"/><circle cx="24" cy="17" r="5" fill="#ffd23f" stroke="${INK}" stroke-width="2"/><circle cx="40" cy="32" r="5" fill="#ffd23f" stroke="${INK}" stroke-width="2"/>`,
   start:`<path d="M14 42V8" stroke="${INK}" stroke-width="3"/><path d="M14 8h22l-5 7 5 7H14z" fill="#ff7b54" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`,
   finish:`<path d="M12 42V8" stroke="${INK}" stroke-width="3"/><rect x="12" y="8" width="26" height="16" fill="#fff" stroke="${INK}" stroke-width="2"/><path d="M12 8h6.5v8H12zM25 8h6.5v8H25zM18.5 16H25v8h-6.5zM31.5 16H38v8h-6.5z" fill="${INK}"/>`,
   coin:`<circle cx="24" cy="24" r="14" fill="#ffd23f" stroke="${INK}" stroke-width="2.5"/><circle cx="24" cy="24" r="9" fill="none" stroke="#e0a800" stroke-width="2"/><path d="M24 18v12" stroke="#b07f00" stroke-width="3" stroke-linecap="round"/>`,
@@ -39,7 +40,7 @@ const ART = {
   wave:`<path d="M4 42V30c6-10 12-10 18 0s12 10 22 0v12z" fill="#4cc9ff" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>`,
 };
 const art = k => `<svg class="art" viewBox="0 0 48 48" aria-hidden="true">${ART[k] || ART.crate}</svg>`;
-const GAMEPLAY = [['start','Start'],['finish','Finish'],['coin','Coin'],['fuel','Fuel'],['gem','Gem'],['crate','Crate'],['plate','Plate'],['gate','Gate']];
+const GAMEPLAY = [['start','Start'],['finish','Finish'],['coin','Coin'],['coin_path','Coin path'],['fuel','Fuel'],['gem','Gem'],['crate','Crate'],['plate','Plate'],['gate','Gate']];
 const GAME_TOOLS = new Set(GAMEPLAY.map(g => g[0]));
 // Rail: one tab per library page; tabs are view state of the chrome and publish as lib_<id>.
 const RAIL = [['play','flag','var(--k-play)','Gameplay'],['track','ramp','var(--k-track)','Track parts'],['decor','tree','var(--k-decor)','Decor'],
