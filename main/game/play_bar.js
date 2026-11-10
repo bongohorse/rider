@@ -167,6 +167,9 @@ function run(act) {
   if (act === 'levels') { m?.clear(); window.riderLevelsRequest = {action: 'open'}; return; }
   if (act === 'import') { m?.clear(); window.riderCustom?.open(); return; }
   if (act === 'freecam') { window.riderFreeCam?.set(!window.riderFreeCam.on); debugKey = ''; canvasFocus(); return; }
+  // One panel at a time: the camera menu and the 3D look close each other.
+  if (act === '3d' && camState()?.open) queue.push('cam:close');
+  if (act === 'camera' && window.riderLook3D && !camState()?.open) lookQueue.push('look_close');
   if (act === 'camera') { menuOpen = false; if (!camState()?.open) window.riderMobile?.closePanels?.(); queue.push('cam:open'); canvasFocus(); return; }
   if (act === 'cam:none') return;
   if (act === 'quality' || act === 'fullscreen') { document.getElementById(act)?.click(); canvasFocus(); return; }
