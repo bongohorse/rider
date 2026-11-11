@@ -2,12 +2,15 @@
 -- The loader stores them in player settings (player_settings.lua); the controller (the single camera owner) reads
 -- them in feel.camera. They never touch physics, the fixed tick, replays, records or level data.
 -- Each value is a multiplier or offset on the existing feel.lua camera, chosen so that the defaults reproduce the
--- shipped camera exactly (x * 1 and y + 0 are exact): A with default settings is byte-for-byte the #352 camera A.
+-- shipped camera exactly (x * 1 and y + 0 are exact): A with default settings is byte-for-byte the #352 camera A,
+-- except for the #671 Auto zoom (on by default); with Auto zoom off it is byte-for-byte again.
 local M={}
 M.MODES={"a","b"}
 M.DEFAULT_MODE="a"
 -- key: settings field; label/format: the live panel row; default/min/max: the value range; step: one +/- tap.
 -- b: used only by camera B (the #352/#374 downhill lead); camera A ignores it.
+-- auto: used only while Auto zoom (#671) is on. names: a two-state switch (0 off, 1 on) shown by name.
+-- since: added after the version 3 settings file (#671); a stored file without the field gets its default.
 M.SPECS={
     -- Follow speed: multiplies the preset's camera_response (position smoothing and its speed lead).
     {key="follow",label="Follow",default=1,min=0.5,max=2,step=0.1,format="%.1fx"},
@@ -22,6 +25,15 @@ M.SPECS={
     {key="descent_response",label="B descent pan",default=0,min=0,max=12,step=1,format="%.0f /s",b=true},
     -- B only (#374): bound on how fast new downhill lead grows (u/s) after touchdown; release stays immediate.
     {key="descent_rise_limit",label="B descent rise",default=240,min=0,max=1200,step=40,format="%.0f u/s",b=true},
+    -- #671 Auto zoom: off frames exactly as before (the preset's speed zoom times Zoom); on adds the three below,
+    -- eased at Zoom ease, between the closest (Slow zoom) and the hard widest limit (feel.follow.zoom_widest).
+    {key="auto_zoom",label="Auto zoom",default=1,min=0,max=1,step=1,format="%d",names={[0]="off",[1]="on"},since=true},
+    -- Closest view, at standstill: fades out by 30 % of the preset's zoom speed (above 1 is closer).
+    {key="zoom_near",label="Slow zoom",default=1.1,min=1,max=1.4,step=0.05,format="%.2fx",auto=true,since=true},
+    -- Extra width in the air (below 1 is wider), from 0.12 s airtime on; eases back after the landing.
+    {key="zoom_air",label="Air zoom",default=0.8,min=0.6,max=1,step=0.05,format="%.2fx",auto=true,since=true},
+    -- Zoom smoothing (1/s): how fast the auto zoom follows (the air state twice as fast); lower is calmer.
+    {key="zoom_rate",label="Zoom ease",default=2,min=0.5,max=6,step=0.5,format="%.1f /s",auto=true,since=true},
 }
 M.KEYS={}
 M.BY_KEY={}
@@ -31,7 +43,7 @@ function M.valid_mode(m) return m=="a" or m=="b" end
 -- A stored or requested value is valid when it is a finite number inside its range.
 function M.valid(key,v)
     local spec=M.BY_KEY[key]
-    return spec~=nil and finite(v) and v>=spec.min and v<=spec.max
+    return spec~=nil and finite(v) and v>=spec.min and v<=spec.max and (not spec.names or spec.names[v]~=nil)
 end
 -- Live input is clamped into the range and rounded to 4 decimals, so repeated steps land exactly on the
 -- step grid and on the default again; nil for an unknown key or a non-finite value.
@@ -39,6 +51,7 @@ function M.clamp(key,v)
     local spec=M.BY_KEY[key]
     if not spec or not finite(v) then return nil end
     v=math.max(spec.min,math.min(spec.max,v))
+    if spec.names then v=math.floor(v+0.5) end
     return tonumber(string.format("%.4f",v))
 end
 function M.defaults()
@@ -70,7 +83,12 @@ function M.sanitize(t)
     end
     return c,valid
 end
-function M.text(spec,v) return spec.label.." "..string.format(spec.format,v) end
+function M.text(spec,v)
+    if spec.names then return spec.label.." "..(spec.names[v] or "?") end
+    return spec.label.." "..string.format(spec.format,v)
+end
+-- A row that has no effect with these settings (shown dimmed): B-only rows on camera A, auto rows with Auto zoom off.
+function M.inactive(spec,c) return (spec.b and c.mode~="b") or (spec.auto and c.auto_zoom~=1) or false end
 -- One camera command from the HUD. Returns true when the settings changed.
 -- data.command: 'toggle' (A <-> B), 'mode' (data.mode 'a'|'b'), 'reset' (camera A and every default),
 -- 'step' (data.key, data.dir +1|-1: one step, clamped) or 'set' (data.key, data.value: clamped).

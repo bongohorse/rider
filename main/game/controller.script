@@ -101,7 +101,8 @@ local function reset(self)
     end
     start_camera(self)
     local _,tune=active_camera(self)
-    self.camera_zoom=feel.values.camera_zoom*tune.zoom
+    -- #671: the start already shows the zoom it settles on (Auto zoom off: camera_zoom * Zoom, as before).
+    self.camera_zoom=feel.camera_start_zoom(self.station.start_speed/sys.get_config_number("physics.scale",0.01),tune)
     go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
     self.generation = self.generation+1
     self.reset_count = self.reset_count+1

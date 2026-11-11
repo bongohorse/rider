@@ -6,7 +6,8 @@
 -- keeps its cap and gets the defaults (shown, top left); the next save writes version 2.
 -- #443, version 3 adds the camera choice and its live settings (camera_settings.lua), stored flat as camera_mode
 -- and camera_<key>. Version 1 and 2 files keep their values and get the camera defaults (A); each invalid camera
--- value falls back on its own; the next save writes version 3.
+-- value falls back on its own; the next save writes version 3. #671 adds the auto zoom fields to version 3: a file
+-- without them gets their defaults and stays valid (an older build ignores them).
 local fps_counter=require "main.game.fps_counter"
 local fps_place=require "main.game.fps_place"
 local camera_settings=require "main.game.camera_settings"
@@ -34,7 +35,9 @@ function M.parse(t)
         if camera_settings.valid_mode(t.camera_mode) then c.mode=t.camera_mode else valid=false end
         for _,key in ipairs(camera_settings.KEYS) do
             local v=t["camera_"..key]
-            if camera_settings.valid(key,v) then c[key]=v else valid=false end
+            if camera_settings.valid(key,v) then c[key]=v
+            -- #671: a field added after version 3 may be missing from an older version 3 file (its default).
+            elseif not (v==nil and camera_settings.BY_KEY[key].since) then valid=false end
         end
     end
     if version>M.VERSION then return s,"newer" end

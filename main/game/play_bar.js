@@ -455,7 +455,7 @@ function camPanel() {
   const modes = '<div class="modes">' + ['a', 'b'].map(m => b(c.mode === m ? 'cam:none' : 'cam:toggle', {label: 'Cam ' + m.toUpperCase(), on: c.mode === m, title: 'Camera ' + m.toUpperCase()})
     .replace('<button', '<button data-mode="' + m + '"')).join('') + '</div>';
   el.innerHTML = '<div class="hd">' + UI.icon('camera') + '<span>Camera</span>' + (compact ? modes : '') + b('cam:close', {icon: 'close', title: 'Close'}) + '</div>'
-    + (compact ? '' : modes) + '<div class="rows">' + c.rows.map((r, i) => '<div class="rw' + (c.b_only?.[i] && c.mode !== 'b' ? ' dim' : '') + '"><span>' + clean(r.text) + '</span>'
+    + (compact ? '' : modes) + '<div class="rows">' + c.rows.map((r, i) => '<div class="rw' + ((c.dim ? c.dim[i] : c.b_only?.[i] && c.mode !== 'b') ? ' dim' : '') + '"><span>' + clean(r.text) + '</span>'
       + b('cam:step:' + r.key + ':-1', {label: '−', title: 'Less'}) + b('cam:step:' + r.key + ':1', {icon: 'plus', title: 'More'}) + '</div>').join('') + '</div>'
     + b('cam:reset', {label: 'Reset camera', title: 'Reset to camera A and every default', variant: 'wide'}).replace('class="b', 'class="b reset');
 }

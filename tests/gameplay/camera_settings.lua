@@ -32,7 +32,7 @@ local feel=require 'main.game.feel'
 
 -- Specs: every setting has a default inside its range and a positive step; A is the default camera.
 assert(cs.DEFAULT_MODE=='a' and cs.valid_mode('a') and cs.valid_mode('b') and not cs.valid_mode('c') and not cs.valid_mode(nil))
-assert(#cs.SPECS==6,'six live settings')
+assert(#cs.SPECS==10,'ten live settings (six #443, four #671 auto zoom)')
 for _,spec in ipairs(cs.SPECS) do
  assert(spec.default>=spec.min and spec.default<=spec.max and spec.step>0,spec.key)
  assert(cs.valid(spec.key,spec.default) and cs.BY_KEY[spec.key]==spec)
@@ -44,7 +44,17 @@ assert(d.mode=='a' and d.follow==1 and d.look==1 and d.zoom==1 and d.offset==0,'
 assert(d.descent_response==0 and d.descent_rise_limit==240,'#374 camera B defaults')
 assert(cs.BY_KEY.descent_response.b and cs.BY_KEY.descent_rise_limit.b and not cs.BY_KEY.follow.b,'B-only rows')
 assert(cs.is_default(d) and cs.is_default(cs.DEFAULTS))
-print('PASS camera settings specs: camera A default, neutral multipliers, #374 B values')
+-- #671 Auto zoom: on by default, a two-state switch (0/1 only, shown by name); its three rows act only while on.
+assert(d.auto_zoom==1 and d.zoom_near==1.1 and d.zoom_air==0.8 and d.zoom_rate==2,'#671 auto zoom defaults')
+assert(cs.valid('auto_zoom',0) and cs.valid('auto_zoom',1) and not cs.valid('auto_zoom',0.5),'auto zoom is a switch')
+assert(cs.clamp('auto_zoom',0.6)==1 and cs.clamp('auto_zoom',0.4)==0 and cs.clamp('auto_zoom',7)==1)
+assert(cs.text(cs.BY_KEY.auto_zoom,1)=='Auto zoom on' and cs.text(cs.BY_KEY.auto_zoom,0)=='Auto zoom off')
+for _,k in ipairs({'zoom_near','zoom_air','zoom_rate'}) do
+ assert(cs.BY_KEY[k].auto and not cs.inactive(cs.BY_KEY[k],d),k..' inactive with auto zoom on')
+ local off=cs.copy(d);off.auto_zoom=0;assert(cs.inactive(cs.BY_KEY[k],off),k..' active with auto zoom off')
+end
+assert(cs.inactive(cs.BY_KEY.descent_response,d) and not cs.inactive(cs.BY_KEY.zoom,d) and not cs.inactive(cs.BY_KEY.auto_zoom,d))
+print('PASS camera settings specs: camera A default, neutral multipliers, #374 B values, #671 auto zoom switch')
 
 -- Clamping: out-of-range input lands on the limit; non-finite or non-number input is refused.
 assert(cs.clamp('zoom',5)==1.4 and cs.clamp('zoom',0)==0.7 and cs.clamp('offset',-1000)==-150 and cs.clamp('offset',1000)==150)
@@ -68,10 +78,12 @@ for _,spec in ipairs(cs.SPECS) do
  assert(not cs.apply(c,{command='step',key=spec.key,dir=1}),'step past max changed something')
  while cs.apply(c,{command='step',key=spec.key,dir=-1}) do n=n+1;assert(n<2000) end
  assert(c[spec.key]==spec.min,spec.key..' not clamped at min '..c[spec.key])
- -- Up from the default and back down returns exactly to the default (no float drift).
+ -- Up from the default and back down returns exactly to the default (no float drift); a switch at its
+ -- maximum (Auto zoom on) goes down and back up instead.
  c[spec.key]=spec.default
- for _=1,3 do cs.apply(c,{command='step',key=spec.key,dir=1}) end
- for _=1,3 do cs.apply(c,{command='step',key=spec.key,dir=-1}) end
+ local first=spec.default+spec.step<=spec.max and 1 or -1
+ for _=1,3 do cs.apply(c,{command='step',key=spec.key,dir=first}) end
+ for _=1,3 do cs.apply(c,{command='step',key=spec.key,dir=-first}) end
  assert(c[spec.key]==spec.default,spec.key..' drifted: '..string.format('%.17g',c[spec.key]))
 end
 assert(cs.apply(c,{command='set',key='zoom',value=9}) and c.zoom==1.4,'set clamps')
@@ -137,6 +149,17 @@ for _,bad in ipairs({{'camera_mode','c'},{'camera_mode',2},{'camera_mode',nil},{
   else assert(v.camera[k]==g.camera[k],'invalid '..key..' changed '..k) end
  end
 end
+-- #671: a version 3 file written before the auto zoom fields gets their defaults and stays valid; a stored
+-- invalid auto zoom value is still invalid and falls back on its own.
+files[path]=with('camera_mode','b');local old=settings.load()
+assert(old.status=='ok' and old.camera.auto_zoom==1 and old.camera.zoom_air==0.8 and old.camera.zoom==1.2,'pre-#671 file')
+files[path]=with('camera_auto_zoom',0);files[path].camera_zoom_air=0.7;local az=settings.load()
+assert(az.status=='ok' and az.camera.auto_zoom==0 and az.camera.zoom_air==0.7,'auto zoom fields not read')
+assert(settings.save(az)==true and files[path].camera_auto_zoom==0 and files[path].camera_zoom_air==0.7 and files[path].camera_zoom_rate==2,'auto zoom fields not written')
+for _,bad in ipairs({{'camera_auto_zoom',0.5},{'camera_zoom_air',2},{'camera_zoom_rate',0/0}}) do
+ files[path]=with(bad[1],bad[2]);local v=settings.load();local key=bad[1]:sub(8)
+ assert(v.status=='invalid' and v.camera[key]==cs.DEFAULTS[key] and v.camera.zoom==1.2,'invalid '..key..' accepted')
+end
 mode='unreadable';local u=settings.load();assert(u.status=='invalid' and cs.is_default(u.camera),'unreadable fallback');mode=nil
 -- A newer file is used where valid and never overwritten, also by camera commands (which last for the session).
 files[path]=with('version',4);files[path].future='kept'
@@ -196,3 +219,62 @@ local b=run('b',nil,120,downhill,true);assert(b.y<base.y-5,'camera B shows no do
 local b0=tuned('descent_rise_limit',0,'b');assert(math.abs(b0.y-base.y)<1e-9,'zero rise limit still builds B lead')
 local bfast=tuned('descent_response',12,'b');assert(bfast.y<b.y,'B descent pan rate changed nothing')
 print('PASS feel.camera settings: defaults unchanged, height/zoom/look/follow move the view, B-only keys never touch A')
+
+-- #671 Auto zoom on a jump: a steady 3 m/s run, a 1 s flight, a landing and 4 s on the ground. The view is closer at
+-- rest, wider in the air than on the ground at the same speed, comes back after the landing, and every change is a
+-- small step in one direction (no pumping). A 0.08 s hop barely changes it. Auto zoom off is the old zoom exactly.
+local function jump(tune,air_from,air_to,frames)
+ local speed=300
+ local st,pos=feel.camera_start(0,90,0,speed,270,tune)
+ local zoom=feel.camera_start_zoom(speed,tune)
+ local target,zooms=v3(0,90,0),{zoom}
+ for i=1,frames do
+  local air=i>air_from and i<=air_to
+  local vy=air and 400-980*(i-air_from)/60 or 0
+  target=v3(target.x+speed/60,target.y+vy/60,0)
+  pos,zoom=feel.camera(st,target,v3(speed,vy,0),not air,pos,zoom,270,1/60,480,nil,tune)
+  zooms[i+1]=zoom
+ end
+ return zooms
+end
+local z=jump(nil,120,180,420)
+local ground,air_min=z[121],math.huge
+for i=122,182 do air_min=math.min(air_min,z[i]) end
+assert(air_min<ground*0.9,'the view is not wider in the air: '..air_min..' vs '..ground)
+assert(math.abs(z[#z]-ground)<ground*0.01,'the view did not come back after the landing: '..z[#z]..' vs '..ground)
+local turns,last,step=0,0,0
+for i=2,#z do
+ local d=z[i]-z[i-1];step=math.max(step,math.abs(d))
+ local sign=d>1e-12 and 1 or d<-1e-12 and -1 or 0
+ if sign~=0 and last~=0 and sign~=last then turns=turns+1 end
+ if sign~=0 then last=sign end
+end
+assert(turns<=1,'auto zoom pumps: '..turns..' direction changes')
+assert(step<0.005,'auto zoom jumps: '..step..' per frame')
+local rest=feel.camera_start_zoom(0,nil)
+assert(rest>ground*1.05 and rest<=feel.values.camera_zoom*1.1+1e-12,'not closer at rest: '..rest..' vs '..ground)
+local hop=jump(nil,120,125,240);local hop_min=math.huge
+for i=121,241 do hop_min=math.min(hop_min,hop[i]) end
+assert(hop_min>ground*0.995,'a short hop widened the view: '..hop_min)
+-- Off: the zoom is the pre-#671 formula exactly (preset speed zoom times Zoom, eased at the follow response).
+for _,zoom_setting in ipairs({1,1.2}) do
+ local off=cs.copy(cs.DEFAULTS);off.auto_zoom=0;off.zoom=zoom_setting
+ local zo=jump(off,120,180,420)
+ local c=feel.values
+ local ref=c.camera_zoom*zoom_setting
+ assert(zo[1]==ref,'auto zoom off changed the start zoom')
+ local alpha=1-math.exp(-(c.camera_response*off.follow)*(1/60))
+ for i=2,#zo do
+  local wanted=(c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*feel.clamp(300/c.camera_zoom_speed,0,1))*zoom_setting
+  ref=ref+(wanted-ref)*alpha
+  assert(zo[i]==ref,'auto zoom off differs from the old zoom at frame '..(i-1))
+ end
+end
+-- Positions never depend on the zoom setting path (the view size comes in as half/half_x).
+local p_on,p_off
+do
+ local off=cs.copy(cs.DEFAULTS);off.auto_zoom=0
+ p_on=run(nil,nil,120,downhill,true);p_off=run(nil,off,120,downhill,true)
+ assert(p_on.x==p_off.x and p_on.y==p_off.y,'auto zoom moved the camera position')
+end
+print('PASS #671 auto zoom: closer at rest, wider in the air, back after the landing without pumping, hop ignored, off = old zoom exactly')

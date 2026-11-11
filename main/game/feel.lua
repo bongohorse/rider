@@ -150,7 +150,12 @@ M.follow={
     vertical_response_scale=0.6, -- vertical pans ease more slowly than horizontal follow
     settle_speed=20,   -- a realignment ends only below this vertical speed (u/s)
     margin_bottom=100,  -- the chassis centre never gets closer to the view's bottom edge (wheels stay in view)
-    margin_top=100     -- nor to its top edge
+    margin_top=100,    -- nor to its top edge
+    -- #671 Auto zoom (camera_settings auto_zoom, zoom_near, zoom_air, zoom_rate):
+    air_delay=0.12,    -- s: airtime before the air zoom starts (a hop over a bump does not widen the view)
+    air_rate_scale=2,  -- the air state follows at this times Zoom ease
+    slow_band=0.3,     -- the Slow zoom fades out by this fraction of the preset's camera_zoom_speed
+    zoom_widest=0.6    -- hard widest limit of the auto zoom, relative to the preset's camera_zoom (before Zoom)
 }
 -- Reserve the ground window inside the safe frame, so bumps cannot repeatedly hit an edge clamp.
 local function camera_frame(half)
@@ -172,10 +177,28 @@ function M.camera_start(x,y,ground_y,speed,half,tune)
     local f=M.follow
     local t=tune or camera_settings.DEFAULTS
     local dir=speed<0 and -1 or 1
-    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,descent=0,look=dir*look_ahead(speed,dir,t)}
+    local s={dir=dir,against=0,ground=(ground_y or y-90)+f.rest,snapping=false,vy=0,vx=speed,descent=0,look=dir*look_ahead(speed,dir,t),
+        air=0,air_time=0}
     local cy=s.ground+camera_frame(half)
     if half then cy=M.clamp(cy,y-math.max(half-f.margin_top,half*0.3),y+math.max(half-f.margin_bottom,half*0.3)) end
     return s,vmath.vector3(x+s.look,cy,500)
+end
+-- #671: the zoom the auto zoom settles on for smoothed horizontal speed vx (u/s) and air weight air (0 ground .. 1
+-- air), with the settings t. Relative factors on the preset's speed zoom, between zoom_widest and Slow zoom.
+local function auto_zoom(vx,air,t)
+    local c,f=M.values,M.follow
+    local fraction=M.clamp(math.abs(vx)/c.camera_zoom_speed,0,1)
+    local rel=1-(1-c.camera_zoom_min/c.camera_zoom)*fraction
+    local slow=1-M.clamp(fraction/f.slow_band,0,1)
+    rel=rel*(1+(t.zoom_near-1)*slow*slow*(3-2*slow))*(1+(t.zoom_air-1)*air)
+    return c.camera_zoom*M.clamp(rel,f.zoom_widest,t.zoom_near)*t.zoom
+end
+-- The zoom for a start at speed (u/s) on the ground (tune: camera settings, nil = defaults). Auto zoom off: the
+-- preset's camera_zoom times Zoom, as before #671.
+function M.camera_start_zoom(speed,tune)
+    local t=tune or camera_settings.DEFAULTS
+    if t.auto_zoom~=1 then return M.values.camera_zoom*t.zoom end
+    return auto_zoom(speed,0,t)
 end
 -- s: state from camera_start (updated in place); velocity: chassis velocity; grounded: a wheel or the chassis
 -- touches something; half, half_x: the view's current half height and width (nil skips the edge limits).
@@ -262,6 +285,17 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
     -- A realignment ends once the chassis has come to rest vertically and the view has settled on it.
     if s.snapping and grounded and math.abs(s.vy)<f.settle_speed and math.abs(s.ground-target.y)<f.snap_done
         and math.abs(pos.y-inside(s.ground+frame))<f.snap_done then s.snapping=false end
+    -- #671 air state, also tracked with Auto zoom off so switching it on starts from the real state: the weight
+    -- eases to 1 after air_delay of airtime and back to 0 on the ground, at air_rate_scale times Zoom ease; the zoom
+    -- then eases at Zoom ease, so it starts and ends without a kink.
+    if grounded then s.air_time=0 else s.air_time=(s.air_time or 0)+dt end
+    local rate=t.zoom_rate or camera_settings.DEFAULTS.zoom_rate
+    local ease=1-math.exp(-rate*dt)
+    s.air=(s.air or 0)+(((s.air_time>=f.air_delay) and 1 or 0)-(s.air or 0))*(1-math.exp(-rate*f.air_rate_scale*dt))
+    if t.auto_zoom==1 then
+        -- Smoothed speed (not the raw chassis speed) and its own slower easing: the zoom never pumps with bumps.
+        return pos,zoom+(auto_zoom(s.vx,s.air,t)-zoom)*ease
+    end
     local wanted=(c.camera_zoom-(c.camera_zoom-c.camera_zoom_min)*M.clamp(math.abs(velocity.x)/c.camera_zoom_speed,0,1))*t.zoom
     return pos,zoom+(wanted-zoom)*alpha
 end

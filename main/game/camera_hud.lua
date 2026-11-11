@@ -59,7 +59,7 @@ function M.new(forced)
     h.reset=box(p,W-M.PAD-102,y0,72,40,COLOR);text(p,W-M.PAD-102,y0,"Reset",0.5)
     h.close=box(p,W-M.PAD-30,y0,60,40,COLOR);text(p,W-M.PAD-30,y0,"Close",0.5)
     for i,spec in ipairs(camera_settings.SPECS) do
-        -- Left column: follow, look-ahead, zoom; right column: height and the two B-only settings.
+        -- Left column: the first half of the settings in order; right column: the rest.
         local column=math.floor((i-1)/M.ROWS)
         local x0,y=M.PAD+column*(M.CELL+M.PAD),y0+((i-1)%M.ROWS+1)*M.ROW
         local row={spec=spec}
@@ -73,7 +73,8 @@ function M.new(forced)
     M.show(h)
     return h
 end
--- Labels for the current settings: the toggle names the camera in use; B-only rows are dimmed on camera A.
+-- Labels for the current settings: the toggle names the camera in use; B-only rows are dimmed on camera A and
+-- the #671 auto zoom rows while Auto zoom is off.
 function M.show(h)
     local s=h.settings
     gui.set_text(h.toggle_label,"Cam "..string.upper(s.mode))
@@ -82,7 +83,7 @@ function M.show(h)
     gui.set_text(h.title,"Camera "..string.upper(s.mode).." - live")
     for _,row in ipairs(h.rows) do
         gui.set_text(row.label,camera_settings.text(row.spec,s[row.spec.key]))
-        gui.set_color(row.label,(row.spec.b and s.mode~="b") and DIM or TEXT)
+        gui.set_color(row.label,camera_settings.inactive(row.spec,s) and DIM or TEXT)
     end
 end
 -- #678: with the HTML5 play bar the camera is a button in the bar and a kit menu (play_bar.js); these nodes stay
@@ -235,6 +236,8 @@ function M.publish(h,pixel_ratio,nodes)
         toggle_screen=(function() local p=gui.get_screen_position(h.toggle);return {x=p.x,y=p.y} end)(),
         panel=h.panel_rect or false,reset=h.open and rect_of(h.reset) or false,close=h.open and rect_of(h.close) or false,
         b_only=(function() local r={};for i,row in ipairs(h.rows) do r[i]=row.spec.b or false end;return r end)(),
+        -- #671: rows without effect with the current settings (dimmed in the menu).
+        dim=(function() local r={};for i,row in ipairs(h.rows) do r[i]=camera_settings.inactive(row.spec,s) end;return r end)(),
         rows=rows,blocked=h.blocked or {},layout_seq=h.layout_seq,forced=h.forced,nodes=nodes or false}))
 end
 return M
