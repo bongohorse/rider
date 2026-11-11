@@ -81,7 +81,7 @@ function mount() {
 #rider-playbar .pb-campanel .rw{display:grid;grid-template-columns:1fr 40px 40px;gap:6px;align-items:center;font:700 13px var(--body);color:var(--text);white-space:nowrap}
 #rider-playbar .pb-campanel .rw.dim span{color:var(--muted);opacity:.75}#rider-playbar .pb-campanel .rw .b{width:40px;padding:0}
 #rider-playbar .pb-campanel .reset{width:100%}#rider-playbar .pb-campanel .rows{display:grid;gap:6px}
-#rider-playbar .pb-campanel.compact{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:16px}
+#rider-playbar .pb-campanel.compact,#rider-playbar .pb-campanel.wide{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows,#rider-playbar .pb-campanel.wide .rows{grid-template-columns:1fr 1fr;column-gap:16px}
 #rider-playbar .pb-campanel.compact .hd .modes{flex:0 0 190px}#rider-playbar .pb-campanel.compact .hd>span{flex:1}
 #rider-playbar .pb-lookpanel{position:fixed;z-index:1101;width:min(400px,calc(100vw - 16px));overflow-y:auto;box-sizing:border-box;padding:10px;
  display:flex;flex-direction:column;gap:8px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overscroll-behavior:contain}
@@ -191,6 +191,8 @@ function tunePanel() {
   const on = t => / ON\b/.test(t || '');
   const compact = innerHeight < 640;
   el.classList.toggle('compact', compact);
+  // #671: more than six settings take two columns on tall views too, so Reset stays in view.
+  el.classList.toggle('wide', c.rows.length > 6);
   const presets = '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>';
   const tools = b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
     + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"');
@@ -447,6 +449,8 @@ function camPanel() {
   const rb = ro && ro.getClientRects().length && getComputedStyle(ro).visibility === 'visible' ? ro.getBoundingClientRect() : null;
   const top = rr.bottom + 8;
   el.classList.toggle('compact', compact);
+  // #671: more than six settings take two columns on tall views too, so Reset stays in view.
+  el.classList.toggle('wide', c.rows.length > 6);
   el.style.top = top + 'px';
   el.style.right = Math.max(8, Math.round(innerWidth - (rb && rb.top < top + 40 ? rb.left - 8 : rr.right))) + 'px';
   el.style.maxHeight = Math.max(88, Math.floor((lows.length ? Math.min(...lows) : innerHeight) - top - 8)) + 'px';
