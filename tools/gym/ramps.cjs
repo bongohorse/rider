@@ -177,7 +177,7 @@ const P=require('./preset.cjs').fromArgv(process.argv);
      await p.keyboard.up('r');
      const after=await p.evaluate(n=>window.riderCamera352Trace.find(s=>s.resets>n),resetBefore);
      assert(after&&after.generation>trace[0].generation,'Retry did not recreate camera state');
-     assert(Math.abs(after.cx-trace[0].cx)<30&&Math.abs(after.cy-trace[0].cy)<30,'Retry camera failed to restore initial framing');
+     assert(Math.abs(after.cx-trace[0].cx)<30&&Math.abs(after.cy-trace[0].cy)<30,'Retry camera failed to restore initial framing: '+JSON.stringify({first:{cx:trace[0].cx,cy:trace[0].cy,zoom:trace[0].zoom,m11:trace[0].m11,x:trace[0].x,y:trace[0].y,frame:trace[0].frame},retry:{cx:after.cx,cy:after.cy,zoom:after.zoom,m11:after.m11,x:after.x,y:after.y,frame:after.frame}}));
      summary.retry={resets:after.resets,first_frame_dx_u:after.cx-trace[0].cx,first_frame_dy_u:after.cy-trace[0].cy,descent_u:after.descent};
     }
     return cameraCases[label];

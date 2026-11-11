@@ -33,7 +33,8 @@ const SCENARIOS=[
 // is the camera itself).
 const PHYSICS_KEYS=['resets','generation','dt','x','y','vx','vy','angle','omega','rear_angle','rear_omega','front_angle','front_omega',
  'rear','front','throttle','brake_reverse','allow_reverse','reverse_engaged'];
-const DEFAULTS={mode:'a',follow:1,look:1,zoom:1,offset:0,descent_response:0,descent_rise_limit:240};
+const DEFAULTS={mode:'a',follow:1,look:1,zoom:1,offset:0,descent_response:0,descent_rise_limit:240,
+ auto_zoom:1,zoom_near:1.1,zoom_air:0.8,zoom_rate:2};
 // Keep the measurement gates and their failure evidence together; these are vehicle ticks, not wall time.
 function measurementBudget(scn){
  return {scenario:scn.name,requested_toggle_tick:scn.toggleAt,toggle_tick:null,
@@ -141,10 +142,32 @@ function verifyReplay(play,label){
  assert.equal(play.scaled_ticks,0,label+': replay not at the fixed 1.0 step');
  return {verdict:play.verdict,ticks:play.ticks,max_position_m:play.max_position_m,max_angle_rad:play.max_angle_rad,mismatches:play.mismatches};
 }
+// #671: Auto zoom (default settings) on the air-mid lip jump of the camera-A run: the view is wider in the flight than
+// on the ground just before the take-off, and the zoom changes in small steps (no pumping) through the flight and the
+// landing, coming back towards the ground zoom. render: render frames in order (probe trace).
+function airZoom(render,label){
+ const frames=render.filter(s=>s.mode==='a'&&Number.isFinite(s.zoom));
+ const takeoff=frames.findIndex(s=>s.air_from_lip);
+ assert(takeoff>0,label+': no lip flight in the render trace');
+ const ground=frames[takeoff-1].zoom;
+ let end=takeoff;while(end<frames.length&&frames[end].air_from_lip)end++;
+ const flight=frames.slice(takeoff,end);
+ const air=Math.min(...flight.map(s=>s.zoom));
+ assert(air<ground*0.95,label+': the view is not wider in the air: '+JSON.stringify({ground,air}));
+ const after=frames.slice(end);
+ assert(after.length>=60,label+': too few frames after the landing: '+after.length);
+ const last=after.at(-1).zoom;
+ assert(last>air+(ground-air)*0.5,label+': the zoom did not come back after the landing: '+JSON.stringify({ground,air,last}));
+ // Per second of render time, so a slow CI frame cannot fake a jump; 0.5/s is far below a visible snap.
+ let rate=0;
+ for(let i=takeoff;i<frames.length;i++){const dt=frames[i].dt;if(dt>0)rate=Math.max(rate,Math.abs(frames[i].zoom-frames[i-1].zoom)/dt);}
+ assert(rate<0.5,label+': the zoom jumps: '+rate+' per s');
+ return {ground_zoom:ground,air_min_zoom:air,last_zoom:last,flight_frames:flight.length,frames_after_landing:after.length,max_zoom_rate_per_s:rate};
+}
 const overlap=(a,b,tol=0.5)=>a.left<b.right-tol&&a.right>b.left+tol&&a.top<b.bottom-tol&&a.bottom>b.top+tol;
 const inside=(r,c,tol=0.5)=>r.left>=c.left-tol&&r.top>=c.top-tol&&r.right<=c.right+tol&&r.bottom<=c.bottom+tol;
 const sameValues=(a,b)=>Object.keys(DEFAULTS).every(k=>a[k]===b[k]);
-module.exports={parseArgs,byTick,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
+module.exports={parseArgs,byTick,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,airZoom,overlap,inside,sameValues,
  SCENARIOS,PHYSICS_KEYS,DEFAULTS,measurementBudget,verifyMeasurementWindow,failurePageState};
 
 if(require.main===module){
@@ -349,6 +372,7 @@ if(require.main===module){
      summary.station_result={a:{status:ja.status,airtime_s:ja.airtime_s,rotation_deg:ja.rotation_deg},b:{status:jt.status,airtime_s:jt.airtime_s,rotation_deg:jt.rotation_deg}};
      assert(T.render.some(s=>s.mode==='b'&&s.air_from_lip),label+': no lip flight on camera B');
      assert(T.render.some(s=>s.mode==='b'&&s.air_landing_age_s>=0),label+': no landing on camera B');
+     summary.auto_zoom=airZoom(A.render,label);
     }
     if(scn.reverse){
      const P=byTick(T.physics,label);let rev=null;
@@ -418,9 +442,11 @@ if(require.main===module){
     await panel(p,true,'desktop open');
     cases.desktop_placement.open=await checkPlacement(p,'desktop open');
     await p.screenshot({path:path.join(out,'cam443-desktop-panel.png')});
-    for(const spec of ['follow','look','zoom','offset','descent_response','descent_rise_limit']){
-     await command(p,null,{key:spec,which:'plus'},'desktop + '+spec);
-     await command(p,null,{key:spec,which:'minus'},'desktop - '+spec);
+    // #671 Auto zoom starts on (its maximum): off and on again.
+    for(const spec of ['follow','look','zoom','offset','descent_response','descent_rise_limit','auto_zoom','zoom_near','zoom_air','zoom_rate']){
+     const first=spec==='auto_zoom'?'minus':'plus',second=first==='plus'?'minus':'plus';
+     await command(p,null,{key:spec,which:first},'desktop '+first+' '+spec);
+     await command(p,null,{key:spec,which:second},'desktop '+second+' '+spec);
     }
     await command(p,'reset',null,'desktop reset',{mode:'a'});
     // A tap on the panel background and on the control's gap is consumed, never driving.

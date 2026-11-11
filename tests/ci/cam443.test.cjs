@@ -4,7 +4,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const vm=require('node:vm');
-const {parseArgs,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,overlap,inside,sameValues,
+const {parseArgs,identicalPhysics,renderByTick,cameraDelta,downhillLead,verifyNoDrive,verifyReplay,airZoom,overlap,inside,sameValues,
  SCENARIOS,PHYSICS_KEYS,DEFAULTS,measurementBudget,verifyMeasurementWindow,failurePageState}=require('../../tools/gym/camera443.cjs');
 const root=path.resolve(__dirname,'../..');
 
@@ -142,4 +142,20 @@ test('failure capture serializes the available partial traces even before readin
  assert.deepEqual(state.camera,page.riderCamera443);assert.deepEqual(state.owner,page.riderCameraOwner);
  const empty=capture({});
  assert.equal(empty.ticks,null);assert.deepEqual(empty.partial_trace,{physics:[],render:[]});
+});
+
+// #671: the auto zoom check on the air-mid camera-A trace.
+test('auto zoom: wider in the flight, back after the landing, no jumps',()=>{
+ const frames=(zoomAt,{air=[60,120],n=240,mode='a'}={})=>Array.from({length:n},(_,i)=>({mode,dt:1/60,zoom:zoomAt(i),air_from_lip:i>=air[0]&&i<air[1]}));
+ // Eases out in the flight and back after it (exponential, 2/s).
+ const smooth=i=>{let z=1;for(let k=1;k<=i;k++){const target=k>=60&&k<120?0.8:1;z+=(target-z)*(1-Math.exp(-2/60));}return z;};
+ const r=airZoom(frames(smooth),'ok');
+ assert(r.air_min_zoom<0.95&&r.ground_zoom===1&&r.last_zoom>0.9&&r.max_zoom_rate_per_s<0.5,JSON.stringify(r));
+ assert.throws(()=>airZoom(frames(()=>1),'flat'),/not wider in the air/);
+ assert.throws(()=>airZoom(frames(i=>i>=60&&i<120?0.8:1),'snap'),/zoom jumps/);
+ assert.throws(()=>airZoom(frames(i=>Math.max(0.8,1-(i-60)*0.004*(i>=60))),'stays'),/did not come back/);
+ assert.throws(()=>airZoom(frames(smooth,{air:[300,400]}),'none'),/no lip flight/);
+ assert.throws(()=>airZoom(frames(smooth,{n:150}),'short'),/too few frames after the landing/);
+ assert.throws(()=>airZoom(frames(smooth,{mode:'b'}),'b only'),/no lip flight/);
+ assert.deepEqual(Object.keys(DEFAULTS).filter(k=>/zoom/.test(k)),['zoom','auto_zoom','zoom_near','zoom_air','zoom_rate']);
 });

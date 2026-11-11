@@ -80,8 +80,8 @@ function mount() {
 #rider-playbar .pb-campanel .modes .b.on{--c:var(--accent);background:var(--c);color:var(--ink)}
 #rider-playbar .pb-campanel .rw{display:grid;grid-template-columns:1fr 40px 40px;gap:6px;align-items:center;font:700 13px var(--body);color:var(--text);white-space:nowrap}
 #rider-playbar .pb-campanel .rw.dim span{color:var(--muted);opacity:.75}#rider-playbar .pb-campanel .rw .b{width:40px;padding:0}
-#rider-playbar .pb-campanel .reset{width:100%}#rider-playbar .pb-campanel .rows{display:grid;gap:6px}
-#rider-playbar .pb-campanel.compact{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows{grid-template-columns:1fr 1fr;column-gap:16px}
+#rider-playbar .pb-campanel .reset{width:100%}#rider-playbar .pb-campanel .hd .reset{width:auto}#rider-playbar .pb-campanel .rows{display:grid;gap:6px}
+#rider-playbar .pb-campanel.compact,#rider-playbar .pb-campanel.wide{width:min(600px,calc(100vw - 16px))}#rider-playbar .pb-campanel.compact .rows,#rider-playbar .pb-campanel.wide .rows{grid-template-columns:1fr 1fr;column-gap:16px}
 #rider-playbar .pb-campanel.compact .hd .modes{flex:0 0 190px}#rider-playbar .pb-campanel.compact .hd>span{flex:1}
 #rider-playbar .pb-lookpanel{position:fixed;z-index:1101;width:min(400px,calc(100vw - 16px));overflow-y:auto;box-sizing:border-box;padding:10px;
  display:flex;flex-direction:column;gap:8px;background:var(--panel);border:var(--ol) solid var(--ink);border-radius:16px;box-shadow:0 5px 0 var(--ink),0 10px 24px #0005;overscroll-behavior:contain}
@@ -448,6 +448,8 @@ function camPanel() {
   const rb = ro && ro.getClientRects().length && getComputedStyle(ro).visibility === 'visible' ? ro.getBoundingClientRect() : null;
   const top = rr.bottom + 8;
   el.classList.toggle('compact', compact);
+  // #671: more than six settings take two columns on tall views too, so Reset stays in view.
+  el.classList.toggle('wide', c.rows.length > 6);
   el.style.top = top + 'px';
   el.style.right = Math.max(8, Math.round(innerWidth - (rb && rb.top < top + 40 ? rb.left - 8 : rr.right))) + 'px';
   el.style.maxHeight = Math.max(88, Math.floor((lows.length ? Math.min(...lows) : innerHeight) - top - 8)) + 'px';
@@ -455,10 +457,12 @@ function camPanel() {
   const clean = t => String(t || '').replace(/[<>&]/g, '');
   const modes = '<div class="modes">' + ['a', 'b'].map(m => b(c.mode === m ? 'cam:none' : 'cam:toggle', {label: 'Cam ' + m.toUpperCase(), on: c.mode === m, title: 'Camera ' + m.toUpperCase()})
     .replace('<button', '<button data-mode="' + m + '"')).join('') + '</div>';
-  el.innerHTML = '<div class="hd">' + UI.icon('camera') + '<span>Camera</span>' + (compact ? modes : '') + b('cam:close', {icon: 'close', title: 'Close'}) + '</div>'
-    + (compact ? '' : modes) + '<div class="rows">' + c.rows.map((r, i) => '<div class="rw' + (c.b_only?.[i] && c.mode !== 'b' ? ' dim' : '') + '"><span>' + clean(r.text) + '</span>'
+  // #671: on short views Reset sits in the header, so the ten setting rows fit above the drive zones.
+  const reset = b('cam:reset', {label: compact ? 'Reset' : 'Reset camera', title: 'Reset to camera A and every default', variant: compact ? undefined : 'wide'}).replace('class="b', 'class="b reset');
+  el.innerHTML = '<div class="hd">' + UI.icon('camera') + '<span>Camera</span>' + (compact ? modes + reset : '') + b('cam:close', {icon: 'close', title: 'Close'}) + '</div>'
+    + (compact ? '' : modes) + '<div class="rows">' + c.rows.map((r, i) => '<div class="rw' + ((c.dim ? c.dim[i] : c.b_only?.[i] && c.mode !== 'b') ? ' dim' : '') + '"><span>' + clean(r.text) + '</span>'
       + b('cam:step:' + r.key + ':-1', {label: '−', title: 'Less'}) + b('cam:step:' + r.key + ':1', {icon: 'plus', title: 'More'}) + '</div>').join('') + '</div>'
-    + b('cam:reset', {label: 'Reset camera', title: 'Reset to camera A and every default', variant: 'wide'}).replace('class="b', 'class="b reset');
+    + (compact ? '' : reset);
 }
 // Commands for main/game/ui.gui_script since the last call, as JSON.
 function take() { return JSON.stringify(queue.splice(0)); }
