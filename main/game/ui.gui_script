@@ -14,6 +14,7 @@ local fps_counter=require "main.game.fps_counter"
 local fps_place=require "main.game.fps_place"
 local camera_hud=require "main.game.camera_hud"
 local callouts=require "main.game.callouts"
+local pickup_edges_hud=require "main.game.pickup_edges_hud"
 -- ui.gui max_nodes (raised from the default 512 for the #443 camera control and panel); the debug camera state
 -- publishes the nodes in use against it.
 local MAX_NODES=600
@@ -393,6 +394,8 @@ function init(self)
     local forced=html5 and sys.get_engine_info().is_debug and html5.run("new URLSearchParams(location.search).get('camera352') || ''") or ""
     self.camera_hud=camera_hud.new((forced=="a" or forced=="b") and forced or nil)
     if self.playbar then camera_hud.skin(self.camera_hud) end
+    -- #669: off-screen pickup indicators (fuel, coins, gem) on the screen edge.
+    self.pickup_edges=pickup_edges_hud.new()
     -- #666: comic callouts, made last so they draw above the HUD and the result card.
     self.callouts=callouts.new();self.callout_nodes={}
     for i=1,callouts.MAX do
@@ -415,6 +418,14 @@ end
 local function toggle_callouts(self)
     callouts.set_enabled(self.callouts,not self.callouts.enabled)
     gui.set_text(self.callouts_label,"Callouts "..(self.callouts.enabled and "ON" or "OFF"))
+end
+-- #669: place the pickup indicators this frame, clear of the controls and readouts of the last layout poll.
+local function place_pickup_edges(self)
+    local r=self.run_ui.data
+    local live=self.edge_data and not self.editing and r and r.state~='finished' and r.state~='failed'
+    local w,h=window.get_size()
+    pickup_edges_hud.update(self.pickup_edges,live and self.edge_data.targets or nil,fps_area(),{x0=0,y0=0,x1=w,y1=h},
+        self.edge_blocked or gui_controls(self),fps_place.GAP_CSS_PX*(self.pixel_ratio or 1))
 end
 -- #417: colour relative to the cap (Unlimited against 60); neutral while no reading or the cap label shows.
 local function fps_color(fps,cap)
@@ -461,7 +472,11 @@ function on_message(self,id,data,sender)
         if old and old.generation==data.generation and old.attempt>data.attempt then return end
         if not old or old.generation~=data.generation or old.attempt~=data.attempt then self.coin_flash=0 end
         self.coin_data=data;if data.feedback>0 then self.coin_flash=.5;self.coin_flash_amount=data.feedback end;return
-    elseif id==hash('coin_bank_state') then self.coin_bank_data=data;return end
+    elseif id==hash('coin_bank_state') then self.coin_bank_data=data;return
+    elseif id==hash('pickup_edges') then
+        if data.generation<(self.session_generation or 1) then return end
+        self.edge_data=data;return
+    end
     if id==hash("course_progress") then
         if data.generation<(self.session_generation or 1) then return end
         local old=self.progress_ui.data
@@ -476,7 +491,7 @@ function on_message(self,id,data,sender)
         callouts.observe_run(self.callouts,data,callout_area(self))
         if html5 then html5.run("window.riderRun="..json.encode(data)..";window.riderRunUI="..json.encode(run_ui.geometry(self.run_ui))) end
         return
-    elseif id==hash("station_loading") then callouts.clear(self.callouts);self.fuel_data=nil;self.fuel_flash=0;self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
+    elseif id==hash("station_loading") then callouts.clear(self.callouts);self.edge_data=nil;self.fuel_data=nil;self.fuel_flash=0;self.coin_data=nil;self.coin_flash=0;run_ui.show(self.run_ui,nil);progress_ui.show(self.progress_ui,nil,false);if html5 then html5.run("window.riderRun=null;window.riderProgress=null") end end
     if id==hash("station_loading") then
         -- A new world starts uncaptured; re-send an open modal once it reports measurements.
         self.mechanism_status=nil;gui.set_visible(self.mechanism_text,false);if html5 then html5.run('window.riderMechanisms=null') end
@@ -803,6 +818,7 @@ function update(self,dt)
         local seq=tonumber(html5.run("window.riderHudLayout?window.riderHudLayout.watch():0"))
         if seq~=self.hud_layout_seq then self.hud_layout_seq=seq;self.feedback_poll=math.max(self.feedback_poll or 0,0.1) end
     end
+    place_pickup_edges(self)
     self.feedback_poll=(self.feedback_poll or 0)+dt
     if self.feedback_poll<0.1 then return end
     self.feedback_poll=0
@@ -825,6 +841,12 @@ function update(self,dt)
     if not self.fps_press then self.fps_blocked=fps_blocked(self,dom.controls);place_fps(self) end
     -- #443: the camera control (and its open panel) after the counter, clear of it and of every other control.
     place_camera(self,dom)
+    -- #669: the pickup indicators keep clear of the same controls and readouts and of the camera control.
+    local edge_blocked=camera_blocked(self,dom)
+    for _,b in ipairs({self.camera_hud.rect,self.camera_hud.panel_rect}) do
+        if b and not self.camera_hud.skin and not self.camera_hud.forced then edge_blocked[#edge_blocked+1]=b end
+    end
+    self.edge_blocked=edge_blocked
     local narrow=html5 and tonumber(html5.run("innerWidth"))<520
     graph.visible(self.graph,not self.run_ui.data and not (open and narrow))
     if html5 then
