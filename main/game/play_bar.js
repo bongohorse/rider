@@ -193,7 +193,8 @@ function tunePanel() {
   el.classList.toggle('compact', compact);
   const presets = '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>';
   const tools = b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
-    + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"');
+    + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"')
+    + b('tune_callouts', {label: T.callouts || 'Callouts', on: on(T.callouts), title: 'Comic callouts (CRASH!, New best!)'}).replace('<button', '<button data-tool="callouts"');
   const footer = b('tune_audio', {label: T.audio || 'Sound [M]', title: 'Sound [M]'}) + b('tune_copy', {icon: 'copy', label: 'Copy [F]', title: 'Copy report [F]'});
   const sliders = '<div class="rows">' + (T.rows || []).map(r => {
     const ratio = Math.max(0, Math.min(1, (r.value - r.min) / (r.max - r.min)));
