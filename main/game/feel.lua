@@ -289,9 +289,9 @@ function M.camera(s,target,velocity,grounded,position,zoom,half,dt,half_x,experi
     -- eases to 1 after air_delay of airtime and back to 0 on the ground, at air_rate_scale times Zoom ease; the zoom
     -- then eases at Zoom ease, so it starts and ends without a kink.
     if grounded then s.air_time=0 else s.air_time=(s.air_time or 0)+dt end
-    local rate=t.zoom_rate or camera_settings.DEFAULTS.zoom_rate
-    local ease=1-math.exp(-rate*dt)
-    s.air=(s.air or 0)+(((s.air_time>=f.air_delay) and 1 or 0)-(s.air or 0))*(1-math.exp(-rate*f.air_rate_scale*dt))
+    local zoom_rate=t.zoom_rate or camera_settings.DEFAULTS.zoom_rate
+    local ease=1-math.exp(-zoom_rate*dt)
+    s.air=(s.air or 0)+(((s.air_time>=f.air_delay) and 1 or 0)-(s.air or 0))*(1-math.exp(-zoom_rate*f.air_rate_scale*dt))
     if t.auto_zoom==1 then
         -- Smoothed speed (not the raw chassis speed) and its own slower easing: the zoom never pumps with bumps.
         return pos,zoom+(auto_zoom(s.vx,s.air,t)-zoom)*ease

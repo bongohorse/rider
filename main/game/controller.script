@@ -71,6 +71,12 @@ local function start_camera(self)
     local _,tune=active_camera(self)
     self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,1/camera.get_projection("/camera#camera").m11,tune)
     go.set_position(pos,"/camera")
+    -- #671: with Auto zoom on, the first placement also starts at the zoom it settles on (Retry sets it in reset);
+    -- Auto zoom off keeps the earlier first-load zoom.
+    if tune.auto_zoom==1 then
+        self.camera_zoom=feel.camera_start_zoom(d.start_speed/scale,tune)
+        go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
+    end
 end
 local function reset(self)
     local request = self.pending_reset

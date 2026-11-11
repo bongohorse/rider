@@ -191,8 +191,6 @@ function tunePanel() {
   const on = t => / ON\b/.test(t || '');
   const compact = innerHeight < 640;
   el.classList.toggle('compact', compact);
-  // #671: more than six settings take two columns on tall views too, so Reset stays in view.
-  el.classList.toggle('wide', c.rows.length > 6);
   const presets = '<div class="ps">' + (T.presets || []).map(p => b('tune_preset:' + p, {label: p.toUpperCase(), on: p === T.preset, title: 'Preset ' + p.toUpperCase()}).replace('<button', '<button data-preset="' + UI.esc(p) + '"')).join('') + '</div>';
   const tools = b('tune_crash', {label: T.crash || 'Crash', on: on(T.crash), title: 'Crash [C]'}).replace('<button', '<button data-tool="crash"')
     + b('tune_struts', {label: T.struts || 'Struts', on: on(T.struts), title: 'Struts'}).replace('<button', '<button data-tool="struts"');
