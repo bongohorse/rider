@@ -76,7 +76,8 @@ local function start_camera(self)
     -- view would otherwise start higher). Auto zoom off keeps the earlier start exactly.
     if tune.auto_zoom==1 then
         local zoom=feel.camera_start_zoom(d.start_speed/scale,tune)
-        half=half*(self.camera_zoom or zoom)/zoom
+        -- The component's zoom is the one behind that projection (set last frame, or 1 on the first frame).
+        half=half*go.get("/camera#camera","orthographic_zoom")/zoom
         self.camera_zoom=zoom
         go.set("/camera#camera","orthographic_zoom",zoom)
     end
