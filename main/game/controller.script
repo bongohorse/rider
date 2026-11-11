@@ -69,14 +69,19 @@ local function start_camera(self)
     end
     local pos
     local _,tune=active_camera(self)
-    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,1/camera.get_projection("/camera#camera").m11,tune)
-    go.set_position(pos,"/camera")
-    -- #671: with Auto zoom on, the first placement also starts at the zoom it settles on (Retry sets it in reset);
-    -- Auto zoom off keeps the earlier first-load zoom.
+    -- Half the view height from the last projection (it includes the zoom of the last frame).
+    local half=1/camera.get_projection("/camera#camera").m11
+    -- #671: with Auto zoom on, every start (first placement and Retry) begins at the zoom it settles on, and the
+    -- start framing uses the view height of that zoom, not of the last frame's (a Retry from a wide, fast or airborne
+    -- view would otherwise start higher). Auto zoom off keeps the earlier start exactly.
     if tune.auto_zoom==1 then
-        self.camera_zoom=feel.camera_start_zoom(d.start_speed/scale,tune)
-        go.set("/camera#camera","orthographic_zoom",self.camera_zoom)
+        local zoom=feel.camera_start_zoom(d.start_speed/scale,tune)
+        half=half*(self.camera_zoom or zoom)/zoom
+        self.camera_zoom=zoom
+        go.set("/camera#camera","orthographic_zoom",zoom)
     end
+    self.camera_follow,pos=feel.camera_start(x,y,self.camera_ground,d.start_speed/scale,half,tune)
+    go.set_position(pos,"/camera")
 end
 local function reset(self)
     local request = self.pending_reset
