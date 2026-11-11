@@ -38,6 +38,23 @@ function M.finish(self,result)
     local bitmap={};for _,p in ipairs(self.coins.items) do bitmap[#bitmap+1]=self.coins.taken[p.id] and '1' or '0' end
     msg.post('main:/loader#script','coin_finish',{generation=self.session_generation,attempt=self.race.attempt,amount=result.coins,official=result.official,gems=table.concat(bitmap)})
 end
+-- #669: the nearest off-screen pickup ahead per type for the HUD's edge indicators. Read-only: the camera owner
+-- calls it after placing the camera this frame; posts only while a list is shown or just emptied.
+function M.edges(self)
+    local c=self.coins
+    local out={}
+    if c and self.vehicle and self.vehicle.ready then
+        local feel=require 'main.game.feel'
+        local cam,p=go.get_position('/camera'),camera.get_projection('/camera#camera')
+        local hw,hh=1/p.m00,1/p.m11
+        local b=b2d.body.get_position(self.vehicle.chassis)
+        out=require('main.game.pickup_edges').targets(c.items,c.taken,{feel.metres(b.x),feel.metres(b.y)},
+            {x0=feel.metres(cam.x-hw),y0=feel.metres(cam.y-hh),x1=feel.metres(cam.x+hw),y1=feel.metres(cam.y+hh)})
+    end
+    if #out==0 and not self.edge_shown then return end
+    self.edge_shown=#out>0
+    msg.post('main:/loader#ui','pickup_edges',{generation=self.session_generation,targets=out})
+end
 function M.update(self,dt)
     require('main.game.fuel_runtime').update(self)
     if not self.coins then return end
