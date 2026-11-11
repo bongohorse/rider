@@ -17,7 +17,7 @@ function M.targets(items,taken,vehicle,view)
     local best={}
     for _,p in ipairs(items or {}) do
         local x,y=p.position[1],p.position[2]
-        if not taken[p.id] and x>=vehicle[1] then
+        if not taken[p.id] and p.indicator~=false and x>=vehicle[1] then
             local k=M.kind(p);local d=math.sqrt((x-vehicle[1])^2+(y-vehicle[2])^2)
             if not best[k] or d<best[k].d then best[k]={x=x,y=y,d=d} end
         end

@@ -23,11 +23,12 @@ local dense=require "main.game.dense"
 local mechanisms=require "main.editor.editor_mechanisms"
 -- New documents stay at 13; material raises to 14, authored backgrounds to 15, decorations to 16, coin paths (#672) to 17.
 -- Older readers refuse new data.
-local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15,DECORATION_EDITOR_VERSION=16,COIN_PATH_EDITOR_VERSION=17}
+local M={EDITOR_VERSION=13,COMPILER_VERSION=13,MATERIAL_EDITOR_VERSION=14,BACKGROUND_EDITOR_VERSION=15,DECORATION_EDITOR_VERSION=16,COIN_PATH_EDITOR_VERSION=17,PICKUP_HINT_EDITOR_VERSION=18}
 local coin_path=require 'main.editor.editor_coin_path'
 local decorations=require 'main.decorations.source'
 -- The lowest version that holds a document's optional visual blocks.
 local function visual_version(e)
+    for _,o in ipairs(e.objects or {}) do if o.type=='coin' and o.indicator~=nil then return M.PICKUP_HINT_EDITOR_VERSION end end
     return e.coin_paths and M.COIN_PATH_EDITOR_VERSION or e.decorations and M.DECORATION_EDITOR_VERSION or e.backgrounds and M.BACKGROUND_EDITOR_VERSION or e.material and M.MATERIAL_EDITOR_VERSION or M.EDITOR_VERSION
 end
 -- The sampling settings of compiler version 4 (R8), written into every document so a compile can be
@@ -323,7 +324,7 @@ function M.validate(doc)
     if type(e)~="table" then return nil,"Missing editor block" end
     local profile_ok,profile_err=require('main.terrain_perspective.profile').validate(doc)
     if not profile_ok then return nil,profile_err,true end
-    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION and e.editor_version~=M.DECORATION_EDITOR_VERSION and e.editor_version~=M.COIN_PATH_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
+    if (e.editor_version~=1 and e.editor_version~=2 and e.editor_version~=3 and e.editor_version~=4 and e.editor_version~=5 and e.editor_version~=6 and e.editor_version~=7 and e.editor_version~=8 and e.editor_version~=9 and e.editor_version~=10 and e.editor_version~=11 and e.editor_version~=12 and e.editor_version~=13 and e.editor_version~=M.MATERIAL_EDITOR_VERSION and e.editor_version~=M.BACKGROUND_EDITOR_VERSION and e.editor_version~=M.DECORATION_EDITOR_VERSION and e.editor_version~=M.COIN_PATH_EDITOR_VERSION and e.editor_version~=M.PICKUP_HINT_EDITOR_VERSION) or e.compiler_version~=e.editor_version then
         return nil,"Unsupported editor version "..tostring(e.editor_version).."/compiler "..tostring(e.compiler_version),true
     end
     if type(e.revision)~="number" or e.revision<0 or e.revision%1~=0 or type(e.next_id)~="number" or e.next_id<1 or e.next_id%1~=0 then return nil,"Invalid editor revision" end
@@ -390,6 +391,9 @@ function M.validate(doc)
                 if not e.fuel then return nil,'Canisters need fuel settings' end
             end
             if o.content~=nil then return nil,'Canister refill is configured once for the course',true end
+            -- #669: only false is stored (the default shows the off-screen indicator).
+            if o.indicator~=nil and e.editor_version<M.PICKUP_HINT_EDITOR_VERSION then return nil,'Pickup indicator setting needs editor/compiler 18',true end
+            if o.indicator~=nil and o.indicator~=false then return nil,'Invalid pickup indicator setting: '..o.id end
             local cd=require 'main.game.coin_data'
             if not point(o.position) or not cd.id(o.pickup_id) or pickups[o.pickup_id] then return nil,'Invalid/duplicate coin pickup ID: '..o.id end
             pickups[o.pickup_id]=true;coin_count=coin_count+1
@@ -775,15 +779,17 @@ function M.compile(doc,test,errors)
     for _,o in ipairs(e.objects) do
         local outline=M.outline(o)
         if outline then d.hulls[#d.hulls+1]={vertices=points(outline)}
-        elseif o.type=='coin' then d.coins=d.coins or {version=1,items={}};d.coins.items[#d.coins.items+1]={id=o.pickup_id,position=copy(o.position),kind=o.kind};if o.kind=='fuel' then d.coins.version=3 elseif o.kind=='gem' then d.coins.version=math.max(2,d.coins.version) end
+        elseif o.type=='coin' then d.coins=d.coins or {version=1,items={}};d.coins.items[#d.coins.items+1]={id=o.pickup_id,position=copy(o.position),kind=o.kind,indicator=o.indicator};if o.indicator==false then d.coins.hints=true end;if o.kind=='fuel' then d.coins.version=3 elseif o.kind=='gem' then d.coins.version=math.max(2,d.coins.version) end
         elseif o.type=="label" then d.labels[#d.labels+1]={position={o.position[1],o.position[2]},text=o.text} end
     end
     if e.finish then
         local f=e.finish.position
         d.finish={position={f[1],f[2]},line={{f[1],f[2]-M.FINISH_BELOW},{f[1],f[2]+M.FINISH_ABOVE}},direction={e.finish.direction,0}}
     end
+    -- #669: an item without its off-screen indicator needs coin version 4 (schema 4, as fuel).
+    if d.coins and d.coins.hints then d.coins.hints=nil;d.coins.version=4 end
     if d.coins then d.schema=d.coins.version==2 and 3 or 2 end
-    d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version==3 then d.schema=4 end
+    d.fuel=copy(e.fuel);if d.fuel or d.coins and d.coins.version>=3 then d.schema=4 end
     d.mechanisms=mechanisms.runtime(e);if d.mechanisms then d.schema=5 end
     d.material=copy(e.material);if d.material then d.schema=6 end
     d.backgrounds=copy(e.backgrounds);if d.backgrounds then d.schema=7 end

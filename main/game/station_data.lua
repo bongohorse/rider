@@ -36,9 +36,11 @@ function M.validate(d)
     -- The schema gates below read coins.version: a scalar coins is refused first (#388), not indexed.
     if d.coins~=nil and type(d.coins)~="table" then return nil,require('main.game.coin_data').NOT_OBJECT end
     if d.coins and d.coins.version==2 and d.schema~=3 and d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Wonder Gems require station schema 3',true end
-    if d.fuel~=nil or d.coins and d.coins.version==3 then
+    local canisters=d.coins and d.coins.version==3
+    if d.coins and d.coins.version==4 and type(d.coins.items)=='table' then for _,p in ipairs(d.coins.items) do if type(p)=='table' and p.kind=='fuel' then canisters=true end end end
+    if d.fuel~=nil or d.coins and d.coins.version==4 or canisters then
         if d.schema~=4 and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Fuel requires station schema 4',true end
-        if d.coins and d.coins.version==3 and not d.fuel then return nil,'Canisters require fuel settings' end
+        if canisters and not d.fuel then return nil,'Canisters require fuel settings' end
     end
     if d.mechanisms~=nil and d.schema~=5 and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'Mechanisms require station schema 5',true end
     if d.material~=nil and d.schema~=6 and d.schema~=7 and d.schema~=8 then return nil,'A level material requires station schema 6',true end

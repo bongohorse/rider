@@ -315,20 +315,26 @@ function init(self)
     end
     self.preset_note=layout.text(vmath.vector3(788,449,0),"","right_top")
     gui.set_font(self.preset_note,"default");gui.set_scale(self.preset_note,vmath.vector3(0.4,0.4,1))
-    self.crash_button=layout.box(vmath.vector3(693,426,0),vmath.vector3(90,24,0),"right_top")
+    self.crash_button=layout.box(vmath.vector3(670,426,0),vmath.vector3(67,24,0),"right_top")
     gui.set_color(self.crash_button,button_color)
-    self.crash_label=layout.text(vmath.vector3(693,426,0),"Crash OFF [C]","right_top")
+    self.crash_label=layout.text(vmath.vector3(670,426,0),"Crash OFF [C]","right_top")
     gui.set_font(self.crash_label,"default");gui.set_scale(self.crash_label,vmath.vector3(0.5,0.5,1))
     -- Car Feel 3: visual suspension struts on/off (the owner's juice module holds the setting).
-    self.struts_button=layout.box(vmath.vector3(883,426,0),vmath.vector3(90,24,0),"right_top")
+    self.struts_button=layout.box(vmath.vector3(883,426,0),vmath.vector3(67,24,0),"right_top")
     gui.set_color(self.struts_button,button_color)
     self.struts_label=layout.text(vmath.vector3(883,426,0),"Struts","right_top")
     gui.set_font(self.struts_label,"default");gui.set_scale(self.struts_label,vmath.vector3(0.5,0.5,1))
     -- #666: live switch for the comic callouts (GUI presentation only; on by default).
-    self.callouts_button=layout.box(vmath.vector3(788,426,0),vmath.vector3(90,24,0),"right_top")
+    self.callouts_button=layout.box(vmath.vector3(741,426,0),vmath.vector3(67,24,0),"right_top")
     gui.set_color(self.callouts_button,button_color)
-    self.callouts_label=layout.text(vmath.vector3(788,426,0),"Callouts ON","right_top")
+    self.callouts_label=layout.text(vmath.vector3(741,426,0),"Callouts ON","right_top")
     gui.set_font(self.callouts_label,"default");gui.set_scale(self.callouts_label,vmath.vector3(0.5,0.5,1))
+    -- #669: live switch for the off-screen pickup indicators (GUI presentation only; on by default).
+    self.edges_on=true
+    self.edges_button=layout.box(vmath.vector3(812,426,0),vmath.vector3(67,24,0),"right_top")
+    gui.set_color(self.edges_button,button_color)
+    self.edges_label=layout.text(vmath.vector3(812,426,0),"Pickups ON","right_top")
+    gui.set_font(self.edges_label,"default");gui.set_scale(self.edges_label,vmath.vector3(0.5,0.5,1))
     self.head=layout.text(vmath.vector3(788,407,0),"","right_top")
     gui.set_font(self.head,"default");gui.set_scale(self.head,vmath.vector3(0.4,0.4,1))
     self.controls=controls.new()
@@ -415,6 +421,10 @@ local function callout_area(self)
     end
     return {w=w,h=h},blocked
 end
+local function toggle_edges(self)
+    self.edges_on=not self.edges_on
+    gui.set_text(self.edges_label,"Pickups "..(self.edges_on and "ON" or "OFF"))
+end
 local function toggle_callouts(self)
     callouts.set_enabled(self.callouts,not self.callouts.enabled)
     gui.set_text(self.callouts_label,"Callouts "..(self.callouts.enabled and "ON" or "OFF"))
@@ -423,7 +433,7 @@ end
 local function place_pickup_edges(self)
     local r=self.run_ui.data
     -- No run (custom levels, Gym stations) counts as live; an ended run hides them.
-    local live=self.edge_data and not self.editing and not (r and (r.state=='finished' or r.state=='failed'))
+    local live=self.edges_on and self.edge_data and not self.editing and not (r and (r.state=='finished' or r.state=='failed'))
     local w,h=window.get_size()
     pickup_edges_hud.update(self.pickup_edges,live and self.edge_data.targets or nil,fps_area(),{x0=0,y0=0,x1=w,y1=h},
         self.edge_blocked or gui_controls(self),fps_place.GAP_CSS_PX*(self.pixel_ratio or 1))
@@ -670,6 +680,7 @@ function update(self,dt)
                 elseif a=='tune_crash' then msg.post("gym:/owner#script","crash_toggle")
                 elseif a=='tune_struts' then msg.post("gym:/owner#script","struts_toggle")
                 elseif a=='tune_callouts' then toggle_callouts(self)
+                elseif a=='tune_edges' then toggle_edges(self)
                 elseif a=='tune_audio' and self.owner then msg.post(self.owner,"audio_mute")
                 elseif a=='tune_copy' then copy_feedback(self)
                 -- The camera menu: cam:open, cam:close, cam:toggle, cam:reset, cam:step:<key>:<dir>.
@@ -807,7 +818,7 @@ function update(self,dt)
             end
             local b=telemetry.budget
             local d=self.latest or {}
-            t={preset=self.preset or 'a',presets=feel.order,note=gui.get_text(self.preset_note),crash=gui.get_text(self.crash_label),struts=gui.get_text(self.struts_label),callouts=gui.get_text(self.callouts_label),
+            t={preset=self.preset or 'a',presets=feel.order,note=gui.get_text(self.preset_note),crash=gui.get_text(self.crash_label),struts=gui.get_text(self.struts_label),callouts=gui.get_text(self.callouts_label),edges=gui.get_text(self.edges_label),
                 head=gui.get_text(self.head),audio=gui.get_text(self.audio_label),rows=rows,physics=gui.get_text(self.metrics[6]),
                 physics_over=d.physics_ms and telemetry.over(d.physics_ms,b.physics_ms_max) or false}
         end
@@ -946,6 +957,10 @@ function on_input(self,id,action)
     end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.struts_button,action.x,action.y) then
         msg.post("gym:/owner#script","struts_toggle")
+        return true
+    end
+    if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.edges_button,action.x,action.y) then
+        toggle_edges(self)
         return true
     end
     if id==hash("ui_pointer") and action.pressed and gui.pick_node(self.callouts_button,action.x,action.y) then

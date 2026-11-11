@@ -36,6 +36,13 @@ assert(#E.targets(items,{},{200,0},{x0=194,y0=-3,x1=214,y1=6})==0,'passed pickup
 assert(#E.targets({},{},{0,0},view)==0 and #E.targets(nil,{},{0,0},view)==0,'no pickups, no indicators')
 assert(E.kind({})=='coin' and E.kind({kind='gem'})=='gem' and E.kind({kind='fuel'})=='fuel')
 assert(E.text({kind='fuel',metres=42})=='Fuel 42 m' and E.text({kind='coin',metres=7})=='Coins 7 m')
+-- #669: a pickup with indicator=false is skipped; the next one of its type ahead takes over.
+local hidden=E.targets(items,{},{0,0},view)
+local fuel_hidden={};for i,p0 in ipairs(items) do fuel_hidden[i]=p0.id=='fuel-near' and {id=p0.id,position=p0.position,kind=p0.kind,indicator=false} or p0 end
+local f1,f2
+for _,e in ipairs(hidden) do if e.kind=='fuel' then f1=e end end
+for _,e in ipairs(E.targets(fuel_hidden,{},{0,0},view)) do if e.kind=='fuel' then f2=e end end
+assert(f1 and f2 and f2.metres>f1.metres,'indicator=false must skip the pickup')
 print('PASS pickup edges: nearest ahead per type, falling distance, hidden when visible, taken or passed')
 
 -- Placement at 1080x486 (CSS px = screen px). Play bar (#678) top right and its strip top centre, the level
@@ -97,3 +104,22 @@ assert(p[1].clear==false and not p[1].rect,'covered edge must hide the indicator
 p=E.place({x0=0,y0=0,x1=60,y1=20},screen,{{kind='fuel',u=2,v=0.5,metres=5}},w,h,{},gap)
 assert(p[1].clear==false,'tiny area must hide the indicator')
 print('PASS pickup edges: on the screen edge inside the safe area, clear of drive zones, toolbar and each other at 1080x486')
+
+-- #669: the per-pickup switch in the editor source: stored only as false, editor/compiler 18, compiled into
+-- coin version 4 (schema 4) and read by the runtime; switched back on, the level returns to its old versions.
+do
+ local D=require 'main.editor.editor_doc'
+ local d=D.blank('edge-test','Edge test');local e=d.editor;e.start.position={0,2}
+ e.objects={{id='o1',type='line',points={{-5,0},{60,0}}},{id='o2',type='coin',pickup_id='gold-a',position={30,1}},{id='o3',type='coin',kind='gem',pickup_id='gem-a',position={40,1}}};e.next_id=4
+ assert(D.validate(d));local plain=assert(D.compile(d));assert(plain.coins.version==2 and plain.schema==3)
+ e.objects[2].indicator=false;D.refresh_version(e);assert(e.editor_version==18 and D.validate(d))
+ local c=assert(D.compile(d));assert(c.coins.version==4 and c.schema==4 and c.coins.items[1].indicator==false and c.coins.items[2].indicator==nil)
+ assert(require('main.game.station_data').validate(c),'compiled level with a hidden indicator loads')
+ assert(not D.compare(d,c))
+ local list=E.targets(c.coins.items,{},{0,0},{x0=-6,y0=-3,x1=14,y1=6})
+ for _,t0 in ipairs(list) do assert(t0.kind~='coin','hidden coin indicator shown') end
+ local old=D.copy(d);old.editor.editor_version,old.editor.compiler_version=17,17;assert(not D.validate(old),'version 17 refuses the field')
+ local wrong=D.copy(d);wrong.editor.objects[2].indicator=true;assert(not D.validate(wrong),'only false is stored')
+ e.objects[2].indicator=nil;D.refresh_version(e);assert(e.editor_version==13 and D.validate(d))
+ print('PASS pickup indicator switch: source false only, editor 18, coin version 4 / schema 4, runtime skips it, back to the old versions when on')
+end

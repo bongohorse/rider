@@ -60,6 +60,7 @@ end
 -- alike), a trailing null (the shorter list, nothing after it to lose) and the 128-pickup maximum.
 admitted(level(items('['..COIN..','..COIN2..','..GEM..','..CAN..','..CAN2..']'),FUEL),2,1,2,'dense coins, gem and canisters')
 admitted(level(items('[]'),FUEL),0,0,0,'empty array')
+admitted(level(items('[{"id":"coin-a","position":[5,1.5],"indicator":false},'..CAN..']',4),FUEL),1,0,1,'version 4 with a hidden indicator')
 admitted(level(items('{}'),FUEL),0,0,0,'empty object')
 admitted(level(nil,FUEL),0,0,0,'no coins')
 admitted(level(items('['..COIN..','..GEM..',null]'),FUEL),1,1,0,'trailing null')
@@ -138,7 +139,10 @@ for _,c in ipairs({
     {level(items('['..CAN..']',3),nil),'Canisters require fuel settings'},
     {level(items('['..CAN..']',3),FUEL,3),'Fuel requires station schema 4 (unsupported)'},
     {level(items('['..CAN..']',2),FUEL),'Unsupported pickup kind/version (unsupported)'},
-    {level(items('['..COIN..']',4),FUEL),'Unsupported coin pickup version (unsupported)'},
+    {level(items('['..COIN..']',5),FUEL),'Unsupported coin pickup version (unsupported)'},
+    -- #669: indicator=false needs coin version 4; any other value is refused.
+    {level(items('[{"id":"coin-a","position":[5,1.5],"indicator":false}]'),FUEL),'Unsupported pickup indicator/version (unsupported)'},
+    {level(items('[{"id":"coin-a","position":[5,1.5],"indicator":true}]',4),FUEL),'Unsupported pickup indicator/version (unsupported)'},
     {level('[]',FUEL),'Unsupported coin pickup version (unsupported)'},
     {level('{"version":1,"items":[],"extra":1}',FUEL),'Unsupported coin pickup field extra (unsupported)'},
     {level(items('['..COIN..','..COIN..']'),FUEL),'Invalid/duplicate coin pickup ID or position'},
