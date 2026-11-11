@@ -518,6 +518,9 @@ function M.render(u,d)
             y=paragraph(rx+16,y,title or '',248,d.selection~='' and C.selected or C.text,18,clip)
             if rest~='' then y=paragraph(rx+16,y,rest,248,C.secondary,14,clip) end
             y=y+16
+            if d.pickup_indicator~=nil then
+                row('pickup_indicator',d.pickup_indicator and 'Off-screen indicator: ON' or 'Off-screen indicator: OFF',nil,nil,nil,'Show this pickup at the screen edge with its distance while it is ahead and off-screen.')
+            end
             if d.auto then
                 local a=d.auto;local c=a.settings
                 row('auto_range','Range: '..(c.range=='whole' and 'Whole track' or 'Selected terrain'),nil,nil,nil,'Selected terrain uses the whole pieces selected with [S] before choosing Coin. Gaps stay empty; hulls and jump arcs are manual.')

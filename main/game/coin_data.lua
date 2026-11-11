@@ -13,7 +13,7 @@ function M.validate(c,bounds)
     if c==nil then return true end
     -- #388: a scalar is malformed, not a newer format (station_data.validate checks it before reading coins.version).
     if type(c)~='table' then return nil,M.NOT_OBJECT end
-    if c.version~=1 and c.version~=2 and c.version~=3 then return nil,'Unsupported coin pickup version',true end
+    if c.version~=1 and c.version~=2 and c.version~=3 and c.version~=4 then return nil,'Unsupported coin pickup version',true end
     for k in pairs(c) do if k~='version' and k~='items' then return nil,'Unsupported coin pickup field '..tostring(k),true end end
     -- Gold, gems and canisters share one list: keys exactly 1..n (#388), so ipairs, counts and the budget see every pickup.
     -- Same message form and key cut as station_data's list check (requiring it here would be a cycle Bob refuses).
@@ -28,7 +28,9 @@ function M.validate(c,bounds)
         if type(p)~='table' or not M.id(p.id) or seen[p.id] or not M.point(p.position) then return nil,'Invalid/duplicate coin pickup ID or position' end
         if p.kind~=nil and not (p.kind=='gem' and c.version>=2 or p.kind=='fuel' and c.version>=3) then return nil,'Unsupported pickup kind/version',true end
         if p.content~=nil then return nil,'Canister refill is configured once for the course',true end
-        for k in pairs(p) do if k~='id' and k~='position' and k~='kind' then return nil,'Unsupported coin pickup item field '..tostring(k),true end end
+        -- #669 (version 4): indicator=false hides the item's off-screen indicator; true is the default and not stored.
+        if p.indicator~=nil and not (p.indicator==false and c.version>=4) then return nil,'Unsupported pickup indicator/version',true end
+        for k in pairs(p) do if k~='id' and k~='position' and k~='kind' and k~='indicator' then return nil,'Unsupported coin pickup item field '..tostring(k),true end end
         seen[p.id]=true
         local x,y=p.position[1],p.position[2]
         if bounds and (x<=bounds[1] or x>=bounds[2] or y<=bounds[3] or y>=bounds[4]) then return nil,'Coin '..p.id..' is outside safety bounds' end

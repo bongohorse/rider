@@ -1407,6 +1407,10 @@ local function on_button(self,name)
         if o and o.locked then editor.message="Locked: "..doc_lib.label(o)..". Unlock it before editing."
         elseif o then self.ui.reveal=name;self.field={object=o.id,text=o.name or "",all=true} end
         return
+    elseif name=='pickup_indicator' then
+        -- #669: one Undo step for every selected pickup; ON is the default and stored as nil.
+        local ids=editor.selected_ids();local first=edit.find(editor.doc.editor,ids[1] or '');local off=not (first and first.indicator==false)
+        editor.commit(function(e) for _,id in ipairs(ids) do local o=edit.find(e,id);if o and o.type=='coin' then o.indicator=off and false or nil end end;require('main.editor.editor_doc').refresh_version(e) end,true);return
     elseif name:match("^object_select_") then
         cancel(self);editor.select(name:sub(15));return
     elseif name:match("^object_eye_") or name:match("^object_lock_") then
@@ -2998,6 +3002,12 @@ local function render_ui(self)
         self.chrome_state.lib={collapsed=self.ui.tools and true or false,kind=editor.prefab_kind,kinds=kinds,gold=gold,gems=gems,objects=rows,
             searching=f and f.search and true or false,search=f and f.search and f.text or self.ui.object_query or "",decor=decoration_tool.armed(),
             look={tex=e.material or false,tex_msg=track_panel.message or '',bg=background_panel.current or e.backgrounds or false,bg_msg=background_panel.message or ''}}
+    end
+    -- #669: per-pickup off-screen indicator switch while only pickups are selected (and not in Auto Add Coins).
+    do
+        local doc=editor.doc and editor.doc.editor;local ids=editor.selected_ids();local all=doc~=nil and #ids>0 and not d.auto
+        for _,id in ipairs(ids) do local o=all and edit.find(doc,id);if not (o and o.type=='coin') then all=false end end
+        if all then d.pickup_indicator=edit.find(doc,ids[1]).indicator~=false end
     end
     editor_ui.render(self.ui,d)
     self.buttons=self.ui.buttons
