@@ -422,7 +422,8 @@ end
 -- #669: place the pickup indicators this frame, clear of the controls and readouts of the last layout poll.
 local function place_pickup_edges(self)
     local r=self.run_ui.data
-    local live=self.edge_data and not self.editing and r and r.state~='finished' and r.state~='failed'
+    -- No run (custom levels, Gym stations) counts as live; an ended run hides them.
+    local live=self.edge_data and not self.editing and not (r and (r.state=='finished' or r.state=='failed'))
     local w,h=window.get_size()
     pickup_edges_hud.update(self.pickup_edges,live and self.edge_data.targets or nil,fps_area(),{x0=0,y0=0,x1=w,y1=h},
         self.edge_blocked or gui_controls(self),fps_place.GAP_CSS_PX*(self.pixel_ratio or 1))
